@@ -61,4 +61,4 @@ jobs:
         run: php artisan migrate --force
 
       - name: Run tests
-        run: composer test -- --colors=always
+        run: composer test

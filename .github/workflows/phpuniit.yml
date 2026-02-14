@@ -1,9 +1,0 @@
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Install Node dependencies and build assets
-        run: |
-          npm ci --prefer-offline --no-audit --progress=false
-          npm run build

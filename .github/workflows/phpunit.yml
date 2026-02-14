@@ -1,0 +1,64 @@
+﻿name: Run tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  tests:
+    name: PHPUnit + Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: [8.5]
+
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: database/database.sqlite
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, pdo, pdo_sqlite, xml, gd
+
+      - name: Cache Composer packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.composer/cache
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-progress --no-suggest --prefer-dist
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Node dependencies and build assets
+        run: |
+          npm ci --prefer-offline --no-audit --progress=false
+          npm run build
+
+      - name: Prepare SQLite database
+        run: |
+          mkdir -p database
+          php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
+
+      - name: Generate app key
+        run: php artisan key:generate --force
+
+      - name: Run migrations
+        run: php artisan migrate --force
+
+      - name: Run tests
+        run: composer test -- --colors=always

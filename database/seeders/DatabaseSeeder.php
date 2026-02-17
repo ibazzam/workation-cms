@@ -21,5 +21,8 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        // Seed Workations for development/testing
+        $this->call(WorkationSeeder::class);
     }
 }

@@ -1,3 +1,34 @@
+# Auto-detect text files and normalize them in the repository
+* text=auto
+
+# Force LF for shell and YAML files
+*.sh eol=lf
+*.yml eol=lf
+*.yaml eol=lf
+
+# Windows script files should keep CRLF
+*.ps1 eol=crlf
+*.bat eol=crlf
+
+# Explicitly mark common text file types
+*.js text
+*.jsx text
+*.ts text
+*.tsx text
+*.css text
+*.html text
+*.md text
+*.json text
+*.php text
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
 * text=auto eol=lf
 
 *.blade.php diff=html

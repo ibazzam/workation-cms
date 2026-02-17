@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Enums removed for SQLite compatibility; use string fields instead
+
+// Core models
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  name       String?
+  password   String?
+  role       String   @default("USER")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  bookings   Booking[]
+}
+
+model Vendor {
+  id        String   @id @default(uuid())
+  name      String
+  email     String?  @unique
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accommodations Accommodation[]
+  transports     Transport[]
+}
+
+model Atoll {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  islands   Island[]
+}
+
+model Island {
+  id        Int      @id @default(autoincrement())
+  name      String
+  slug      String   @unique
+  atollId   Int
+  lat       Float?
+  lng       Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  atoll     Atoll    @relation(fields: [atollId], references: [id])
+  accommodations Accommodation[]
+  fromTransports   Transport[] @relation("fromIsland")
+  toTransports     Transport[] @relation("toIsland")
+}
+
+model Accommodation {
+  id          String   @id @default(uuid())
+  vendorId    String
+  islandId    Int
+  title       String
+  slug        String   @unique
+  description String?
+  type        String?  
+  rooms       Int?     
+  price       Decimal  @default("0.00")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+  island      Island   @relation(fields: [islandId], references: [id])
+  bookings    Booking[]
+}
+
+model Transport {
+  id          String       @id @default(uuid())
+  vendorId    String?
+  type        String
+  code        String?      
+  fromIslandId Int?
+  toIslandId   Int?
+  departure    DateTime?
+  arrival      DateTime?
+  capacity     Int?
+  price        Decimal      @default("0.00")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  vendor       Vendor?      @relation(fields: [vendorId], references: [id])
+  fromIsland   Island?      @relation("fromIsland", fields: [fromIslandId], references: [id])
+  toIsland     Island?      @relation("toIsland", fields: [toIslandId], references: [id])
+  bookings     Booking[]
+}
+
+model Booking {
+  id              String        @id @default(uuid())
+  userId          String
+  accommodationId String? 
+  transportId     String?
+  startDate       DateTime?
+  endDate         DateTime?
+  guests          Int?          @default(1)
+  totalPrice      Decimal       @default("0.00")
+  status          String @default("PENDING")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user            User          @relation(fields: [userId], references: [id])
+  accommodation   Accommodation? @relation(fields: [accommodationId], references: [id])
+  transport       Transport?    @relation(fields: [transportId], references: [id])
+  payment         Payment?
+}
+
+model Payment {
+  id           String    @id @default(uuid())
+  bookingId    String    @unique
+  provider     String    
+  providerId   String?   
+  amount       Decimal   @default("0.00")
+  currency     String    @default("USD")
+  status       String    
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  booking      Booking   @relation(fields: [bookingId], references: [id])
+}

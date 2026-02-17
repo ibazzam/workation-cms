@@ -5,7 +5,8 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "test": "vitest --run"
+        "test": "vitest --run",
+        "coverage": "vitest --coverage"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

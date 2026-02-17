@@ -59,6 +59,15 @@ jobs:
           npm ci --prefer-offline --no-audit --progress=false
           npm run build
 
+      - name: Run JS coverage
+        run: |
+          npm run coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: false
+
       - name: Prepare SQLite database
         run: |
           mkdir -p database

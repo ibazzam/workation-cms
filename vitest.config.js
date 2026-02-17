@@ -5,3 +5,8 @@ export default {
     include: ['tests/js/**/*.test.*']
   }
 }
+
+export const coverage = {
+  reporter: ['text', 'lcov'],
+  // output directory is coverage by default
+}

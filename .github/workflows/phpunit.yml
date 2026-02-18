@@ -63,6 +63,11 @@ jobs:
         run: |
           npm run coverage
 
+      - name: Show coverage files
+        run: |
+          echo "Listing workspace root files:" && ls -la
+          echo "Listing coverage directory (if present):" && ls -la coverage || true
+          echo "Show if a coverage-final.json exists:" && test -f coverage-final.json && echo "coverage-final.json exists" || true
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
@@ -72,7 +77,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage
-          path: coverage
+          path: |
+            coverage
+            coverage-final.json
+            coverage/coverage-final.json
+            coverage/coverage-summary.json
+            coverage/*.html
+            clover.xml
 
       - name: Prepare SQLite database
         run: |
@@ -112,30 +123,30 @@ jobs:
             ${{ runner.os }}-node-modules-
 
       - name: Install Node dependencies
-        run: npm ci --prefer-offline --no-audit --progress=false
+        run: npm install --prefer-offline --no-audit --progress=false
 
       - name: Run JS coverage
-        run: npm run coverage
-
-      - name: Show coverage directory
-        if: always()
         run: |
-          if [ -d coverage ]; then
-            ls -la coverage || true
-            if [ -f coverage/coverage-summary.json ]; then
-              echo '---- coverage-summary.json ----'
-              cat coverage/coverage-summary.json || true
-            fi
-          else
-            echo 'coverage directory missing'
-          fi
+          npm run coverage
+
+      - name: Show coverage files
+        run: |
+          echo "Listing workspace root files:" && ls -la
+          echo "Listing coverage directory (if present):" && ls -la coverage || true
+          echo "Show if a coverage-final.json exists:" && test -f coverage-final.json && echo "coverage-final.json exists" || true
 
       - name: Upload coverage artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage
-          path: coverage
+          path: |
+            coverage
+            coverage-final.json
+            coverage/coverage-final.json
+            coverage/coverage-summary.json
+            coverage/*.html
+            clover.xml
 
       - name: Upload coverage to Codecov
         if: success()

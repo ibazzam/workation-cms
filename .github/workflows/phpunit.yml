@@ -68,6 +68,9 @@ jobs:
           echo "Listing workspace root files:" && ls -la
           echo "Listing coverage directory (if present):" && ls -la coverage || true
           echo "Show if a coverage-final.json exists:" && test -f coverage-final.json && echo "coverage-final.json exists" || true
+      - name: Check JS coverage thresholds
+        run: |
+          node -e "const fs=require('fs');const p=fs.existsSync('coverage-final.json')?'coverage-final.json':(fs.existsSync('coverage/coverage-final.json')?'coverage/coverage-final.json':null);if(!p){console.error('No coverage-final.json found');process.exit(1);}const cov=JSON.parse(fs.readFileSync(p));let totals={s:{t:0,c:0},f:{t:0,c:0},b:{t:0,c:0}};for(const k of Object.keys(cov)){const file=cov[k];const s=file.s||{};const f=file.f||{};const b=file.b||{};totals.s.t+=Object.keys(s).length;totals.s.c+=Object.values(s).filter(x=>x>0).length;totals.f.t+=Object.keys(f).length;totals.f.c+=Object.values(f).filter(x=>x>0).length;totals.b.t+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].length:0),0);totals.b.c+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].filter(x=>x>0).length:0),0);}const pct=(n,m)=>(m?100*n/m:0);const s=pct(totals.s.c,totals.s.t).toFixed(2);const f=pct(totals.f.c,totals.f.t).toFixed(2);const b=pct(totals.b.c,totals.b.t).toFixed(2);console.log(`Coverage percentages: statements ${s}%, functions ${f}%, branches ${b}%`);const minS=95,minF=95,minB=90;if(s<minS||f<minF||b<minB){console.error('Coverage below thresholds');process.exit(2);}console.log('Coverage thresholds met');"
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
@@ -78,11 +81,8 @@ jobs:
         with:
           name: coverage
           path: |
-            coverage
+            coverage/**
             coverage-final.json
-            coverage/coverage-final.json
-            coverage/coverage-summary.json
-            coverage/*.html
             clover.xml
 
       - name: Prepare SQLite database
@@ -100,29 +100,29 @@ jobs:
         run: composer test
 
   js-coverage:
-    name: JS Coverage
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Run JS coverage
+        run: |
+          npm run coverage
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Show coverage files
+        run: |
+          echo "Listing workspace root files:" && ls -la
+          echo "Listing coverage directory (if present):" && ls -la coverage || true
+          echo "Show if a coverage-final.json exists:" && test -f coverage-final.json && echo "coverage-final.json exists" || true
+
+      - name: Check JS coverage thresholds
+        run: |
+          node -e "const fs=require('fs');const p=fs.existsSync('coverage-final.json')?'coverage-final.json':(fs.existsSync('coverage/coverage-final.json')?'coverage/coverage-final.json':null);if(!p){console.error('No coverage-final.json found');process.exit(1);}const cov=JSON.parse(fs.readFileSync(p));let totals={s:{t:0,c:0},f:{t:0,c:0},b:{t:0,c:0}};for(const k of Object.keys(cov)){const file=cov[k];const s=file.s||{};const f=file.f||{};const b=file.b||{};totals.s.t+=Object.keys(s).length;totals.s.c+=Object.values(s).filter(x=>x>0).length;totals.f.t+=Object.keys(f).length;totals.f.c+=Object.values(f).filter(x=>x>0).length;totals.b.t+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].length:0),0);totals.b.c+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].filter(x=>x>0).length:0),0);}const pct=(n,m)=>(m?100*n/m:0);const s=pct(totals.s.c,totals.s.t).toFixed(2);const f=pct(totals.f.c,totals.f.t).toFixed(2);const b=pct(totals.b.c,totals.b.t).toFixed(2);console.log(`Coverage percentages: statements ${s}%, functions ${f}%, branches ${b}%`);const minS=95,minF=95,minB=90;if(s<minS||f<minF||b<minB){console.error('Coverage below thresholds');process.exit(2);}console.log('Coverage thresholds met');"
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
-
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-
-
-      - name: Install Node dependencies
+          name: coverage
+          path: |
+            coverage/**
+            coverage-final.json
+            clover.xml
         run: npm install --prefer-offline --no-audit --progress=false
 
       - name: Run JS coverage

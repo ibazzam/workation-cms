@@ -112,10 +112,23 @@ jobs:
             ${{ runner.os }}-node-modules-
 
       - name: Install Node dependencies
-          run: npm install --prefer-offline --no-audit --progress=false
+        run: npm ci --prefer-offline --no-audit --progress=false
 
       - name: Run JS coverage
         run: npm run coverage
+
+      - name: Show coverage directory
+        if: always()
+        run: |
+          if [ -d coverage ]; then
+            ls -la coverage || true
+            if [ -f coverage/coverage-summary.json ]; then
+              echo '---- coverage-summary.json ----'
+              cat coverage/coverage-summary.json || true
+            fi
+          else
+            echo 'coverage directory missing'
+          fi
 
       - name: Upload coverage artifact
         if: always()

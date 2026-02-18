@@ -6,11 +6,11 @@ export default {
   },
   coverage: {
     provider: 'v8',
-    reporter: ['text', 'lcov'],
+    reporter: ['text', 'lcov', 'json-summary'],
     // Minimum coverage thresholds (percent)
-    statements: 80,
-    branches: 75,
-    functions: 80,
-    lines: 80
+    statements: 95,
+    branches: 90,
+    functions: 95,
+    lines: 95
   }
 }

@@ -18,7 +18,7 @@ RUN apt-get update \
     build-essential \
   && docker-php-ext-install pdo pdo_mysql mbstring zip intl xml \
   && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
-  && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+  && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
   && apt-get install -y --no-install-recommends nodejs \
   && npm --version || true \
   && apt-get clean \

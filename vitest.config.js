@@ -7,6 +7,9 @@ export default {
   coverage: {
     provider: 'v8',
     reporter: ['text', 'lcov', 'json-summary'],
+    // Only collect coverage for application JS (ignore infra, backend, node_modules)
+    include: ['resources/js/**'],
+    exclude: ['**/node_modules/**', 'infra/**', 'vendor/**'],
     // Minimum coverage thresholds (percent)
     statements: 95,
     branches: 90,

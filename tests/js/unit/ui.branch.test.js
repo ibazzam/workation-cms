@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createCounterElement } from '../../../../resources/js/ui'
+import { createCounterElement } from '../../../resources/js/ui'
 
 describe('createCounterElement branch coverage', () => {
   it('uses fallback when span.textContent is falsy', () => {

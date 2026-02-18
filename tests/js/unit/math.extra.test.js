@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { add, multiply, average } from '../../../../resources/js/lib/math'
+import { add, multiply, average } from '../../../resources/js/lib/math'
 
 describe('math edge cases', () => {
   it('handles negative and float numbers', () => {

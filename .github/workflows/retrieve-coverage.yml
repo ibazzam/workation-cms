@@ -24,4 +24,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.COVERAGE_FETCH_PAT }}
         run: |
           Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-          & "${{ github.workspace }}\scripts\retrieve_and_compute.ps1" -Owner ibazzam -Repo workation-cms -Commit
+          # ensure script content is available (avoid sparse-checkout issues)
+          git fetch --no-tags origin main
+          git show origin/main:scripts/retrieve_and_compute.ps1 > .\retrieve_and_compute.ps1
+          pwsh -NoProfile -ExecutionPolicy Bypass -File .\retrieve_and_compute.ps1 -Owner ibazzam -Repo workation-cms -Commit

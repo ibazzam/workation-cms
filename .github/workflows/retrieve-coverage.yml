@@ -76,3 +76,24 @@ jobs:
           $putBodyJson = $putBody | ConvertTo-Json
           Invoke-RestMethod -Uri "$apiBase/contents/coverage-reports/coverage-summary-ci.json" -Headers $headers -Method Put -Body $putBodyJson -ContentType 'application/json'
           Write-Host 'Uploaded coverage summary via REST API.'
+
+          # create a Shields-compatible badge JSON and upload it as well
+          $summaryDecoded = $putBody.content
+          try {
+            $summaryResp = Invoke-RestMethod -Uri "$apiBase/contents/coverage-reports/coverage-summary-ci.json?ref=$branch" -Headers $headers -Method Get -ErrorAction Stop
+            $summaryContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($summaryResp.content)) | ConvertFrom-Json
+            $pct = $summaryContent.percent.statements
+            $color = if ($pct -ge 90) { 'brightgreen' } elseif ($pct -ge 75) { 'yellow' } else { 'red' }
+            $badgeObj = @{ schemaVersion = 1; label = 'coverage'; message = "$pct%"; color = $color }
+            $badgeJson = ($badgeObj | ConvertTo-Json -Compress)
+            $badgeEncoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($badgeJson))
+            $badgeBody = @{ message = "coverage badge"; content = $badgeEncoded; branch = $branch }
+            $existingBadge = $null
+            try { $existingBadge = Invoke-RestMethod -Uri "$apiBase/contents/coverage-reports/coverage-badge.json?ref=$branch" -Headers $headers -Method Get -ErrorAction Stop } catch { }
+            if ($existingBadge) { $badgeBody.sha = $existingBadge.sha }
+            $badgeBodyJson = $badgeBody | ConvertTo-Json
+            Invoke-RestMethod -Uri "$apiBase/contents/coverage-reports/coverage-badge.json" -Headers $headers -Method Put -Body $badgeBodyJson -ContentType 'application/json'
+            Write-Host 'Uploaded coverage badge JSON.'
+          } catch {
+            Write-Host 'Failed to generate/upload badge JSON:' $_.Exception.Message
+          }

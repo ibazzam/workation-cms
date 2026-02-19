@@ -32,4 +32,47 @@ jobs:
           # ensure script content is available (avoid sparse-checkout issues)
           git fetch --no-tags origin main
           git show origin/main:scripts/retrieve_and_compute.ps1 > .\retrieve_and_compute.ps1
-          pwsh -NoProfile -ExecutionPolicy Bypass -File .\retrieve_and_compute.ps1 -Owner ibazzam -Repo workation-cms -Commit
+          pwsh -NoProfile -ExecutionPolicy Bypass -File .\retrieve_and_compute.ps1 -Owner ibazzam -Repo workation-cms
+
+      - name: Upload coverage summary via GitHub REST API
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.COVERAGE_FETCH_PAT }}
+        run: |
+          Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+          $owner = 'ibazzam'
+          $repo = 'workation-cms'
+          $branch = 'coverage-reports'
+          # find the generated summary file
+          $file = Get-ChildItem -Path $PWD -Recurse -Filter 'coverage-summary-ci.json' -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $file) { Write-Host 'No coverage-summary-ci.json found; skipping upload.'; exit 0 }
+          $contentBytes = [System.IO.File]::ReadAllBytes($file.FullName)
+          $encoded = [Convert]::ToBase64String($contentBytes)
+          $apiBase = "https://api.github.com/repos/$owner/$repo"
+          $headers = @{ Authorization = "token $($env:GITHUB_TOKEN)"; Accept = 'application/vnd.github+json'; 'User-Agent' = 'coverage-uploader' }
+
+          # ensure branch exists; create from main if missing
+          $refUrl = "$apiBase/git/refs/heads/$branch"
+          try {
+            Invoke-RestMethod -Uri $refUrl -Headers $headers -Method Get -ErrorAction Stop | Out-Null
+            Write-Host "Branch $branch exists."
+          } catch {
+            Write-Host "Branch $branch not found; creating from main..."
+            $mainRef = Invoke-RestMethod -Uri "$apiBase/git/refs/heads/main" -Headers $headers -Method Get
+            $mainSha = $mainRef.object.sha
+            $body = @{ ref = "refs/heads/$branch"; sha = $mainSha } | ConvertTo-Json
+            Invoke-RestMethod -Uri "$apiBase/git/refs" -Headers $headers -Method Post -Body $body -ContentType 'application/json'
+            Write-Host "Created branch $branch."
+          }
+
+          # check if file exists to get sha
+          $contentsUrl = "$apiBase/contents/coverage-reports/coverage-summary-ci.json?ref=$branch"
+          $existing = $null
+          try { $existing = Invoke-RestMethod -Uri $contentsUrl -Headers $headers -Method Get -ErrorAction Stop } catch { }
+
+          $msg = "ci: add coverage summary (generated $(Get-Date -Format o))"
+          $putBody = @{ message = $msg; content = $encoded; branch = $branch }
+          if ($existing) { $putBody.sha = $existing.sha }
+          $putBodyJson = $putBody | ConvertTo-Json
+          Invoke-RestMethod -Uri "$apiBase/contents/coverage-reports/coverage-summary-ci.json" -Headers $headers -Method Put -Body $putBodyJson -ContentType 'application/json'
+          Write-Host 'Uploaded coverage summary via REST API.'

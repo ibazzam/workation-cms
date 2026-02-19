@@ -24,4 +24,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.COVERAGE_FETCH_PAT }}
         run: |
           Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-          .\scripts\retrieve_and_compute.ps1 -Owner ibazzam -Repo workation-cms -Commit
+          & "${{ github.workspace }}\scripts\retrieve_and_compute.ps1" -Owner ibazzam -Repo workation-cms -Commit

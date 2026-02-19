@@ -24,6 +24,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.COVERAGE_FETCH_PAT }}
         run: |
           Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+          # configure git identity so commits succeed in the runner
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          # set origin to use the provided PAT for pushes
+          git remote set-url origin "https://x-access-token:${{ secrets.COVERAGE_FETCH_PAT }}@github.com/ibazzam/workation-cms.git"
           # ensure script content is available (avoid sparse-checkout issues)
           git fetch --no-tags origin main
           git show origin/main:scripts/retrieve_and_compute.ps1 > .\retrieve_and_compute.ps1

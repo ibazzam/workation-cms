@@ -1,0 +1,28 @@
+﻿2026-02-19T06:25:27.9982306Z ##[group]Run actions/upload-artifact@v4
+2026-02-19T06:25:27.9982567Z with:
+2026-02-19T06:25:27.9982736Z   name: coverage
+2026-02-19T06:25:27.9983203Z   path: coverage/**
+coverage-final.json
+coverage/coverage-final.json
+coverage/coverage-summary.json
+coverage/*.html
+clover.xml
+
+2026-02-19T06:25:27.9983743Z   if-no-files-found: warn
+2026-02-19T06:25:27.9983949Z   compression-level: 6
+2026-02-19T06:25:27.9984143Z   overwrite: false
+2026-02-19T06:25:27.9984334Z   include-hidden-files: false
+2026-02-19T06:25:27.9984546Z ##[endgroup]
+2026-02-19T06:25:28.2105332Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-02-19T06:25:28.2108105Z The least common ancestor is /home/runner/work/workation-cms/workation-cms. This will be the root directory of the artifact
+2026-02-19T06:25:28.2109236Z With the provided path, there will be 36 files uploaded
+2026-02-19T06:25:28.2113545Z Artifact name is valid!
+2026-02-19T06:25:28.2114345Z Root directory input is valid!
+2026-02-19T06:25:28.4739224Z Beginning upload of artifact content to blob storage
+2026-02-19T06:25:28.9014926Z Uploaded bytes 55965
+2026-02-19T06:25:28.9722974Z Finished uploading artifact content to blob storage!
+2026-02-19T06:25:28.9726983Z SHA256 digest of uploaded artifact zip is 5ca14b0b4559400bd4554ef6c37d53aab376201cfe59f78efc623a2cf06b87e8
+2026-02-19T06:25:28.9728950Z Finalizing artifact upload
+2026-02-19T06:25:29.0990476Z Artifact coverage.zip successfully finalized. Artifact ID 5568074419
+2026-02-19T06:25:29.0991896Z Artifact coverage has been successfully uploaded! Final size is 55965 bytes. Artifact ID is 5568074419
+2026-02-19T06:25:29.0999674Z Artifact download URL: https://github.com/ibazzam/workation-cms/actions/runs/22171049789/artifacts/5568074419

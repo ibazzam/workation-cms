@@ -1,0 +1,28 @@
+﻿2026-02-19T06:25:14.7191206Z ##[group]Run shivammathur/setup-php@v2
+2026-02-19T06:25:14.7192159Z with:
+2026-02-19T06:25:14.7192801Z   php-version: 8.4
+2026-02-19T06:25:14.7193604Z   extensions: mbstring, pdo, pdo_sqlite, xml, gd
+2026-02-19T06:25:14.7194589Z   ini-file: production
+2026-02-19T06:25:14.7195634Z   github-token: ***
+2026-02-19T06:25:14.7196325Z env:
+2026-02-19T06:25:14.7196937Z   APP_ENV: testing
+2026-02-19T06:25:14.7197639Z   DB_CONNECTION: sqlite
+2026-02-19T06:25:14.7198445Z   DB_DATABASE: database/database.sqlite
+2026-02-19T06:25:14.7199323Z ##[endgroup]
+2026-02-19T06:25:14.7859117Z [command]/usr/bin/bash /home/runner/work/_actions/shivammathur/setup-php/v2/src/scripts/run.sh
+2026-02-19T06:25:14.8186322Z 
+2026-02-19T06:25:14.8188595Z [90;1m==> [0m[37;1mSetup PHP[0m
+2026-02-19T06:25:17.6934301Z [32;1m✓ [0m[34;1mPHP [0m[90;1mInstalled PHP 8.4.18[0m
+2026-02-19T06:25:17.6935333Z 
+2026-02-19T06:25:17.6935791Z [90;1m==> [0m[37;1mSetup Extensions[0m
+2026-02-19T06:25:17.7320021Z [32;1m✓ [0m[34;1mmbstring [0m[90;1mEnabled[0m
+2026-02-19T06:25:17.7341529Z [32;1m✓ [0m[34;1mpdo [0m[90;1mEnabled[0m
+2026-02-19T06:25:17.7353491Z [32;1m✓ [0m[34;1mpdo_sqlite [0m[90;1mEnabled[0m
+2026-02-19T06:25:17.7377082Z [32;1m✓ [0m[34;1mxml [0m[90;1mEnabled[0m
+2026-02-19T06:25:17.7401511Z [32;1m✓ [0m[34;1mgd [0m[90;1mEnabled[0m
+2026-02-19T06:25:17.7402650Z 
+2026-02-19T06:25:17.7402918Z [90;1m==> [0m[37;1mSetup Tools[0m
+2026-02-19T06:25:17.9792106Z [32;1m✓ [0m[34;1mcomposer [0m[90;1mAdded composer 2.9.3[0m
+2026-02-19T06:25:17.9793008Z 
+2026-02-19T06:25:17.9793334Z [90;1m==> [0m[37;1mSponsor setup-php[0m
+2026-02-19T06:25:17.9794279Z [32;1m✓ [0m[34;1msetup-php [0m[90;1mhttps://setup-php.com/sponsor[0m

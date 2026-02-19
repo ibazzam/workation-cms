@@ -1,0 +1,8 @@
+2026-02-19T10:53:24.1830000Z Evaluating retrieve.if
+2026-02-19T10:53:24.1830000Z Evaluating: success()
+2026-02-19T10:53:24.1830000Z Result: true
+2026-02-19T10:53:24.1840000Z Requested labels: windows-latest
+2026-02-19T10:53:24.1840000Z Job defined at: ibazzam/workation-cms/.github/workflows/retrieve-coverage.yml@refs/heads/main
+2026-02-19T10:53:24.1840000Z Waiting for a runner to pick up this job...
+2026-02-19T10:53:24.6680000Z Job is about to start running on the hosted runner: GitHub Actions 1000000094
+2026-02-19T10:53:24.6670000Z Job is waiting for a hosted runner to come online.

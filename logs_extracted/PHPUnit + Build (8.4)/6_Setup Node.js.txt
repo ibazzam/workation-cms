@@ -1,0 +1,30 @@
+﻿2026-02-19T06:25:22.7662029Z ##[group]Run actions/setup-node@v4
+2026-02-19T06:25:22.7662271Z with:
+2026-02-19T06:25:22.7662454Z   node-version: 20
+2026-02-19T06:25:22.7662621Z   cache: npm
+2026-02-19T06:25:22.7662818Z   cache-dependency-path: package-lock.json
+2026-02-19T06:25:22.7663060Z   always-auth: false
+2026-02-19T06:25:22.7663243Z   check-latest: false
+2026-02-19T06:25:22.7663583Z   token: ***
+2026-02-19T06:25:22.7663735Z env:
+2026-02-19T06:25:22.7663893Z   APP_ENV: testing
+2026-02-19T06:25:22.7664060Z   DB_CONNECTION: sqlite
+2026-02-19T06:25:22.7664272Z   DB_DATABASE: database/database.sqlite
+2026-02-19T06:25:22.7664507Z   COMPOSER_PROCESS_TIMEOUT: 0
+2026-02-19T06:25:22.7664727Z   COMPOSER_NO_INTERACTION: 1
+2026-02-19T06:25:22.7665793Z   COMPOSER_NO_AUDIT: 1
+2026-02-19T06:25:22.7665994Z ##[endgroup]
+2026-02-19T06:25:22.9342022Z Found in cache @ /opt/hostedtoolcache/node/20.20.0/x64
+2026-02-19T06:25:22.9350265Z ##[group]Environment details
+2026-02-19T06:25:23.2372169Z node: v20.20.0
+2026-02-19T06:25:23.2372579Z npm: 10.8.2
+2026-02-19T06:25:23.2372901Z yarn: 1.22.22
+2026-02-19T06:25:23.2373576Z ##[endgroup]
+2026-02-19T06:25:23.2395276Z [command]/opt/hostedtoolcache/node/20.20.0/x64/bin/npm config get cache
+2026-02-19T06:25:23.3887157Z /home/runner/.npm
+2026-02-19T06:25:23.5117617Z Cache hit for: node-cache-Linux-x64-npm-a0f0f012ed3f872331c61f522efaeb031a2250899a8bce9715aa64c651017ded
+2026-02-19T06:25:24.2062534Z Received 35840014 of 35840014 (100.0%), 60.2 MBs/sec
+2026-02-19T06:25:24.2063802Z Cache Size: ~34 MB (35840014 B)
+2026-02-19T06:25:24.2099528Z [command]/usr/bin/tar -xf /home/runner/work/_temp/b8f9a19e-0f77-402f-a14e-50c390610149/cache.tzst -P -C /home/runner/work/workation-cms/workation-cms --use-compress-program unzstd
+2026-02-19T06:25:24.2691459Z Cache restored successfully
+2026-02-19T06:25:24.2734947Z Cache restored from key: node-cache-Linux-x64-npm-a0f0f012ed3f872331c61f522efaeb031a2250899a8bce9715aa64c651017ded

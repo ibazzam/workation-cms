@@ -1,0 +1,32 @@
+﻿2026-02-19T11:11:58.0932650Z Current runner version: '2.331.0'
+2026-02-19T11:11:58.1007903Z ##[group]Runner Image Provisioner
+2026-02-19T11:11:58.1008671Z Hosted Compute Agent
+2026-02-19T11:11:58.1009139Z Version: 20260123.484
+2026-02-19T11:11:58.1009680Z Commit: 6bd6555ca37d84114959e1c76d2c01448ff61c5d
+2026-02-19T11:11:58.1010347Z Build Date: 2026-01-23T19:41:17Z
+2026-02-19T11:11:58.1011312Z Worker ID: {ef6bece1-f481-47b3-b1ae-c61c9e69097c}
+2026-02-19T11:11:58.1011958Z Azure Region: westcentralus
+2026-02-19T11:11:58.1012475Z ##[endgroup]
+2026-02-19T11:11:58.1014238Z ##[group]Operating System
+2026-02-19T11:11:58.1015025Z Microsoft Windows Server 2025
+2026-02-19T11:11:58.1015608Z 10.0.26100
+2026-02-19T11:11:58.1016042Z Datacenter
+2026-02-19T11:11:58.1016454Z ##[endgroup]
+2026-02-19T11:11:58.1016897Z ##[group]Runner Image
+2026-02-19T11:11:58.1017364Z Image: windows-2025
+2026-02-19T11:11:58.1017773Z Version: 20260209.23.1
+2026-02-19T11:11:58.1018744Z Included Software: https://github.com/actions/runner-images/blob/win25/20260209.23/images/windows/Windows2025-Readme.md
+2026-02-19T11:11:58.1020407Z Image Release: https://github.com/actions/runner-images/releases/tag/win25%2F20260209.23
+2026-02-19T11:11:58.1021261Z ##[endgroup]
+2026-02-19T11:11:58.1022230Z ##[group]GITHUB_TOKEN Permissions
+2026-02-19T11:11:58.1023938Z Contents: read
+2026-02-19T11:11:58.1024398Z Metadata: read
+2026-02-19T11:11:58.1024893Z Packages: read
+2026-02-19T11:11:58.1025387Z ##[endgroup]
+2026-02-19T11:11:58.1027179Z Secret source: Actions
+2026-02-19T11:11:58.1027794Z Prepare workflow directory
+2026-02-19T11:11:58.1391327Z Prepare all required actions
+2026-02-19T11:11:58.1434787Z Getting action download info
+2026-02-19T11:11:58.5355643Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-02-19T11:11:58.6486516Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-02-19T11:11:59.1076680Z Complete job name: Retrieve and compute coverage summary

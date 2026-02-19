@@ -1,0 +1,15 @@
+﻿2026-02-19T10:59:24.1483000Z ##[group]Run Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+2026-02-19T10:59:24.1483743Z [36;1mSet-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force[0m
+2026-02-19T10:59:24.1484226Z [36;1m# ensure script content is available (avoid sparse-checkout issues)[0m
+2026-02-19T10:59:24.1485291Z [36;1mgit fetch --no-tags origin main[0m
+2026-02-19T10:59:24.1485697Z [36;1mgit show origin/main:scripts/retrieve_and_compute.ps1 > .\retrieve_and_compute.ps1[0m
+2026-02-19T10:59:24.1486350Z [36;1mpwsh -NoProfile -ExecutionPolicy Bypass -File .\retrieve_and_compute.ps1 -Owner ibazzam -Repo workation-cms -Commit[0m
+2026-02-19T10:59:24.2081223Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-02-19T10:59:24.2081593Z env:
+2026-02-19T10:59:24.2082114Z   GITHUB_TOKEN: ***
+2026-02-19T10:59:24.2082327Z ##[endgroup]
+2026-02-19T10:59:29.5130540Z From https://github.com/ibazzam/workation-cms
+2026-02-19T10:59:29.5131035Z  * branch            main       -> FETCH_HEAD
+2026-02-19T10:59:30.2839111Z Running fetcher to download artifact...
+2026-02-19T10:59:31.7075909Z [31;1mWrite-Error: [31;1mFetcher failed with exit code -196608.[0m
+2026-02-19T10:59:32.0108511Z ##[error]Process completed with exit code 1.

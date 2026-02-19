@@ -1,0 +1,31 @@
+﻿2026-02-19T06:25:27.7844083Z ##[group]Run actions/setup-node@v4
+2026-02-19T06:25:27.7844588Z with:
+2026-02-19T06:25:27.7844780Z   node-version: 20
+2026-02-19T06:25:27.7844954Z   cache: npm
+2026-02-19T06:25:27.7845156Z   cache-dependency-path: package-lock.json
+2026-02-19T06:25:27.7845410Z   always-auth: false
+2026-02-19T06:25:27.7845600Z   check-latest: false
+2026-02-19T06:25:27.7845910Z   token: ***
+2026-02-19T06:25:27.7846069Z env:
+2026-02-19T06:25:27.7846223Z   APP_ENV: testing
+2026-02-19T06:25:27.7846397Z   DB_CONNECTION: sqlite
+2026-02-19T06:25:27.7846607Z   DB_DATABASE: database/database.sqlite
+2026-02-19T06:25:27.7846851Z   COMPOSER_PROCESS_TIMEOUT: 0
+2026-02-19T06:25:27.7847071Z   COMPOSER_NO_INTERACTION: 1
+2026-02-19T06:25:27.7847271Z   COMPOSER_NO_AUDIT: 1
+2026-02-19T06:25:27.7847457Z ##[endgroup]
+2026-02-19T06:25:27.9603669Z Found in cache @ /opt/hostedtoolcache/node/20.20.0/x64
+2026-02-19T06:25:27.9610582Z ##[group]Environment details
+2026-02-19T06:25:30.1024466Z node: v20.20.0
+2026-02-19T06:25:30.1024870Z npm: 10.8.2
+2026-02-19T06:25:30.1025217Z yarn: 1.22.22
+2026-02-19T06:25:30.1026044Z ##[endgroup]
+2026-02-19T06:25:30.1053989Z [command]/opt/hostedtoolcache/node/20.20.0/x64/bin/npm config get cache
+2026-02-19T06:25:30.3672928Z /home/runner/.npm
+2026-02-19T06:25:30.6463958Z Cache hit for: node-cache-Linux-x64-npm-a0f0f012ed3f872331c61f522efaeb031a2250899a8bce9715aa64c651017ded
+2026-02-19T06:25:31.8867249Z Received 31645710 of 35840014 (88.3%), 30.1 MBs/sec
+2026-02-19T06:25:32.0451170Z Received 35840014 of 35840014 (100.0%), 29.5 MBs/sec
+2026-02-19T06:25:32.0451885Z Cache Size: ~34 MB (35840014 B)
+2026-02-19T06:25:32.0483811Z [command]/usr/bin/tar -xf /home/runner/work/_temp/581cbd10-7b4f-41ec-b5b1-581b1f96f62e/cache.tzst -P -C /home/runner/work/workation-cms/workation-cms --use-compress-program unzstd
+2026-02-19T06:25:32.1380734Z Cache restored successfully
+2026-02-19T06:25:32.1460092Z Cache restored from key: node-cache-Linux-x64-npm-a0f0f012ed3f872331c61f522efaeb031a2250899a8bce9715aa64c651017ded

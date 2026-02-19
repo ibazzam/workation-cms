@@ -39,15 +39,16 @@ if (-not $env:GITHUB_TOKEN) {
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 Write-Host "Running fetcher to download artifact..."
-$argsList = @(
-    '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "${scriptDir}\fetch_coverage_artifact.ps1",
-    '-Owner', $Owner, '-Repo', $Repo, '-Workflow', $Workflow, '-Branch', $Branch,
-    '-ArtifactName', $ArtifactName, '-PollInterval', $PollInterval, '-MaxAttempts', $MaxAttempts
-)
-$proc = Start-Process -FilePath (Get-Command powershell).Source -ArgumentList $argsList -Wait -PassThru
-if ($proc.ExitCode -ne 0) {
-    Write-Error "Fetcher failed with exit code $($proc.ExitCode)."
-    exit $proc.ExitCode
+$fetchScript = Join-Path $scriptDir 'fetch_coverage_artifact.ps1'
+# prefer pwsh when available, fallback to legacy powershell
+$pwshCmd = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
+if (-not $pwshCmd) { $pwshCmd = (Get-Command powershell -ErrorAction SilentlyContinue).Source }
+if (-not $pwshCmd) { Write-Error "No PowerShell executable found on PATH"; exit 2 }
+& $pwshCmd -NoProfile -ExecutionPolicy Bypass -File $fetchScript -Owner $Owner -Repo $Repo -Workflow $Workflow -Branch $Branch -ArtifactName $ArtifactName -PollInterval $PollInterval -MaxAttempts $MaxAttempts
+$fetchExit = $LASTEXITCODE
+if ($fetchExit -ne 0) {
+    Write-Error "Fetcher failed with exit code $fetchExit."
+    exit $fetchExit
 }
 
 Write-Host "Locating downloaded coverage-final JSON..."
@@ -68,9 +69,9 @@ $computeScript = Join-Path $scriptDir 'compute_coverage_summary.cjs'
 if (-not (Test-Path $computeScript)) { Write-Error "Compute script not found: $computeScript"; exit 5 }
 
 Write-Host "Computing coverage summary -> $Out"
-$nodeArgs = @($computeScript, $inputPath, $Out)
-$proc2 = Start-Process -FilePath $nodeCmd.Source -ArgumentList $nodeArgs -Wait -PassThru
-if ($proc2.ExitCode -ne 0) { Write-Error "Node summary generator failed (exit $($proc2.ExitCode))"; exit $proc2.ExitCode }
+ $nodeArgs = @($computeScript, $inputPath, $Out)
+& $nodeCmd.Source @nodeArgs
+if ($LASTEXITCODE -ne 0) { Write-Error "Node summary generator failed (exit $LASTEXITCODE)"; exit $LASTEXITCODE }
 
 Write-Host "Wrote summary: $Out"
 

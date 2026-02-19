@@ -39,7 +39,14 @@ if (-not $env:GITHUB_TOKEN) {
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 Write-Host "Running fetcher to download artifact..."
-$fetchScript = Join-Path $scriptDir 'fetch_coverage_artifact.ps1'
+# resolve fetch script path (try several likely locations)
+$candidates = @(
+    (Join-Path $scriptDir 'fetch_coverage_artifact.ps1'),
+    (Join-Path $scriptDir 'scripts\\fetch_coverage_artifact.ps1'),
+    (Join-Path $scriptDir '..\\scripts\\fetch_coverage_artifact.ps1')
+)
+$fetchScript = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $fetchScript) { Write-Error "Fetch script not found in any expected location: $($candidates -join ', ')"; exit 5 }
 # prefer pwsh when available, fallback to legacy powershell
 $pwshCmd = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
 if (-not $pwshCmd) { $pwshCmd = (Get-Command powershell -ErrorAction SilentlyContinue).Source }
@@ -65,8 +72,14 @@ Write-Host "Using coverage file: $inputPath"
 $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
 if (-not $nodeCmd) { Write-Error '`node` command not found in PATH'; exit 4 }
 
-$computeScript = Join-Path $scriptDir 'compute_coverage_summary.cjs'
-if (-not (Test-Path $computeScript)) { Write-Error "Compute script not found: $computeScript"; exit 5 }
+# resolve compute script path similarly
+$computeCandidates = @(
+    (Join-Path $scriptDir 'compute_coverage_summary.cjs'),
+    (Join-Path $scriptDir 'scripts\\compute_coverage_summary.cjs'),
+    (Join-Path $scriptDir '..\\scripts\\compute_coverage_summary.cjs')
+)
+$computeScript = $computeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $computeScript) { Write-Error "Compute script not found in expected locations: $($computeCandidates -join ', ')"; exit 5 }
 
 Write-Host "Computing coverage summary -> $Out"
  $nodeArgs = @($computeScript, $inputPath, $Out)

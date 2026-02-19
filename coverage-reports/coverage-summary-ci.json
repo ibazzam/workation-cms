@@ -1,9 +1,4 @@
 {
-  "summary": {
-    "statements": 100,
-    "functions": 100,
-    "branches": 100
-  },
   "totals": {
     "s": {
       "t": 33,
@@ -17,5 +12,11 @@
       "t": 9,
       "c": 9
     }
-  }
+  },
+  "percent": {
+    "statements": 100,
+    "functions": 100,
+    "branches": 100
+  },
+  "generated_at": "2026-02-19T08:17:14.970Z"
 }

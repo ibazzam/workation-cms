@@ -63,11 +63,7 @@ jobs:
         run: |
           npm run coverage
 
-      - name: Show coverage files
-        run: |
-          echo "Listing workspace root files:" && ls -la
-          echo "Listing coverage directory (if present):" && ls -la coverage || true
-          echo "Show if a coverage-final.json exists:" && test -f coverage-final.json && echo "coverage-final.json exists" || true
+      # Removed debug listing step to tidy workflow
 
       - name: Check JS coverage thresholds
         continue-on-error: true
@@ -123,11 +119,7 @@ jobs:
         run: |
           npm run coverage
 
-      - name: Show coverage files
-        run: |
-          echo "Listing workspace root files:" && ls -la
-          echo "Listing coverage directory (if present):" && ls -la coverage || true
-          echo "Show if a coverage-final.json exists:" && test -f coverage-final.json && echo "coverage-final.json exists" || true
+      # Removed debug listing step to tidy workflow
 
       - name: Check JS coverage thresholds
         continue-on-error: true

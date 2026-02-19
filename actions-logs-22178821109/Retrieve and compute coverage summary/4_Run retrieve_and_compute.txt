@@ -1,0 +1,15 @@
+﻿2026-02-19T10:53:49.9834582Z ##[group]Run Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+2026-02-19T10:53:49.9835347Z [36;1mSet-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force[0m
+2026-02-19T10:53:49.9835887Z [36;1m.\scripts\retrieve_and_compute.ps1 -Owner ibazzam -Repo workation-cms -Commit[0m
+2026-02-19T10:53:50.0581624Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-02-19T10:53:50.0582142Z env:
+2026-02-19T10:53:50.0582710Z   GITHUB_TOKEN: ***
+2026-02-19T10:53:50.0582948Z ##[endgroup]
+2026-02-19T10:53:56.7094094Z [31;1m.\scripts\retrieve_and_compute.ps1: [0mD:\a\_temp\ffd0b137-afcc-4195-a3fc-7c39e3954fb3.ps1:3[0m
+2026-02-19T10:53:56.7095269Z [31;1m[0m[36;1mLine |[0m
+2026-02-19T10:53:56.7096685Z [31;1m[0m[36;1m[36;1m   3 | [0m [36;1m.\scripts\retrieve_and_compute.ps1[0m -Owner ibazzam -Repo workation-cms …[0m
+2026-02-19T10:53:56.7097875Z [31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+2026-02-19T10:53:56.7099655Z [31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mThe term '.\scripts\retrieve_and_compute.ps1' is not recognized as a name of a cmdlet, function, script file, or[0m
+2026-02-19T10:53:56.7101930Z [31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mexecutable program. Check the spelling of the name, or if a path was included, verify that the path is correct[0m
+2026-02-19T10:53:56.7103035Z [31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mand try again.[0m
+2026-02-19T10:53:56.7970415Z ##[error]Process completed with exit code 1.

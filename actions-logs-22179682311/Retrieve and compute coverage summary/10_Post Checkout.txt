@@ -1,0 +1,15 @@
+﻿2026-02-19T11:21:33.8478118Z Post job cleanup.
+2026-02-19T11:21:34.0421065Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-02-19T11:21:34.0749688Z git version 2.53.0.windows.1
+2026-02-19T11:21:34.0823955Z Copying 'C:\Users\runneradmin\.gitconfig' to 'D:\a\_temp\06f13671-cf59-459e-9762-0ddb6f2ef912\.gitconfig'
+2026-02-19T11:21:34.0848575Z Temporarily overriding HOME='D:\a\_temp\06f13671-cf59-459e-9762-0ddb6f2ef912' before making global git config changes
+2026-02-19T11:21:34.0849712Z Adding repository directory to the temporary git global config as a safe directory
+2026-02-19T11:21:34.0864731Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\workation-cms\workation-cms
+2026-02-19T11:21:34.1212975Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-02-19T11:21:34.1532341Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-02-19T11:21:34.6853410Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-02-19T11:21:34.7097127Z http.https://github.com/.extraheader
+2026-02-19T11:21:34.7148176Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all http.https://github.com/.extraheader
+2026-02-19T11:21:34.7436773Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-02-19T11:21:35.2486780Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-02-19T11:21:35.2810994Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"

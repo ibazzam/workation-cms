@@ -1,0 +1,72 @@
+﻿2026-02-19T06:25:15.5336011Z ##[group]Run actions/checkout@v4
+2026-02-19T06:25:15.5336868Z with:
+2026-02-19T06:25:15.5337198Z   repository: ibazzam/workation-cms
+2026-02-19T06:25:15.5337813Z   token: ***
+2026-02-19T06:25:15.5338101Z   ssh-strict: true
+2026-02-19T06:25:15.5338390Z   ssh-user: git
+2026-02-19T06:25:15.5338696Z   persist-credentials: true
+2026-02-19T06:25:15.5339019Z   clean: true
+2026-02-19T06:25:15.5339318Z   sparse-checkout-cone-mode: true
+2026-02-19T06:25:15.5339667Z   fetch-depth: 1
+2026-02-19T06:25:15.5339951Z   fetch-tags: false
+2026-02-19T06:25:15.5340250Z   show-progress: true
+2026-02-19T06:25:15.5340549Z   lfs: false
+2026-02-19T06:25:15.5340830Z   submodules: false
+2026-02-19T06:25:15.5341121Z   set-safe-directory: true
+2026-02-19T06:25:15.5341653Z ##[endgroup]
+2026-02-19T06:25:15.6369342Z Syncing repository: ibazzam/workation-cms
+2026-02-19T06:25:15.6370942Z ##[group]Getting Git version info
+2026-02-19T06:25:15.6371466Z Working directory is '/home/runner/work/workation-cms/workation-cms'
+2026-02-19T06:25:15.6372361Z [command]/usr/bin/git version
+2026-02-19T06:25:15.6372699Z git version 2.52.0
+2026-02-19T06:25:15.6385447Z ##[endgroup]
+2026-02-19T06:25:15.6405937Z Temporarily overriding HOME='/home/runner/work/_temp/1b951d6a-3e29-43a3-8169-2cbfc220500c' before making global git config changes
+2026-02-19T06:25:15.6407093Z Adding repository directory to the temporary git global config as a safe directory
+2026-02-19T06:25:15.6411075Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/workation-cms/workation-cms
+2026-02-19T06:25:15.6446775Z Deleting the contents of '/home/runner/work/workation-cms/workation-cms'
+2026-02-19T06:25:15.6449888Z ##[group]Initializing the repository
+2026-02-19T06:25:15.6453622Z [command]/usr/bin/git init /home/runner/work/workation-cms/workation-cms
+2026-02-19T06:25:15.6548784Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-02-19T06:25:15.6549517Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-02-19T06:25:15.6550181Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-02-19T06:25:15.6550681Z hint: call:
+2026-02-19T06:25:15.6550942Z hint:
+2026-02-19T06:25:15.6551402Z hint: 	git config --global init.defaultBranch <name>
+2026-02-19T06:25:15.6552080Z hint:
+2026-02-19T06:25:15.6552560Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-02-19T06:25:15.6553134Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-02-19T06:25:15.6553608Z hint:
+2026-02-19T06:25:15.6553892Z hint: 	git branch -m <name>
+2026-02-19T06:25:15.6554194Z hint:
+2026-02-19T06:25:15.6554591Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-02-19T06:25:15.6555273Z Initialized empty Git repository in /home/runner/work/workation-cms/workation-cms/.git/
+2026-02-19T06:25:15.6561968Z [command]/usr/bin/git remote add origin https://github.com/ibazzam/workation-cms
+2026-02-19T06:25:15.6590643Z ##[endgroup]
+2026-02-19T06:25:15.6591266Z ##[group]Disabling automatic garbage collection
+2026-02-19T06:25:15.6594315Z [command]/usr/bin/git config --local gc.auto 0
+2026-02-19T06:25:15.6617421Z ##[endgroup]
+2026-02-19T06:25:15.6617940Z ##[group]Setting up auth
+2026-02-19T06:25:15.6623837Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-02-19T06:25:15.6647913Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-02-19T06:25:15.6931984Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-02-19T06:25:15.6960626Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-02-19T06:25:15.7140178Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-02-19T06:25:15.7170297Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-02-19T06:25:15.7352697Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-02-19T06:25:15.7382134Z ##[endgroup]
+2026-02-19T06:25:15.7382757Z ##[group]Fetching the repository
+2026-02-19T06:25:15.7390592Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +653bb7abef8d44ce0b1c76d85ff321449c6ccc2c:refs/remotes/origin/main
+2026-02-19T06:25:16.2656616Z From https://github.com/ibazzam/workation-cms
+2026-02-19T06:25:16.2657453Z  * [new ref]         653bb7abef8d44ce0b1c76d85ff321449c6ccc2c -> origin/main
+2026-02-19T06:25:16.2684040Z ##[endgroup]
+2026-02-19T06:25:16.2684850Z ##[group]Determining the checkout info
+2026-02-19T06:25:16.2686177Z ##[endgroup]
+2026-02-19T06:25:16.2691708Z [command]/usr/bin/git sparse-checkout disable
+2026-02-19T06:25:16.2726095Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-02-19T06:25:16.2747323Z ##[group]Checking out the ref
+2026-02-19T06:25:16.2751160Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-02-19T06:25:16.2840782Z Switched to a new branch 'main'
+2026-02-19T06:25:16.2842410Z branch 'main' set up to track 'origin/main'.
+2026-02-19T06:25:16.2847963Z ##[endgroup]
+2026-02-19T06:25:16.2877859Z [command]/usr/bin/git log -1 --format=%H
+2026-02-19T06:25:16.2896429Z 653bb7abef8d44ce0b1c76d85ff321449c6ccc2c

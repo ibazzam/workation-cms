@@ -1,0 +1,22 @@
+{
+  "totals": {
+    "s": {
+      "t": 33,
+      "c": 33
+    },
+    "f": {
+      "t": 4,
+      "c": 4
+    },
+    "b": {
+      "t": 9,
+      "c": 9
+    }
+  },
+  "percent": {
+    "statements": 100,
+    "functions": 100,
+    "branches": 100
+  },
+  "generated_at": "2026-02-19T11:02:49.069Z"
+}

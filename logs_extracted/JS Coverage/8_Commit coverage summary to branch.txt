@@ -1,0 +1,67 @@
+﻿2026-02-19T06:25:26.4108415Z ##[warning]Unexpected input(s) 'branch', valid inputs are ['add', 'author_name', 'author_email', 'commit', 'committer_name', 'committer_email', 'cwd', 'default_author', 'fetch', 'message', 'new_branch', 'pathspec_error_handling', 'pull', 'push', 'remove', 'tag', 'tag_push', 'github_token']
+2026-02-19T06:25:26.4113250Z ##[group]Run EndBug/add-and-commit@v9
+2026-02-19T06:25:26.4113491Z with:
+2026-02-19T06:25:26.4113670Z   author_name: github-actions
+2026-02-19T06:25:26.4113909Z   author_email: actions@github.com
+2026-02-19T06:25:26.4114148Z   message: ci: update coverage summary
+2026-02-19T06:25:26.4114415Z   add: coverage-summary.json
+2026-02-19T06:25:26.4114636Z   branch: coverage-reports
+2026-02-19T06:25:26.4114840Z   cwd: .
+2026-02-19T06:25:26.4115014Z   default_author: github_actor
+2026-02-19T06:25:26.4115231Z   fetch: --tags --force
+2026-02-19T06:25:26.4115448Z   pathspec_error_handling: ignore
+2026-02-19T06:25:26.4115676Z   push: true
+2026-02-19T06:25:26.4116002Z   github_token: ***
+2026-02-19T06:25:26.4116219Z ##[endgroup]
+2026-02-19T06:25:26.5001390Z Running in /home/runner/work/workation-cms/workation-cms
+2026-02-19T06:25:26.5020951Z Add input parsed as single string, running 1 git add command.
+2026-02-19T06:25:26.5022075Z > Using 'github-actions <actions@github.com>' as author.
+2026-02-19T06:25:26.5023019Z > Using "ci: update coverage summary" as commit message.
+2026-02-19T06:25:26.5023984Z ##[group]Internal logs
+2026-02-19T06:25:26.5024345Z > Staging files...
+2026-02-19T06:25:26.5024683Z > Adding files...
+2026-02-19T06:25:26.5710851Z > No files to remove.
+2026-02-19T06:25:26.5712156Z > Checking for uncommitted changes in the git working tree...
+2026-02-19T06:25:26.5759065Z > Found 1 changed files.
+2026-02-19T06:25:26.9044442Z > Fetching repo...
+2026-02-19T06:25:27.6957769Z {
+2026-02-19T06:25:27.6958153Z   raw: '',
+2026-02-19T06:25:27.6958592Z   remote: 'https://github.com/ibazzam/workation-cms',
+2026-02-19T06:25:27.6958916Z   branches: [
+2026-02-19T06:25:27.6959103Z     {
+2026-02-19T06:25:27.6959314Z       name: 'ci-add-test-script',
+2026-02-19T06:25:27.6959740Z       tracking: 'origin/ci-add-test-script'
+2026-02-19T06:25:27.6960157Z     }
+2026-02-19T06:25:27.6960404Z   ],
+2026-02-19T06:25:27.6960695Z   tags: [],
+2026-02-19T06:25:27.6960860Z   updated: [],
+2026-02-19T06:25:27.6961038Z   deleted: []
+2026-02-19T06:25:27.6961203Z }
+2026-02-19T06:25:27.6961390Z > Not pulling from repo.
+2026-02-19T06:25:27.6961632Z > Creating commit...
+2026-02-19T06:25:27.7029676Z {
+2026-02-19T06:25:27.7030093Z   author: null,
+2026-02-19T06:25:27.7030445Z   branch: 'main',
+2026-02-19T06:25:27.7030944Z   commit: '9c408cd0e5e4f58eb746e5d9f401d85cd8733ea4',
+2026-02-19T06:25:27.7031422Z   root: false,
+2026-02-19T06:25:27.7031860Z   summary: { changes: 1, insertions: 21, deletions: 0 }
+2026-02-19T06:25:27.7032291Z }
+2026-02-19T06:25:27.7033389Z > No tag info provided.
+2026-02-19T06:25:27.7033776Z > Pushing commit to repo...
+2026-02-19T06:25:27.9333620Z ##[error]Error: Pushing to https://github.com/ibazzam/workation-cms
+remote: Permission to ibazzam/workation-cms.git denied to github-actions[bot].
+fatal: unable to access 'https://github.com/ibazzam/workation-cms/': The requested URL returned error: 403
+
+2026-02-19T06:25:27.9335489Z ##[endgroup]
+2026-02-19T06:25:27.9335808Z ##[group]Outputs
+2026-02-19T06:25:27.9336042Z committed: true
+2026-02-19T06:25:27.9336627Z commit_long_sha: 9c408cd0e5e4f58eb746e5d9f401d85cd8733ea4
+2026-02-19T06:25:27.9336947Z commit_sha: 9c408cd
+2026-02-19T06:25:27.9337136Z pushed: false
+2026-02-19T06:25:27.9337315Z tagged: false
+2026-02-19T06:25:27.9337497Z tag_pushed: false
+2026-02-19T06:25:27.9337846Z ##[endgroup]
+2026-02-19T06:25:27.9339709Z ##[error]Error: Pushing to https://github.com/ibazzam/workation-cms
+remote: Permission to ibazzam/workation-cms.git denied to github-actions[bot].
+fatal: unable to access 'https://github.com/ibazzam/workation-cms/': The requested URL returned error: 403
+

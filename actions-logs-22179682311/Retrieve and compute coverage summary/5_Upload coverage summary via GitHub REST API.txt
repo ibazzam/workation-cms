@@ -1,0 +1,49 @@
+﻿2026-02-19T11:21:31.9272357Z ##[group]Run Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+2026-02-19T11:21:31.9272982Z [36;1mSet-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force[0m
+2026-02-19T11:21:31.9273319Z [36;1m$owner = 'ibazzam'[0m
+2026-02-19T11:21:31.9273528Z [36;1m$repo = 'workation-cms'[0m
+2026-02-19T11:21:31.9273735Z [36;1m$branch = 'coverage-reports'[0m
+2026-02-19T11:21:31.9273973Z [36;1m# find the generated summary file[0m
+2026-02-19T11:21:31.9274536Z [36;1m$file = Get-ChildItem -Path $PWD -Recurse -Filter 'coverage-summary-ci.json' -File -ErrorAction SilentlyContinue | Select-Object -First 1[0m
+2026-02-19T11:21:31.9275272Z [36;1mif (-not $file) { Write-Host 'No coverage-summary-ci.json found; skipping upload.'; exit 0 }[0m
+2026-02-19T11:21:31.9275754Z [36;1m$contentBytes = [System.IO.File]::ReadAllBytes($file.FullName)[0m
+2026-02-19T11:21:31.9276116Z [36;1m$encoded = [Convert]::ToBase64String($contentBytes)[0m
+2026-02-19T11:21:31.9276450Z [36;1m$apiBase = "https://api.github.com/repos/$owner/$repo"[0m
+2026-02-19T11:21:31.9277061Z [36;1m$headers = @{ Authorization = "token $($env:GITHUB_TOKEN)"; Accept = 'application/vnd.github+json'; 'User-Agent' = 'coverage-uploader' }[0m
+2026-02-19T11:21:31.9277555Z [36;1m[0m
+2026-02-19T11:21:31.9277755Z [36;1m# ensure branch exists; create from main if missing[0m
+2026-02-19T11:21:31.9278050Z [36;1m$refUrl = "$apiBase/git/refs/heads/$branch"[0m
+2026-02-19T11:21:31.9278284Z [36;1mtry {[0m
+2026-02-19T11:21:31.9278615Z [36;1m  Invoke-RestMethod -Uri $refUrl -Headers $headers -Method Get -ErrorAction Stop | Out-Null[0m
+2026-02-19T11:21:31.9279200Z [36;1m  Write-Host "Branch $branch exists."[0m
+2026-02-19T11:21:31.9279435Z [36;1m} catch {[0m
+2026-02-19T11:21:31.9279698Z [36;1m  Write-Host "Branch $branch not found; creating from main..."[0m
+2026-02-19T11:21:31.9280169Z [36;1m  $mainRef = Invoke-RestMethod -Uri "$apiBase/git/refs/heads/main" -Headers $headers -Method Get[0m
+2026-02-19T11:21:31.9280595Z [36;1m  $mainSha = $mainRef.object.sha[0m
+2026-02-19T11:21:31.9280909Z [36;1m  $body = @{ ref = "refs/heads/$branch"; sha = $mainSha } | ConvertTo-Json[0m
+2026-02-19T11:21:31.9281492Z [36;1m  Invoke-RestMethod -Uri "$apiBase/git/refs" -Headers $headers -Method Post -Body $body -ContentType 'application/json'[0m
+2026-02-19T11:21:31.9281999Z [36;1m  Write-Host "Created branch $branch."[0m
+2026-02-19T11:21:31.9282215Z [36;1m}[0m
+2026-02-19T11:21:31.9282355Z [36;1m[0m
+2026-02-19T11:21:31.9282517Z [36;1m# check if file exists to get sha[0m
+2026-02-19T11:21:31.9282909Z [36;1m$contentsUrl = "$apiBase/contents/coverage-reports/coverage-summary-ci.json?ref=$branch"[0m
+2026-02-19T11:21:31.9283305Z [36;1m$existing = $null[0m
+2026-02-19T11:21:31.9283802Z [36;1mtry { $existing = Invoke-RestMethod -Uri $contentsUrl -Headers $headers -Method Get -ErrorAction Stop } catch { }[0m
+2026-02-19T11:21:31.9284276Z [36;1m[0m
+2026-02-19T11:21:31.9284509Z [36;1m$msg = "ci: add coverage summary (generated $(Get-Date -Format o))"[0m
+2026-02-19T11:21:31.9284914Z [36;1m$putBody = @{ message = $msg; content = $encoded; branch = $branch }[0m
+2026-02-19T11:21:31.9285511Z [36;1mif ($existing) { $putBody.sha = $existing.sha }[0m
+2026-02-19T11:21:31.9285809Z [36;1m$putBodyJson = $putBody | ConvertTo-Json[0m
+2026-02-19T11:21:31.9286648Z [36;1mInvoke-RestMethod -Uri "$apiBase/contents/coverage-reports/coverage-summary-ci.json" -Headers $headers -Method Put -Body $putBodyJson -ContentType 'application/json'[0m
+2026-02-19T11:21:31.9287352Z [36;1mWrite-Host 'Uploaded coverage summary via REST API.'[0m
+2026-02-19T11:21:31.9351173Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-02-19T11:21:31.9351500Z env:
+2026-02-19T11:21:31.9351866Z   GITHUB_TOKEN: ***
+2026-02-19T11:21:31.9352034Z ##[endgroup]
+2026-02-19T11:21:32.6828996Z Branch coverage-reports exists.
+2026-02-19T11:21:33.5283704Z 
+2026-02-19T11:21:33.5293523Z Uploaded coverage summary via REST API.
+2026-02-19T11:21:33.5323557Z [32;1mcontent[0m
+2026-02-19T11:21:33.5327753Z [32;1m-------                                                                                                                [0m
+2026-02-19T11:21:33.5329666Z @{name=coverage-summary-ci.json; path=coverage-reports/coverage-summary-ci.json; sha=0600dcacdd4d2dc85978ff70d5aa82827…
+2026-02-19T11:21:33.5330605Z 

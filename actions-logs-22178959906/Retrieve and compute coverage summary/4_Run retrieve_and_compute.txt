@@ -1,0 +1,13 @@
+﻿2026-02-19T10:58:02.8077569Z ##[group]Run Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+2026-02-19T10:58:02.8078301Z [36;1mSet-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force[0m
+2026-02-19T10:58:02.8078824Z [36;1m# ensure script content is available (avoid sparse-checkout issues)[0m
+2026-02-19T10:58:02.8079897Z [36;1mgit fetch --no-tags origin main[0m
+2026-02-19T10:58:02.8080317Z [36;1mgit show origin/main:scripts/retrieve_and_compute.ps1 > .\retrieve_and_compute.ps1[0m
+2026-02-19T10:58:02.8081413Z [36;1mpwsh -NoProfile -ExecutionPolicy Bypass -File .\retrieve_and_compute.ps1 -Owner ibazzam -Repo workation-cms -Commit[0m
+2026-02-19T10:58:02.8766129Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-02-19T10:58:02.8766543Z env:
+2026-02-19T10:58:02.8766984Z   GITHUB_TOKEN: ***
+2026-02-19T10:58:02.8767224Z ##[endgroup]
+2026-02-19T10:58:08.3598662Z From https://github.com/ibazzam/workation-cms
+2026-02-19T10:58:08.3599169Z  * branch            main       -> FETCH_HEAD
+2026-02-19T10:58:08.4250630Z fatal: path 'scripts/retrieve_and_compute.ps1' does not exist in 'origin/main'

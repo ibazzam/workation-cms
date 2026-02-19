@@ -1,0 +1,199 @@
+﻿2026-02-19T11:21:11.5224593Z Current runner version: '2.331.0'
+2026-02-19T11:21:11.5249208Z ##[group]Runner Image Provisioner
+2026-02-19T11:21:11.5249922Z Hosted Compute Agent
+2026-02-19T11:21:11.5250374Z Version: 20260123.484
+2026-02-19T11:21:11.5250931Z Commit: 6bd6555ca37d84114959e1c76d2c01448ff61c5d
+2026-02-19T11:21:11.5251536Z Build Date: 2026-01-23T19:41:17Z
+2026-02-19T11:21:11.5252086Z Worker ID: {8ccc9da1-01e0-4af9-9a2c-d4c4de3fb60f}
+2026-02-19T11:21:11.5252693Z Azure Region: westus3
+2026-02-19T11:21:11.5253142Z ##[endgroup]
+2026-02-19T11:21:11.5254280Z ##[group]Operating System
+2026-02-19T11:21:11.5254790Z Microsoft Windows Server 2025
+2026-02-19T11:21:11.5255216Z 10.0.26100
+2026-02-19T11:21:11.5255641Z Datacenter
+2026-02-19T11:21:11.5256035Z ##[endgroup]
+2026-02-19T11:21:11.5256401Z ##[group]Runner Image
+2026-02-19T11:21:11.5256876Z Image: windows-2025
+2026-02-19T11:21:11.5257262Z Version: 20260209.23.1
+2026-02-19T11:21:11.5258496Z Included Software: https://github.com/actions/runner-images/blob/win25/20260209.23/images/windows/Windows2025-Readme.md
+2026-02-19T11:21:11.5259720Z Image Release: https://github.com/actions/runner-images/releases/tag/win25%2F20260209.23
+2026-02-19T11:21:11.5260461Z ##[endgroup]
+2026-02-19T11:21:11.5261392Z ##[group]GITHUB_TOKEN Permissions
+2026-02-19T11:21:11.5263447Z Contents: read
+2026-02-19T11:21:11.5263907Z Metadata: read
+2026-02-19T11:21:11.5264333Z Packages: read
+2026-02-19T11:21:11.5264737Z ##[endgroup]
+2026-02-19T11:21:11.5266568Z Secret source: Actions
+2026-02-19T11:21:11.5267240Z Prepare workflow directory
+2026-02-19T11:21:11.5666806Z Prepare all required actions
+2026-02-19T11:21:11.5704097Z Getting action download info
+2026-02-19T11:21:11.9203488Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-02-19T11:21:12.0311984Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-02-19T11:21:12.2760172Z Complete job name: Retrieve and compute coverage summary
+2026-02-19T11:21:12.4130763Z ##[group]Run actions/checkout@v4
+2026-02-19T11:21:12.4132226Z with:
+2026-02-19T11:21:12.4132874Z   repository: ibazzam/workation-cms
+2026-02-19T11:21:12.4133687Z   token: ***
+2026-02-19T11:21:12.4134127Z   ssh-strict: true
+2026-02-19T11:21:12.4134647Z   ssh-user: git
+2026-02-19T11:21:12.4135082Z   persist-credentials: true
+2026-02-19T11:21:12.4135652Z   clean: true
+2026-02-19T11:21:12.4136170Z   sparse-checkout-cone-mode: true
+2026-02-19T11:21:12.4136709Z   fetch-depth: 1
+2026-02-19T11:21:12.4137218Z   fetch-tags: false
+2026-02-19T11:21:12.4137740Z   show-progress: true
+2026-02-19T11:21:12.4138119Z   lfs: false
+2026-02-19T11:21:12.4138515Z   submodules: false
+2026-02-19T11:21:12.4138880Z   set-safe-directory: true
+2026-02-19T11:21:12.4139612Z ##[endgroup]
+2026-02-19T11:21:12.5764734Z Syncing repository: ibazzam/workation-cms
+2026-02-19T11:21:12.5768081Z ##[group]Getting Git version info
+2026-02-19T11:21:12.5769726Z Working directory is 'D:\a\workation-cms\workation-cms'
+2026-02-19T11:21:12.6648319Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-02-19T11:21:13.0299774Z git version 2.53.0.windows.1
+2026-02-19T11:21:13.0392014Z ##[endgroup]
+2026-02-19T11:21:13.0397439Z Temporarily overriding HOME='D:\a\_temp\afe6f357-2ab2-4abf-b314-e6b8002cc21f' before making global git config changes
+2026-02-19T11:21:13.0398733Z Adding repository directory to the temporary git global config as a safe directory
+2026-02-19T11:21:13.0400024Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\workation-cms\workation-cms
+2026-02-19T11:21:13.0940342Z Deleting the contents of 'D:\a\workation-cms\workation-cms'
+2026-02-19T11:21:13.0946945Z ##[group]Initializing the repository
+2026-02-19T11:21:13.0956741Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\workation-cms\workation-cms
+2026-02-19T11:21:13.1761448Z Initialized empty Git repository in D:/a/workation-cms/workation-cms/.git/
+2026-02-19T11:21:13.1807142Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/ibazzam/workation-cms
+2026-02-19T11:21:13.2328318Z ##[endgroup]
+2026-02-19T11:21:13.2329723Z ##[group]Disabling automatic garbage collection
+2026-02-19T11:21:13.2337609Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+2026-02-19T11:21:13.2622885Z ##[endgroup]
+2026-02-19T11:21:13.2624487Z ##[group]Setting up auth
+2026-02-19T11:21:13.2636587Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-02-19T11:21:13.2924694Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-02-19T11:21:14.6509484Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-02-19T11:21:14.6791508Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-02-19T11:21:15.1916101Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-02-19T11:21:15.2200708Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-02-19T11:21:15.6968274Z [command]"C:\Program Files\Git\bin\git.exe" config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+2026-02-19T11:21:15.7278683Z ##[endgroup]
+2026-02-19T11:21:15.7279815Z ##[group]Fetching the repository
+2026-02-19T11:21:15.7298025Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +e35e037dab87ccdb0485a33f0cc7a2477e111650:refs/remotes/origin/main
+2026-02-19T11:21:16.8227264Z From https://github.com/ibazzam/workation-cms
+2026-02-19T11:21:16.8228491Z  * [new ref]         e35e037dab87ccdb0485a33f0cc7a2477e111650 -> origin/main
+2026-02-19T11:21:16.8564069Z ##[endgroup]
+2026-02-19T11:21:16.8564889Z ##[group]Determining the checkout info
+2026-02-19T11:21:16.8567069Z ##[endgroup]
+2026-02-19T11:21:16.8582046Z [command]"C:\Program Files\Git\bin\git.exe" sparse-checkout disable
+2026-02-19T11:21:16.8989093Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all extensions.worktreeConfig
+2026-02-19T11:21:16.9270596Z ##[group]Checking out the ref
+2026-02-19T11:21:16.9281055Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force -B main refs/remotes/origin/main
+2026-02-19T11:21:17.0073802Z Switched to a new branch 'main'
+2026-02-19T11:21:17.0093622Z branch 'main' set up to track 'origin/main'.
+2026-02-19T11:21:17.0145096Z ##[endgroup]
+2026-02-19T11:21:17.0531805Z [command]"C:\Program Files\Git\bin\git.exe" log -1 --format=%H
+2026-02-19T11:21:17.0784305Z e35e037dab87ccdb0485a33f0cc7a2477e111650
+2026-02-19T11:21:17.1291212Z ##[group]Run actions/setup-node@v4
+2026-02-19T11:21:17.1291535Z with:
+2026-02-19T11:21:17.1291683Z   node-version: 20
+2026-02-19T11:21:17.1291853Z   always-auth: false
+2026-02-19T11:21:17.1292030Z   check-latest: false
+2026-02-19T11:21:17.1292347Z   token: ***
+2026-02-19T11:21:17.1292513Z ##[endgroup]
+2026-02-19T11:21:17.3702133Z Found in cache @ C:\hostedtoolcache\windows\node\20.20.0\x64
+2026-02-19T11:21:17.3711232Z ##[group]Environment details
+2026-02-19T11:21:21.1614190Z node: v20.20.0
+2026-02-19T11:21:21.1614500Z npm: 10.8.2
+2026-02-19T11:21:21.1614748Z yarn: 1.22.22
+2026-02-19T11:21:21.1617587Z ##[endgroup]
+2026-02-19T11:21:21.1969579Z ##[group]Run Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+2026-02-19T11:21:21.1970256Z [36;1mSet-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force[0m
+2026-02-19T11:21:21.1970692Z [36;1m# configure git identity so commits succeed in the runner[0m
+2026-02-19T11:21:21.1971754Z [36;1mgit config --global user.email "actions@github.com"[0m
+2026-02-19T11:21:21.1972085Z [36;1mgit config --global user.name "GitHub Actions"[0m
+2026-02-19T11:21:21.1972656Z [36;1m# set origin to use the provided PAT for pushes[0m
+2026-02-19T11:21:21.1973525Z [36;1mgit remote set-url origin "***github.com/ibazzam/workation-cms.git"[0m
+2026-02-19T11:21:21.1974126Z [36;1m# ensure script content is available (avoid sparse-checkout issues)[0m
+2026-02-19T11:21:21.1974482Z [36;1mgit fetch --no-tags origin main[0m
+2026-02-19T11:21:21.1974899Z [36;1mgit show origin/main:scripts/retrieve_and_compute.ps1 > .\retrieve_and_compute.ps1[0m
+2026-02-19T11:21:21.1975565Z [36;1mpwsh -NoProfile -ExecutionPolicy Bypass -File .\retrieve_and_compute.ps1 -Owner ibazzam -Repo workation-cms[0m
+2026-02-19T11:21:21.2618372Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-02-19T11:21:21.2618775Z env:
+2026-02-19T11:21:21.2619282Z   GITHUB_TOKEN: ***
+2026-02-19T11:21:21.2619526Z ##[endgroup]
+2026-02-19T11:21:27.9332438Z From https://github.com/ibazzam/workation-cms
+2026-02-19T11:21:27.9333159Z  * branch            main       -> FETCH_HEAD
+2026-02-19T11:21:28.6239542Z Running fetcher to download artifact...
+2026-02-19T11:21:28.9951885Z Polling workflow runs for 'phpunit.yml' on ibazzam/workation-cms (branch=main) looking for artifact 'coverage'...
+2026-02-19T11:21:30.0771516Z Checking run 22179510184 (created: 02/19/2026 11:15:32)...
+2026-02-19T11:21:30.3355270Z Found artifact 'coverage' (id=5571358487) in run 22179510184; downloading...
+2026-02-19T11:21:31.4280467Z Extracted artifact to D:\a\workation-cms\workation-cms\artifacts\artifact_22179510184_5571358487
+2026-02-19T11:21:31.4509995Z Found coverage-final.json -> D:\a\workation-cms\workation-cms\coverage-final-run22179510184-artifact.json
+2026-02-19T11:21:31.6987124Z Locating downloaded coverage-final JSON...
+2026-02-19T11:21:31.7206285Z Using coverage file: D:\a\workation-cms\workation-cms\coverage-final-run22179510184-artifact.json
+2026-02-19T11:21:31.7247872Z Computing coverage summary -> coverage-summary-ci.json
+2026-02-19T11:21:31.7710552Z Wrote coverage-summary-ci.json -> {"totals":{"s":{"t":33,"c":33},"f":{"t":4,"c":4},"b":{"t":9,"c":9}},"percent":{"statements":100,"functions":100,"branches":100},"generated_at":"2026-02-19T11:21:31.764Z"}
+2026-02-19T11:21:31.7786049Z Wrote summary: coverage-summary-ci.json
+2026-02-19T11:21:31.7801404Z Done.
+2026-02-19T11:21:31.9272381Z ##[group]Run Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+2026-02-19T11:21:31.9272992Z [36;1mSet-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force[0m
+2026-02-19T11:21:31.9273323Z [36;1m$owner = 'ibazzam'[0m
+2026-02-19T11:21:31.9273531Z [36;1m$repo = 'workation-cms'[0m
+2026-02-19T11:21:31.9273738Z [36;1m$branch = 'coverage-reports'[0m
+2026-02-19T11:21:31.9273975Z [36;1m# find the generated summary file[0m
+2026-02-19T11:21:31.9274539Z [36;1m$file = Get-ChildItem -Path $PWD -Recurse -Filter 'coverage-summary-ci.json' -File -ErrorAction SilentlyContinue | Select-Object -First 1[0m
+2026-02-19T11:21:31.9275274Z [36;1mif (-not $file) { Write-Host 'No coverage-summary-ci.json found; skipping upload.'; exit 0 }[0m
+2026-02-19T11:21:31.9275756Z [36;1m$contentBytes = [System.IO.File]::ReadAllBytes($file.FullName)[0m
+2026-02-19T11:21:31.9276119Z [36;1m$encoded = [Convert]::ToBase64String($contentBytes)[0m
+2026-02-19T11:21:31.9276501Z [36;1m$apiBase = "https://api.github.com/repos/$owner/$repo"[0m
+2026-02-19T11:21:31.9277064Z [36;1m$headers = @{ Authorization = "token $($env:GITHUB_TOKEN)"; Accept = 'application/vnd.github+json'; 'User-Agent' = 'coverage-uploader' }[0m
+2026-02-19T11:21:31.9277558Z [36;1m[0m
+2026-02-19T11:21:31.9277758Z [36;1m# ensure branch exists; create from main if missing[0m
+2026-02-19T11:21:31.9278053Z [36;1m$refUrl = "$apiBase/git/refs/heads/$branch"[0m
+2026-02-19T11:21:31.9278287Z [36;1mtry {[0m
+2026-02-19T11:21:31.9278618Z [36;1m  Invoke-RestMethod -Uri $refUrl -Headers $headers -Method Get -ErrorAction Stop | Out-Null[0m
+2026-02-19T11:21:31.9279202Z [36;1m  Write-Host "Branch $branch exists."[0m
+2026-02-19T11:21:31.9279438Z [36;1m} catch {[0m
+2026-02-19T11:21:31.9279700Z [36;1m  Write-Host "Branch $branch not found; creating from main..."[0m
+2026-02-19T11:21:31.9280172Z [36;1m  $mainRef = Invoke-RestMethod -Uri "$apiBase/git/refs/heads/main" -Headers $headers -Method Get[0m
+2026-02-19T11:21:31.9280601Z [36;1m  $mainSha = $mainRef.object.sha[0m
+2026-02-19T11:21:31.9280922Z [36;1m  $body = @{ ref = "refs/heads/$branch"; sha = $mainSha } | ConvertTo-Json[0m
+2026-02-19T11:21:31.9281494Z [36;1m  Invoke-RestMethod -Uri "$apiBase/git/refs" -Headers $headers -Method Post -Body $body -ContentType 'application/json'[0m
+2026-02-19T11:21:31.9282001Z [36;1m  Write-Host "Created branch $branch."[0m
+2026-02-19T11:21:31.9282223Z [36;1m}[0m
+2026-02-19T11:21:31.9282357Z [36;1m[0m
+2026-02-19T11:21:31.9282519Z [36;1m# check if file exists to get sha[0m
+2026-02-19T11:21:31.9282911Z [36;1m$contentsUrl = "$apiBase/contents/coverage-reports/coverage-summary-ci.json?ref=$branch"[0m
+2026-02-19T11:21:31.9283308Z [36;1m$existing = $null[0m
+2026-02-19T11:21:31.9283805Z [36;1mtry { $existing = Invoke-RestMethod -Uri $contentsUrl -Headers $headers -Method Get -ErrorAction Stop } catch { }[0m
+2026-02-19T11:21:31.9284278Z [36;1m[0m
+2026-02-19T11:21:31.9284516Z [36;1m$msg = "ci: add coverage summary (generated $(Get-Date -Format o))"[0m
+2026-02-19T11:21:31.9284915Z [36;1m$putBody = @{ message = $msg; content = $encoded; branch = $branch }[0m
+2026-02-19T11:21:31.9285514Z [36;1mif ($existing) { $putBody.sha = $existing.sha }[0m
+2026-02-19T11:21:31.9285811Z [36;1m$putBodyJson = $putBody | ConvertTo-Json[0m
+2026-02-19T11:21:31.9286652Z [36;1mInvoke-RestMethod -Uri "$apiBase/contents/coverage-reports/coverage-summary-ci.json" -Headers $headers -Method Put -Body $putBodyJson -ContentType 'application/json'[0m
+2026-02-19T11:21:31.9287354Z [36;1mWrite-Host 'Uploaded coverage summary via REST API.'[0m
+2026-02-19T11:21:31.9351184Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-02-19T11:21:31.9351503Z env:
+2026-02-19T11:21:31.9351869Z   GITHUB_TOKEN: ***
+2026-02-19T11:21:31.9352037Z ##[endgroup]
+2026-02-19T11:21:32.6829029Z Branch coverage-reports exists.
+2026-02-19T11:21:33.5283755Z 
+2026-02-19T11:21:33.5293540Z Uploaded coverage summary via REST API.
+2026-02-19T11:21:33.5326654Z [32;1mcontent[0m
+2026-02-19T11:21:33.5327761Z [32;1m-------                                                                                                                [0m
+2026-02-19T11:21:33.5329677Z @{name=coverage-summary-ci.json; path=coverage-reports/coverage-summary-ci.json; sha=0600dcacdd4d2dc85978ff70d5aa82827…
+2026-02-19T11:21:33.5330613Z 
+2026-02-19T11:21:33.6163401Z Post job cleanup.
+2026-02-19T11:21:33.8478143Z Post job cleanup.
+2026-02-19T11:21:34.0421096Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-02-19T11:21:34.0749725Z git version 2.53.0.windows.1
+2026-02-19T11:21:34.0823993Z Copying 'C:\Users\runneradmin\.gitconfig' to 'D:\a\_temp\06f13671-cf59-459e-9762-0ddb6f2ef912\.gitconfig'
+2026-02-19T11:21:34.0848607Z Temporarily overriding HOME='D:\a\_temp\06f13671-cf59-459e-9762-0ddb6f2ef912' before making global git config changes
+2026-02-19T11:21:34.0849716Z Adding repository directory to the temporary git global config as a safe directory
+2026-02-19T11:21:34.0864746Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\workation-cms\workation-cms
+2026-02-19T11:21:34.1213010Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-02-19T11:21:34.1532497Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-02-19T11:21:34.6853459Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-02-19T11:21:34.7097176Z http.https://github.com/.extraheader
+2026-02-19T11:21:34.7148219Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all http.https://github.com/.extraheader
+2026-02-19T11:21:34.7436809Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-02-19T11:21:35.2486828Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-02-19T11:21:35.2811049Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-02-19T11:21:35.8261700Z Cleaning up orphan processes

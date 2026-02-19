@@ -1,0 +1,43 @@
+﻿2026-02-19T11:05:14.5811299Z ##[group]Run Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+2026-02-19T11:05:14.5812108Z [36;1mSet-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force[0m
+2026-02-19T11:05:14.5812726Z [36;1m# ensure script content is available (avoid sparse-checkout issues)[0m
+2026-02-19T11:05:14.5813928Z [36;1mgit fetch --no-tags origin main[0m
+2026-02-19T11:05:14.5814460Z [36;1mgit show origin/main:scripts/retrieve_and_compute.ps1 > .\retrieve_and_compute.ps1[0m
+2026-02-19T11:05:14.5815348Z [36;1mpwsh -NoProfile -ExecutionPolicy Bypass -File .\retrieve_and_compute.ps1 -Owner ibazzam -Repo workation-cms -Commit[0m
+2026-02-19T11:05:14.6475528Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-02-19T11:05:14.6475950Z env:
+2026-02-19T11:05:14.6476424Z   GITHUB_TOKEN: ***
+2026-02-19T11:05:14.6476622Z ##[endgroup]
+2026-02-19T11:05:20.4907072Z From https://github.com/ibazzam/workation-cms
+2026-02-19T11:05:20.4907591Z  * branch            main       -> FETCH_HEAD
+2026-02-19T11:05:21.2699028Z Running fetcher to download artifact...
+2026-02-19T11:05:21.6998086Z Polling workflow runs for 'phpunit.yml' on ibazzam/workation-cms (branch=main) looking for artifact 'coverage'...
+2026-02-19T11:05:22.8030356Z Checking run 22179121641 (created: 02/19/2026 11:03:03)...
+2026-02-19T11:05:23.1043232Z Found artifact 'coverage' (id=5571201694) in run 22179121641; downloading...
+2026-02-19T11:05:24.1430359Z Extracted artifact to D:\a\workation-cms\workation-cms\artifacts\artifact_22179121641_5571201694
+2026-02-19T11:05:24.1952389Z Found coverage-final.json -> D:\a\workation-cms\workation-cms\coverage-final-run22179121641-artifact.json
+2026-02-19T11:05:24.4549074Z Locating downloaded coverage-final JSON...
+2026-02-19T11:05:24.4807757Z Using coverage file: D:\a\workation-cms\workation-cms\coverage-final-run22179121641-artifact.json
+2026-02-19T11:05:24.4854621Z Computing coverage summary -> coverage-summary-ci.json
+2026-02-19T11:05:24.5362192Z Wrote coverage-summary-ci.json -> {"totals":{"s":{"t":33,"c":33},"f":{"t":4,"c":4},"b":{"t":9,"c":9}},"percent":{"statements":100,"functions":100,"branches":100},"generated_at":"2026-02-19T11:05:24.529Z"}
+2026-02-19T11:05:24.5449547Z Wrote summary: coverage-summary-ci.json
+2026-02-19T11:05:24.5465625Z Committing coverage-summary-ci.json to branch coverage-reports
+2026-02-19T11:05:24.6043491Z Switched to a new branch 'coverage-reports'
+2026-02-19T11:05:24.7089887Z Author identity unknown
+2026-02-19T11:05:24.7090135Z 
+2026-02-19T11:05:24.7090281Z *** Please tell me who you are.
+2026-02-19T11:05:24.7090449Z 
+2026-02-19T11:05:24.7090529Z Run
+2026-02-19T11:05:24.7090677Z 
+2026-02-19T11:05:24.7090928Z   git config --global user.email "you@example.com"
+2026-02-19T11:05:24.7091394Z   git config --global user.name "Your Name"
+2026-02-19T11:05:24.7091586Z 
+2026-02-19T11:05:24.7091723Z to set your account's default identity.
+2026-02-19T11:05:24.7092092Z Omit --global to set the identity only in this repository.
+2026-02-19T11:05:24.7092374Z 
+2026-02-19T11:05:24.7092676Z fatal: unable to auto-detect email address (got 'runneradmin@runnervmvlcqd.(none)')
+2026-02-19T11:05:24.7150876Z No changes to commit or commit failed (exit 128)
+2026-02-19T11:05:24.9803039Z remote: Permission to ibazzam/workation-cms.git denied to github-actions[bot].
+2026-02-19T11:05:24.9804593Z fatal: unable to access 'https://github.com/ibazzam/workation-cms/': The requested URL returned error: 403
+2026-02-19T11:05:24.9892306Z Pushed coverage summary to origin/coverage-reports
+2026-02-19T11:05:24.9897806Z Done.

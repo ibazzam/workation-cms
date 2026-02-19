@@ -1,0 +1,25 @@
+﻿2026-02-19T06:25:54.2889796Z ##[group]Run actions/upload-artifact@v4
+2026-02-19T06:25:54.2890255Z with:
+2026-02-19T06:25:54.2890533Z   name: coverage
+2026-02-19T06:25:54.2890908Z   path: coverage/**
+coverage-final.json
+clover.xml
+
+2026-02-19T06:25:54.2891393Z   if-no-files-found: warn
+2026-02-19T06:25:54.2891744Z   compression-level: 6
+2026-02-19T06:25:54.2892070Z   overwrite: false
+2026-02-19T06:25:54.2892384Z   include-hidden-files: false
+2026-02-19T06:25:54.2892708Z env:
+2026-02-19T06:25:54.2892955Z   APP_ENV: testing
+2026-02-19T06:25:54.2893237Z   DB_CONNECTION: sqlite
+2026-02-19T06:25:54.2893580Z   DB_DATABASE: database/database.sqlite
+2026-02-19T06:25:54.2893983Z   COMPOSER_PROCESS_TIMEOUT: 0
+2026-02-19T06:25:54.2894349Z   COMPOSER_NO_INTERACTION: 1
+2026-02-19T06:25:54.2894703Z   COMPOSER_NO_AUDIT: 1
+2026-02-19T06:25:54.2895042Z ##[endgroup]
+2026-02-19T06:25:54.5035161Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-02-19T06:25:54.5036973Z The least common ancestor is /home/runner/work/workation-cms/workation-cms. This will be the root directory of the artifact
+2026-02-19T06:25:54.5038114Z With the provided path, there will be 55 files uploaded
+2026-02-19T06:25:54.5038833Z Artifact name is valid!
+2026-02-19T06:25:54.5039270Z Root directory input is valid!
+2026-02-19T06:25:54.6295137Z ##[error]Failed to CreateArtifact: Received non-retryable error: Failed request: (409) Conflict: an artifact with this name already exists on the workflow run

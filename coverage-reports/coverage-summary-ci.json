@@ -1,0 +1,21 @@
+{
+  "summary": {
+    "statements": 100,
+    "functions": 100,
+    "branches": 100
+  },
+  "totals": {
+    "s": {
+      "t": 33,
+      "c": 33
+    },
+    "f": {
+      "t": 4,
+      "c": 4
+    },
+    "b": {
+      "t": 9,
+      "c": 9
+    }
+  }
+}

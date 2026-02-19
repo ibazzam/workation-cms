@@ -1,0 +1,27 @@
+name: Retrieve Coverage Summary
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *' # daily at 02:00 UTC
+
+jobs:
+  retrieve:
+    name: Retrieve and compute coverage summary
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run retrieve_and_compute
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.COVERAGE_FETCH_PAT }}
+        run: |
+          Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+          .\scripts\retrieve_and_compute.ps1 -Owner ibazzam -Repo workation-cms -Commit

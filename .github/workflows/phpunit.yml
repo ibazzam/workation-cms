@@ -76,18 +76,28 @@ jobs:
           fail_ci_if_error: false
 
       - name: Upload coverage artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage
+          name: coverage-php-${{ matrix.php }}
           path: |
             coverage/**
             coverage-final.json
             clover.xml
+          if-no-files-found: warn
 
       - name: Prepare SQLite database
         run: |
           mkdir -p database
           php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
+
+      - name: Prepare environment file
+        run: |
+          if [ -f .env.example ]; then
+            cp .env.example .env
+          elif [ ! -f .env ]; then
+            touch .env
+          fi
 
       - name: Generate app key
         run: php artisan key:generate --force
@@ -131,6 +141,7 @@ jobs:
           node -e "const fs=require('fs');const p=fs.existsSync('coverage-final.json')?'coverage-final.json':(fs.existsSync('coverage/coverage-final.json')?'coverage/coverage-final.json':null); if(!p){ console.log('no coverage json'); process.exit(0);} const cov=JSON.parse(fs.readFileSync(p)); let totals={s:{t:0,c:0},f:{t:0,c:0},b:{t:0,c:0}}; for(const k of Object.keys(cov)){ if(!k.includes('/resources/js/') && !k.includes('resources\\js')) continue; const file=cov[k]; const s=file.s||{}; const f=file.f||{}; const b=file.b||{}; totals.s.t+=Object.keys(s).length; totals.s.c+=Object.values(s).filter(x=>x>0).length; totals.f.t+=Object.keys(f).length; totals.f.c+=Object.values(f).filter(x=>x>0).length; totals.b.t+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].length:0),0); totals.b.c+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].filter(x=>x>0).length:0),0);} const pct=(n,m)=>(m?100*n/m:0); const summary={statements:pct(totals.s.c,totals.s.t).toFixed(2),functions:pct(totals.f.c,totals.f.t).toFixed(2),branches:pct(totals.b.c,totals.b.t).toFixed(2)}; fs.writeFileSync('coverage-summary.json', JSON.stringify({summary, totals}, null, 2)); console.log('Wrote coverage-summary.json');"
 
       - name: Commit coverage summary to branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: EndBug/add-and-commit@v9
         with:
           author_name: github-actions
@@ -151,6 +162,7 @@ jobs:
             coverage/coverage-summary.json
             coverage/*.html
             clover.xml
+          if-no-files-found: warn
 
       - name: Upload coverage to Codecov
         if: success()

@@ -91,6 +91,14 @@ jobs:
           mkdir -p database
           php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
 
+      - name: Prepare environment file
+        run: |
+          if [ -f .env.example ]; then
+            cp .env.example .env
+          elif [ ! -f .env ]; then
+            touch .env
+          fi
+
       - name: Generate app key
         run: php artisan key:generate --force
 

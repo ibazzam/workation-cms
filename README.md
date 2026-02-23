@@ -33,6 +33,12 @@ Local development
 
 See `docs/development.md` for local development and testing instructions (Dev Container, Docker, and test commands).
 
+Architecture decisions
+----------------------
+
+- Backend decision (accepted): `docs/architecture/adr-0001-backend-decision.md`
+- Laravel -> NestJS migration plan: `docs/architecture/backend-migration-plan.md`
+
 ## Learning Laravel
 
 Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.

@@ -91,7 +91,7 @@ export function registerBackendLifecycle(test) {
         ...process.env,
         PORT: String(port),
       },
-      stdio: 'ignore',
+      stdio: 'inherit',
     });
 
     await waitForHealth();

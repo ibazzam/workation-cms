@@ -88,8 +88,17 @@ async function bootstrap() {
   });
   app.setGlobalPrefix('api/v1');
   const port = Number(process.env.PORT ?? 3000);
-  await app.listen(port);
-  console.log(`Workation backend listening on http://localhost:${port}`);
+  // Bind explicitly to 0.0.0.0 so the process is reachable from the host
+  await app.listen(port, '0.0.0.0');
+  console.log(`Workation backend listening on http://0.0.0.0:${port} (PORT=${process.env.PORT ?? 'unset'})`);
+
+  process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled Rejection at:', reason);
+  });
+  process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    process.exit(1);
+  });
 }
 
 bootstrap();

@@ -17,9 +17,9 @@ Migrate backend ownership from Laravel to NestJS with zero critical downtime, pr
 
 ## Current baseline
 
-- Laravel has operational CRUD API for `workations`.
-- NestJS currently exposes health only.
-- Prisma schema exists but is configured for SQLite and not yet serving production API flows.
+- Laravel product API routes are decommissioned (`/api/*` returns HTTP `410`).
+- NestJS is the active product API runtime under `/api/v1` for core domains.
+- Prisma schema is PostgreSQL-backed and used by contract/smoke suites in CI.
 
 ## Migration strategy
 
@@ -36,7 +36,7 @@ Use a **strangler pattern**:
 
 ### Deliverables
 
-- [ ] Switch Prisma datasource to PostgreSQL for all environments.
+- [x] Switch Prisma datasource to PostgreSQL for all environments.
 - [ ] Provision dev/staging PostgreSQL and baseline schema migration.
 - [ ] Establish NestJS module skeletons:
   - [ ] `auth`

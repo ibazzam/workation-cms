@@ -10,14 +10,32 @@ jobs:
   tests:
     name: PHPUnit + Build
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: workation_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d workation_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     strategy:
       matrix:
         php: [8.4, 8.5]
 
     env:
       APP_ENV: testing
-      DB_CONNECTION: sqlite
-      DB_DATABASE: database/database.sqlite
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: workation_test
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
 
     steps:
       - name: Checkout code
@@ -27,7 +45,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring, pdo, pdo_sqlite, xml, gd
+          extensions: mbstring, pdo, pdo_pgsql, xml, gd
 
       - name: Cache Composer packages
         uses: actions/cache@v3
@@ -86,11 +104,6 @@ jobs:
             clover.xml
           if-no-files-found: warn
 
-      - name: Prepare SQLite database
-        run: |
-          mkdir -p database
-          php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
-
       - name: Prepare environment file
         run: |
           if [ -f .env.example ]; then
@@ -148,7 +161,6 @@ jobs:
           author_email: actions@github.com
           message: 'ci: update coverage summary'
           add: 'coverage-summary.json'
-          branch: coverage-reports
 
       - name: Upload coverage artifact
         if: always()
@@ -169,3 +181,139 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: false
+
+  contract-tests:
+    name: Contract (${{ matrix.suite }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [workations, auth, auth-strict, countries, islands, service-categories, vendors, accommodations, transports, bookings, payments, admin-settings, permissions-matrix, feature-flags]
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: pass
+          POSTGRES_DB: dbname
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user -d dbname"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://user:pass@localhost:5432/dbname
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: infra/backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: infra/backend
+        run: npm ci --prefer-offline --no-audit --progress=false
+
+      - name: Generate Prisma client
+        working-directory: infra/backend
+        run: npm run prisma:generate
+
+      - name: Apply Prisma migrations
+        working-directory: infra/backend
+        run: npx prisma migrate deploy --schema=../prisma/schema.prisma
+
+      - name: Check Prisma schema drift
+        working-directory: infra/backend
+        run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel ../prisma/schema.prisma --exit-code
+
+      - name: Run contract suite
+        working-directory: infra/backend
+        run: |
+          mkdir -p artifacts/contract
+          set -o pipefail
+          npm run test:contract:${{ matrix.suite }} 2>&1 | tee artifacts/contract/${{ matrix.suite }}.log
+
+      - name: Upload contract logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-logs-${{ matrix.suite }}
+          path: infra/backend/artifacts/contract/${{ matrix.suite }}.log
+          if-no-files-found: warn
+
+  smoke-tests:
+    name: Smoke (${{ matrix.suite }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [payments]
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: pass
+          POSTGRES_DB: dbname
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user -d dbname"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://user:pass@localhost:5432/dbname
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: infra/backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: infra/backend
+        run: npm ci --prefer-offline --no-audit --progress=false
+
+      - name: Generate Prisma client
+        working-directory: infra/backend
+        run: npm run prisma:generate
+
+      - name: Apply Prisma migrations
+        working-directory: infra/backend
+        run: npx prisma migrate deploy --schema=../prisma/schema.prisma
+
+      - name: Check Prisma schema drift
+        working-directory: infra/backend
+        run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel ../prisma/schema.prisma --exit-code
+
+      - name: Run smoke suite
+        working-directory: infra/backend
+        run: |
+          mkdir -p artifacts/smoke
+          set -o pipefail
+          npm run test:smoke:${{ matrix.suite }} 2>&1 | tee artifacts/smoke/${{ matrix.suite }}.log
+
+      - name: Upload smoke logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-logs-${{ matrix.suite }}
+          path: infra/backend/artifacts/smoke/${{ matrix.suite }}.log
+          if-no-files-found: warn

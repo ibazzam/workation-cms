@@ -33,11 +33,36 @@ Local development
 
 See `docs/development.md` for local development and testing instructions (Dev Container, Docker, and test commands).
 
+From repository root, run backend quality checks (E2E journey + full contract matrix) with:
+
+```bash
+npm run test:quality:all
+```
+
+To clean generated logs/artifacts on a retention schedule:
+
+```bash
+npm run cleanup:artifacts:dry-run
+npm run cleanup:artifacts
+```
+
+See `scripts/README.md` for daily scheduler setup.
+
+CI governance
+-------------
+
+See `docs/ci-branch-protection.md` for required GitHub branch protection checks (`contract-tests` and `smoke-tests`) before merge.
+
+See `docs/api-contract-versioning-policy.md` for API compatibility and versioning rules for `/api/v1`.
+
 Architecture decisions
 ----------------------
 
 - Backend decision (accepted): `docs/architecture/adr-0001-backend-decision.md`
 - Laravel -> NestJS migration plan: `docs/architecture/backend-migration-plan.md`
+- Migration governance + rollback runbook: `docs/database-migration-governance.md`
+- Cloudflare integration runbook: `docs/cloudflare-integration.md`
+- Plesk + Cloudflare cutover checklist (`workation.mv`): `docs/plesk-cloudflare-cutover-workation-mv.md`
 
 ## Learning Laravel
 

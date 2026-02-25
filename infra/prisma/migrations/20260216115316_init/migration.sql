@@ -5,8 +5,8 @@ CREATE TABLE "User" (
     "name" TEXT,
     "password" TEXT,
     "role" TEXT NOT NULL DEFAULT 'USER',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL
 );
 
 -- CreateTable
@@ -15,29 +15,33 @@ CREATE TABLE "Vendor" (
     "name" TEXT NOT NULL,
     "email" TEXT,
     "phone" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "Atoll" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL NOT NULL,
     "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Atoll_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Island" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "atollId" INTEGER NOT NULL,
-    "lat" REAL,
-    "lng" REAL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "lat" DOUBLE PRECISION,
+    "lng" DOUBLE PRECISION,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Island_pkey" PRIMARY KEY ("id"),
     CONSTRAINT "Island_atollId_fkey" FOREIGN KEY ("atollId") REFERENCES "Atoll" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
@@ -51,9 +55,9 @@ CREATE TABLE "Accommodation" (
     "description" TEXT,
     "type" TEXT,
     "rooms" INTEGER,
-    "price" DECIMAL NOT NULL DEFAULT 0.00,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "price" DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "Accommodation_vendorId_fkey" FOREIGN KEY ("vendorId") REFERENCES "Vendor" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "Accommodation_islandId_fkey" FOREIGN KEY ("islandId") REFERENCES "Island" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
@@ -66,12 +70,12 @@ CREATE TABLE "Transport" (
     "code" TEXT,
     "fromIslandId" INTEGER,
     "toIslandId" INTEGER,
-    "departure" DATETIME,
-    "arrival" DATETIME,
+    "departure" TIMESTAMP(3),
+    "arrival" TIMESTAMP(3),
     "capacity" INTEGER,
-    "price" DECIMAL NOT NULL DEFAULT 0.00,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "price" DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "Transport_vendorId_fkey" FOREIGN KEY ("vendorId") REFERENCES "Vendor" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "Transport_fromIslandId_fkey" FOREIGN KEY ("fromIslandId") REFERENCES "Island" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "Transport_toIslandId_fkey" FOREIGN KEY ("toIslandId") REFERENCES "Island" ("id") ON DELETE SET NULL ON UPDATE CASCADE
@@ -83,13 +87,13 @@ CREATE TABLE "Booking" (
     "userId" TEXT NOT NULL,
     "accommodationId" TEXT,
     "transportId" TEXT,
-    "startDate" DATETIME,
-    "endDate" DATETIME,
+    "startDate" TIMESTAMP(3),
+    "endDate" TIMESTAMP(3),
     "guests" INTEGER DEFAULT 1,
-    "totalPrice" DECIMAL NOT NULL DEFAULT 0.00,
+    "totalPrice" DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     "status" TEXT NOT NULL DEFAULT 'PENDING',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "Booking_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "Booking_accommodationId_fkey" FOREIGN KEY ("accommodationId") REFERENCES "Accommodation" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "Booking_transportId_fkey" FOREIGN KEY ("transportId") REFERENCES "Transport" ("id") ON DELETE SET NULL ON UPDATE CASCADE
@@ -101,12 +105,27 @@ CREATE TABLE "Payment" (
     "bookingId" TEXT NOT NULL,
     "provider" TEXT NOT NULL,
     "providerId" TEXT,
-    "amount" DECIMAL NOT NULL DEFAULT 0.00,
+    "amount" DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     "currency" TEXT NOT NULL DEFAULT 'USD',
     "status" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "Payment_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "Booking" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "workations" (
+    "id" SERIAL NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "location" TEXT NOT NULL,
+    "start_date" TIMESTAMP(3) NOT NULL,
+    "end_date" TIMESTAMP(3) NOT NULL,
+    "price" DECIMAL(10,2) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "workations_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex

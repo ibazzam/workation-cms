@@ -26,6 +26,14 @@ export class PaymentsBackgroundJobsRunner implements OnModuleInit, OnModuleDestr
   constructor(private readonly paymentsService: PaymentsService) {}
 
   onModuleInit() {
+    // Allow skipping background jobs in test/contract runs or via env override
+    const skipBackgroundJobs = (process.env.SKIP_BACKGROUND_JOBS ?? 'false').toLowerCase() === 'true';
+    if (skipBackgroundJobs) {
+      this.enabled = false;
+      this.logger.log('Payments background jobs runner skipped due to SKIP_BACKGROUND_JOBS=true');
+      return;
+    }
+
     this.enabled = (process.env.PAYMENTS_JOBS_ENABLED ?? 'true').toLowerCase() === 'true';
     this.intervalMs = this.parseNumber(process.env.PAYMENTS_JOBS_INTERVAL_MS, 10000, 1000, 300000);
     this.initialDelayMs = this.parseNumber(process.env.PAYMENTS_JOBS_INITIAL_DELAY_MS, 3000, 0, 60000);

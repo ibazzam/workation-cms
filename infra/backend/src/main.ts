@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { AdminWriteAuditService } from './audit/admin-write-audit.service';
+import { PrismaService } from './prisma.service';
 
 const ADMIN_ROLES = new Set(['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE']);
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -87,6 +88,16 @@ async function bootstrap() {
     origin: parseCorsOrigin(process.env.CORS_ORIGIN),
   });
   app.setGlobalPrefix('api/v1');
+  // Ensure Prisma connection ready before listening to avoid startup races
+  try {
+    const prisma = app.get(PrismaService);
+    if (prisma && typeof prisma.$connect === 'function') {
+      await prisma.$connect();
+      console.log('Prisma connection established');
+    }
+  } catch (err) {
+    console.warn('Prisma connect warning:', err instanceof Error ? err.message : err);
+  }
   const port = Number(process.env.PORT ?? 3000);
   // Bind explicitly to 0.0.0.0 so the process is reachable from the host
   await app.listen(port, '0.0.0.0');

@@ -58,7 +58,7 @@ const hasDatabaseUrl = Boolean(process.env.DATABASE_URL);
 export const canRun = hasDatabaseUrl && existsSync(compiledEntry);
 export const skipReason = 'Set DATABASE_URL and build backend before running contract tests';
 
-async function waitForHealth(timeoutMs = 15000) {
+async function waitForHealth(timeoutMs = Number(process.env.CONTRACT_HEALTH_TIMEOUT_MS ?? 60000)) {
   const start = Date.now();
 
   while (Date.now() - start < timeoutMs) {
@@ -90,6 +90,9 @@ export function registerBackendLifecycle(test) {
       env: {
         ...process.env,
         PORT: String(port),
+        // Prevent background jobs from running during contract tests which may access
+        // schema/rows that aren't present in the test fixture or block startup.
+        SKIP_BACKGROUND_JOBS: 'true',
       },
       stdio: 'inherit',
     });

@@ -207,6 +207,10 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://user:pass@localhost:5432/dbname
+      # Prevent background jobs from running during contract tests in CI
+      SKIP_BACKGROUND_JOBS: 'true'
+      # Increase default health timeout for the contract harness (ms)
+      CONTRACT_HEALTH_TIMEOUT_MS: '60000'
 
     steps:
       - name: Checkout code
@@ -275,6 +279,8 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://user:pass@localhost:5432/dbname
+      SKIP_BACKGROUND_JOBS: 'true'
+      CONTRACT_HEALTH_TIMEOUT_MS: '60000'
 
     steps:
       - name: Checkout code

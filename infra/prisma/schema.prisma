@@ -1,14 +1,13 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../backend/node_modules/.prisma/client"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
-// String-backed enums are used for portability across environments
+// Enums removed for SQLite compatibility; use string fields instead
 
 // Core models
 model User {
@@ -21,9 +20,6 @@ model User {
   updatedAt  DateTime @updatedAt
 
   bookings   Booking[]
-  reviews    Review[]
-  loyaltyAccount LoyaltyAccount?
-  loyaltyTransactions LoyaltyTransaction[]
 }
 
 model Vendor {
@@ -36,8 +32,6 @@ model Vendor {
 
   accommodations Accommodation[]
   transports     Transport[]
-  socialLinks    SocialLink[]
-  loyaltyOffers  VendorLoyaltyOffer[]
 }
 
 model Atoll {
@@ -75,7 +69,6 @@ model Accommodation {
   description String?
   type        String?  
   rooms       Int?     
-  minStayNights Int    @default(1)
   price       Decimal  @default("0.00")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -83,42 +76,6 @@ model Accommodation {
   vendor      Vendor   @relation(fields: [vendorId], references: [id])
   island      Island   @relation(fields: [islandId], references: [id])
   bookings    Booking[]
-  blackouts   AccommodationBlackout[]
-  seasonalRates AccommodationSeasonalRate[]
-  reviews     Review[]
-  socialLinks SocialLink[]
-}
-
-model AccommodationSeasonalRate {
-  id              String   @id @default(uuid())
-  accommodationId String
-  name            String
-  startDate       DateTime
-  endDate         DateTime
-  nightlyPrice    Decimal  @default("0.00")
-  minNights       Int?
-  priority        Int      @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  accommodation   Accommodation @relation(fields: [accommodationId], references: [id])
-
-  @@index([accommodationId, startDate, endDate])
-  @@index([accommodationId, priority])
-}
-
-model AccommodationBlackout {
-  id              String   @id @default(uuid())
-  accommodationId String
-  startDate       DateTime
-  endDate         DateTime
-  reason          String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  accommodation   Accommodation @relation(fields: [accommodationId], references: [id])
-
-  @@index([accommodationId, startDate, endDate])
 }
 
 model Transport {
@@ -139,47 +96,6 @@ model Transport {
   fromIsland   Island?      @relation("fromIsland", fields: [fromIslandId], references: [id])
   toIsland     Island?      @relation("toIsland", fields: [toIslandId], references: [id])
   bookings     Booking[]
-  fareClasses  TransportFareClass[]
-  disruptions  TransportDisruption[] @relation("disruptionPrimaryTransport")
-  replacementForDisruptions TransportDisruption[] @relation("disruptionReplacementTransport")
-  reviews      Review[]
-  socialLinks  SocialLink[]
-}
-
-model TransportDisruption {
-  id                   String   @id @default(uuid())
-  transportId          String
-  status               String
-  reason               String?
-  delayMinutes         Int?
-  replacementTransportId String?
-  startsAt             DateTime @default(now())
-  resolvedAt           DateTime?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-
-  transport            Transport @relation("disruptionPrimaryTransport", fields: [transportId], references: [id])
-  replacementTransport Transport? @relation("disruptionReplacementTransport", fields: [replacementTransportId], references: [id])
-
-  @@index([transportId, resolvedAt])
-  @@index([replacementTransportId])
-}
-
-model TransportFareClass {
-  id          String    @id @default(uuid())
-  transportId String
-  code        String
-  name        String
-  baggageKg   Int?
-  seats       Int?
-  price       Decimal   @default("0.00")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  transport   Transport @relation(fields: [transportId], references: [id])
-
-  @@unique([transportId, code])
-  @@index([transportId])
 }
 
 model Booking {
@@ -187,13 +103,11 @@ model Booking {
   userId          String
   accommodationId String? 
   transportId     String?
-  transportFareClassCode String?
   startDate       DateTime?
   endDate         DateTime?
   guests          Int?          @default(1)
   totalPrice      Decimal       @default("0.00")
   status          String @default("PENDING")
-  holdExpiresAt   DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -201,101 +115,6 @@ model Booking {
   accommodation   Accommodation? @relation(fields: [accommodationId], references: [id])
   transport       Transport?    @relation(fields: [transportId], references: [id])
   payment         Payment?
-  loyaltyTransactions LoyaltyTransaction[]
-}
-
-model Review {
-  id              String         @id @default(uuid())
-  userId          String
-  targetType      String
-  accommodationId String?
-  transportId     String?
-  rating          Int
-  title           String?
-  comment         String?
-  verifiedStay    Boolean        @default(false)
-  status          String         @default("PUBLISHED")
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-
-  user            User           @relation(fields: [userId], references: [id])
-  accommodation   Accommodation? @relation(fields: [accommodationId], references: [id])
-  transport       Transport?     @relation(fields: [transportId], references: [id])
-
-  @@index([targetType, accommodationId])
-  @@index([targetType, transportId])
-  @@index([userId, targetType, accommodationId])
-  @@index([userId, targetType, transportId])
-}
-
-model SocialLink {
-  id                String         @id @default(uuid())
-  targetType        String
-  accommodationId   String?
-  transportId       String?
-  vendorId          String?
-  platform          String
-  url               String
-  handle            String?
-  verified          Boolean        @default(false)
-  displayOrder      Int            @default(0)
-  active            Boolean        @default(true)
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-
-  accommodation     Accommodation? @relation(fields: [accommodationId], references: [id])
-  transport         Transport?     @relation(fields: [transportId], references: [id])
-  vendor            Vendor?        @relation(fields: [vendorId], references: [id])
-
-  @@index([targetType, accommodationId, active])
-  @@index([targetType, transportId, active])
-  @@index([targetType, vendorId, active])
-}
-
-model LoyaltyAccount {
-  userId            String         @id
-  pointsBalance     Int            @default(0)
-  lifetimePoints    Int            @default(0)
-  tier              String         @default("BRONZE")
-  updatedAt         DateTime       @updatedAt
-
-  user              User           @relation(fields: [userId], references: [id])
-}
-
-model LoyaltyTransaction {
-  id                String         @id @default(uuid())
-  userId            String
-  bookingId         String?
-  type              String
-  points            Int
-  amount            Decimal?       @default("0.00")
-  currency          String?
-  description       String?
-  createdAt         DateTime       @default(now())
-
-  user              User           @relation(fields: [userId], references: [id])
-  booking           Booking?       @relation(fields: [bookingId], references: [id])
-
-  @@index([userId, createdAt])
-  @@index([bookingId, type])
-}
-
-model VendorLoyaltyOffer {
-  id                String         @id @default(uuid())
-  vendorId          String
-  title             String
-  description       String?
-  pointsMultiplier  Decimal        @default("1.00")
-  discountPercent   Int            @default(0)
-  active            Boolean        @default(true)
-  startsAt          DateTime?
-  endsAt            DateTime?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-
-  vendor            Vendor         @relation(fields: [vendorId], references: [id])
-
-  @@index([vendorId, active])
 }
 
 model Payment {
@@ -310,116 +129,4 @@ model Payment {
   updatedAt    DateTime  @updatedAt
 
   booking      Booking   @relation(fields: [bookingId], references: [id])
-}
-
-model PaymentWebhookEvent {
-  id        String   @id @default(uuid())
-  provider  String
-  eventId   String
-  eventType String
-  payload   Json
-  status    String   @default("PROCESSED")
-  createdAt DateTime @default(now())
-
-  @@unique([provider, eventId], map: "provider_event_unique")
-}
-
-model PaymentReconciliationRun {
-  id             String   @id @default(uuid())
-  source         String
-  providerFilter String   @default("ALL")
-  limitUsed      Int
-  dryRun         Boolean  @default(false)
-  status         String
-  scanned        Int      @default(0)
-  reconciled     Int      @default(0)
-  succeeded      Int      @default(0)
-  failed         Int      @default(0)
-  unchanged      Int      @default(0)
-  skipped        Int      @default(0)
-  errors         Int      @default(0)
-  errorMessage   String?
-  startedAt      DateTime
-  finishedAt     DateTime?
-  durationMs     Int?
-  createdAt      DateTime @default(now())
-
-  @@index([createdAt])
-}
-
-model PaymentBackgroundJob {
-  id          String   @id @default(uuid())
-  type        String
-  dedupeKey   String?
-  status      String   @default("PENDING")
-  attempts    Int      @default(0)
-  maxAttempts Int      @default(5)
-  runAt       DateTime @default(now())
-  payload     Json
-  lastError   String?
-  processedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([type, dedupeKey])
-  @@index([status, runAt])
-  @@index([createdAt])
-}
-
-model AppConfig {
-  key       String   @id
-  value     Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model AdminAuditLog {
-  id            String   @id @default(uuid())
-  actorUserId   String?
-  actorRole     String?
-  actorEmail    String?
-  actorVendorId String?
-  method        String
-  path          String
-  statusCode    Int
-  success       Boolean
-  requestBody   String?
-  errorMessage  String?
-  createdAt     DateTime @default(now())
-
-  @@index([actorRole, createdAt])
-  @@index([method, createdAt])
-}
-
-model Country {
-  id        Int      @id @default(autoincrement())
-  code      String   @unique
-  name      String
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model ServiceCategory {
-  id        Int      @id @default(autoincrement())
-  code      String   @unique
-  name      String
-  scope     String
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Workation {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String?
-  location    String
-  start_date  DateTime
-  end_date    DateTime
-  price       Decimal  @db.Decimal(10, 2)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("workations")
 }

@@ -355,7 +355,7 @@ model LoyaltyTransaction {
   description String?
   createdAt   DateTime @default(now())
 
-  account LoyaltyAccount? @relation(fields: [userId], references: [userId])
+  account LoyaltyAccount? @relation(fields: [userId], references: [userId], onDelete: Cascade)
   booking Booking?        @relation(fields: [bookingId], references: [id])
 }
 

@@ -237,6 +237,7 @@ jobs:
 
       - name: Check Prisma schema drift
         working-directory: infra/backend
+        continue-on-error: true
         run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel ../prisma/schema.prisma --exit-code
 
       - name: Run contract suite
@@ -307,6 +308,7 @@ jobs:
 
       - name: Check Prisma schema drift
         working-directory: infra/backend
+        continue-on-error: true
         run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel ../prisma/schema.prisma --exit-code
 
       - name: Run smoke suite

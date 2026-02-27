@@ -20,8 +20,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   bookings Booking[]
-  loyalty  LoyaltyAccount?
-  reviews  Review[]
+  // loyalty and reviews were removed by the latest migration
 }
 
 model Vendor {
@@ -34,8 +33,6 @@ model Vendor {
 
   accommodations      Accommodation[]
   transports          Transport[]
-  vendorLoyaltyOffers VendorLoyaltyOffer[]
-  socialLinks         SocialLink[]
 }
 
 model Atoll {
@@ -74,19 +71,56 @@ model Accommodation {
   type          String?
   rooms         Int?
   price         Decimal  @default(0.00)
-  // `minStayNights` was removed by the latest migration
+  minStayNights Int?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   vendor        Vendor                      @relation(fields: [vendorId], references: [id])
   island        Island                      @relation(fields: [islandId], references: [id])
   bookings      Booking[]
-  // seasonal rates and blackouts removed in latest migration
-  socialLinks   SocialLink[]
-  reviews       Review[]
+  seasonalRates AccommodationSeasonalRate[]
+  blackouts     AccommodationBlackout[]
+  // seasonal rates, blackouts, social links and reviews removed in latest migration
 }
 
 // Accommodation seasonal rates and blackouts removed by migration
+
+model AccommodationSeasonalRate {
+  id              String    @id @default(uuid())
+  accommodationId String
+  name            String
+  startDate       DateTime
+  endDate         DateTime
+  nightlyPrice    Decimal   @default(0.00)
+  minNights       Int?
+  priority        Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime? @updatedAt
+
+  accommodation Accommodation @relation(fields: [accommodationId], references: [id])
+}
+
+model AccommodationBlackout {
+  id              String    @id @default(uuid())
+  accommodationId String
+  startDate       DateTime
+  endDate         DateTime
+  reason          String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime? @updatedAt
+
+  accommodation Accommodation @relation(fields: [accommodationId], references: [id])
+}
+
+model AdminAuditLog {
+  id        String   @id @default(uuid())
+  actorId   String?
+  actorRole String
+  method    String
+  path      String
+  success   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
 
 model Transport {
   id           String    @id @default(uuid())
@@ -103,8 +137,7 @@ model Transport {
   updatedAt    DateTime  @updatedAt
 
   bookings                  Booking[]
-  // fare classes and disruptions removed by migration
-  socialLinks               SocialLink[]
+  // fare classes, disruptions and social links removed by migration
   vendor                    Vendor?               @relation(fields: [vendorId], references: [id])
   fromIsland                Island?               @relation("fromIsland", fields: [fromIslandId], references: [id])
   toIsland                  Island?               @relation("toIsland", fields: [toIslandId], references: [id])
@@ -122,6 +155,7 @@ model Booking {
   endDate                DateTime?
   guests                 Int?      @default(1)
   totalPrice             Decimal   @default(0.00)
+  holdExpiresAt          DateTime?
   status                 String    @default("PENDING")
   // holdExpiresAt and transportFareClassCode removed by migration
   createdAt              DateTime  @default(now())
@@ -131,7 +165,7 @@ model Booking {
   accommodation      Accommodation?       @relation(fields: [accommodationId], references: [id])
   transport          Transport?           @relation(fields: [transportId], references: [id])
   payment            Payment?
-  LoyaltyTransaction LoyaltyTransaction[]
+  // loyalty transactions removed by migration
 }
 
 model Payment {
@@ -151,5 +185,111 @@ model Payment {
 // Payment background job, webhook events and reconciliation runs removed by migration
 
 // AppConfig, Country, ServiceCategory, AdminAuditLog, Review and SocialLink removed by migration
+
+model AppConfig {
+  key       String   @id
+  value     String?
+  createdAt DateTime @default(now())
+}
+
+model Country {
+  id        Int      @id @default(autoincrement())
+  name      String
+  code      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ServiceCategory {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Review {
+  id              String   @id @default(uuid())
+  userId          String
+  accommodationId String?
+  transportId     String?
+  rating          Int
+  body            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SocialLink {
+  id              String   @id @default(uuid())
+  vendorId        String?
+  accommodationId String?
+  transportId     String?
+  url             String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model LoyaltyAccount {
+  id        String   @id @default(uuid())
+  userId    String
+  balance   Decimal  @default(0.00)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LoyaltyTransaction {
+  id        String   @id @default(uuid())
+  userId    String
+  bookingId String?
+  amount    Decimal  @default(0.00)
+  createdAt DateTime @default(now())
+}
+
+model VendorLoyaltyOffer {
+  id        String   @id @default(uuid())
+  vendorId  String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model PaymentBackgroundJob {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+}
+
+model PaymentReconciliationRun {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+}
+
+model PaymentWebhookEvent {
+  id        String   @id @default(uuid())
+  provider  String
+  payload   String
+  createdAt DateTime @default(now())
+}
+
+model TransportDisruption {
+  id                    String   @id @default(uuid())
+  transportId           String
+  replacementTransportId String?
+  createdAt             DateTime @default(now())
+}
+
+model TransportFareClass {
+  id          String   @id @default(uuid())
+  transportId String
+  code        String
+  createdAt   DateTime @default(now())
+}
+
+model Workation {
+  id        String   @id @default(uuid())
+  title     String
+  createdAt DateTime @default(now())
+}
+
+// Note: these models are minimal stubs to match code references. Data and constraints
+// should be reviewed and expanded if you intend to use these features in production.
 
 // Loyalty and workation-related models removed by migration

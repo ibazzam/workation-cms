@@ -204,6 +204,7 @@ model Country {
   id        Int      @id @default(autoincrement())
   name      String
   code      String   @unique
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 }
@@ -211,9 +212,9 @@ model Country {
 model ServiceCategory {
   id        Int      @id @default(autoincrement())
   name      String
-  code      String?
+  code      String   @unique
   active    Boolean  @default(true)
-  scope     String?
+  scope     String
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 }

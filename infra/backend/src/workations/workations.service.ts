@@ -46,7 +46,7 @@ export class WorkationsService {
     await this.prisma.workations.delete({ where: { id } });
   }
 
-  private validateCreatePayload(payload: WorkationPayload): Prisma.workationsCreateInput {
+  private validateCreatePayload(payload: WorkationPayload): Prisma.WorkationsCreateInput {
     const validated = this.validatePayload(payload, false);
 
     return {
@@ -59,7 +59,7 @@ export class WorkationsService {
     };
   }
 
-  private validateUpdatePayload(payload: WorkationPayload): Prisma.workationsUpdateInput {
+  private validateUpdatePayload(payload: WorkationPayload): Prisma.WorkationsUpdateInput {
     const validated = this.validatePayload(payload, true);
 
     return {

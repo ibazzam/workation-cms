@@ -118,12 +118,16 @@ model AccommodationBlackout {
 model AdminAuditLog {
   id        String   @id @default(uuid())
   actorId   String?
+  actorVendorId String?
   actorEmail String?
   actorRole String
   actorUserId String?
+  statusCode Int? 
   method    String
   path      String
   success   Boolean  @default(false)
+  requestBody String?
+  errorMessage String?
   createdAt DateTime @default(now())
 }
 
@@ -190,7 +194,7 @@ model Payment {
 
 model AppConfig {
   key       String   @id
-  value     String?
+  value     Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 }
@@ -204,9 +208,10 @@ model Country {
 }
 
 model ServiceCategory {
-  id        String   @id @default(uuid())
+  id        Int      @id @default(autoincrement())
   name      String
   code      String?
+  active    Boolean  @default(true)
   scope     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
@@ -215,10 +220,12 @@ model ServiceCategory {
 model Review {
   id              String   @id @default(uuid())
   title           String?
+  comment         String?
   userId          String
   accommodationId String?
   transportId     String?
   rating          Int
+  verifiedStay    Boolean?
   body            String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @default(now()) @updatedAt
@@ -365,10 +372,18 @@ model TransportFareClass {
   transport   Transport @relation(fields: [transportId], references: [id])
 }
 
-model Workation {
-  id        String   @id @default(uuid())
+model Workations {
+  id        Int      @id @default(autoincrement())
   title     String
+  description String?
+  location  String
+  start_date DateTime @map("start_date")
+  end_date   DateTime @map("end_date")
+  price     Decimal
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@map("workations")
 }
 
 // Note: these models are reconstructed from migration SQL to match backend expectations.

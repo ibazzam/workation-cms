@@ -28,8 +28,27 @@ $outDir = Join-Path -Path "artifacts" -ChildPath "run_$RunId"
 if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Path $outDir | Out-Null }
 if ($conclusion -ne 'success') {
     Write-Output "Downloading run artifacts and full logs to $outDir"
-    gh run download $RunId --repo $Repo --dir $outDir
-    gh run view $RunId --repo $Repo --log > (Join-Path $outDir "run_${RunId}_logs.txt")
+    # Ensure a clean output directory to avoid zip-extraction collisions
+    if (Test-Path $outDir) {
+        try {
+            Remove-Item -LiteralPath $outDir -Recurse -Force -ErrorAction Stop
+        } catch {
+            Write-Output ("Warning: failed to remove existing output dir {0}: {1}" -f $outDir, $_)
+        }
+    }
+    New-Item -ItemType Directory -Path $outDir | Out-Null
+
+    try {
+        gh run download $RunId --repo $Repo --dir $outDir
+    } catch {
+        Write-Output ("Warning: gh run download failed for run {0}: {1}" -f $RunId, $_)
+    }
+
+    try {
+        gh run view $RunId --repo $Repo --log > (Join-Path $outDir "run_${RunId}_logs.txt")
+    } catch {
+        Write-Output ("Warning: failed to save logs for run {0}: {1}" -f $RunId, $_)
+    }
     Write-Output "Searching logs for Prisma P1012 errors"
     $matches = Select-String -Path (Join-Path $outDir "**\*.*") -Pattern 'P1012' -SimpleMatch -AllMatches -ErrorAction SilentlyContinue
     if ($matches) {

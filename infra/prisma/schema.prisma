@@ -118,6 +118,7 @@ model AccommodationBlackout {
 model AdminAuditLog {
   id        String   @id @default(uuid())
   actorId   String?
+  actorEmail String?
   actorRole String
   actorUserId String?
   method    String
@@ -146,6 +147,7 @@ model Transport {
   vendor                    Vendor?               @relation(fields: [vendorId], references: [id])
   fromIsland                Island?               @relation("fromIsland", fields: [fromIslandId], references: [id])
   toIsland                  Island?               @relation("toIsland", fields: [toIslandId], references: [id])
+  replacementDisruptions    TransportDisruption[] @relation("ReplacementTransport")
   socialLinks               SocialLink[]
   reviews                   Review[]
 }
@@ -204,12 +206,15 @@ model Country {
 model ServiceCategory {
   id        String   @id @default(uuid())
   name      String
+  code      String?
+  scope     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 }
 
 model Review {
   id              String   @id @default(uuid())
+  title           String?
   userId          String
   accommodationId String?
   transportId     String?
@@ -294,6 +299,7 @@ model PaymentBackgroundJob {
   maxAttempts Int      @default(5)
   runAt       DateTime @default(now())
   payload     Json
+  dedupeKey   String?
   lastError   String?
   processedAt DateTime?
   createdAt   DateTime @default(now())
@@ -343,6 +349,7 @@ model TransportDisruption {
   createdAt              DateTime @default(now())
   updatedAt              DateTime @default(now()) @updatedAt
   transport              Transport @relation(fields: [transportId], references: [id])
+  replacementTransport   Transport? @relation("ReplacementTransport", fields: [replacementTransportId], references: [id])
 }
 
 model TransportFareClass {

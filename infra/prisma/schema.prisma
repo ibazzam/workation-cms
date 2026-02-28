@@ -126,7 +126,7 @@ model AdminAuditLog {
   method    String
   path      String
   success   Boolean  @default(false)
-  requestBody String?
+  requestBody Json?
   errorMessage String?
   createdAt DateTime @default(now())
 }
@@ -134,6 +134,7 @@ model AdminAuditLog {
 model Transport {
   id           String    @id @default(uuid())
   vendorId     String?
+  name         String?
   type         String
   code         String?
   fromIslandId Int?

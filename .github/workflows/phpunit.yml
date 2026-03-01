@@ -474,7 +474,7 @@ jobs:
         continue-on-error: true
         run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel ../prisma/schema.prisma --exit-code
 
-      - name: Diagnostic: list migrated columns
+      - name: "Diagnostic: list migrated columns"
         working-directory: infra/backend
         run: |
           set -e

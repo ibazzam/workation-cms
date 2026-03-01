@@ -1,0 +1,104 @@
+{
+  "generated": "2026-02-26T11:42:04.451Z",
+  "sourceLog": "contract-all-2026-02-26.log",
+  "totals": {
+    "suites": 15,
+    "tests": 86,
+    "pass": 85,
+    "fail": 1,
+    "result": "FAIL"
+  },
+  "parseWarning": "Expected 20 suite counters, parsed 15",
+  "suites": [
+    {
+      "suite": "workations.contract.test.mjs",
+      "tests": 4,
+      "pass": 4,
+      "fail": 0
+    },
+    {
+      "suite": "auth.contract.test.mjs",
+      "tests": 6,
+      "pass": 6,
+      "fail": 0
+    },
+    {
+      "suite": "auth.strict.contract.test.mjs",
+      "tests": 2,
+      "pass": 2,
+      "fail": 0
+    },
+    {
+      "suite": "users.contract.test.mjs",
+      "tests": 2,
+      "pass": 2,
+      "fail": 0
+    },
+    {
+      "suite": "countries.contract.test.mjs",
+      "tests": 3,
+      "pass": 3,
+      "fail": 0
+    },
+    {
+      "suite": "islands.contract.test.mjs",
+      "tests": 4,
+      "pass": 4,
+      "fail": 0
+    },
+    {
+      "suite": "service-categories.contract.test.mjs",
+      "tests": 3,
+      "pass": 3,
+      "fail": 0
+    },
+    {
+      "suite": "reviews.contract.test.mjs",
+      "tests": 5,
+      "pass": 5,
+      "fail": 0
+    },
+    {
+      "suite": "social-links.contract.test.mjs",
+      "tests": 3,
+      "pass": 3,
+      "fail": 0
+    },
+    {
+      "suite": "loyalty.contract.test.mjs",
+      "tests": 3,
+      "pass": 3,
+      "fail": 0
+    },
+    {
+      "suite": "vendors.contract.test.mjs",
+      "tests": 3,
+      "pass": 3,
+      "fail": 0
+    },
+    {
+      "suite": "accommodations.contract.test.mjs",
+      "tests": 10,
+      "pass": 10,
+      "fail": 0
+    },
+    {
+      "suite": "transports.contract.test.mjs",
+      "tests": 11,
+      "pass": 11,
+      "fail": 0
+    },
+    {
+      "suite": "cart.contract.test.mjs",
+      "tests": 2,
+      "pass": 2,
+      "fail": 0
+    },
+    {
+      "suite": "bookings.contract.test.mjs",
+      "tests": 25,
+      "pass": 24,
+      "fail": 1
+    }
+  ]
+}

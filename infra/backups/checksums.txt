@@ -1,0 +1,3 @@
+# Checksums recorded by automation
+# Format: ISO8601<TAB>SHA256<TAB>source_path_or_filename
+2026-02-27T12:00:00Z	22c845302273da11e0bd3116ab83187f59375844773fc67a4299e7762aaf22bc	C:\Users\iazza\Downloads\contract-logs-accommodations (2).zip

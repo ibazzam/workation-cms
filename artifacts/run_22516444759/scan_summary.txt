@@ -1,0 +1,2 @@
+16 matches in C:\Users\iazza\workation-cms\artifacts\run_22516444759\contract-logs-workations-scan.txt
+16 matches in C:\Users\iazza\workation-cms\artifacts\run_22516444759\workations.log

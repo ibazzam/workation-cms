@@ -1,0 +1,33 @@
+# Default owner for the whole repository
+* @ibazzam
+
+# Backend core
+/infra/backend/src/auth/ @ibazzam
+/infra/backend/src/users/ @ibazzam
+/infra/backend/src/bookings/ @ibazzam
+/infra/backend/src/workations/ @ibazzam
+
+# Payments domain
+/infra/backend/src/payments/ @ibazzam
+/infra/backend/tests/contract/payments.contract.test.mjs @ibazzam
+/infra/backend/tests/smoke/payments.intent.smoke.test.mjs @ibazzam
+
+# Backend platform and tests
+/infra/backend/package.json @ibazzam
+/infra/backend/tests/ @ibazzam
+/infra/backend/README.md @ibazzam
+
+# Data model and migrations
+/infra/prisma/ @ibazzam
+
+# Frontend
+/infra/frontend/ @ibazzam
+
+# Architecture and governance docs
+/docs/architecture/ @ibazzam
+/docs/ci-branch-protection.md @ibazzam
+
+# CI and repository governance
+/.github/workflows/ @ibazzam
+/.github/CODEOWNERS @ibazzam
+/.github/pull_request_template.md @ibazzam

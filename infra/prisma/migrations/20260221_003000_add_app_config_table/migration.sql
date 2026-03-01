@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS "AppConfig" (
+  "key" TEXT PRIMARY KEY,
+  "value" JSONB NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE OR REPLACE FUNCTION set_app_config_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW."updatedAt" = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS app_config_set_updated_at ON "AppConfig";
+CREATE TRIGGER app_config_set_updated_at
+BEFORE UPDATE ON "AppConfig"
+FOR EACH ROW
+EXECUTE FUNCTION set_app_config_updated_at();

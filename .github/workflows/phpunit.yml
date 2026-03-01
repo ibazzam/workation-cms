@@ -235,6 +235,40 @@ jobs:
         working-directory: infra/backend
         run: npx prisma migrate deploy --schema=../prisma/schema.prisma
 
+      - name: Fix ServiceCategory id default (if missing)
+        working-directory: infra/backend
+        run: |
+          set -e
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DO $$
+          DECLARE
+            t text;
+            seqname text;
+          BEGIN
+            -- Find the actual table name case-insensitively (handles quoted identifiers)
+            SELECT table_name INTO t FROM information_schema.tables
+              WHERE table_schema='public' AND lower(table_name)='servicecategory' LIMIT 1;
+            IF t IS NULL THEN
+              RAISE NOTICE 'ServiceCategory table not found; skipping sequence fix';
+              RETURN;
+            END IF;
+            -- If the id column has no default/identity, create and attach a sequence
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema='public' AND table_name = t AND column_name='id'
+                AND (column_default IS NOT NULL OR identity_generation IS NOT NULL)
+            ) THEN
+              seqname := t || '_id_seq';
+              IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relkind='S' AND relname = seqname) THEN
+                EXECUTE format('CREATE SEQUENCE %I', seqname);
+              END IF;
+              EXECUTE format('SELECT setval(%s, COALESCE((SELECT MAX(id) FROM %I), 0))', quote_literal(seqname), t);
+              EXECUTE format('ALTER TABLE %I ALTER COLUMN id SET DEFAULT nextval(%L)', t, seqname);
+              EXECUTE format('ALTER SEQUENCE %I OWNED BY %I.id', seqname, t);
+            END IF;
+          END$$;"
+
       - name: Check Prisma schema drift
         working-directory: infra/backend
         continue-on-error: true
@@ -322,6 +356,38 @@ jobs:
       - name: Apply Prisma migrations
         working-directory: infra/backend
         run: npx prisma migrate deploy --schema=../prisma/schema.prisma
+
+      - name: Fix ServiceCategory id default (if missing)
+        working-directory: infra/backend
+        run: |
+          set -e
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DO $$
+          DECLARE
+            t text;
+            seqname text;
+          BEGIN
+            SELECT table_name INTO t FROM information_schema.tables
+              WHERE table_schema='public' AND lower(table_name)='servicecategory' LIMIT 1;
+            IF t IS NULL THEN
+              RAISE NOTICE 'ServiceCategory table not found; skipping sequence fix';
+              RETURN;
+            END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema='public' AND table_name = t AND column_name='id'
+                AND (column_default IS NOT NULL OR identity_generation IS NOT NULL)
+            ) THEN
+              seqname := t || '_id_seq';
+              IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relkind='S' AND relname = seqname) THEN
+                EXECUTE format('CREATE SEQUENCE %I', seqname);
+              END IF;
+              EXECUTE format('SELECT setval(%s, COALESCE((SELECT MAX(id) FROM %I), 0))', quote_literal(seqname), t);
+              EXECUTE format('ALTER TABLE %I ALTER COLUMN id SET DEFAULT nextval(%L)', t, seqname);
+              EXECUTE format('ALTER SEQUENCE %I OWNED BY %I.id', seqname, t);
+            END IF;
+          END$$;"
 
       - name: Check Prisma schema drift
         working-directory: infra/backend

@@ -115,8 +115,14 @@ jobs:
       - name: Generate app key
         run: php artisan key:generate --force
 
+
       - name: Run migrations
         run: php artisan migrate --force
+
+
+      - name: Install root Node dependencies (for DB-fix script)
+        run: |
+          npm ci --prefer-offline --no-audit --progress=false
 
       - name: Run tests
         run: composer test
@@ -146,6 +152,37 @@ jobs:
 
       - name: Check JS coverage thresholds
         continue-on-error: true
+
+      - name: Run DB fix script (ensure ServiceCategory.id default)
+        run: |
+          node scripts/db_fix_servicecategory.js
+
+      - name: Verify ServiceCategory id default
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client
+          mkdir -p infra/backend/artifacts/diagnostics
+
+          echo 'Checking information_schema for ServiceCategory.id default' | tee infra/backend/artifacts/diagnostics/servicecategory_id_check.txt
+          col_default=$(psql "$DATABASE_URL" -t -A -c "SELECT column_default FROM information_schema.columns WHERE table_schema='public' AND table_name='ServiceCategory' AND column_name='id';") || true
+          echo "column_default=$col_default" | tee -a infra/backend/artifacts/diagnostics/servicecategory_id_check.txt
+
+          seq=$(psql "$DATABASE_URL" -t -A -c "SELECT pg_get_serial_sequence('"ServiceCategory"','id');") || true
+          seq=$(echo "$seq" | xargs)
+          echo "pg_get_serial_sequence=$seq" | tee -a infra/backend/artifacts/diagnostics/servicecategory_id_check.txt
+
+          if [ -z "$col_default" ] || [ "$col_default" = "NULL" ]; then
+            echo "ERROR: ServiceCategory.id has no column_default/identity attached." | tee -a infra/backend/artifacts/diagnostics/servicecategory_id_check.txt
+            exit 1
+          fi
+
+          if [ -z "$seq" ] || [ "$seq" = "NULL" ]; then
+            echo "ERROR: No sequence attached to ServiceCategory.id (pg_get_serial_sequence returned empty)." | tee -a infra/backend/artifacts/diagnostics/servicecategory_id_check.txt
+            exit 1
+          fi
+
+          echo "Inspecting sequence $seq" | tee -a infra/backend/artifacts/diagnostics/servicecategory_id_check.txt
+          psql "$DATABASE_URL" -c "SELECT last_value, is_called FROM $seq;" | tee -a infra/backend/artifacts/diagnostics/servicecategory_id_check.txt
         run: |
           node -e "const fs=require('fs');const p=fs.existsSync('coverage-final.json')?'coverage-final.json':(fs.existsSync('coverage/coverage-final.json')?'coverage/coverage-final.json':null);if(!p){console.error('No coverage-final.json found');process.exit(1);}const cov=JSON.parse(fs.readFileSync(p));let totals={s:{t:0,c:0},f:{t:0,c:0},b:{t:0,c:0}};for(const k of Object.keys(cov)){const file=cov[k];const s=file.s||{};const f=file.f||{};const b=file.b||{};totals.s.t+=Object.keys(s).length;totals.s.c+=Object.values(s).filter(x=>x>0).length;totals.f.t+=Object.keys(f).length;totals.f.c+=Object.values(f).filter(x=>x>0).length;totals.b.t+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].length:0),0);totals.b.c+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].filter(x=>x>0).length:0),0);}const pct=(n,m)=>(m?100*n/m:0);const s=pct(totals.s.c,totals.s.t).toFixed(2);const f=pct(totals.f.c,totals.f.t).toFixed(2);const b=pct(totals.b.c,totals.b.t).toFixed(2);console.log(`Coverage percentages: statements ${s}%, functions ${f}%, branches ${b}%`);const minS=95,minF=95,minB=90;if(s<minS||f<minF||b<minB){console.error('Coverage below thresholds');process.exit(2);}console.log('Coverage thresholds met');"
 
@@ -234,6 +271,13 @@ jobs:
       - name: Apply Prisma migrations
         working-directory: infra/backend
         run: npx prisma migrate deploy --schema=../prisma/schema.prisma
+
+      - name: Ensure ServiceCategory id default
+        working-directory: infra/backend
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1 FROM information_schema.columns\n    WHERE table_schema = 'public'\n      AND table_name = 'ServiceCategory'\n      AND column_name = 'id'\n      AND (identity_generation IS NOT NULL OR column_default IS NOT NULL)\n  ) THEN\n    -- create sequence if missing\n    IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relkind = 'S' AND relname = 'servicecategory_id_seq') THEN\n      CREATE SEQUENCE servicecategory_id_seq;\n    END IF;\n\n    -- set sequence to max(id)+1 to avoid collisions\n    PERFORM setval('servicecategory_id_seq', COALESCE((SELECT MAX("id") FROM "ServiceCategory"), 0) + 1);\n\n    -- attach as default to id column\n    ALTER TABLE \"ServiceCategory\" ALTER COLUMN \"id\" SET DEFAULT nextval('servicecategory_id_seq');\n    ALTER SEQUENCE servicecategory_id_seq OWNED BY \"ServiceCategory\".\"id\";\n  END IF;\nEND\n$$;"
 
       - name: Check Prisma schema drift
         working-directory: infra/backend

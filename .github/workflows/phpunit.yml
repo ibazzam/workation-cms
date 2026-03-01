@@ -287,6 +287,11 @@ jobs:
           # Ensure node deps are available at repo root for scripts
           npm ci --prefix . --no-audit --progress=false || true
           node scripts/db_fix_servicecategory_scope.js || true
+      - name: Run ServiceCategory id-fix (idempotent)
+        run: |
+          # Ensure node deps are available at repo root for scripts
+          npm ci --prefix . --no-audit --progress=false || true
+          node scripts/db_fix_servicecategory.js || true
 
       - name: Generate Prisma client
         working-directory: infra/backend

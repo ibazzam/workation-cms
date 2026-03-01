@@ -30,7 +30,7 @@ while ($true) {
             try {
                 & .\scripts\ci_monitor_and_fetch.ps1 -RunId $id -Repo $Repo -PollSeconds 2
             } catch {
-                Write-Output "Error processing run $id: $_"
+                Write-Output ("Error processing run {0}: {1}" -f $id, $_)
             }
             Add-Content -Path $ProcessedFile -Value $id
         }

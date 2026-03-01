@@ -240,6 +240,23 @@ jobs:
         continue-on-error: true
         run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel ../prisma/schema.prisma --exit-code
 
+      - name: Diagnostic: list migrated columns
+        working-directory: infra/backend
+        run: |
+          set -e
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client
+          mkdir -p artifacts/diagnostics
+          psql "$DATABASE_URL" -c "SELECT table_schema, table_name, column_name FROM information_schema.columns WHERE (table_name, column_name) IN (('TransportDisruption','status'),('TransportDisruption','resolvedAt'),('PaymentBackgroundJob','attempts'),('PaymentReconciliationRun','source'),('PaymentWebhookEvent','eventType'),('Payment','source'),('Booking','updatedAt'),('Accommodation','minStayNights')) ORDER BY table_name, column_name;" | tee artifacts/diagnostics/columns.txt
+
+      - name: Upload diagnostics artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prisma-diagnostics-${{ matrix.suite }}
+          path: infra/backend/artifacts/diagnostics/columns.txt
+          if-no-files-found: warn
+
       - name: Run contract suite
         working-directory: infra/backend
         run: |
@@ -310,6 +327,23 @@ jobs:
         working-directory: infra/backend
         continue-on-error: true
         run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel ../prisma/schema.prisma --exit-code
+
+      - name: Diagnostic: list migrated columns
+        working-directory: infra/backend
+        run: |
+          set -e
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client
+          mkdir -p artifacts/diagnostics
+          psql "$DATABASE_URL" -c "SELECT table_schema, table_name, column_name FROM information_schema.columns WHERE (table_name, column_name) IN (('TransportDisruption','status'),('TransportDisruption','resolvedAt'),('PaymentBackgroundJob','attempts'),('PaymentReconciliationRun','source'),('PaymentWebhookEvent','eventType'),('Payment','source'),('Booking','updatedAt'),('Accommodation','minStayNights')) ORDER BY table_name, column_name;" | tee artifacts/diagnostics/columns.txt
+
+      - name: Upload diagnostics artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prisma-diagnostics-smoke-${{ matrix.suite }}
+          path: infra/backend/artifacts/diagnostics/columns.txt
+          if-no-files-found: warn
 
       - name: Run smoke suite
         working-directory: infra/backend

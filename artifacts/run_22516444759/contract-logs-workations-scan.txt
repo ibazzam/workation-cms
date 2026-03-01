@@ -1,0 +1,16 @@
+C:\Users\iazza\workation-cms\artifacts\run_22516444759\workations.log:189: # The column `statusCode` does not exist in the current database.
+C:\Users\iazza\workation-cms\artifacts\run_22516444759\workations.log:195: #   code: 'P2022',
+C:\Users\iazza\workation-cms\artifacts\run_22516444759\workations.log:211: # The column `statusCode` does not exist in the current database.
+C:\Users\iazza\workation-cms\artifacts\run_22516444759\workations.log:217: #   code: 'P2022',
+C:\Users\iazza\workation-cms\artifacts\run_22516444759\workations.log:228: # The column `statusCode` does not exist in the current database.
+C:\Users\iazza\workation-cms\artifacts\run_22516444759\workations.log:234: #   code: 'P2022',
+C:\Users\iazza\workation-cms\artifacts\run_22516444759\workations.log:245: # The column `statusCode` does not exist in the current database.
+C:\Users\iazza\workation-cms\artifacts\run_22516444759\workations.log:251: #   code: 'P2022',
+C:\Users\iazza\workation-cms\artifacts\run_22516444759\workations.log:267: # The column `statusCode` does not exist in the current database.
+C:\Users\iazza\workation-cms\artifacts\run_22516444759\workations.log:273: #   code: 'P2022',
+C:\Users\iazza\workation-cms\artifacts\run_22516444759\workations.log:284: # The column `statusCode` does not exist in the current database.
+C:\Users\iazza\workation-cms\artifacts\run_22516444759\workations.log:290: #   code: 'P2022',
+C:\Users\iazza\workation-cms\artifacts\run_22516444759\workations.log:301: # The column `statusCode` does not exist in the current database.
+C:\Users\iazza\workation-cms\artifacts\run_22516444759\workations.log:307: #   code: 'P2022',
+C:\Users\iazza\workation-cms\artifacts\run_22516444759\workations.log:318: # The column `statusCode` does not exist in the current database.
+C:\Users\iazza\workation-cms\artifacts\run_22516444759\workations.log:324: #   code: 'P2022',

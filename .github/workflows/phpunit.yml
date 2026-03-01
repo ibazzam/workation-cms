@@ -277,6 +277,16 @@ jobs:
         run: |
           mkdir -p prisma
           echo "DATABASE_URL=$DATABASE_URL" > prisma/.env
+          # Also ensure backend sees same DATABASE_URL during tests
+          mkdir -p ../infra/backend
+          echo "DATABASE_URL=$DATABASE_URL" > ../infra/backend/.env
+
+      - name: Run ServiceCategory scope-fix (idempotent)
+        working-directory: infra
+        run: |
+          # Ensure node deps are available at repo root for scripts
+          npm ci --prefix . --no-audit --progress=false || true
+          node scripts/db_fix_servicecategory_scope.js || true
 
       - name: Generate Prisma client
         working-directory: infra/backend

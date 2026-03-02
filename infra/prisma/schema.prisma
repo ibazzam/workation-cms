@@ -132,11 +132,11 @@ model Payment {
 }
 
 model ServiceCategory {
-  id        Int      @id @default(autoincrement())
-  name      String
-  code      String
-  active    Boolean
-  scope     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         Int      @id @default(autoincrement())
+  name       String
+  code       String   @unique
+  scope      String
+  active     Boolean
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }

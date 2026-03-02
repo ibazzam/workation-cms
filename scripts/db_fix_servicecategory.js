@@ -34,10 +34,29 @@ async function run() {
 
       await client.query('BEGIN');
 
-      // create sequence if missing (use quoted name matching existing dumps: "ServiceCategory_id_seq")
-      await client.query(
-        "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relkind='S' AND lower(relname)=lower('ServiceCategory_id_seq')) THEN EXECUTE 'CREATE SEQUENCE ""ServiceCategory_id_seq""'; END IF; END$$;"
-      );
+        // Run a single idempotent DO block that creates the quoted sequence,
+        // sets the default, assigns ownership, and sets the sequence value.
+        await client.query(`DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE c.relkind = 'S' AND n.nspname = 'public' AND c.relname = 'ServiceCategory_id_seq'
+          ) THEN
+            EXECUTE 'CREATE SEQUENCE "ServiceCategory_id_seq"';
+          END IF;
+
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema='public' AND table_name='ServiceCategory' AND column_name='id'
+          ) THEN
+            -- set default to the quoted sequence using regclass
+            EXECUTE 'ALTER TABLE "ServiceCategory" ALTER COLUMN "id" SET DEFAULT nextval((''"ServiceCategory_id_seq"'')::regclass)';
+            EXECUTE 'ALTER SEQUENCE "ServiceCategory_id_seq" OWNED BY "ServiceCategory"."id"';
+            PERFORM setval(('"ServiceCategory_id_seq"')::regclass, COALESCE((SELECT MAX("id")::bigint FROM "ServiceCategory"),0) + 1, false);
+          END IF;
+        END
+        $$;`);
 
       // set sequence to max(id) (cast id to bigint to handle text columns)
       await client.query(

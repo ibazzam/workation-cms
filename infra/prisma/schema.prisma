@@ -130,3 +130,13 @@ model Payment {
 
   booking      Booking   @relation(fields: [bookingId], references: [id])
 }
+
+model ServiceCategory {
+  id        Int      @id @default(autoincrement())
+  name      String
+  code      String
+  active    Boolean
+  scope     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

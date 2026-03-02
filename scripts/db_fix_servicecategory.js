@@ -1,5 +1,7 @@
 import pg from 'pg';
 const { Client } = pg;
+import fs from 'fs';
+import path from 'path';
 
 async function run() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -54,42 +56,63 @@ async function run() {
        WHERE table_schema='public' AND table_name='ServiceCategory' AND column_name='id'`);
     console.log('After change:', after.rows[0]);
 
-    // Determine the actual sequence name (if any) associated with the id column
-    const seqNameRes = await client.query("SELECT pg_get_serial_sequence('\"ServiceCategory\"','id') AS serial_seq");
-    const seqName = seqNameRes.rows[0] && seqNameRes.rows[0].serial_seq;
-    console.log('pg_get_serial_sequence:', seqName);
+    // Determine an existing sequence associated with the ServiceCategory.id column (if any)
+    // This looks up sequences which are linked via dependency to the table column.
+    const seqLookup = await client.query(
+      `SELECT n.nspname AS seq_schema, c.relname AS seq_name
+       FROM pg_class c
+       JOIN pg_namespace n ON n.oid = c.relnamespace
+       JOIN pg_depend d ON d.objid = c.oid
+       JOIN pg_class t ON d.refobjid = t.oid
+       WHERE c.relkind = 'S' AND t.relname = 'ServiceCategory' LIMIT 1;`
+    );
+    const seqRow = seqLookup.rows[0];
+    let seqName = null;
+    if (seqRow) {
+      seqName = seqRow.seq_schema ? `${seqRow.seq_schema}.${seqRow.seq_name}` : seqRow.seq_name;
+    }
+    console.log('discovered sequence for ServiceCategory.id:', seqName);
 
     if (seqName) {
-      console.log('Setting sequence to MAX(id) to avoid conflicts and ensuring ownership.');
+      console.log('Setting sequence to MAX(id)+1 to avoid conflicts and ensuring ownership.');
       const maxRes = await client.query('SELECT COALESCE(MAX("id"::bigint), NULL) as max_id FROM "ServiceCategory"');
       const maxId = maxRes.rows[0] && maxRes.rows[0].max_id;
 
-      if (maxId && Number(maxId) >= 1) {
-        // set to MAX(id)+1 and mark as not called so nextval returns MAX(id)+1
-        await client.query('SELECT setval($1, $2, false)', [seqName, Number(maxId) + 1]);
-      } else {
-        // empty table: set sequence to 1 and mark as not called so nextval returns 1
-        await client.query('SELECT setval($1, $2, false)', [seqName, 1]);
-      }
+      const desired = (maxId && Number(maxId) >= 1) ? Number(maxId) + 1 : 1;
 
-      // Safely quote the sequence identifier (may include schema)
-      function quoteIdentFromPgGetSerial(name) {
-        // name can be like public.seq or "public"."Seq" — normalize by removing outer quotes then quote each part
-        const parts = name.split('.');
-        return parts.map(p => {
-          const stripped = p.replace(/^"(.*)"$/, '$1');
-          const doubled = stripped.replace(/"/g, '""');
-          return `"${doubled}"`;
-        }).join('.');
-      }
+      // Use fully qualified sequence name as parameterized identifier isn't supported for NEXTVAL/setval calls with schema
+      // We'll call setval using the text name and then ensure ownership via ALTER SEQUENCE with quoted identifiers.
+      await client.query('SELECT setval($1, $2, false)', [seqName, desired]);
 
-      const quotedSeq = quoteIdentFromPgGetSerial(seqName);
-      await client.query(`ALTER SEQUENCE ${quotedSeq} OWNED BY "ServiceCategory"."id"`);
+      // Quote identifiers safely for ALTER SEQUENCE
+      const parts = seqName.split('.');
+      const quoted = parts.map(p => `"${p.replace(/"/g, '""')}"`).join('.');
+      await client.query(`ALTER SEQUENCE ${quoted} OWNED BY "ServiceCategory"."id"`);
 
       const seqVal = await client.query('SELECT nextval($1) as v', [seqName]);
       console.log('sample nextval from sequence:', seqVal.rows[0]);
+      diagnostics.sample_nextval = seqVal.rows[0] || null;
     } else {
-      console.log('No associated sequence found via pg_get_serial_sequence().');
+      console.log('No sequence discovered for ServiceCategory.id. Consider creating one or allowing migrations to handle it.');
+      diagnostics.sample_nextval = null;
+    }
+
+    // Write diagnostics file to infra/backend/artifacts/diagnostics if possible
+    try {
+      const outDir = path.resolve(process.cwd(), 'infra', 'backend', 'artifacts', 'diagnostics');
+      fs.mkdirSync(outDir, { recursive: true });
+      const outPath = path.join(outDir, 'servicecategory_id_check.json');
+      const payload = {
+        information_schema: row || null,
+        after_column: (after && after.rows && after.rows[0]) || null,
+        discovered_sequence: seqName || null,
+        diagnostics: diagnostics || null,
+        timestamp: new Date().toISOString(),
+      };
+      fs.writeFileSync(outPath, JSON.stringify(payload, null, 2));
+      console.log('Wrote diagnostics to', outPath);
+    } catch (e) {
+      console.warn('Failed to write diagnostics file:', e && e.message);
     }
 
   } catch (err) {

@@ -28,8 +28,8 @@ BEGIN
   ) THEN
     EXECUTE 'ALTER TABLE public."ServiceCategory" ALTER COLUMN "id" SET DEFAULT nextval(''"ServiceCategory_id_seq"'')::regclass';
     EXECUTE 'ALTER SEQUENCE "ServiceCategory_id_seq" OWNED BY public."ServiceCategory"."id"';
-    EXECUTE format('SELECT setval(%L, COALESCE((SELECT MAX("id") FROM public."ServiceCategory"), 0) + 1, false);',
-                   'ServiceCategory_id_seq');
+    EXECUTE format('SELECT setval(%L, COALESCE((SELECT MAX("id")::bigint FROM public."ServiceCategory"), 0) + 1, false);',
+             'ServiceCategory_id_seq');
   END IF;
 END
 $$;

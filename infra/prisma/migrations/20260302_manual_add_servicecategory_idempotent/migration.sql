@@ -32,7 +32,7 @@ BEGIN
       END;
 
       -- set sequence value to max(id)+1 (or 1)
-      EXECUTE format('SELECT setval(%L, COALESCE((SELECT MAX(id) FROM public."ServiceCategory"),0) + 1, false)', '"ServiceCategory_id_seq"');
+      EXECUTE format('SELECT setval(%L, COALESCE((SELECT MAX(id)::bigint FROM public."ServiceCategory"),0) + 1, false)', '"ServiceCategory_id_seq"');
 
       -- set default to nextval of the sequence
       EXECUTE 'ALTER TABLE public."ServiceCategory" ALTER COLUMN id SET DEFAULT nextval(''"ServiceCategory_id_seq"'')';

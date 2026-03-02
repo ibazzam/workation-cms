@@ -38,6 +38,16 @@ jobs:
         run: |
           npm ci --prefer-offline --no-audit --progress=false
 
+      - name: Install backend dependencies
+        working-directory: infra/backend
+        run: |
+          npm ci --prefer-offline --no-audit --progress=false
+
+      - name: Apply Prisma migrations
+        working-directory: infra/backend
+        run: |
+          npx prisma migrate deploy --schema=../prisma/schema.prisma
+
       - name: Run DB fix script (idempotent)
         run: |
           mkdir -p infra/backend/artifacts/diagnostics

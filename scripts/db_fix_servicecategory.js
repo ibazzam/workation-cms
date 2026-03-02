@@ -34,17 +34,25 @@ async function run() {
 
       await client.query('BEGIN');
 
-      // create sequence if missing
-      await client.query("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relkind='S' AND relname='servicecategory_id_seq') THEN CREATE SEQUENCE servicecategory_id_seq; END IF; END$$;");
+      // create sequence if missing (use quoted name matching existing dumps: "ServiceCategory_id_seq")
+      await client.query(
+        "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relkind='S' AND lower(relname)=lower('ServiceCategory_id_seq')) THEN EXECUTE 'CREATE SEQUENCE ""ServiceCategory_id_seq""'; END IF; END$$;"
+      );
 
       // set sequence to max(id) (cast id to bigint to handle text columns)
-      await client.query("SELECT setval('servicecategory_id_seq', COALESCE((SELECT MAX(\"id\")::bigint FROM \"ServiceCategory\"), 0) + 1, false);");
+      await client.query(
+        "SELECT setval(('\"ServiceCategory_id_seq\"')::regclass, COALESCE((SELECT MAX(\"id\")::bigint FROM \"ServiceCategory\"), 0) + 1, false);"
+      );
 
-      // attach as default
-      await client.query("ALTER TABLE \"ServiceCategory\" ALTER COLUMN \"id\" SET DEFAULT nextval('servicecategory_id_seq')");
+      // attach as default (use regclass to reference quoted sequence)
+      await client.query(
+        "ALTER TABLE \"ServiceCategory\" ALTER COLUMN \"id\" SET DEFAULT nextval(('\"ServiceCategory_id_seq\"')::regclass)"
+      );
 
       // set ownership
-      await client.query("ALTER SEQUENCE servicecategory_id_seq OWNED BY \"ServiceCategory\".\"id\"");
+      await client.query(
+        "ALTER SEQUENCE \"ServiceCategory_id_seq\" OWNED BY \"ServiceCategory\".\"id\""
+      );
 
       await client.query('COMMIT');
       console.log('Sequence created/attached and default set.');

@@ -1,0 +1,75 @@
+name: Diagnose ServiceCategory ID
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  diagnose:
+    name: Diagnose ServiceCategory ID
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: pass
+          POSTGRES_DB: dbname
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user -d dbname"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://user:pass@localhost:5432/dbname
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: |
+          npm ci --prefer-offline --no-audit --progress=false
+
+      - name: Run DB fix script (idempotent)
+        run: |
+          mkdir -p infra/backend/artifacts/diagnostics
+          node scripts/db_fix_servicecategory.js || true
+
+      - name: Verify ServiceCategory id default
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client
+          mkdir -p infra/backend/artifacts/diagnostics
+          echo 'Checking information_schema for ServiceCategory.id default' | tee infra/backend/artifacts/diagnostics/servicecategory_id_check.txt
+          col_default=$(psql "$DATABASE_URL" -t -A -c "SELECT column_default FROM information_schema.columns WHERE table_schema='public' AND table_name='ServiceCategory' AND column_name='id';") || true
+          echo "column_default=$col_default" | tee -a infra/backend/artifacts/diagnostics/servicecategory_id_check.txt
+
+          seq=$(psql "$DATABASE_URL" -t -A -c "SELECT pg_get_serial_sequence('"ServiceCategory"','id');") || true
+          seq=$(echo "$seq" | xargs)
+          echo "pg_get_serial_sequence=$seq" | tee -a infra/backend/artifacts/diagnostics/servicecategory_id_check.txt
+
+          if [ -z "$col_default" ] || [ "$col_default" = "NULL" ]; then
+            echo "ERROR: ServiceCategory.id has no column_default/identity attached." | tee -a infra/backend/artifacts/diagnostics/servicecategory_id_check.txt
+          fi
+
+          if [ -z "$seq" ] || [ "$seq" = "NULL" ]; then
+            echo "ERROR: No sequence attached to ServiceCategory.id (pg_get_serial_sequence returned empty)." | tee -a infra/backend/artifacts/diagnostics/servicecategory_id_check.txt
+          else
+            echo "Inspecting sequence $seq" | tee -a infra/backend/artifacts/diagnostics/servicecategory_id_check.txt
+            psql "$DATABASE_URL" -c "SELECT last_value, is_called FROM $seq;" | tee -a infra/backend/artifacts/diagnostics/servicecategory_id_check.txt
+          fi
+
+      - name: Upload diagnostics artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: servicecategory-id-check
+          path: infra/backend/artifacts/diagnostics/servicecategory_id_check.txt
+          if-no-files-found: warn

@@ -2,25 +2,34 @@
     "$schema": "https://www.schemastore.org/package.json",
     "private": true,
     "type": "module",
+    "prisma": {
+        "schema": "infra/prisma/schema.prisma"
+    },
     "scripts": {
         "build": "vite build",
         "dev": "vite",
         "test": "vitest --run",
-        "coverage": "vitest --coverage"
+        "coverage": "vitest --coverage",
+        "test:quality:all": "npm --prefix infra/backend run test:quality:all",
+        "cleanup:artifacts": "node scripts/cleanup_workspace_artifacts.cjs --execute",
+        "cleanup:artifacts:dry-run": "node scripts/cleanup_workspace_artifacts.cjs",
+        "cloudflare:preflight": "powershell -ExecutionPolicy Bypass -File .\\scripts\\cloudflare_preflight_check.ps1",
+        "cloudflare:preflight:workation-mv": "powershell -ExecutionPolicy Bypass -File .\\scripts\\cloudflare_preflight_workation_mv.ps1"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
+        "@vitest/coverage-v8": "^1.0.0",
         "axios": "^1.11.0",
         "concurrently": "^9.0.1",
+        "jsdom": "^21.1.0",
         "laravel-vite-plugin": "^2.0.0",
-        "prisma": "^4.16.0",
+        "prisma": "^5.22.0",
         "tailwindcss": "^4.0.0",
         "vite": "^7.0.7",
-        "vitest": "^1.0.0",
-        "@vitest/coverage-v8": "^1.0.0",
-        "jsdom": "^21.1.0"
+        "vitest": "^1.0.0"
     },
     "dependencies": {
-        "@prisma/client": "^4.16.0"
+        "@prisma/client": "^5.22.0",
+        "pg": "^8.18.0"
     }
 }

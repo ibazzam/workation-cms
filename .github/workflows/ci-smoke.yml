@@ -1,0 +1,41 @@
+name: CI Smoke - Prisma
+
+on:
+  push:
+    branches:
+      - chore/backup-automation-hardening-2026-02-25
+  workflow_dispatch:
+
+jobs:
+  prisma-generate:
+    name: Prisma Generate Smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install backend dependencies
+        run: npm ci --prefix infra/backend --no-audit --prefer-offline
+
+      - name: Show repo commit and prisma folder
+        run: |
+          echo "HEAD=$(git rev-parse HEAD)"
+          echo "--- infra/prisma files ---"
+          ls -la infra/prisma || true
+
+      - name: Print `infra/prisma/schema.prisma`
+        run: |
+          echo '---- BEGIN infra/prisma/schema.prisma ----'
+          sed -n '1,400p' infra/prisma/schema.prisma || true
+          echo '---- END infra/prisma/schema.prisma ----'
+
+      - name: Run Prisma generate
+        run: npm --prefix infra/backend run prisma:generate
+        env:
+          DATABASE_URL: postgresql://user:pass@localhost:5432/dbname

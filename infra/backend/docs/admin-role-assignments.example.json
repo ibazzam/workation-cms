@@ -1,0 +1,24 @@
+[
+  {
+    "email": "aishath.ibrahim@workation.example",
+    "role": "ADMIN_CARE",
+    "accessType": "PERMANENT",
+    "approvedBy": "Operations Manager - Ahmed Zahir",
+    "nextReviewDate": "2026-06-30"
+  },
+  {
+    "email": "mariyam.nazeer@workation.example",
+    "role": "ADMIN_FINANCE",
+    "accessType": "PERMANENT",
+    "approvedBy": "Finance Lead - Ibrahim Riyaz",
+    "nextReviewDate": "2026-06-30"
+  },
+  {
+    "email": "hussain.shareef@workation.example",
+    "role": "ADMIN_SUPER",
+    "accessType": "TEMPORARY",
+    "endDate": "2026-06-30",
+    "approvedBy": "CTO - Fathimath Ali",
+    "nextReviewDate": "2026-04-30"
+  }
+]

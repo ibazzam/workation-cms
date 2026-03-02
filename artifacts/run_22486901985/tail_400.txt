@@ -1,0 +1,400 @@
+﻿Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:22.5510889Z     â””â”€ migration.sql
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:22.5511226Z       
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:22.5511712Z All migrations have been successfully applied.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:22.5781313Z ##[group]Run npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel ../prisma/schema.prisma --exit-code
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:22.5782183Z [36;1mnpx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel ../prisma/schema.prisma --exit-code[0m
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:22.5833910Z shell: /usr/bin/bash -e {0}
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:22.5834165Z env:
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:22.5834720Z   DATABASE_URL: ***localhost:5432/dbname
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:22.5835033Z   SKIP_BACKGROUND_JOBS: true
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:22.5835280Z   CONTRACT_HEALTH_TIMEOUT_MS: 60000
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:22.5835518Z ##[endgroup]
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3889692Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3890146Z [+] Added tables
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3890597Z   - Workation
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3890830Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3891128Z [*] Changed the `Accommodation` table
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3892833Z   [+] Added column `minStayNights`
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3893182Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3893491Z [*] Changed the `AccommodationBlackout` table
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3894605Z   [-] Removed foreign key on columns (accommodationId)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3895241Z   [*] Altered column `startDate` (type changed)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3895831Z   [*] Altered column `endDate` (type changed)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3896535Z   [*] Altered column `createdAt` (type changed)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3897159Z   [*] Altered column `updatedAt` (type changed)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3897928Z   [+] Added foreign key on columns (accommodationId)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3898448Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3898866Z [*] Changed the `AccommodationSeasonalRate` table
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3899617Z   [-] Removed foreign key on columns (accommodationId)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3900291Z   [+] Added column `minNights`
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3900792Z   [*] Altered column `startDate` (type changed)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3901452Z   [*] Altered column `endDate` (type changed)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3902073Z   [*] Altered column `createdAt` (type changed)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3902910Z   [*] Altered column `updatedAt` (type changed)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3903845Z   [+] Added foreign key on columns (accommodationId)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3904253Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3904611Z [*] Changed the `AdminAuditLog` table
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3905295Z   [-] Removed index on columns (createdAt)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3905921Z   [*] Altered column `createdAt` (type changed)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3906257Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3906493Z [*] Changed the `Booking` table
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3907019Z   [+] Added column `holdExpiresAt`
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3907356Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3907624Z [*] Changed the `Country` table
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3908333Z   [*] Altered column `updatedAt` (changed from Nullable to Required)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3908781Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3909013Z [*] Changed the `LoyaltyAccount` table
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3909779Z   [*] Altered column `balance` (changed from Nullable to Required, type changed)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3910781Z   [*] Altered column `updatedAt` (changed from Nullable to Required)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3911238Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3911509Z [*] Changed the `LoyaltyTransaction` table
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3912236Z   [*] Altered column `amount` (changed from Nullable to Required, type changed)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3912923Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3913185Z [*] Changed the `PaymentBackgroundJob` table
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3913796Z   [*] Altered column `name` (changed from Nullable to Required)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3914195Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3914445Z [*] Changed the `PaymentWebhookEvent` table
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3915070Z   [*] Altered column `provider` (changed from Nullable to Required)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3915894Z   [*] Altered column `payload` (changed from Nullable to Required)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3916340Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3916549Z [*] Changed the `Review` table
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3917153Z   [*] Altered column `updatedAt` (changed from Nullable to Required)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3917600Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3917844Z [*] Changed the `ServiceCategory` table
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3918892Z   [*] Altered column `updatedAt` (changed from Nullable to Required)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3919368Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3919578Z [*] Changed the `SocialLink` table
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3920226Z   [*] Altered column `updatedAt` (changed from Nullable to Required)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3920714Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3921001Z [*] Changed the `TransportFareClass` table
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3921691Z   [*] Altered column `code` (changed from Nullable to Required)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3922141Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3922400Z [*] Changed the `VendorLoyaltyOffer` table
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.3923217Z   [*] Altered column `active` (changed from Nullable to Required)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.4100498Z ##[error]Process completed with exit code 2.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.4170041Z ##[group]Run mkdir -p artifacts/contract
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.4170383Z [36;1mmkdir -p artifacts/contract[0m
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.4170645Z [36;1mset -o pipefail[0m
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.4170967Z [36;1mnpm run test:contract:auth 2>&1 | tee artifacts/contract/auth.log[0m
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.4219654Z shell: /usr/bin/bash -e {0}
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.4219895Z env:
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.4220434Z   DATABASE_URL: ***localhost:5432/dbname
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.4220724Z   SKIP_BACKGROUND_JOBS: true
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.4220956Z   CONTRACT_HEALTH_TIMEOUT_MS: 60000
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.4221193Z ##[endgroup]
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.5424064Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.5424574Z > workation-backend@0.1.0 test:contract:auth
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.5425290Z > npm run build && node --test --test-concurrency=1 tests/contract/auth.contract.test.mjs
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.5425721Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.6564541Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.6565178Z > workation-backend@0.1.0 build
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.6566050Z > npm run prisma:generate && tsc -p tsconfig.json
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.6566487Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.7719207Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.7719915Z > workation-backend@0.1.0 prisma:generate
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.7720648Z > prisma generate --schema=../prisma/schema.prisma
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:23.7720955Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.1749317Z Prisma schema loaded from ../prisma/schema.prisma
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.6941394Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.6942535Z âœ” Generated Prisma Client (v5.22.0) to ./node_modules/.prisma/client in 225ms
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.6943367Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.6943841Z Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.6944276Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.6944951Z Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.6945560Z 
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.7221114Z â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.7221744Z â”‚  Update available 5.22.0 -> 7.4.1                       â”‚
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.7222232Z â”‚                                                         â”‚
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.7222891Z â”‚  This is a major update - please follow the guide at    â”‚
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.7223449Z â”‚  https://pris.ly/d/major-version-upgrade                â”‚
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.7223898Z â”‚                                                         â”‚
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.7224345Z â”‚  Run the following to update                            â”‚
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.7224791Z â”‚    npm i --save-dev prisma@latest                       â”‚
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.7225233Z â”‚    npm i @prisma/client@latest                          â”‚
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:24.7225676Z â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6534042Z ##[error]src/admin-settings/admin-settings.service.ts(49,28): error TS2339: Property 'updatedAt' does not exist on type '{ createdAt: Date; key: string; value: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6538354Z ##[error]src/admin-settings/admin-settings.service.ts(66,17): error TS2322: Type 'CommercialSettings' is not assignable to type 'string | NullableStringFieldUpdateOperationsInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6541556Z ##[error]src/admin-settings/admin-settings.service.ts(67,47): error TS2322: Type 'CommercialSettings' is not assignable to type 'string'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6544992Z ##[error]src/admin-settings/admin-settings.service.ts(73,29): error TS2339: Property 'updatedAt' does not exist on type '{ createdAt: Date; key: string; value: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6550626Z ##[error]src/audit/admin-write-audit.service.ts(26,9): error TS2353: Object literal may only specify known properties, and 'actorUserId' does not exist in type '(Without<AdminAuditLogCreateInput, AdminAuditLogUncheckedCreateInput> & AdminAuditLogUncheckedCreateInput) | (Without<...> & AdminAuditLogCreateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6556274Z ##[error]src/bookings/bookings.service.ts(181,11): error TS2353: Object literal may only specify known properties, and 'resolvedAt' does not exist in type 'TransportDisruptionWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6561040Z ##[error]src/bookings/bookings.service.ts(186,49): error TS2339: Property 'status' does not exist on type '{ id: string; createdAt: Date; transportId: string; replacementTransportId: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6565667Z ##[error]src/bookings/bookings.service.ts(186,92): error TS2339: Property 'status' does not exist on type '{ id: string; createdAt: Date; transportId: string; replacementTransportId: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6570369Z ##[error]src/bookings/bookings.service.ts(200,33): error TS2353: Object literal may only specify known properties, and 'seats' does not exist in type 'TransportFareClassSelect<DefaultArgs>'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6575655Z ##[error]src/bookings/bookings.service.ts(208,11): error TS2739: Type '{ id: string; createdAt: Date; transportId: string; code: string; }' is missing the following properties from type '{ code: string; seats: number; price: Decimal; }': seats, price
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6580108Z ##[error]src/bookings/bookings.service.ts(217,17): error TS2353: Object literal may only specify known properties, and 'transportFareClassCode' does not exist in type 'BookingWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6586457Z ##[error]src/bookings/bookings.service.ts(279,9): error TS2353: Object literal may only specify known properties, and 'transportFareClassCode' does not exist in type '(Without<BookingCreateInput, BookingUncheckedCreateInput> & BookingUncheckedCreateInput) | (Without<...> & BookingCreateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6594544Z ##[error]src/bookings/bookings.service.ts(351,43): error TS2339: Property 'transportFareClassCode' does not exist on type '{ accommodation: { id: string; createdAt: Date; updatedAt: Date; vendorId: string; islandId: number; title: string; slug: string; description: string; type: string; rooms: number; price: Decimal; minStayNights: number; }; transport: { ...; }; payment: { ...; }; } & { ...; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6601888Z ##[error]src/bookings/bookings.service.ts(500,21): error TS2339: Property 'transportFareClassCode' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; startDate: Date; accommodationId: string; endDate: Date; userId: string; transportId: string; guests: number; totalPrice: Decimal; holdExpiresAt: Date; status: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6606891Z ##[error]src/cart/cart.service.ts(207,19): error TS2352: Conversion of type 'string' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6609146Z ##[error]src/cart/cart.service.ts(209,83): error TS2339: Property 'updatedAt' does not exist on type '{ createdAt: Date; key: string; value: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6610609Z ##[error]src/cart/cart.service.ts(225,9): error TS2322: Type 'object' is not assignable to type 'string'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6612545Z ##[error]src/loyalty/loyalty.service.ts(47,51): error TS2339: Property 'lifetimePoints' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; balance: Decimal; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6615015Z ##[error]src/loyalty/loyalty.service.ts(113,9): error TS2353: Object literal may only specify known properties, and 'type' does not exist in type 'LoyaltyTransactionWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6617282Z ##[error]src/loyalty/loyalty.service.ts(123,17): error TS2339: Property 'pointsBalance' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; balance: Decimal; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6619186Z ##[error]src/loyalty/loyalty.service.ts(133,9): error TS2322: Type '{ userId: string; }' is not assignable to type 'LoyaltyAccountWhereUniqueInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6620985Z   Type '{ userId: string; }' is not assignable to type '{ id: string; } & { id?: string; AND?: LoyaltyAccountWhereInput | LoyaltyAccountWhereInput[]; OR?: LoyaltyAccountWhereInput[]; ... 4 more ...; updatedAt?: string | ... 1 more ... | DateTimeFilter<...>; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6622366Z     Property 'id' is missing in type '{ userId: string; }' but required in type '{ id: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6625438Z ##[error]src/loyalty/loyalty.service.ts(135,11): error TS2353: Object literal may only specify known properties, and 'pointsBalance' does not exist in type '(Without<LoyaltyAccountUpdateInput, LoyaltyAccountUncheckedUpdateInput> & LoyaltyAccountUncheckedUpdateInput) | (Without<...> & LoyaltyAccountUpdateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6629707Z ##[error]src/loyalty/loyalty.service.ts(143,11): error TS2353: Object literal may only specify known properties, and 'type' does not exist in type '(Without<LoyaltyTransactionCreateInput, LoyaltyTransactionUncheckedCreateInput> & LoyaltyTransactionUncheckedCreateInput) | (Without<...> & LoyaltyTransactionCreateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6633226Z ##[error]src/loyalty/loyalty.service.ts(178,19): error TS2353: Object literal may only specify known properties, and 'pointsMultiplier' does not exist in type 'VendorLoyaltyOfferOrderByWithRelationInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6636016Z ##[error]src/loyalty/loyalty.service.ts(241,9): error TS2353: Object literal may only specify known properties, and 'type' does not exist in type 'LoyaltyTransactionWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6639586Z ##[error]src/loyalty/loyalty.service.ts(259,15): error TS2353: Object literal may only specify known properties, and 'startsAt' does not exist in type 'VendorLoyaltyOfferWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6642262Z ##[error]src/loyalty/loyalty.service.ts(260,15): error TS2353: Object literal may only specify known properties, and 'startsAt' does not exist in type 'VendorLoyaltyOfferWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6644657Z ##[error]src/loyalty/loyalty.service.ts(261,15): error TS2353: Object literal may only specify known properties, and 'startsAt' does not exist in type 'VendorLoyaltyOfferWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6646780Z ##[error]src/loyalty/loyalty.service.ts(262,15): error TS2353: Object literal may only specify known properties, and 'startsAt' does not exist in type 'VendorLoyaltyOfferWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6649158Z ##[error]src/loyalty/loyalty.service.ts(265,21): error TS2353: Object literal may only specify known properties, and 'pointsMultiplier' does not exist in type 'VendorLoyaltyOfferOrderByWithRelationInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6651368Z ##[error]src/loyalty/loyalty.service.ts(269,53): error TS2339: Property 'pointsMultiplier' does not exist on type '{ id: string; createdAt: Date; vendorId: string; active: boolean; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6653412Z ##[error]src/loyalty/loyalty.service.ts(283,9): error TS2322: Type '{ userId: string; }' is not assignable to type 'LoyaltyAccountWhereUniqueInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6655214Z   Type '{ userId: string; }' is not assignable to type '{ id: string; } & { id?: string; AND?: LoyaltyAccountWhereInput | LoyaltyAccountWhereInput[]; OR?: LoyaltyAccountWhereInput[]; ... 4 more ...; updatedAt?: string | ... 1 more ... | DateTimeFilter<...>; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6656366Z     Property 'id' is missing in type '{ userId: string; }' but required in type '{ id: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6658916Z ##[error]src/loyalty/loyalty.service.ts(286,11): error TS2353: Object literal may only specify known properties, and 'pointsBalance' does not exist in type '(Without<LoyaltyAccountCreateInput, LoyaltyAccountUncheckedCreateInput> & LoyaltyAccountUncheckedCreateInput) | (Without<...> & LoyaltyAccountCreateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6661617Z ##[error]src/loyalty/loyalty.service.ts(293,42): error TS2339: Property 'lifetimePoints' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; balance: Decimal; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6665195Z ##[error]src/loyalty/loyalty.service.ts(300,11): error TS2353: Object literal may only specify known properties, and 'type' does not exist in type '(Without<LoyaltyTransactionCreateInput, LoyaltyTransactionUncheckedCreateInput> & LoyaltyTransactionUncheckedCreateInput) | (Without<...> & LoyaltyTransactionCreateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6667761Z ##[error]src/loyalty/loyalty.service.ts(309,9): error TS2322: Type '{ userId: string; }' is not assignable to type 'LoyaltyAccountWhereUniqueInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6669576Z   Type '{ userId: string; }' is not assignable to type '{ id: string; } & { id?: string; AND?: LoyaltyAccountWhereInput | LoyaltyAccountWhereInput[]; OR?: LoyaltyAccountWhereInput[]; ... 4 more ...; updatedAt?: string | ... 1 more ... | DateTimeFilter<...>; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6670880Z     Property 'id' is missing in type '{ userId: string; }' but required in type '{ id: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6673657Z ##[error]src/loyalty/loyalty.service.ts(311,11): error TS2353: Object literal may only specify known properties, and 'pointsBalance' does not exist in type '(Without<LoyaltyAccountUpdateInput, LoyaltyAccountUncheckedUpdateInput> & LoyaltyAccountUncheckedUpdateInput) | (Without<...> & LoyaltyAccountUpdateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6676059Z ##[error]src/loyalty/loyalty.service.ts(364,7): error TS2322: Type '{ userId: string; }' is not assignable to type 'LoyaltyAccountWhereUniqueInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6677840Z   Type '{ userId: string; }' is not assignable to type '{ id: string; } & { id?: string; AND?: LoyaltyAccountWhereInput | LoyaltyAccountWhereInput[]; OR?: LoyaltyAccountWhereInput[]; ... 4 more ...; updatedAt?: string | ... 1 more ... | DateTimeFilter<...>; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6678981Z     Property 'id' is missing in type '{ userId: string; }' but required in type '{ id: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6681496Z ##[error]src/loyalty/loyalty.service.ts(367,9): error TS2353: Object literal may only specify known properties, and 'pointsBalance' does not exist in type '(Without<LoyaltyAccountCreateInput, LoyaltyAccountUncheckedCreateInput> & LoyaltyAccountUncheckedCreateInput) | (Without<...> & LoyaltyAccountCreateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6685750Z ##[error]src/payments/payments.service.ts(284,11): error TS2353: Object literal may only specify known properties, and 'source' does not exist in type '(Without<PaymentReconciliationRunCreateInput, PaymentReconciliationRunUncheckedCreateInput> & PaymentReconciliationRunUncheckedCreateInput) | (Without<...> & PaymentReconciliationRunCreateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6689922Z ##[error]src/payments/payments.service.ts(306,11): error TS2353: Object literal may only specify known properties, and 'source' does not exist in type '(Without<PaymentReconciliationRunCreateInput, PaymentReconciliationRunUncheckedCreateInput> & PaymentReconciliationRunUncheckedCreateInput) | (Without<...> & PaymentReconciliationRunCreateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6692904Z ##[error]src/payments/payments.service.ts(350,18): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'PaymentReconciliationRunWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6694812Z ##[error]src/payments/payments.service.ts(360,41): error TS2339: Property 'finishedAt' does not exist on type '{ id: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6696574Z ##[error]src/payments/payments.service.ts(361,52): error TS2339: Property 'finishedAt' does not exist on type '{ id: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6698245Z ##[error]src/payments/payments.service.ts(371,15): error TS2339: Property 'status' does not exist on type '{ id: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6699840Z ##[error]src/payments/payments.service.ts(378,58): error TS2339: Property 'errors' does not exist on type '{ id: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6701453Z ##[error]src/payments/payments.service.ts(409,35): error TS2339: Property 'errors' does not exist on type '{ id: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6705790Z ##[error]src/payments/payments.service.ts(425,7): error TS2615: Type of property 'AND' circularly references itself in mapped type '{ [K in keyof { AND?: PaymentBackgroundJobScalarWhereWithAggregatesInput | PaymentBackgroundJobScalarWhereWithAggregatesInput[]; ... 4 more ...; createdAt?: string | ... 1 more ... | DateTimeWithAggregatesFilter<...>; }]: Or<...> extends 1 ? { ...; }[K] extends infer TK ? GetHavingFields<...> : never : {} extends Fi...'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6710848Z ##[error]src/payments/payments.service.ts(425,7): error TS2615: Type of property 'NOT' circularly references itself in mapped type '{ [K in keyof { AND?: PaymentBackgroundJobScalarWhereWithAggregatesInput | PaymentBackgroundJobScalarWhereWithAggregatesInput[]; ... 4 more ...; createdAt?: string | ... 1 more ... | DateTimeWithAggregatesFilter<...>; }]: Or<...> extends 1 ? { ...; }[K] extends infer TK ? GetHavingFields<...> : never : {} extends Fi...'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6716204Z ##[error]src/payments/payments.service.ts(425,7): error TS2615: Type of property 'OR' circularly references itself in mapped type '{ [K in keyof { AND?: PaymentBackgroundJobScalarWhereWithAggregatesInput | PaymentBackgroundJobScalarWhereWithAggregatesInput[]; ... 4 more ...; createdAt?: string | ... 1 more ... | DateTimeWithAggregatesFilter<...>; }]: Or<...> extends 1 ? { ...; }[K] extends infer TK ? GetHavingFields<...> : never : {} extends Fi...'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6719201Z ##[error]src/payments/payments.service.ts(430,18): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'PaymentBackgroundJobWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6721887Z ##[error]src/payments/payments.service.ts(431,20): error TS2353: Object literal may only specify known properties, and 'runAt' does not exist in type 'PaymentBackgroundJobOrderByWithRelationInput | PaymentBackgroundJobOrderByWithRelationInput[]'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6724498Z ##[error]src/payments/payments.service.ts(434,18): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'PaymentBackgroundJobWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6726612Z ##[error]src/payments/payments.service.ts(438,18): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'PaymentBackgroundJobWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6729378Z ##[error]src/payments/payments.service.ts(439,20): error TS2353: Object literal may only specify known properties, and 'updatedAt' does not exist in type 'PaymentBackgroundJobOrderByWithRelationInput | PaymentBackgroundJobOrderByWithRelationInput[]'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6731689Z ##[error]src/payments/payments.service.ts(668,9): error TS2559: Type '{ type?: string; status?: string; }' has no properties in common with type 'PaymentBackgroundJobWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6733948Z ##[error]src/payments/payments.service.ts(673,48): error TS2559: Type '{ type?: string; status?: string; }' has no properties in common with type 'PaymentBackgroundJobWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6735945Z ##[error]src/payments/payments.service.ts(701,13): error TS2339: Property 'status' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6737696Z ##[error]src/payments/payments.service.ts(701,41): error TS2339: Property 'status' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6739433Z ##[error]src/payments/payments.service.ts(705,21): error TS2339: Property 'status' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6741151Z ##[error]src/payments/payments.service.ts(706,20): error TS2339: Property 'runAt' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6743083Z ##[error]src/payments/payments.service.ts(710,13): error TS2339: Property 'status' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6746419Z ##[error]src/payments/payments.service.ts(718,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type '(Without<PaymentBackgroundJobUpdateInput, PaymentBackgroundJobUncheckedUpdateInput> & PaymentBackgroundJobUncheckedUpdateInput) | (Without<...> & PaymentBackgroundJobUpdateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6748835Z ##[error]src/payments/payments.service.ts(729,23): error TS2339: Property 'status' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6750706Z ##[error]src/payments/payments.service.ts(730,22): error TS2339: Property 'runAt' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6752480Z ##[error]src/payments/payments.service.ts(740,13): error TS2339: Property 'status' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6754671Z ##[error]src/payments/payments.service.ts(744,21): error TS2339: Property 'status' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6756393Z ##[error]src/payments/payments.service.ts(748,13): error TS2339: Property 'status' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6758118Z ##[error]src/payments/payments.service.ts(752,21): error TS2339: Property 'status' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6759892Z ##[error]src/payments/payments.service.ts(756,13): error TS2339: Property 'status' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6763355Z ##[error]src/payments/payments.service.ts(763,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type '(Without<PaymentBackgroundJobUpdateInput, PaymentBackgroundJobUncheckedUpdateInput> & PaymentBackgroundJobUncheckedUpdateInput) | (Without<...> & PaymentBackgroundJobUpdateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6765819Z ##[error]src/payments/payments.service.ts(771,23): error TS2339: Property 'status' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6767529Z ##[error]src/payments/payments.service.ts(781,13): error TS2339: Property 'status' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6769237Z ##[error]src/payments/payments.service.ts(785,21): error TS2339: Property 'status' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6770945Z ##[error]src/payments/payments.service.ts(789,13): error TS2339: Property 'status' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6774425Z ##[error]src/payments/payments.service.ts(796,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type '(Without<PaymentBackgroundJobUpdateInput, PaymentBackgroundJobUncheckedUpdateInput> & PaymentBackgroundJobUncheckedUpdateInput) | (Without<...> & PaymentBackgroundJobUpdateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6776889Z ##[error]src/payments/payments.service.ts(805,23): error TS2339: Property 'status' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6779131Z ##[error]src/payments/payments.service.ts(820,41): error TS2345: Argument of type '{ id: string; name: string; createdAt: Date; }' is not assignable to parameter of type '{ id: string; type: string; payload: JsonValue; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6780786Z   Type '{ id: string; name: string; createdAt: Date; }' is missing the following properties from type '{ id: string; type: string; payload: JsonValue; }': type, payload
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6783901Z ##[error]src/payments/payments.service.ts(824,13): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type '(Without<PaymentBackgroundJobUpdateInput, PaymentBackgroundJobUncheckedUpdateInput> & PaymentBackgroundJobUncheckedUpdateInput) | (Without<...> & PaymentBackgroundJobUpdateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6786408Z ##[error]src/payments/payments.service.ts(830,29): error TS2339: Property 'attempts' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6788198Z ##[error]src/payments/payments.service.ts(831,33): error TS2339: Property 'maxAttempts' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6791690Z ##[error]src/payments/payments.service.ts(838,13): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type '(Without<PaymentBackgroundJobUpdateInput, PaymentBackgroundJobUncheckedUpdateInput> & PaymentBackgroundJobUncheckedUpdateInput) | (Without<...> & PaymentBackgroundJobUpdateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6794404Z ##[error]src/payments/payments.service.ts(839,74): error TS2339: Property 'runAt' does not exist on type '{ id: string; name: string; createdAt: Date; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6796582Z ##[error]src/payments/payments.service.ts(869,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'PaymentBackgroundJobWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6799363Z ##[error]src/payments/payments.service.ts(872,18): error TS2353: Object literal may only specify known properties, and 'processedAt' does not exist in type 'PaymentBackgroundJobOrderByWithRelationInput | PaymentBackgroundJobOrderByWithRelationInput[]'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6801262Z ##[error]src/payments/payments.service.ts(930,11): error TS2322: Type 'JsonObject' is not assignable to type 'string'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6804590Z ##[error]src/payments/payments.service.ts(950,17): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type '(Without<PaymentWebhookEventUpdateInput, PaymentWebhookEventUncheckedUpdateInput> & PaymentWebhookEventUncheckedUpdateInput) | (Without<...> & PaymentWebhookEventUpdateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6808589Z ##[error]src/payments/payments.service.ts(1029,11): error TS2353: Object literal may only specify known properties, and 'type' does not exist in type '(Without<PaymentBackgroundJobCreateInput, PaymentBackgroundJobUncheckedCreateInput> & PaymentBackgroundJobUncheckedCreateInput) | (Without<...> & PaymentBackgroundJobCreateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6811251Z ##[error]src/payments/payments.service.ts(1041,9): error TS2353: Object literal may only specify known properties, and 'type' does not exist in type 'PaymentBackgroundJobWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6814818Z ##[error]src/payments/payments.service.ts(1052,11): error TS2353: Object literal may only specify known properties, and 'type' does not exist in type '(Without<PaymentBackgroundJobCreateInput, PaymentBackgroundJobUncheckedCreateInput> & PaymentBackgroundJobUncheckedCreateInput) | (Without<...> & PaymentBackgroundJobCreateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6817521Z ##[error]src/payments/payments.service.ts(1065,13): error TS2353: Object literal may only specify known properties, and 'type' does not exist in type 'PaymentBackgroundJobWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6819669Z ##[error]src/payments/payments.service.ts(1083,11): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'PaymentBackgroundJobWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6821787Z ##[error]src/payments/payments.service.ts(1096,11): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'PaymentBackgroundJobWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6825704Z ##[error]src/payments/payments.service.ts(1100,11): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type '(Without<PaymentBackgroundJobUpdateManyMutationInput, PaymentBackgroundJobUncheckedUpdateManyInput> & PaymentBackgroundJobUncheckedUpdateManyInput) | (Without<...> & PaymentBackgroundJobUpdateManyMutationInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6829765Z ##[error]src/payments/payments.service.ts(1170,15): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type '(Without<PaymentWebhookEventUpdateInput, PaymentWebhookEventUncheckedUpdateInput> & PaymentWebhookEventUncheckedUpdateInput) | (Without<...> & PaymentWebhookEventUpdateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6832401Z ##[error]src/reviews/reviews.service.ts(26,13): error TS2322: Type '{ status: "PUBLISHED" | "FLAGGED" | "HIDDEN"; } | { status: { in: string[]; }; }' is not assignable to type 'ReviewWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6833955Z   Object literal may only specify known properties, and 'status' does not exist in type 'ReviewWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6835500Z ##[error]src/reviews/reviews.service.ts(50,9): error TS2353: Object literal may only specify known properties, and 'targetType' does not exist in type 'ReviewWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6837515Z ##[error]src/reviews/reviews.service.ts(80,9): error TS2353: Object literal may only specify known properties, and 'targetType' does not exist in type 'ReviewWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6839801Z ##[error]src/reviews/reviews.service.ts(118,11): error TS2353: Object literal may only specify known properties, and 'targetType' does not exist in type 'ReviewWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6842897Z ##[error]src/reviews/reviews.service.ts(133,11): error TS2353: Object literal may only specify known properties, and 'targetType' does not exist in type '(Without<ReviewCreateInput, ReviewUncheckedCreateInput> & ReviewUncheckedCreateInput) | (Without<...> & ReviewCreateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6845403Z ##[error]src/reviews/reviews.service.ts(156,9): error TS2353: Object literal may only specify known properties, and 'targetType' does not exist in type 'ReviewWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6848278Z ##[error]src/reviews/reviews.service.ts(171,9): error TS2353: Object literal may only specify known properties, and 'targetType' does not exist in type '(Without<ReviewCreateInput, ReviewUncheckedCreateInput> & ReviewUncheckedCreateInput) | (Without<...> & ReviewCreateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6850662Z ##[error]src/reviews/reviews.service.ts(191,95): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'ReviewSelect<DefaultArgs>'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6853491Z ##[error]src/reviews/reviews.service.ts(196,18): error TS2339: Property 'status' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; accommodationId: string; userId: string; transportId: string; rating: number; body: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6855589Z ##[error]src/reviews/reviews.service.ts(199,9): error TS2322: Type '{ user: { select: { id: true; name: true; }; }; }' is not assignable to type 'never'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6858298Z ##[error]src/reviews/reviews.service.ts(212,15): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type '(Without<ReviewUpdateInput, ReviewUncheckedUpdateInput> & ReviewUncheckedUpdateInput) | (Without<...> & ReviewUpdateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6861444Z ##[error]src/reviews/reviews.service.ts(232,15): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type '(Without<ReviewUpdateInput, ReviewUncheckedUpdateInput> & ReviewUncheckedUpdateInput) | (Without<...> & ReviewUpdateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6865236Z ##[error]src/service-categories/service-categories.service.ts(27,19): error TS2322: Type '{ OR?: ({ name: { contains: string; mode: "insensitive"; }; } | { code: { contains: string; mode: string; }; })[]; active?: boolean; scope?: CategoryScope; }' is not assignable to type 'ServiceCategoryWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6867246Z   Types of property 'OR' are incompatible.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6868025Z     Type '({ name: { contains: string; mode: "insensitive"; }; } | { code: { contains: string; mode: string; }; })[]' is not assignable to type 'ServiceCategoryWhereInput[]'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6869094Z       Type '{ name: { contains: string; mode: "insensitive"; }; } | { code: { contains: string; mode: string; }; }' is not assignable to type 'ServiceCategoryWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6870031Z         Object literal may only specify known properties, and 'code' does not exist in type 'ServiceCategoryWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6871856Z ##[error]src/service-categories/service-categories.service.ts(32,19): error TS2353: Object literal may only specify known properties, and 'scope' does not exist in type 'ServiceCategoryOrderByWithRelationInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6874117Z ##[error]src/service-categories/service-categories.service.ts(37,78): error TS2322: Type 'number' is not assignable to type 'string'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6875825Z ##[error]src/service-categories/service-categories.service.ts(58,16): error TS2322: Type 'number' is not assignable to type 'string'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6877386Z ##[error]src/service-categories/service-categories.service.ts(65,57): error TS2322: Type 'number' is not assignable to type 'string'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6878890Z ##[error]src/service-categories/service-categories.service.ts(69,76): error TS2322: Type 'number' is not assignable to type 'string'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6880939Z ##[error]src/social-links/social-links.service.ts(31,16): error TS2353: Object literal may only specify known properties, and 'active' does not exist in type 'SocialLinkWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6883224Z ##[error]src/social-links/social-links.service.ts(31,35): error TS2353: Object literal may only specify known properties, and 'verified' does not exist in type 'SocialLinkWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6885373Z ##[error]src/social-links/social-links.service.ts(41,9): error TS2353: Object literal may only specify known properties, and 'targetType' does not exist in type 'SocialLinkWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6887616Z ##[error]src/social-links/social-links.service.ts(46,19): error TS2353: Object literal may only specify known properties, and 'displayOrder' does not exist in type 'SocialLinkOrderByWithRelationInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6889769Z ##[error]src/social-links/social-links.service.ts(54,9): error TS2353: Object literal may only specify known properties, and 'targetType' does not exist in type 'SocialLinkWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6892003Z ##[error]src/social-links/social-links.service.ts(59,19): error TS2353: Object literal may only specify known properties, and 'displayOrder' does not exist in type 'SocialLinkOrderByWithRelationInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6894499Z ##[error]src/social-links/social-links.service.ts(67,9): error TS2353: Object literal may only specify known properties, and 'targetType' does not exist in type 'SocialLinkWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6897712Z ##[error]src/social-links/social-links.service.ts(72,19): error TS2353: Object literal may only specify known properties, and 'displayOrder' does not exist in type 'SocialLinkOrderByWithRelationInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6900800Z ##[error]src/social-links/social-links.service.ts(92,28): error TS2339: Property 'targetType' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; vendorId: string; accommodationId: string; transportId: string; url: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6903844Z ##[error]src/social-links/social-links.service.ts(98,107): error TS2339: Property 'targetType' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; vendorId: string; accommodationId: string; transportId: string; url: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6907954Z ##[error]src/social-links/social-links.service.ts(100,28): error TS2339: Property 'targetType' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; vendorId: string; accommodationId: string; transportId: string; url: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6912905Z ##[error]src/social-links/social-links.service.ts(122,28): error TS2339: Property 'targetType' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; vendorId: string; accommodationId: string; transportId: string; url: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6918793Z ##[error]src/social-links/social-links.service.ts(136,9): error TS2353: Object literal may only specify known properties, and 'active' does not exist in type '(Without<SocialLinkUpdateInput, SocialLinkUncheckedUpdateInput> & SocialLinkUncheckedUpdateInput) | (Without<...> & SocialLinkUpdateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6924939Z ##[error]src/social-links/social-links.service.ts(147,9): error TS2353: Object literal may only specify known properties, and 'active' does not exist in type '(Without<SocialLinkUpdateInput, SocialLinkUncheckedUpdateInput> & SocialLinkUncheckedUpdateInput) | (Without<...> & SocialLinkUpdateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6931631Z ##[error]src/social-links/social-links.service.ts(157,9): error TS2353: Object literal may only specify known properties, and 'active' does not exist in type '(Without<SocialLinkUpdateInput, SocialLinkUncheckedUpdateInput> & SocialLinkUncheckedUpdateInput) | (Without<...> & SocialLinkUpdateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6936638Z ##[error]src/transports/transports.service.ts(70,9): error TS2353: Object literal may only specify known properties, and 'fareClasses' does not exist in type 'TransportInclude<DefaultArgs>'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6940084Z ##[error]src/transports/transports.service.ts(101,9): error TS2353: Object literal may only specify known properties, and 'fareClasses' does not exist in type 'TransportInclude<DefaultArgs>'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6946416Z ##[error]src/transports/transports.service.ts(114,32): error TS2339: Property 'fareClasses' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; vendorId: string; type: string; price: Decimal; code: string; fromIslandId: number; toIslandId: number; departure: Date; arrival: Date; capacity: number; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6951542Z ##[error]src/transports/transports.service.ts(128,9): error TS2353: Object literal may only specify known properties, and 'fareClasses' does not exist in type 'TransportInclude<DefaultArgs>'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6956182Z ##[error]src/transports/transports.service.ts(180,9): error TS2353: Object literal may only specify known properties, and 'resolvedAt' does not exist in type 'TransportDisruptionWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6964044Z ##[error]src/transports/transports.service.ts(183,9): error TS2353: Object literal may only specify known properties, and 'resolvedAt' does not exist in type '(Without<TransportDisruptionUpdateManyMutationInput, TransportDisruptionUncheckedUpdateManyInput> & TransportDisruptionUncheckedUpdateManyInput) | (Without<...> & TransportDisruptionUpdateManyMutationInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6972397Z ##[error]src/transports/transports.service.ts(190,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type '(Without<TransportDisruptionCreateInput, TransportDisruptionUncheckedCreateInput> & TransportDisruptionUncheckedCreateInput) | (Without<...> & TransportDisruptionCreateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6978413Z ##[error]src/transports/transports.service.ts(207,46): error TS2353: Object literal may only specify known properties, and 'resolvedAt' does not exist in type 'TransportDisruptionSelect<DefaultArgs>'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6983025Z ##[error]src/transports/transports.service.ts(214,20): error TS2339: Property 'resolvedAt' does not exist on type '{ id: string; createdAt: Date; transportId: string; replacementTransportId: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6985184Z ##[error]src/transports/transports.service.ts(217,9): error TS2322: Type '{ replacementTransport: true; }' is not assignable to type 'never'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6988530Z ##[error]src/transports/transports.service.ts(223,15): error TS2353: Object literal may only specify known properties, and 'resolvedAt' does not exist in type '(Without<TransportDisruptionUpdateInput, TransportDisruptionUncheckedUpdateInput> & TransportDisruptionUncheckedUpdateInput) | (Without<...> & TransportDisruptionUpdateInput)'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6991135Z ##[error]src/transports/transports.service.ts(233,7): error TS2322: Type '{ replacementTransport: { include: { fareClasses: true; }; }; }' is not assignable to type 'never'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6992961Z ##[error]src/transports/transports.service.ts(261,65): error TS2339: Property 'id' does not exist on type 'never'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6994609Z ##[error]src/transports/transports.service.ts(271,54): error TS2339: Property 'id' does not exist on type 'never'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6995990Z ##[error]src/transports/transports.service.ts(277,58): error TS2339: Property 'capacity' does not exist on type 'never'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6997365Z ##[error]src/transports/transports.service.ts(279,50): error TS2339: Property 'capacity' does not exist on type 'never'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.6999006Z ##[error]src/transports/transports.service.ts(282,61): error TS2339: Property 'fareClasses' does not exist on type 'never'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7000499Z ##[error]src/transports/transports.service.ts(290,56): error TS2339: Property 'id' does not exist on type 'never'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7002480Z ##[error]src/transports/transports.service.ts(291,11): error TS2353: Object literal may only specify known properties, and 'transportFareClassCode' does not exist in type 'BookingWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7006321Z ##[error]src/transports/transports.service.ts(316,19): error TS2339: Property 'transportFareClassCode' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; startDate: Date; accommodationId: string; endDate: Date; userId: string; transportId: string; guests: number; totalPrice: Decimal; holdExpiresAt: Date; status: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7010198Z ##[error]src/transports/transports.service.ts(317,77): error TS2339: Property 'transportFareClassCode' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; startDate: Date; accommodationId: string; endDate: Date; userId: string; transportId: string; guests: number; totalPrice: Decimal; holdExpiresAt: Date; status: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7014470Z ##[error]src/transports/transports.service.ts(338,49): error TS2339: Property 'transportFareClassCode' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; startDate: Date; accommodationId: string; endDate: Date; userId: string; transportId: string; guests: number; totalPrice: Decimal; holdExpiresAt: Date; status: string; }'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7016730Z ##[error]src/transports/transports.service.ts(344,56): error TS2339: Property 'id' does not exist on type 'never'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7018091Z ##[error]src/transports/transports.service.ts(358,63): error TS2339: Property 'id' does not exist on type 'never'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7020286Z ##[error]src/transports/transports.service.ts(390,9): error TS2353: Object literal may only specify known properties, and 'fareClasses' does not exist in type 'TransportInclude<DefaultArgs>'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7024216Z ##[error]src/transports/transports.service.ts(419,11): error TS2353: Object literal may only specify known properties, and 'fareClasses' does not exist in type 'TransportInclude<DefaultArgs>'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7027216Z ##[error]src/transports/transports.service.ts(453,11): error TS2353: Object literal may only specify known properties, and 'fareClasses' does not exist in type 'TransportInclude<DefaultArgs>'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7031414Z ##[error]src/transports/transports.service.ts(827,35): error TS2615: Type of property 'AND' circularly references itself in mapped type '{ [K in keyof { AND?: BookingScalarWhereWithAggregatesInput | BookingScalarWhereWithAggregatesInput[]; OR?: BookingScalarWhereWithAggregatesInput[]; ... 12 more ...; updatedAt?: string | ... 1 more ... | DateTimeWithAggregatesFilter<...>; }]: Or<...> extends 1 ? { ...; }[K] extends infer TK ? GetHavingFields<...> : ...'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7036693Z ##[error]src/transports/transports.service.ts(827,35): error TS2615: Type of property 'NOT' circularly references itself in mapped type '{ [K in keyof { AND?: BookingScalarWhereWithAggregatesInput | BookingScalarWhereWithAggregatesInput[]; OR?: BookingScalarWhereWithAggregatesInput[]; ... 12 more ...; updatedAt?: string | ... 1 more ... | DateTimeWithAggregatesFilter<...>; }]: Or<...> extends 1 ? { ...; }[K] extends infer TK ? GetHavingFields<...> : ...'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7041673Z ##[error]src/transports/transports.service.ts(827,35): error TS2615: Type of property 'OR' circularly references itself in mapped type '{ [K in keyof { AND?: BookingScalarWhereWithAggregatesInput | BookingScalarWhereWithAggregatesInput[]; OR?: BookingScalarWhereWithAggregatesInput[]; ... 12 more ...; updatedAt?: string | ... 1 more ... | DateTimeWithAggregatesFilter<...>; }]: Or<...> extends 1 ? { ...; }[K] extends infer TK ? GetHavingFields<...> : ...'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7045123Z ##[error]src/transports/transports.service.ts(879,9): error TS2353: Object literal may only specify known properties, and 'resolvedAt' does not exist in type 'TransportDisruptionWhereInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7046899Z ##[error]src/users/users.service.ts(111,11): error TS2322: Type 'UserProfilePreferences' is not assignable to type 'string'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7048740Z ##[error]src/users/users.service.ts(114,11): error TS2322: Type 'UserProfilePreferences' is not assignable to type 'string | NullableStringFieldUpdateOperationsInput'.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7050732Z ##[error]src/workations/workations.service.ts(19,24): error TS2551: Property 'workations' does not exist on type 'PrismaService'. Did you mean 'workation'?
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7052497Z ##[error]src/workations/workations.service.ts(25,38): error TS2551: Property 'workations' does not exist on type 'PrismaService'. Did you mean 'workation'?
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7054488Z ##[error]src/workations/workations.service.ts(35,24): error TS2551: Property 'workations' does not exist on type 'PrismaService'. Did you mean 'workation'?
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7056243Z ##[error]src/workations/workations.service.ts(41,24): error TS2551: Property 'workations' does not exist on type 'PrismaService'. Did you mean 'workation'?
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7057988Z ##[error]src/workations/workations.service.ts(46,23): error TS2551: Property 'workations' does not exist on type 'PrismaService'. Did you mean 'workation'?
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7060626Z ##[error]src/workations/workations.service.ts(49,68): error TS2724: '"/home/runner/work/workation-cms/workation-cms/infra/backend/node_modules/.prisma/client/index".Prisma' has no exported member named 'workationsCreateInput'. Did you mean 'WorkationCreateInput'?
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7063866Z ##[error]src/workations/workations.service.ts(62,68): error TS2724: '"/home/runner/work/workation-cms/workation-cms/infra/backend/node_modules/.prisma/client/index".Prisma' has no exported member named 'workationsUpdateInput'. Did you mean 'WorkationUpdateInput'?
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7066101Z ##[error]Process completed with exit code 2.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7143955Z ##[group]Run actions/upload-artifact@v4
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7144230Z with:
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7144418Z   name: contract-logs-auth
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7144683Z   path: infra/backend/artifacts/contract/auth.log
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7144973Z   if-no-files-found: warn
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7145188Z   compression-level: 6
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7145390Z   overwrite: false
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7145600Z   include-hidden-files: false
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7145810Z env:
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7146188Z   DATABASE_URL: ***localhost:5432/dbname
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7146489Z   SKIP_BACKGROUND_JOBS: true
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7146722Z   CONTRACT_HEALTH_TIMEOUT_MS: 60000
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.7146959Z ##[endgroup]
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.9333239Z With the provided path, there will be 1 file uploaded
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.9338912Z Artifact name is valid!
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:28.9340241Z Root directory input is valid!
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.2224266Z Beginning upload of artifact content to blob storage
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.5216634Z Uploaded bytes 4221
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.5998524Z Finished uploading artifact content to blob storage!
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.6002874Z SHA256 digest of uploaded artifact zip is 3c2e9e6b9ffcf4ea4400ae1b3438e3ee79691e055d0676d89c947dabf2250f8d
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.6004002Z Finalizing artifact upload
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.7656553Z Artifact contract-logs-auth.zip successfully finalized. Artifact ID 5690687040
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.7658348Z Artifact contract-logs-auth has been successfully uploaded! Final size is 4221 bytes. Artifact ID is 5690687040
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.7665634Z Artifact download URL: https://github.com/ibazzam/workation-cms/actions/runs/22486901985/artifacts/5690687040
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.7816580Z Post job cleanup.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.8807578Z [command]/usr/bin/git version
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.8862836Z git version 2.53.0
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.8948743Z Temporarily overriding HOME='/home/runner/work/_temp/a6e6b901-f70c-43f9-bd62-f4de49f180c8' before making global git config changes
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.8950238Z Adding repository directory to the temporary git global config as a safe directory
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.8956959Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/workation-cms/workation-cms
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.9006174Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.9052438Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.9346974Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.9370215Z http.https://github.com/.extraheader
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.9385461Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.9420293Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.9676436Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:29.9712624Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0065637Z Print service container logs: dbf425ff39e24bcfb7129859706fe7f5_postgres15_204562
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0070079Z ##[command]/usr/bin/docker logs --details 9f13cbe3fdd55eab4d92dd7a190e583e57a7db476c81f8c4a86170f808778981
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0198032Z  The files belonging to this database system will be owned by user "postgres".
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0199033Z  This user must also own the server process.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0199571Z  
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0200047Z  The database cluster will be initialized with locale "en_US.utf8".
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0201650Z  initdb: warning: enabling "trust" authentication for local connections
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0203131Z  initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0204350Z  The default database encoding has accordingly been set to "UTF8".
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0205102Z  The default text search configuration will be set to "english".
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0205729Z  
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0206057Z  Data page checksums are disabled.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0206476Z  
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0206969Z  fixing permissions on existing directory /var/lib/postgresql/data ... ok
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0207613Z  creating subdirectories ... ok
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0208121Z  selecting dynamic shared memory implementation ... posix
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0208722Z  selecting default max_connections ... 100
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0209235Z  selecting default shared_buffers ... 128MB
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0209729Z  selecting default time zone ... Etc/UTC
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0210206Z  creating configuration files ... ok
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0210677Z  running bootstrap script ... ok
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0211180Z  performing post-bootstrap initialization ... ok
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0211750Z  syncing data to disk ... ok
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0212140Z  
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0212413Z  
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0212970Z  Success. You can now start the database server using:
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0213485Z  
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0213876Z      pg_ctl -D /var/lib/postgresql/data -l logfile start
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0214383Z  
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0215713Z  waiting for server to start....2026-02-27 13:28:50.574 UTC [49] LOG:  starting PostgreSQL 15.17 (Debian 15.17-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0217202Z  2026-02-27 13:28:50.576 UTC [49] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0217801Z  2026-02-27 13:28:50.579 UTC [52] LOG:  database system was shut down at 2026-02-27 13:28:50 UTC
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0218321Z  2026-02-27 13:28:50.583 UTC [49] LOG:  database system is ready to accept connections
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0218680Z   done
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0218854Z  server started
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0219046Z  CREATE DATABASE
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0219225Z  
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0219381Z  
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0219688Z  /usr/local/bin/docker-entrypoint.sh: ignoring /docker-entrypoint-initdb.d/*
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0220075Z  
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0220546Z  2026-02-27 13:28:50.764 UTC [49] LOG:  received fast shutdown request
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0221057Z  waiting for server to shut down....2026-02-27 13:28:50.765 UTC [49] LOG:  aborting any active transactions
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0221723Z  2026-02-27 13:28:50.767 UTC [49] LOG:  background worker "logical replication launcher" (PID 55) exited with exit code 1
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0222243Z  2026-02-27 13:28:50.767 UTC [50] LOG:  shutting down
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0222609Z  2026-02-27 13:28:50.768 UTC [50] LOG:  checkpoint starting: shutdown immediate
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0223794Z  2026-02-27 13:28:50.786 UTC [50] LOG:  checkpoint complete: wrote 922 buffers (5.6%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.014 s, sync=0.003 s, total=0.019 s; sync files=301, longest=0.002 s, average=0.001 s; distance=4239 kB, estimate=4239 kB
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0224743Z  2026-02-27 13:28:50.793 UTC [49] LOG:  database system is shut down
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0225245Z   done
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0225437Z  server stopped
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0225625Z  
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0225861Z  PostgreSQL init process complete; ready for start up.
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0226168Z  
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0226720Z  2026-02-27 13:28:50.885 UTC [1] LOG:  starting PostgreSQL 15.17 (Debian 15.17-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0227430Z  2026-02-27 13:28:50.885 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0227896Z  2026-02-27 13:28:50.885 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0228403Z  2026-02-27 13:28:50.887 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0228948Z  2026-02-27 13:28:50.889 UTC [65] LOG:  database system was shut down at 2026-02-27 13:28:50 UTC
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0229445Z  2026-02-27 13:28:50.894 UTC [1] LOG:  database system is ready to accept connections
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0234993Z Stop and remove container: dbf425ff39e24bcfb7129859706fe7f5_postgres15_204562
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.0239430Z ##[command]/usr/bin/docker rm --force 9f13cbe3fdd55eab4d92dd7a190e583e57a7db476c81f8c4a86170f808778981
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.7041504Z 9f13cbe3fdd55eab4d92dd7a190e583e57a7db476c81f8c4a86170f808778981
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.7067561Z Remove container network: github_network_a64778c4671f4094a5b35604a4769d61
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.7072311Z ##[command]/usr/bin/docker network rm github_network_a64778c4671f4094a5b35604a4769d61
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.8290085Z github_network_a64778c4671f4094a5b35604a4769d61
+Contract (auth)	UNKNOWN STEP	2026-02-27T13:29:30.8347785Z Cleaning up orphan processes

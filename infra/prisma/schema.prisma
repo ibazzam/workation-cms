@@ -1,25 +1,28 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../backend/node_modules/.prisma/client"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-// Enums removed for SQLite compatibility; use string fields instead
+// Reconstructed Prisma schema — fields aligned with migration SQL
 
-// Core models
 model User {
-  id         String   @id @default(uuid())
-  email      String   @unique
-  name       String?
-  password   String?
-  role       String   @default("USER")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  password  String?
+  role      String   @default("USER")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
-  bookings   Booking[]
+  bookings Booking[]
+  loyalty  LoyaltyAccount?
+  reviews  Review[]
+  loyaltyTransactions LoyaltyTransaction[]
 }
 
 model Vendor {
@@ -28,10 +31,12 @@ model Vendor {
   email     String?  @unique
   phone     String?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
-  accommodations Accommodation[]
-  transports     Transport[]
+  accommodations      Accommodation[]
+  transports          Transport[]
+  vendorLoyaltyOffers VendorLoyaltyOffer[]
+  socialLinks         SocialLink[]
 }
 
 model Atoll {
@@ -39,9 +44,9 @@ model Atoll {
   code      String   @unique
   name      String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
-  islands   Island[]
+  islands Island[]
 }
 
 model Island {
@@ -52,81 +57,335 @@ model Island {
   lat       Float?
   lng       Float?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
-  atoll     Atoll    @relation(fields: [atollId], references: [id])
+  atoll          Atoll           @relation(fields: [atollId], references: [id])
   accommodations Accommodation[]
-  fromTransports   Transport[] @relation("fromIsland")
-  toTransports     Transport[] @relation("toIsland")
+  fromTransports Transport[]     @relation("fromIsland")
+  toTransports   Transport[]     @relation("toIsland")
 }
 
 model Accommodation {
-  id          String   @id @default(uuid())
-  vendorId    String
-  islandId    Int
-  title       String
-  slug        String   @unique
-  description String?
-  type        String?  
-  rooms       Int?     
-  price       Decimal  @default("0.00")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(uuid())
+  vendorId      String
+  islandId      Int
+  title         String
+  slug          String   @unique
+  description   String?
+  type          String?
+  rooms         Int?
+  price         Decimal  @default("0.00")
+  minStayNights Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
 
-  vendor      Vendor   @relation(fields: [vendorId], references: [id])
-  island      Island   @relation(fields: [islandId], references: [id])
-  bookings    Booking[]
+  vendor        Vendor                      @relation(fields: [vendorId], references: [id])
+  island        Island                      @relation(fields: [islandId], references: [id])
+  bookings      Booking[]
+  seasonalRates AccommodationSeasonalRate[]
+  blackouts     AccommodationBlackout[]
+  socialLinks   SocialLink[]
+  reviews       Review[]
+}
+
+model AccommodationSeasonalRate {
+  id              String    @id @default(uuid())
+  accommodationId String
+  name            String
+  startDate       DateTime
+  endDate         DateTime
+  nightlyPrice    Decimal   @default("0.00")
+  minNights       Int?
+  priority        Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
+
+  accommodation Accommodation @relation(fields: [accommodationId], references: [id])
+}
+
+model AccommodationBlackout {
+  id              String    @id @default(uuid())
+  accommodationId String
+  startDate       DateTime
+  endDate         DateTime
+  reason          String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
+
+  accommodation Accommodation @relation(fields: [accommodationId], references: [id])
+}
+
+model AdminAuditLog {
+  id        String   @id @default(uuid())
+  actorId   String?
+  actorVendorId String?
+  actorEmail String?
+  actorRole String
+  actorUserId String?
+  statusCode Int? 
+  method    String
+  path      String
+  success   Boolean  @default(false)
+  requestBody Json?
+  errorMessage String?
+  createdAt DateTime @default(now())
 }
 
 model Transport {
-  id          String       @id @default(uuid())
-  vendorId    String?
-  type        String
-  code        String?      
+  id           String    @id @default(uuid())
+  vendorId     String?
+  name         String?
+  type         String
+  code         String?
   fromIslandId Int?
   toIslandId   Int?
   departure    DateTime?
   arrival      DateTime?
   capacity     Int?
-  price        Decimal      @default("0.00")
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  price        Decimal   @default("0.00")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now()) @updatedAt
 
-  vendor       Vendor?      @relation(fields: [vendorId], references: [id])
-  fromIsland   Island?      @relation("fromIsland", fields: [fromIslandId], references: [id])
-  toIsland     Island?      @relation("toIsland", fields: [toIslandId], references: [id])
-  bookings     Booking[]
+  bookings                  Booking[]
+  fareClasses               TransportFareClass[]
+  disruptions               TransportDisruption[]
+  vendor                    Vendor?               @relation(fields: [vendorId], references: [id])
+  fromIsland                Island?               @relation("fromIsland", fields: [fromIslandId], references: [id])
+  toIsland                  Island?               @relation("toIsland", fields: [toIslandId], references: [id])
+  replacementDisruptions    TransportDisruption[] @relation("ReplacementTransport")
+  socialLinks               SocialLink[]
+  reviews                   Review[]
 }
 
 model Booking {
-  id              String        @id @default(uuid())
-  userId          String
-  accommodationId String? 
-  transportId     String?
-  startDate       DateTime?
-  endDate         DateTime?
-  guests          Int?          @default(1)
-  totalPrice      Decimal       @default("0.00")
-  status          String @default("PENDING")
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                     String    @id @default(uuid())
+  userId                 String
+  accommodationId        String?
+  transportId            String?
+  startDate              DateTime?
+  endDate                DateTime?
+  guests                 Int?      @default(1)
+  totalPrice             Decimal   @default("0.00")
+  holdExpiresAt          DateTime?
+  transportFareClassCode String?
+  status                 String    @default("PENDING")
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @default(now()) @updatedAt
 
-  user            User          @relation(fields: [userId], references: [id])
-  accommodation   Accommodation? @relation(fields: [accommodationId], references: [id])
-  transport       Transport?    @relation(fields: [transportId], references: [id])
-  payment         Payment?
+  user               User                 @relation(fields: [userId], references: [id])
+  accommodation      Accommodation?       @relation(fields: [accommodationId], references: [id])
+  transport          Transport?           @relation(fields: [transportId], references: [id])
+  payment            Payment?
+  loyaltyTransactions LoyaltyTransaction[]
 }
 
 model Payment {
-  id           String    @id @default(uuid())
-  bookingId    String    @unique
-  provider     String    
-  providerId   String?   
-  amount       Decimal   @default("0.00")
-  currency     String    @default("USD")
-  status       String    
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id         String   @id @default(uuid())
+  bookingId  String   @unique
+  provider   String
+  providerId String?
+  amount     Decimal  @default("0.00")
+  currency   String   @default("USD")
+  status     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
 
-  booking      Booking   @relation(fields: [bookingId], references: [id])
+  booking Booking @relation(fields: [bookingId], references: [id])
 }
+
+model AppConfig {
+  key       String   @id
+  value     Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model Country {
+  id        Int      @id @default(autoincrement())
+  name      String
+  code      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model ServiceCategory {
+  id        Int      @id @default(autoincrement())
+  name      String
+  code      String   @unique
+  active    Boolean  @default(true)
+  scope     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model Review {
+  id              String   @id @default(uuid())
+  title           String?
+  comment         String?
+  userId          String
+  accommodationId String?
+  transportId     String?
+  rating          Int
+  verifiedStay    Boolean?
+  body            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+  status          String   @default("PUBLISHED")
+  targetType      String?
+  user            User    @relation(fields: [userId], references: [id])
+  accommodation   Accommodation? @relation(fields: [accommodationId], references: [id])
+  transport       Transport?     @relation(fields: [transportId], references: [id])
+}
+
+model SocialLink {
+  id              String   @id @default(uuid())
+  targetType      String
+  accommodationId String?
+  transportId     String?
+  vendorId        String?
+  platform        String
+  url             String
+  handle          String?
+  verified        Boolean  @default(false)
+  displayOrder    Int      @default(0)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  accommodation Accommodation? @relation(fields: [accommodationId], references: [id])
+  transport     Transport?     @relation(fields: [transportId], references: [id])
+  vendor        Vendor?        @relation(fields: [vendorId], references: [id])
+}
+
+model LoyaltyAccount {
+  userId        String   @id
+  pointsBalance Int      @default(0)
+  lifetimePoints Int     @default(0)
+  tier          String   @default("BRONZE")
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id])
+  // transactions  LoyaltyTransaction[] @relation("account_transactions")
+}
+
+model LoyaltyTransaction {
+  id          String   @id @default(uuid())
+  userId      String
+  bookingId   String?
+  type        String
+  points      Int
+  amount      Decimal  @default("0.00")
+  currency    String?
+  description String?
+  createdAt   DateTime @default(now())
+
+  user     User    @relation(fields: [userId], references: [id])
+  booking  Booking? @relation(fields: [bookingId], references: [id])
+}
+
+model VendorLoyaltyOffer {
+  id               String   @id @default(uuid())
+  vendorId         String
+  title            String
+  description      String?
+  pointsMultiplier Decimal  @default("1.00")
+  discountPercent  Int      @default(0)
+  active           Boolean  @default(true)
+  startsAt         DateTime?
+  endsAt           DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @default(now()) @updatedAt
+
+  vendor           Vendor   @relation(fields: [vendorId], references: [id])
+}
+
+model PaymentBackgroundJob {
+  id          String   @id @default(uuid())
+  type        String
+  status      String   @default("PENDING")
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(5)
+  runAt       DateTime @default(now())
+  payload     Json
+  dedupeKey   String?
+  lastError   String?
+  processedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+}
+
+model PaymentReconciliationRun {
+  id             String   @id @default(uuid())
+  source         String
+  providerFilter String   @default("ALL")
+  limitUsed      Int
+  dryRun         Boolean  @default(false)
+  status         String
+  scanned        Int      @default(0)
+  reconciled     Int      @default(0)
+  succeeded      Int      @default(0)
+  failed         Int      @default(0)
+  unchanged      Int      @default(0)
+  skipped        Int      @default(0)
+  errors         Int      @default(0)
+  errorMessage   String?
+  startedAt      DateTime
+  finishedAt     DateTime?
+  durationMs     Int?
+  createdAt      DateTime @default(now())
+}
+
+model PaymentWebhookEvent {
+  id        String   @id @default(uuid())
+  provider  String
+  eventId   String
+  eventType String
+  payload   Json
+  status    String   @default("PROCESSED")
+  createdAt DateTime @default(now())
+}
+
+model TransportDisruption {
+  id                     String   @id @default(uuid())
+  transportId            String
+  status                 String
+  reason                 String?
+  delayMinutes           Int?
+  replacementTransportId String?
+  startsAt               DateTime @default(now())
+  resolvedAt             DateTime?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @default(now()) @updatedAt
+  transport              Transport @relation(fields: [transportId], references: [id])
+  replacementTransport   Transport? @relation("ReplacementTransport", fields: [replacementTransportId], references: [id])
+}
+
+model TransportFareClass {
+  id          String   @id @default(uuid())
+  transportId String
+  code        String
+  name        String
+  baggageKg   Int?
+  seats       Int?
+  price       Decimal  @default("0.00")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+  transport   Transport @relation(fields: [transportId], references: [id])
+}
+
+model Workations {
+  id        Int      @id @default(autoincrement())
+  title     String
+  description String?
+  location  String
+  start_date DateTime @map("start_date")
+  end_date   DateTime @map("end_date")
+  price     Decimal
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@map("workations")
+}
+
+// Note: these models are reconstructed from migration SQL to match backend expectations.

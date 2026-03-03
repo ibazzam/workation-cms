@@ -86,7 +86,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload coverage to Codecov
-        if: ${{ secrets.CODECOV_TOKEN }}
+        if: always()
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -216,7 +216,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Codecov verbose upload (diagnostic)
-        if: ${{ secrets.CODECOV_TOKEN }}
+        if: always()
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
@@ -231,7 +231,7 @@ jobs:
         shell: bash
 
       - name: Upload coverage to Codecov
-        if: ${{ success() && secrets.CODECOV_TOKEN }}
+        if: ${{ success() }}
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

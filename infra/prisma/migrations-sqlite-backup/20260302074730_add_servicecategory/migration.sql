@@ -1,6 +1,6 @@
 -- CreateTable
 CREATE TABLE "ServiceCategory" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY AUTOINCREMENT,
     "name" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "active" BOOLEAN NOT NULL,

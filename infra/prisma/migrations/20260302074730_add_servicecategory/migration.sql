@@ -26,10 +26,28 @@ BEGIN
     SELECT 1 FROM information_schema.columns
     WHERE table_schema='public' AND table_name='ServiceCategory' AND column_name='id'
   ) THEN
-    EXECUTE 'ALTER TABLE public."ServiceCategory" ALTER COLUMN "id" SET DEFAULT nextval(''"ServiceCategory_id_seq"'')::regclass';
-    EXECUTE 'ALTER SEQUENCE "ServiceCategory_id_seq" OWNED BY public."ServiceCategory"."id"';
-    EXECUTE format('SELECT setval(%L, COALESCE((SELECT MAX("id")::bigint FROM public."ServiceCategory"), 0) + 1, false);',
-             'ServiceCategory_id_seq');
+    -- Only set default/attach sequence if column has no default AND is not an identity
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='ServiceCategory' AND column_name='id'
+        AND (column_default IS NOT NULL OR identity_generation IS NOT NULL)
+    ) THEN
+      -- protect against errors by executing in a begin-exception block
+      BEGIN
+        EXECUTE 'ALTER TABLE public."ServiceCategory" ALTER COLUMN "id" SET DEFAULT nextval(''"ServiceCategory_id_seq"'')::regclass';
+        EXECUTE 'ALTER SEQUENCE "ServiceCategory_id_seq" OWNED BY public."ServiceCategory"."id"';
+        EXECUTE format(
+          'SELECT setval(%L, COALESCE((SELECT MAX("id")::bigint FROM public."ServiceCategory"), 0) + 1, false);',
+          'ServiceCategory_id_seq'
+        );
+      EXCEPTION WHEN OTHERS THEN
+        -- if something goes wrong (e.g., race with another process), skip and continue
+        RAISE NOTICE 'Skipping attach sequence for ServiceCategory.id due to: %', SQLERRM;
+      END;
+    ELSE
+      -- already has a default or is an identity column; nothing to do
+      RAISE NOTICE 'ServiceCategory.id already has default or identity; skipping attach.';
+    END IF;
   END IF;
 END
 $$;

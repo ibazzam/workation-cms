@@ -83,10 +83,17 @@ jobs:
           name: servicecategory-id-check
           path: infra/backend/artifacts/diagnostics/servicecategory_id_check.txt
           if-no-files-found: warn
-  - name: Run ServiceCategory DB-fix (idempotent)
-    run: |
-      cd infra/backend
-      npm ci --prefer-offline --no-audit --progress=false
-      node ../../scripts/db_fix_servicecategory.js || true
-    env:
-      DATABASE_URL: ${{ env.DATABASE_URL }}
+  run_servicecategory_db_fix:
+    name: Run ServiceCategory DB-fix (idempotent)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run ServiceCategory DB-fix (idempotent)
+        run: |
+          cd infra/backend
+          npm ci --prefer-offline --no-audit --progress=false
+          node ../../scripts/db_fix_servicecategory.js || true
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}

@@ -37,8 +37,8 @@ function runDbFixScript() {
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    console.error('Missing DATABASE_URL');
-    process.exit(1);
+    console.warn('Missing DATABASE_URL — skipping servicecategory migration in this environment');
+    return;
   }
 
   const migrationPath = path.resolve(process.cwd(), 'infra', 'prisma', 'migrations', '20260302074730_add_servicecategory', 'migration.sql');

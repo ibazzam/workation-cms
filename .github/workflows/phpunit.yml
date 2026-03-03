@@ -71,7 +71,21 @@ jobs:
       - name: Check JS coverage thresholds
         continue-on-error: true
         run: |
-          node -e "const fs=require('fs');const p=fs.existsSync('coverage-final.json')?'coverage-final.json':(fs.existsSync('coverage/coverage-final.json')?'coverage/coverage-final.json':null);if(!p){console.error('No coverage-final.json found');process.exit(1);}const cov=JSON.parse(fs.readFileSync(p));const keys=Object.keys(cov).filter(k=>k.includes('/resources/js/')); if(keys.length===0){console.error('No resource JS files found in coverage'); process.exit(1);}let totals={s:{t:0,c:0},f:{t:0,c:0},b:{t:0,c:0}};for(const k of keys){const file=cov[k];const s=file.s||{};const f=file.f||{};const b=file.b||{};totals.s.t+=Object.keys(s).length;totals.s.c+=Object.values(s).filter(x=>x>0).length;totals.f.t+=Object.keys(f).length;totals.f.c+=Object.values(f).filter(x=>x>0).length;totals.b.t+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].length:0),0);totals.b.c+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].filter(x=>x>0).length:0),0);}const pct=(n,m)=>(m?100*n/m:0);const s=pct(totals.s.c,totals.s.t).toFixed(2);const f=pct(totals.f.c,totals.f.t).toFixed(2);const b=pct(totals.b.c,totals.b.t).toFixed(2);console.log(`Resource JS coverage: statements ${s}%, functions ${f}%, branches ${b}%`);const minS=95,minF=95,minB=90;if(s<minS||f<minF||b<minB){console.error('Resource JS coverage below thresholds');process.exit(2);}console.log('Coverage thresholds met for resources/js');"
+          node scripts/coverage-summary.js check
+
+      - name: Codecov diagnostics
+        if: always()
+        run: |
+          curl -sS -D codecov-headers-tests.txt -o /dev/null https://codecov.io/ || true
+        shell: bash
+
+      - name: Upload Codecov diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codecov-diagnostics-tests
+          path: codecov-headers-tests.txt
+          if-no-files-found: ignore
 
       - name: Upload coverage to Codecov
         if: secrets.CODECOV_TOKEN != ''
@@ -139,11 +153,11 @@ jobs:
       - name: Check JS coverage thresholds
         continue-on-error: true
         run: |
-          node -e "const fs=require('fs');const p=fs.existsSync('coverage-final.json')?'coverage-final.json':(fs.existsSync('coverage/coverage-final.json')?'coverage/coverage-final.json':null);if(!p){console.error('No coverage-final.json found');process.exit(1);}const cov=JSON.parse(fs.readFileSync(p));const keys=Object.keys(cov).filter(k=>k.includes('/resources/js/')||k.includes('resources\\js')); if(keys.length===0){console.error('No resource JS files found in coverage'); process.exit(1);}let totals={s:{t:0,c:0},f:{t:0,c:0},b:{t:0,c:0}};for(const k of keys){const file=cov[k];const s=file.s||{};const f=file.f||{};const b=file.b||{};totals.s.t+=Object.keys(s).length;totals.s.c+=Object.values(s).filter(x=>x>0).length;totals.f.t+=Object.keys(f).length;totals.f.c+=Object.values(f).filter(x=>x>0).length;totals.b.t+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].length:0),0);totals.b.c+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].filter(x=>x>0).length:0),0);}const pct=(n,m)=>(m?100*n/m:0);const s=pct(totals.s.c,totals.s.t).toFixed(2);const f=pct(totals.f.c,totals.f.t).toFixed(2);const b=pct(totals.b.c,totals.b.t).toFixed(2);console.log(`Resource JS coverage: statements ${s}%, functions ${f}%, branches ${b}%`);const minS=95,minF=95,minB=90;if(s<minS||f<minF||b<minB){console.error('Resource JS coverage below thresholds');process.exit(2);}console.log('Coverage thresholds met for resources/js');"
+          node scripts/coverage-summary.js check
 
       - name: Create coverage summary file
         run: |
-          node -e "const fs=require('fs');const p=fs.existsSync('coverage-final.json')?'coverage-final.json':(fs.existsSync('coverage/coverage-final.json')?'coverage/coverage-final.json':null); if(!p){ console.log('no coverage json'); process.exit(0);} const cov=JSON.parse(fs.readFileSync(p)); let totals={s:{t:0,c:0},f:{t:0,c:0},b:{t:0,c:0}}; for(const k of Object.keys(cov)){ if(!k.includes('/resources/js/') && !k.includes('resources\\js')) continue; const file=cov[k]; const s=file.s||{}; const f=file.f||{}; const b=file.b||{}; totals.s.t+=Object.keys(s).length; totals.s.c+=Object.values(s).filter(x=>x>0).length; totals.f.t+=Object.keys(f).length; totals.f.c+=Object.values(f).filter(x=>x>0).length; totals.b.t+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].length:0),0); totals.b.c+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].filter(x=>x>0).length:0),0);} const pct=(n,m)=>(m?100*n/m:0); const summary={statements:pct(totals.s.c,totals.s.t).toFixed(2),functions:pct(totals.f.c,totals.f.t).toFixed(2),branches:pct(totals.b.c,totals.b.t).toFixed(2)}; fs.writeFileSync('coverage-summary.json', JSON.stringify({summary, totals}, null, 2)); console.log('Wrote coverage-summary.json');"
+          node scripts/coverage-summary.js summary
 
       - name: Commit coverage summary to branch
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -190,6 +204,36 @@ jobs:
             coverage/*.html
             clover.xml
           if-no-files-found: warn
+
+      - name: Codecov diagnostics
+        if: always()
+        run: |
+          curl -sS -D codecov-headers-js.txt -o /dev/null https://codecov.io/ || true
+        shell: bash
+
+      - name: Upload Codecov diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codecov-diagnostics-js
+          path: codecov-headers-js.txt
+          if-no-files-found: ignore
+
+      - name: Codecov verbose upload (diagnostic)
+        if: secrets.CODECOV_TOKEN != ''
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "Running Codecov bash uploader in verbose diagnostic mode"
+          if [ -f coverage-summary.json ]; then
+            echo "Found coverage-summary.json, attempting upload via bash uploader"
+            bash -c "bash <(curl -s https://codecov.io/bash) -t \"$CODECOV_TOKEN\" -f coverage-summary.json -Z -v" 2>&1 | tee codecov-verbose-upload.txt || true
+          else
+            echo "coverage-summary.json not found; skipping verbose uploader"
+          fi
+        shell: bash
+
 
       - name: Upload coverage to Codecov
         if: success() && secrets.CODECOV_TOKEN != ''

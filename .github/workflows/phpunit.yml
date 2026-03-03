@@ -88,7 +88,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload coverage to Codecov
-        if: secrets.CODECOV_TOKEN != ''
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -220,7 +220,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Codecov verbose upload (diagnostic)
-        if: secrets.CODECOV_TOKEN != ''
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
@@ -236,7 +236,7 @@ jobs:
 
 
       - name: Upload coverage to Codecov
-        if: success() && secrets.CODECOV_TOKEN != ''
+        if: ${{ success() && secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

@@ -155,10 +155,19 @@ jobs:
           git config user.email "actions@github.com"
           # Use the GITHUB_TOKEN for authentication when pushing
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          # Ensure a clean working tree to avoid checkout conflicts
+          git reset --hard || true
+          git clean -fdx || true
           # Try to fetch the remote branch if it exists, ignore errors
           git fetch origin coverage-reports || true
-          # Create or reset local branch to track remote if present
-          git checkout -B coverage-reports origin/coverage-reports || git checkout -B coverage-reports
+          # Delete any existing local branch to avoid stale refs
+          git branch -D coverage-reports || true
+          # Create or reset local branch from remote if present, otherwise create new
+          if git ls-remote --exit-code --heads origin coverage-reports >/dev/null 2>&1; then
+            git checkout -B coverage-reports origin/coverage-reports
+          else
+            git checkout -B coverage-reports
+          fi
           git add coverage-summary.json || true
           # Commit (allow empty to keep script idempotent) and push safely
           if git commit -m "ci: update coverage summary" --allow-empty; then

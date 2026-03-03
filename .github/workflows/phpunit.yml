@@ -1,4 +1,4 @@
-﻿name: Run tests
+name: Run tests
 
 permissions:
   contents: write
@@ -65,8 +65,6 @@ jobs:
       - name: Run JS coverage
         run: |
           npm run coverage
-
-      # Removed debug listing step to tidy workflow
 
       - name: Check JS coverage thresholds
         continue-on-error: true
@@ -147,8 +145,6 @@ jobs:
       - name: Run JS coverage
         run: |
           npm run coverage
-
-      # Removed debug listing step to tidy workflow
 
       - name: Check JS coverage thresholds
         continue-on-error: true
@@ -233,7 +229,6 @@ jobs:
             echo "coverage-summary.json not found; skipping verbose uploader"
           fi
         shell: bash
-
 
       - name: Upload coverage to Codecov
         if: ${{ success() && secrets.CODECOV_TOKEN != '' }}

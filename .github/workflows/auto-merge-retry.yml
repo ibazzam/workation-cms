@@ -1,0 +1,61 @@
+name: Auto-merge Retry
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  check_run:
+    types: [completed]
+  check_suite:
+    types: [completed]
+  workflow_run:
+    types: [completed]
+  workflow_dispatch: {}
+
+jobs:
+  enable-auto-merge:
+    name: Enable Auto-merge When Mergeable
+    runs-on: ubuntu-latest
+    concurrency:
+      group: auto-merge-retry-${{ github.run_id }}
+      cancel-in-progress: false
+    steps:
+      - name: Try enable auto-merge
+        uses: actions/github-script@v7
+        with:
+          # Use the PAT stored in repository secret COVERAGE_FETCH_PAT
+          github-token: ${{ secrets.COVERAGE_FETCH_PAT }}
+          script: |
+            const core = require('@actions/core')
+
+            const findPrNumber = (payload) => {
+              if (payload.pull_request) return payload.pull_request.number
+              if (payload.check_suite && payload.check_suite.pull_requests && payload.check_suite.pull_requests.length) return payload.check_suite.pull_requests[0].number
+              if (payload.check_run && payload.check_run.pull_requests && payload.check_run.pull_requests.length) return payload.check_run.pull_requests[0].number
+              if (payload.workflow_run && payload.workflow_run.pull_requests && payload.workflow_run.pull_requests.length) return payload.workflow_run.pull_requests[0].number
+              return null
+            }
+
+            const prNumber = findPrNumber(context.payload)
+            if (!prNumber) {
+              core.info('No PR number found in event payload — nothing to do.')
+              return
+            }
+
+            const { data: pr } = await github.rest.pulls.get({ owner: context.repo.owner, repo: context.repo.repo, pull_number: prNumber })
+            core.info(`PR #${prNumber} state=${pr.state} mergeable=${pr.mergeable} mergeable_state=${pr.mergeable_state}`)
+
+            // Only attempt when mergeable_state is clean (avoid unstable/draft/conflicts)
+            if (!pr.mergeable || pr.mergeable_state !== 'clean') {
+              core.info('PR not in a clean mergeable state; skipping auto-merge attempt.')
+              return
+            }
+
+            const nodeId = pr.node_id
+            try {
+              const gql = `mutation { enablePullRequestAutoMerge(input: { pullRequestId: "${nodeId}", mergeMethod: SQUASH }) { pullRequest { number } clientMutationId } }`
+              const res = await github.graphql(gql)
+              core.info('Auto-merge enabled: ' + JSON.stringify(res))
+            } catch (err) {
+              core.error('Failed to enable auto-merge: ' + (err.message || err))
+              throw err
+            }

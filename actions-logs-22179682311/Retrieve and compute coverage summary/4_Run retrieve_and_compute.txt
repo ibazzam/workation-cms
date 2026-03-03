@@ -1,0 +1,29 @@
+﻿2026-02-19T11:21:21.1969554Z ##[group]Run Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+2026-02-19T11:21:21.1970253Z [36;1mSet-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force[0m
+2026-02-19T11:21:21.1970681Z [36;1m# configure git identity so commits succeed in the runner[0m
+2026-02-19T11:21:21.1971750Z [36;1mgit config --global user.email "actions@github.com"[0m
+2026-02-19T11:21:21.1972082Z [36;1mgit config --global user.name "GitHub Actions"[0m
+2026-02-19T11:21:21.1972653Z [36;1m# set origin to use the provided PAT for pushes[0m
+2026-02-19T11:21:21.1973522Z [36;1mgit remote set-url origin "***github.com/ibazzam/workation-cms.git"[0m
+2026-02-19T11:21:21.1974123Z [36;1m# ensure script content is available (avoid sparse-checkout issues)[0m
+2026-02-19T11:21:21.1974479Z [36;1mgit fetch --no-tags origin main[0m
+2026-02-19T11:21:21.1974886Z [36;1mgit show origin/main:scripts/retrieve_and_compute.ps1 > .\retrieve_and_compute.ps1[0m
+2026-02-19T11:21:21.1975504Z [36;1mpwsh -NoProfile -ExecutionPolicy Bypass -File .\retrieve_and_compute.ps1 -Owner ibazzam -Repo workation-cms[0m
+2026-02-19T11:21:21.2618347Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-02-19T11:21:21.2618770Z env:
+2026-02-19T11:21:21.2619278Z   GITHUB_TOKEN: ***
+2026-02-19T11:21:21.2619522Z ##[endgroup]
+2026-02-19T11:21:27.9332388Z From https://github.com/ibazzam/workation-cms
+2026-02-19T11:21:27.9333153Z  * branch            main       -> FETCH_HEAD
+2026-02-19T11:21:28.6239500Z Running fetcher to download artifact...
+2026-02-19T11:21:28.9951845Z Polling workflow runs for 'phpunit.yml' on ibazzam/workation-cms (branch=main) looking for artifact 'coverage'...
+2026-02-19T11:21:30.0771461Z Checking run 22179510184 (created: 02/19/2026 11:15:32)...
+2026-02-19T11:21:30.3355224Z Found artifact 'coverage' (id=5571358487) in run 22179510184; downloading...
+2026-02-19T11:21:31.4280387Z Extracted artifact to D:\a\workation-cms\workation-cms\artifacts\artifact_22179510184_5571358487
+2026-02-19T11:21:31.4509948Z Found coverage-final.json -> D:\a\workation-cms\workation-cms\coverage-final-run22179510184-artifact.json
+2026-02-19T11:21:31.6987077Z Locating downloaded coverage-final JSON...
+2026-02-19T11:21:31.7206220Z Using coverage file: D:\a\workation-cms\workation-cms\coverage-final-run22179510184-artifact.json
+2026-02-19T11:21:31.7247853Z Computing coverage summary -> coverage-summary-ci.json
+2026-02-19T11:21:31.7710523Z Wrote coverage-summary-ci.json -> {"totals":{"s":{"t":33,"c":33},"f":{"t":4,"c":4},"b":{"t":9,"c":9}},"percent":{"statements":100,"functions":100,"branches":100},"generated_at":"2026-02-19T11:21:31.764Z"}
+2026-02-19T11:21:31.7786026Z Wrote summary: coverage-summary-ci.json
+2026-02-19T11:21:31.7801376Z Done.

@@ -1,0 +1,23 @@
+﻿2026-02-19T06:25:16.3104231Z ##[group]Run actions/setup-node@v4
+2026-02-19T06:25:16.3104612Z with:
+2026-02-19T06:25:16.3105006Z   node-version: 20
+2026-02-19T06:25:16.3105271Z   cache: npm
+2026-02-19T06:25:16.3105573Z   cache-dependency-path: package-lock.json
+2026-02-19T06:25:16.3105919Z   always-auth: false
+2026-02-19T06:25:16.3106202Z   check-latest: false
+2026-02-19T06:25:16.3106957Z   token: ***
+2026-02-19T06:25:16.3107209Z ##[endgroup]
+2026-02-19T06:25:16.4741092Z Found in cache @ /opt/hostedtoolcache/node/20.20.0/x64
+2026-02-19T06:25:16.4747777Z ##[group]Environment details
+2026-02-19T06:25:16.8118339Z node: v20.20.0
+2026-02-19T06:25:16.8118911Z npm: 10.8.2
+2026-02-19T06:25:16.8119247Z yarn: 1.22.22
+2026-02-19T06:25:16.8119951Z ##[endgroup]
+2026-02-19T06:25:16.8145972Z [command]/opt/hostedtoolcache/node/20.20.0/x64/bin/npm config get cache
+2026-02-19T06:25:16.9272044Z /home/runner/.npm
+2026-02-19T06:25:17.1759643Z Cache hit for: node-cache-Linux-x64-npm-a0f0f012ed3f872331c61f522efaeb031a2250899a8bce9715aa64c651017ded
+2026-02-19T06:25:18.4692152Z Received 35840014 of 35840014 (100.0%), 36.3 MBs/sec
+2026-02-19T06:25:18.4692837Z Cache Size: ~34 MB (35840014 B)
+2026-02-19T06:25:18.4719385Z [command]/usr/bin/tar -xf /home/runner/work/_temp/16ff3d04-d051-4244-b968-e262e3fdd27d/cache.tzst -P -C /home/runner/work/workation-cms/workation-cms --use-compress-program unzstd
+2026-02-19T06:25:18.5276929Z Cache restored successfully
+2026-02-19T06:25:18.5325663Z Cache restored from key: node-cache-Linux-x64-npm-a0f0f012ed3f872331c61f522efaeb031a2250899a8bce9715aa64c651017ded

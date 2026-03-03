@@ -1,0 +1,700 @@
+﻿2026-02-19T06:30:23.4176251Z Current runner version: '2.331.0'
+2026-02-19T06:30:23.4209128Z ##[group]Runner Image Provisioner
+2026-02-19T06:30:23.4210213Z Hosted Compute Agent
+2026-02-19T06:30:23.4211129Z Version: 20260123.484
+2026-02-19T06:30:23.4212197Z Commit: 6bd6555ca37d84114959e1c76d2c01448ff61c5d
+2026-02-19T06:30:23.4213294Z Build Date: 2026-01-23T19:41:17Z
+2026-02-19T06:30:23.4214348Z Worker ID: {18309f72-3e3b-4a97-8cce-d69bed6d1daf}
+2026-02-19T06:30:23.4215512Z Azure Region: eastus
+2026-02-19T06:30:23.4216348Z ##[endgroup]
+2026-02-19T06:30:23.4218877Z ##[group]Operating System
+2026-02-19T06:30:23.4219903Z Ubuntu
+2026-02-19T06:30:23.4220626Z 24.04.3
+2026-02-19T06:30:23.4221385Z LTS
+2026-02-19T06:30:23.4222717Z ##[endgroup]
+2026-02-19T06:30:23.4223452Z ##[group]Runner Image
+2026-02-19T06:30:23.4224335Z Image: ubuntu-24.04
+2026-02-19T06:30:23.4225242Z Version: 20260209.23.1
+2026-02-19T06:30:23.4227217Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260209.23/images/ubuntu/Ubuntu2404-Readme.md
+2026-02-19T06:30:23.4230086Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260209.23
+2026-02-19T06:30:23.4231662Z ##[endgroup]
+2026-02-19T06:30:23.4233427Z ##[group]GITHUB_TOKEN Permissions
+2026-02-19T06:30:23.4236234Z Contents: read
+2026-02-19T06:30:23.4237016Z Metadata: read
+2026-02-19T06:30:23.4238179Z Packages: read
+2026-02-19T06:30:23.4239012Z ##[endgroup]
+2026-02-19T06:30:23.4242369Z Secret source: Actions
+2026-02-19T06:30:23.4243707Z Prepare workflow directory
+2026-02-19T06:30:23.4785488Z Prepare all required actions
+2026-02-19T06:30:23.4840742Z Getting action download info
+2026-02-19T06:30:23.8646683Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-02-19T06:30:23.9954213Z Download action repository 'shivammathur/setup-php@v2' (SHA:44454db4f0199b8b9685a5d763dc37cbf79108e1)
+2026-02-19T06:30:24.1748561Z Download action repository 'actions/cache@v3' (SHA:6f8efc29b200d32929f49075959781ed54ec270c)
+2026-02-19T06:30:24.3158693Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-02-19T06:30:24.4677248Z Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+2026-02-19T06:30:24.5781238Z Download action repository 'codecov/codecov-action@v4' (SHA:b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238)
+2026-02-19T06:30:24.7854652Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-02-19T06:30:25.0519283Z Complete job name: PHPUnit + Build (8.4)
+2026-02-19T06:30:25.1405303Z ##[group]Run actions/checkout@v4
+2026-02-19T06:30:25.1406571Z with:
+2026-02-19T06:30:25.1407313Z   repository: ibazzam/workation-cms
+2026-02-19T06:30:25.1408719Z   token: ***
+2026-02-19T06:30:25.1409423Z   ssh-strict: true
+2026-02-19T06:30:25.1410150Z   ssh-user: git
+2026-02-19T06:30:25.1410893Z   persist-credentials: true
+2026-02-19T06:30:25.1411730Z   clean: true
+2026-02-19T06:30:25.1412469Z   sparse-checkout-cone-mode: true
+2026-02-19T06:30:25.1413410Z   fetch-depth: 1
+2026-02-19T06:30:25.1414129Z   fetch-tags: false
+2026-02-19T06:30:25.1414876Z   show-progress: true
+2026-02-19T06:30:25.1415620Z   lfs: false
+2026-02-19T06:30:25.1416289Z   submodules: false
+2026-02-19T06:30:25.1417037Z   set-safe-directory: true
+2026-02-19T06:30:25.1418219Z env:
+2026-02-19T06:30:25.1418879Z   APP_ENV: testing
+2026-02-19T06:30:25.1419606Z   DB_CONNECTION: sqlite
+2026-02-19T06:30:25.1420432Z   DB_DATABASE: database/database.sqlite
+2026-02-19T06:30:25.1421363Z ##[endgroup]
+2026-02-19T06:30:25.2530992Z Syncing repository: ibazzam/workation-cms
+2026-02-19T06:30:25.2533502Z ##[group]Getting Git version info
+2026-02-19T06:30:25.2534852Z Working directory is '/home/runner/work/workation-cms/workation-cms'
+2026-02-19T06:30:25.2536673Z [command]/usr/bin/git version
+2026-02-19T06:30:25.2537820Z git version 2.52.0
+2026-02-19T06:30:25.2551710Z ##[endgroup]
+2026-02-19T06:30:25.2573604Z Temporarily overriding HOME='/home/runner/work/_temp/93a55d29-b19b-41b4-b5eb-5cafee0cf963' before making global git config changes
+2026-02-19T06:30:25.2577978Z Adding repository directory to the temporary git global config as a safe directory
+2026-02-19T06:30:25.2581230Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/workation-cms/workation-cms
+2026-02-19T06:30:25.2622900Z Deleting the contents of '/home/runner/work/workation-cms/workation-cms'
+2026-02-19T06:30:25.2626119Z ##[group]Initializing the repository
+2026-02-19T06:30:25.2630470Z [command]/usr/bin/git init /home/runner/work/workation-cms/workation-cms
+2026-02-19T06:30:25.2752012Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-02-19T06:30:25.2754062Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-02-19T06:30:25.2756581Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-02-19T06:30:25.2758357Z hint: call:
+2026-02-19T06:30:25.2759058Z hint:
+2026-02-19T06:30:25.2759893Z hint: 	git config --global init.defaultBranch <name>
+2026-02-19T06:30:25.2761206Z hint:
+2026-02-19T06:30:25.2762226Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-02-19T06:30:25.2763900Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-02-19T06:30:25.2765188Z hint:
+2026-02-19T06:30:25.2765874Z hint: 	git branch -m <name>
+2026-02-19T06:30:25.2767051Z hint:
+2026-02-19T06:30:25.2768381Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-02-19T06:30:25.2770352Z Initialized empty Git repository in /home/runner/work/workation-cms/workation-cms/.git/
+2026-02-19T06:30:25.2773513Z [command]/usr/bin/git remote add origin https://github.com/ibazzam/workation-cms
+2026-02-19T06:30:25.2803837Z ##[endgroup]
+2026-02-19T06:30:25.2805119Z ##[group]Disabling automatic garbage collection
+2026-02-19T06:30:25.2808061Z [command]/usr/bin/git config --local gc.auto 0
+2026-02-19T06:30:25.2836544Z ##[endgroup]
+2026-02-19T06:30:25.2837894Z ##[group]Setting up auth
+2026-02-19T06:30:25.2843927Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-02-19T06:30:25.2874790Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-02-19T06:30:25.3257841Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-02-19T06:30:25.3288844Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-02-19T06:30:25.3519581Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-02-19T06:30:25.3551899Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-02-19T06:30:25.3787990Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-02-19T06:30:25.3827112Z ##[endgroup]
+2026-02-19T06:30:25.3829292Z ##[group]Fetching the repository
+2026-02-19T06:30:25.3840390Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +24ba76b19a00a7e5b8054476fb85ece0c05dd3d0:refs/remotes/origin/main
+2026-02-19T06:30:25.5627755Z From https://github.com/ibazzam/workation-cms
+2026-02-19T06:30:25.5660638Z  * [new ref]         24ba76b19a00a7e5b8054476fb85ece0c05dd3d0 -> origin/main
+2026-02-19T06:30:25.5665701Z ##[endgroup]
+2026-02-19T06:30:25.5668048Z ##[group]Determining the checkout info
+2026-02-19T06:30:25.5670563Z ##[endgroup]
+2026-02-19T06:30:25.5672001Z [command]/usr/bin/git sparse-checkout disable
+2026-02-19T06:30:25.5724688Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-02-19T06:30:25.5753599Z ##[group]Checking out the ref
+2026-02-19T06:30:25.5757300Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-02-19T06:30:25.5881196Z Switched to a new branch 'main'
+2026-02-19T06:30:25.5884726Z branch 'main' set up to track 'origin/main'.
+2026-02-19T06:30:25.5893046Z ##[endgroup]
+2026-02-19T06:30:25.5928947Z [command]/usr/bin/git log -1 --format=%H
+2026-02-19T06:30:25.5952158Z 24ba76b19a00a7e5b8054476fb85ece0c05dd3d0
+2026-02-19T06:30:25.6188615Z ##[group]Run shivammathur/setup-php@v2
+2026-02-19T06:30:25.6189577Z with:
+2026-02-19T06:30:25.6190226Z   php-version: 8.4
+2026-02-19T06:30:25.6191070Z   extensions: mbstring, pdo, pdo_sqlite, xml, gd
+2026-02-19T06:30:25.6192092Z   ini-file: production
+2026-02-19T06:30:25.6193153Z   github-token: ***
+2026-02-19T06:30:25.6193855Z env:
+2026-02-19T06:30:25.6194476Z   APP_ENV: testing
+2026-02-19T06:30:25.6195195Z   DB_CONNECTION: sqlite
+2026-02-19T06:30:25.6196012Z   DB_DATABASE: database/database.sqlite
+2026-02-19T06:30:25.6196925Z ##[endgroup]
+2026-02-19T06:30:25.6935592Z [command]/usr/bin/bash /home/runner/work/_actions/shivammathur/setup-php/v2/src/scripts/run.sh
+2026-02-19T06:30:25.7377665Z 
+2026-02-19T06:30:25.7379585Z [90;1m==> [0m[37;1mSetup PHP[0m
+2026-02-19T06:30:29.1999369Z [32;1m✓ [0m[34;1mPHP [0m[90;1mInstalled PHP 8.4.18[0m
+2026-02-19T06:30:29.2000348Z 
+2026-02-19T06:30:29.2000676Z [90;1m==> [0m[37;1mSetup Extensions[0m
+2026-02-19T06:30:29.2511678Z [32;1m✓ [0m[34;1mmbstring [0m[90;1mEnabled[0m
+2026-02-19T06:30:29.2541686Z [32;1m✓ [0m[34;1mpdo [0m[90;1mEnabled[0m
+2026-02-19T06:30:29.2558903Z [32;1m✓ [0m[34;1mpdo_sqlite [0m[90;1mEnabled[0m
+2026-02-19T06:30:29.2591620Z [32;1m✓ [0m[34;1mxml [0m[90;1mEnabled[0m
+2026-02-19T06:30:29.2623310Z [32;1m✓ [0m[34;1mgd [0m[90;1mEnabled[0m
+2026-02-19T06:30:29.2624600Z 
+2026-02-19T06:30:29.2624934Z [90;1m==> [0m[37;1mSetup Tools[0m
+2026-02-19T06:30:29.5799945Z [32;1m✓ [0m[34;1mcomposer [0m[90;1mAdded composer 2.9.3[0m
+2026-02-19T06:30:29.5802347Z 
+2026-02-19T06:30:29.5803048Z [90;1m==> [0m[37;1mSponsor setup-php[0m
+2026-02-19T06:30:29.5804693Z [32;1m✓ [0m[34;1msetup-php [0m[90;1mhttps://setup-php.com/sponsor[0m
+2026-02-19T06:30:29.6774523Z ##[group]Run actions/cache@v3
+2026-02-19T06:30:29.6774904Z with:
+2026-02-19T06:30:29.6775094Z   path: ~/.cache/composer
+2026-02-19T06:30:29.6775493Z   key: Linux-composer-3e6256eb551861b90adec6188ab6bced64899f2580c27c7a04cd2e323b4f7bfb
+2026-02-19T06:30:29.6775941Z   restore-keys: Linux-composer-
+2026-02-19T06:30:29.6776189Z   enableCrossOsArchive: false
+2026-02-19T06:30:29.6776427Z   fail-on-cache-miss: false
+2026-02-19T06:30:29.6776638Z   lookup-only: false
+2026-02-19T06:30:29.6776843Z env:
+2026-02-19T06:30:29.6777005Z   APP_ENV: testing
+2026-02-19T06:30:29.6777196Z   DB_CONNECTION: sqlite
+2026-02-19T06:30:29.6777816Z   DB_DATABASE: database/database.sqlite
+2026-02-19T06:30:29.6778109Z   COMPOSER_PROCESS_TIMEOUT: 0
+2026-02-19T06:30:29.6778344Z   COMPOSER_NO_INTERACTION: 1
+2026-02-19T06:30:29.6778564Z   COMPOSER_NO_AUDIT: 1
+2026-02-19T06:30:29.6778782Z ##[endgroup]
+2026-02-19T06:30:29.9101894Z Cache not found for input keys: Linux-composer-3e6256eb551861b90adec6188ab6bced64899f2580c27c7a04cd2e323b4f7bfb, Linux-composer-
+2026-02-19T06:30:29.9202437Z ##[group]Run composer install --no-progress --no-suggest --prefer-dist
+2026-02-19T06:30:29.9202972Z [36;1mcomposer install --no-progress --no-suggest --prefer-dist[0m
+2026-02-19T06:30:29.9258318Z shell: /usr/bin/bash -e {0}
+2026-02-19T06:30:29.9258587Z env:
+2026-02-19T06:30:29.9258759Z   APP_ENV: testing
+2026-02-19T06:30:29.9258972Z   DB_CONNECTION: sqlite
+2026-02-19T06:30:29.9259195Z   DB_DATABASE: database/database.sqlite
+2026-02-19T06:30:29.9259460Z   COMPOSER_PROCESS_TIMEOUT: 0
+2026-02-19T06:30:29.9259690Z   COMPOSER_NO_INTERACTION: 1
+2026-02-19T06:30:29.9259917Z   COMPOSER_NO_AUDIT: 1
+2026-02-19T06:30:29.9260112Z ##[endgroup]
+2026-02-19T06:30:30.1168983Z You are using the deprecated option "--no-suggest". It has no effect and will break in Composer 3.
+2026-02-19T06:30:30.1226860Z Installing dependencies from lock file (including require-dev)
+2026-02-19T06:30:30.1278171Z Verifying lock file contents can be installed on current platform.
+2026-02-19T06:30:30.1623535Z Package operations: 111 installs, 0 updates, 0 removals
+2026-02-19T06:30:30.1640660Z   - Downloading doctrine/inflector (2.1.0)
+2026-02-19T06:30:30.1649406Z   - Downloading doctrine/lexer (3.0.1)
+2026-02-19T06:30:30.1652898Z   - Downloading dragonmantank/cron-expression (v3.6.0)
+2026-02-19T06:30:30.1656217Z   - Downloading symfony/deprecation-contracts (v3.6.0)
+2026-02-19T06:30:30.1659777Z   - Downloading psr/container (2.0.2)
+2026-02-19T06:30:30.1663359Z   - Downloading fakerphp/faker (v1.24.1)
+2026-02-19T06:30:30.1666579Z   - Downloading symfony/polyfill-mbstring (v1.33.0)
+2026-02-19T06:30:30.1670017Z   - Downloading symfony/http-foundation (v7.4.5)
+2026-02-19T06:30:30.1673602Z   - Downloading fruitcake/php-cors (v1.4.0)
+2026-02-19T06:30:30.1676523Z   - Downloading psr/http-message (2.0)
+2026-02-19T06:30:30.1679702Z   - Downloading psr/http-client (1.0.3)
+2026-02-19T06:30:30.1683054Z   - Downloading ralouphie/getallheaders (3.0.3)
+2026-02-19T06:30:30.1685993Z   - Downloading psr/http-factory (1.1.0)
+2026-02-19T06:30:30.1688532Z   - Downloading guzzlehttp/psr7 (2.8.0)
+2026-02-19T06:30:30.1690096Z   - Downloading guzzlehttp/promises (2.3.0)
+2026-02-19T06:30:30.1693319Z   - Downloading guzzlehttp/guzzle (7.10.0)
+2026-02-19T06:30:30.1694885Z   - Downloading symfony/polyfill-php80 (v1.33.0)
+2026-02-19T06:30:30.1696672Z   - Downloading guzzlehttp/uri-template (v1.0.5)
+2026-02-19T06:30:30.1698677Z   - Downloading symfony/polyfill-intl-normalizer (v1.33.0)
+2026-02-19T06:30:30.1700406Z   - Downloading symfony/polyfill-intl-grapheme (v1.33.0)
+2026-02-19T06:30:30.1702101Z   - Downloading symfony/polyfill-ctype (v1.33.0)
+2026-02-19T06:30:30.1703790Z   - Downloading symfony/string (v8.0.4)
+2026-02-19T06:30:30.1705804Z   - Downloading symfony/service-contracts (v3.6.1)
+2026-02-19T06:30:30.1707571Z   - Downloading symfony/console (v7.4.4)
+2026-02-19T06:30:30.1710143Z   - Downloading nunomaduro/termwind (v2.3.3)
+2026-02-19T06:30:30.1712421Z   - Downloading voku/portable-ascii (2.0.3)
+2026-02-19T06:30:30.1714770Z   - Downloading phpoption/phpoption (1.9.5)
+2026-02-19T06:30:30.1717183Z   - Downloading graham-campbell/result-type (v1.1.4)
+2026-02-19T06:30:30.1719610Z   - Downloading vlucas/phpdotenv (v5.6.3)
+2026-02-19T06:30:30.1721216Z   - Downloading symfony/css-selector (v8.0.0)
+2026-02-19T06:30:30.1723749Z   - Downloading tijsverkoyen/css-to-inline-styles (v2.4.0)
+2026-02-19T06:30:30.1725182Z   - Downloading symfony/var-dumper (v7.4.4)
+2026-02-19T06:30:30.1726982Z   - Downloading symfony/polyfill-uuid (v1.33.0)
+2026-02-19T06:30:30.1728875Z   - Downloading symfony/uid (v7.4.4)
+2026-02-19T06:30:30.1730649Z   - Downloading symfony/routing (v7.4.4)
+2026-02-19T06:30:30.1732174Z   - Downloading symfony/process (v7.4.5)
+2026-02-19T06:30:30.1734152Z   - Downloading symfony/polyfill-php85 (v1.33.0)
+2026-02-19T06:30:30.1735586Z   - Downloading symfony/polyfill-php84 (v1.33.0)
+2026-02-19T06:30:30.1737614Z   - Downloading symfony/polyfill-php83 (v1.33.0)
+2026-02-19T06:30:30.1739332Z   - Downloading symfony/polyfill-intl-idn (v1.33.0)
+2026-02-19T06:30:30.1741320Z   - Downloading symfony/mime (v7.4.5)
+2026-02-19T06:30:30.1742693Z   - Downloading psr/event-dispatcher (1.0.0)
+2026-02-19T06:30:30.1744470Z   - Downloading symfony/event-dispatcher-contracts (v3.6.0)
+2026-02-19T06:30:30.1746122Z   - Downloading symfony/event-dispatcher (v8.0.4)
+2026-02-19T06:30:30.1747836Z   - Downloading psr/log (3.0.2)
+2026-02-19T06:30:30.1750482Z   - Downloading egulias/email-validator (4.0.4)
+2026-02-19T06:30:30.1751874Z   - Downloading symfony/mailer (v7.4.4)
+2026-02-19T06:30:30.1753627Z   - Downloading symfony/error-handler (v7.4.4)
+2026-02-19T06:30:30.1755317Z   - Downloading symfony/http-kernel (v7.4.5)
+2026-02-19T06:30:30.1756985Z   - Downloading symfony/finder (v7.4.5)
+2026-02-19T06:30:30.1759837Z   - Downloading ramsey/collection (2.1.1)
+2026-02-19T06:30:30.1762023Z   - Downloading brick/math (0.14.8)
+2026-02-19T06:30:30.1763578Z   - Downloading ramsey/uuid (4.9.2)
+2026-02-19T06:30:30.1765312Z   - Downloading psr/simple-cache (3.0.0)
+2026-02-19T06:30:30.1767111Z   - Downloading symfony/translation-contracts (v3.6.1)
+2026-02-19T06:30:30.1768983Z   - Downloading symfony/translation (v8.0.4)
+2026-02-19T06:30:30.1770668Z   - Downloading psr/clock (1.0.0)
+2026-02-19T06:30:30.1772356Z   - Downloading symfony/clock (v8.0.0)
+2026-02-19T06:30:30.1774987Z   - Downloading carbonphp/carbon-doctrine-types (3.2.0)
+2026-02-19T06:30:30.1777257Z   - Downloading nesbot/carbon (3.11.1)
+2026-02-19T06:30:30.1779751Z   - Downloading monolog/monolog (3.10.0)
+2026-02-19T06:30:30.1782153Z   - Downloading league/uri-interfaces (7.8.0)
+2026-02-19T06:30:30.1783597Z   - Downloading league/uri (7.8.0)
+2026-02-19T06:30:30.1785382Z   - Downloading league/mime-type-detection (1.16.0)
+2026-02-19T06:30:30.1787089Z   - Downloading league/flysystem-local (3.31.0)
+2026-02-19T06:30:30.1788996Z   - Downloading league/flysystem (3.31.0)
+2026-02-19T06:30:30.1791506Z   - Downloading nette/utils (v4.1.3)
+2026-02-19T06:30:30.1792975Z   - Downloading nette/schema (v1.3.4)
+2026-02-19T06:30:30.1795540Z   - Downloading dflydev/dot-access-data (v3.0.3)
+2026-02-19T06:30:30.1796974Z   - Downloading league/config (v1.2.0)
+2026-02-19T06:30:30.1798906Z   - Downloading league/commonmark (2.8.0)
+2026-02-19T06:30:30.1801533Z   - Downloading laravel/serializable-closure (v2.0.9)
+2026-02-19T06:30:30.1802901Z   - Downloading laravel/prompts (v0.3.13)
+2026-02-19T06:30:30.1804670Z   - Downloading laravel/framework (v12.51.0)
+2026-02-19T06:30:30.1806305Z   - Downloading laravel/pail (v1.2.6)
+2026-02-19T06:30:30.1808456Z   - Downloading laravel/pint (v1.27.1)
+2026-02-19T06:30:30.1810035Z   - Downloading symfony/yaml (v8.0.1)
+2026-02-19T06:30:30.1811732Z   - Downloading laravel/sail (v1.53.0)
+2026-02-19T06:30:30.1814255Z   - Downloading nikic/php-parser (v5.7.0)
+2026-02-19T06:30:30.1816507Z   - Downloading psy/psysh (v0.12.20)
+2026-02-19T06:30:30.1818260Z   - Downloading laravel/tinker (v2.11.1)
+2026-02-19T06:30:30.1820911Z   - Downloading hamcrest/hamcrest-php (v2.1.1)
+2026-02-19T06:30:30.1823266Z   - Downloading mockery/mockery (1.6.12)
+2026-02-19T06:30:30.1825626Z   - Downloading filp/whoops (2.18.4)
+2026-02-19T06:30:30.1827245Z   - Downloading nunomaduro/collision (v8.8.3)
+2026-02-19T06:30:30.1830038Z   - Downloading staabm/side-effects-detector (1.0.5)
+2026-02-19T06:30:30.1832218Z   - Downloading sebastian/version (5.0.2)
+2026-02-19T06:30:30.1833757Z   - Downloading sebastian/type (5.1.3)
+2026-02-19T06:30:30.1835536Z   - Downloading sebastian/recursion-context (6.0.3)
+2026-02-19T06:30:30.1837215Z   - Downloading sebastian/object-reflector (4.0.1)
+2026-02-19T06:30:30.1839168Z   - Downloading sebastian/object-enumerator (6.0.1)
+2026-02-19T06:30:30.1840821Z   - Downloading sebastian/global-state (7.0.2)
+2026-02-19T06:30:30.1842493Z   - Downloading sebastian/exporter (6.3.2)
+2026-02-19T06:30:30.1844192Z   - Downloading sebastian/environment (7.2.1)
+2026-02-19T06:30:30.1845848Z   - Downloading sebastian/diff (6.0.2)
+2026-02-19T06:30:30.1847754Z   - Downloading sebastian/comparator (6.3.3)
+2026-02-19T06:30:30.1849689Z   - Downloading sebastian/code-unit (3.0.3)
+2026-02-19T06:30:30.1851155Z   - Downloading sebastian/cli-parser (3.0.2)
+2026-02-19T06:30:30.1853729Z   - Downloading phpunit/php-timer (7.0.1)
+2026-02-19T06:30:30.1855333Z   - Downloading phpunit/php-text-template (4.0.1)
+2026-02-19T06:30:30.1856970Z   - Downloading phpunit/php-invoker (5.0.1)
+2026-02-19T06:30:30.1858965Z   - Downloading phpunit/php-file-iterator (5.1.1)
+2026-02-19T06:30:30.1861579Z   - Downloading theseer/tokenizer (1.3.1)
+2026-02-19T06:30:30.1864602Z   - Downloading sebastian/lines-of-code (3.0.1)
+2026-02-19T06:30:30.1866102Z   - Downloading sebastian/complexity (4.0.1)
+2026-02-19T06:30:30.1868214Z   - Downloading sebastian/code-unit-reverse-lookup (4.0.1)
+2026-02-19T06:30:30.1869844Z   - Downloading phpunit/php-code-coverage (11.0.12)
+2026-02-19T06:30:30.1872362Z   - Downloading phar-io/version (3.2.1)
+2026-02-19T06:30:30.1873890Z   - Downloading phar-io/manifest (2.0.4)
+2026-02-19T06:30:30.1876422Z   - Downloading myclabs/deep-copy (1.13.4)
+2026-02-19T06:30:30.1878170Z   - Downloading phpunit/phpunit (11.5.53)
+2026-02-19T06:30:31.6294966Z   - Installing doctrine/inflector (2.1.0): Extracting archive
+2026-02-19T06:30:31.6306390Z   - Installing doctrine/lexer (3.0.1): Extracting archive
+2026-02-19T06:30:31.6312999Z   - Installing dragonmantank/cron-expression (v3.6.0): Extracting archive
+2026-02-19T06:30:31.6318996Z   - Installing symfony/deprecation-contracts (v3.6.0): Extracting archive
+2026-02-19T06:30:31.6332445Z   - Installing psr/container (2.0.2): Extracting archive
+2026-02-19T06:30:31.6342565Z   - Installing fakerphp/faker (v1.24.1): Extracting archive
+2026-02-19T06:30:31.6348666Z   - Installing symfony/polyfill-mbstring (v1.33.0): Extracting archive
+2026-02-19T06:30:31.6356814Z   - Installing symfony/http-foundation (v7.4.5): Extracting archive
+2026-02-19T06:30:31.6368067Z   - Installing fruitcake/php-cors (v1.4.0): Extracting archive
+2026-02-19T06:30:31.6371720Z   - Installing psr/http-message (2.0): Extracting archive
+2026-02-19T06:30:31.6380060Z   - Installing psr/http-client (1.0.3): Extracting archive
+2026-02-19T06:30:31.6384894Z   - Installing ralouphie/getallheaders (3.0.3): Extracting archive
+2026-02-19T06:30:31.6386856Z   - Installing psr/http-factory (1.1.0): Extracting archive
+2026-02-19T06:30:31.6392261Z   - Installing guzzlehttp/psr7 (2.8.0): Extracting archive
+2026-02-19T06:30:31.6418447Z   - Installing guzzlehttp/promises (2.3.0): Extracting archive
+2026-02-19T06:30:31.6419161Z   - Installing guzzlehttp/guzzle (7.10.0): Extracting archive
+2026-02-19T06:30:31.6419869Z   - Installing symfony/polyfill-php80 (v1.33.0): Extracting archive
+2026-02-19T06:30:31.6420659Z   - Installing guzzlehttp/uri-template (v1.0.5): Extracting archive
+2026-02-19T06:30:31.6421501Z   - Installing symfony/polyfill-intl-normalizer (v1.33.0): Extracting archive
+2026-02-19T06:30:31.6422456Z   - Installing symfony/polyfill-intl-grapheme (v1.33.0): Extracting archive
+2026-02-19T06:30:31.6423448Z   - Installing symfony/polyfill-ctype (v1.33.0): Extracting archive
+2026-02-19T06:30:31.6481809Z   - Installing symfony/string (v8.0.4): Extracting archive
+2026-02-19T06:30:31.6482593Z   - Installing symfony/service-contracts (v3.6.1): Extracting archive
+2026-02-19T06:30:31.6483476Z   - Installing symfony/console (v7.4.4): Extracting archive
+2026-02-19T06:30:31.6484154Z   - Installing nunomaduro/termwind (v2.3.3): Extracting archive
+2026-02-19T06:30:31.6484824Z   - Installing voku/portable-ascii (2.0.3): Extracting archive
+2026-02-19T06:30:31.6485539Z   - Installing phpoption/phpoption (1.9.5): Extracting archive
+2026-02-19T06:30:31.6486289Z   - Installing graham-campbell/result-type (v1.1.4): Extracting archive
+2026-02-19T06:30:31.6487019Z   - Installing vlucas/phpdotenv (v5.6.3): Extracting archive
+2026-02-19T06:30:31.6488049Z   - Installing symfony/css-selector (v8.0.0): Extracting archive
+2026-02-19T06:30:31.6500230Z   - Installing tijsverkoyen/css-to-inline-styles (v2.4.0): Extracting archive
+2026-02-19T06:30:31.6501286Z   - Installing symfony/var-dumper (v7.4.4): Extracting archive
+2026-02-19T06:30:31.6502420Z   - Installing symfony/polyfill-uuid (v1.33.0): Extracting archive
+2026-02-19T06:30:31.6503333Z   - Installing symfony/uid (v7.4.4): Extracting archive
+2026-02-19T06:30:31.6504107Z   - Installing symfony/routing (v7.4.4): Extracting archive
+2026-02-19T06:30:31.6504951Z   - Installing symfony/process (v7.4.5): Extracting archive
+2026-02-19T06:30:31.6505841Z   - Installing symfony/polyfill-php85 (v1.33.0): Extracting archive
+2026-02-19T06:30:31.6507504Z   - Installing symfony/polyfill-php84 (v1.33.0): Extracting archive
+2026-02-19T06:30:31.6518144Z   - Installing symfony/polyfill-php83 (v1.33.0): Extracting archive
+2026-02-19T06:30:31.6519117Z   - Installing symfony/polyfill-intl-idn (v1.33.0): Extracting archive
+2026-02-19T06:30:31.6519962Z   - Installing symfony/mime (v7.4.5): Extracting archive
+2026-02-19T06:30:31.6520727Z   - Installing psr/event-dispatcher (1.0.0): Extracting archive
+2026-02-19T06:30:31.6522707Z   - Installing symfony/event-dispatcher-contracts (v3.6.0): Extracting archive
+2026-02-19T06:30:31.6528200Z   - Installing symfony/event-dispatcher (v8.0.4): Extracting archive
+2026-02-19T06:30:31.6528914Z   - Installing psr/log (3.0.2): Extracting archive
+2026-02-19T06:30:31.6532138Z   - Installing egulias/email-validator (4.0.4): Extracting archive
+2026-02-19T06:30:31.6535274Z   - Installing symfony/mailer (v7.4.4): Extracting archive
+2026-02-19T06:30:31.6543933Z   - Installing symfony/error-handler (v7.4.4): Extracting archive
+2026-02-19T06:30:31.6599591Z   - Installing symfony/http-kernel (v7.4.5): Extracting archive
+2026-02-19T06:30:31.6600166Z   - Installing symfony/finder (v7.4.5): Extracting archive
+2026-02-19T06:30:31.6600625Z   - Installing ramsey/collection (2.1.1): Extracting archive
+2026-02-19T06:30:31.6601121Z   - Installing brick/math (0.14.8): Extracting archive
+2026-02-19T06:30:31.6622867Z   - Installing ramsey/uuid (4.9.2): Extracting archive
+2026-02-19T06:30:31.6623527Z   - Installing psr/simple-cache (3.0.0): Extracting archive
+2026-02-19T06:30:31.6624273Z   - Installing symfony/translation-contracts (v3.6.1): Extracting archive
+2026-02-19T06:30:31.6625012Z   - Installing symfony/translation (v8.0.4): Extracting archive
+2026-02-19T06:30:31.6625631Z   - Installing psr/clock (1.0.0): Extracting archive
+2026-02-19T06:30:31.6626188Z   - Installing symfony/clock (v8.0.0): Extracting archive
+2026-02-19T06:30:31.6626848Z   - Installing carbonphp/carbon-doctrine-types (3.2.0): Extracting archive
+2026-02-19T06:30:31.6627251Z   - Installing nesbot/carbon (3.11.1): Extracting archive
+2026-02-19T06:30:31.6631491Z   - Installing monolog/monolog (3.10.0): Extracting archive
+2026-02-19T06:30:31.6633628Z   - Installing league/uri-interfaces (7.8.0): Extracting archive
+2026-02-19T06:30:31.6636640Z   - Installing league/uri (7.8.0): Extracting archive
+2026-02-19T06:30:31.6639847Z   - Installing league/mime-type-detection (1.16.0): Extracting archive
+2026-02-19T06:30:31.6642625Z   - Installing league/flysystem-local (3.31.0): Extracting archive
+2026-02-19T06:30:31.6645543Z   - Installing league/flysystem (3.31.0): Extracting archive
+2026-02-19T06:30:31.6648480Z   - Installing nette/utils (v4.1.3): Extracting archive
+2026-02-19T06:30:31.6651532Z   - Installing nette/schema (v1.3.4): Extracting archive
+2026-02-19T06:30:31.6654340Z   - Installing dflydev/dot-access-data (v3.0.3): Extracting archive
+2026-02-19T06:30:31.6657172Z   - Installing league/config (v1.2.0): Extracting archive
+2026-02-19T06:30:31.6660276Z   - Installing league/commonmark (2.8.0): Extracting archive
+2026-02-19T06:30:31.6663360Z   - Installing laravel/serializable-closure (v2.0.9): Extracting archive
+2026-02-19T06:30:31.6665136Z   - Installing laravel/prompts (v0.3.13): Extracting archive
+2026-02-19T06:30:31.6667593Z   - Installing laravel/framework (v12.51.0): Extracting archive
+2026-02-19T06:30:31.6669809Z   - Installing laravel/pail (v1.2.6): Extracting archive
+2026-02-19T06:30:31.6672000Z   - Installing laravel/pint (v1.27.1): Extracting archive
+2026-02-19T06:30:31.6674228Z   - Installing symfony/yaml (v8.0.1): Extracting archive
+2026-02-19T06:30:31.6676120Z   - Installing laravel/sail (v1.53.0): Extracting archive
+2026-02-19T06:30:31.6678461Z   - Installing nikic/php-parser (v5.7.0): Extracting archive
+2026-02-19T06:30:31.6680488Z   - Installing psy/psysh (v0.12.20): Extracting archive
+2026-02-19T06:30:31.6682757Z   - Installing laravel/tinker (v2.11.1): Extracting archive
+2026-02-19T06:30:31.6684837Z   - Installing hamcrest/hamcrest-php (v2.1.1): Extracting archive
+2026-02-19T06:30:31.6686916Z   - Installing mockery/mockery (1.6.12): Extracting archive
+2026-02-19T06:30:31.6689183Z   - Installing filp/whoops (2.18.4): Extracting archive
+2026-02-19T06:30:31.6691387Z   - Installing nunomaduro/collision (v8.8.3): Extracting archive
+2026-02-19T06:30:31.6693549Z   - Installing staabm/side-effects-detector (1.0.5): Extracting archive
+2026-02-19T06:30:31.6695685Z   - Installing sebastian/version (5.0.2): Extracting archive
+2026-02-19T06:30:31.6697809Z   - Installing sebastian/type (5.1.3): Extracting archive
+2026-02-19T06:30:31.6700297Z   - Installing sebastian/recursion-context (6.0.3): Extracting archive
+2026-02-19T06:30:31.6702356Z   - Installing sebastian/object-reflector (4.0.1): Extracting archive
+2026-02-19T06:30:31.6704396Z   - Installing sebastian/object-enumerator (6.0.1): Extracting archive
+2026-02-19T06:30:31.6706359Z   - Installing sebastian/global-state (7.0.2): Extracting archive
+2026-02-19T06:30:31.6708860Z   - Installing sebastian/exporter (6.3.2): Extracting archive
+2026-02-19T06:30:31.6710965Z   - Installing sebastian/environment (7.2.1): Extracting archive
+2026-02-19T06:30:31.6712977Z   - Installing sebastian/diff (6.0.2): Extracting archive
+2026-02-19T06:30:31.6714972Z   - Installing sebastian/comparator (6.3.3): Extracting archive
+2026-02-19T06:30:31.6717126Z   - Installing sebastian/code-unit (3.0.3): Extracting archive
+2026-02-19T06:30:31.6719393Z   - Installing sebastian/cli-parser (3.0.2): Extracting archive
+2026-02-19T06:30:31.6721386Z   - Installing phpunit/php-timer (7.0.1): Extracting archive
+2026-02-19T06:30:31.6723457Z   - Installing phpunit/php-text-template (4.0.1): Extracting archive
+2026-02-19T06:30:31.6725499Z   - Installing phpunit/php-invoker (5.0.1): Extracting archive
+2026-02-19T06:30:31.6727741Z   - Installing phpunit/php-file-iterator (5.1.1): Extracting archive
+2026-02-19T06:30:31.6729772Z   - Installing theseer/tokenizer (1.3.1): Extracting archive
+2026-02-19T06:30:31.6731992Z   - Installing sebastian/lines-of-code (3.0.1): Extracting archive
+2026-02-19T06:30:31.6734049Z   - Installing sebastian/complexity (4.0.1): Extracting archive
+2026-02-19T06:30:31.6736144Z   - Installing sebastian/code-unit-reverse-lookup (4.0.1): Extracting archive
+2026-02-19T06:30:31.6738381Z   - Installing phpunit/php-code-coverage (11.0.12): Extracting archive
+2026-02-19T06:30:31.6740362Z   - Installing phar-io/version (3.2.1): Extracting archive
+2026-02-19T06:30:31.6742381Z   - Installing phar-io/manifest (2.0.4): Extracting archive
+2026-02-19T06:30:31.6744466Z   - Installing myclabs/deep-copy (1.13.4): Extracting archive
+2026-02-19T06:30:31.6746525Z   - Installing phpunit/phpunit (11.5.53): Extracting archive
+2026-02-19T06:30:32.5813810Z Generating optimized autoload files
+2026-02-19T06:30:33.7693865Z Class WorkationApiTest located in ./tests/Feature/WorkationApiTest.php does not comply with psr-4 autoloading standard (rule: Tests\ => ./tests). Skipping.
+2026-02-19T06:30:33.9863305Z > Illuminate\Foundation\ComposerScripts::postAutoloadDump
+2026-02-19T06:30:34.0015392Z > @php artisan package:discover --ansi
+2026-02-19T06:30:34.1617039Z 
+2026-02-19T06:30:34.1617972Z   [37;44m INFO [39;49m Discovering packages.  
+2026-02-19T06:30:34.1618347Z 
+2026-02-19T06:30:34.1693963Z   laravel/pail [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+2026-02-19T06:30:34.1740047Z   laravel/sail [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+2026-02-19T06:30:34.1786035Z   laravel/tinker [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+2026-02-19T06:30:34.1831884Z   nesbot/carbon [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+2026-02-19T06:30:34.1872476Z   nunomaduro/collision [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+2026-02-19T06:30:34.1913399Z   nunomaduro/termwind [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+2026-02-19T06:30:34.1915123Z 
+2026-02-19T06:30:34.2030801Z 81 packages you are using are looking for funding.
+2026-02-19T06:30:34.2031438Z Use the `composer fund` command to find out more!
+2026-02-19T06:30:34.2426644Z ##[group]Run actions/setup-node@v4
+2026-02-19T06:30:34.2426907Z with:
+2026-02-19T06:30:34.2427095Z   node-version: 20
+2026-02-19T06:30:34.2427269Z   cache: npm
+2026-02-19T06:30:34.2427771Z   cache-dependency-path: package-lock.json
+2026-02-19T06:30:34.2428041Z   always-auth: false
+2026-02-19T06:30:34.2428238Z   check-latest: false
+2026-02-19T06:30:34.2428548Z   token: ***
+2026-02-19T06:30:34.2428717Z env:
+2026-02-19T06:30:34.2428877Z   APP_ENV: testing
+2026-02-19T06:30:34.2429056Z   DB_CONNECTION: sqlite
+2026-02-19T06:30:34.2429271Z   DB_DATABASE: database/database.sqlite
+2026-02-19T06:30:34.2429524Z   COMPOSER_PROCESS_TIMEOUT: 0
+2026-02-19T06:30:34.2429744Z   COMPOSER_NO_INTERACTION: 1
+2026-02-19T06:30:34.2429946Z   COMPOSER_NO_AUDIT: 1
+2026-02-19T06:30:34.2430131Z ##[endgroup]
+2026-02-19T06:30:34.4339404Z Found in cache @ /opt/hostedtoolcache/node/20.20.0/x64
+2026-02-19T06:30:34.4348470Z ##[group]Environment details
+2026-02-19T06:30:36.6592051Z node: v20.20.0
+2026-02-19T06:30:36.6592545Z npm: 10.8.2
+2026-02-19T06:30:36.6592841Z yarn: 1.22.22
+2026-02-19T06:30:36.6593620Z ##[endgroup]
+2026-02-19T06:30:36.6615770Z [command]/opt/hostedtoolcache/node/20.20.0/x64/bin/npm config get cache
+2026-02-19T06:30:36.9287728Z /home/runner/.npm
+2026-02-19T06:30:37.0492407Z Cache hit for: node-cache-Linux-x64-npm-a0f0f012ed3f872331c61f522efaeb031a2250899a8bce9715aa64c651017ded
+2026-02-19T06:30:37.4516397Z Received 35840014 of 35840014 (100.0%), 102.6 MBs/sec
+2026-02-19T06:30:37.4517058Z Cache Size: ~34 MB (35840014 B)
+2026-02-19T06:30:37.4624435Z [command]/usr/bin/tar -xf /home/runner/work/_temp/9156afba-9ff3-4c23-9850-47a4e0acd73f/cache.tzst -P -C /home/runner/work/workation-cms/workation-cms --use-compress-program unzstd
+2026-02-19T06:30:37.5533053Z Cache restored successfully
+2026-02-19T06:30:37.5609907Z Cache restored from key: node-cache-Linux-x64-npm-a0f0f012ed3f872331c61f522efaeb031a2250899a8bce9715aa64c651017ded
+2026-02-19T06:30:38.3479466Z ##[group]Run actions/cache@v4
+2026-02-19T06:30:38.3479731Z with:
+2026-02-19T06:30:38.3479913Z   path: node_modules
+2026-02-19T06:30:38.3480371Z   key: Linux-node-modules-5eef1b06e40ecd27e7267f7dcd0efbd80d2e29c7f01b3788537b537cd6ff979f
+2026-02-19T06:30:38.3480877Z   restore-keys: Linux-node-modules-
+
+2026-02-19T06:30:38.3481137Z   enableCrossOsArchive: false
+2026-02-19T06:30:38.3481375Z   fail-on-cache-miss: false
+2026-02-19T06:30:38.3481593Z   lookup-only: false
+2026-02-19T06:30:38.3481786Z   save-always: false
+2026-02-19T06:30:38.3481974Z env:
+2026-02-19T06:30:38.3482139Z   APP_ENV: testing
+2026-02-19T06:30:38.3482323Z   DB_CONNECTION: sqlite
+2026-02-19T06:30:38.3482543Z   DB_DATABASE: database/database.sqlite
+2026-02-19T06:30:38.3482803Z   COMPOSER_PROCESS_TIMEOUT: 0
+2026-02-19T06:30:38.3483025Z   COMPOSER_NO_INTERACTION: 1
+2026-02-19T06:30:38.3483242Z   COMPOSER_NO_AUDIT: 1
+2026-02-19T06:30:38.3483437Z ##[endgroup]
+2026-02-19T06:30:38.5494676Z Cache hit for restore-key: Linux-node-modules-c319af93326b3296cf8c08c001b10bf2b9cf374c4f548ed9745f210ab37d128c
+2026-02-19T06:30:38.8652069Z Received 50901853 of 50901853 (100.0%), 173.4 MBs/sec
+2026-02-19T06:30:38.8652821Z Cache Size: ~49 MB (50901853 B)
+2026-02-19T06:30:38.8682217Z [command]/usr/bin/tar -xf /home/runner/work/_temp/6b720166-49ed-44dc-ad35-84bc026ade39/cache.tzst -P -C /home/runner/work/workation-cms/workation-cms --use-compress-program unzstd
+2026-02-19T06:30:39.2909645Z Cache restored successfully
+2026-02-19T06:30:39.3092291Z Cache restored from key: Linux-node-modules-c319af93326b3296cf8c08c001b10bf2b9cf374c4f548ed9745f210ab37d128c
+2026-02-19T06:30:39.3211828Z ##[group]Run npm ci --prefer-offline --no-audit --progress=false
+2026-02-19T06:30:39.3212342Z [36;1mnpm ci --prefer-offline --no-audit --progress=false[0m
+2026-02-19T06:30:39.3212680Z [36;1mnpm run build[0m
+2026-02-19T06:30:39.3268919Z shell: /usr/bin/bash -e {0}
+2026-02-19T06:30:39.3269173Z env:
+2026-02-19T06:30:39.3269355Z   APP_ENV: testing
+2026-02-19T06:30:39.3269568Z   DB_CONNECTION: sqlite
+2026-02-19T06:30:39.3269801Z   DB_DATABASE: database/database.sqlite
+2026-02-19T06:30:39.3270065Z   COMPOSER_PROCESS_TIMEOUT: 0
+2026-02-19T06:30:39.3270310Z   COMPOSER_NO_INTERACTION: 1
+2026-02-19T06:30:39.3270555Z   COMPOSER_NO_AUDIT: 1
+2026-02-19T06:30:39.3270761Z ##[endgroup]
+2026-02-19T06:30:41.9130498Z npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+2026-02-19T06:30:41.9704532Z npm warn deprecated whatwg-encoding@2.0.0: Use @exodus/bytes instead for a more spec-conformant and faster implementation
+2026-02-19T06:30:41.9833375Z npm warn deprecated abab@2.0.6: Use your platform's native atob() and btoa() methods instead
+2026-02-19T06:30:42.0199114Z npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-02-19T06:30:42.0489011Z npm warn deprecated domexception@4.0.0: Use your platform's native DOMException instead
+2026-02-19T06:30:43.7884819Z 
+2026-02-19T06:30:43.7885435Z added 229 packages in 4s
+2026-02-19T06:30:43.7885786Z 
+2026-02-19T06:30:43.7886059Z 50 packages are looking for funding
+2026-02-19T06:30:43.7886667Z   run `npm fund` for details
+2026-02-19T06:30:43.9208759Z 
+2026-02-19T06:30:43.9209437Z > build
+2026-02-19T06:30:43.9209848Z > vite build
+2026-02-19T06:30:43.9210110Z 
+2026-02-19T06:30:44.4876983Z [36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+2026-02-19T06:30:44.5438353Z transforming...
+2026-02-19T06:30:44.8827906Z [32m✓[39m 53 modules transformed.
+2026-02-19T06:30:44.9272855Z rendering chunks...
+2026-02-19T06:30:44.9357545Z computing gzip size...
+2026-02-19T06:30:44.9649300Z [2mpublic/build/[22m[32mmanifest.json            [39m[1m[2m 0.33 kB[22m[1m[22m[2m │ gzip:  0.17 kB[22m
+2026-02-19T06:30:44.9688185Z [2mpublic/build/[22m[2massets/[22m[35mapp-Ce_HpQr4.css  [39m[1m[2m34.53 kB[22m[1m[22m[2m │ gzip:  8.58 kB[22m
+2026-02-19T06:30:44.9690511Z [2mpublic/build/[22m[2massets/[22m[36mapp-CKl8NZMC.js   [39m[1m[2m36.69 kB[22m[1m[22m[2m │ gzip: 14.75 kB[22m
+2026-02-19T06:30:44.9691623Z [32m✓ built in 452ms[39m
+2026-02-19T06:30:44.9927950Z ##[group]Run npm run coverage
+2026-02-19T06:30:44.9928277Z [36;1mnpm run coverage[0m
+2026-02-19T06:30:44.9976823Z shell: /usr/bin/bash -e {0}
+2026-02-19T06:30:44.9977063Z env:
+2026-02-19T06:30:44.9977243Z   APP_ENV: testing
+2026-02-19T06:30:44.9977616Z   DB_CONNECTION: sqlite
+2026-02-19T06:30:44.9977844Z   DB_DATABASE: database/database.sqlite
+2026-02-19T06:30:44.9978110Z   COMPOSER_PROCESS_TIMEOUT: 0
+2026-02-19T06:30:44.9978350Z   COMPOSER_NO_INTERACTION: 1
+2026-02-19T06:30:44.9978573Z   COMPOSER_NO_AUDIT: 1
+2026-02-19T06:30:44.9978775Z ##[endgroup]
+2026-02-19T06:30:45.1098247Z 
+2026-02-19T06:30:45.1098550Z > coverage
+2026-02-19T06:30:45.1099030Z > vitest --coverage
+2026-02-19T06:30:45.1099277Z 
+2026-02-19T06:30:45.5618764Z 
+2026-02-19T06:30:45.5620584Z [7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90m/home/runner/work/workation-cms/workation-cms[39m
+2026-02-19T06:30:45.5621545Z [2m      Coverage enabled with [22m[33mv8[39m
+2026-02-19T06:30:45.5621810Z 
+2026-02-19T06:30:46.5533405Z  [32m✓[39m tests/js/unit/ui.branch.test.js [2m ([22m[2m1 test[22m[2m)[22m[90m 16[2mms[22m[39m
+2026-02-19T06:30:46.5692513Z  [32m✓[39m tests/js/unit/math.coverage.test.js [2m ([22m[2m3 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+2026-02-19T06:30:46.5976940Z  [32m✓[39m tests/js/unit/coverage.additions.test.js [2m ([22m[2m3 tests[22m[2m)[22m[90m 95[2mms[22m[39m
+2026-02-19T06:30:47.5174061Z  [32m✓[39m tests/js/integration/ui.test.js [2m ([22m[2m1 test[22m[2m)[22m[90m 15[2mms[22m[39m
+2026-02-19T06:30:47.5600410Z  [32m✓[39m tests/js/unit/math.extra.test.js [2m ([22m[2m2 tests[22m[2m)[22m[90m 4[2mms[22m[39m
+2026-02-19T06:30:47.6698380Z  [32m✓[39m tests/js/unit/bootstrap.import.test.js [2m ([22m[2m1 test[22m[2m)[22m[90m 64[2mms[22m[39m
+2026-02-19T06:30:48.4119652Z  [32m✓[39m tests/js/unit/math.test.js [2m ([22m[2m3 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+2026-02-19T06:30:48.5964709Z  [32m✓[39m tests/js/unit/bootstrap.test.js [2m ([22m[2m1 test[22m[2m)[22m[90m 4[2mms[22m[39m
+2026-02-19T06:30:48.7031092Z  [32m✓[39m tests/js/unit/math.branch.test.js [2m ([22m[2m1 test[22m[2m)[22m[90m 4[2mms[22m[39m
+2026-02-19T06:30:49.4934823Z  [32m✓[39m tests/js/unit/app.import.test.js [2m ([22m[2m1 test[22m[2m)[22m[90m 74[2mms[22m[39m
+2026-02-19T06:30:49.6090974Z  [32m✓[39m tests/js/example.test.js [2m ([22m[2m1 test[22m[2m)[22m[90m 4[2mms[22m[39m
+2026-02-19T06:30:49.6234521Z  [32m✓[39m tests/js/unit/app.test.js [2m ([22m[2m1 test[22m[2m)[22m[90m 3[2mms[22m[39m
+2026-02-19T06:30:49.6668119Z 
+2026-02-19T06:30:49.6689187Z [2m Test Files [22m [1m[32m12 passed[39m[22m[90m (12)[39m
+2026-02-19T06:30:49.6690176Z [2m      Tests [22m [1m[32m19 passed[39m[22m[90m (19)[39m
+2026-02-19T06:30:49.6691560Z [2m   Start at [22m 06:30:45
+2026-02-19T06:30:49.6693993Z [2m   Duration [22m 4.10s[2m (transform 93ms, setup 3ms, collect 294ms, tests 293ms, environment 6.69s, prepare 1.67s)[22m
+2026-02-19T06:30:49.6694812Z 
+2026-02-19T06:31:05.9178419Z [34m % [39m[2mCoverage report from [22m[33mv8[39m
+2026-02-19T06:31:05.9218344Z -------------------|---------|----------|---------|---------|-------------------
+2026-02-19T06:31:05.9219539Z File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+2026-02-19T06:31:05.9220619Z -------------------|---------|----------|---------|---------|-------------------
+2026-02-19T06:31:05.9225701Z All files          |    3.72 |    26.47 |   13.79 |    3.72 |                   
+2026-02-19T06:31:05.9226527Z  infra/backend/src |       0 |        0 |       0 |       0 |                   
+2026-02-19T06:31:05.9228002Z   ...controller.ts |       0 |        0 |       0 |       0 | 1-9               
+2026-02-19T06:31:05.9228790Z   main.ts          |       0 |        0 |       0 |       0 | 1-18              
+2026-02-19T06:31:05.9229574Z  infra/frontend    |       0 |        0 |       0 |       0 |                   
+2026-02-19T06:31:05.9230933Z   next.config.mjs  |       0 |        0 |       0 |       0 | 1-9               
+2026-02-19T06:31:05.9231749Z   ...ss.config.cjs |       0 |        0 |       0 |       0 | 1-6               
+2026-02-19T06:31:05.9232559Z   ...nd.config.cjs |       0 |        0 |       0 |       0 | 1-10              
+2026-02-19T06:31:05.9233318Z  ...a/frontend/app |       0 |        0 |       0 |       0 |                   
+2026-02-19T06:31:05.9238495Z   layout.tsx       |       0 |        0 |       0 |       0 | 1-21              
+2026-02-19T06:31:05.9239268Z   page.tsx         |       0 |        0 |       0 |       0 | 1-8               
+2026-02-19T06:31:05.9240112Z  ...accommodations |       0 |        0 |       0 |       0 |                   
+2026-02-19T06:31:05.9240868Z   page.tsx         |       0 |        0 |       0 |       0 | 1-11              
+2026-02-19T06:31:05.9241616Z  ...d/app/bookings |       0 |        0 |       0 |       0 |                   
+2026-02-19T06:31:05.9242353Z   page.tsx         |       0 |        0 |       0 |       0 | 1-11              
+2026-02-19T06:31:05.9243079Z  ...nd/app/islands |       0 |        0 |       0 |       0 |                   
+2026-02-19T06:31:05.9243813Z   page.tsx         |       0 |        0 |       0 |       0 | 1-11              
+2026-02-19T06:31:05.9244366Z  ...nd/app/vendors |       0 |        0 |       0 |       0 |                   
+2026-02-19T06:31:05.9245108Z   page.tsx         |       0 |        0 |       0 |       0 | 1-11              
+2026-02-19T06:31:05.9245834Z  ...end/components |       0 |        0 |       0 |       0 |                   
+2026-02-19T06:31:05.9246613Z   RemoteStatus.tsx |       0 |        0 |       0 |       0 | 1-19              
+2026-02-19T06:31:05.9247524Z  ...c/build/assets |       0 |        0 |       0 |       0 |                   
+2026-02-19T06:31:05.9248310Z   app-CKl8NZMC.js  |       0 |        0 |       0 |       0 | 1-6               
+2026-02-19T06:31:05.9249122Z  resources/js      |     100 |      100 |     100 |     100 |                   
+2026-02-19T06:31:05.9249853Z   app.js           |     100 |      100 |     100 |     100 |                   
+2026-02-19T06:31:05.9250448Z   bootstrap.js     |     100 |      100 |     100 |     100 |                   
+2026-02-19T06:31:05.9250858Z   ui.js            |     100 |      100 |     100 |     100 |                   
+2026-02-19T06:31:05.9251385Z  resources/js/lib  |     100 |      100 |     100 |     100 |                   
+2026-02-19T06:31:05.9252194Z   math.js          |     100 |      100 |     100 |     100 |                   
+2026-02-19T06:31:05.9252922Z  ...s/Resources/js |       0 |        0 |       0 |       0 |                   
+2026-02-19T06:31:05.9253717Z   clipboard.min.js |       0 |        0 |       0 |       0 | 1-7               
+2026-02-19T06:31:05.9254773Z   prism.js         |       0 |        0 |       0 |       0 | 1-8               
+2026-02-19T06:31:05.9255532Z   whoops.base.js   |       0 |        0 |       0 |       0 | 1-215             
+2026-02-19T06:31:05.9256308Z   zepto.min.js     |       0 |        0 |       0 |       0 | 1-2               
+2026-02-19T06:31:05.9257087Z  ...tions/renderer |       0 |        0 |       0 |       0 |                   
+2026-02-19T06:31:05.9258064Z   scripts.js       |       0 |        0 |       0 |       0 | 1-100             
+2026-02-19T06:31:05.9258826Z  ...er/Template/js |       0 |        0 |       0 |       0 |                   
+2026-02-19T06:31:05.9259605Z   ...bundle.min.js |       0 |        0 |       0 |       0 | 1-7               
+2026-02-19T06:31:05.9260346Z   d3.min.js        |       0 |        0 |       0 |       0 | 1-5               
+2026-02-19T06:31:05.9261050Z   file.js          |       0 |        0 |       0 |       0 | 1-53              
+2026-02-19T06:31:05.9261787Z   jquery.min.js    |       0 |        0 |       0 |       0 | 1-2               
+2026-02-19T06:31:05.9262539Z   nv.d3.min.js     |       0 |        0 |       0 |       0 | 1-8               
+2026-02-19T06:31:05.9263471Z  ...rces/assets/js |       0 |        0 |       0 |       0 |                   
+2026-02-19T06:31:05.9263949Z   exception.js     |       0 |        0 |       0 |       0 | 1-286             
+2026-02-19T06:31:05.9264375Z  ...r/Resources/js |       0 |        0 |       0 |       0 |                   
+2026-02-19T06:31:05.9264803Z   ...Descriptor.js |       0 |        0 |       0 |       0 | 1-10              
+2026-02-19T06:31:05.9265278Z -------------------|---------|----------|---------|---------|-------------------
+2026-02-19T06:31:06.0146898Z ##[group]Run node -e "const fs=require('fs');const p=fs.existsSync('coverage-final.json')?'coverage-final.json':(fs.existsSync('coverage/coverage-final.json')?'coverage/coverage-final.json':null);if(!p){console.error('No coverage-final.json found');process.exit(1);}const cov=JSON.parse(fs.readFileSync(p));const keys=Object.keys(cov).filter(k=>k.includes('/resources/js/')); if(keys.length===0){console.error('No resource JS files found in coverage'); process.exit(1);}let totals={s:{t:0,c:0},f:{t:0,c:0},b:{t:0,c:0}};for(const k of keys){const file=cov[k];const s=file.s||{};const f=file.f||{};const b=file.b||{};totals.s.t+=Object.keys(s).length;totals.s.c+=Object.values(s).filter(x=>x>0).length;totals.f.t+=Object.keys(f).length;totals.f.c+=Object.values(f).filter(x=>x>0).length;totals.b.t+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].length:0),0);totals.b.c+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].filter(x=>x>0).length:0),0);}const pct=(n,m)=>(m?100*n/m:0);const s=pct(totals.s.c,totals.s.t).toFixed(2);const f=pct(totals.f.c,totals.f.t).toFixed(2);const b=pct(totals.b.c,totals.b.t).toFixed(2);console.log(`Resource JS coverage: statements ${s}%, functions ${f}%, branches ${b}%`);const minS=95,minF=95,minB=90;if(s<minS||f<minF||b<minB){console.error('Resource JS coverage below thresholds');process.exit(2);}console.log('Coverage thresholds met for resources/js');"
+2026-02-19T06:31:06.0155764Z [36;1mnode -e "const fs=require('fs');const p=fs.existsSync('coverage-final.json')?'coverage-final.json':(fs.existsSync('coverage/coverage-final.json')?'coverage/coverage-final.json':null);if(!p){console.error('No coverage-final.json found');process.exit(1);}const cov=JSON.parse(fs.readFileSync(p));const keys=Object.keys(cov).filter(k=>k.includes('/resources/js/')); if(keys.length===0){console.error('No resource JS files found in coverage'); process.exit(1);}let totals={s:{t:0,c:0},f:{t:0,c:0},b:{t:0,c:0}};for(const k of keys){const file=cov[k];const s=file.s||{};const f=file.f||{};const b=file.b||{};totals.s.t+=Object.keys(s).length;totals.s.c+=Object.values(s).filter(x=>x>0).length;totals.f.t+=Object.keys(f).length;totals.f.c+=Object.values(f).filter(x=>x>0).length;totals.b.t+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].length:0),0);totals.b.c+=Object.keys(b).reduce((a,i)=>a+(Array.isArray(b[i])?b[i].filter(x=>x>0).length:0),0);}const pct=(n,m)=>(m?100*n/m:0);const s=pct(totals.s.c,totals.s.t).toFixed(2);const f=pct(totals.f.c,totals.f.t).toFixed(2);const b=pct(totals.b.c,totals.b.t).toFixed(2);console.log(`Resource JS coverage: statements ${s}%, functions ${f}%, branches ${b}%`);const minS=95,minF=95,minB=90;if(s<minS||f<minF||b<minB){console.error('Resource JS coverage below thresholds');process.exit(2);}console.log('Coverage thresholds met for resources/js');"[0m
+2026-02-19T06:31:06.0209701Z shell: /usr/bin/bash -e {0}
+2026-02-19T06:31:06.0209939Z env:
+2026-02-19T06:31:06.0210116Z   APP_ENV: testing
+2026-02-19T06:31:06.0210322Z   DB_CONNECTION: sqlite
+2026-02-19T06:31:06.0210556Z   DB_DATABASE: database/database.sqlite
+2026-02-19T06:31:06.0210823Z   COMPOSER_PROCESS_TIMEOUT: 0
+2026-02-19T06:31:06.0211060Z   COMPOSER_NO_INTERACTION: 1
+2026-02-19T06:31:06.0211284Z   COMPOSER_NO_AUDIT: 1
+2026-02-19T06:31:06.0211497Z ##[endgroup]
+2026-02-19T06:31:06.0284935Z /home/runner/work/_temp/22718c2c-d656-4285-a8eb-970ab286c389.sh: line 1: Resource: command not found
+2026-02-19T06:31:06.0528176Z 
+2026-02-19T06:31:06.0533170Z Coverage thresholds met for resources/js
+2026-02-19T06:31:06.0646598Z ##[group]Run codecov/codecov-action@v4
+2026-02-19T06:31:06.0646892Z with:
+2026-02-19T06:31:06.0647078Z   fail_ci_if_error: false
+2026-02-19T06:31:06.0647304Z env:
+2026-02-19T06:31:06.0647643Z   APP_ENV: testing
+2026-02-19T06:31:06.0647852Z   DB_CONNECTION: sqlite
+2026-02-19T06:31:06.0648081Z   DB_DATABASE: database/database.sqlite
+2026-02-19T06:31:06.0648354Z   COMPOSER_PROCESS_TIMEOUT: 0
+2026-02-19T06:31:06.0648590Z   COMPOSER_NO_INTERACTION: 1
+2026-02-19T06:31:06.0648818Z   COMPOSER_NO_AUDIT: 1
+2026-02-19T06:31:06.0649022Z ##[endgroup]
+2026-02-19T06:31:06.1514516Z eventName: push
+2026-02-19T06:31:06.1524042Z ==> linux OS detected
+2026-02-19T06:31:06.4024007Z https://cli.codecov.io/latest/linux/codecov.SHA256SUM
+2026-02-19T06:31:06.4655722Z gpg: directory '/home/runner/.gnupg' created
+2026-02-19T06:31:06.4660288Z gpg: keybox '/home/runner/.gnupg/pubring.kbx' created
+2026-02-19T06:31:06.4692555Z gpg: /home/runner/.gnupg/trustdb.gpg: trustdb created
+2026-02-19T06:31:06.4693698Z gpg: key 806BB28AED779869: public key "Codecov Uploader (Codecov Uploader Verification Key) <security@codecov.io>" imported
+2026-02-19T06:31:06.4814767Z gpg: Total number processed: 1
+2026-02-19T06:31:06.4815313Z gpg:               imported: 1
+2026-02-19T06:31:06.4881711Z gpg: Signature made Fri Dec  5 15:31:48 2025 UTC
+2026-02-19T06:31:06.4882528Z gpg:                using RSA key 27034E7FDB850E0BBC2C62FF806BB28AED779869
+2026-02-19T06:31:06.4886111Z gpg: Good signature from "Codecov Uploader (Codecov Uploader Verification Key) <security@codecov.io>" [unknown]
+2026-02-19T06:31:06.4887519Z gpg: WARNING: This key is not certified with a trusted signature!
+2026-02-19T06:31:06.4888421Z gpg:          There is no indication that the signature belongs to the owner.
+2026-02-19T06:31:06.4889372Z Primary key fingerprint: 2703 4E7F DB85 0E0B BC2C  62FF 806B B28A ED77 9869
+2026-02-19T06:31:06.5149916Z ==> Uploader SHASUM verified (fd34214e2b2c738e48e3ac90b2c23ec4e975d0e9aee51f2cebe81b5704af3f6c  codecov)
+2026-02-19T06:31:06.5151047Z ==> Running version latest
+2026-02-19T06:31:06.5940240Z Could not pull latest version information: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+2026-02-19T06:31:06.5941887Z ==> Running git config --global --add safe.directory /home/runner/work/workation-cms/workation-cms
+2026-02-19T06:31:06.5974903Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/workation-cms/workation-cms
+2026-02-19T06:31:06.6030731Z ==> Running command '/home/runner/work/_actions/codecov/codecov-action/v4/dist/codecov create-commit'
+2026-02-19T06:31:06.6032367Z [command]/home/runner/work/_actions/codecov/codecov-action/v4/dist/codecov create-commit --git-service github
+2026-02-19T06:31:06.9604195Z info - 2026-02-19 06:31:06,959 -- ci service found: github-actions
+2026-02-19T06:31:06.9716254Z warning - 2026-02-19 06:31:06,971 -- No config file could be found. Ignoring config.
+2026-02-19T06:31:07.0030499Z warning - 2026-02-19 06:31:07,002 -- Branch `main` is protected but no token was provided
+2026-02-19T06:31:07.0032465Z warning - 2026-02-19 06:31:07,002 -- For information on Codecov upload tokens, see https://docs.codecov.com/docs/codecov-tokens
+2026-02-19T06:31:07.1865617Z info - 2026-02-19 06:31:07,186 -- Process Commit creating complete
+2026-02-19T06:31:07.1867013Z error - 2026-02-19 06:31:07,186 -- Commit creating failed: {"message":"Token required - not valid tokenless upload"}
+2026-02-19T06:31:07.3141903Z ==> Running command '/home/runner/work/_actions/codecov/codecov-action/v4/dist/codecov create-report'
+2026-02-19T06:31:07.3143841Z [command]/home/runner/work/_actions/codecov/codecov-action/v4/dist/codecov create-report --git-service github
+2026-02-19T06:31:07.6776494Z info - 2026-02-19 06:31:07,677 -- ci service found: github-actions
+2026-02-19T06:31:07.6874563Z warning - 2026-02-19 06:31:07,686 -- No config file could be found. Ignoring config.
+2026-02-19T06:31:07.8682527Z info - 2026-02-19 06:31:07,867 -- Process Report creating complete
+2026-02-19T06:31:07.8689110Z error - 2026-02-19 06:31:07,868 -- Report creating failed: {"message":"Token required - not valid tokenless upload"}
+2026-02-19T06:31:07.9463947Z ==> Running command '/home/runner/work/_actions/codecov/codecov-action/v4/dist/codecov do-upload'
+2026-02-19T06:31:07.9465736Z [command]/home/runner/work/_actions/codecov/codecov-action/v4/dist/codecov do-upload --git-service github
+2026-02-19T06:31:08.3021694Z info - 2026-02-19 06:31:08,301 -- ci service found: github-actions
+2026-02-19T06:31:08.3118841Z warning - 2026-02-19 06:31:08,311 -- No config file could be found. Ignoring config.
+2026-02-19T06:31:08.3440602Z warning - 2026-02-19 06:31:08,343 -- xcrun is not installed or can't be found.
+2026-02-19T06:31:08.5486236Z warning - 2026-02-19 06:31:08,548 -- No gcov data found.
+2026-02-19T06:31:08.5490152Z warning - 2026-02-19 06:31:08,548 -- coverage.py is not installed or can't be found.
+2026-02-19T06:31:08.5702201Z info - 2026-02-19 06:31:08,569 -- Found 2 coverage files to report
+2026-02-19T06:31:08.5703359Z info - 2026-02-19 06:31:08,570 -- > /home/runner/work/workation-cms/workation-cms/coverage/clover.xml
+2026-02-19T06:31:08.5704687Z info - 2026-02-19 06:31:08,570 -- > /home/runner/work/workation-cms/workation-cms/coverage/coverage-final.json
+2026-02-19T06:31:08.7144210Z info - 2026-02-19 06:31:08,713 -- Process Upload complete
+2026-02-19T06:31:08.7145428Z error - 2026-02-19 06:31:08,714 -- Upload failed: {"message":"Token required - not valid tokenless upload"}
+2026-02-19T06:31:08.8092603Z ##[group]Run actions/upload-artifact@v4
+2026-02-19T06:31:08.8092908Z with:
+2026-02-19T06:31:08.8093089Z   name: coverage
+2026-02-19T06:31:08.8093329Z   path: coverage/**
+coverage-final.json
+clover.xml
+
+2026-02-19T06:31:08.8093636Z   if-no-files-found: warn
+2026-02-19T06:31:08.8093867Z   compression-level: 6
+2026-02-19T06:31:08.8094077Z   overwrite: false
+2026-02-19T06:31:08.8094298Z   include-hidden-files: false
+2026-02-19T06:31:08.8094520Z env:
+2026-02-19T06:31:08.8094683Z   APP_ENV: testing
+2026-02-19T06:31:08.8094874Z   DB_CONNECTION: sqlite
+2026-02-19T06:31:08.8095099Z   DB_DATABASE: database/database.sqlite
+2026-02-19T06:31:08.8095358Z   COMPOSER_PROCESS_TIMEOUT: 0
+2026-02-19T06:31:08.8095589Z   COMPOSER_NO_INTERACTION: 1
+2026-02-19T06:31:08.8095816Z   COMPOSER_NO_AUDIT: 1
+2026-02-19T06:31:08.8096012Z ##[endgroup]
+2026-02-19T06:31:09.0535272Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-02-19T06:31:09.0538632Z The least common ancestor is /home/runner/work/workation-cms/workation-cms. This will be the root directory of the artifact
+2026-02-19T06:31:09.0540012Z With the provided path, there will be 55 files uploaded
+2026-02-19T06:31:09.0544910Z Artifact name is valid!
+2026-02-19T06:31:09.0545840Z Root directory input is valid!
+2026-02-19T06:31:09.1236791Z ##[error]Failed to CreateArtifact: Received non-retryable error: Failed request: (409) Conflict: an artifact with this name already exists on the workflow run
+2026-02-19T06:31:09.1391003Z Post job cleanup.
+2026-02-19T06:31:09.2353136Z [command]/usr/bin/git version
+2026-02-19T06:31:09.2396176Z git version 2.52.0
+2026-02-19T06:31:09.2433958Z Copying '/home/runner/.gitconfig' to '/home/runner/work/_temp/53de52a5-1795-48e6-922c-3a3b04578760/.gitconfig'
+2026-02-19T06:31:09.2444992Z Temporarily overriding HOME='/home/runner/work/_temp/53de52a5-1795-48e6-922c-3a3b04578760' before making global git config changes
+2026-02-19T06:31:09.2446192Z Adding repository directory to the temporary git global config as a safe directory
+2026-02-19T06:31:09.2459105Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/workation-cms/workation-cms
+2026-02-19T06:31:09.2495613Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-02-19T06:31:09.2528258Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-02-19T06:31:09.2773530Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-02-19T06:31:09.2796784Z http.https://github.com/.extraheader
+2026-02-19T06:31:09.2810243Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-02-19T06:31:09.2842099Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-02-19T06:31:09.3078233Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-02-19T06:31:09.3110315Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-02-19T06:31:09.3475227Z Cleaning up orphan processes

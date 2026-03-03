@@ -1,0 +1,15 @@
+﻿2026-02-19T10:56:44.5682681Z ##[group]Run Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+2026-02-19T10:56:44.5683527Z [36;1mSet-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force[0m
+2026-02-19T10:56:44.5684182Z [36;1m& "D:\a\workation-cms\workation-cms\scripts\retrieve_and_compute.ps1" -Owner ibazzam -Repo workation-cms -Commit[0m
+2026-02-19T10:56:44.7483209Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-02-19T10:56:44.7483604Z env:
+2026-02-19T10:56:44.7484112Z   GITHUB_TOKEN: ***
+2026-02-19T10:56:44.7484297Z ##[endgroup]
+2026-02-19T10:56:53.5996574Z [31;1m&: [0mD:\a\_temp\8427de50-0f80-4326-a87b-fa069a98ef87.ps1:3[0m
+2026-02-19T10:56:53.5997321Z [31;1m[0m[36;1mLine |[0m
+2026-02-19T10:56:53.5998250Z [31;1m[0m[36;1m[36;1m   3 | [0m & [36;1m"D:\a\workation-cms\workation-cms\scripts\retrieve_and_compute.ps1"[0m …[0m
+2026-02-19T10:56:53.5999362Z [31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+2026-02-19T10:56:53.6000924Z [31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mThe term 'D:\a\workation-cms\workation-cms\scripts\retrieve_and_compute.ps1' is not recognized as a name of a[0m
+2026-02-19T10:56:53.6002772Z [31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mcmdlet, function, script file, or executable program. Check the spelling of the name, or if a path was included,[0m
+2026-02-19T10:56:53.6004376Z [31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mverify that the path is correct and try again.[0m
+2026-02-19T10:56:53.6921506Z ##[error]Process completed with exit code 1.

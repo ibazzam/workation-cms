@@ -148,7 +148,9 @@ jobs:
           author_email: actions@github.com
           message: 'ci: update coverage summary'
           add: 'coverage-summary.json'
-          branch: coverage-reports
+          new_branch: coverage-reports
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          push: true
 
       - name: Upload coverage artifact
         if: always()

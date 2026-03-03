@@ -6,8 +6,8 @@ import path from 'path';
 async function run() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    console.error('Missing DATABASE_URL env var');
-    process.exit(2);
+    console.warn('Missing DATABASE_URL env var — skipping db fix in this environment');
+    process.exit(0);
   }
 
   const client = new Client({ connectionString: databaseUrl, ssl: { rejectUnauthorized: false } });

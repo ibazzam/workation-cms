@@ -145,6 +145,8 @@ jobs:
 
       - name: Commit coverage summary to branch
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           git config user.name "github-actions"

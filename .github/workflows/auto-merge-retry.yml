@@ -8,6 +8,7 @@ on:
   check_suite:
     types: [completed]
   workflow_run:
+    workflows: ["Run tests"]
     types: [completed]
   workflow_dispatch: {}
 

@@ -145,15 +145,24 @@ jobs:
 
       - name: Commit coverage summary to branch
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: EndBug/add-and-commit@v9
-        with:
-          author_name: github-actions
-          author_email: actions@github.com
-          message: 'ci: update coverage summary'
-          add: 'coverage-summary.json'
-          new_branch: coverage-reports
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          push: true
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          # Use the GITHUB_TOKEN for authentication when pushing
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          # Try to fetch the remote branch if it exists, ignore errors
+          git fetch origin coverage-reports || true
+          # Create or reset local branch to track remote if present
+          git checkout -B coverage-reports origin/coverage-reports || git checkout -B coverage-reports
+          git add coverage-summary.json || true
+          # Commit (allow empty to keep script idempotent) and push safely
+          if git commit -m "ci: update coverage summary" --allow-empty; then
+            git push origin coverage-reports --force-with-lease
+          else
+            echo "No changes to commit"
+          fi
+        shell: bash
 
       - name: Upload coverage artifact
         if: always()

@@ -1,0 +1,32 @@
+﻿2026-02-19T10:57:53.2488122Z Current runner version: '2.331.0'
+2026-02-19T10:57:53.2535946Z ##[group]Runner Image Provisioner
+2026-02-19T10:57:53.2536749Z Hosted Compute Agent
+2026-02-19T10:57:53.2537472Z Version: 20260123.484
+2026-02-19T10:57:53.2538057Z Commit: 6bd6555ca37d84114959e1c76d2c01448ff61c5d
+2026-02-19T10:57:53.2538722Z Build Date: 2026-01-23T19:41:17Z
+2026-02-19T10:57:53.2539333Z Worker ID: {0123cf70-e8d6-48f4-95b9-0eb972e011b1}
+2026-02-19T10:57:53.2539981Z Azure Region: westus
+2026-02-19T10:57:53.2540481Z ##[endgroup]
+2026-02-19T10:57:53.2541805Z ##[group]Operating System
+2026-02-19T10:57:53.2542396Z Microsoft Windows Server 2025
+2026-02-19T10:57:53.2542937Z 10.0.26100
+2026-02-19T10:57:53.2543350Z Datacenter
+2026-02-19T10:57:53.2543793Z ##[endgroup]
+2026-02-19T10:57:53.2544202Z ##[group]Runner Image
+2026-02-19T10:57:53.2545024Z Image: windows-2025
+2026-02-19T10:57:53.2545510Z Version: 20260209.23.1
+2026-02-19T10:57:53.2546424Z Included Software: https://github.com/actions/runner-images/blob/win25/20260209.23/images/windows/Windows2025-Readme.md
+2026-02-19T10:57:53.2548177Z Image Release: https://github.com/actions/runner-images/releases/tag/win25%2F20260209.23
+2026-02-19T10:57:53.2549022Z ##[endgroup]
+2026-02-19T10:57:53.2550050Z ##[group]GITHUB_TOKEN Permissions
+2026-02-19T10:57:53.2551751Z Contents: read
+2026-02-19T10:57:53.2552344Z Metadata: read
+2026-02-19T10:57:53.2552781Z Packages: read
+2026-02-19T10:57:53.2553228Z ##[endgroup]
+2026-02-19T10:57:53.2555104Z Secret source: Actions
+2026-02-19T10:57:53.2555766Z Prepare workflow directory
+2026-02-19T10:57:53.2883575Z Prepare all required actions
+2026-02-19T10:57:53.2925306Z Getting action download info
+2026-02-19T10:57:53.6656409Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-02-19T10:57:53.7846597Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-02-19T10:57:54.0734952Z Complete job name: Retrieve and compute coverage summary

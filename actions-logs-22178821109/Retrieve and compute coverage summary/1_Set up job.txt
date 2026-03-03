@@ -1,0 +1,32 @@
+﻿2026-02-19T10:53:27.9897152Z Current runner version: '2.331.0'
+2026-02-19T10:53:27.9944503Z ##[group]Runner Image Provisioner
+2026-02-19T10:53:27.9945371Z Hosted Compute Agent
+2026-02-19T10:53:27.9945958Z Version: 20260123.484
+2026-02-19T10:53:27.9946592Z Commit: 6bd6555ca37d84114959e1c76d2c01448ff61c5d
+2026-02-19T10:53:27.9947271Z Build Date: 2026-01-23T19:41:17Z
+2026-02-19T10:53:27.9947930Z Worker ID: {7366e5bb-04f8-4786-a398-b45ed4e586db}
+2026-02-19T10:53:27.9948607Z Azure Region: centralus
+2026-02-19T10:53:27.9949170Z ##[endgroup]
+2026-02-19T10:53:27.9950532Z ##[group]Operating System
+2026-02-19T10:53:27.9951129Z Microsoft Windows Server 2025
+2026-02-19T10:53:27.9951712Z 10.0.26100
+2026-02-19T10:53:27.9952203Z Datacenter
+2026-02-19T10:53:27.9952654Z ##[endgroup]
+2026-02-19T10:53:27.9953151Z ##[group]Runner Image
+2026-02-19T10:53:27.9953661Z Image: windows-2025
+2026-02-19T10:53:27.9954171Z Version: 20260209.23.1
+2026-02-19T10:53:27.9955207Z Included Software: https://github.com/actions/runner-images/blob/win25/20260209.23/images/windows/Windows2025-Readme.md
+2026-02-19T10:53:27.9958208Z Image Release: https://github.com/actions/runner-images/releases/tag/win25%2F20260209.23
+2026-02-19T10:53:27.9959797Z ##[endgroup]
+2026-02-19T10:53:27.9961483Z ##[group]GITHUB_TOKEN Permissions
+2026-02-19T10:53:27.9963793Z Contents: read
+2026-02-19T10:53:27.9964426Z Metadata: read
+2026-02-19T10:53:27.9964964Z Packages: read
+2026-02-19T10:53:27.9965439Z ##[endgroup]
+2026-02-19T10:53:27.9967565Z Secret source: Actions
+2026-02-19T10:53:27.9968421Z Prepare workflow directory
+2026-02-19T10:53:28.0362938Z Prepare all required actions
+2026-02-19T10:53:28.0401498Z Getting action download info
+2026-02-19T10:53:28.3272942Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-02-19T10:53:28.4489096Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-02-19T10:53:28.7226157Z Complete job name: Retrieve and compute coverage summary

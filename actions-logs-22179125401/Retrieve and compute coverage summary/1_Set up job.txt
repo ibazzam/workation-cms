@@ -1,0 +1,32 @@
+﻿2026-02-19T11:03:15.5490953Z Current runner version: '2.331.0'
+2026-02-19T11:03:15.5537206Z ##[group]Runner Image Provisioner
+2026-02-19T11:03:15.5538418Z Hosted Compute Agent
+2026-02-19T11:03:15.5539266Z Version: 20260123.484
+2026-02-19T11:03:15.5540100Z Commit: 6bd6555ca37d84114959e1c76d2c01448ff61c5d
+2026-02-19T11:03:15.5541611Z Build Date: 2026-01-23T19:41:17Z
+2026-02-19T11:03:15.5542586Z Worker ID: {73c3dfd2-7b80-436b-a250-697b5983e4d6}
+2026-02-19T11:03:15.5543674Z Azure Region: eastus2
+2026-02-19T11:03:15.5544690Z ##[endgroup]
+2026-02-19T11:03:15.5546801Z ##[group]Operating System
+2026-02-19T11:03:15.5547861Z Microsoft Windows Server 2025
+2026-02-19T11:03:15.5548953Z 10.0.26100
+2026-02-19T11:03:15.5549662Z Datacenter
+2026-02-19T11:03:15.5550244Z ##[endgroup]
+2026-02-19T11:03:15.5550923Z ##[group]Runner Image
+2026-02-19T11:03:15.5551697Z Image: windows-2025
+2026-02-19T11:03:15.5552591Z Version: 20260209.23.1
+2026-02-19T11:03:15.5554524Z Included Software: https://github.com/actions/runner-images/blob/win25/20260209.23/images/windows/Windows2025-Readme.md
+2026-02-19T11:03:15.5557821Z Image Release: https://github.com/actions/runner-images/releases/tag/win25%2F20260209.23
+2026-02-19T11:03:15.5559473Z ##[endgroup]
+2026-02-19T11:03:15.5561990Z ##[group]GITHUB_TOKEN Permissions
+2026-02-19T11:03:15.5564458Z Contents: read
+2026-02-19T11:03:15.5565372Z Metadata: read
+2026-02-19T11:03:15.5566123Z Packages: read
+2026-02-19T11:03:15.5566889Z ##[endgroup]
+2026-02-19T11:03:15.5569689Z Secret source: Actions
+2026-02-19T11:03:15.5570759Z Prepare workflow directory
+2026-02-19T11:03:15.5995173Z Prepare all required actions
+2026-02-19T11:03:15.6039127Z Getting action download info
+2026-02-19T11:03:15.8189751Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-02-19T11:03:15.9416186Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-02-19T11:03:16.3132704Z Complete job name: Retrieve and compute coverage summary

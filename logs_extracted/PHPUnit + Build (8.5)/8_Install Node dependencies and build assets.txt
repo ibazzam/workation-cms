@@ -1,0 +1,35 @@
+﻿2026-02-19T06:25:36.1331885Z ##[group]Run npm ci --prefer-offline --no-audit --progress=false
+2026-02-19T06:25:36.1332388Z [36;1mnpm ci --prefer-offline --no-audit --progress=false[0m
+2026-02-19T06:25:36.1332742Z [36;1mnpm run build[0m
+2026-02-19T06:25:36.1391026Z shell: /usr/bin/bash -e {0}
+2026-02-19T06:25:36.1391280Z env:
+2026-02-19T06:25:36.1391459Z   APP_ENV: testing
+2026-02-19T06:25:36.1391677Z   DB_CONNECTION: sqlite
+2026-02-19T06:25:36.1391908Z   DB_DATABASE: database/database.sqlite
+2026-02-19T06:25:36.1392180Z   COMPOSER_PROCESS_TIMEOUT: 0
+2026-02-19T06:25:36.1392421Z   COMPOSER_NO_INTERACTION: 1
+2026-02-19T06:25:36.1392639Z   COMPOSER_NO_AUDIT: 1
+2026-02-19T06:25:36.1392838Z ##[endgroup]
+2026-02-19T06:25:38.5202087Z npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+2026-02-19T06:25:38.5746748Z npm warn deprecated whatwg-encoding@2.0.0: Use @exodus/bytes instead for a more spec-conformant and faster implementation
+2026-02-19T06:25:38.5855731Z npm warn deprecated abab@2.0.6: Use your platform's native atob() and btoa() methods instead
+2026-02-19T06:25:38.6121527Z npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-02-19T06:25:38.6373120Z npm warn deprecated domexception@4.0.0: Use your platform's native DOMException instead
+2026-02-19T06:25:40.4425049Z 
+2026-02-19T06:25:40.4425701Z added 229 packages in 4s
+2026-02-19T06:25:40.4431392Z 
+2026-02-19T06:25:40.4431803Z 50 packages are looking for funding
+2026-02-19T06:25:40.4432369Z   run `npm fund` for details
+2026-02-19T06:25:40.5754533Z 
+2026-02-19T06:25:40.5754920Z > build
+2026-02-19T06:25:40.5755177Z > vite build
+2026-02-19T06:25:40.5755318Z 
+2026-02-19T06:25:41.1206659Z [36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+2026-02-19T06:25:41.1666208Z transforming...
+2026-02-19T06:25:41.5278294Z [32m✓[39m 53 modules transformed.
+2026-02-19T06:25:41.5721197Z rendering chunks...
+2026-02-19T06:25:41.5821841Z computing gzip size...
+2026-02-19T06:25:41.6117253Z [2mpublic/build/[22m[32mmanifest.json            [39m[1m[2m 0.33 kB[22m[1m[22m[2m │ gzip:  0.17 kB[22m
+2026-02-19T06:25:41.6254103Z [2mpublic/build/[22m[2massets/[22m[35mapp-Ce_HpQr4.css  [39m[1m[2m34.53 kB[22m[1m[22m[2m │ gzip:  8.58 kB[22m
+2026-02-19T06:25:41.6256822Z [2mpublic/build/[22m[2massets/[22m[36mapp-CKl8NZMC.js   [39m[1m[2m36.69 kB[22m[1m[22m[2m │ gzip: 14.75 kB[22m
+2026-02-19T06:25:41.6258345Z [32m✓ built in 469ms[39m

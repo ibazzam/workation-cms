@@ -1,0 +1,35 @@
+﻿2026-02-19T11:03:33.9934767Z ##[group]Run Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+2026-02-19T11:03:33.9935464Z [36;1mSet-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force[0m
+2026-02-19T11:03:33.9935981Z [36;1m# ensure script content is available (avoid sparse-checkout issues)[0m
+2026-02-19T11:03:33.9937176Z [36;1mgit fetch --no-tags origin main[0m
+2026-02-19T11:03:33.9937597Z [36;1mgit show origin/main:scripts/retrieve_and_compute.ps1 > .\retrieve_and_compute.ps1[0m
+2026-02-19T11:03:33.9938305Z [36;1mpwsh -NoProfile -ExecutionPolicy Bypass -File .\retrieve_and_compute.ps1 -Owner ibazzam -Repo workation-cms -Commit[0m
+2026-02-19T11:03:34.0712911Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-02-19T11:03:34.0713339Z env:
+2026-02-19T11:03:34.0713849Z   GITHUB_TOKEN: ***
+2026-02-19T11:03:34.0714078Z ##[endgroup]
+2026-02-19T11:03:40.4036658Z From https://github.com/ibazzam/workation-cms
+2026-02-19T11:03:40.4037180Z  * branch            main       -> FETCH_HEAD
+2026-02-19T11:03:41.2055928Z Running fetcher to download artifact...
+2026-02-19T11:03:41.3626217Z The argument 'D:\a\workation-cms\workation-cms\fetch_coverage_artifact.ps1' is not recognized as the name of a script file. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+2026-02-19T11:03:41.3628016Z 
+2026-02-19T11:03:41.3628894Z Usage: pwsh[.exe] [-Login] [[-File] <filePath> [args]]
+2026-02-19T11:03:41.3629602Z                   [-Command { - | <script-block> [-args <arg-array>]
+2026-02-19T11:03:41.3630313Z                                 | <string> [<CommandParameters>] } ]
+2026-02-19T11:03:41.3631024Z                   [-CommandWithArgs <string> [<CommandParameters>]
+2026-02-19T11:03:41.3631846Z                   [-ConfigurationName <string>] [-ConfigurationFile <filePath>]
+2026-02-19T11:03:41.3632773Z                   [-CustomPipeName <string>] [-EncodedCommand <Base64EncodedCommand>]
+2026-02-19T11:03:41.3633847Z                   [-ExecutionPolicy <ExecutionPolicy>] [-InputFormat {Text | XML}]
+2026-02-19T11:03:41.3634820Z                   [-Interactive] [-MTA] [-NoExit] [-NoLogo] [-NonInteractive] [-NoProfile]
+2026-02-19T11:03:41.3635633Z                   [-NoProfileLoadTime] [-OutputFormat {Text | XML}] 
+2026-02-19T11:03:41.3636396Z                   [-SettingsFile <filePath>] [-SSHServerMode] [-STA] 
+2026-02-19T11:03:41.3637059Z                   [-Version] [-WindowStyle <style>] 
+2026-02-19T11:03:41.3637627Z                   [-WorkingDirectory <directoryPath>]
+2026-02-19T11:03:41.3637996Z 
+2026-02-19T11:03:41.3638197Z        pwsh[.exe] -h | -Help | -? | /?
+2026-02-19T11:03:41.3638513Z 
+2026-02-19T11:03:41.3638863Z PowerShell Online Help https://aka.ms/powershell-docs
+2026-02-19T11:03:41.3639321Z 
+2026-02-19T11:03:41.3639547Z All parameters are case-insensitive.
+2026-02-19T11:03:42.2192085Z [31;1mWrite-Error: [31;1mFetcher failed with exit code 64.[0m
+2026-02-19T11:03:42.3647264Z ##[error]Process completed with exit code 1.

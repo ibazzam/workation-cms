@@ -1,0 +1,59 @@
+﻿2026-02-19T10:57:54.2175204Z ##[group]Run actions/checkout@v4
+2026-02-19T10:57:54.2176250Z with:
+2026-02-19T10:57:54.2176634Z   repository: ibazzam/workation-cms
+2026-02-19T10:57:54.2177254Z   token: ***
+2026-02-19T10:57:54.2177614Z   ssh-strict: true
+2026-02-19T10:57:54.2177961Z   ssh-user: git
+2026-02-19T10:57:54.2178325Z   persist-credentials: true
+2026-02-19T10:57:54.2178767Z   clean: true
+2026-02-19T10:57:54.2179142Z   sparse-checkout-cone-mode: true
+2026-02-19T10:57:54.2179596Z   fetch-depth: 1
+2026-02-19T10:57:54.2179942Z   fetch-tags: false
+2026-02-19T10:57:54.2180311Z   show-progress: true
+2026-02-19T10:57:54.2180681Z   lfs: false
+2026-02-19T10:57:54.2181016Z   submodules: false
+2026-02-19T10:57:54.2181387Z   set-safe-directory: true
+2026-02-19T10:57:54.2182001Z ##[endgroup]
+2026-02-19T10:57:54.3843654Z Syncing repository: ibazzam/workation-cms
+2026-02-19T10:57:54.3845871Z ##[group]Getting Git version info
+2026-02-19T10:57:54.3846527Z Working directory is 'D:\a\workation-cms\workation-cms'
+2026-02-19T10:57:54.4813882Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-02-19T10:57:54.8379619Z git version 2.53.0.windows.1
+2026-02-19T10:57:54.8432287Z ##[endgroup]
+2026-02-19T10:57:54.8453618Z Temporarily overriding HOME='D:\a\_temp\792ee1d0-a6b2-43c1-9ef1-ceb5efb27b69' before making global git config changes
+2026-02-19T10:57:54.8454980Z Adding repository directory to the temporary git global config as a safe directory
+2026-02-19T10:57:54.8465351Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\workation-cms\workation-cms
+2026-02-19T10:57:54.8998550Z Deleting the contents of 'D:\a\workation-cms\workation-cms'
+2026-02-19T10:57:54.9005561Z ##[group]Initializing the repository
+2026-02-19T10:57:54.9015110Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\workation-cms\workation-cms
+2026-02-19T10:57:54.9800094Z Initialized empty Git repository in D:/a/workation-cms/workation-cms/.git/
+2026-02-19T10:57:54.9842129Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/ibazzam/workation-cms
+2026-02-19T10:57:55.0366074Z ##[endgroup]
+2026-02-19T10:57:55.0367912Z ##[group]Disabling automatic garbage collection
+2026-02-19T10:57:55.0376684Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+2026-02-19T10:57:55.0666393Z ##[endgroup]
+2026-02-19T10:57:55.0668135Z ##[group]Setting up auth
+2026-02-19T10:57:55.0684539Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-02-19T10:57:55.0976905Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-02-19T10:57:56.5056651Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-02-19T10:57:56.5356890Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-02-19T10:57:57.0497643Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-02-19T10:57:57.0791712Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-02-19T10:57:57.6047704Z [command]"C:\Program Files\Git\bin\git.exe" config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+2026-02-19T10:57:57.6358793Z ##[endgroup]
+2026-02-19T10:57:57.6359441Z ##[group]Fetching the repository
+2026-02-19T10:57:57.6372161Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +ebd6827f903f07f2a6a47597272b28fb477623d5:refs/remotes/origin/main
+2026-02-19T10:57:58.5852231Z From https://github.com/ibazzam/workation-cms
+2026-02-19T10:57:58.5856014Z  * [new ref]         ebd6827f903f07f2a6a47597272b28fb477623d5 -> origin/main
+2026-02-19T10:57:58.6202812Z ##[endgroup]
+2026-02-19T10:57:58.6203436Z ##[group]Determining the checkout info
+2026-02-19T10:57:58.6206004Z ##[endgroup]
+2026-02-19T10:57:58.6217128Z [command]"C:\Program Files\Git\bin\git.exe" sparse-checkout disable
+2026-02-19T10:57:58.6641060Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all extensions.worktreeConfig
+2026-02-19T10:57:58.6972773Z ##[group]Checking out the ref
+2026-02-19T10:57:58.6973355Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force -B main refs/remotes/origin/main
+2026-02-19T10:57:58.7890622Z Switched to a new branch 'main'
+2026-02-19T10:57:58.7914659Z branch 'main' set up to track 'origin/main'.
+2026-02-19T10:57:58.7959866Z ##[endgroup]
+2026-02-19T10:57:58.8375990Z [command]"C:\Program Files\Git\bin\git.exe" log -1 --format=%H
+2026-02-19T10:57:58.8644900Z ebd6827f903f07f2a6a47597272b28fb477623d5

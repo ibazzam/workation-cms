@@ -1,0 +1,37 @@
+﻿2026-02-19T11:12:19.9692987Z ##[group]Run Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+2026-02-19T11:12:19.9693723Z [36;1mSet-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force[0m
+2026-02-19T11:12:19.9694209Z [36;1m# configure git identity so commits succeed in the runner[0m
+2026-02-19T11:12:19.9695548Z [36;1mgit config --global user.email "actions@github.com"[0m
+2026-02-19T11:12:19.9695919Z [36;1mgit config --global user.name "GitHub Actions"[0m
+2026-02-19T11:12:19.9696244Z [36;1m# set origin to use the provided PAT for pushes[0m
+2026-02-19T11:12:19.9697088Z [36;1mgit remote set-url origin "***github.com/ibazzam/workation-cms.git"[0m
+2026-02-19T11:12:19.9697561Z [36;1m# ensure script content is available (avoid sparse-checkout issues)[0m
+2026-02-19T11:12:19.9697931Z [36;1mgit fetch --no-tags origin main[0m
+2026-02-19T11:12:19.9698613Z [36;1mgit show origin/main:scripts/retrieve_and_compute.ps1 > .\retrieve_and_compute.ps1[0m
+2026-02-19T11:12:19.9699312Z [36;1mpwsh -NoProfile -ExecutionPolicy Bypass -File .\retrieve_and_compute.ps1 -Owner ibazzam -Repo workation-cms -Commit[0m
+2026-02-19T11:12:20.0514304Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-02-19T11:12:20.0514735Z env:
+2026-02-19T11:12:20.0515150Z   GITHUB_TOKEN: ***
+2026-02-19T11:12:20.0515388Z ##[endgroup]
+2026-02-19T11:12:31.6360629Z From https://github.com/ibazzam/workation-cms
+2026-02-19T11:12:31.6361410Z  * branch            main       -> FETCH_HEAD
+2026-02-19T11:12:33.2006446Z Running fetcher to download artifact...
+2026-02-19T11:12:33.7146549Z Polling workflow runs for 'phpunit.yml' on ibazzam/workation-cms (branch=main) looking for artifact 'coverage'...
+2026-02-19T11:12:35.0594676Z Checking run 22179332472 (created: 02/19/2026 11:09:52)...
+2026-02-19T11:12:35.3033699Z Found artifact 'coverage' (id=5571287694) in run 22179332472; downloading...
+2026-02-19T11:12:36.4259049Z Extracted artifact to D:\a\workation-cms\workation-cms\artifacts\artifact_22179332472_5571287694
+2026-02-19T11:12:36.5084534Z Found coverage-final.json -> D:\a\workation-cms\workation-cms\coverage-final-run22179332472-artifact.json
+2026-02-19T11:12:36.8580795Z Locating downloaded coverage-final JSON...
+2026-02-19T11:12:36.8805943Z Using coverage file: D:\a\workation-cms\workation-cms\coverage-final-run22179332472-artifact.json
+2026-02-19T11:12:36.8845345Z Computing coverage summary -> coverage-summary-ci.json
+2026-02-19T11:12:36.9338310Z Wrote coverage-summary-ci.json -> {"totals":{"s":{"t":33,"c":33},"f":{"t":4,"c":4},"b":{"t":9,"c":9}},"percent":{"statements":100,"functions":100,"branches":100},"generated_at":"2026-02-19T11:12:36.925Z"}
+2026-02-19T11:12:36.9407719Z Wrote summary: coverage-summary-ci.json
+2026-02-19T11:12:36.9422528Z Committing coverage-summary-ci.json to branch coverage-reports
+2026-02-19T11:12:36.9904312Z Switched to a new branch 'coverage-reports'
+2026-02-19T11:12:37.1196308Z [coverage-reports f15b9c9] ci: add coverage summary (generated 2026-02-19T11:12:37.0607270+00:00)
+2026-02-19T11:12:37.1197208Z  1 file changed, 22 insertions(+)
+2026-02-19T11:12:37.1197750Z  create mode 100644 coverage-reports/coverage-summary-ci.json
+2026-02-19T11:12:37.3829796Z remote: Permission to ibazzam/workation-cms.git denied to github-actions[bot].
+2026-02-19T11:12:37.3831220Z fatal: unable to access 'https://github.com/ibazzam/workation-cms.git/': The requested URL returned error: 403
+2026-02-19T11:12:37.3917121Z Pushed coverage summary to origin/coverage-reports
+2026-02-19T11:12:37.3923103Z Done.

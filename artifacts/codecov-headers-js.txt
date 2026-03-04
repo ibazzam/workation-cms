@@ -1,0 +1,9 @@
+HTTP/2 502 
+content-type: text/html; charset=UTF-8
+referrer-policy: no-referrer
+content-length: 332
+date: Wed, 04 Mar 2026 08:52:54 GMT
+strict-transport-security: max-age=3104000
+x-frame-options: SAMEORIGIN
+alt-svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+

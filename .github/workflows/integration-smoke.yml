@@ -1,0 +1,40 @@
+name: Integration smoke (PHP)
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main, feat/sprint-1-holds ]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, pdo_sqlite
+
+      - name: Get composer
+        run: composer --version || php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" && php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+
+      - name: Install dependencies
+        run: composer install --no-progress --no-suggest --prefer-dist
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env || true
+          php -r "file_put_contents('.env', str_replace(["DB_CONNECTION=mysql","DB_DATABASE=homestead"],["DB_CONNECTION=sqlite","DB_DATABASE=:memory:"], file_get_contents('.env')));
+
+      - name: Run PHPUnit
+        run: vendor/bin/phpunit --testdox --colors=never
+
+      - name: Run transport job processing smoke
+        run: php artisan transport:process-jobs --limit=5
+
+      - name: Run transport reconciliation smoke
+        run: php artisan transport:reconcile-holds --limit=5

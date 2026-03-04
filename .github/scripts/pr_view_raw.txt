@@ -1,0 +1,55 @@
+﻿gh : Unknown JSON field: "headOid"
+At line:1 char:1
++ gh pr view 16 --repo ibazzam/workation-cms --json headRefName,headOid ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Unknown JSON field: "headOid":Str 
+   ing) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Available fields:
+  additions
+  assignees
+  author
+  autoMergeRequest
+  baseRefName
+  baseRefOid
+  body
+  changedFiles
+  closed
+  closedAt
+  closingIssuesReferences
+  comments
+  commits
+  createdAt
+  deletions
+  files
+  fullDatabaseId
+  headRefName
+  headRefOid
+  headRepository
+  headRepositoryOwner
+  id
+  isCrossRepository
+  isDraft
+  labels
+  latestReviews
+  maintainerCanModify
+  mergeCommit
+  mergeStateStatus
+  mergeable
+  mergedAt
+  mergedBy
+  milestone
+  number
+  potentialMergeCommit
+  projectCards
+  projectItems
+  reactionGroups
+  reviewDecision
+  reviewRequests
+  reviews
+  state
+  statusCheckRollup
+  title
+  updatedAt
+  url

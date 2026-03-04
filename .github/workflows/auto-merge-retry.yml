@@ -26,7 +26,9 @@ jobs:
           # Use the PAT stored in repository secret COVERAGE_FETCH_PAT
           github-token: ${{ secrets.COVERAGE_FETCH_PAT }}
           script: |
-            const ghcore = require('@actions/core')
+            // Avoid requiring @actions/core here because the runner's action
+            // bundle may not include it in some environments. Use console logging
+            // instead to prevent MODULE_NOT_FOUND errors.
 
             const findPrNumber = (payload) => {
               if (payload.pull_request) return payload.pull_request.number
@@ -38,16 +40,16 @@ jobs:
 
             const prNumber = findPrNumber(context.payload)
             if (!prNumber) {
-              ghcore.info('No PR number found in event payload — nothing to do.')
+              console.log('No PR number found in event payload — nothing to do.')
               return
             }
 
             const { data: pr } = await github.rest.pulls.get({ owner: context.repo.owner, repo: context.repo.repo, pull_number: prNumber })
-            ghcore.info(`PR #${prNumber} state=${pr.state} mergeable=${pr.mergeable} mergeable_state=${pr.mergeable_state}`)
+            console.log(`PR #${prNumber} state=${pr.state} mergeable=${pr.mergeable} mergeable_state=${pr.mergeable_state}`)
 
             // Only attempt when mergeable_state is clean (avoid unstable/draft/conflicts)
             if (!pr.mergeable || pr.mergeable_state !== 'clean') {
-              ghcore.info('PR not in a clean mergeable state; skipping auto-merge attempt.')
+              console.log('PR not in a clean mergeable state; skipping auto-merge attempt.')
               return
             }
 
@@ -55,8 +57,8 @@ jobs:
             try {
               const gql = `mutation { enablePullRequestAutoMerge(input: { pullRequestId: "${nodeId}", mergeMethod: SQUASH }) { pullRequest { number } clientMutationId } }`
               const res = await github.graphql(gql)
-              ghcore.info('Auto-merge enabled: ' + JSON.stringify(res))
+              console.log('Auto-merge enabled: ' + JSON.stringify(res))
             } catch (err) {
-              ghcore.error('Failed to enable auto-merge: ' + (err.message || err))
+              console.error('Failed to enable auto-merge: ' + (err.message || err))
               throw err
             }

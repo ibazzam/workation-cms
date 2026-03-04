@@ -1,0 +1,27 @@
+﻿2026-03-02T13:20:04.3885087Z ##[group]Run npx prisma migrate deploy --schema=../prisma/schema.prisma
+2026-03-02T13:20:04.3885895Z [36;1mnpx prisma migrate deploy --schema=../prisma/schema.prisma[0m
+2026-03-02T13:20:04.3953118Z shell: /usr/bin/bash -e {0}
+2026-03-02T13:20:04.3953486Z env:
+2026-03-02T13:20:04.3954264Z   DATABASE_URL: ***localhost:5432/dbname
+2026-03-02T13:20:04.3954915Z ##[endgroup]
+2026-03-02T13:20:05.1358523Z Prisma schema loaded from ../prisma/schema.prisma
+2026-03-02T13:20:05.1402609Z Datasource "db": PostgreSQL database "dbname", schema "public" at "localhost:5432"
+2026-03-02T13:20:05.2296294Z 
+2026-03-02T13:20:05.2297964Z 2 migrations found in prisma/migrations
+2026-03-02T13:20:05.2298360Z 
+2026-03-02T13:20:05.2779222Z Applying migration `20260302074730_add_servicecategory`
+2026-03-02T13:20:05.2899793Z Error: P3018
+2026-03-02T13:20:05.2900330Z 
+2026-03-02T13:20:05.2902017Z A migration failed to apply. New migrations cannot be applied before the error is recovered from. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+2026-03-02T13:20:05.2906902Z 
+2026-03-02T13:20:05.2907519Z Migration name: 20260302074730_add_servicecategory
+2026-03-02T13:20:05.2907921Z 
+2026-03-02T13:20:05.2908148Z Database error code: 42601
+2026-03-02T13:20:05.2908416Z 
+2026-03-02T13:20:05.2908578Z Database error:
+2026-03-02T13:20:05.2909237Z ERROR: column "id" of relation "ServiceCategory" is an identity column
+2026-03-02T13:20:05.2909697Z 
+2026-03-02T13:20:05.2913949Z DbError { severity: "ERROR", parsed_severity: Some(Error), code: SqlState(E42601), message: "column \"id\" of relation \"ServiceCategory\" is an identity column", detail: None, hint: None, position: None, where_: Some("SQL statement \"ALTER TABLE public.\"ServiceCategory\" ALTER COLUMN \"id\" SET DEFAULT nextval('\"ServiceCategory_id_seq\"')::regclass\"\nPL/pgSQL function inline_code_block line 17 at EXECUTE"), schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("tablecmds.c"), line: Some(7737), routine: Some("ATExecColumnDefault") }
+2026-03-02T13:20:05.2917376Z 
+2026-03-02T13:20:05.2917386Z 
+2026-03-02T13:20:05.3128359Z ##[error]Process completed with exit code 1.

@@ -1,0 +1,238 @@
+name: Run tests
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  tests:
+    name: PHPUnit + Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: [8.4, 8.5]
+
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: database/database.sqlite
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, pdo, pdo_sqlite, xml, gd
+
+      - name: Cache Composer packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/composer
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-progress --no-suggest --prefer-dist
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-
+
+      - name: Install Node dependencies and build assets
+        run: |
+          npm ci --prefer-offline --no-audit --progress=false
+          npm run build
+
+      - name: Run JS coverage
+        run: |
+          npm run coverage
+
+      - name: Check JS coverage thresholds
+        continue-on-error: true
+        run: |
+          node scripts/coverage-summary.js check
+
+      - name: Codecov diagnostics
+        if: always()
+        run: |
+          curl -sS -D codecov-headers-tests.txt -o /dev/null https://codecov.io/ || true
+        shell: bash
+
+      - name: Upload Codecov diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codecov-diagnostics-tests
+          path: codecov-headers-tests.txt
+          if-no-files-found: ignore
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-php-${{ matrix.php }}
+          path: |
+            coverage/**
+            coverage-final.json
+            clover.xml
+          if-no-files-found: warn
+
+      - name: Prepare SQLite database
+        run: |
+          mkdir -p database
+          php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
+
+      - name: Prepare environment file
+        run: |
+          if [ -f .env.example ]; then
+            cp .env.example .env
+          elif [ ! -f .env ]; then
+            touch .env
+          fi
+
+      - name: Generate app key
+        run: php artisan key:generate --force
+
+      - name: Run migrations
+        run: php artisan migrate --force
+
+      - name: Run tests
+        run: composer test
+
+  js-coverage:
+    name: JS Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install Node dependencies
+        run: npm ci --prefer-offline --no-audit --progress=false
+
+      - name: Run JS coverage
+        run: |
+          npm run coverage
+
+      - name: Check JS coverage thresholds
+        continue-on-error: true
+        run: |
+          node scripts/coverage-summary.js check
+
+      - name: Create coverage summary file
+        run: |
+          node scripts/coverage-summary.js summary
+
+      - name: Commit coverage summary to branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          # Use the GITHUB_TOKEN for authentication when pushing
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          # Ensure a clean working tree to avoid checkout conflicts
+          git reset --hard || true
+          git clean -fdx || true
+          # Try to fetch the remote branch if it exists, ignore errors
+          git fetch origin coverage-reports || true
+          # Delete any existing local branch to avoid stale refs
+          git branch -D coverage-reports || true
+          # Create or reset local branch from remote if present, otherwise create new
+          if git ls-remote --exit-code --heads origin coverage-reports >/dev/null 2>&1; then
+            git checkout -B coverage-reports origin/coverage-reports
+          else
+            git checkout -B coverage-reports
+          fi
+          git add coverage-summary.json || true
+          # Commit (allow empty to keep script idempotent) and push safely
+          if git commit -m "ci: update coverage summary" --allow-empty; then
+            git push origin coverage-reports --force-with-lease
+          else
+            echo "No changes to commit"
+          fi
+        shell: bash
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            coverage/**
+            coverage-final.json
+            coverage/coverage-final.json
+            coverage/coverage-summary.json
+            coverage/*.html
+            clover.xml
+          if-no-files-found: warn
+
+      - name: Codecov diagnostics
+        if: always()
+        run: |
+          curl -sS -D codecov-headers-js.txt -o /dev/null https://codecov.io/ || true
+        shell: bash
+
+      - name: Upload Codecov diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codecov-diagnostics-js
+          path: codecov-headers-js.txt
+          if-no-files-found: ignore
+
+      - name: Codecov verbose upload (diagnostic)
+        if: always()
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "Running Codecov bash uploader in verbose diagnostic mode"
+          if [ -f coverage-summary.json ]; then
+            echo "Found coverage-summary.json, attempting upload via bash uploader"
+            bash -c "bash <(curl -s https://codecov.io/bash) -t \"$CODECOV_TOKEN\" -f coverage-summary.json -Z -v" 2>&1 | tee codecov-verbose-upload.txt || true
+          else
+            echo "coverage-summary.json not found; skipping verbose uploader"
+          fi
+        shell: bash
+
+      - name: Upload coverage to Codecov
+        if: ${{ success() }}
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false

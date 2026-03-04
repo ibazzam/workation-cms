@@ -1,0 +1,17 @@
+{
+  "information_schema": {
+    "column_default": "(nextval('\"ServiceCategory_id_seq\"'::regclass))::regclass",
+    "identity_generation": null
+  },
+  "after_column": {
+    "column_default": "(nextval('\"ServiceCategory_id_seq\"'::regclass))::regclass",
+    "identity_generation": null
+  },
+  "discovered_sequence": "public.servicecategory_id_seq",
+  "diagnostics": {
+    "sample_nextval": {
+      "v": "1"
+    }
+  },
+  "timestamp": "2026-03-02T11:24:37.038Z"
+}

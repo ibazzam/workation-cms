@@ -128,6 +128,8 @@ jobs:
   js-coverage:
     name: JS Coverage
     runs-on: ubuntu-latest
+    env:
+      ACTIONS_STEP_DEBUG: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -145,6 +147,28 @@ jobs:
       - name: Run JS coverage
         run: |
           npm run coverage
+
+      - name: Ensure CODECOV_TOKEN is present
+        run: |
+          if [ -z "${{ secrets.CODECOV_TOKEN }}" ]; then
+            echo "ERROR: CODECOV_TOKEN is not set in repository secrets. Please add it at Settings → Secrets & variables → Actions." >&2
+            exit 1
+          else
+            echo "CODECOV_TOKEN appears to be set (masked)."
+          fi
+        shell: bash
+
+      - name: List coverage files for debugging
+        run: |
+          echo "Working directory: $(pwd)"
+          ls -la
+          echo "coverage dir listing:" && ls -la coverage || true
+          if [ -f coverage-summary.json ]; then
+            echo "---- coverage-summary.json ----"
+            cat coverage-summary.json || true
+            echo "-------------------------------"
+          fi
+        shell: bash
 
       - name: Check JS coverage thresholds
         continue-on-error: true

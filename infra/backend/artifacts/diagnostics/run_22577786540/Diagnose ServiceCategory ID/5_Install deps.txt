@@ -1,0 +1,16 @@
+﻿2026-03-02T13:19:55.4279529Z ##[group]Run npm ci --prefer-offline --no-audit --progress=false
+2026-03-02T13:19:55.4280044Z [36;1mnpm ci --prefer-offline --no-audit --progress=false[0m
+2026-03-02T13:19:55.4340441Z shell: /usr/bin/bash -e {0}
+2026-03-02T13:19:55.4340681Z env:
+2026-03-02T13:19:55.4341097Z   DATABASE_URL: ***localhost:5432/dbname
+2026-03-02T13:19:55.4341341Z ##[endgroup]
+2026-03-02T13:19:58.1103178Z npm warn deprecated whatwg-encoding@2.0.0: Use @exodus/bytes instead for a more spec-conformant and faster implementation
+2026-03-02T13:19:58.4475348Z npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+2026-03-02T13:19:58.6195653Z npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-03-02T13:19:58.7276660Z npm warn deprecated domexception@4.0.0: Use your platform's native DOMException instead
+2026-03-02T13:19:58.8590781Z npm warn deprecated abab@2.0.6: Use your platform's native atob() and btoa() methods instead
+2026-03-02T13:20:01.2492640Z 
+2026-03-02T13:20:01.2493559Z added 229 packages in 6s
+2026-03-02T13:20:01.2493895Z 
+2026-03-02T13:20:01.2494186Z 50 packages are looking for funding
+2026-03-02T13:20:01.2494648Z   run `npm fund` for details

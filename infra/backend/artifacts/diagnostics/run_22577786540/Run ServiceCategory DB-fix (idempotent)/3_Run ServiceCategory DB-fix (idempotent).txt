@@ -1,0 +1,33 @@
+﻿2026-03-02T13:19:28.8561453Z ##[group]Run cd infra/backend
+2026-03-02T13:19:28.8562070Z [36;1mcd infra/backend[0m
+2026-03-02T13:19:28.8562682Z [36;1mnpm ci --prefer-offline --no-audit --progress=false[0m
+2026-03-02T13:19:28.8563430Z [36;1mnode ../../scripts/db_fix_servicecategory.js || true[0m
+2026-03-02T13:19:28.8618586Z shell: /usr/bin/bash -e {0}
+2026-03-02T13:19:28.8619111Z env:
+2026-03-02T13:19:28.8619737Z   DATABASE_URL: 
+2026-03-02T13:19:28.8620407Z ##[endgroup]
+2026-03-02T13:19:33.4343569Z npm warn deprecated rimraf@2.7.1: Rimraf versions prior to v4 are no longer supported
+2026-03-02T13:19:33.6031431Z npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+2026-03-02T13:19:33.6948837Z npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-03-02T13:19:35.6830615Z 
+2026-03-02T13:19:35.6831792Z added 194 packages in 5s
+2026-03-02T13:19:35.6832366Z 
+2026-03-02T13:19:35.6832623Z 35 packages are looking for funding
+2026-03-02T13:19:35.6833241Z   run `npm fund` for details
+2026-03-02T13:19:35.7369503Z node:internal/modules/esm/resolve:873
+2026-03-02T13:19:35.7371075Z   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+2026-03-02T13:19:35.7371899Z         ^
+2026-03-02T13:19:35.7372169Z 
+2026-03-02T13:19:35.7373214Z Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'pg' imported from /home/runner/work/workation-cms/workation-cms/scripts/db_fix_servicecategory.js
+2026-03-02T13:19:35.7374927Z     at packageResolve (node:internal/modules/esm/resolve:873:9)
+2026-03-02T13:19:35.7375808Z     at moduleResolve (node:internal/modules/esm/resolve:946:18)
+2026-03-02T13:19:35.7376715Z     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+2026-03-02T13:19:35.7377609Z     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+2026-03-02T13:19:35.7378439Z     at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+2026-03-02T13:19:35.7379203Z     at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+2026-03-02T13:19:35.7380220Z     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+2026-03-02T13:19:35.7381090Z     at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+2026-03-02T13:19:35.7381567Z   code: 'ERR_MODULE_NOT_FOUND'
+2026-03-02T13:19:35.7381880Z }
+2026-03-02T13:19:35.7382002Z 
+2026-03-02T13:19:35.7382100Z Node.js v20.20.0

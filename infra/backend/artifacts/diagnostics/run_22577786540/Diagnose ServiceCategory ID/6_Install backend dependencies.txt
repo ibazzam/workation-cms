@@ -1,0 +1,14 @@
+﻿2026-03-02T13:20:01.2713912Z ##[group]Run npm ci --prefer-offline --no-audit --progress=false
+2026-03-02T13:20:01.2714395Z [36;1mnpm ci --prefer-offline --no-audit --progress=false[0m
+2026-03-02T13:20:01.2764370Z shell: /usr/bin/bash -e {0}
+2026-03-02T13:20:01.2764597Z env:
+2026-03-02T13:20:01.2764993Z   DATABASE_URL: ***localhost:5432/dbname
+2026-03-02T13:20:01.2765258Z ##[endgroup]
+2026-03-02T13:20:02.2037597Z npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+2026-03-02T13:20:02.2749684Z npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-03-02T13:20:02.7114429Z npm warn deprecated rimraf@2.7.1: Rimraf versions prior to v4 are no longer supported
+2026-03-02T13:20:04.3609114Z 
+2026-03-02T13:20:04.3609848Z added 194 packages in 3s
+2026-03-02T13:20:04.3617779Z 
+2026-03-02T13:20:04.3618313Z 35 packages are looking for funding
+2026-03-02T13:20:04.3622021Z   run `npm fund` for details

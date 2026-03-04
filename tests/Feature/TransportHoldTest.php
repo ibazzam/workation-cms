@@ -14,10 +14,54 @@ class TransportHoldTest extends TestCase
 
     public function test_create_hold_and_idempotency()
     {
+        // ensure required related records exist (operator, route, islands)
+        if (\Illuminate\Support\Facades\Schema::hasTable('transport_operators')) {
+            $operatorId = \Illuminate\Support\Facades\DB::table('transport_operators')->insertGetId([
+                'name' => 'test-operator',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        } else {
+            $operatorId = 1;
+        }
+
+        // create islands if present
+        if (\Illuminate\Support\Facades\Schema::hasTable('islands')) {
+            $originId = \Illuminate\Support\Facades\DB::table('islands')->insertGetId(['name' => 'origin', 'created_at' => now(), 'updated_at' => now()]);
+            $destId = \Illuminate\Support\Facades\DB::table('islands')->insertGetId(['name' => 'dest', 'created_at' => now(), 'updated_at' => now()]);
+        } else {
+            $originId = 1;
+            $destId = 1;
+        }
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('transport_routes')) {
+            // SQLite in-memory tests may not have islands table; temporarily disable FK checks to insert route
+            try {
+                \Illuminate\Support\Facades\DB::getPdo()->exec('PRAGMA foreign_keys = OFF');
+            } catch (\Throwable $e) {
+                // ignore if not sqlite or fails
+            }
+
+            $routeId = \Illuminate\Support\Facades\DB::table('transport_routes')->insertGetId([
+                'origin_island_id' => $originId,
+                'destination_island_id' => $destId,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            try {
+                \Illuminate\Support\Facades\DB::getPdo()->exec('PRAGMA foreign_keys = ON');
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        } else {
+            $routeId = 1;
+        }
+
         // create schedule and inventory
         $schedule = TransportSchedule::create([
-            'route_id' => 1,
-            'operator_id' => 1,
+            'route_id' => $routeId,
+            'operator_id' => $operatorId,
             'departure_at' => now(),
         ]);
 

@@ -72,6 +72,18 @@ class TransportHold extends Model
                 'created_by' => $createdBy,
             ]);
 
+            // enqueue outbound provider job (DLQ) for hold_create
+            try {
+                \App\Models\TransportProviderJob::create([
+                    'provider' => null,
+                    'action' => 'hold_create',
+                    'payload' => $hold->toArray(),
+                    'status' => 'pending',
+                ]);
+            } catch (\Throwable $e) {
+                // swallow - job storage failure shouldn't break hold creation
+            }
+
             return $hold;
         });
     }
@@ -85,6 +97,18 @@ class TransportHold extends Model
 
             $this->status = 'confirmed';
             $this->save();
+
+            // enqueue provider confirm job
+            try {
+                \App\Models\TransportProviderJob::create([
+                    'provider' => null,
+                    'action' => 'hold_confirm',
+                    'payload' => $this->toArray(),
+                    'status' => 'pending',
+                ]);
+            } catch (\Throwable $e) {
+                // ignore
+            }
 
             return $this;
         });
@@ -110,6 +134,18 @@ class TransportHold extends Model
 
             $this->status = 'released';
             $this->save();
+
+            // enqueue provider release job
+            try {
+                \App\Models\TransportProviderJob::create([
+                    'provider' => null,
+                    'action' => 'hold_release',
+                    'payload' => $this->toArray(),
+                    'status' => 'pending',
+                ]);
+            } catch (\Throwable $e) {
+                // ignore
+            }
 
             return $this;
         });

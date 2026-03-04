@@ -260,3 +260,31 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
+
+      - name: Check Codecov availability
+        id: codecov_check
+        run: |
+          set -euo pipefail
+          status=$(curl -sS -o /dev/null -w "%{http_code}" https://codecov.io || echo "000")
+          echo "status=$status"
+          if [ "$status" = "200" ]; then
+            echo "codecov_up=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "codecov_up=false" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+
+      - name: Codecov verbose upload (diagnostic)
+        if: ${{ steps.codecov_check.outputs.codecov_up == 'true' && always() }}
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "Running Codecov bash uploader in verbose diagnostic mode"
+          if [ -f coverage-summary.json ]; then
+            echo "Found coverage-summary.json, attempting upload via bash uploader"
+            bash -c "bash <(curl -s https://codecov.io/bash) -t \"$CODECOV_TOKEN\" -f coverage-summary.json -Z -v" 2>&1 | tee codecov-verbose-upload.txt || true
+          else
+            echo "coverage-summary.json not found; skipping verbose uploader"
+          fi
+        shell: bash

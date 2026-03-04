@@ -32,6 +32,9 @@ jobs:
           cp .env.example .env || true
           php -r 'file_put_contents(".env", str_replace(["DB_CONNECTION=mysql","DB_DATABASE=homestead"],["DB_CONNECTION=sqlite","DB_DATABASE=:memory:"], file_get_contents(".env")));'
 
+      - name: Generate application key
+        run: php artisan key:generate --ansi
+
       - name: Run PHPUnit
         run: vendor/bin/phpunit --testdox --colors=never
 

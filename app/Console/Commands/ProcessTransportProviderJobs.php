@@ -34,6 +34,7 @@ class ProcessTransportProviderJobs extends Command
                 // Ensure a request_id is present for correlation and persist it with the job
                 $payload['request_id'] = $payload['request_id'] ?? ($payload['meta']['request_id'] ?? (string) Str::uuid());
                 $job->payload = $payload;
+                $job->request_id = $payload['request_id'];
                 $job->save();
 
                 $result = match ($job->action) {

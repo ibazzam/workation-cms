@@ -40,5 +40,7 @@ class ProcessTransportProviderRequestIdTest extends TestCase
         $this->assertEquals('completed', $job->status);
         $this->assertArrayHasKey('request_id', $job->payload);
         $this->assertEquals($job->payload['request_id'], $seenRequestId);
+        $this->assertNotEmpty($job->request_id);
+        $this->assertEquals($job->request_id, $seenRequestId);
     }
 }

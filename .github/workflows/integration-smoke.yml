@@ -13,6 +13,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set CI metadata
+        run: |
+          echo "ARTIFACT_SUFFIX=${GITHUB_RUN_ID}" >> $GITHUB_ENV
+          if [ -n "$CODECOV_TOKEN" ] && [ "$REPOSITORY" = "ibazzam/workation-cms" ]; then
+            echo "CODECOV_ALLOWED=true" >> $GITHUB_ENV
+          else
+            echo "CODECOV_ALLOWED=false" >> $GITHUB_ENV
+          fi
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:

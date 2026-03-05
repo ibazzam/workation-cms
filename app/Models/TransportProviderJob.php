@@ -12,7 +12,7 @@ class TransportProviderJob extends Model
     protected $table = 'transport_provider_jobs';
 
     protected $fillable = [
-        'provider', 'action', 'payload', 'status', 'attempts', 'next_attempt_at', 'last_error',
+        'provider', 'action', 'payload', 'status', 'attempts', 'next_attempt_at', 'last_error', 'request_id',
     ];
 
     protected $casts = [

@@ -48,7 +48,14 @@ class TransportProviderJobsTest extends TestCase
 
         $this->assertDatabaseHas('transport_provider_jobs', ['action' => 'hold_create', 'status' => 'pending']);
 
-        // run processing command (adapter is stubbed to succeed)
+        // Bind a mock adapter so processing uses a predictable successful response
+        $mock = $this->createMock(\App\Services\HttpTransportProviderAdapter::class);
+        $mock->method('sendHoldCreate')->willReturn(['ok' => true, 'body' => []]);
+        $mock->method('sendHoldConfirm')->willReturn(['ok' => true, 'body' => []]);
+        $mock->method('sendHoldRelease')->willReturn(['ok' => true, 'body' => []]);
+        $this->app->instance(\App\Services\HttpTransportProviderAdapter::class, $mock);
+
+        // run processing command
         $this->artisan('transport:process-jobs --limit=10')->assertExitCode(0);
 
         $this->assertDatabaseHas('transport_provider_jobs', ['action' => 'hold_create', 'status' => 'completed']);

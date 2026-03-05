@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\TransportProviderJob;
 use App\Services\HttpTransportProviderAdapter;
+use Illuminate\Support\Str;
 use Illuminate\Console\Command;
 
 class ProcessTransportProviderJobs extends Command
@@ -22,13 +23,22 @@ class ProcessTransportProviderJobs extends Command
               });
         })->orderBy('created_at')->limit($limit)->get();
 
-        $adapter = new HttpTransportProviderAdapter();
+        // Resolve adapter from the container so tests can bind a mock implementation
+        $adapter = app()->make(HttpTransportProviderAdapter::class);
 
         foreach ($jobs as $job) {
             $job->markProcessing();
 
             try {
                 $payload = $job->payload ?? [];
+
+                // Ensure a request_id is present for correlation and persist it with the job
+                $payload['request_id'] = $payload['request_id'] ?? ($payload['meta']['request_id'] ?? (string) Str::uuid());
+                $job->payload = $payload;
+                $job->request_id = $payload['request_id'];
+                $job->save();
+
+                // Delegate to provider adapter
 
                 $result = match ($job->action) {
                     'hold_create' => $adapter->sendHoldCreate($payload),
@@ -42,6 +52,12 @@ class ProcessTransportProviderJobs extends Command
                     $this->info("Job {$job->id} completed");
                 } else {
                     $err = $result['error'] ?? 'provider error';
+                    \Illuminate\Support\Facades\Log::error('Transport job failed during processing', [
+                        'job_id' => $job->id,
+                        'action' => $job->action,
+                        'error' => $err,
+                        'result' => $result,
+                    ]);
                     $job->markFailed($err);
                     $this->error("Job {$job->id} failed: {$err}");
                 }

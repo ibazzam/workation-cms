@@ -8,32 +8,38 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   tests:
     name: PHPUnit + Build
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        php: [8.4, 8.5]
-
-    env:
-      APP_ENV: testing
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: codecov-diagnostics-tests-${{ github.run_id }}
+          path: codecov-headers-tests.txt
+          if-no-files-found: ignore
       DB_CONNECTION: sqlite
       DB_DATABASE: database/database.sqlite
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup PHP
+      - name: Upload coverage to Codecov
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@v4
+        continue-on-error: true
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: ibazzam/workation-cms
+          fail_ci_if_error: false
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring, pdo, pdo_sqlite, xml, gd
-
-      - name: Cache Composer packages
-        uses: actions/cache@v3
+      - name: Upload coverage artifact
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-php-${{ matrix.php }}-${{ github.run_id }}
         with:
           path: ~/.cache/composer
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -42,10 +48,12 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-progress --no-suggest --prefer-dist
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Upload coverage artifact
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
         with:
-          node-version: '20'
+          name: coverage-${{ github.run_id }}
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
@@ -53,20 +61,25 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-
-
-      - name: Install Node dependencies and build assets
-        run: |
+      - name: Upload Codecov diagnostics
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: codecov-diagnostics-js-${{ github.run_id }}
+          path: codecov-headers-js.txt
+          if-no-files-found: ignore
           npm ci --prefer-offline --no-audit --progress=false
           npm run build
 
-      - name: Run JS coverage
-        run: |
-          npm run coverage
-
-      - name: Check JS coverage thresholds
+      - name: Upload coverage to Codecov
+        if: ${{ success() && secrets.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@v4
+        continue-on-error: true
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: ibazzam/workation-cms
+          fail_ci_if_error: false
         continue-on-error: true
         run: |
           node scripts/coverage-summary.js check
@@ -79,21 +92,25 @@ jobs:
 
       - name: Upload Codecov diagnostics
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: codecov-diagnostics-tests
+          name: codecov-diagnostics-tests-${{ github.run_id }}
           path: codecov-headers-tests.txt
           if-no-files-found: ignore
 
       - name: Upload coverage to Codecov
-        if: always()
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v4
+        continue-on-error: true
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          slug: ibazzam/workation-cms
           fail_ci_if_error: false
 
       - name: Upload coverage artifact
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: coverage-php-${{ matrix.php }}
@@ -213,6 +230,7 @@ jobs:
 
       - name: Upload coverage artifact
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: coverage
@@ -233,6 +251,7 @@ jobs:
 
       - name: Upload Codecov diagnostics
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: codecov-diagnostics-js
@@ -248,7 +267,8 @@ jobs:
           echo "Running Codecov bash uploader in verbose diagnostic mode"
           if [ -f coverage-summary.json ]; then
             echo "Found coverage-summary.json, attempting upload via bash uploader"
-            bash -c "bash <(curl -s https://codecov.io/bash) -t \"$CODECOV_TOKEN\" -f coverage-summary.json -Z -v" 2>&1 | tee codecov-verbose-upload.txt || true
+            CODECOV_SLUG="ibazzam/workation-cms"
+            bash -c "bash <(curl -s https://codecov.io/bash) -R \"$CODECOV_SLUG\" -t \"$CODECOV_TOKEN\" -f coverage-summary.json -Z -v" 2>&1 | tee codecov-verbose-upload.txt || true
           else
             echo "coverage-summary.json not found; skipping verbose uploader"
           fi
@@ -257,6 +277,7 @@ jobs:
       - name: Upload coverage to Codecov
         if: ${{ success() }}
         uses: codecov/codecov-action@v4
+        continue-on-error: true
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
@@ -283,7 +304,8 @@ jobs:
           echo "Running Codecov bash uploader in verbose diagnostic mode"
           if [ -f coverage-summary.json ]; then
             echo "Found coverage-summary.json, attempting upload via bash uploader"
-            bash -c "bash <(curl -s https://codecov.io/bash) -t \"$CODECOV_TOKEN\" -f coverage-summary.json -Z -v" 2>&1 | tee codecov-verbose-upload.txt || true
+            CODECOV_SLUG="ibazzam/workation-cms"
+            bash -c "bash <(curl -s https://codecov.io/bash) -R \"$CODECOV_SLUG\" -t \"$CODECOV_TOKEN\" -f coverage-summary.json -Z -v" 2>&1 | tee codecov-verbose-upload.txt || true
           else
             echo "coverage-summary.json not found; skipping verbose uploader"
           fi

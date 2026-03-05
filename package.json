@@ -6,7 +6,8 @@
         "build": "vite build",
         "dev": "vite",
         "test": "vitest --run",
-        "coverage": "vitest --coverage"
+        "coverage": "vitest --coverage",
+        "e2e": "node tests/e2e/run-e2e.mjs"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

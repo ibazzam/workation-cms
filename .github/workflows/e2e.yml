@@ -1,0 +1,49 @@
+name: E2E tests (staging)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'tests/e2e/**'
+      - '.github/workflows/e2e.yml'
+  push:
+    branches:
+      - chore/add-e2e-tests
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set CI metadata
+        run: |
+          echo "ARTIFACT_SUFFIX=${GITHUB_RUN_ID}" >> $GITHUB_ENV
+          if [ -n "$CODECOV_TOKEN" ] && [ "$REPOSITORY" = "ibazzam/workation-cms" ]; then
+            echo "CODECOV_ALLOWED=true" >> $GITHUB_ENV
+          else
+            echo "CODECOV_ALLOWED=false" >> $GITHUB_ENV
+          fi
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run E2E
+        env:
+          BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+        run: |
+          if [ -z "$BASE_URL" ]; then
+            echo "STAGING_BASE_URL not set - skipping E2E"
+            exit 0
+          fi
+          npm run e2e

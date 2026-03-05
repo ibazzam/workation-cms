@@ -1,3 +1,19 @@
+Download GitHub Actions logs
+===========================
+
+This folder contains a helper PowerShell script to download GitHub Actions run logs for a given workflow using the `gh` CLI.
+
+Usage (PowerShell):
+
+```powershell
+# Download last 10 runs for the integration smoke workflow
+.\download_github_logs.ps1 -Repo ibazzam/workation-cms -Workflow integration-smoke.yml -Branch main -Limit 10 -OutDir .\ci-logs
+```
+
+Requirements:
+- `gh` (GitHub CLI) installed and authenticated (`gh auth login`).
+
+The script will retry downloading logs if they are temporarily unavailable.
 # Scripts usage
 
 This folder contains helper scripts to fetch the GitHub Actions `coverage` artifact, extract the v8 `coverage-final.json`, compute a resource-scoped coverage summary for `resources/js/**`, and (optionally) commit the summary to the `coverage-reports` branch.

@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
-
 /**
  * Simple HTTP-based transport provider adapter.
  *
@@ -40,6 +39,7 @@ class HttpTransportProviderAdapter
         $endpoint = rtrim($cfg['url'], '/') . '/' . ltrim($path, '/');
 
         try {
+            // Use a short timeout and a small number of retries for transient failures.
             $request = Http::withHeaders([
                 'Accept' => 'application/json',
             ]);
@@ -48,7 +48,8 @@ class HttpTransportProviderAdapter
                 $request = $request->withToken($cfg['token']);
             }
 
-            $resp = $request->post($endpoint, $payload);
+            // Retry up to 2 times with 150ms backoff, and set a 5s timeout per attempt.
+            $resp = $request->timeout(5)->retry(2, 150)->post($endpoint, $payload);
 
             if ($resp->successful()) {
                 return ['ok' => true, 'body' => $resp->json()];
@@ -56,6 +57,7 @@ class HttpTransportProviderAdapter
 
             return ['ok' => false, 'error' => 'provider error: ' . $resp->status(), 'body' => $resp->body()];
         } catch (\Throwable $e) {
+            // Classify as transient where possible; return error message for logging.
             return ['ok' => false, 'error' => $e->getMessage()];
         }
     }
@@ -90,28 +92,4 @@ class HttpTransportProviderAdapter
         return $this->callProvider($provider, "/holds/{$holdId}/release", $payload);
     }
 }
-<?php
 
-namespace App\Services;
-
-use Illuminate\Support\Facades\Http;
-
-class HttpTransportProviderAdapter implements TransportProviderAdapterInterface
-{
-    public function sendHoldCreate(array $payload): array
-    {
-        // Minimal stub: in real adapter we'd call remote provider HTTP API and handle responses.
-        // Return a shape indicating success or error.
-        return ['ok' => true, 'provider_ref' => null];
-    }
-
-    public function sendHoldConfirm(array $payload): array
-    {
-        return ['ok' => true];
-    }
-
-    public function sendHoldRelease(array $payload): array
-    {
-        return ['ok' => true];
-    }
-}

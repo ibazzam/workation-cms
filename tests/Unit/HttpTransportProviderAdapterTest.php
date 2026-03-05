@@ -22,6 +22,8 @@ class HttpTransportProviderAdapterTest extends TestCase
             $this->assertNotNull($auth);
             $this->assertStringContainsString('sekret', $auth);
 
+            $this->assertNotEmpty($request->header('X-Request-ID')[0]);
+
             return Http::response(['id' => 'hold123'], 200);
         });
 
@@ -30,6 +32,8 @@ class HttpTransportProviderAdapterTest extends TestCase
 
         $this->assertTrue($res['ok']);
         $this->assertEquals(['id' => 'hold123'], $res['body']);
+        $this->assertArrayHasKey('request_id', $res);
+        $this->assertIsString($res['request_id']);
     }
 
     public function test_send_hold_confirm_calls_provider_and_returns_body()
@@ -37,8 +41,10 @@ class HttpTransportProviderAdapterTest extends TestCase
         putenv('TRANSPORT_PROVIDER_TESTPROV_URL=http://example.test');
         putenv('TRANSPORT_PROVIDER_TESTPROV_KEY=sekret');
 
+
         Http::fake(function ($request) {
             $this->assertStringContainsString('/holds/hold123/confirm', $request->url());
+            $this->assertNotEmpty($request->header('X-Request-ID')[0]);
             return Http::response(['confirmed' => true], 200);
         });
 
@@ -54,8 +60,10 @@ class HttpTransportProviderAdapterTest extends TestCase
         putenv('TRANSPORT_PROVIDER_TESTPROV_URL=http://example.test');
         putenv('TRANSPORT_PROVIDER_TESTPROV_KEY=sekret');
 
+
         Http::fake(function ($request) {
             $this->assertStringContainsString('/holds/hold123/release', $request->url());
+            $this->assertNotEmpty($request->header('X-Request-ID')[0]);
             return Http::response(['released' => true], 200);
         });
 

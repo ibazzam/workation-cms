@@ -23,7 +23,8 @@ class ProcessTransportProviderJobs extends Command
               });
         })->orderBy('created_at')->limit($limit)->get();
 
-        $adapter = new HttpTransportProviderAdapter();
+        // Resolve adapter from the container so tests can bind a mock implementation
+        $adapter = app()->make(HttpTransportProviderAdapter::class);
 
         foreach ($jobs as $job) {
             $job->markProcessing();
@@ -37,12 +38,7 @@ class ProcessTransportProviderJobs extends Command
                 $job->request_id = $payload['request_id'];
                 $job->save();
 
-                // In testing, if the job has no explicit provider configured, treat it as a successful stub
-                if (app()->environment('testing') && empty($payload['provider'])) {
-                    $job->markCompleted();
-                    $this->info("Job {$job->id} completed (testing stub)");
-                    continue;
-                }
+                // Delegate to provider adapter
 
                 $result = match ($job->action) {
                     'hold_create' => $adapter->sendHoldCreate($payload),

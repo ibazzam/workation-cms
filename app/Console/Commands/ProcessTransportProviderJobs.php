@@ -49,6 +49,12 @@ class ProcessTransportProviderJobs extends Command
                     $this->info("Job {$job->id} completed");
                 } else {
                     $err = $result['error'] ?? 'provider error';
+                    \Illuminate\Support\Facades\Log::error('Transport job failed during processing', [
+                        'job_id' => $job->id,
+                        'action' => $job->action,
+                        'error' => $err,
+                        'result' => $result,
+                    ]);
                     $job->markFailed($err);
                     $this->error("Job {$job->id} failed: {$err}");
                 }

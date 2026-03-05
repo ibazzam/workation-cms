@@ -39,35 +39,16 @@ jobs:
 
       - name: Generate application key
         run: php artisan key:generate --ansi
-      
-        - name: Run migrations
-          run: |
-            php artisan migrate --force
 
-        - name: CI diagnostics (post-migrate)
-          run: |
-            echo "=== CI diagnostics (post-migrate) ==="
-            echo "PWD: $(pwd)"
-            php -v || true
-            composer --version || true
-            echo "Listing database dir:"; ls -la database || true
-            echo ".env preview:"; sed -n '1,200p' .env || true
-            echo "artisan migrate:status:"; php artisan migrate:status || true
-            php -r "try { \$pdo = new PDO('sqlite:' . getcwd() . '/database/database.sqlite'); foreach((\$pdo->query(\"SELECT name FROM sqlite_master WHERE type='table';\")) as \$r) echo 'TBL: '.\$r['name']."\n"; } catch (Exception \$e) { echo 'PDO ERR: '.\$e->getMessage()."\n"; }" || true
+      - name: Run migrations
+        run: |
+          php artisan migrate --force
 
       - name: Run PHPUnit
         run: vendor/bin/phpunit --testdox --colors=never
 
       - name: Run transport job processing smoke
         run: php artisan transport:process-jobs --limit=5
-
-      - name: CI diagnostics (pre-transport-jobs)
-        run: |
-          echo "=== CI diagnostics (pre-transport-jobs) ==="
-          echo "Listing database file info:"; ls -la database || true
-          echo "DB path in env:"; grep -n "DB_DATABASE" .env || true
-          echo "artisan migrate:status:"; php artisan migrate:status || true
-          php -r "try { \$pdo = new PDO('sqlite:' . getcwd() . '/database/database.sqlite'); foreach((\$pdo->query(\"SELECT name FROM sqlite_master WHERE type='table';\")) as \$r) echo 'TBL: '.\$r['name']."\n"; } catch (Exception \$e) { echo 'PDO ERR: '.\$e->getMessage()."\n"; }" || true
 
       - name: Run transport reconciliation smoke
         run: php artisan transport:reconcile-holds --limit=5

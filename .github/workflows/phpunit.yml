@@ -29,6 +29,7 @@ jobs:
         continue-on-error: true
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          slug: ibazzam/workation-cms
           fail_ci_if_error: false
         uses: shivammathur/setup-php@v2
         with:
@@ -77,6 +78,7 @@ jobs:
         continue-on-error: true
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          slug: ibazzam/workation-cms
           fail_ci_if_error: false
         continue-on-error: true
         run: |
@@ -103,6 +105,7 @@ jobs:
         continue-on-error: true
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          slug: ibazzam/workation-cms
           fail_ci_if_error: false
 
       - name: Upload coverage artifact
@@ -264,7 +267,8 @@ jobs:
           echo "Running Codecov bash uploader in verbose diagnostic mode"
           if [ -f coverage-summary.json ]; then
             echo "Found coverage-summary.json, attempting upload via bash uploader"
-            bash -c "bash <(curl -s https://codecov.io/bash) -t \"$CODECOV_TOKEN\" -f coverage-summary.json -Z -v" 2>&1 | tee codecov-verbose-upload.txt || true
+            CODECOV_SLUG="ibazzam/workation-cms"
+            bash -c "bash <(curl -s https://codecov.io/bash) -R \"$CODECOV_SLUG\" -t \"$CODECOV_TOKEN\" -f coverage-summary.json -Z -v" 2>&1 | tee codecov-verbose-upload.txt || true
           else
             echo "coverage-summary.json not found; skipping verbose uploader"
           fi
@@ -300,7 +304,8 @@ jobs:
           echo "Running Codecov bash uploader in verbose diagnostic mode"
           if [ -f coverage-summary.json ]; then
             echo "Found coverage-summary.json, attempting upload via bash uploader"
-            bash -c "bash <(curl -s https://codecov.io/bash) -t \"$CODECOV_TOKEN\" -f coverage-summary.json -Z -v" 2>&1 | tee codecov-verbose-upload.txt || true
+            CODECOV_SLUG="ibazzam/workation-cms"
+            bash -c "bash <(curl -s https://codecov.io/bash) -R \"$CODECOV_SLUG\" -t \"$CODECOV_TOKEN\" -f coverage-summary.json -Z -v" 2>&1 | tee codecov-verbose-upload.txt || true
           else
             echo "coverage-summary.json not found; skipping verbose uploader"
           fi

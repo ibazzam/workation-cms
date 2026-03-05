@@ -1,3 +1,38 @@
+monitor_integration_smoke.ps1
+
+Purpose
+- Watch or poll the GitHub Actions `integration-smoke.yml` workflow for `main`, download run logs, and archive them.
+
+Usage
+- Poll latest run once (default):
+
+```powershell
+pwsh -File scripts/monitor_integration_smoke.ps1
+```
+
+- Poll latest run with a 1-minute timeout:
+
+```powershell
+pwsh -File scripts/monitor_integration_smoke.ps1 -TimeoutMinutes 1
+```
+
+- Watch mode: wait for a new run to start, then download its logs when it finishes (runs indefinitely):
+
+```powershell
+pwsh -File scripts/monitor_integration_smoke.ps1 -Watch
+```
+
+Options
+- `-Repo` repository (default: `ibazzam/workation-cms`)
+- `-Workflow` workflow filename (default: `integration-smoke.yml`)
+- `-Branch` branch name (default: `main`)
+- `-PollSeconds` seconds between status polls while waiting for a run to finish
+- `-PollNewRunSeconds` seconds between checks for a new run in watch mode
+- `-LogsDir` where logs are saved (default: `ci-logs`)
+- `-ArchiveDir` where archived logs are stored (default: `ci-logs/archive`)
+
+Requirements
+- `gh` (GitHub CLI) must be authenticated and available in PATH.
 Download GitHub Actions logs
 ===========================
 

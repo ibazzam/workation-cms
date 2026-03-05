@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\TransportProviderJob;
 use App\Services\HttpTransportProviderAdapter;
+use Illuminate\Support\Str;
 use Illuminate\Console\Command;
 
 class ProcessTransportProviderJobs extends Command
@@ -29,6 +30,11 @@ class ProcessTransportProviderJobs extends Command
 
             try {
                 $payload = $job->payload ?? [];
+
+                // Ensure a request_id is present for correlation and persist it with the job
+                $payload['request_id'] = $payload['request_id'] ?? ($payload['meta']['request_id'] ?? (string) Str::uuid());
+                $job->payload = $payload;
+                $job->save();
 
                 $result = match ($job->action) {
                     'hold_create' => $adapter->sendHoldCreate($payload),

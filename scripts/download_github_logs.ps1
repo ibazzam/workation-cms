@@ -20,7 +20,7 @@ function Retry-Command {
       & $Script
       return $true
     } catch {
-      Write-Host "Attempt $i failed: $($_.Exception.Message)"
+      Write-Host ("Attempt {0} failed: {1}" -f $i, $_.Exception.Message)
       if ($i -lt $Attempts) { Start-Sleep -Seconds $DelaySeconds }
     }
   }
@@ -69,7 +69,7 @@ foreach ($r in $runs) {
         else { Remove-Item $outFile -ErrorAction SilentlyContinue }
       }
     } catch {
-      Write-Host "Download attempt $attempt failed for run $id: $($_.Exception.Message)"
+      Write-Host ("Download attempt {0} failed for run {1}: {2}" -f $attempt, $id, $_.Exception.Message)
     }
     Start-Sleep -Seconds (5 * $attempt)
   }

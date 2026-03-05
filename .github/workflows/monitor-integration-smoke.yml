@@ -1,0 +1,33 @@
+name: Monitor integration-smoke
+
+on:
+  schedule:
+    - cron: '0 * * * *' # hourly
+  workflow_run:
+    workflows: ["integration-smoke.yml"]
+    types: [completed]
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show gh version
+        run: gh --version || true
+
+      - name: Authenticate gh
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Run monitor script (download latest integration-smoke logs)
+        shell: pwsh
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/monitor_integration_smoke.ps1 -TimeoutMinutes 20
+
+      - name: Upload archived logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-smoke-logs
+          path: ci-logs/archive/*

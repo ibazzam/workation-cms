@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 /**
  * Simple HTTP-based transport provider adapter.
  *
@@ -52,13 +53,45 @@ class HttpTransportProviderAdapter
             $resp = $request->timeout(5)->retry(2, 150)->post($endpoint, $payload);
 
             if ($resp->successful()) {
-                return ['ok' => true, 'body' => $resp->json()];
+                Log::info('Transport provider call success', [
+                    'provider' => $provider,
+                    'endpoint' => $endpoint,
+                    'status' => $resp->status(),
+                ]);
+
+                return ['ok' => true, 'body' => $resp->json(), 'retryable' => false];
             }
 
-            return ['ok' => false, 'error' => 'provider error: ' . $resp->status(), 'body' => $resp->body()];
+            // Classify error: 5xx => retryable, 4xx => permanent
+            if ($resp->serverError()) {
+                $retryable = true;
+            } elseif ($resp->clientError()) {
+                $retryable = false;
+            } else {
+                $retryable = false;
+            }
+
+            Log::warning('Transport provider call returned error', [
+                'provider' => $provider,
+                'endpoint' => $endpoint,
+                'status' => $resp->status(),
+                'retryable' => $retryable,
+                'body_preview' => mb_substr((string) $resp->body(), 0, 1000),
+            ]);
+
+            return ['ok' => false, 'error' => 'provider error: ' . $resp->status(), 'body' => $resp->body(), 'retryable' => $retryable];
         } catch (\Throwable $e) {
-            // Classify as transient where possible; return error message for logging.
-            return ['ok' => false, 'error' => $e->getMessage()];
+            $msg = $e->getMessage();
+            Log::error('Transport provider call exception', [
+                'provider' => $provider,
+                'endpoint' => $endpoint ?? null,
+                'error' => $msg,
+                'trace' => mb_substr($e->getTraceAsString(), 0, 2000),
+                'retryable' => true,
+            ]);
+
+            // Treat exceptions (network/timeouts) as retryable by default
+            return ['ok' => false, 'error' => $msg, 'retryable' => true];
         }
     }
 

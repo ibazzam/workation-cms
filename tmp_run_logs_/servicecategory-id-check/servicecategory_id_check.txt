@@ -1,0 +1,5 @@
+Checking information_schema for ServiceCategory.id default
+column_default=
+pg_get_serial_sequence=
+ERROR: ServiceCategory.id has no column_default/identity attached.
+ERROR: No sequence attached to ServiceCategory.id (pg_get_serial_sequence returned empty).

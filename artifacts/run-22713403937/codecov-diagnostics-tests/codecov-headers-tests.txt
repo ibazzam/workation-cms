@@ -1,0 +1,10 @@
+HTTP/2 301 
+location: https://about.codecov.io/
+date: Thu, 05 Mar 2026 10:46:39 GMT
+server: envoy
+content-length: 0
+via: 1.1 google
+strict-transport-security: max-age=3104000
+x-frame-options: SAMEORIGIN
+alt-svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+

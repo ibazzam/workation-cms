@@ -14,8 +14,7 @@ jobs:
   tests:
     name: PHPUnit + Build
     runs-on: ubuntu-latest
-    env:
-      ACTIONS_STEP_DEBUG: 'true'
+    # debug removed (kept out of main); keep job env minimal
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,24 +46,34 @@ jobs:
       - name: Run migrations
         run: php artisan migrate --force
 
-      - name: Debug info
-        run: |
-          echo "=== environment ==="
-          printenv | sort
-          echo "=== php version ==="
-          php -v
-          echo "=== composer version ==="
-          composer --version || true
-          echo "=== workspace listing ==="
-          ls -la
-
       - name: Run tests
-        run: composer test --verbose
+        run: composer test
 
-      - name: Upload coverage to Codecov
+      - name: Upload coverage to Codecov (action)
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: false
+
+      - name: Retry Codecov upload (bash uploader)
+        if: always()
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          set -e
+          attempts=0
+          max=3
+          until [ $attempts -ge $max ]
+          do
+            attempts=$((attempts+1))
+            echo "Codecov retry attempt $attempts"
+            curl -sSfLo codecov "https://uploader.codecov.io/latest/linux/codecov" && chmod +x codecov || true
+            if [ -x ./codecov ]; then
+              ./codecov -t "$CODECOV_TOKEN" || echo "uploader exit $?"
+            else
+              echo "codecov uploader not available"
+            fi
+            sleep $((attempts * 5))
+          done
 
   js-coverage:
     name: JS Coverage
@@ -85,7 +94,28 @@ jobs:
         run: |
           npm run coverage
 
-      - name: Upload coverage to Codecov
+      - name: Upload coverage to Codecov (action)
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: false
+
+      - name: Retry Codecov upload (bash uploader)
+        if: always()
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          set -e
+          attempts=0
+          max=3
+          until [ $attempts -ge $max ]
+          do
+            attempts=$((attempts+1))
+            echo "Codecov retry attempt $attempts"
+            curl -sSfLo codecov "https://uploader.codecov.io/latest/linux/codecov" && chmod +x codecov || true
+            if [ -x ./codecov ]; then
+              ./codecov -t "$CODECOV_TOKEN" || echo "uploader exit $?"
+            else
+              echo "codecov uploader not available"
+            fi
+            sleep $((attempts * 5))
+          done

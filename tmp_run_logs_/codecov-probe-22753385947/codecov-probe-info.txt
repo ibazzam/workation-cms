@@ -1,0 +1,1 @@
+https://codecov.io/upload/v4?package=bash-1.0.6&token=d5b2d60e-d71b-40fb-8513-a53289f0bd48&slug=ibazzam/workation-cms&commit=2d795f66e98dc102ad02eaca9ecd351554265c01&cmd_args=probe

@@ -1,0 +1,33 @@
+name: Codecov Probe
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Codecov HTTP probe (explicit slug)
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "Running Codecov HTTP probe"
+          URL="https://codecov.io/upload/v4?package=bash-1.0.6&token=${CODECOV_TOKEN}&slug=ibazzam/workation-cms&commit=${GITHUB_SHA}&cmd_args=probe"
+          echo "$URL" > codecov-probe-info.txt
+          curl -sS -D codecov-probe-headers.txt -o codecov-probe-body.txt "$URL" || true
+
+      - name: Upload probe artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codecov-probe-${{ github.run_id }}
+          path: |
+            codecov-probe-info.txt
+            codecov-probe-headers.txt
+            codecov-probe-body.txt
+          if-no-files-found: ignore

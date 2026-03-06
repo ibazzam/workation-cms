@@ -274,6 +274,18 @@ jobs:
           fi
         shell: bash
 
+      - name: Codecov token mapping diagnostic
+        if: ${{ secrets.CODECOV_TOKEN != '' && always() }}
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "Running Codecov token mapping diagnostic (no file upload)"
+          CODECOV_SLUG="ibazzam/workation-cms"
+          # Run uploader in verbose mode targeting the explicit slug to observe detection/response.
+          bash -c "bash <(curl -s https://codecov.io/bash) -R \"$CODECOV_SLUG\" -t \"$CODECOV_TOKEN\" -Z -v" 2>&1 | tee codecov-token-mapping.txt || true
+        shell: bash
+
       - name: Upload coverage to Codecov
         if: ${{ success() }}
         uses: codecov/codecov-action@v4

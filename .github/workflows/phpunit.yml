@@ -322,3 +322,29 @@ jobs:
             echo "coverage-summary.json not found; skipping verbose uploader"
           fi
         shell: bash
+
+      - name: Codecov HTTP probe (save headers+body)
+        if: ${{ secrets.CODECOV_TOKEN != '' && always() }}
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "Probing Codecov upload endpoint with explicit slug"
+          URL="https://codecov.io/upload/v4?package=bash-1.0.6&token=${CODECOV_TOKEN}&slug=ibazzam/workation-cms&commit=${GITHUB_SHA}&cmd_args=probe"
+          echo "Probe URL: $URL" > codecov-probe-info.txt
+          # Save response headers and body for offline inspection (do not fail job)
+          curl -sS -D codecov-probe-headers.txt -o codecov-probe-body.txt "$URL" || true
+          echo "Saved probe headers and body"
+        shell: bash
+
+      - name: Upload Codecov probe artifacts
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: codecov-probe-${{ github.run_id }}
+          path: |
+            codecov-probe-info.txt
+            codecov-probe-headers.txt
+            codecov-probe-body.txt
+          if-no-files-found: ignore

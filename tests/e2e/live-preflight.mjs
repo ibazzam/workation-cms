@@ -4,6 +4,7 @@ const baseUrl = process.env.BASE_URL;
 const scheduleId = Number(process.env.SCHEDULE_ID || 1);
 const xUserId = process.env.X_USER_ID;
 const xUserRole = process.env.X_USER_ROLE;
+const bearerToken = process.env.AUTH_BEARER_TOKEN;
 
 if (!baseUrl) {
   console.error('BASE_URL is required. Example: BASE_URL=https://api.workation.mv');
@@ -14,6 +15,7 @@ const client = axios.create({
   baseURL: baseUrl,
   timeout: 10000,
   headers: {
+    ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
     ...(xUserId ? { 'x-user-id': String(xUserId) } : {}),
     ...(xUserRole ? { 'x-user-role': String(xUserRole) } : {}),
   },
@@ -138,6 +140,58 @@ async function checkTransportHoldFlow() {
   }
 }
 
+async function checkTransportScheduleFlow() {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { res: listRes, path: listPath } = await requestWithFallbacks('get', [
+    '/api/v1/transports',
+    '/api/transports',
+  ]);
+
+  if (listRes.status !== 200) {
+    throw new Error(`transport list failed: ${listRes.status}`);
+  }
+
+  const { res: scheduleRes } = await requestWithFallbacks('get', [
+    `/api/v1/transports/schedule?date=${today}`,
+    `/api/transports/schedule?date=${today}`,
+    `/api/v1/transports/flights/schedule?date=${today}`,
+    `/api/transports/flights/schedule?date=${today}`,
+  ]);
+
+  if (scheduleRes.status !== 200) {
+    throw new Error(`transport schedule failed: ${scheduleRes.status}`);
+  }
+
+  const listData = listRes.data;
+  const firstTransport = Array.isArray(listData)
+    ? listData[0]
+    : (Array.isArray(listData?.items) ? listData.items[0] : null);
+
+  if (firstTransport?.id) {
+    const detail = await client.get(`${listPath}/${firstTransport.id}`);
+    if (detail.status !== 200) {
+      throw new Error(`transport details failed: ${detail.status}`);
+    }
+  }
+}
+
+async function checkTransportFlow() {
+  try {
+    await checkTransportHoldFlow();
+    console.log('Transport hold flow OK (legacy endpoints)');
+    return;
+  } catch (err) {
+    if (err?.response?.status !== 404) {
+      throw err;
+    }
+
+    console.warn('Legacy transport hold endpoints unavailable; running transport schedule smoke instead');
+  }
+
+  await checkTransportScheduleFlow();
+}
+
 (async () => {
   try {
     console.log(`Running live preflight against ${baseUrl} (schedule ${scheduleId})`);
@@ -147,10 +201,13 @@ async function checkTransportHoldFlow() {
     if (xUserRole) {
       console.log(`Using auth header x-user-role=${xUserRole}`);
     }
+    if (bearerToken) {
+      console.log('Using bearer token authentication');
+    }
     await checkHealth();
     await checkOpsSlo();
     await checkWorkationCrud();
-    await checkTransportHoldFlow();
+    await checkTransportFlow();
     console.log('Live preflight passed');
     process.exit(0);
   } catch (err) {

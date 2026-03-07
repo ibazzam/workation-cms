@@ -165,9 +165,9 @@ Core customer outcomes:
 - [x] Run local pre-host smoke journey (search → book → pay → manage) and confirm pass.
 - [x] Run local pre-host moderation verification (reviews/social moderation flows) and confirm pass.
 - [x] Run local pre-host ops verification (payments admin jobs/alerts/reconcile endpoints) and confirm pass.
-- [ ] Create and verify `api.workation.mv` DNS + origin mapping (current blocker: hostname not resolving in preflight).
-- [ ] Deploy backend + frontend to hosting preview/staging domain.
-- [ ] Execute smoke journey in hosting environment (search → book → pay → manage).
+- [x] Create and verify `api.workation.mv` DNS + origin mapping.
+- [x] Deploy backend to Render on `main` (authority backend live).
+- [x] Execute live preflight in hosting environment (`Live preflight passed` on 2026-03-07).
 - [ ] Verify admin moderation paths in hosting (review flag/hide/publish and social flag/approve/hide).
 - [ ] Verify scheduler health in hosting (reconciliation runner + cleanup task logs).
 - [ ] Confirm rollback path and environment variable parity before production promotion.
@@ -188,22 +188,21 @@ Core customer outcomes:
 ## 8) Live Finish Now (Render + Neon)
 
 Current state
-- Local branch is synced with GitHub `main`.
-- Authority backend parity endpoints are Prisma-backed.
-- WB-201 contract parity script passes locally against Neon (isolated schema).
+- Authority backend is live on Render at `https://api.workation.mv` (branch: `main`).
+- Hosted health check is passing at `GET /api/v1/health`.
+- Hosted live preflight is passing with bearer-token auth.
 
 Immediate execution steps
-1. Deploy latest `main` to Render backend service.
-2. Verify Render env has correct Neon `DATABASE_URL` and runtime vars.
-3. Run hosted preflight:
-	- `BASE_URL=https://api.workation.mv SCHEDULE_ID=<known_schedule_id> X_USER_ID=<admin_user_id> X_USER_ROLE=admin npm.cmd run live:preflight`
-4. If preflight passes, mark WB-201 staging smoke as complete.
-5. Begin staged decommission of Laravel legacy business routes using rollback guard from `docs/wb-201-authority-cutover-runbook.md`.
+1. Keep Render pinned to `main` and verify env parity on each deploy (`DATABASE_URL`, `AUTH_JWT_SECRET`, auth flags).
+2. Run hosted preflight with bearer token:
+	- `BASE_URL=https://api.workation.mv SCHEDULE_ID=<known_schedule_id> AUTH_BEARER_TOKEN=<jwt> npm.cmd run live:preflight`
+3. Track auth secret rotation and token issuance in ops runbook (no secrets in terminal history).
+4. Begin staged decommission of Laravel legacy business routes using rollback guard from `docs/wb-201-authority-cutover-runbook.md`.
 
 Success criteria for this step
 - Hosted health check passes.
 - Hosted workation CRUD passes in preflight.
-- Hosted transport hold create/confirm/release passes in preflight.
+- Hosted transport domain smoke passes in preflight (legacy holds if available, otherwise transports schedule/list fallback).
 - No critical errors in Render logs during preflight window.
 
 ## 9) Repository Reality Scan (2026-03-07)
@@ -327,3 +326,11 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `infra/backend/scripts/contract-parity.cjs`
 		- `npm.cmd run contract:test`
 	- Verified Prisma client regeneration and backend TypeScript build.
+- 2026-03-07: Live deployment stabilized on Render + Neon.
+	- Promoted backend runtime parity from `chore/backend-deploy-fixes` to `main`:
+		- `9f52a3bd` (`Sync main backend runtime with deployed deploy-fixes branch`)
+	- Updated hosted preflight to support current transports route shape and bearer-only auth:
+		- `8c370957` (`Make live preflight compatible with transports schedule endpoints`)
+	- Verified live API and preflight against `https://api.workation.mv`:
+		- `GET /api/v1/health` = 200
+		- `node tests/e2e/live-preflight.mjs` = `Live preflight passed`

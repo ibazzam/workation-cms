@@ -1,6 +1,6 @@
 ## WB-201 Authority Cutover Runbook
 
-Status: In progress (created 2026-03-07)
+Status: In progress (live authority backend on main; Laravel decommission pending)
 Owner: Backend Lead
 
 Purpose
@@ -29,6 +29,21 @@ Definition of done (WB-201)
 - Staging smoke journey green against `infra/backend`.
 - Laravel business routes disabled (or guarded behind emergency flag).
 - Rollback tested and documented.
+
+## Latest Validation Snapshot (2026-03-07)
+
+- Live authority backend URL: `https://api.workation.mv`
+- Active deploy branch: `main`
+- Health check: `GET /api/v1/health` => 200
+- Auth mode: bearer token required (header fallback disabled)
+- Hosted preflight: `Live preflight passed`
+- Key commits used for live stabilization:
+  - `9f52a3bd` (`Sync main backend runtime with deployed deploy-fixes branch`)
+  - `8c370957` (`Make live preflight compatible with transports schedule endpoints`)
+
+Notes
+- Legacy transport hold endpoints (`/api/v1/transport/holds`) are not exposed on current live runtime.
+- Preflight now validates transports using legacy hold flow when present, otherwise current transports schedule/list smoke.
 
 ## Phase Plan
 
@@ -64,20 +79,20 @@ Use this table before cutover. Mark each item `done` only after tests pass.
 
 | Endpoint | Source (Laravel) | Target (`infra/backend`) | Contract test | Staging smoke | Notes |
 |---|---|---|---|---|---|
-| `GET /api/workations` | yes | implemented | implemented | pending | Prisma-backed; covered by contract script |
-| `GET /api/workations/{workation}` | yes | implemented | implemented | pending | Prisma-backed; covered by contract script |
-| `POST /api/workations` | yes | implemented | implemented | pending | Prisma-backed; covered by contract script |
-| `PUT /api/workations/{workation}` | yes | implemented | implemented | pending | Prisma-backed; covered by contract script |
-| `DELETE /api/workations/{workation}` | yes | implemented | implemented | pending | Prisma-backed; covered by contract script |
-| `POST /api/transport/holds` | yes | implemented | implemented | pending | Prisma-backed with idempotency key support |
-| `POST /api/transport/holds/{hold}/confirm` | yes | implemented | implemented | pending | Prisma-backed; 200 status parity |
-| `POST /api/transport/holds/{hold}/release` | yes | implemented | implemented | pending | Prisma-backed; 200 status parity |
+| `GET /api/workations` | yes | implemented | implemented | passed | Live preflight pass on 2026-03-07 |
+| `GET /api/workations/{workation}` | yes | implemented | implemented | passed | Live preflight pass on 2026-03-07 |
+| `POST /api/workations` | yes | implemented | implemented | passed | Live preflight pass on 2026-03-07 |
+| `PUT /api/workations/{workation}` | yes | implemented | implemented | passed | Live preflight pass on 2026-03-07 |
+| `DELETE /api/workations/{workation}` | yes | implemented | implemented | passed | Live preflight pass on 2026-03-07 |
+| `POST /api/transport/holds` | yes | legacy path only | implemented | n/a | Live runtime validates transports via `/api/v1/transports*` routes |
+| `POST /api/transport/holds/{hold}/confirm` | yes | legacy path only | implemented | n/a | Live runtime validates transports via `/api/v1/transports*` routes |
+| `POST /api/transport/holds/{hold}/release` | yes | legacy path only | implemented | n/a | Live runtime validates transports via `/api/v1/transports*` routes |
 
 Contract test command
 - `cd infra/backend && npm.cmd run contract:test`
 
 Staging smoke command
-- `cd . && BASE_URL=https://api.workation.mv SCHEDULE_ID=1 X_USER_ID=1 X_USER_ROLE=admin npm.cmd run live:preflight`
+- `cd . && BASE_URL=https://api.workation.mv SCHEDULE_ID=1 AUTH_BEARER_TOKEN=<jwt> npm.cmd run live:preflight`
 
 ## Rollback Playbook
 

@@ -17,7 +17,8 @@
     "@prisma/client": "4.16.0",
     "pg": "^8.11.0",
     "reflect-metadata": "^0.1.13",
-    "rxjs": "^7.8.0"
+    "rxjs": "^7.8.0",
+    "@types/node": "^20.17.57"
   },
   "devDependencies": {
     "prisma": "^4.16.0",

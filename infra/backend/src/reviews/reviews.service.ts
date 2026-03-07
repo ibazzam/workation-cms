@@ -11,6 +11,22 @@ type ReviewCreatePayload = {
 
 type RequestActor = {
   id?: string;
+  role?: string;
+};
+
+type ModerationActionPayload = {
+  reasonCode?: unknown;
+  reviewerNote?: unknown;
+};
+
+type ReviewModerationEvent = {
+  reviewId: string;
+  action: 'FLAG' | 'HIDE' | 'PUBLISH';
+  reasonCode: string | null;
+  reviewerNote: string | null;
+  actorUserId: string | null;
+  actorRole: string | null;
+  createdAt: string;
 };
 
 @Injectable()
@@ -20,7 +36,7 @@ export class ReviewsService {
   async listModerationQueue(status?: string) {
     const normalized = this.parseOptionalReviewStatus(status);
 
-    return this.prisma.review.findMany({
+    const queue = await this.prisma.review.findMany({
       where: normalized
         ? {
             status: normalized,
@@ -40,6 +56,13 @@ export class ReviewsService {
       },
       orderBy: { updatedAt: 'desc' },
     });
+
+    const latestEvents = await this.getLatestModerationEventsByReviewId();
+
+    return queue.map((item) => ({
+      ...item,
+      moderation: latestEvents.get(item.id) ?? null,
+    }));
   }
 
   async listAccommodationReviews(accommodationId: string) {
@@ -187,14 +210,14 @@ export class ReviewsService {
     });
   }
 
-  async flag(id: string) {
+  async flag(id: string, actor?: RequestActor, payload?: ModerationActionPayload) {
     const existing = await this.prisma.review.findUnique({ where: { id }, select: { id: true, status: true } });
     if (!existing) {
       throw new NotFoundException('Review not found');
     }
 
     if (existing.status === 'HIDDEN') {
-      return this.prisma.review.findUnique({
+      const unchanged = await this.prisma.review.findUnique({
         where: { id },
         include: {
           user: {
@@ -205,9 +228,12 @@ export class ReviewsService {
           },
         },
       });
+
+      await this.recordModerationEvent(id, 'FLAG', actor, payload);
+      return unchanged;
     }
 
-    return this.prisma.review.update({
+    const updated = await this.prisma.review.update({
       where: { id },
       data: { status: 'FLAGGED' },
       include: {
@@ -219,15 +245,18 @@ export class ReviewsService {
         },
       },
     });
+
+    await this.recordModerationEvent(id, 'FLAG', actor, payload);
+    return updated;
   }
 
-  async setStatus(id: string, status: 'PUBLISHED' | 'HIDDEN') {
+  async setStatus(id: string, status: 'PUBLISHED' | 'HIDDEN', actor?: RequestActor, payload?: ModerationActionPayload) {
     const existing = await this.prisma.review.findUnique({ where: { id }, select: { id: true } });
     if (!existing) {
       throw new NotFoundException('Review not found');
     }
 
-    return this.prisma.review.update({
+    const updated = await this.prisma.review.update({
       where: { id },
       data: { status },
       include: {
@@ -239,6 +268,129 @@ export class ReviewsService {
         },
       },
     });
+
+    await this.recordModerationEvent(id, status === 'HIDDEN' ? 'HIDE' : 'PUBLISH', actor, payload);
+    return updated;
+  }
+
+  private async recordModerationEvent(
+    reviewId: string,
+    action: 'FLAG' | 'HIDE' | 'PUBLISH',
+    actor?: RequestActor,
+    payload?: ModerationActionPayload,
+  ) {
+    const reasonCode = this.parseOptionalModerationReasonCode(payload?.reasonCode);
+    const reviewerNote = this.parseOptionalReviewerNote(payload?.reviewerNote);
+    const events = await this.readModerationEvents();
+
+    const nextEvent: ReviewModerationEvent = {
+      reviewId,
+      action,
+      reasonCode,
+      reviewerNote,
+      actorUserId: typeof actor?.id === 'string' && actor.id.trim().length > 0 ? actor.id.trim() : null,
+      actorRole: typeof actor?.role === 'string' && actor.role.trim().length > 0 ? actor.role.trim() : null,
+      createdAt: new Date().toISOString(),
+    };
+
+    const next = [nextEvent, ...events].slice(0, 5000);
+    await this.prisma.appConfig.upsert({
+      where: { key: this.reviewModerationEventsKey() },
+      update: {
+        value: {
+          updatedAt: new Date().toISOString(),
+          items: next,
+        } as unknown as object,
+      },
+      create: {
+        key: this.reviewModerationEventsKey(),
+        value: {
+          updatedAt: new Date().toISOString(),
+          items: next,
+        } as unknown as object,
+      },
+    });
+  }
+
+  private async readModerationEvents(): Promise<ReviewModerationEvent[]> {
+    const row = await this.prisma.appConfig.findUnique({ where: { key: this.reviewModerationEventsKey() } });
+    if (!row) {
+      return [];
+    }
+
+    const value = row.value as Record<string, unknown>;
+    const items = Array.isArray(value.items) ? value.items : [];
+    return items as ReviewModerationEvent[];
+  }
+
+  private async getLatestModerationEventsByReviewId() {
+    const events = await this.readModerationEvents();
+    const latestById = new Map<string, ReviewModerationEvent>();
+    for (const event of events) {
+      if (!event?.reviewId || latestById.has(event.reviewId)) {
+        continue;
+      }
+
+      latestById.set(event.reviewId, event);
+    }
+
+    return latestById;
+  }
+
+  private reviewModerationEventsKey() {
+    return 'reviews:moderation_events:v1';
+  }
+
+  private parseOptionalModerationReasonCode(value: unknown): string | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('reasonCode must be a string when provided');
+    }
+
+    const normalized = value.trim().toUpperCase();
+    if (normalized.length === 0) {
+      return null;
+    }
+
+    const allowed = new Set([
+      'SPAM',
+      'ABUSIVE_LANGUAGE',
+      'HARASSMENT',
+      'MISLEADING_CONTENT',
+      'INAPPROPRIATE_CONTENT',
+      'POLICY_VIOLATION',
+      'OTHER',
+    ]);
+
+    if (!allowed.has(normalized)) {
+      throw new BadRequestException('reasonCode is not supported');
+    }
+
+    return normalized;
+  }
+
+  private parseOptionalReviewerNote(value: unknown): string | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('reviewerNote must be a string when provided');
+    }
+
+    const normalized = value.trim();
+    if (normalized.length === 0) {
+      return null;
+    }
+
+    if (normalized.length > 500) {
+      throw new BadRequestException('reviewerNote exceeds 500 characters');
+    }
+
+    return normalized;
   }
 
   private async hasVerifiedAccommodationStay(userId: string, accommodationId: string) {

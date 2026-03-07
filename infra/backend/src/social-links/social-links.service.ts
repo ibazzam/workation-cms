@@ -14,8 +14,24 @@ type SocialLinkPayload = {
 };
 
 type RequestActor = {
+  id?: string;
   role?: string;
   vendorId?: string;
+};
+
+type ModerationActionPayload = {
+  reasonCode?: unknown;
+  reviewerNote?: unknown;
+};
+
+type SocialLinkModerationEvent = {
+  socialLinkId: string;
+  action: 'FLAG' | 'HIDE' | 'APPROVE';
+  reasonCode: string | null;
+  reviewerNote: string | null;
+  actorUserId: string | null;
+  actorRole: string | null;
+  createdAt: string;
 };
 
 @Injectable()
@@ -25,13 +41,20 @@ export class SocialLinksService {
   async listModerationQueue(targetType?: string) {
     const normalizedTargetType = this.parseOptionalTargetType(targetType);
 
-    return this.prisma.socialLink.findMany({
+    const queue = await this.prisma.socialLink.findMany({
       where: {
         ...(normalizedTargetType ? { targetType: normalizedTargetType } : {}),
         OR: [{ active: false }, { verified: false }],
       },
       orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
     });
+
+    const latestEvents = await this.getLatestModerationEventsBySocialLinkId();
+
+    return queue.map((item) => ({
+      ...item,
+      moderation: latestEvents.get(item.id) ?? null,
+    }));
   }
 
   async listAccommodationLinks(accommodationId: string) {
@@ -128,36 +151,165 @@ export class SocialLinksService {
     await this.prisma.socialLink.delete({ where: { id } });
   }
 
-  async flag(id: string) {
+  async flag(id: string, actor?: RequestActor, payload?: ModerationActionPayload) {
     await this.ensureSocialLinkExists(id);
-    return this.prisma.socialLink.update({
+    const updated = await this.prisma.socialLink.update({
       where: { id },
       data: {
         active: false,
         verified: false,
       },
     });
+
+    await this.recordModerationEvent(id, 'FLAG', actor, payload);
+    return updated;
   }
 
-  async hide(id: string) {
+  async hide(id: string, actor?: RequestActor, payload?: ModerationActionPayload) {
     await this.ensureSocialLinkExists(id);
-    return this.prisma.socialLink.update({
+    const updated = await this.prisma.socialLink.update({
       where: { id },
       data: {
         active: false,
       },
     });
+
+    await this.recordModerationEvent(id, 'HIDE', actor, payload);
+    return updated;
   }
 
-  async approve(id: string) {
+  async approve(id: string, actor?: RequestActor, payload?: ModerationActionPayload) {
     await this.ensureSocialLinkExists(id);
-    return this.prisma.socialLink.update({
+    const updated = await this.prisma.socialLink.update({
       where: { id },
       data: {
         active: true,
         verified: true,
       },
     });
+
+    await this.recordModerationEvent(id, 'APPROVE', actor, payload);
+    return updated;
+  }
+
+  private async recordModerationEvent(
+    socialLinkId: string,
+    action: 'FLAG' | 'HIDE' | 'APPROVE',
+    actor?: RequestActor,
+    payload?: ModerationActionPayload,
+  ) {
+    const reasonCode = this.parseOptionalModerationReasonCode(payload?.reasonCode);
+    const reviewerNote = this.parseOptionalReviewerNote(payload?.reviewerNote);
+    const events = await this.readModerationEvents();
+
+    const nextEvent: SocialLinkModerationEvent = {
+      socialLinkId,
+      action,
+      reasonCode,
+      reviewerNote,
+      actorUserId: typeof actor?.id === 'string' && actor.id.trim().length > 0 ? actor.id.trim() : null,
+      actorRole: typeof actor?.role === 'string' && actor.role.trim().length > 0 ? actor.role.trim() : null,
+      createdAt: new Date().toISOString(),
+    };
+
+    const next = [nextEvent, ...events].slice(0, 5000);
+    await this.prisma.appConfig.upsert({
+      where: { key: this.socialModerationEventsKey() },
+      update: {
+        value: {
+          updatedAt: new Date().toISOString(),
+          items: next,
+        } as unknown as object,
+      },
+      create: {
+        key: this.socialModerationEventsKey(),
+        value: {
+          updatedAt: new Date().toISOString(),
+          items: next,
+        } as unknown as object,
+      },
+    });
+  }
+
+  private async readModerationEvents(): Promise<SocialLinkModerationEvent[]> {
+    const row = await this.prisma.appConfig.findUnique({ where: { key: this.socialModerationEventsKey() } });
+    if (!row) {
+      return [];
+    }
+
+    const value = row.value as Record<string, unknown>;
+    const items = Array.isArray(value.items) ? value.items : [];
+    return items as SocialLinkModerationEvent[];
+  }
+
+  private async getLatestModerationEventsBySocialLinkId() {
+    const events = await this.readModerationEvents();
+    const latestById = new Map<string, SocialLinkModerationEvent>();
+    for (const event of events) {
+      if (!event?.socialLinkId || latestById.has(event.socialLinkId)) {
+        continue;
+      }
+
+      latestById.set(event.socialLinkId, event);
+    }
+
+    return latestById;
+  }
+
+  private socialModerationEventsKey() {
+    return 'social_links:moderation_events:v1';
+  }
+
+  private parseOptionalModerationReasonCode(value: unknown): string | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('reasonCode must be a string when provided');
+    }
+
+    const normalized = value.trim().toUpperCase();
+    if (normalized.length === 0) {
+      return null;
+    }
+
+    const allowed = new Set([
+      'SPAM',
+      'ABUSIVE_LANGUAGE',
+      'HARASSMENT',
+      'MISLEADING_CONTENT',
+      'INAPPROPRIATE_CONTENT',
+      'POLICY_VIOLATION',
+      'OTHER',
+    ]);
+
+    if (!allowed.has(normalized)) {
+      throw new BadRequestException('reasonCode is not supported');
+    }
+
+    return normalized;
+  }
+
+  private parseOptionalReviewerNote(value: unknown): string | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('reviewerNote must be a string when provided');
+    }
+
+    const normalized = value.trim();
+    if (normalized.length === 0) {
+      return null;
+    }
+
+    if (normalized.length > 500) {
+      throw new BadRequestException('reviewerNote exceeds 500 characters');
+    }
+
+    return normalized;
   }
 
   private async normalizePayload(

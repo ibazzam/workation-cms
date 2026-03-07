@@ -35,19 +35,19 @@ export class ReviewsController {
 
   @Post(':id/flag')
   @Roles('USER', 'ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE', 'VENDOR')
-  async flag(@Param('id') id: string) {
-    return this.reviewsService.flag(id);
+  async flag(@Param('id') id: string, @Body() body: Record<string, unknown>, @Req() request: any) {
+    return this.reviewsService.flag(id, request.user, body);
   }
 
   @Post('admin/:id/hide')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE')
-  async hide(@Param('id') id: string) {
-    return this.reviewsService.setStatus(id, 'HIDDEN');
+  async hide(@Param('id') id: string, @Body() body: Record<string, unknown>, @Req() request: any) {
+    return this.reviewsService.setStatus(id, 'HIDDEN', request.user, body);
   }
 
   @Post('admin/:id/publish')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE')
-  async publish(@Param('id') id: string) {
-    return this.reviewsService.setStatus(id, 'PUBLISHED');
+  async publish(@Param('id') id: string, @Body() body: Record<string, unknown>, @Req() request: any) {
+    return this.reviewsService.setStatus(id, 'PUBLISHED', request.user, body);
   }
 }

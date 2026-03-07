@@ -46,6 +46,10 @@ Definition of done (WB-201)
 Notes
 - Legacy transport hold endpoints (`/api/v1/transport/holds`) are not exposed on current live runtime.
 - Preflight now validates transports using legacy hold flow when present, otherwise current transports schedule/list smoke.
+- Review and social moderation actions now accept optional moderation metadata:
+  - `reasonCode` (`SPAM`, `ABUSIVE_LANGUAGE`, `HARASSMENT`, `MISLEADING_CONTENT`, `INAPPROPRIATE_CONTENT`, `POLICY_VIOLATION`, `OTHER`)
+  - `reviewerNote` (optional free-text note, up to 500 chars)
+- Admin moderation queue responses include the latest moderation metadata for each flagged/hidden item.
 - Emergency rollback flag for Laravel legacy routes:
   - `LEGACY_LARAVEL_BUSINESS_ROUTES_ENABLED=true` (temporary rollback only)
   - Default should remain `false` in normal runtime.

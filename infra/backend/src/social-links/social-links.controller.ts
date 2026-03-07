@@ -55,19 +55,19 @@ export class SocialLinksController {
 
   @Post(':id/flag')
   @Roles('USER', 'ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE', 'VENDOR')
-  async flag(@Param('id') id: string) {
-    return this.socialLinksService.flag(id);
+  async flag(@Param('id') id: string, @Body() body: Record<string, unknown>, @Req() request: any) {
+    return this.socialLinksService.flag(id, request.user, body);
   }
 
   @Post('admin/:id/hide')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE')
-  async hide(@Param('id') id: string) {
-    return this.socialLinksService.hide(id);
+  async hide(@Param('id') id: string, @Body() body: Record<string, unknown>, @Req() request: any) {
+    return this.socialLinksService.hide(id, request.user, body);
   }
 
   @Post('admin/:id/approve')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE')
-  async approve(@Param('id') id: string) {
-    return this.socialLinksService.approve(id);
+  async approve(@Param('id') id: string, @Body() body: Record<string, unknown>, @Req() request: any) {
+    return this.socialLinksService.approve(id, request.user, body);
   }
 }

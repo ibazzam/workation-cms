@@ -35,11 +35,14 @@ class TransportHoldTest extends TestCase
         }
 
         if (\Illuminate\Support\Facades\Schema::hasTable('transport_routes')) {
-            // SQLite in-memory tests may not have islands table; temporarily disable FK checks to insert route
-            try {
-                \Illuminate\Support\Facades\DB::getPdo()->exec('PRAGMA foreign_keys = OFF');
-            } catch (\Throwable $e) {
-                // ignore if not sqlite or fails
+            $isSqlite = \Illuminate\Support\Facades\DB::getDriverName() === 'sqlite';
+            if ($isSqlite) {
+                // SQLite in-memory tests may need FK toggles for seed convenience.
+                try {
+                    \Illuminate\Support\Facades\DB::getPdo()->exec('PRAGMA foreign_keys = OFF');
+                } catch (\Throwable $e) {
+                    // ignore
+                }
             }
 
             $routeId = \Illuminate\Support\Facades\DB::table('transport_routes')->insertGetId([
@@ -49,10 +52,12 @@ class TransportHoldTest extends TestCase
                 'updated_at' => now(),
             ]);
 
-            try {
-                \Illuminate\Support\Facades\DB::getPdo()->exec('PRAGMA foreign_keys = ON');
-            } catch (\Throwable $e) {
-                // ignore
+            if ($isSqlite) {
+                try {
+                    \Illuminate\Support\Facades\DB::getPdo()->exec('PRAGMA foreign_keys = ON');
+                } catch (\Throwable $e) {
+                    // ignore
+                }
             }
         } else {
             $routeId = 1;

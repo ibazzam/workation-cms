@@ -8,10 +8,12 @@ Route::get('/', function () {
 
 // Emergency rollback switch for legacy Laravel business routes.
 // Default: disabled outside testing so authority backend remains single writer.
-$legacyBusinessRoutesEnabled = filter_var(
-    env('LEGACY_LARAVEL_BUSINESS_ROUTES_ENABLED', app()->environment('testing')),
-    FILTER_VALIDATE_BOOL,
-);
+$legacyBusinessRoutesEnabled = app()->environment('testing')
+    ? true
+    : filter_var(
+        env('LEGACY_LARAVEL_BUSINESS_ROUTES_ENABLED', false),
+        FILTER_VALIDATE_BOOL,
+    );
 
 if ($legacyBusinessRoutesEnabled) {
     Route::prefix('api')->group(function () {

@@ -8,7 +8,8 @@
     "baseUrl": "./",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node"]
   },
   "include": ["src/**/*"]
 }

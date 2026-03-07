@@ -17,7 +17,7 @@ Core customer outcomes:
 
 ## A. Foundation and Architecture
 - [ ] Finalize single-backend authority and decommission legacy Laravel API paths.
-- [ ] Lock environment configs to PostgreSQL everywhere (dev/staging/prod + docs + templates).
+- [x] Lock environment configs to PostgreSQL everywhere (dev/staging/prod + docs + templates).
 - [ ] Enforce API contract/version policy for all new domains.
 - [x] Implement schema governance (migration checklist, rollback playbook, seed strategy).
 - [x] Set up feature flags for gradual rollouts by domain.
@@ -295,6 +295,9 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `config/database.php`
 	- Added local development doc with explicit Postgres baseline and cutover note:
 		- `docs/development.md`
+	- Completed PostgreSQL parity for queue/failure defaults and CI integration smoke workflow:
+		- `config/queue.php` (`batching.database` and `failed.database` default to `pgsql`)
+		- `.github/workflows/integration-smoke.yml` migrated from SQLite to PostgreSQL service
 - 2026-03-07: `WB-203` started.
 	- Added authority backend transport API scaffold in `infra/backend`:
 		- schedules list + inventory endpoints

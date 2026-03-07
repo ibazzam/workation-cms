@@ -262,7 +262,7 @@ async function checkCheckoutFailureSemantics() {
   let createdCartItemIds = [];
 
   try {
-    const { res: transportsRes, path: transportsPath } = await requestWithFallbacks('get', [
+    const { res: transportsRes } = await requestWithFallbacks('get', [
       '/api/v1/transports',
       '/api/transports',
     ]);

@@ -243,6 +243,107 @@ async function checkTransportFlow() {
   await checkTransportScheduleFlow();
 }
 
+function countActiveBookings(bookingsPayload) {
+  const entries = Array.isArray(bookingsPayload)
+    ? bookingsPayload
+    : (Array.isArray(bookingsPayload?.items) ? bookingsPayload.items : []);
+
+  return entries.filter((booking) => ['HOLD', 'PENDING', 'CONFIRMED'].includes(String(booking?.status ?? ''))).length;
+}
+
+async function checkCheckoutFailureSemantics() {
+  if (!bearerToken) {
+    console.warn('Skipping checkout reliability smoke: AUTH_BEARER_TOKEN not set');
+    return;
+  }
+
+  let cartPath;
+  let bookingsPath;
+  let createdCartItemIds = [];
+
+  try {
+    const { res: transportsRes, path: transportsPath } = await requestWithFallbacks('get', [
+      '/api/v1/transports',
+      '/api/transports',
+    ]);
+
+    const transportsData = transportsRes.data;
+    const transports = Array.isArray(transportsData)
+      ? transportsData
+      : (Array.isArray(transportsData?.items) ? transportsData.items : []);
+    const firstTransport = transports[0];
+    if (!firstTransport?.id) {
+      console.warn('Skipping checkout reliability smoke: no transport fixtures available');
+      return;
+    }
+
+    const firstFareClassCode = Array.isArray(firstTransport?.fareClasses) && firstTransport.fareClasses[0]?.code
+      ? firstTransport.fareClasses[0].code
+      : undefined;
+
+    const cartFetch = await requestWithFallbacks('get', ['/api/v1/cart', '/api/cart']);
+    cartPath = cartFetch.path;
+
+    const bookingsBeforeRes = await requestWithFallbacks('get', ['/api/v1/bookings', '/api/bookings']);
+    bookingsPath = bookingsBeforeRes.path;
+    const activeBefore = countActiveBookings(bookingsBeforeRes.res.data);
+
+    const validTransportItemPayload = {
+      serviceType: 'TRANSPORT',
+      transportId: firstTransport.id,
+      guests: 1,
+      ...(firstFareClassCode ? { transportFareClassCode: firstFareClassCode } : {}),
+    };
+
+    const validItem = await client.post(`${cartPath}/items`, validTransportItemPayload);
+    createdCartItemIds.push(validItem?.data?.items?.[validItem.data.items.length - 1]?.id ?? null);
+
+    const invalidTransportItem = await client.post(`${cartPath}/items`, {
+      serviceType: 'TRANSPORT',
+      transportId: `missing-transport-${Date.now()}`,
+      guests: 1,
+    });
+    createdCartItemIds.push(invalidTransportItem?.data?.items?.[invalidTransportItem.data.items.length - 1]?.id ?? null);
+
+    let checkoutFailed = false;
+    try {
+      await client.post(`${cartPath}/checkout?clear=false`, {});
+    } catch (err) {
+      if (err?.response?.status && [400, 404].includes(err.response.status)) {
+        checkoutFailed = true;
+      } else {
+        throw err;
+      }
+    }
+
+    if (!checkoutFailed) {
+      throw new Error('checkout reliability smoke expected a failure but checkout succeeded');
+    }
+
+    const bookingsAfterRes = await client.get(bookingsPath);
+    const activeAfter = countActiveBookings(bookingsAfterRes.data);
+    if (activeAfter !== activeBefore) {
+      throw new Error(`checkout reliability smoke failed: active booking count drifted (${activeBefore} -> ${activeAfter})`);
+    }
+  } catch (err) {
+    if (err?.response?.status === 404) {
+      console.warn('checkout/bookings endpoints unavailable on target runtime, skipping checkout reliability smoke');
+      return;
+    }
+    throw err;
+  } finally {
+    if (cartPath) {
+      for (const itemId of createdCartItemIds.filter(Boolean)) {
+        try {
+          await client.delete(`${cartPath}/items/${itemId}`);
+        } catch {
+          // Cleanup is best-effort for preflight safety.
+        }
+      }
+    }
+  }
+}
+
 (async () => {
   try {
     console.log(`Running live preflight against ${baseUrl} (schedule ${scheduleId})`);
@@ -259,6 +360,7 @@ async function checkTransportFlow() {
     await checkOpsSlo();
     await checkWorkationCrud();
     await checkTransportFlow();
+    await checkCheckoutFailureSemantics();
     console.log('Live preflight passed');
     process.exit(0);
   } catch (err) {

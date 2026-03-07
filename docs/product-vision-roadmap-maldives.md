@@ -314,6 +314,13 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `POST /api/v1/checkout/confirm`
 		- `GET /api/v1/bookings/{id}`
 	- Added in-memory draft-to-confirm booking flow with hold coherence checks.
+	- Hardened cart checkout failure handling in authority backend:
+		- `infra/backend/src/cart/cart.service.ts`
+		- Added pre-checkout cart coherence validation for accommodation-to-transport linkage.
+		- Added compensating rollback so partial booking creates are cancelled if checkout fails mid-flow.
+	- Extended hosted live preflight with checkout reliability smoke:
+		- `tests/e2e/live-preflight.mjs`
+		- Verifies failed checkout does not increase active booking count and cleans up injected cart items.
 - 2026-03-07: `WB-205` started.
 	- Added payments reliability scaffold endpoints in `infra/backend`:
 		- `POST /api/v1/payments/refunds`

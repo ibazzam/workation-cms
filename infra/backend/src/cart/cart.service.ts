@@ -76,63 +76,72 @@ export class CartService {
 
     const transportItems = cart.items.filter((item) => item.serviceType === 'TRANSPORT');
     const accommodationItems = cart.items.filter((item) => item.serviceType === 'ACCOMMODATION');
+    this.validateCheckoutCoherence(transportItems, accommodationItems);
 
     const transportItemById = new Map(transportItems.map((item) => [item.id, item]));
     const primaryTransport = transportItems[0];
 
     const createdBookings: Array<Record<string, unknown>> = [];
+    const createdBookingIds: string[] = [];
 
-    for (const transportItem of transportItems) {
-      if (!transportItem.transportId) {
-        throw new BadRequestException(`Cart transport item ${transportItem.id} is missing transportId`);
+    try {
+      for (const transportItem of transportItems) {
+        if (!transportItem.transportId) {
+          throw new BadRequestException(`Cart transport item ${transportItem.id} is missing transportId`);
+        }
+
+        const created = await this.bookingsService.createForUser(userId, {
+          transportId: transportItem.transportId,
+          transportFareClassCode: transportItem.transportFareClassCode,
+          guests: transportItem.guests,
+        });
+        createdBookingIds.push(String(created.id));
+        createdBookings.push({
+          cartItemId: transportItem.id,
+          bookingId: created.id,
+          status: created.status,
+          totalPrice: created.totalPrice,
+        });
       }
 
-      const created = await this.bookingsService.createForUser(userId, {
-        transportId: transportItem.transportId,
-        transportFareClassCode: transportItem.transportFareClassCode,
-        guests: transportItem.guests,
-      });
-      createdBookings.push({
-        cartItemId: transportItem.id,
-        bookingId: created.id,
-        status: created.status,
-        totalPrice: created.totalPrice,
-      });
-    }
+      for (const accommodationItem of accommodationItems) {
+        if (!accommodationItem.accommodationId) {
+          throw new BadRequestException(`Cart accommodation item ${accommodationItem.id} is missing accommodationId`);
+        }
 
-    for (const accommodationItem of accommodationItems) {
-      if (!accommodationItem.accommodationId) {
-        throw new BadRequestException(`Cart accommodation item ${accommodationItem.id} is missing accommodationId`);
+        if (!accommodationItem.startDate || !accommodationItem.endDate) {
+          throw new BadRequestException(`Cart accommodation item ${accommodationItem.id} requires startDate and endDate`);
+        }
+
+        const matchedTransport = accommodationItem.relatedTransportItemId
+          ? transportItemById.get(accommodationItem.relatedTransportItemId)
+          : primaryTransport;
+
+        if (!matchedTransport?.transportId) {
+          throw new BadRequestException(`Cart accommodation item ${accommodationItem.id} requires a related transport item`);
+        }
+
+        const created = await this.bookingsService.createForUser(userId, {
+          accommodationId: accommodationItem.accommodationId,
+          transportId: matchedTransport.transportId,
+          itineraryTransportIds: matchedTransport.itineraryTransportIds,
+          transportFareClassCode: matchedTransport.transportFareClassCode,
+          startDate: accommodationItem.startDate,
+          endDate: accommodationItem.endDate,
+          guests: accommodationItem.guests,
+        });
+        createdBookingIds.push(String(created.id));
+
+        createdBookings.push({
+          cartItemId: accommodationItem.id,
+          bookingId: created.id,
+          status: created.status,
+          totalPrice: created.totalPrice,
+        });
       }
-
-      if (!accommodationItem.startDate || !accommodationItem.endDate) {
-        throw new BadRequestException(`Cart accommodation item ${accommodationItem.id} requires startDate and endDate`);
-      }
-
-      const matchedTransport = accommodationItem.relatedTransportItemId
-        ? transportItemById.get(accommodationItem.relatedTransportItemId)
-        : primaryTransport;
-
-      if (!matchedTransport?.transportId) {
-        throw new BadRequestException(`Cart accommodation item ${accommodationItem.id} requires a related transport item`);
-      }
-
-      const created = await this.bookingsService.createForUser(userId, {
-        accommodationId: accommodationItem.accommodationId,
-        transportId: matchedTransport.transportId,
-        itineraryTransportIds: matchedTransport.itineraryTransportIds,
-        transportFareClassCode: matchedTransport.transportFareClassCode,
-        startDate: accommodationItem.startDate,
-        endDate: accommodationItem.endDate,
-        guests: accommodationItem.guests,
-      });
-
-      createdBookings.push({
-        cartItemId: accommodationItem.id,
-        bookingId: created.id,
-        status: created.status,
-        totalPrice: created.totalPrice,
-      });
+    } catch (error) {
+      await this.rollbackPartialCheckout(userId, createdBookingIds);
+      throw error;
     }
 
     if (options.clearCart) {
@@ -296,6 +305,48 @@ export class CartService {
       }
 
       return entry.trim();
+    });
+  }
+
+  private validateCheckoutCoherence(transportItems: CartItem[], accommodationItems: CartItem[]) {
+    if (accommodationItems.length > 0 && transportItems.length === 0) {
+      throw new BadRequestException('Accommodation cart items require at least one transport cart item');
+    }
+
+    const transportIds = new Set(transportItems.map((item) => item.id));
+    const hasAmbiguousTransportSelection = transportItems.length > 1;
+
+    for (const accommodationItem of accommodationItems) {
+      if (!accommodationItem.relatedTransportItemId && hasAmbiguousTransportSelection) {
+        throw new BadRequestException(
+          `Cart accommodation item ${accommodationItem.id} must set relatedTransportItemId when multiple transport items exist`,
+        );
+      }
+
+      if (accommodationItem.relatedTransportItemId && !transportIds.has(accommodationItem.relatedTransportItemId)) {
+        throw new BadRequestException(
+          `Cart accommodation item ${accommodationItem.id} references missing related transport item ${accommodationItem.relatedTransportItemId}`,
+        );
+      }
+    }
+  }
+
+  private async rollbackPartialCheckout(userId: string, bookingIds: string[]) {
+    if (bookingIds.length === 0) {
+      return;
+    }
+
+    // Compensating rollback keeps checkout failures deterministic for users.
+    await this.prisma.booking.updateMany({
+      where: {
+        id: { in: bookingIds },
+        userId,
+        status: { in: ['HOLD', 'PENDING'] },
+      },
+      data: {
+        status: 'CANCELLED',
+        holdExpiresAt: null,
+      },
     });
   }
 }

@@ -170,7 +170,7 @@ Core customer outcomes:
 - [x] Execute live preflight in hosting environment (`Live preflight passed` on 2026-03-07).
 - [ ] Verify admin moderation paths in hosting (review flag/hide/publish and social flag/approve/hide).
 - [ ] Verify scheduler health in hosting (reconciliation runner + cleanup task logs).
-- [ ] Confirm rollback path and environment variable parity before production promotion.
+- [x] Confirm rollback path and environment variable parity before production promotion (legacy Laravel routes now env-guarded).
 
 ### B) Production Readiness Task List (Before Public Launch)
 - [ ] Add moderation reason codes and reviewer notes for reviews/social trust & safety workflows.
@@ -337,3 +337,8 @@ Owners are role-based so this can be applied immediately even if personnel shift
 	- Verified live API and preflight against `https://api.workation.mv`:
 		- `GET /api/v1/health` = 200
 		- `node tests/e2e/live-preflight.mjs` = `Live preflight passed`
+- 2026-03-07: `WB-201` guarded decommission completed.
+	- Legacy Laravel business routes moved behind emergency rollback flag:
+		- `routes/web.php` now requires `LEGACY_LARAVEL_BUSINESS_ROUTES_ENABLED=true` to re-enable legacy routes outside testing.
+	- Added rollback flag documentation in root env template:
+		- `.env.example`

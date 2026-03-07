@@ -1,6 +1,6 @@
 ## WB-201 Authority Cutover Runbook
 
-Status: In progress (live authority backend on main; Laravel decommission pending)
+Status: In progress (live authority backend on main; Laravel legacy routes guarded by rollback flag)
 Owner: Backend Lead
 
 Purpose
@@ -9,7 +9,7 @@ Purpose
 - Keep a controlled rollback path for one release window.
 
 Current state (repo evidence)
-- Business routes are served from Laravel in `routes/web.php`.
+- Legacy Laravel business routes are guarded in `routes/web.php` and disabled by default outside testing.
 - Current Laravel endpoints:
   - `GET /api/workations`
   - `GET /api/workations/{workation}`
@@ -44,6 +44,9 @@ Definition of done (WB-201)
 Notes
 - Legacy transport hold endpoints (`/api/v1/transport/holds`) are not exposed on current live runtime.
 - Preflight now validates transports using legacy hold flow when present, otherwise current transports schedule/list smoke.
+- Emergency rollback flag for Laravel legacy routes:
+  - `LEGACY_LARAVEL_BUSINESS_ROUTES_ENABLED=true` (temporary rollback only)
+  - Default should remain `false` in normal runtime.
 
 ## Phase Plan
 
@@ -70,8 +73,10 @@ Phase 3: Controlled cutover
 - Monitor error rate, latency, and booking/hold failure metrics.
 
 Phase 4: Laravel business route decommission
-- Remove or hard-disable Laravel business routes from `routes/web.php` after cutover stability window.
-- Keep only non-business or maintenance endpoints if needed.
+- Completed as guarded decommission:
+  - Legacy Laravel business routes are disabled by default.
+  - Emergency rollback path is env-guarded via `LEGACY_LARAVEL_BUSINESS_ROUTES_ENABLED`.
+  - Keep only temporary rollback enablement during incident handling.
 
 ## Endpoint Parity Checklist
 

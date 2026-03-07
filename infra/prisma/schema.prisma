@@ -140,3 +140,120 @@ model ServiceCategory {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model Workation {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  location    String
+  startDate   DateTime @map("start_date")
+  endDate     DateTime @map("end_date")
+  price       Decimal  @default("0.00")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("workations")
+}
+
+model TransportSchedule {
+  id                   Int                   @id @default(autoincrement())
+  originIslandId       Int                   @map("origin_island_id")
+  destinationIslandId  Int                   @map("destination_island_id")
+  operator             String
+  departureAt          DateTime              @map("departure_at")
+  arrivalAt            DateTime              @map("arrival_at")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+
+  inventories          TransportInventory[]
+  holds                TransportHold[]
+  disruptions          TransportDisruption[]
+
+  @@map("transport_schedules_v2")
+}
+
+model TransportInventory {
+  id            Int               @id @default(autoincrement())
+  scheduleId    Int               @map("schedule_id")
+  seatClass     String            @map("seat_class")
+  totalSeats    Int               @default(0) @map("total_seats")
+  reservedSeats Int               @default(0) @map("reserved_seats")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  schedule      TransportSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, seatClass])
+  @@map("transport_inventory_v2")
+}
+
+model TransportHold {
+  id             Int               @id @default(autoincrement())
+  scheduleId     Int               @map("schedule_id")
+  seatClass      String            @map("seat_class")
+  seatsReserved  Int               @map("seats_reserved")
+  status         String            @default("held")
+  ttlExpiresAt   DateTime          @map("ttl_expires_at")
+  idempotencyKey String?           @unique @map("idempotency_key")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  schedule       TransportSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@map("transport_holds_v2")
+}
+
+model TransportDisruption {
+  id          Int               @id @default(autoincrement())
+  scheduleId  Int               @map("schedule_id")
+  type        String
+  severity    String
+  reason      String?
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  schedule    TransportSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@map("transport_disruptions_v2")
+}
+
+model ItineraryBooking {
+  id         Int             @id @default(autoincrement())
+  holdIds    Int[]           @map("hold_ids")
+  status     String          @default("draft")
+  totalPrice Decimal         @default("0.00") @map("total_price")
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
+
+  refunds    PaymentRefund[]
+  disputes   PaymentDispute[]
+
+  @@map("itinerary_bookings_v2")
+}
+
+model PaymentRefund {
+  id         Int             @id @default(autoincrement())
+  bookingId  Int             @map("booking_id")
+  amount     Decimal         @default("0.00")
+  reason     String?
+  status     String          @default("processed")
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
+
+  booking    ItineraryBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("payment_refunds_v2")
+}
+
+model PaymentDispute {
+  id         Int              @id @default(autoincrement())
+  bookingId  Int              @map("booking_id")
+  reason     String
+  status     String           @default("opened")
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  booking    ItineraryBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("payment_disputes_v2")
+}

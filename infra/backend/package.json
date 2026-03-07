@@ -6,7 +6,8 @@
     "start": "node dist/main.js",
     "start:dev": "ts-node-dev --respawn --transpile-only src/main.ts",
     "build": "tsc -p tsconfig.json",
-    "prisma:generate": "prisma generate --schema=..\\prisma\\schema.prisma",
+    "contract:test": "npm.cmd run prisma:generate && npm.cmd run build && node scripts/contract-parity.cjs",
+    "prisma:generate": "prisma generate --schema=..\\prisma\\schema.prisma && node scripts/sync-prisma-client.cjs",
     "prisma:migrate": "prisma migrate dev --schema=..\\prisma\\schema.prisma"
   },
   "dependencies": {

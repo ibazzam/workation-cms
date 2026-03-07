@@ -184,3 +184,125 @@ Core customer outcomes:
 - [ ] Extend social integration with embed policy controls and UGC safety validation.
 - [ ] Complete frontend typed hook migration for remaining customer flows.
 - [ ] Add deployment gate in CI requiring full contract matrix pass before promote.
+
+## 8) Repository Reality Scan (2026-03-07)
+
+This section validates current implementation against go-live priorities using code currently in this workspace.
+
+### A) Confirmed Implemented (Code Evidence)
+- Transport hold lifecycle API exists in Laravel routes and controller:
+	- `routes/web.php`
+	- `app/Http/Controllers/TransportHoldController.php`
+- Hold inventory reservation/release with DB transaction and idempotency:
+	- `app/Models/TransportHold.php`
+	- `app/Models/TransportInventory.php`
+- Provider outbound job queue + retry processing command:
+	- `app/Models/TransportProviderJob.php`
+	- `app/Console/Commands/ProcessTransportProviderJobs.php`
+- Expired hold reconciliation command:
+	- `app/Console/Commands/ReconcileTransportHolds.php`
+- Basic Workation CRUD API:
+	- `routes/web.php`
+	- `app/Http/Controllers/WorkationController.php`
+- Baseline tests for current Laravel transport/workation scope:
+	- `tests/Feature/TransportHoldTest.php`
+	- `tests/Feature/TransportProviderJobsTest.php`
+	- `tests/Feature/WorkationApiTest.php`
+
+### B) Confirmed Gaps / Mismatch With Vision Claims
+- Backend authority cutover not complete:
+	- Laravel API is still active and currently serves functional domain endpoints (`routes/web.php`).
+	- New backend under `infra/backend/src` exposes only health endpoint (`health.controller.ts`).
+- Full domain surface not present in runnable API routes:
+	- No route/controller evidence in this workspace for islands/accommodations/transports CRUD, bookings, payments, vendors, reviews/social APIs beyond hold/workation endpoints.
+- PostgreSQL lock-in not complete across root Laravel env template:
+	- Root `.env.example` defaults to SQLite (`DB_CONNECTION=sqlite`).
+	- `config/database.php` default connection is env-driven with sqlite fallback.
+- Frontend migration is early-stage in `infra/frontend`:
+	- Pages are placeholders and rely on a simple reachability fetch (`components/RemoteStatus.tsx`).
+	- No typed client or React Query implementation found in `infra/frontend`.
+- E2E readiness is limited:
+	- Current E2E script assumes static `schedule_id=1` in target env (`tests/e2e/transport-hold.mjs`).
+	- Staging smoke does not yet represent full search->book->pay->manage flow in this codebase.
+- Observability/SLO stack remains planning-level in docs:
+	- No dedicated tracing/metrics exporters or SLO dashboard configuration found in app/infra code.
+
+### C) Immediate Endpoints Missing For M1-M4 Exit
+- New authority backend missing business endpoints (only `/health` exists in `infra/backend/src`).
+- Missing explicit API endpoints for:
+	- Transport schedules search/list and inventory quoting.
+	- Disruption ingestion and re-accommodation orchestration.
+	- Booking state transitions and customer booking management.
+	- Payment refunds/partial refunds/dispute lifecycle.
+	- Vendor settlement and payout reporting.
+
+## 9) Prioritized 2-Week Sprint Board (Top 6)
+
+Owners are role-based so this can be applied immediately even if personnel shift.
+
+| Ticket | Priority | Owner | Scope | Dependencies | Done Criteria |
+|---|---|---|---|---|---|
+| WB-201 M1 Authority Cutover Plan | P0 | Backend Lead | Define and execute cutover from Laravel business routes to `infra/backend`; keep Laravel as fallback only during transition window | Architecture sign-off | Approved cutover ADR, endpoint parity checklist, rollback steps tested |
+| WB-202 PostgreSQL Env Parity | P0 | DevOps Lead | Standardize PostgreSQL defaults across root env templates, CI, local compose, and staging/prod docs | WB-201 | All env templates point to PostgreSQL, bootstrap scripts and docs updated, smoke migration passes in dev+staging |
+| WB-203 Transport Production API v1 | P0 | Transport Backend Engineer | Add schedule inventory query + hold TTL/expiry semantics + disruption event ingestion + rebooking policy MVP on authority backend | WB-201, WB-202 | Contract tests for schedule/hold/disruption pass, no double-booking under concurrency test, disruption event creates actionable rebooking candidates |
+| WB-204 Booking/Checkout Reliability | P1 | Checkout Engineer | Implement itinerary hold coherence, fare-lock expiry behavior, and deterministic checkout failure handling | WB-203 | Search->hold->checkout journey passes with hold expiry edge cases; failed checkout rate baseline captured |
+| WB-205 Payments Refunds and Settlement Core | P1 | Payments Engineer | Add refund/partial-refund workflow, dispute state tracking, and settlement reporting export for vendors | WB-201, WB-202 | Refund and partial-refund happy/failure paths covered by integration tests; settlement report generated and reconciled |
+| WB-206 Observability + Staging Smoke Gate | P1 | SRE/Platform Engineer | Establish p95/p99 + error-rate dashboards for booking/payments, alert routes, and a staging smoke gate for deploys | WB-203, WB-204, WB-205 | Dashboard live, alert routing tested, staging deploy blocked unless smoke + key SLO checks pass |
+
+### Sprint Cadence (2 Weeks)
+- Days 1-2: WB-201, WB-202 design and environment parity.
+- Days 3-6: WB-203 implementation and transport contract tests.
+- Days 5-8: WB-204 checkout reliability in parallel with WB-203 stabilization.
+- Days 7-10: WB-205 refunds/settlement workflows.
+- Days 9-10: WB-206 dashboards, alerts, and staging smoke gate activation.
+
+### Suggested Owner Matrix
+- Backend Lead: authority cutover, endpoint parity, legacy route retirement.
+- Transport Backend Engineer: schedules/inventory/disruption/rebooking.
+- Checkout Engineer: bundled checkout reliability and booking management states.
+- Payments Engineer: refunds, disputes, settlement/payout exports.
+- DevOps Lead: PostgreSQL parity, staging/prod config consistency.
+- SRE/Platform Engineer: metrics/tracing/SLOs, alerting, load/smoke gates.
+
+## 10) Execution Log
+
+- 2026-03-07: `WB-201` started.
+	- Added authority cutover runbook with phased plan, endpoint parity checklist, and rollback playbook:
+		- `docs/wb-201-authority-cutover-runbook.md`
+- 2026-03-07: `WB-202` started.
+	- Switched root non-test DB defaults to PostgreSQL:
+		- `.env.example`
+		- `config/database.php`
+	- Added local development doc with explicit Postgres baseline and cutover note:
+		- `docs/development.md`
+- 2026-03-07: `WB-203` started.
+	- Added authority backend transport API scaffold in `infra/backend`:
+		- schedules list + inventory endpoints
+		- hold create/confirm/release endpoints (`/api/v1` and legacy-parity `/api` paths)
+		- disruption ingestion endpoint with re-accommodation queue status response
+	- Added authority backend workations CRUD parity endpoint scaffold.
+	- Verified `infra/backend` compiles successfully with `npm.cmd run build`.
+- 2026-03-07: `WB-204` started.
+	- Added booking/checkout reliability scaffold endpoints in `infra/backend`:
+		- `POST /api/v1/bookings/itinerary-hold`
+		- `POST /api/v1/checkout/confirm`
+		- `GET /api/v1/bookings/{id}`
+	- Added in-memory draft-to-confirm booking flow with hold coherence checks.
+- 2026-03-07: `WB-205` started.
+	- Added payments reliability scaffold endpoints in `infra/backend`:
+		- `POST /api/v1/payments/refunds`
+		- `POST /api/v1/payments/disputes`
+		- `GET /api/v1/payments/settlements/report`
+	- Added in-memory refund/dispute records and settlement summary generation.
+- 2026-03-07: `WB-206` started.
+	- Added observability baseline scaffold in `infra/backend`:
+		- Request timing/error capture middleware
+		- `GET /api/v1/ops/slo-summary` for p95/p99 and error-rate snapshot
+		- `GET /api/v1/ops/metrics` Prometheus-style metrics output
+- 2026-03-07: Authority backend persistence migration completed for current scaffold.
+	- Replaced in-memory controllers with Prisma-backed persistence (`infra/prisma/schema.prisma`).
+	- Added Prisma service wiring and response mappers in `infra/backend/src`.
+	- Added WB-201 contract parity script:
+		- `infra/backend/scripts/contract-parity.cjs`
+		- `npm.cmd run contract:test`
+	- Verified Prisma client regeneration and backend TypeScript build.

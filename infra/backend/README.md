@@ -11,3 +11,12 @@ npm.cmd run start:dev
 ```
 
 Use `npm.cmd`/`npx.cmd` to avoid PowerShell script-execution policy issues.
+
+Deployment baseline
+- Runtime host: Render
+- Database: Neon PostgreSQL
+- Required env var in hosted environments: `DATABASE_URL` (Neon connection string)
+
+Security note
+- Do not store real Render/Neon credentials in tracked files.
+- Keep secrets in Render environment settings and rotate from Neon as needed.

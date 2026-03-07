@@ -14,6 +14,27 @@ jobs:
   tests:
     name: PHPUnit + Build
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: workation
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d workation"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: workation
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
     # debug removed (kept out of main); keep job env minimal
     steps:
       - name: Checkout
@@ -23,14 +44,19 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
+          extensions: mbstring, pdo_pgsql
 
       - name: Install Composer dependencies
         run: composer install --no-progress --no-suggest --prefer-dist
 
-      - name: Prepare SQLite database
+      - name: Wait for PostgreSQL
         run: |
-          mkdir -p database
-          php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          for i in {1..30}; do
+            pg_isready -h 127.0.0.1 -p 5432 -U postgres -d workation && break
+            sleep 2
+          done
 
       - name: Prepare environment file
         run: |

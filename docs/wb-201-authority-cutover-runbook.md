@@ -19,8 +19,10 @@ Current state (repo evidence)
   - `POST /api/transport/holds`
   - `POST /api/transport/holds/{hold}/confirm`
   - `POST /api/transport/holds/{hold}/release`
-- New authority backend currently exposes only health in `infra/backend/src/health.controller.ts`:
+- New authority backend now exposes parity endpoints for workations and transport holds with Prisma-backed persistence:
   - `GET /health`
+  - `GET/POST/PUT/DELETE /api/workations...`
+  - `POST /api/transport/holds`, `/confirm`, `/release`
 
 Definition of done (WB-201)
 - Endpoint parity checklist completed for all in-scope business endpoints.
@@ -73,6 +75,9 @@ Use this table before cutover. Mark each item `done` only after tests pass.
 
 Contract test command
 - `cd infra/backend && npm.cmd run contract:test`
+
+Staging smoke command
+- `cd . && BASE_URL=https://api.workation.mv SCHEDULE_ID=1 X_USER_ID=1 X_USER_ROLE=admin npm.cmd run live:preflight`
 
 ## Rollback Playbook
 

@@ -185,7 +185,28 @@ Core customer outcomes:
 - [ ] Complete frontend typed hook migration for remaining customer flows.
 - [ ] Add deployment gate in CI requiring full contract matrix pass before promote.
 
-## 8) Repository Reality Scan (2026-03-07)
+## 8) Live Finish Now (Render + Neon)
+
+Current state
+- Local branch is synced with GitHub `main`.
+- Authority backend parity endpoints are Prisma-backed.
+- WB-201 contract parity script passes locally against Neon (isolated schema).
+
+Immediate execution steps
+1. Deploy latest `main` to Render backend service.
+2. Verify Render env has correct Neon `DATABASE_URL` and runtime vars.
+3. Run hosted preflight:
+	- `BASE_URL=https://api.workation.mv SCHEDULE_ID=<known_schedule_id> X_USER_ID=<admin_user_id> X_USER_ROLE=admin npm.cmd run live:preflight`
+4. If preflight passes, mark WB-201 staging smoke as complete.
+5. Begin staged decommission of Laravel legacy business routes using rollback guard from `docs/wb-201-authority-cutover-runbook.md`.
+
+Success criteria for this step
+- Hosted health check passes.
+- Hosted workation CRUD passes in preflight.
+- Hosted transport hold create/confirm/release passes in preflight.
+- No critical errors in Render logs during preflight window.
+
+## 9) Repository Reality Scan (2026-03-07)
 
 This section validates current implementation against go-live priorities using code currently in this workspace.
 
@@ -236,7 +257,7 @@ This section validates current implementation against go-live priorities using c
 	- Payment refunds/partial refunds/dispute lifecycle.
 	- Vendor settlement and payout reporting.
 
-## 9) Prioritized 2-Week Sprint Board (Top 6)
+## 10) Prioritized 2-Week Sprint Board (Top 6)
 
 Owners are role-based so this can be applied immediately even if personnel shift.
 
@@ -264,7 +285,7 @@ Owners are role-based so this can be applied immediately even if personnel shift
 - DevOps Lead: PostgreSQL parity, staging/prod config consistency.
 - SRE/Platform Engineer: metrics/tracing/SLOs, alerting, load/smoke gates.
 
-## 10) Execution Log
+## 11) Execution Log
 
 - 2026-03-07: `WB-201` started.
 	- Added authority cutover runbook with phased plan, endpoint parity checklist, and rollback playbook:

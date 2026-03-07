@@ -164,14 +164,65 @@ async function checkTransportScheduleFlow() {
   }
 
   const listData = listRes.data;
-  const firstTransport = Array.isArray(listData)
-    ? listData[0]
-    : (Array.isArray(listData?.items) ? listData.items[0] : null);
+  const transports = Array.isArray(listData)
+    ? listData
+    : (Array.isArray(listData?.items) ? listData.items : []);
+  const firstTransport = transports[0] ?? null;
 
   if (firstTransport?.id) {
     const detail = await client.get(`${listPath}/${firstTransport.id}`);
     if (detail.status !== 200) {
       throw new Error(`transport details failed: ${detail.status}`);
+    }
+
+    const firstFareClassCode = Array.isArray(firstTransport?.fareClasses) && firstTransport.fareClasses[0]?.code
+      ? firstTransport.fareClasses[0].code
+      : undefined;
+
+    const quotePath = firstFareClassCode
+      ? `${listPath}/${firstTransport.id}/quote?guests=1&fareClassCode=${encodeURIComponent(firstFareClassCode)}`
+      : `${listPath}/${firstTransport.id}/quote?guests=1`;
+
+    const quote = await client.get(quotePath);
+    if (quote.status !== 200) {
+      throw new Error(`transport quote failed: ${quote.status}`);
+    }
+  }
+
+  if (bearerToken && transports.length >= 2 && transports[0]?.id && transports[1]?.id) {
+    const disruptedId = transports[0].id;
+    const replacementId = transports[1].id;
+
+    const disruption = await client.post(`/api/v1/transports/admin/${disruptedId}/disruptions`, {
+      status: 'DELAYED',
+      delayMinutes: 15,
+      reason: 'live-preflight disruption test',
+      replacementTransportId: replacementId,
+    });
+
+    if (disruption.status !== 201) {
+      throw new Error(`transport disruption create failed: ${disruption.status}`);
+    }
+
+    const disruptionId = disruption.data?.id;
+    if (!disruptionId) {
+      throw new Error('transport disruption create did not return id');
+    }
+
+    const reaccommodation = await client.post(
+      `/api/v1/transports/admin/${disruptedId}/disruptions/${disruptionId}/reaccommodate`,
+    );
+
+    if (reaccommodation.status !== 200) {
+      throw new Error(`transport reaccommodation failed: ${reaccommodation.status}`);
+    }
+
+    const resolved = await client.patch(
+      `/api/v1/transports/admin/${disruptedId}/disruptions/${disruptionId}/resolve`,
+    );
+
+    if (resolved.status !== 200) {
+      throw new Error(`transport disruption resolve failed: ${resolved.status}`);
     }
   }
 }

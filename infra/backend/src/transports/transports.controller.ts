@@ -78,6 +78,21 @@ export class TransportsController {
     return this.transportsService.listFareClasses(id);
   }
 
+  @Get(':id/quote')
+  @Public()
+  async quote(
+    @Param('id') id: string,
+    @Query('guests') guests?: string,
+    @Query('fareClassCode') fareClassCode?: string,
+  ) {
+    const parsedGuests = guests !== undefined ? Number(guests) : undefined;
+
+    return this.transportsService.quote(id, {
+      guests: Number.isFinite(parsedGuests) ? parsedGuests : undefined,
+      fareClassCode: fareClassCode?.trim() ? fareClassCode.trim() : undefined,
+    });
+  }
+
   @Get(':id')
   @Public()
   async getById(@Param('id') id: string) {

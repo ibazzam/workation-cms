@@ -305,6 +305,9 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- disruption ingestion endpoint with re-accommodation queue status response
 	- Added authority backend workations CRUD parity endpoint scaffold.
 	- Verified `infra/backend` compiles successfully with `npm.cmd run build`.
+	- Added transport quote endpoint for inventory/fare-class pricing behavior:
+		- `GET /api/v1/transports/{id}/quote?guests=<n>&fareClassCode=<code>`
+	- Extended hosted preflight transport smoke to exercise disruption ingestion + re-accommodation + resolve flow when fixture transports are available.
 - 2026-03-07: `WB-204` started.
 	- Added booking/checkout reliability scaffold endpoints in `infra/backend`:
 		- `POST /api/v1/bookings/itinerary-hold`

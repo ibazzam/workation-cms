@@ -118,6 +118,95 @@ export class TransportsService {
     return withInventory[0].fareClasses;
   }
 
+  async quote(id: string, options: { guests?: number; fareClassCode?: string }) {
+    const guests = options.guests ?? 1;
+    if (!Number.isInteger(guests) || guests <= 0) {
+      throw new BadRequestException('guests must be a positive integer');
+    }
+
+    const transport = await this.prisma.transport.findUnique({
+      where: { id },
+      include: {
+        fareClasses: {
+          orderBy: { code: 'asc' },
+        },
+      },
+    });
+
+    if (!transport) {
+      throw new NotFoundException('Transport not found');
+    }
+
+    const fareClassCode = options.fareClassCode?.toUpperCase();
+    const selectedFareClass = fareClassCode
+      ? transport.fareClasses.find((fareClass) => fareClass.code.toUpperCase() === fareClassCode)
+      : null;
+
+    if (fareClassCode && !selectedFareClass) {
+      throw new BadRequestException('fareClassCode is not available for this transport');
+    }
+
+    const activeDisruption = await this.prisma.transportDisruption.findFirst({
+      where: {
+        transportId: transport.id,
+        resolvedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { replacementTransport: true },
+    });
+
+    const reservedAggregate = await this.prisma.booking.aggregate({
+      where: {
+        transportId: transport.id,
+        status: { in: ['PENDING', 'HOLD', 'CONFIRMED'] },
+        transportFareClassCode: selectedFareClass?.code,
+      },
+      _sum: { guests: true },
+    });
+
+    const reservedSeats = reservedAggregate._sum.guests ?? 0;
+    const capacity = selectedFareClass?.seats ?? transport.capacity;
+    const availableSeats = capacity === null ? null : Math.max(capacity - reservedSeats, 0);
+
+    const unitPrice = selectedFareClass?.price ?? transport.price;
+    const totalPrice = unitPrice.mul(new Prisma.Decimal(guests));
+
+    const disruptionStatus = activeDisruption?.status?.toUpperCase();
+    const serviceUnavailable = disruptionStatus === 'CANCELLED' || disruptionStatus === 'WEATHER_CANCELLED';
+    const canBookByCapacity = availableSeats === null ? true : availableSeats >= guests;
+    const canBook = canBookByCapacity && !serviceUnavailable;
+
+    return {
+      transportId: transport.id,
+      guests,
+      fareClassCode: selectedFareClass?.code ?? null,
+      pricing: {
+        unitPrice: String(unitPrice),
+        totalPrice: String(totalPrice),
+      },
+      inventory: {
+        capacity,
+        reservedSeats,
+        availableSeats,
+      },
+      disruption: activeDisruption
+        ? {
+            id: activeDisruption.id,
+            status: activeDisruption.status,
+            reason: activeDisruption.reason,
+            delayMinutes: activeDisruption.delayMinutes,
+            replacementTransportId: activeDisruption.replacementTransportId,
+          }
+        : null,
+      canBook,
+      unavailableReason: !canBook
+        ? (serviceUnavailable
+            ? `transport is ${disruptionStatus?.toLowerCase()}`
+            : 'insufficient seat inventory')
+        : null,
+    };
+  }
+
   async getById(id: string) {
     const transport = await this.prisma.transport.findUnique({
       where: { id },

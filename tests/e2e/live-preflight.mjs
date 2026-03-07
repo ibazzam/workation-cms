@@ -5,6 +5,9 @@ const scheduleId = Number(process.env.SCHEDULE_ID || 1);
 const xUserId = process.env.X_USER_ID;
 const xUserRole = process.env.X_USER_ROLE;
 const bearerToken = process.env.AUTH_BEARER_TOKEN;
+const requireOpsSlo = (process.env.PREFLIGHT_REQUIRE_OPS_SLO ?? 'false').toLowerCase() === 'true';
+const requireCheckoutReliability = (process.env.PREFLIGHT_REQUIRE_CHECKOUT_RELIABILITY ?? 'false').toLowerCase() === 'true';
+const requirePaymentsReliability = (process.env.PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY ?? 'false').toLowerCase() === 'true';
 
 if (!baseUrl) {
   console.error('BASE_URL is required. Example: BASE_URL=https://api.workation.mv');
@@ -66,6 +69,10 @@ async function checkOpsSlo() {
       throw new Error(`ops slo failed: ${slo.status}`);
     }
   } catch (err) {
+    if (requireOpsSlo) {
+      throw new Error('ops/slo-summary is required but unavailable');
+    }
+
     console.warn('ops/slo-summary not available yet, continuing');
   }
 }
@@ -253,6 +260,10 @@ function countActiveBookings(bookingsPayload) {
 
 async function checkCheckoutFailureSemantics() {
   if (!bearerToken) {
+    if (requireCheckoutReliability) {
+      throw new Error('checkout reliability smoke is required but AUTH_BEARER_TOKEN is not set');
+    }
+
     console.warn('Skipping checkout reliability smoke: AUTH_BEARER_TOKEN not set');
     return;
   }
@@ -273,6 +284,10 @@ async function checkCheckoutFailureSemantics() {
       : (Array.isArray(transportsData?.items) ? transportsData.items : []);
     const firstTransport = transports[0];
     if (!firstTransport?.id) {
+      if (requireCheckoutReliability) {
+        throw new Error('checkout reliability smoke is required but no transport fixtures are available');
+      }
+
       console.warn('Skipping checkout reliability smoke: no transport fixtures available');
       return;
     }
@@ -327,6 +342,10 @@ async function checkCheckoutFailureSemantics() {
     }
   } catch (err) {
     if (err?.response?.status === 404) {
+      if (requireCheckoutReliability) {
+        throw new Error('checkout reliability smoke is required but checkout/bookings endpoints are unavailable');
+      }
+
       console.warn('checkout/bookings endpoints unavailable on target runtime, skipping checkout reliability smoke');
       return;
     }
@@ -346,6 +365,10 @@ async function checkCheckoutFailureSemantics() {
 
 async function checkPaymentsReliabilityFlow() {
   if (!bearerToken) {
+    if (requirePaymentsReliability) {
+      throw new Error('payments reliability smoke is required but AUTH_BEARER_TOKEN is not set');
+    }
+
     console.warn('Skipping payments reliability smoke: AUTH_BEARER_TOKEN not set');
     return;
   }
@@ -393,11 +416,19 @@ async function checkPaymentsReliabilityFlow() {
     }
   } catch (err) {
     if (err?.response?.status === 404) {
+      if (requirePaymentsReliability) {
+        throw new Error('payments reliability smoke is required but endpoints are unavailable');
+      }
+
       console.warn('payments reliability endpoints unavailable on target runtime, skipping payments smoke');
       return;
     }
 
     if (err?.response?.status === 403) {
+      if (requirePaymentsReliability) {
+        throw new Error('payments reliability smoke is required but role lacks settlement-report access');
+      }
+
       console.warn('payments settlement report requires elevated role, skipping payments smoke');
       return;
     }

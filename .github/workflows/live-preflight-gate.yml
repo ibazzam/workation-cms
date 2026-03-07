@@ -1,0 +1,55 @@
+name: Live preflight gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: API base URL to validate (for example https://api.workation.mv)
+        required: true
+        default: https://api.workation.mv
+      schedule_id:
+        description: Schedule id fixture used by transport smoke checks
+        required: true
+        default: "1"
+      require_ops_slo:
+        description: Fail when ops SLO endpoint is unavailable
+        required: true
+        type: boolean
+        default: false
+      require_checkout_reliability:
+        description: Fail when checkout reliability check is skipped
+        required: true
+        type: boolean
+        default: false
+      require_payments_reliability:
+        description: Fail when payments reliability check is skipped
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  live-preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run live preflight gate
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+          SCHEDULE_ID: ${{ inputs.schedule_id }}
+          AUTH_BEARER_TOKEN: ${{ secrets.LIVE_PREFLIGHT_BEARER_TOKEN }}
+          X_USER_ID: ${{ secrets.LIVE_PREFLIGHT_X_USER_ID }}
+          X_USER_ROLE: ${{ secrets.LIVE_PREFLIGHT_X_USER_ROLE }}
+          PREFLIGHT_REQUIRE_OPS_SLO: ${{ inputs.require_ops_slo }}
+          PREFLIGHT_REQUIRE_CHECKOUT_RELIABILITY: ${{ inputs.require_checkout_reliability }}
+          PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY: ${{ inputs.require_payments_reliability }}
+        run: npm run live:preflight

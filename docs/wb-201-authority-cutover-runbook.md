@@ -99,6 +99,19 @@ Contract test command
 Staging smoke command
 - `cd . && BASE_URL=https://api.workation.mv SCHEDULE_ID=1 AUTH_BEARER_TOKEN=<jwt> npm.cmd run live:preflight`
 
+CI smoke gate workflow
+- Workflow: `.github/workflows/live-preflight-gate.yml`
+- Trigger: manual `workflow_dispatch`
+- Required repository secrets:
+  - `LIVE_PREFLIGHT_BEARER_TOKEN`
+  - `LIVE_PREFLIGHT_X_USER_ID` (optional if bearer is sufficient)
+  - `LIVE_PREFLIGHT_X_USER_ROLE` (optional if bearer is sufficient)
+- Strict gate inputs:
+  - `require_ops_slo`
+  - `require_checkout_reliability`
+  - `require_payments_reliability`
+- Use strict inputs as `true` only after the corresponding endpoints and fixtures are available in target runtime.
+
 ## Rollback Playbook
 
 Trigger conditions

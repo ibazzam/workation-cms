@@ -341,6 +341,12 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- Request timing/error capture middleware
 		- `GET /api/v1/ops/slo-summary` for p95/p99 and error-rate snapshot
 		- `GET /api/v1/ops/metrics` Prometheus-style metrics output
+	- Added deploy smoke gate workflow for hosted validation:
+		- `.github/workflows/live-preflight-gate.yml`
+		- Manual gate supports strict toggles for ops/checkpoint/payments reliability checks.
+	- Hardened live preflight with strict required-check flags:
+		- `tests/e2e/live-preflight.mjs`
+		- Added `PREFLIGHT_REQUIRE_OPS_SLO`, `PREFLIGHT_REQUIRE_CHECKOUT_RELIABILITY`, and `PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY`.
 - 2026-03-07: Authority backend persistence migration completed for current scaffold.
 	- Replaced in-memory controllers with Prisma-backed persistence (`infra/prisma/schema.prisma`).
 	- Added Prisma service wiring and response mappers in `infra/backend/src`.

@@ -37,6 +37,8 @@ Definition of done (WB-201)
 - Health check: `GET /api/v1/health` => 200
 - Auth mode: bearer token required (header fallback disabled)
 - Hosted preflight: `Live preflight passed`
+- Hosted moderation verification: `Moderation admin paths OK`
+- Hosted scheduler verification: `Scheduler health endpoints OK`
 - Key commits used for live stabilization:
   - `9f52a3bd` (`Sync main backend runtime with deployed deploy-fixes branch`)
   - `8c370957` (`Make live preflight compatible with transports schedule endpoints`)
@@ -114,10 +116,14 @@ CI smoke gate workflow
   - `LIVE_PREFLIGHT_REQUIRE_OPS_SLO` (`true`/`false`)
   - `LIVE_PREFLIGHT_REQUIRE_CHECKOUT_RELIABILITY` (`true`/`false`)
   - `LIVE_PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY` (`true`/`false`)
+  - `LIVE_PREFLIGHT_REQUIRE_MODERATION_PATHS` (`true`/`false`)
+  - `LIVE_PREFLIGHT_REQUIRE_SCHEDULER_HEALTH` (`true`/`false`)
 - Strict gate inputs:
   - `require_ops_slo`
   - `require_checkout_reliability`
   - `require_payments_reliability`
+  - `require_moderation_paths`
+  - `require_scheduler_health`
 - Use strict inputs as `true` only after the corresponding endpoints and fixtures are available in target runtime.
 
 ## Rollback Playbook

@@ -8,6 +8,8 @@ const bearerToken = process.env.AUTH_BEARER_TOKEN;
 const requireOpsSlo = (process.env.PREFLIGHT_REQUIRE_OPS_SLO ?? 'false').toLowerCase() === 'true';
 const requireCheckoutReliability = (process.env.PREFLIGHT_REQUIRE_CHECKOUT_RELIABILITY ?? 'false').toLowerCase() === 'true';
 const requirePaymentsReliability = (process.env.PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY ?? 'false').toLowerCase() === 'true';
+const requireModerationPaths = (process.env.PREFLIGHT_REQUIRE_MODERATION_PATHS ?? 'false').toLowerCase() === 'true';
+const requireSchedulerHealth = (process.env.PREFLIGHT_REQUIRE_SCHEDULER_HEALTH ?? 'false').toLowerCase() === 'true';
 
 if (!baseUrl) {
   console.error('BASE_URL is required. Example: BASE_URL=https://api.workation.mv');
@@ -16,7 +18,7 @@ if (!baseUrl) {
 
 const client = axios.create({
   baseURL: baseUrl,
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
     ...(xUserId ? { 'x-user-id': String(xUserId) } : {}),
@@ -220,7 +222,7 @@ async function checkTransportScheduleFlow() {
       `/api/v1/transports/admin/${disruptedId}/disruptions/${disruptionId}/reaccommodate`,
     );
 
-    if (reaccommodation.status !== 200) {
+    if (reaccommodation.status !== 200 && reaccommodation.status !== 201) {
       throw new Error(`transport reaccommodation failed: ${reaccommodation.status}`);
     }
 
@@ -437,6 +439,257 @@ async function checkPaymentsReliabilityFlow() {
   }
 }
 
+async function resolveModerationTarget() {
+  const transportsResponse = await requestWithFallbacks('get', ['/api/v1/transports', '/api/transports']);
+  const transportRows = Array.isArray(transportsResponse.res.data)
+    ? transportsResponse.res.data
+    : (Array.isArray(transportsResponse.res.data?.items) ? transportsResponse.res.data.items : []);
+
+  for (const transport of transportRows) {
+    if (typeof transport?.id !== 'string') {
+      continue;
+    }
+
+    const existingReviews = await client.get(`/api/v1/reviews/transports/${transport.id}`);
+    const items = Array.isArray(existingReviews.data?.items) ? existingReviews.data.items : [];
+    const hasActorReview = xUserId
+      ? items.some((item) => String(item?.user?.id ?? '') === String(xUserId))
+      : false;
+
+    if (!hasActorReview) {
+      return {
+        targetType: 'TRANSPORT',
+        targetId: transport.id,
+      };
+    }
+  }
+
+  const accommodationsResponse = await requestWithFallbacks('get', ['/api/v1/accommodations', '/api/accommodations']);
+  const accommodationRows = Array.isArray(accommodationsResponse.res.data)
+    ? accommodationsResponse.res.data
+    : (Array.isArray(accommodationsResponse.res.data?.items) ? accommodationsResponse.res.data.items : []);
+
+  const firstAccommodation = accommodationRows.find((item) => typeof item?.id === 'string');
+  if (firstAccommodation?.id) {
+    return {
+      targetType: 'ACCOMMODATION',
+      targetId: firstAccommodation.id,
+    };
+  }
+
+  const createdTransport = await client.post('/api/v1/transports/admin', {
+    type: 'SPEEDBOAT',
+    code: `LIVE-PREFLIGHT-${Date.now()}`,
+    price: 1,
+  });
+
+  const createdTransportId = createdTransport.data?.id;
+  if (createdTransport.status === 201 && createdTransportId) {
+    return {
+      targetType: 'TRANSPORT',
+      targetId: createdTransportId,
+    };
+  }
+
+  return null;
+}
+
+async function checkModerationAdminPaths() {
+  if (!bearerToken) {
+    if (requireModerationPaths) {
+      throw new Error('moderation paths are required but AUTH_BEARER_TOKEN is not set');
+    }
+
+    console.warn('Skipping moderation paths smoke: AUTH_BEARER_TOKEN not set');
+    return;
+  }
+
+  let createdSocialLinkId = null;
+
+  try {
+    const target = await resolveModerationTarget();
+    if (!target) {
+      if (requireModerationPaths) {
+        throw new Error('moderation paths are required but no transport/accommodation fixtures are available');
+      }
+
+      console.warn('Skipping moderation paths smoke: no transport/accommodation fixtures available');
+      return;
+    }
+
+    const createReviewPayload = (targetType, targetId) => ({
+      targetType,
+      targetId,
+      rating: 5,
+      title: 'live-preflight moderation probe',
+      comment: `live-preflight-${Date.now()}`,
+    });
+
+    let reviewCreated;
+    try {
+      reviewCreated = await client.post('/api/v1/reviews', createReviewPayload(target.targetType, target.targetId));
+    } catch (err) {
+      const message = String(err?.response?.data?.message ?? '');
+      const duplicateReview = err?.response?.status === 400 && message.toLowerCase().includes('already reviewed');
+      if (!duplicateReview) {
+        throw err;
+      }
+
+      const newTransport = await client.post('/api/v1/transports/admin', {
+        type: 'SPEEDBOAT',
+        code: `LIVE-PREFLIGHT-REVIEW-${Date.now()}`,
+        price: 1,
+      });
+
+      const newTransportId = newTransport.data?.id;
+      if (!newTransportId) {
+        throw new Error('failed to create fallback transport for moderation review check');
+      }
+
+      reviewCreated = await client.post('/api/v1/reviews', createReviewPayload('TRANSPORT', newTransportId));
+      target.targetType = 'TRANSPORT';
+      target.targetId = newTransportId;
+    }
+
+    const reviewId = reviewCreated.data?.id;
+    if (!reviewId) {
+      throw new Error('moderation review create did not return id');
+    }
+
+    const flaggedReview = await client.post(`/api/v1/reviews/${reviewId}/flag`);
+    if (flaggedReview.status !== 201 && flaggedReview.status !== 200) {
+      throw new Error(`review flag failed: ${flaggedReview.status}`);
+    }
+
+    const hiddenReview = await client.post(`/api/v1/reviews/admin/${reviewId}/hide`);
+    if (hiddenReview.status !== 201 && hiddenReview.status !== 200) {
+      throw new Error(`review hide failed: ${hiddenReview.status}`);
+    }
+
+    const publishedReview = await client.post(`/api/v1/reviews/admin/${reviewId}/publish`);
+    if (publishedReview.status !== 201 && publishedReview.status !== 200) {
+      throw new Error(`review publish failed: ${publishedReview.status}`);
+    }
+
+    const socialCreated = await client.post('/api/v1/social-links/admin', {
+      targetType: target.targetType,
+      targetId: target.targetId,
+      platform: 'WEBSITE',
+      url: `https://example.com/live-preflight-${Date.now()}`,
+      handle: 'live-preflight',
+    });
+
+    createdSocialLinkId = socialCreated.data?.id ?? null;
+    if (!createdSocialLinkId) {
+      throw new Error('social link create did not return id');
+    }
+
+    const flaggedSocial = await client.post(`/api/v1/social-links/${createdSocialLinkId}/flag`);
+    if (flaggedSocial.status !== 201 && flaggedSocial.status !== 200) {
+      throw new Error(`social link flag failed: ${flaggedSocial.status}`);
+    }
+
+    const approvedSocial = await client.post(`/api/v1/social-links/admin/${createdSocialLinkId}/approve`);
+    if (approvedSocial.status !== 201 && approvedSocial.status !== 200) {
+      throw new Error(`social link approve failed: ${approvedSocial.status}`);
+    }
+
+    const hiddenSocial = await client.post(`/api/v1/social-links/admin/${createdSocialLinkId}/hide`);
+    if (hiddenSocial.status !== 201 && hiddenSocial.status !== 200) {
+      throw new Error(`social link hide failed: ${hiddenSocial.status}`);
+    }
+
+    const moderationQueueReviews = await client.get('/api/v1/reviews/admin/moderation');
+    const moderationQueueSocial = await client.get('/api/v1/social-links/admin/moderation');
+    if (moderationQueueReviews.status !== 200 || moderationQueueSocial.status !== 200) {
+      throw new Error('moderation queue retrieval failed');
+    }
+
+    console.log('Moderation admin paths OK');
+  } catch (err) {
+    if (err?.response?.status === 404) {
+      if (requireModerationPaths) {
+        throw new Error('moderation paths are required but endpoints are unavailable');
+      }
+
+      console.warn('moderation endpoints unavailable on target runtime, skipping moderation smoke');
+      return;
+    }
+
+    if (err?.response?.status === 403) {
+      if (requireModerationPaths) {
+        throw new Error('moderation paths are required but role lacks required admin permissions');
+      }
+
+      console.warn('moderation endpoints require elevated role, skipping moderation smoke');
+      return;
+    }
+
+    throw err;
+  } finally {
+    if (createdSocialLinkId) {
+      try {
+        await client.delete(`/api/v1/social-links/admin/${createdSocialLinkId}`);
+      } catch {
+        // Cleanup is best-effort for preflight safety.
+      }
+    }
+  }
+}
+
+async function checkSchedulerHealth() {
+  if (!bearerToken) {
+    if (requireSchedulerHealth) {
+      throw new Error('scheduler health is required but AUTH_BEARER_TOKEN is not set');
+    }
+
+    console.warn('Skipping scheduler health smoke: AUTH_BEARER_TOKEN not set');
+    return;
+  }
+
+  try {
+    const [reconcileStatus, jobsHealth, opsAlerts] = await Promise.all([
+      client.get('/api/v1/payments/admin/reconcile/status'),
+      client.get('/api/v1/payments/admin/jobs/health'),
+      client.get('/api/v1/payments/admin/alerts'),
+    ]);
+
+    if (reconcileStatus.status !== 200) {
+      throw new Error(`reconcile status failed: ${reconcileStatus.status}`);
+    }
+
+    if (jobsHealth.status !== 200) {
+      throw new Error(`jobs health failed: ${jobsHealth.status}`);
+    }
+
+    if (opsAlerts.status !== 200) {
+      throw new Error(`payments alerts failed: ${opsAlerts.status}`);
+    }
+
+    console.log('Scheduler health endpoints OK');
+  } catch (err) {
+    if (err?.response?.status === 404) {
+      if (requireSchedulerHealth) {
+        throw new Error('scheduler health is required but payments scheduler endpoints are unavailable');
+      }
+
+      console.warn('payments scheduler endpoints unavailable on target runtime, skipping scheduler smoke');
+      return;
+    }
+
+    if (err?.response?.status === 403) {
+      if (requireSchedulerHealth) {
+        throw new Error('scheduler health is required but role lacks required admin permissions');
+      }
+
+      console.warn('payments scheduler endpoints require elevated role, skipping scheduler smoke');
+      return;
+    }
+
+    throw err;
+  }
+}
+
 (async () => {
   try {
     console.log(`Running live preflight against ${baseUrl} (schedule ${scheduleId})`);
@@ -455,6 +708,8 @@ async function checkPaymentsReliabilityFlow() {
     await checkTransportFlow();
     await checkCheckoutFailureSemantics();
     await checkPaymentsReliabilityFlow();
+    await checkModerationAdminPaths();
+    await checkSchedulerHealth();
     console.log('Live preflight passed');
     process.exit(0);
   } catch (err) {

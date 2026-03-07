@@ -168,8 +168,8 @@ Core customer outcomes:
 - [x] Create and verify `api.workation.mv` DNS + origin mapping.
 - [x] Deploy backend to Render on `main` (authority backend live).
 - [x] Execute live preflight in hosting environment (`Live preflight passed` on 2026-03-07).
-- [ ] Verify admin moderation paths in hosting (review flag/hide/publish and social flag/approve/hide).
-- [ ] Verify scheduler health in hosting (reconciliation runner + cleanup task logs).
+- [x] Verify admin moderation paths in hosting (review flag/hide/publish and social flag/approve/hide).
+- [x] Verify scheduler health in hosting (reconciliation runner + cleanup task logs).
 - [x] Confirm rollback path and environment variable parity before production promotion (legacy Laravel routes now env-guarded).
 
 ### B) Production Readiness Task List (Before Public Launch)
@@ -348,6 +348,10 @@ Owners are role-based so this can be applied immediately even if personnel shift
 	- Hardened live preflight with strict required-check flags:
 		- `tests/e2e/live-preflight.mjs`
 		- Added `PREFLIGHT_REQUIRE_OPS_SLO`, `PREFLIGHT_REQUIRE_CHECKOUT_RELIABILITY`, and `PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY`.
+	- Extended hosted live preflight with moderation + scheduler verification:
+		- validates review moderation lifecycle (`flag` -> `hide` -> `publish`) and social moderation lifecycle (`flag` -> `approve` -> `hide`)
+		- validates scheduler health endpoints (`/payments/admin/reconcile/status`, `/payments/admin/jobs/health`, `/payments/admin/alerts`)
+		- hosted run result: `Moderation admin paths OK`, `Scheduler health endpoints OK`, `Live preflight passed`.
 - 2026-03-07: Authority backend persistence migration completed for current scaffold.
 	- Replaced in-memory controllers with Prisma-backed persistence (`infra/prisma/schema.prisma`).
 	- Added Prisma service wiring and response mappers in `infra/backend/src`.

@@ -1,0 +1,374 @@
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma.service';
+
+type SocialLinkPayload = {
+  targetType?: unknown;
+  targetId?: unknown;
+  platform?: unknown;
+  url?: unknown;
+  handle?: unknown;
+  verified?: unknown;
+  displayOrder?: unknown;
+  active?: unknown;
+};
+
+type RequestActor = {
+  role?: string;
+  vendorId?: string;
+};
+
+@Injectable()
+export class SocialLinksService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async listModerationQueue(targetType?: string) {
+    const normalizedTargetType = this.parseOptionalTargetType(targetType);
+
+    return this.prisma.socialLink.findMany({
+      where: {
+        ...(normalizedTargetType ? { targetType: normalizedTargetType } : {}),
+        OR: [{ active: false }, { verified: false }],
+      },
+      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  async listAccommodationLinks(accommodationId: string) {
+    await this.ensureAccommodationExists(accommodationId);
+    return this.prisma.socialLink.findMany({
+      where: {
+        targetType: 'ACCOMMODATION',
+        accommodationId,
+        active: true,
+        verified: true,
+      },
+      orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  async listTransportLinks(transportId: string) {
+    await this.ensureTransportExists(transportId);
+    return this.prisma.socialLink.findMany({
+      where: {
+        targetType: 'TRANSPORT',
+        transportId,
+        active: true,
+        verified: true,
+      },
+      orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  async listVendorLinks(vendorId: string) {
+    await this.ensureVendorExists(vendorId);
+    return this.prisma.socialLink.findMany({
+      where: {
+        targetType: 'VENDOR',
+        vendorId,
+        active: true,
+        verified: true,
+      },
+      orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  async create(payload: SocialLinkPayload, actor?: RequestActor) {
+    const normalized = await this.normalizePayload(payload, { partial: false });
+    await this.assertVendorScopedPermission(actor, normalized);
+
+    return this.prisma.socialLink.create({
+      data: normalized as Prisma.SocialLinkUncheckedCreateInput,
+    });
+  }
+
+  async update(id: string, payload: SocialLinkPayload, actor?: RequestActor) {
+    const existing = await this.prisma.socialLink.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Social link not found');
+    }
+
+    await this.assertVendorScopedPermission(actor, {
+      targetType: existing.targetType,
+      accommodationId: existing.accommodationId ?? undefined,
+      transportId: existing.transportId ?? undefined,
+      vendorId: existing.vendorId ?? undefined,
+    });
+
+    const normalized = await this.normalizePayload(payload, { partial: true, existingTargetType: existing.targetType });
+    const merged = {
+      targetType: existing.targetType,
+      accommodationId: existing.accommodationId ?? undefined,
+      transportId: existing.transportId ?? undefined,
+      vendorId: existing.vendorId ?? undefined,
+      ...normalized,
+    };
+
+    await this.assertVendorScopedPermission(actor, merged);
+
+    return this.prisma.socialLink.update({
+      where: { id },
+      data: normalized as Prisma.SocialLinkUncheckedUpdateInput,
+    });
+  }
+
+  async remove(id: string, actor?: RequestActor) {
+    const existing = await this.prisma.socialLink.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Social link not found');
+    }
+
+    await this.assertVendorScopedPermission(actor, {
+      targetType: existing.targetType,
+      accommodationId: existing.accommodationId ?? undefined,
+      transportId: existing.transportId ?? undefined,
+      vendorId: existing.vendorId ?? undefined,
+    });
+
+    await this.prisma.socialLink.delete({ where: { id } });
+  }
+
+  async flag(id: string) {
+    await this.ensureSocialLinkExists(id);
+    return this.prisma.socialLink.update({
+      where: { id },
+      data: {
+        active: false,
+        verified: false,
+      },
+    });
+  }
+
+  async hide(id: string) {
+    await this.ensureSocialLinkExists(id);
+    return this.prisma.socialLink.update({
+      where: { id },
+      data: {
+        active: false,
+      },
+    });
+  }
+
+  async approve(id: string) {
+    await this.ensureSocialLinkExists(id);
+    return this.prisma.socialLink.update({
+      where: { id },
+      data: {
+        active: true,
+        verified: true,
+      },
+    });
+  }
+
+  private async normalizePayload(
+    payload: SocialLinkPayload,
+    options: { partial: boolean; existingTargetType?: string },
+  ) {
+    const targetType = options.partial
+      ? this.parseOptionalTargetType(payload.targetType)
+      : this.parseRequiredTargetType(payload.targetType);
+
+    const targetId = this.parseOptionalString(payload.targetId);
+    const platform = this.parseOptionalString(payload.platform)?.toUpperCase();
+    const url = this.parseOptionalString(payload.url);
+    const handle = this.parseOptionalNullableString(payload.handle);
+    const verified = this.parseOptionalBoolean(payload.verified);
+    const displayOrder = this.parseOptionalInteger(payload.displayOrder);
+    const active = this.parseOptionalBoolean(payload.active);
+
+    const effectiveTargetType = targetType ?? options.existingTargetType;
+    if (!options.partial && !targetId) {
+      throw new BadRequestException('targetId is required');
+    }
+
+    const data: Record<string, unknown> = {};
+
+    if (effectiveTargetType) {
+      data.targetType = effectiveTargetType;
+    }
+
+    if (targetId !== undefined && effectiveTargetType) {
+      if (effectiveTargetType === 'ACCOMMODATION') {
+        await this.ensureAccommodationExists(targetId);
+        data.accommodationId = targetId;
+        data.transportId = null;
+        data.vendorId = null;
+      } else if (effectiveTargetType === 'TRANSPORT') {
+        await this.ensureTransportExists(targetId);
+        data.transportId = targetId;
+        data.accommodationId = null;
+        data.vendorId = null;
+      } else if (effectiveTargetType === 'VENDOR') {
+        await this.ensureVendorExists(targetId);
+        data.vendorId = targetId;
+        data.accommodationId = null;
+        data.transportId = null;
+      }
+    }
+
+    if (platform !== undefined) {
+      if (!['INSTAGRAM', 'FACEBOOK', 'TIKTOK', 'X', 'YOUTUBE', 'LINKEDIN', 'WHATSAPP', 'TELEGRAM', 'WEBSITE'].includes(platform)) {
+        throw new BadRequestException('platform is not supported');
+      }
+      data.platform = platform;
+    }
+
+    if (url !== undefined) {
+      if (!/^https?:\/\//i.test(url)) {
+        throw new BadRequestException('url must be an absolute http/https URL');
+      }
+      data.url = url;
+    }
+
+    if (handle !== undefined) data.handle = handle;
+    if (verified !== undefined) data.verified = verified;
+    if (displayOrder !== undefined) data.displayOrder = displayOrder;
+    if (active !== undefined) data.active = active;
+
+    if (!options.partial) {
+      if (!data.platform || !data.url) {
+        throw new BadRequestException('platform and url are required');
+      }
+    }
+
+    if (options.partial && Object.keys(data).length === 0) {
+      throw new BadRequestException('No updatable fields provided');
+    }
+
+    return data;
+  }
+
+  private async assertVendorScopedPermission(actor: RequestActor | undefined, data: Record<string, unknown>) {
+    if (actor?.role !== 'VENDOR') {
+      return;
+    }
+
+    if (typeof actor.vendorId !== 'string' || actor.vendorId.trim().length === 0) {
+      throw new ForbiddenException('Vendor scope is missing for authenticated vendor user');
+    }
+
+    const scopedVendorId = actor.vendorId.trim();
+    const targetType = typeof data.targetType === 'string' ? data.targetType : undefined;
+    if (!targetType) {
+      return;
+    }
+
+    if (targetType === 'VENDOR') {
+      const vendorId = typeof data.vendorId === 'string' ? data.vendorId : undefined;
+      if (!vendorId || vendorId !== scopedVendorId) {
+        throw new ForbiddenException('Vendor users can only manage their own vendor social links');
+      }
+      return;
+    }
+
+    if (targetType === 'ACCOMMODATION') {
+      const accommodationId = typeof data.accommodationId === 'string' ? data.accommodationId : undefined;
+      if (!accommodationId) {
+        return;
+      }
+      const row = await this.prisma.accommodation.findUnique({ where: { id: accommodationId }, select: { vendorId: true } });
+      if (!row || row.vendorId !== scopedVendorId) {
+        throw new ForbiddenException('Vendor users can only manage social links for their own accommodations');
+      }
+      return;
+    }
+
+    if (targetType === 'TRANSPORT') {
+      const transportId = typeof data.transportId === 'string' ? data.transportId : undefined;
+      if (!transportId) {
+        return;
+      }
+      const row = await this.prisma.transport.findUnique({ where: { id: transportId }, select: { vendorId: true } });
+      if (!row || row.vendorId !== scopedVendorId) {
+        throw new ForbiddenException('Vendor users can only manage social links for their own transports');
+      }
+    }
+  }
+
+  private parseRequiredTargetType(value: unknown): 'ACCOMMODATION' | 'TRANSPORT' | 'VENDOR' {
+    if (typeof value !== 'string') {
+      throw new BadRequestException('targetType is required');
+    }
+
+    const normalized = value.trim().toUpperCase();
+    if (normalized === 'ACCOMMODATION' || normalized === 'TRANSPORT' || normalized === 'VENDOR') {
+      return normalized;
+    }
+
+    throw new BadRequestException('targetType must be ACCOMMODATION, TRANSPORT, or VENDOR');
+  }
+
+  private parseOptionalTargetType(value: unknown): 'ACCOMMODATION' | 'TRANSPORT' | 'VENDOR' | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    return this.parseRequiredTargetType(value);
+  }
+
+  private parseOptionalString(value: unknown): string | undefined {
+    if (value === undefined) return undefined;
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      throw new BadRequestException('Expected non-empty string value');
+    }
+
+    return value.trim();
+  }
+
+  private parseOptionalNullableString(value: unknown): string | null | undefined {
+    if (value === undefined) return undefined;
+    if (value === null) return null;
+    if (typeof value !== 'string') {
+      throw new BadRequestException('Expected string value');
+    }
+
+    return value.trim();
+  }
+
+  private parseOptionalBoolean(value: unknown): boolean | undefined {
+    if (value === undefined) return undefined;
+    if (typeof value !== 'boolean') {
+      throw new BadRequestException('Expected boolean value');
+    }
+
+    return value;
+  }
+
+  private parseOptionalInteger(value: unknown): number | undefined {
+    if (value === undefined) return undefined;
+    const parsed = typeof value === 'number' ? value : Number(value);
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      throw new BadRequestException('displayOrder must be a non-negative integer');
+    }
+
+    return parsed;
+  }
+
+  private async ensureAccommodationExists(id: string) {
+    const row = await this.prisma.accommodation.findUnique({ where: { id }, select: { id: true } });
+    if (!row) {
+      throw new NotFoundException('Accommodation not found');
+    }
+  }
+
+  private async ensureTransportExists(id: string) {
+    const row = await this.prisma.transport.findUnique({ where: { id }, select: { id: true } });
+    if (!row) {
+      throw new NotFoundException('Transport not found');
+    }
+  }
+
+  private async ensureVendorExists(id: string) {
+    const row = await this.prisma.vendor.findUnique({ where: { id }, select: { id: true } });
+    if (!row) {
+      throw new NotFoundException('Vendor not found');
+    }
+  }
+
+  private async ensureSocialLinkExists(id: string) {
+    const row = await this.prisma.socialLink.findUnique({ where: { id }, select: { id: true } });
+    if (!row) {
+      throw new NotFoundException('Social link not found');
+    }
+  }
+}

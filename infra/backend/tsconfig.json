@@ -2,14 +2,14 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "es2020",
+    "types": ["node"],
     "noImplicitAny": false,
     "sourceMap": true,
     "outDir": "dist",
     "baseUrl": "./",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "skipLibCheck": true,
-    "types": ["node"]
+    "skipLibCheck": true
   },
   "include": ["src/**/*"]
 }

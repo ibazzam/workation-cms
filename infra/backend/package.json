@@ -5,10 +5,12 @@
   "scripts": {
     "start": "node dist/main.js",
     "start:dev": "ts-node-dev --respawn --transpile-only src/main.ts",
-    "build": "npx --yes -p typescript@5.9.3 -c \"tsc -p tsconfig.json\"",
-    "prisma:generate": "npx --yes -p prisma@4.16.0 -c \"prisma generate --schema=../prisma/schema.prisma\" && node scripts/sync-prisma-client.cjs",
+    "build": "npx --yes -p typescript@5.9.3 -p @types/node@20.19.37 -c \"tsc -p tsconfig.json\"",
+    "prisma:generate": "npm ci --include=dev --no-audit --fund=false && npx --yes -p prisma@4.16.0 -c \"prisma generate --schema=../prisma/schema.prisma\" && node scripts/sync-prisma-client.cjs",
     "prisma:migrate": "npx --yes -p prisma@4.16.0 -c \"prisma migrate dev --schema=../prisma/schema.prisma\"",
-    "contract:test": "npm run prisma:generate && npm run build && node scripts/contract-parity.cjs"
+    "contract:test": "npm run prisma:generate && npm run build && node scripts/contract-parity.cjs",
+    "render:build": "npm run prisma:generate && npm run build",
+    "render:build.": "npm run render:build"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

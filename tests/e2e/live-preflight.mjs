@@ -80,6 +80,11 @@ async function checkOpsSlo() {
 }
 
 async function checkWorkationCrud() {
+  if (!bearerToken) {
+    console.warn('Skipping workation CRUD smoke: AUTH_BEARER_TOKEN not set');
+    return;
+  }
+
   const createPayload = {
     title: `preflight-${Date.now()}`,
     description: 'Render+Neon preflight check',
@@ -242,6 +247,11 @@ async function checkTransportFlow() {
     console.log('Transport hold flow OK (legacy endpoints)');
     return;
   } catch (err) {
+    if (err?.response?.status === 401 && !bearerToken) {
+      console.warn('Skipping transport flow smoke: AUTH_BEARER_TOKEN not set');
+      return;
+    }
+
     if (err?.response?.status !== 404) {
       throw err;
     }
@@ -249,7 +259,16 @@ async function checkTransportFlow() {
     console.warn('Legacy transport hold endpoints unavailable; running transport schedule smoke instead');
   }
 
-  await checkTransportScheduleFlow();
+  try {
+    await checkTransportScheduleFlow();
+  } catch (err) {
+    if (err?.response?.status === 401 && !bearerToken) {
+      console.warn('Skipping transport schedule smoke: AUTH_BEARER_TOKEN not set');
+      return;
+    }
+
+    throw err;
+  }
 }
 
 function countActiveBookings(bookingsPayload) {

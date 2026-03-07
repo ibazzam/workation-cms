@@ -344,6 +344,7 @@ Owners are role-based so this can be applied immediately even if personnel shift
 	- Added deploy smoke gate workflow for hosted validation:
 		- `.github/workflows/live-preflight-gate.yml`
 		- Manual gate supports strict toggles for ops/checkpoint/payments reliability checks.
+		- Automatic gate enabled on `push` to `main` with repository-variable fallbacks for target URL, schedule id, and strict flags.
 	- Hardened live preflight with strict required-check flags:
 		- `tests/e2e/live-preflight.mjs`
 		- Added `PREFLIGHT_REQUIRE_OPS_SLO`, `PREFLIGHT_REQUIRE_CHECKOUT_RELIABILITY`, and `PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY`.

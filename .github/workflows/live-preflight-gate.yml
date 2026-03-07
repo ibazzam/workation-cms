@@ -1,6 +1,9 @@
 name: Live preflight gate
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       base_url:
@@ -30,6 +33,8 @@ on:
 jobs:
   live-preflight:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,12 +49,12 @@ jobs:
 
       - name: Run live preflight gate
         env:
-          BASE_URL: ${{ inputs.base_url }}
-          SCHEDULE_ID: ${{ inputs.schedule_id }}
+          BASE_URL: ${{ github.event.inputs.base_url || vars.LIVE_PREFLIGHT_BASE_URL || 'https://api.workation.mv' }}
+          SCHEDULE_ID: ${{ github.event.inputs.schedule_id || vars.LIVE_PREFLIGHT_SCHEDULE_ID || '1' }}
           AUTH_BEARER_TOKEN: ${{ secrets.LIVE_PREFLIGHT_BEARER_TOKEN }}
           X_USER_ID: ${{ secrets.LIVE_PREFLIGHT_X_USER_ID }}
           X_USER_ROLE: ${{ secrets.LIVE_PREFLIGHT_X_USER_ROLE }}
-          PREFLIGHT_REQUIRE_OPS_SLO: ${{ inputs.require_ops_slo }}
-          PREFLIGHT_REQUIRE_CHECKOUT_RELIABILITY: ${{ inputs.require_checkout_reliability }}
-          PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY: ${{ inputs.require_payments_reliability }}
+          PREFLIGHT_REQUIRE_OPS_SLO: ${{ github.event.inputs.require_ops_slo || vars.LIVE_PREFLIGHT_REQUIRE_OPS_SLO || 'false' }}
+          PREFLIGHT_REQUIRE_CHECKOUT_RELIABILITY: ${{ github.event.inputs.require_checkout_reliability || vars.LIVE_PREFLIGHT_REQUIRE_CHECKOUT_RELIABILITY || 'false' }}
+          PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY: ${{ github.event.inputs.require_payments_reliability || vars.LIVE_PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY || 'false' }}
         run: npm run live:preflight

@@ -101,11 +101,19 @@ Staging smoke command
 
 CI smoke gate workflow
 - Workflow: `.github/workflows/live-preflight-gate.yml`
-- Trigger: manual `workflow_dispatch`
+- Triggers:
+  - automatic on `push` to `main`
+  - manual `workflow_dispatch`
 - Required repository secrets:
   - `LIVE_PREFLIGHT_BEARER_TOKEN`
   - `LIVE_PREFLIGHT_X_USER_ID` (optional if bearer is sufficient)
   - `LIVE_PREFLIGHT_X_USER_ROLE` (optional if bearer is sufficient)
+- Optional repository variables for push-trigger defaults:
+  - `LIVE_PREFLIGHT_BASE_URL` (default: `https://api.workation.mv`)
+  - `LIVE_PREFLIGHT_SCHEDULE_ID` (default: `1`)
+  - `LIVE_PREFLIGHT_REQUIRE_OPS_SLO` (`true`/`false`)
+  - `LIVE_PREFLIGHT_REQUIRE_CHECKOUT_RELIABILITY` (`true`/`false`)
+  - `LIVE_PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY` (`true`/`false`)
 - Strict gate inputs:
   - `require_ops_slo`
   - `require_checkout_reliability`

@@ -327,6 +327,15 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `POST /api/v1/payments/disputes`
 		- `GET /api/v1/payments/settlements/report`
 	- Added in-memory refund/dispute records and settlement summary generation.
+	- Hardened refund/dispute handling with deterministic validation and idempotency:
+		- `infra/backend/src/payments/payments.controller.ts`
+		- `infra/backend/src/payments/payments.service.ts`
+		- User and admin refund request paths with ownership checks and refundable-balance enforcement.
+		- Dispute opening path with idempotency + duplicate-open protection.
+		- Settlement report aggregation with provider/currency/date filters and completed-refund netting.
+	- Extended hosted live preflight with non-destructive payments reliability checks:
+		- `tests/e2e/live-preflight.mjs`
+		- Validates settlement report reachability and negative validation behavior for refund/dispute routes.
 - 2026-03-07: `WB-206` started.
 	- Added observability baseline scaffold in `infra/backend`:
 		- Request timing/error capture middleware

@@ -31,6 +31,63 @@ type BackgroundJobsRunnerSnapshot = {
   lastPruneError: string | null;
 };
 
+type RefundRequestPayload = {
+  bookingId?: unknown;
+  paymentId?: unknown;
+  amount?: unknown;
+  reason?: unknown;
+  idempotencyKey?: unknown;
+};
+
+type DisputeRequestPayload = {
+  bookingId?: unknown;
+  paymentId?: unknown;
+  reason?: unknown;
+  details?: unknown;
+  idempotencyKey?: unknown;
+};
+
+type SettlementReportPayload = {
+  from?: unknown;
+  to?: unknown;
+  provider?: unknown;
+  currency?: unknown;
+};
+
+type RefundRecordStatus = 'PENDING' | 'APPROVED' | 'COMPLETED' | 'REJECTED' | 'FAILED';
+type DisputeRecordStatus = 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED' | 'REJECTED';
+
+type RefundRecord = {
+  id: string;
+  bookingId: string;
+  paymentId: string;
+  provider: string;
+  currency: string;
+  requestedAmount: number;
+  reason: string | null;
+  status: RefundRecordStatus;
+  idempotencyKey: string | null;
+  actorUserId: string;
+  actorRole: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type DisputeRecord = {
+  id: string;
+  bookingId: string;
+  paymentId: string;
+  provider: string;
+  reason: string;
+  details: string | null;
+  status: DisputeRecordStatus;
+  idempotencyKey: string | null;
+  actorUserId: string;
+  actorRole: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 @Injectable()
 export class PaymentsService {
   constructor(
@@ -124,6 +181,227 @@ export class PaymentsService {
       created: true,
       payment,
       clientSecret: intent.clientSecret,
+    };
+  }
+
+  async createRefundRequestForUser(userId: string, payload: RefundRequestPayload) {
+    const normalized = this.parseRefundRequestPayload(payload);
+    const payment = await this.resolvePaymentForAdjustment(normalized.bookingId, normalized.paymentId);
+    const booking = await this.prisma.booking.findUnique({ where: { id: payment.bookingId } });
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    if (booking.userId !== userId) {
+      throw new ForbiddenException('Booking does not belong to authenticated user');
+    }
+
+    return this.createRefundRequest(payment, normalized, {
+      actorUserId: userId,
+      actorRole: 'USER',
+    });
+  }
+
+  async createRefundRequestAsAdmin(
+    payload: RefundRequestPayload,
+    actor: { id: string; role: string },
+  ) {
+    const normalized = this.parseRefundRequestPayload(payload);
+    const payment = await this.resolvePaymentForAdjustment(normalized.bookingId, normalized.paymentId);
+    return this.createRefundRequest(payment, normalized, {
+      actorUserId: actor.id,
+      actorRole: actor.role,
+    });
+  }
+
+  async createDisputeForUser(userId: string, payload: DisputeRequestPayload) {
+    const normalized = this.parseDisputePayload(payload);
+    const payment = await this.resolvePaymentForAdjustment(normalized.bookingId, normalized.paymentId);
+    const booking = await this.prisma.booking.findUnique({ where: { id: payment.bookingId } });
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    if (booking.userId !== userId) {
+      throw new ForbiddenException('Booking does not belong to authenticated user');
+    }
+
+    if (payment.status !== 'SUCCEEDED') {
+      throw new BadRequestException('Disputes can only be opened for succeeded payments');
+    }
+
+    const disputes = await this.readDisputeRecords();
+    if (normalized.idempotencyKey) {
+      const idempotentExisting = disputes.find((record) => record.idempotencyKey === normalized.idempotencyKey);
+      if (idempotentExisting) {
+        return {
+          created: false,
+          dispute: idempotentExisting,
+        };
+      }
+    }
+
+    const openExisting = disputes.find((record) => record.paymentId === payment.id && ['OPEN', 'UNDER_REVIEW'].includes(record.status));
+    if (openExisting) {
+      return {
+        created: false,
+        dispute: openExisting,
+      };
+    }
+
+    const nowIso = new Date().toISOString();
+    const created: DisputeRecord = {
+      id: `dispute_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      bookingId: payment.bookingId,
+      paymentId: payment.id,
+      provider: payment.provider,
+      reason: normalized.reason,
+      details: normalized.details,
+      status: 'OPEN',
+      idempotencyKey: normalized.idempotencyKey,
+      actorUserId: userId,
+      actorRole: 'USER',
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    await this.writeDisputeRecords([created, ...disputes]);
+
+    return {
+      created: true,
+      dispute: created,
+    };
+  }
+
+  async getSettlementReport(payload: SettlementReportPayload) {
+    const dateRange = this.parseSettlementDateRange(payload);
+    const providerFilter = this.parseProviderFilter(payload.provider);
+    if (payload.provider !== undefined && !providerFilter) {
+      throw new BadRequestException('provider must be one of STRIPE, BML, MIB');
+    }
+
+    const currencyFilter = this.parseCurrency(payload.currency);
+    if (payload.currency !== undefined && !currencyFilter) {
+      throw new BadRequestException('currency must be one of USD, MVR');
+    }
+
+    const succeededPayments = await this.prisma.payment.findMany({
+      where: {
+        status: 'SUCCEEDED',
+        ...(providerFilter ? { provider: providerFilter } : {}),
+        ...(currencyFilter ? { currency: currencyFilter } : {}),
+        createdAt: {
+          gte: dateRange.from,
+          lte: dateRange.to,
+        },
+      },
+      select: {
+        id: true,
+        provider: true,
+        currency: true,
+        amount: true,
+        createdAt: true,
+      },
+    });
+
+    const refunds = await this.readRefundRecords();
+    const completedRefunds = refunds.filter((record) => {
+      const createdAt = new Date(record.createdAt);
+      return record.status === 'COMPLETED'
+        && createdAt >= dateRange.from
+        && createdAt <= dateRange.to
+        && (!providerFilter || record.provider === providerFilter)
+        && (!currencyFilter || record.currency === currencyFilter);
+    });
+
+    const bucketByProviderCurrency = new Map<string, {
+      provider: string;
+      currency: string;
+      grossAmount: number;
+      refundedAmount: number;
+      netAmount: number;
+      paymentsCount: number;
+      refundsCount: number;
+    }>();
+
+    for (const payment of succeededPayments) {
+      const key = `${payment.provider}:${payment.currency}`;
+      const existing = bucketByProviderCurrency.get(key) ?? {
+        provider: payment.provider,
+        currency: payment.currency,
+        grossAmount: 0,
+        refundedAmount: 0,
+        netAmount: 0,
+        paymentsCount: 0,
+        refundsCount: 0,
+      };
+
+      existing.grossAmount += Number(payment.amount);
+      existing.netAmount += Number(payment.amount);
+      existing.paymentsCount += 1;
+      bucketByProviderCurrency.set(key, existing);
+    }
+
+    for (const refund of completedRefunds) {
+      const key = `${refund.provider}:${refund.currency}`;
+      const existing = bucketByProviderCurrency.get(key) ?? {
+        provider: refund.provider,
+        currency: refund.currency,
+        grossAmount: 0,
+        refundedAmount: 0,
+        netAmount: 0,
+        paymentsCount: 0,
+        refundsCount: 0,
+      };
+
+      existing.refundedAmount += refund.requestedAmount;
+      existing.netAmount -= refund.requestedAmount;
+      existing.refundsCount += 1;
+      bucketByProviderCurrency.set(key, existing);
+    }
+
+    const byProviderCurrency = Array.from(bucketByProviderCurrency.values())
+      .map((entry) => ({
+        ...entry,
+        grossAmount: Number(entry.grossAmount.toFixed(2)),
+        refundedAmount: Number(entry.refundedAmount.toFixed(2)),
+        netAmount: Number(entry.netAmount.toFixed(2)),
+      }))
+      .sort((a, b) => a.provider.localeCompare(b.provider) || a.currency.localeCompare(b.currency));
+
+    const totals = byProviderCurrency.reduce((acc, item) => {
+      acc.grossAmount += item.grossAmount;
+      acc.refundedAmount += item.refundedAmount;
+      acc.netAmount += item.netAmount;
+      acc.paymentsCount += item.paymentsCount;
+      acc.refundsCount += item.refundsCount;
+      return acc;
+    }, {
+      grossAmount: 0,
+      refundedAmount: 0,
+      netAmount: 0,
+      paymentsCount: 0,
+      refundsCount: 0,
+    });
+
+    return {
+      window: {
+        from: dateRange.from.toISOString(),
+        to: dateRange.to.toISOString(),
+      },
+      filters: {
+        provider: providerFilter ?? 'ALL',
+        currency: currencyFilter ?? 'ALL',
+      },
+      totals: {
+        grossAmount: Number(totals.grossAmount.toFixed(2)),
+        refundedAmount: Number(totals.refundedAmount.toFixed(2)),
+        netAmount: Number(totals.netAmount.toFixed(2)),
+        paymentsCount: totals.paymentsCount,
+        refundsCount: totals.refundsCount,
+      },
+      byProviderCurrency,
+      generatedAt: new Date().toISOString(),
     };
   }
 
@@ -907,6 +1185,205 @@ export class PaymentsService {
     }, undefined, 5, bookingId);
   }
 
+  private async createRefundRequest(
+    payment: { id: string; bookingId: string; provider: string; currency: string; amount: Prisma.Decimal; status: string },
+    normalized: { amount: number | null; reason: string | null; idempotencyKey: string | null },
+    actor: { actorUserId: string; actorRole: string },
+  ) {
+    if (payment.status !== 'SUCCEEDED') {
+      throw new BadRequestException('Refunds can only be requested for succeeded payments');
+    }
+
+    const refunds = await this.readRefundRecords();
+    if (normalized.idempotencyKey) {
+      const idempotentExisting = refunds.find((record) => record.idempotencyKey === normalized.idempotencyKey);
+      if (idempotentExisting) {
+        return {
+          created: false,
+          refund: idempotentExisting,
+        };
+      }
+    }
+
+    const completedOrApprovedAmount = refunds
+      .filter((record) => record.paymentId === payment.id && ['APPROVED', 'COMPLETED'].includes(record.status))
+      .reduce((sum, record) => sum + record.requestedAmount, 0);
+    const pendingAmount = refunds
+      .filter((record) => record.paymentId === payment.id && record.status === 'PENDING')
+      .reduce((sum, record) => sum + record.requestedAmount, 0);
+
+    const paymentAmount = Number(payment.amount);
+    const availableAmount = Math.max(paymentAmount - completedOrApprovedAmount - pendingAmount, 0);
+    const requestedAmount = normalized.amount ?? availableAmount;
+    if (requestedAmount <= 0) {
+      throw new BadRequestException('No refundable balance remains for this payment');
+    }
+
+    if (requestedAmount > availableAmount) {
+      throw new BadRequestException(`Refund amount exceeds available refundable balance (${availableAmount.toFixed(2)})`);
+    }
+
+    const nowIso = new Date().toISOString();
+    const created: RefundRecord = {
+      id: `refund_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      bookingId: payment.bookingId,
+      paymentId: payment.id,
+      provider: payment.provider,
+      currency: payment.currency,
+      requestedAmount: Number(requestedAmount.toFixed(2)),
+      reason: normalized.reason,
+      status: 'PENDING',
+      idempotencyKey: normalized.idempotencyKey,
+      actorUserId: actor.actorUserId,
+      actorRole: actor.actorRole,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    await this.writeRefundRecords([created, ...refunds]);
+
+    return {
+      created: true,
+      refund: created,
+      balances: {
+        paymentAmount: Number(paymentAmount.toFixed(2)),
+        alreadyCommittedAmount: Number(completedOrApprovedAmount.toFixed(2)),
+        pendingAmount: Number((pendingAmount + created.requestedAmount).toFixed(2)),
+        remainingAmount: Number((availableAmount - created.requestedAmount).toFixed(2)),
+      },
+    };
+  }
+
+  private async resolvePaymentForAdjustment(bookingId: string | null, paymentId: string | null) {
+    if (!bookingId && !paymentId) {
+      throw new BadRequestException('bookingId or paymentId is required');
+    }
+
+    const paymentByBooking = bookingId
+      ? await this.prisma.payment.findUnique({ where: { bookingId } })
+      : null;
+    const paymentById = paymentId
+      ? await this.prisma.payment.findUnique({ where: { id: paymentId } })
+      : null;
+
+    const resolved = paymentById ?? paymentByBooking;
+    if (!resolved) {
+      throw new NotFoundException('Payment not found');
+    }
+
+    if (paymentByBooking && paymentById && paymentByBooking.id !== paymentById.id) {
+      throw new BadRequestException('bookingId and paymentId refer to different payments');
+    }
+
+    return resolved;
+  }
+
+  private parseRefundRequestPayload(payload: RefundRequestPayload) {
+    const bookingId = this.parseOptionalId(payload.bookingId);
+    const paymentId = this.parseOptionalId(payload.paymentId);
+    const amount = payload.amount === undefined || payload.amount === null
+      ? null
+      : this.parsePositiveMoney(payload.amount, 'amount');
+    const reason = this.parseOptionalText(payload.reason, 500);
+    const idempotencyKey = this.parseOptionalKey(payload.idempotencyKey, 100);
+
+    return {
+      bookingId,
+      paymentId,
+      amount,
+      reason,
+      idempotencyKey,
+    };
+  }
+
+  private parseDisputePayload(payload: DisputeRequestPayload) {
+    const bookingId = this.parseOptionalId(payload.bookingId);
+    const paymentId = this.parseOptionalId(payload.paymentId);
+    const reason = this.parseRequiredText(payload.reason, 'reason', 250);
+    const details = this.parseOptionalText(payload.details, 2000);
+    const idempotencyKey = this.parseOptionalKey(payload.idempotencyKey, 100);
+
+    return {
+      bookingId,
+      paymentId,
+      reason,
+      details,
+      idempotencyKey,
+    };
+  }
+
+  private parseSettlementDateRange(payload: SettlementReportPayload) {
+    const now = new Date();
+    const defaultFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const from = payload.from !== undefined ? this.parseDate(payload.from, 'from') : defaultFrom;
+    const to = payload.to !== undefined ? this.parseDate(payload.to, 'to') : now;
+
+    if (from.getTime() > to.getTime()) {
+      throw new BadRequestException('from must be before or equal to to');
+    }
+
+    const maxWindowMs = 180 * 24 * 60 * 60 * 1000;
+    if (to.getTime() - from.getTime() > maxWindowMs) {
+      throw new BadRequestException('date range cannot exceed 180 days');
+    }
+
+    return { from, to };
+  }
+
+  private async readRefundRecords(): Promise<RefundRecord[]> {
+    return this.readJsonArrayConfig<RefundRecord>(this.refundConfigKey());
+  }
+
+  private async writeRefundRecords(records: RefundRecord[]) {
+    await this.writeJsonArrayConfig(this.refundConfigKey(), records);
+  }
+
+  private async readDisputeRecords(): Promise<DisputeRecord[]> {
+    return this.readJsonArrayConfig<DisputeRecord>(this.disputeConfigKey());
+  }
+
+  private async writeDisputeRecords(records: DisputeRecord[]) {
+    await this.writeJsonArrayConfig(this.disputeConfigKey(), records);
+  }
+
+  private async readJsonArrayConfig<T>(key: string): Promise<T[]> {
+    const row = await this.prisma.appConfig.findUnique({ where: { key } });
+    if (!row) {
+      return [];
+    }
+
+    const value = row.value as Record<string, unknown>;
+    const entries = Array.isArray(value.items) ? (value.items as T[]) : [];
+    return entries;
+  }
+
+  private async writeJsonArrayConfig<T>(key: string, items: T[]) {
+    const trimmedItems = items.slice(0, 1000);
+    const value = {
+      updatedAt: new Date().toISOString(),
+      items: trimmedItems,
+    };
+
+    await this.prisma.appConfig.upsert({
+      where: { key },
+      update: {
+        value: value as unknown as Prisma.JsonObject,
+      },
+      create: {
+        key,
+        value: value as unknown as Prisma.JsonObject,
+      },
+    });
+  }
+
+  private refundConfigKey() {
+    return 'payments:refund_requests:v1';
+  }
+
+  private disputeConfigKey() {
+    return 'payments:disputes:v1';
+  }
+
   private async processWebhook(
     provider: ProviderName,
     signature: string | undefined,
@@ -1336,6 +1813,91 @@ export class PaymentsService {
     }
 
     return process.env.STRIPE_WEBHOOK_SECRET ?? 'dev-webhook-secret';
+  }
+
+  private parseOptionalId(value: unknown): string | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      throw new BadRequestException('id fields must be non-empty strings when provided');
+    }
+
+    return value.trim();
+  }
+
+  private parsePositiveMoney(value: unknown, fieldName: string): number {
+    const parsed = typeof value === 'string' ? Number(value) : value;
+    if (typeof parsed !== 'number' || !Number.isFinite(parsed) || parsed <= 0) {
+      throw new BadRequestException(`${fieldName} must be a positive number`);
+    }
+
+    return Number(parsed.toFixed(2));
+  }
+
+  private parseOptionalText(value: unknown, maxLength: number): string | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('text fields must be strings when provided');
+    }
+
+    const normalized = value.trim();
+    if (normalized.length === 0) {
+      return null;
+    }
+
+    if (normalized.length > maxLength) {
+      throw new BadRequestException(`text exceeds max length of ${maxLength}`);
+    }
+
+    return normalized;
+  }
+
+  private parseRequiredText(value: unknown, fieldName: string, maxLength: number): string {
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      throw new BadRequestException(`${fieldName} is required`);
+    }
+
+    const normalized = value.trim();
+    if (normalized.length > maxLength) {
+      throw new BadRequestException(`${fieldName} exceeds max length of ${maxLength}`);
+    }
+
+    return normalized;
+  }
+
+  private parseOptionalKey(value: unknown, maxLength: number): string | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      throw new BadRequestException('idempotencyKey must be a non-empty string when provided');
+    }
+
+    const normalized = value.trim();
+    if (normalized.length > maxLength) {
+      throw new BadRequestException(`idempotencyKey exceeds max length of ${maxLength}`);
+    }
+
+    return normalized;
+  }
+
+  private parseDate(value: unknown, fieldName: string): Date {
+    if (typeof value !== 'string') {
+      throw new BadRequestException(`${fieldName} must be a valid ISO date string`);
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BadRequestException(`${fieldName} must be a valid ISO date string`);
+    }
+
+    return parsed;
   }
 
   private parseProvider(value: unknown): ProviderName | null {

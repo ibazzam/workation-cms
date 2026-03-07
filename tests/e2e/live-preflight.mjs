@@ -344,6 +344,68 @@ async function checkCheckoutFailureSemantics() {
   }
 }
 
+async function checkPaymentsReliabilityFlow() {
+  if (!bearerToken) {
+    console.warn('Skipping payments reliability smoke: AUTH_BEARER_TOKEN not set');
+    return;
+  }
+
+  try {
+    const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const to = new Date().toISOString();
+    const settlement = await client.get(`/api/v1/payments/admin/settlements/report?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+    if (settlement.status !== 200) {
+      throw new Error(`settlement report failed: ${settlement.status}`);
+    }
+
+    let refundValidationFailed = false;
+    try {
+      await client.post('/api/v1/payments/refunds', {
+        reason: 'preflight-negative-validation',
+      });
+    } catch (err) {
+      if (err?.response?.status === 400) {
+        refundValidationFailed = true;
+      } else {
+        throw err;
+      }
+    }
+
+    if (!refundValidationFailed) {
+      throw new Error('payments reliability smoke expected refund validation failure but request succeeded');
+    }
+
+    let disputeValidationFailed = false;
+    try {
+      await client.post('/api/v1/payments/disputes', {
+        paymentId: `missing-payment-${Date.now()}`,
+      });
+    } catch (err) {
+      if (err?.response?.status === 400 || err?.response?.status === 404) {
+        disputeValidationFailed = true;
+      } else {
+        throw err;
+      }
+    }
+
+    if (!disputeValidationFailed) {
+      throw new Error('payments reliability smoke expected dispute validation failure but request succeeded');
+    }
+  } catch (err) {
+    if (err?.response?.status === 404) {
+      console.warn('payments reliability endpoints unavailable on target runtime, skipping payments smoke');
+      return;
+    }
+
+    if (err?.response?.status === 403) {
+      console.warn('payments settlement report requires elevated role, skipping payments smoke');
+      return;
+    }
+
+    throw err;
+  }
+}
+
 (async () => {
   try {
     console.log(`Running live preflight against ${baseUrl} (schedule ${scheduleId})`);
@@ -361,6 +423,7 @@ async function checkCheckoutFailureSemantics() {
     await checkWorkationCrud();
     await checkTransportFlow();
     await checkCheckoutFailureSemantics();
+    await checkPaymentsReliabilityFlow();
     console.log('Live preflight passed');
     process.exit(0);
   } catch (err) {

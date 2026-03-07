@@ -155,6 +155,40 @@ export class PaymentsController {
     };
   }
 
+  @Post('refunds')
+  async requestRefund(
+    @CurrentUser() user: RequestUser,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.paymentsService.createRefundRequestForUser(user.id, body);
+  }
+
+  @Post('admin/refunds')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
+  async requestRefundAsAdmin(
+    @CurrentUser() user: RequestUser,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.paymentsService.createRefundRequestAsAdmin(body, {
+      id: user.id,
+      role: user.role,
+    });
+  }
+
+  @Post('disputes')
+  async openDispute(
+    @CurrentUser() user: RequestUser,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.paymentsService.createDisputeForUser(user.id, body);
+  }
+
+  @Get('admin/settlements/report')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
+  async settlementReport(@Query() query: Record<string, unknown>) {
+    return this.paymentsService.getSettlementReport(query);
+  }
+
   @Post('webhooks/stripe')
   @Public()
   @HttpCode(HttpStatus.OK)

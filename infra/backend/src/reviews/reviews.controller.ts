@@ -13,8 +13,16 @@ export class ReviewsController {
 
   @Get('admin/moderation')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE')
-  async listModerationQueue(@Query('status') status?: string, @Query('targetType') targetType?: string) {
-    return this.reviewsService.listModerationQueue(status, targetType);
+  async listModerationQueue(
+    @Query('status') status?: string,
+    @Query('targetType') targetType?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.reviewsService.listModerationQueue(status, targetType, {
+      limit,
+      offset,
+    });
   }
 
   @Get('accommodations/:id')

@@ -19,6 +19,11 @@ type ModerationActionPayload = {
   reviewerNote?: unknown;
 };
 
+type ModerationQueueQuery = {
+  limit?: unknown;
+  offset?: unknown;
+};
+
 type ReviewModerationEvent = {
   reviewId: string;
   action: 'FLAG' | 'HIDE' | 'PUBLISH';
@@ -33,9 +38,10 @@ type ReviewModerationEvent = {
 export class ReviewsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listModerationQueue(status?: string, targetType?: string) {
+  async listModerationQueue(status?: string, targetType?: string, query?: ModerationQueueQuery) {
     const normalized = this.parseOptionalReviewStatus(status);
     const normalizedTargetType = this.parseOptionalTargetTypeFilter(targetType);
+    const pagination = this.parseModerationPagination(query);
 
     const queue = await this.prisma.review.findMany({
       where: {
@@ -62,6 +68,8 @@ export class ReviewsService {
           },
         },
       },
+      take: pagination.limit,
+      skip: pagination.offset,
       orderBy: { updatedAt: 'desc' },
     });
 
@@ -633,6 +641,29 @@ export class ReviewsService {
     }
 
     return this.parseTargetType(value);
+  }
+
+  private parseModerationPagination(query?: ModerationQueueQuery): { limit: number; offset: number } {
+    const parsedLimit = this.parseIntegerOrDefault(query?.limit, 50);
+    const parsedOffset = this.parseIntegerOrDefault(query?.offset, 0);
+
+    const limit = Math.min(Math.max(parsedLimit, 1), 200);
+    const offset = Math.max(parsedOffset, 0);
+
+    return { limit, offset };
+  }
+
+  private parseIntegerOrDefault(value: unknown, defaultValue: number): number {
+    if (value === undefined || value === null || value === '') {
+      return defaultValue;
+    }
+
+    const numeric = typeof value === 'number' ? value : Number(value);
+    if (!Number.isInteger(numeric)) {
+      throw new BadRequestException('Pagination values must be integers');
+    }
+
+    return numeric;
   }
 
   private parseRequiredString(value: unknown, field: string): string {

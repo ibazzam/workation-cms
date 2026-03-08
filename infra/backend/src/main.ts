@@ -31,7 +31,7 @@ function parseTrustProxy(value: string | undefined): boolean | number | string {
 function parseCorsOrigin(value: string | undefined): string[] | boolean {
   const normalized = (value ?? '').trim();
   if (normalized.length === 0) {
-    return true;
+    return process.env.NODE_ENV === 'production' ? false : true;
   }
 
   return normalized
@@ -86,6 +86,10 @@ async function bootstrap() {
   app.enableCors({
     origin: parseCorsOrigin(process.env.CORS_ORIGIN),
   });
+
+  if (process.env.NODE_ENV === 'production' && (process.env.AUTH_ALLOW_HEADER_FALLBACK ?? 'false').toLowerCase() === 'true') {
+    console.warn('AUTH_ALLOW_HEADER_FALLBACK is enabled in production. This should be temporary only.');
+  }
   app.setGlobalPrefix('api/v1');
   const port = Number(process.env.PORT ?? 3000);
   await app.listen(port);

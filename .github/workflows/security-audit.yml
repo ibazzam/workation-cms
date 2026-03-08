@@ -1,0 +1,50 @@
+name: Security audit
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm --prefix infra/backend ci
+
+      - name: Install composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Secrets audit
+        run: npm run security:secrets
+
+      - name: Root production dependency audit
+        run: npm audit --omit=dev
+
+      - name: Backend production dependency audit
+        run: npm --prefix infra/backend audit --omit=dev
+
+      - name: Composer dependency audit
+        run: composer audit

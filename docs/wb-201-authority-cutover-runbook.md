@@ -108,6 +108,7 @@ Staging smoke command
 CI smoke gate workflow
 - Workflow: `.github/workflows/live-preflight-gate.yml`
 - Triggers:
+  - automatic on `pull_request` to `main`
   - automatic on `push` to `main`
   - manual `workflow_dispatch`
 - Required repository secrets:
@@ -129,6 +130,8 @@ CI smoke gate workflow
   - `require_moderation_paths`
   - `require_scheduler_health`
 - Use strict inputs as `true` only after the corresponding endpoints and fixtures are available in target runtime.
+- Branch protection required-check context should match actual GitHub check-run context:
+  - required context: `live-preflight`
 
 ## Rollback Playbook
 

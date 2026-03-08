@@ -174,7 +174,7 @@ Core customer outcomes:
 
 ### B) Production Readiness Task List (Before Public Launch)
 - [x] Add moderation reason codes and reviewer notes for reviews/social trust & safety workflows.
-- [ ] Add rate-limiting and abuse controls on review/social write endpoints.
+- [x] Add rate-limiting and abuse controls on review/social write endpoints.
 - [ ] Complete observability baseline (metrics, structured logs, alert routes, on-call runbook links).
 - [ ] Run load/performance test for booking + payments critical paths and record SLO baselines.
 - [ ] Run security pass (secrets audit, dependency scan, auth hardening checks).
@@ -358,6 +358,17 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- moderation queues now include latest moderation metadata (`reasonCode`, `reviewerNote`, actor and timestamp) from persisted events.
 - 2026-03-07: Authority backend persistence migration completed for current scaffold.
 	- Replaced in-memory controllers with Prisma-backed persistence (`infra/prisma/schema.prisma`).
+- 2026-03-08: Production abuse-control hardening completed for trust & safety write paths.
+	- Added write-rate limiting guard + decorator in authority backend:
+		- `infra/backend/src/security/rate-limit.guard.ts`
+		- `infra/backend/src/security/rate-limit.decorator.ts`
+	- Applied per-endpoint rate limits to review/social write routes (user flag/create and admin moderation CRUD actions):
+		- `infra/backend/src/reviews/reviews.controller.ts`
+		- `infra/backend/src/social-links/social-links.controller.ts`
+	- Registered guard providers in feature modules and verified compile success:
+		- `infra/backend/src/reviews/reviews.module.ts`
+		- `infra/backend/src/social-links/social-links.module.ts`
+		- Build validation: `npm --prefix infra/backend run build` (pass)
 	- Added Prisma service wiring and response mappers in `infra/backend/src`.
 	- Added WB-201 contract parity script:
 		- `infra/backend/scripts/contract-parity.cjs`

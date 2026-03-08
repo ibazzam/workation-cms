@@ -173,7 +173,7 @@ Core customer outcomes:
 - [x] Confirm rollback path and environment variable parity before production promotion (legacy Laravel routes now env-guarded).
 
 ### B) Production Readiness Task List (Before Public Launch)
-- [ ] Add moderation reason codes and reviewer notes for reviews/social trust & safety workflows.
+- [x] Add moderation reason codes and reviewer notes for reviews/social trust & safety workflows.
 - [ ] Add rate-limiting and abuse controls on review/social write endpoints.
 - [ ] Complete observability baseline (metrics, structured logs, alert routes, on-call runbook links).
 - [ ] Run load/performance test for booking + payments critical paths and record SLO baselines.
@@ -352,6 +352,10 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- validates review moderation lifecycle (`flag` -> `hide` -> `publish`) and social moderation lifecycle (`flag` -> `approve` -> `hide`)
 		- validates scheduler health endpoints (`/payments/admin/reconcile/status`, `/payments/admin/jobs/health`, `/payments/admin/alerts`)
 		- hosted run result: `Moderation admin paths OK`, `Scheduler health endpoints OK`, `Live preflight passed`.
+	- Added moderation reason-code and reviewer-note support for reviews/social workflows:
+		- review endpoints: `POST /reviews/:id/flag`, `POST /reviews/admin/:id/hide`, `POST /reviews/admin/:id/publish`
+		- social endpoints: `POST /social-links/:id/flag`, `POST /social-links/admin/:id/approve`, `POST /social-links/admin/:id/hide`
+		- moderation queues now include latest moderation metadata (`reasonCode`, `reviewerNote`, actor and timestamp) from persisted events.
 - 2026-03-07: Authority backend persistence migration completed for current scaffold.
 	- Replaced in-memory controllers with Prisma-backed persistence (`infra/prisma/schema.prisma`).
 	- Added Prisma service wiring and response mappers in `infra/backend/src`.

@@ -32,9 +32,14 @@ class TransportProviderJobsTest extends TestCase
         }
 
         if (\Illuminate\Support\Facades\Schema::hasTable('transport_routes')) {
-            \Illuminate\Support\Facades\DB::getPdo()->exec('PRAGMA foreign_keys = OFF');
+            $isSqlite = \Illuminate\Support\Facades\DB::getDriverName() === 'sqlite';
+            if ($isSqlite) {
+                \Illuminate\Support\Facades\DB::getPdo()->exec('PRAGMA foreign_keys = OFF');
+            }
             $routeId = \Illuminate\Support\Facades\DB::table('transport_routes')->insertGetId(['origin_island_id' => $originId, 'destination_island_id' => $destId, 'created_at' => now(), 'updated_at' => now()]);
-            \Illuminate\Support\Facades\DB::getPdo()->exec('PRAGMA foreign_keys = ON');
+            if ($isSqlite) {
+                \Illuminate\Support\Facades\DB::getPdo()->exec('PRAGMA foreign_keys = ON');
+            }
         } else {
             $routeId = 1;
         }

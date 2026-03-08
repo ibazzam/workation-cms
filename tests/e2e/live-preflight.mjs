@@ -80,6 +80,11 @@ async function checkOpsSlo() {
 }
 
 async function checkWorkationCrud() {
+  if (!bearerToken) {
+    console.warn('Skipping workation CRUD smoke: AUTH_BEARER_TOKEN not set');
+    return;
+  }
+
   const createPayload = {
     title: `preflight-${Date.now()}`,
     description: 'Render+Neon preflight check',
@@ -242,6 +247,11 @@ async function checkTransportFlow() {
     console.log('Transport hold flow OK (legacy endpoints)');
     return;
   } catch (err) {
+    if (err?.response?.status === 401 && !bearerToken) {
+      console.warn('Skipping transport flow smoke: AUTH_BEARER_TOKEN not set');
+      return;
+    }
+
     if (err?.response?.status !== 404) {
       throw err;
     }
@@ -249,7 +259,16 @@ async function checkTransportFlow() {
     console.warn('Legacy transport hold endpoints unavailable; running transport schedule smoke instead');
   }
 
-  await checkTransportScheduleFlow();
+  try {
+    await checkTransportScheduleFlow();
+  } catch (err) {
+    if (err?.response?.status === 401 && !bearerToken) {
+      console.warn('Skipping transport schedule smoke: AUTH_BEARER_TOKEN not set');
+      return;
+    }
+
+    throw err;
+  }
 }
 
 function countActiveBookings(bookingsPayload) {
@@ -556,17 +575,26 @@ async function checkModerationAdminPaths() {
       throw new Error('moderation review create did not return id');
     }
 
-    const flaggedReview = await client.post(`/api/v1/reviews/${reviewId}/flag`);
+    const flaggedReview = await client.post(`/api/v1/reviews/${reviewId}/flag`, {
+      reasonCode: 'OTHER',
+      reviewerNote: 'live-preflight user flag',
+    });
     if (flaggedReview.status !== 201 && flaggedReview.status !== 200) {
       throw new Error(`review flag failed: ${flaggedReview.status}`);
     }
 
-    const hiddenReview = await client.post(`/api/v1/reviews/admin/${reviewId}/hide`);
+    const hiddenReview = await client.post(`/api/v1/reviews/admin/${reviewId}/hide`, {
+      reasonCode: 'POLICY_VIOLATION',
+      reviewerNote: 'live-preflight admin hide',
+    });
     if (hiddenReview.status !== 201 && hiddenReview.status !== 200) {
       throw new Error(`review hide failed: ${hiddenReview.status}`);
     }
 
-    const publishedReview = await client.post(`/api/v1/reviews/admin/${reviewId}/publish`);
+    const publishedReview = await client.post(`/api/v1/reviews/admin/${reviewId}/publish`, {
+      reasonCode: 'OTHER',
+      reviewerNote: 'live-preflight admin publish',
+    });
     if (publishedReview.status !== 201 && publishedReview.status !== 200) {
       throw new Error(`review publish failed: ${publishedReview.status}`);
     }
@@ -584,17 +612,26 @@ async function checkModerationAdminPaths() {
       throw new Error('social link create did not return id');
     }
 
-    const flaggedSocial = await client.post(`/api/v1/social-links/${createdSocialLinkId}/flag`);
+    const flaggedSocial = await client.post(`/api/v1/social-links/${createdSocialLinkId}/flag`, {
+      reasonCode: 'OTHER',
+      reviewerNote: 'live-preflight social flag',
+    });
     if (flaggedSocial.status !== 201 && flaggedSocial.status !== 200) {
       throw new Error(`social link flag failed: ${flaggedSocial.status}`);
     }
 
-    const approvedSocial = await client.post(`/api/v1/social-links/admin/${createdSocialLinkId}/approve`);
+    const approvedSocial = await client.post(`/api/v1/social-links/admin/${createdSocialLinkId}/approve`, {
+      reasonCode: 'OTHER',
+      reviewerNote: 'live-preflight social approve',
+    });
     if (approvedSocial.status !== 201 && approvedSocial.status !== 200) {
       throw new Error(`social link approve failed: ${approvedSocial.status}`);
     }
 
-    const hiddenSocial = await client.post(`/api/v1/social-links/admin/${createdSocialLinkId}/hide`);
+    const hiddenSocial = await client.post(`/api/v1/social-links/admin/${createdSocialLinkId}/hide`, {
+      reasonCode: 'POLICY_VIOLATION',
+      reviewerNote: 'live-preflight social hide',
+    });
     if (hiddenSocial.status !== 201 && hiddenSocial.status !== 200) {
       throw new Error(`social link hide failed: ${hiddenSocial.status}`);
     }

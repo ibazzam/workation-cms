@@ -8,6 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (!Schema::hasTable('islands')) {
+            Schema::create('islands', function (Blueprint $table) {
+                $table->id();
+                $table->string('name');
+                $table->timestamps();
+            });
+        }
+
         Schema::create('transport_operators', function (Blueprint $table) {
             $table->id();
             $table->string('name');

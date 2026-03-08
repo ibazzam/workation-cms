@@ -117,6 +117,23 @@ Load/performance baseline command (booking + payments)
 - `cd . && BASE_URL=https://api.workation.mv AUTH_BEARER_TOKEN=<jwt> PERF_ITERATIONS=10 PERF_CONCURRENCY=4 npm.cmd run perf:booking-payments`
 - Artifacts are written to `artifacts/perf/booking-payments-baseline-<timestamp>.json`.
 
+Security audit commands
+- `npm run security:secrets`
+- `npm audit --omit=dev`
+- `npm --prefix infra/backend audit --omit=dev`
+- `composer audit`
+- Combined command: `npm run security:audit`
+
+Latest security pass snapshot (2026-03-08)
+- Secrets audit: pass (`scripts/security/secrets-audit.mjs`, no high-risk token/key signatures in tracked files)
+- Root prod dependency audit: pass (`npm audit --omit=dev`, 0 vulnerabilities)
+- Backend prod dependency audit: pass (`npm --prefix infra/backend audit --omit=dev`, 0 vulnerabilities)
+- Composer audit: pass (`composer audit`, no advisories)
+- Auth hardening applied:
+  - production header fallback requires explicit `AUTH_ALLOW_HEADER_FALLBACK_IN_PRODUCTION=true`
+  - production default for unset `CORS_ORIGIN` denies cross-origin requests
+  - warning emitted when header fallback auth is enabled in production
+
 Latest load/performance baseline snapshot (2026-03-08)
 - Artifact: `artifacts/perf/booking-payments-baseline-1772969015649.json`
 - Run profile: `iterations=10`, `concurrency=4`, `80` requests per domain

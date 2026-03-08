@@ -177,7 +177,7 @@ Core customer outcomes:
 - [x] Add rate-limiting and abuse controls on review/social write endpoints.
 - [x] Complete observability baseline (metrics, structured logs, alert routes, on-call runbook links).
 - [x] Run load/performance test for booking + payments critical paths and record SLO baselines.
-- [ ] Run security pass (secrets audit, dependency scan, auth hardening checks).
+- [x] Run security pass (secrets audit, dependency scan, auth hardening checks).
 
 ### C) Next Sprint Build List (Product Expansion)
 - [ ] Implement activity/service review targets and include moderation queue support.
@@ -394,6 +394,26 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- Payments domain p95/p99: `1996.18ms` / `3651.49ms`
 		- Error rate: `0` for both domains
 	- Current SLO budget evaluation: breach observed against configured budgets (`booking 800ms`, `payments 1200ms`).
+- 2026-03-08: Security pass completed (secrets audit, dependency scan, auth hardening checks).
+	- Added repeatable security audit tooling and CI workflow:
+		- `scripts/security/secrets-audit.mjs`
+		- `.github/workflows/security-audit.yml`
+		- `package.json` scripts: `security:secrets`, `security:audit`
+	- Remediated dependency advisories:
+		- Root Node deps: updated `vitest`, `@vitest/coverage-v8`, `jsdom`; added overrides for `minimatch` and `rollup`.
+		- Backend Node deps: upgraded `@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`; added overrides for `minimatch` and `multer`.
+		- Composer deps: upgraded `league/commonmark` (`2.8.0` -> `2.8.1`) and `nette/schema` (`v1.3.4` -> `v1.3.5`).
+	- Hardened runtime auth and edge defaults:
+		- `infra/backend/src/auth/guards/auth.guard.ts` now requires explicit `AUTH_ALLOW_HEADER_FALLBACK_IN_PRODUCTION=true` before header fallback can be used in production.
+		- `infra/backend/src/main.ts` now defaults CORS to deny cross-origin in production when `CORS_ORIGIN` is unset and emits warning when fallback auth is enabled in production.
+		- `infra/backend/.env.example` updated with production fallback auth toggle and CORS behavior notes.
+	- Verification results:
+		- `npm run security:secrets` -> pass (no high-risk patterns)
+		- `npm audit --omit=dev` -> 0 vulnerabilities
+		- `npm --prefix infra/backend audit --omit=dev` -> 0 vulnerabilities
+		- `composer audit` -> no advisories
+		- `npm --prefix infra/backend run build` -> pass
+		- `npm test` -> pass
 	- Added Prisma service wiring and response mappers in `infra/backend/src`.
 	- Added WB-201 contract parity script:
 		- `infra/backend/scripts/contract-parity.cjs`

@@ -32,6 +32,8 @@ export class AuthGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest();
     const allowHeaderFallback = (process.env.AUTH_ALLOW_HEADER_FALLBACK ?? 'false').toLowerCase() === 'true';
+    const allowHeaderFallbackInProduction = (process.env.AUTH_ALLOW_HEADER_FALLBACK_IN_PRODUCTION ?? 'false').toLowerCase() === 'true';
+    const isProduction = (process.env.NODE_ENV ?? '').toLowerCase() === 'production';
     const authorizationHeader = request.headers.authorization;
     const authorization = Array.isArray(authorizationHeader) ? authorizationHeader[0] : authorizationHeader;
     const bearerToken = parseBearerToken(typeof authorization === 'string' ? authorization : undefined);
@@ -85,7 +87,7 @@ export class AuthGuard implements CanActivate {
       return true;
     }
 
-    if (!allowHeaderFallback) {
+    if (!allowHeaderFallback || (isProduction && !allowHeaderFallbackInProduction)) {
       throw new UnauthorizedException('Header-based auth fallback is disabled; use bearer token');
     }
 

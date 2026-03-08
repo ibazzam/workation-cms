@@ -16,6 +16,7 @@ import { IslandsModule } from './islands/islands.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PrismaService } from './prisma.service';
 import { LoyaltyModule } from './loyalty/loyalty.module';
+import { ObservabilityModule } from './observability/observability.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { SocialLinksModule } from './social-links/social-links.module';
 import { TransportsModule } from './transports/transports.module';
@@ -37,6 +38,7 @@ import { WorkationsModule } from './workations/workations.module';
     BookingsModule,
     CartModule,
     PaymentsModule,
+    ObservabilityModule,
     LoyaltyModule,
     ReviewsModule,
     SocialLinksModule,

@@ -53,6 +53,14 @@ Notes
 - Emergency rollback flag for Laravel legacy routes:
   - `LEGACY_LARAVEL_BUSINESS_ROUTES_ENABLED=true` (temporary rollback only)
   - Default should remain `false` in normal runtime.
+- Observability baseline endpoints are available on authority backend:
+  - `GET /api/v1/ops/slo-summary`
+  - `GET /api/v1/ops/metrics`
+  - `GET /api/v1/ops/alerts`
+  - `GET /api/v1/ops/runbooks`
+- Runbook links and alert thresholds are configured via environment variables:
+  - `OPS_RUNBOOK_ONCALL_URL`, `OPS_RUNBOOK_INCIDENT_URL`, `OPS_RUNBOOK_PAYMENTS_URL`
+  - `OPS_SLO_WINDOW_MINUTES`, `OPS_ALERT_MIN_SAMPLE_SIZE`, `OPS_ALERT_MAX_ERROR_RATE`, `OPS_ALERT_MAX_P95_MS`
 
 ## Phase Plan
 

@@ -175,7 +175,7 @@ Core customer outcomes:
 ### B) Production Readiness Task List (Before Public Launch)
 - [x] Add moderation reason codes and reviewer notes for reviews/social trust & safety workflows.
 - [x] Add rate-limiting and abuse controls on review/social write endpoints.
-- [ ] Complete observability baseline (metrics, structured logs, alert routes, on-call runbook links).
+- [x] Complete observability baseline (metrics, structured logs, alert routes, on-call runbook links).
 - [ ] Run load/performance test for booking + payments critical paths and record SLO baselines.
 - [ ] Run security pass (secrets audit, dependency scan, auth hardening checks).
 
@@ -369,6 +369,20 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `infra/backend/src/reviews/reviews.module.ts`
 		- `infra/backend/src/social-links/social-links.module.ts`
 		- Build validation: `npm --prefix infra/backend run build` (pass)
+- 2026-03-08: Observability baseline completed for authority backend runtime.
+	- Added dedicated observability module and request instrumentation:
+		- `infra/backend/src/observability/observability.module.ts`
+		- `infra/backend/src/observability/observability.middleware.ts`
+		- `infra/backend/src/observability/observability.service.ts`
+		- `infra/backend/src/observability/observability.controller.ts`
+	- Added structured JSON request logs for hosted log ingestion (`event=http_request` with request id, latency, status, role/user context).
+	- Added observability API endpoints:
+		- `GET /api/v1/ops/slo-summary`
+		- `GET /api/v1/ops/metrics` (Prometheus text format)
+		- `GET /api/v1/ops/alerts`
+		- `GET /api/v1/ops/runbooks`
+	- Added environment-driven thresholds and runbook link variables (`OPS_ALERT_*`, `OPS_RUNBOOK_*`, `OPS_SLO_WINDOW_MINUTES`).
+	- Build validation: `npm --prefix infra/backend run build` (pass)
 	- Added Prisma service wiring and response mappers in `infra/backend/src`.
 	- Added WB-201 contract parity script:
 		- `infra/backend/scripts/contract-parity.cjs`

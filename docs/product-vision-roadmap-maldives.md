@@ -180,7 +180,7 @@ Core customer outcomes:
 - [x] Run security pass (secrets audit, dependency scan, auth hardening checks).
 
 ### C) Next Sprint Build List (Product Expansion)
-- [ ] Implement activity/service review targets and include moderation queue support.
+- [x] Implement activity/service review targets and include moderation queue support.
 - [ ] Extend social integration with embed policy controls and UGC safety validation.
 - [ ] Complete frontend typed hook migration for remaining customer flows.
 - [ ] Add deployment gate in CI requiring full contract matrix pass before promote.
@@ -414,6 +414,18 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `composer audit` -> no advisories
 		- `npm --prefix infra/backend run build` -> pass
 		- `npm test` -> pass
+- 2026-03-08: Expanded reviews target coverage to activities/services with moderation queue support.
+	- Added public listing endpoints for new review targets:
+		- `GET /api/v1/reviews/activities/:id`
+		- `GET /api/v1/reviews/services/:id`
+	- Extended review creation targetType support to include `ACTIVITY` and `SERVICE`.
+	- Extended moderation queue to accept optional `targetType` filter including `ACTIVITY` and `SERVICE`.
+	- Added Prisma schema support and migration for non-FK target references:
+		- `infra/prisma/schema.prisma` (`activityRefId`, `serviceRefId` + indexes)
+		- `infra/prisma/migrations/20260308131000_add_review_activity_service_targets/migration.sql`
+	- Regenerated Prisma client and verified backend build:
+		- `npm --prefix infra/backend run prisma:generate` (pass)
+		- `npm --prefix infra/backend run build` (pass)
 	- Added Prisma service wiring and response mappers in `infra/backend/src`.
 	- Added WB-201 contract parity script:
 		- `infra/backend/scripts/contract-parity.cjs`

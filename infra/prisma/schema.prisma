@@ -210,6 +210,8 @@ model Review {
   targetType      String
   accommodationId String?
   transportId     String?
+  activityRefId   String?
+  serviceRefId    String?
   rating          Int
   title           String?
   comment         String?
@@ -224,8 +226,12 @@ model Review {
 
   @@index([targetType, accommodationId])
   @@index([targetType, transportId])
+  @@index([targetType, activityRefId])
+  @@index([targetType, serviceRefId])
   @@index([userId, targetType, accommodationId])
   @@index([userId, targetType, transportId])
+  @@index([userId, targetType, activityRefId])
+  @@index([userId, targetType, serviceRefId])
 }
 
 model SocialLink {

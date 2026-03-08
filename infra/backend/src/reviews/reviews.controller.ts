@@ -13,8 +13,8 @@ export class ReviewsController {
 
   @Get('admin/moderation')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE')
-  async listModerationQueue(@Query('status') status?: string) {
-    return this.reviewsService.listModerationQueue(status);
+  async listModerationQueue(@Query('status') status?: string, @Query('targetType') targetType?: string) {
+    return this.reviewsService.listModerationQueue(status, targetType);
   }
 
   @Get('accommodations/:id')
@@ -27,6 +27,18 @@ export class ReviewsController {
   @Public()
   async listTransportReviews(@Param('id') id: string) {
     return this.reviewsService.listTransportReviews(id);
+  }
+
+  @Get('activities/:id')
+  @Public()
+  async listActivityReviews(@Param('id') id: string) {
+    return this.reviewsService.listActivityReviews(id);
+  }
+
+  @Get('services/:id')
+  @Public()
+  async listServiceReviews(@Param('id') id: string) {
+    return this.reviewsService.listServiceReviews(id);
   }
 
   @Post()

@@ -50,6 +50,11 @@ Notes
   - `reasonCode` (`SPAM`, `ABUSIVE_LANGUAGE`, `HARASSMENT`, `MISLEADING_CONTENT`, `INAPPROPRIATE_CONTENT`, `POLICY_VIOLATION`, `OTHER`)
   - `reviewerNote` (optional free-text note, up to 500 chars)
 - Admin moderation queue responses include the latest moderation metadata for each flagged/hidden item.
+- Reviews domain now includes activity/service targets:
+  - `GET /api/v1/reviews/activities/:id`
+  - `GET /api/v1/reviews/services/:id`
+  - review creation accepts `targetType` in `{ACCOMMODATION, TRANSPORT, ACTIVITY, SERVICE}`
+  - moderation queue supports optional `targetType` filter across all four target types.
 - Emergency rollback flag for Laravel legacy routes:
   - `LEGACY_LARAVEL_BUSINESS_ROUTES_ENABLED=true` (temporary rollback only)
   - Default should remain `false` in normal runtime.

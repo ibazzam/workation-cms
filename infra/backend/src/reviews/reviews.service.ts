@@ -33,19 +33,27 @@ type ReviewModerationEvent = {
 export class ReviewsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listModerationQueue(status?: string) {
+  async listModerationQueue(status?: string, targetType?: string) {
     const normalized = this.parseOptionalReviewStatus(status);
+    const normalizedTargetType = this.parseOptionalTargetTypeFilter(targetType);
 
     const queue = await this.prisma.review.findMany({
-      where: normalized
-        ? {
-            status: normalized,
-          }
-        : {
-            status: {
-              in: ['FLAGGED', 'HIDDEN'],
-            },
-          },
+      where: {
+        ...(normalized
+          ? {
+              status: normalized,
+            }
+          : {
+              status: {
+                in: ['FLAGGED', 'HIDDEN'],
+              },
+            }),
+        ...(normalizedTargetType
+          ? {
+              targetType: normalizedTargetType,
+            }
+          : {}),
+      },
       include: {
         user: {
           select: {
@@ -125,6 +133,66 @@ export class ReviewsService {
     };
   }
 
+  async listActivityReviews(activityId: string) {
+    const normalizedId = this.parseRequiredString(activityId, 'activityId');
+
+    const items = await this.prisma.review.findMany({
+      where: {
+        targetType: 'ACTIVITY',
+        activityRefId: normalizedId,
+        status: 'PUBLISHED',
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const ratingSummary = this.computeRatingSummary(items.map((item) => item.rating));
+
+    return {
+      targetType: 'ACTIVITY',
+      targetId: normalizedId,
+      ratingSummary,
+      items,
+    };
+  }
+
+  async listServiceReviews(serviceId: string) {
+    const normalizedId = this.parseRequiredString(serviceId, 'serviceId');
+
+    const items = await this.prisma.review.findMany({
+      where: {
+        targetType: 'SERVICE',
+        serviceRefId: normalizedId,
+        status: 'PUBLISHED',
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const ratingSummary = this.computeRatingSummary(items.map((item) => item.rating));
+
+    return {
+      targetType: 'SERVICE',
+      targetId: normalizedId,
+      ratingSummary,
+      items,
+    };
+  }
+
   async create(payload: ReviewCreatePayload, actor?: RequestActor) {
     const userId = this.parseActorUserId(actor?.id);
     const targetType = this.parseTargetType(payload.targetType);
@@ -172,31 +240,103 @@ export class ReviewsService {
       });
     }
 
-    await this.ensureTransportExists(targetId);
+    if (targetType === 'TRANSPORT') {
+      await this.ensureTransportExists(targetId);
+      const existing = await this.prisma.review.findFirst({
+        where: {
+          userId,
+          targetType,
+          transportId: targetId,
+        },
+        select: { id: true },
+      });
+
+      if (existing) {
+        throw new BadRequestException('You have already reviewed this transport');
+      }
+
+      const verifiedStay = await this.hasVerifiedTransportStay(userId, targetId);
+
+      return this.prisma.review.create({
+        data: {
+          userId,
+          targetType,
+          transportId: targetId,
+          rating,
+          title,
+          comment,
+          verifiedStay,
+          status: 'PUBLISHED',
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
+    }
+
+    if (targetType === 'ACTIVITY') {
+      const existing = await this.prisma.review.findFirst({
+        where: {
+          userId,
+          targetType,
+          activityRefId: targetId,
+        },
+        select: { id: true },
+      });
+
+      if (existing) {
+        throw new BadRequestException('You have already reviewed this activity');
+      }
+
+      return this.prisma.review.create({
+        data: {
+          userId,
+          targetType,
+          activityRefId: targetId,
+          rating,
+          title,
+          comment,
+          verifiedStay: false,
+          status: 'PUBLISHED',
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
+    }
+
     const existing = await this.prisma.review.findFirst({
       where: {
         userId,
         targetType,
-        transportId: targetId,
+        serviceRefId: targetId,
       },
       select: { id: true },
     });
 
     if (existing) {
-      throw new BadRequestException('You have already reviewed this transport');
+      throw new BadRequestException('You have already reviewed this service');
     }
-
-    const verifiedStay = await this.hasVerifiedTransportStay(userId, targetId);
 
     return this.prisma.review.create({
       data: {
         userId,
         targetType,
-        transportId: targetId,
+        serviceRefId: targetId,
         rating,
         title,
         comment,
-        verifiedStay,
+        verifiedStay: false,
         status: 'PUBLISHED',
       },
       include: {
@@ -444,17 +584,17 @@ export class ReviewsService {
     return value.trim();
   }
 
-  private parseTargetType(value: unknown): 'ACCOMMODATION' | 'TRANSPORT' {
+  private parseTargetType(value: unknown): 'ACCOMMODATION' | 'TRANSPORT' | 'ACTIVITY' | 'SERVICE' {
     if (typeof value !== 'string') {
-      throw new BadRequestException('targetType must be ACCOMMODATION or TRANSPORT');
+      throw new BadRequestException('targetType must be ACCOMMODATION, TRANSPORT, ACTIVITY, or SERVICE');
     }
 
     const normalized = value.trim().toUpperCase();
-    if (normalized === 'ACCOMMODATION' || normalized === 'TRANSPORT') {
+    if (normalized === 'ACCOMMODATION' || normalized === 'TRANSPORT' || normalized === 'ACTIVITY' || normalized === 'SERVICE') {
       return normalized;
     }
 
-    throw new BadRequestException('targetType must be ACCOMMODATION or TRANSPORT');
+    throw new BadRequestException('targetType must be ACCOMMODATION, TRANSPORT, ACTIVITY, or SERVICE');
   }
 
   private parseRating(value: unknown): number {
@@ -481,6 +621,18 @@ export class ReviewsService {
     }
 
     throw new BadRequestException('status must be PUBLISHED, FLAGGED, or HIDDEN');
+  }
+
+  private parseOptionalTargetTypeFilter(value: unknown): 'ACCOMMODATION' | 'TRANSPORT' | 'ACTIVITY' | 'SERVICE' | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('targetType must be ACCOMMODATION, TRANSPORT, ACTIVITY, or SERVICE');
+    }
+
+    return this.parseTargetType(value);
   }
 
   private parseRequiredString(value: unknown, field: string): string {

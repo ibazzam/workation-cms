@@ -8,7 +8,8 @@
         "test": "vitest --run",
         "coverage": "vitest --coverage",
         "e2e": "node tests/e2e/run-e2e.mjs",
-        "live:preflight": "node tests/e2e/live-preflight.mjs"
+        "live:preflight": "node tests/e2e/live-preflight.mjs",
+        "perf:booking-payments": "node tests/perf/booking-payments-baseline.mjs"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

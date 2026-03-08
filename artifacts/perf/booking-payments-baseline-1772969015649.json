@@ -1,0 +1,102 @@
+{
+  "generatedAt": "2026-03-08T11:23:35.647Z",
+  "baseUrl": "https://api.workation.mv",
+  "config": {
+    "iterations": 10,
+    "concurrency": 4,
+    "timeoutMs": 30000,
+    "bookingP95BudgetMs": 800,
+    "paymentsP95BudgetMs": 1200
+  },
+  "scenarios": [
+    {
+      "key": "booking_list",
+      "domain": "booking",
+      "requests": 40,
+      "successRate": 1,
+      "errorRate": 0,
+      "statusCounts": {
+        "200": 40
+      },
+      "latencyMs": {
+        "p50": 873.97,
+        "p95": 2557.8,
+        "p99": 4499.19,
+        "max": 4499.19
+      }
+    },
+    {
+      "key": "booking_cart",
+      "domain": "booking",
+      "requests": 40,
+      "successRate": 1,
+      "errorRate": 0,
+      "statusCounts": {
+        "200": 40
+      },
+      "latencyMs": {
+        "p50": 406,
+        "p95": 2266.33,
+        "p99": 2301.17,
+        "max": 2301.17
+      }
+    },
+    {
+      "key": "payments_refund_validation",
+      "domain": "payments",
+      "requests": 40,
+      "successRate": 1,
+      "errorRate": 0,
+      "statusCounts": {
+        "400": 40
+      },
+      "latencyMs": {
+        "p50": 310.61,
+        "p95": 1996.18,
+        "p99": 3651.49,
+        "max": 3651.49
+      }
+    },
+    {
+      "key": "payments_dispute_validation",
+      "domain": "payments",
+      "requests": 40,
+      "successRate": 1,
+      "errorRate": 0,
+      "statusCounts": {
+        "400": 40
+      },
+      "latencyMs": {
+        "p50": 348.35,
+        "p95": 1881.88,
+        "p99": 3117.93,
+        "max": 3117.93
+      }
+    }
+  ],
+  "domains": {
+    "booking": {
+      "requests": 80,
+      "errorRate": 0,
+      "latencyMs": {
+        "p95": 2301.17,
+        "p99": 4499.19
+      }
+    },
+    "payments": {
+      "requests": 80,
+      "errorRate": 0,
+      "latencyMs": {
+        "p95": 1996.18,
+        "p99": 3651.49
+      }
+    }
+  },
+  "slo": {
+    "pass": false,
+    "breaches": [
+      "booking p95 2301.17ms > budget 800ms",
+      "payments p95 1996.18ms > budget 1200ms"
+    ]
+  }
+}

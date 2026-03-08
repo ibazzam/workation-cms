@@ -113,6 +113,18 @@ Contract test command
 Staging smoke command
 - `cd . && BASE_URL=https://api.workation.mv SCHEDULE_ID=1 AUTH_BEARER_TOKEN=<jwt> npm.cmd run live:preflight`
 
+Load/performance baseline command (booking + payments)
+- `cd . && BASE_URL=https://api.workation.mv AUTH_BEARER_TOKEN=<jwt> PERF_ITERATIONS=10 PERF_CONCURRENCY=4 npm.cmd run perf:booking-payments`
+- Artifacts are written to `artifacts/perf/booking-payments-baseline-<timestamp>.json`.
+
+Latest load/performance baseline snapshot (2026-03-08)
+- Artifact: `artifacts/perf/booking-payments-baseline-1772969015649.json`
+- Run profile: `iterations=10`, `concurrency=4`, `80` requests per domain
+- Booking domain: `p95=2301.17ms`, `p99=4499.19ms`, `errorRate=0`
+- Payments domain: `p95=1996.18ms`, `p99=3651.49ms`, `errorRate=0`
+- Budget check status: breached configured budgets (`booking p95 <= 800ms`, `payments p95 <= 1200ms`)
+- Follow-up: run query/index tuning and provider latency analysis before launch gate sign-off.
+
 CI smoke gate workflow
 - Workflow: `.github/workflows/live-preflight-gate.yml`
 - Triggers:

@@ -176,7 +176,7 @@ Core customer outcomes:
 - [x] Add moderation reason codes and reviewer notes for reviews/social trust & safety workflows.
 - [x] Add rate-limiting and abuse controls on review/social write endpoints.
 - [x] Complete observability baseline (metrics, structured logs, alert routes, on-call runbook links).
-- [ ] Run load/performance test for booking + payments critical paths and record SLO baselines.
+- [x] Run load/performance test for booking + payments critical paths and record SLO baselines.
 - [ ] Run security pass (secrets audit, dependency scan, auth hardening checks).
 
 ### C) Next Sprint Build List (Product Expansion)
@@ -383,6 +383,17 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `GET /api/v1/ops/runbooks`
 	- Added environment-driven thresholds and runbook link variables (`OPS_ALERT_*`, `OPS_RUNBOOK_*`, `OPS_SLO_WINDOW_MINUTES`).
 	- Build validation: `npm --prefix infra/backend run build` (pass)
+- 2026-03-08: Booking + payments load/performance baseline captured and recorded.
+	- Added repeatable perf harness and npm script:
+		- `tests/perf/booking-payments-baseline.mjs`
+		- `package.json` -> `perf:booking-payments`
+	- Canonical live baseline artifact:
+		- `artifacts/perf/booking-payments-baseline-1772969015649.json`
+	- Baseline results (10 iterations, concurrency 4, 80 requests per domain):
+		- Booking domain p95/p99: `2301.17ms` / `4499.19ms`
+		- Payments domain p95/p99: `1996.18ms` / `3651.49ms`
+		- Error rate: `0` for both domains
+	- Current SLO budget evaluation: breach observed against configured budgets (`booking 800ms`, `payments 1200ms`).
 	- Added Prisma service wiring and response mappers in `infra/backend/src`.
 	- Added WB-201 contract parity script:
 		- `infra/backend/scripts/contract-parity.cjs`

@@ -41,21 +41,21 @@ const scenarios = [
     key: 'booking_list',
     domain: 'booking',
     method: 'get',
-    paths: ['/api/v1/bookings', '/api/bookings'],
+    paths: ['/api/v1/bookings'],
     expectedStatuses: [200],
   },
   {
     key: 'booking_cart',
     domain: 'booking',
     method: 'get',
-    paths: ['/api/v1/cart', '/api/cart'],
+    paths: ['/api/v1/cart'],
     expectedStatuses: [200],
   },
   {
     key: 'payments_refund_validation',
     domain: 'payments',
     method: 'post',
-    paths: ['/api/v1/payments/refunds', '/api/payments/refunds'],
+    paths: ['/api/v1/payments/refunds'],
     body: {
       reason: 'perf-baseline-validation',
     },
@@ -65,7 +65,7 @@ const scenarios = [
     key: 'payments_dispute_validation',
     domain: 'payments',
     method: 'post',
-    paths: ['/api/v1/payments/disputes', '/api/payments/disputes'],
+    paths: ['/api/v1/payments/disputes'],
     body: {
       paymentId: `missing-payment-${Date.now()}`,
     },

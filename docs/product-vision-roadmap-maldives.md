@@ -18,7 +18,7 @@ Core customer outcomes:
 ## A. Foundation and Architecture
 - [x] Finalize single-backend authority and decommission legacy Laravel API paths.
 - [x] Lock environment configs to PostgreSQL everywhere (dev/staging/prod + docs + templates).
-- [ ] Enforce API contract/version policy for all new domains.
+- [x] Enforce API contract/version policy for all new domains.
 - [x] Implement schema governance (migration checklist, rollback playbook, seed strategy).
 - [x] Set up feature flags for gradual rollouts by domain.
 

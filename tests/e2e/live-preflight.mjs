@@ -232,10 +232,7 @@ async function checkCheckoutFailureSemantics() {
   let createdCartItemIds = [];
 
   try {
-    const { res: transportsRes } = await requestWithFallbacks('get', [
-      '/api/v1/transports',
-      '/api/transports',
-    ]);
+    const transportsRes = await client.get('/api/v1/transports');
 
     const transportsData = transportsRes.data;
     const transports = Array.isArray(transportsData)
@@ -255,12 +252,12 @@ async function checkCheckoutFailureSemantics() {
       ? firstTransport.fareClasses[0].code
       : undefined;
 
-    const cartFetch = await requestWithFallbacks('get', ['/api/v1/cart', '/api/cart']);
-    cartPath = cartFetch.path;
+    cartPath = '/api/v1/cart';
+    await client.get(cartPath);
 
-    const bookingsBeforeRes = await requestWithFallbacks('get', ['/api/v1/bookings', '/api/bookings']);
-    bookingsPath = bookingsBeforeRes.path;
-    const activeBefore = countActiveBookings(bookingsBeforeRes.res.data);
+    bookingsPath = '/api/v1/bookings';
+    const bookingsBeforeRes = await client.get(bookingsPath);
+    const activeBefore = countActiveBookings(bookingsBeforeRes.data);
 
     const validTransportItemPayload = {
       serviceType: 'TRANSPORT',
@@ -397,10 +394,10 @@ async function checkPaymentsReliabilityFlow() {
 }
 
 async function resolveModerationTarget() {
-  const transportsResponse = await requestWithFallbacks('get', ['/api/v1/transports', '/api/transports']);
-  const transportRows = Array.isArray(transportsResponse.res.data)
-    ? transportsResponse.res.data
-    : (Array.isArray(transportsResponse.res.data?.items) ? transportsResponse.res.data.items : []);
+  const transportsResponse = await client.get('/api/v1/transports');
+  const transportRows = Array.isArray(transportsResponse.data)
+    ? transportsResponse.data
+    : (Array.isArray(transportsResponse.data?.items) ? transportsResponse.data.items : []);
 
   for (const transport of transportRows) {
     if (typeof transport?.id !== 'string') {
@@ -421,10 +418,10 @@ async function resolveModerationTarget() {
     }
   }
 
-  const accommodationsResponse = await requestWithFallbacks('get', ['/api/v1/accommodations', '/api/accommodations']);
-  const accommodationRows = Array.isArray(accommodationsResponse.res.data)
-    ? accommodationsResponse.res.data
-    : (Array.isArray(accommodationsResponse.res.data?.items) ? accommodationsResponse.res.data.items : []);
+  const accommodationsResponse = await client.get('/api/v1/accommodations');
+  const accommodationRows = Array.isArray(accommodationsResponse.data)
+    ? accommodationsResponse.data
+    : (Array.isArray(accommodationsResponse.data?.items) ? accommodationsResponse.data.items : []);
 
   const firstAccommodation = accommodationRows.find((item) => typeof item?.id === 'string');
   if (firstAccommodation?.id) {

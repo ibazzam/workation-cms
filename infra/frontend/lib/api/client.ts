@@ -67,7 +67,6 @@ function toStringValue(input: unknown, fallback = ''): string {
 export async function fetchHealthStatus(): Promise<HealthStatus> {
   const payload = await fetchJsonWithFallback<{ status?: unknown; timestamp?: unknown } | { data?: { status?: unknown; timestamp?: unknown } }>([
     '/api/v1/health',
-    '/health',
   ]);
 
   const sourceCandidate = 'data' in payload && payload.data ? payload.data : payload;
@@ -82,7 +81,7 @@ export async function fetchHealthStatus(): Promise<HealthStatus> {
 }
 
 export async function fetchAccommodations(): Promise<Accommodation[]> {
-  const payload = await fetchJsonWithFallback<unknown>(['/api/v1/accommodations', '/api/accommodations']);
+  const payload = await fetchJsonWithFallback<unknown>(['/api/v1/accommodations']);
 
   return pickCollection(payload)
     .map((entry) => {
@@ -97,7 +96,7 @@ export async function fetchAccommodations(): Promise<Accommodation[]> {
 }
 
 export async function fetchIslands(): Promise<Island[]> {
-  const payload = await fetchJsonWithFallback<unknown>(['/api/v1/islands', '/api/islands']);
+  const payload = await fetchJsonWithFallback<unknown>(['/api/v1/islands']);
 
   return pickCollection(payload)
     .map((entry) => {
@@ -112,7 +111,7 @@ export async function fetchIslands(): Promise<Island[]> {
 }
 
 export async function fetchVendors(): Promise<Vendor[]> {
-  const payload = await fetchJsonWithFallback<unknown>(['/api/v1/vendors', '/api/vendors']);
+  const payload = await fetchJsonWithFallback<unknown>(['/api/v1/vendors']);
 
   return pickCollection(payload)
     .map((entry) => {
@@ -126,7 +125,7 @@ export async function fetchVendors(): Promise<Vendor[]> {
 }
 
 export async function fetchBookings(): Promise<Booking[]> {
-  const payload = await fetchJsonWithFallback<unknown>(['/api/v1/bookings', '/api/bookings']);
+  const payload = await fetchJsonWithFallback<unknown>(['/api/v1/bookings']);
 
   return pickCollection(payload)
     .map((entry) => {

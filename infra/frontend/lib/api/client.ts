@@ -70,7 +70,10 @@ export async function fetchHealthStatus(): Promise<HealthStatus> {
     '/health',
   ]);
 
-  const source = ('data' in payload && payload.data ? payload.data : payload) as Record<string, unknown>;
+  const sourceCandidate = 'data' in payload && payload.data ? payload.data : payload;
+  const source = (sourceCandidate && typeof sourceCandidate === 'object'
+    ? sourceCandidate
+    : {}) as Record<string, unknown>;
 
   return {
     status: toStringValue(source.status, 'unknown'),
@@ -81,51 +84,59 @@ export async function fetchHealthStatus(): Promise<HealthStatus> {
 export async function fetchAccommodations(): Promise<Accommodation[]> {
   const payload = await fetchJsonWithFallback<unknown>(['/api/v1/accommodations', '/api/accommodations']);
 
-  return pickCollection(payload).map((entry, index) => {
-    const item = (entry ?? {}) as Record<string, unknown>;
-    return {
-      id: toStringValue(item.id, `accommodation-${index}`),
-      name: toStringValue(item.name, 'Untitled accommodation'),
-      islandName: toStringValue(item.islandName ?? item.island_name) || undefined,
-    };
-  });
+  return pickCollection(payload)
+    .map((entry) => {
+      const item = (entry ?? {}) as Record<string, unknown>;
+      return {
+        id: toStringValue(item.id),
+        name: toStringValue(item.name, 'Untitled accommodation'),
+        islandName: toStringValue(item.islandName ?? item.island_name) || undefined,
+      };
+    })
+    .filter((item): item is Accommodation => item.id.length > 0);
 }
 
 export async function fetchIslands(): Promise<Island[]> {
   const payload = await fetchJsonWithFallback<unknown>(['/api/v1/islands', '/api/islands']);
 
-  return pickCollection(payload).map((entry, index) => {
-    const item = (entry ?? {}) as Record<string, unknown>;
-    return {
-      id: toStringValue(item.id, `island-${index}`),
-      name: toStringValue(item.name, 'Untitled island'),
-      atollName: toStringValue(item.atollName ?? item.atoll_name) || undefined,
-    };
-  });
+  return pickCollection(payload)
+    .map((entry) => {
+      const item = (entry ?? {}) as Record<string, unknown>;
+      return {
+        id: toStringValue(item.id),
+        name: toStringValue(item.name, 'Untitled island'),
+        atollName: toStringValue(item.atollName ?? item.atoll_name) || undefined,
+      };
+    })
+    .filter((item): item is Island => item.id.length > 0);
 }
 
 export async function fetchVendors(): Promise<Vendor[]> {
   const payload = await fetchJsonWithFallback<unknown>(['/api/v1/vendors', '/api/vendors']);
 
-  return pickCollection(payload).map((entry, index) => {
-    const item = (entry ?? {}) as Record<string, unknown>;
-    return {
-      id: toStringValue(item.id, `vendor-${index}`),
-      name: toStringValue(item.name, 'Untitled vendor'),
-    };
-  });
+  return pickCollection(payload)
+    .map((entry) => {
+      const item = (entry ?? {}) as Record<string, unknown>;
+      return {
+        id: toStringValue(item.id),
+        name: toStringValue(item.name, 'Untitled vendor'),
+      };
+    })
+    .filter((item): item is Vendor => item.id.length > 0);
 }
 
 export async function fetchBookings(): Promise<Booking[]> {
   const payload = await fetchJsonWithFallback<unknown>(['/api/v1/bookings', '/api/bookings']);
 
-  return pickCollection(payload).map((entry, index) => {
-    const item = (entry ?? {}) as Record<string, unknown>;
-    return {
-      id: toStringValue(item.id, `booking-${index}`),
-      status: toStringValue(item.status, 'unknown'),
-      serviceType: toStringValue(item.serviceType ?? item.service_type) || undefined,
-      createdAt: toStringValue(item.createdAt ?? item.created_at) || undefined,
-    };
-  });
+  return pickCollection(payload)
+    .map((entry) => {
+      const item = (entry ?? {}) as Record<string, unknown>;
+      return {
+        id: toStringValue(item.id),
+        status: toStringValue(item.status, 'unknown'),
+        serviceType: toStringValue(item.serviceType ?? item.service_type) || undefined,
+        createdAt: toStringValue(item.createdAt ?? item.created_at) || undefined,
+      };
+    })
+    .filter((item): item is Booking => item.id.length > 0);
 }

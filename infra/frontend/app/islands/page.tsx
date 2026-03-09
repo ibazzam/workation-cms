@@ -5,6 +5,7 @@ import { useIslands } from '../../lib/hooks/use-catalog'
 
 export default function Islands(){
   const { data, isLoading, isError } = useIslands()
+  const islands = data ?? []
 
   return (
     <section>
@@ -16,13 +17,13 @@ export default function Islands(){
 
       {!isLoading && !isError && (
         <ul className="mt-4 space-y-2 text-sm">
-          {(data ?? []).slice(0, 10).map((item) => (
+          {islands.slice(0, 10).map((item) => (
             <li key={item.id} className="rounded border border-slate-200 px-3 py-2 bg-white">
               <p className="font-medium">{item.name}</p>
               {item.atollName && <p className="text-slate-600">Atoll: {item.atollName}</p>}
             </li>
           ))}
-          {(data ?? []).length === 0 && <li className="text-slate-500">No islands found.</li>}
+          {islands.length === 0 && <li className="text-slate-500">No islands found.</li>}
         </ul>
       )}
 

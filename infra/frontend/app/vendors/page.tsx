@@ -5,6 +5,7 @@ import { useVendors } from '../../lib/hooks/use-catalog'
 
 export default function Vendors(){
   const { data, isLoading, isError } = useVendors()
+  const vendors = data ?? []
 
   return (
     <section>
@@ -16,12 +17,12 @@ export default function Vendors(){
 
       {!isLoading && !isError && (
         <ul className="mt-4 space-y-2 text-sm">
-          {(data ?? []).slice(0, 10).map((item) => (
+          {vendors.slice(0, 10).map((item) => (
             <li key={item.id} className="rounded border border-slate-200 px-3 py-2 bg-white">
               <p className="font-medium">{item.name}</p>
             </li>
           ))}
-          {(data ?? []).length === 0 && <li className="text-slate-500">No vendors found.</li>}
+          {vendors.length === 0 && <li className="text-slate-500">No vendors found.</li>}
         </ul>
       )}
 

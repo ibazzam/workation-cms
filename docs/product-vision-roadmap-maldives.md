@@ -183,7 +183,7 @@ Core customer outcomes:
 - [x] Implement activity/service review targets and include moderation queue support.
 - [x] Extend social integration with embed policy controls and UGC safety validation.
 - [ ] Complete frontend typed hook migration for remaining customer flows.
-- [ ] Add deployment gate in CI requiring full contract matrix pass before promote.
+- [x] Add deployment gate in CI requiring full contract matrix pass before promote.
 
 ## 8) Live Finish Now (Render + Neon)
 

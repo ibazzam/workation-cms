@@ -1,0 +1,91 @@
+name: Promote with contract gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: Branch, tag, or commit SHA to validate before promotion
+        required: true
+        default: main
+      dry_run:
+        description: Validate gate only without triggering deployment hook
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  checks: read
+
+jobs:
+  contract-matrix-gate:
+    name: Contract matrix gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required checks on target ref
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const targetRef = core.getInput('target_ref') || 'main';
+            const requiredChecks = [
+              'PHPUnit + Build',
+              'JS Coverage',
+              'smoke',
+              'security-audit',
+              'live-preflight',
+            ];
+
+            const { owner, repo } = context.repo;
+            const commit = await github.rest.repos.getCommit({ owner, repo, ref: targetRef });
+            const sha = commit.data.sha;
+            const checks = await github.rest.checks.listForRef({ owner, repo, ref: sha, per_page: 100 });
+
+            const byName = new Map();
+            for (const run of checks.data.check_runs) {
+              byName.set(run.name, run);
+            }
+
+            const failures = [];
+            for (const checkName of requiredChecks) {
+              const run = byName.get(checkName);
+              if (!run) {
+                failures.push(`${checkName}: missing`);
+                continue;
+              }
+
+              if (run.status !== 'completed' || run.conclusion !== 'success') {
+                failures.push(`${checkName}: status=${run.status}, conclusion=${run.conclusion}`);
+              }
+            }
+
+            core.info(`Evaluated ref ${targetRef} at sha ${sha}`);
+
+            if (failures.length > 0) {
+              core.setFailed(`Promotion blocked. Required checks not green:\n- ${failures.join('\n- ')}`);
+              return;
+            }
+
+            core.notice('All required contract matrix checks passed. Promotion gate is open.');
+
+  promote:
+    name: Promote deployment
+    runs-on: ubuntu-latest
+    needs: [contract-matrix-gate]
+    if: ${{ needs.contract-matrix-gate.result == 'success' }}
+    steps:
+      - name: Promotion dry run
+        if: ${{ inputs.dry_run }}
+        run: echo "Dry run enabled. Gate validated; no deployment hook triggered."
+
+      - name: Trigger Render deployment hook
+        if: ${{ !inputs.dry_run }}
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "RENDER_DEPLOY_HOOK_URL secret is required for non-dry-run promotion."
+            exit 1
+          fi
+
+          curl --fail --show-error --silent -X POST "$RENDER_DEPLOY_HOOK_URL"
+          echo "Render deploy hook triggered."

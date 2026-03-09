@@ -182,6 +182,22 @@ CI smoke gate workflow
 - Branch protection required-check context should match actual GitHub check-run context:
   - required context: `live-preflight`
 
+CI promotion gate workflow
+- Workflow: `.github/workflows/promote-with-contract-gate.yml`
+- Trigger:
+  - manual `workflow_dispatch`
+- Inputs:
+  - `target_ref` (branch/tag/sha to validate, default `main`)
+  - `dry_run` (`true` validates only, `false` triggers deploy hook)
+- Required check matrix before promotion:
+  - `PHPUnit + Build`
+  - `JS Coverage`
+  - `smoke`
+  - `security-audit`
+  - `live-preflight`
+- Deployment secret:
+  - `RENDER_DEPLOY_HOOK_URL` (required only when `dry_run=false`)
+
 ## Rollback Playbook
 
 Trigger conditions

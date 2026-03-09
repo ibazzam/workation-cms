@@ -8,7 +8,7 @@
     "ADMIN_CARE",
     "ADMIN_FINANCE"
   ],
-  "totalEndpoints": 121,
+  "totalEndpoints": 122,
   "endpoints": [
     {
       "method": "GET",
@@ -265,11 +265,11 @@
     {
       "method": "GET",
       "path": "/api/v1/atolls",
-      "accessMode": "authenticated",
+      "accessMode": "public",
       "allowedRoles": [],
       "source": "infra/backend/src/islands/islands.controller.ts",
       "roles": {
-        "ANONYMOUS": false,
+        "ANONYMOUS": true,
         "USER": true,
         "VENDOR": true,
         "ADMIN": true,
@@ -281,11 +281,11 @@
     {
       "method": "GET",
       "path": "/api/v1/atolls/:id",
-      "accessMode": "authenticated",
+      "accessMode": "public",
       "allowedRoles": [],
       "source": "infra/backend/src/islands/islands.controller.ts",
       "roles": {
-        "ANONYMOUS": false,
+        "ANONYMOUS": true,
         "USER": true,
         "VENDOR": true,
         "ADMIN": true,
@@ -654,11 +654,11 @@
     {
       "method": "GET",
       "path": "/api/v1/islands",
-      "accessMode": "authenticated",
+      "accessMode": "public",
       "allowedRoles": [],
       "source": "infra/backend/src/islands/islands.controller.ts",
       "roles": {
-        "ANONYMOUS": false,
+        "ANONYMOUS": true,
         "USER": true,
         "VENDOR": true,
         "ADMIN": true,
@@ -670,17 +670,37 @@
     {
       "method": "GET",
       "path": "/api/v1/islands/:id",
-      "accessMode": "authenticated",
+      "accessMode": "public",
       "allowedRoles": [],
       "source": "infra/backend/src/islands/islands.controller.ts",
       "roles": {
-        "ANONYMOUS": false,
+        "ANONYMOUS": true,
         "USER": true,
         "VENDOR": true,
         "ADMIN": true,
         "ADMIN_SUPER": true,
         "ADMIN_CARE": true,
         "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/islands/admin/:id/metadata",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/islands/islands.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
       }
     },
     {

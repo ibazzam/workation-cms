@@ -46,7 +46,33 @@ type RequestActor = {
 export class TransportsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(filters: { fromIslandId?: number; toIslandId?: number; type?: string; date?: string }) {
+  private computeRouteRelevanceScore(
+    transport: { fromIsland?: { id?: number | null; atollId?: number | null } | null; toIsland?: { id?: number | null; atollId?: number | null } | null },
+    filters: { anchorIslandId?: number; preferredAtollId?: number },
+  ): number {
+    let score = 0;
+
+    if (filters.anchorIslandId !== undefined) {
+      if (transport.fromIsland?.id === filters.anchorIslandId) score += 3;
+      if (transport.toIsland?.id === filters.anchorIslandId) score += 3;
+    }
+
+    if (filters.preferredAtollId !== undefined) {
+      if (transport.fromIsland?.atollId === filters.preferredAtollId) score += 2;
+      if (transport.toIsland?.atollId === filters.preferredAtollId) score += 2;
+    }
+
+    return score;
+  }
+
+  async list(filters: {
+    fromIslandId?: number;
+    toIslandId?: number;
+    type?: string;
+    date?: string;
+    anchorIslandId?: number;
+    preferredAtollId?: number;
+  }) {
     const dayRange = filters.date ? this.parseDateRange(filters.date) : null;
 
     const transports = await this.prisma.transport.findMany({
@@ -76,10 +102,38 @@ export class TransportsService {
 
     const withSeatInventory = await this.attachSeatInventory(transports);
     const withFareClassInventory = await this.attachFareClassInventory(withSeatInventory);
-    return this.attachActiveDisruption(withFareClassInventory);
+    const withDisruption = await this.attachActiveDisruption(withFareClassInventory);
+
+    if (filters.anchorIslandId === undefined && filters.preferredAtollId === undefined) {
+      return withDisruption;
+    }
+
+    const withRelevance = withDisruption.map((transport) => ({
+      ...transport,
+      relevanceScore: this.computeRouteRelevanceScore(transport, filters),
+    }));
+
+    withRelevance.sort((a, b) => {
+      if (a.relevanceScore !== b.relevanceScore) {
+        return b.relevanceScore - a.relevanceScore;
+      }
+
+      const aDeparture = a.departure ? new Date(a.departure).getTime() : Number.MAX_SAFE_INTEGER;
+      const bDeparture = b.departure ? new Date(b.departure).getTime() : Number.MAX_SAFE_INTEGER;
+      return aDeparture - bDeparture;
+    });
+
+    return withRelevance;
   }
 
-  async listSchedule(filters: { fromIslandId?: number; toIslandId?: number; type?: string; date?: string }) {
+  async listSchedule(filters: {
+    fromIslandId?: number;
+    toIslandId?: number;
+    type?: string;
+    date?: string;
+    anchorIslandId?: number;
+    preferredAtollId?: number;
+  }) {
     if (!filters.date) {
       throw new BadRequestException('date is required (YYYY-MM-DD)');
     }
@@ -87,7 +141,13 @@ export class TransportsService {
     return this.list(filters);
   }
 
-  async listFlightSchedule(filters: { fromIslandId?: number; toIslandId?: number; date?: string }) {
+  async listFlightSchedule(filters: {
+    fromIslandId?: number;
+    toIslandId?: number;
+    date?: string;
+    anchorIslandId?: number;
+    preferredAtollId?: number;
+  }) {
     return this.listSchedule({
       ...filters,
       type: 'DOMESTIC_FLIGHT',
@@ -859,12 +919,8 @@ export class TransportsService {
     return { start, end };
   }
 
-  private async attachSeatInventory(
-    transports: Array<{
-      id: string;
-      capacity: number | null;
-      [key: string]: unknown;
-    }>,
+  private async attachSeatInventory<TRow extends { id: string; capacity: number | null; [key: string]: unknown }>(
+    transports: TRow[],
   ) {
     if (transports.length === 0) {
       return transports;

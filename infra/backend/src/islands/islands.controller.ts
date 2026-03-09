@@ -26,12 +26,23 @@ export class IslandsController {
   async listIslands(
     @Query('atollId') atollId?: string,
     @Query('q') q?: string,
+    @Query('nearLat') nearLat?: string,
+    @Query('nearLng') nearLng?: string,
+    @Query('radiusKm') radiusKm?: string,
+    @Query('sort') sort?: string,
   ) {
     const parsedAtollId = atollId !== undefined ? Number(atollId) : undefined;
+    const parsedNearLat = nearLat !== undefined ? Number(nearLat) : undefined;
+    const parsedNearLng = nearLng !== undefined ? Number(nearLng) : undefined;
+    const parsedRadiusKm = radiusKm !== undefined ? Number(radiusKm) : undefined;
 
     return this.islandsService.listIslands({
       atollId: Number.isFinite(parsedAtollId) ? parsedAtollId : undefined,
       q: q?.trim() ? q.trim() : undefined,
+      nearLat: Number.isFinite(parsedNearLat) ? parsedNearLat : undefined,
+      nearLng: Number.isFinite(parsedNearLng) ? parsedNearLng : undefined,
+      radiusKm: Number.isFinite(parsedRadiusKm) ? parsedRadiusKm : undefined,
+      sort: sort?.trim() ? sort.trim().toLowerCase() : undefined,
     });
   }
 

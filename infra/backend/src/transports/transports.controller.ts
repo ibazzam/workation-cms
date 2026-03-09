@@ -24,15 +24,21 @@ export class TransportsController {
     @Query('toIslandId') toIslandId?: string,
     @Query('type') type?: string,
     @Query('date') date?: string,
+    @Query('anchorIslandId') anchorIslandId?: string,
+    @Query('preferredAtollId') preferredAtollId?: string,
   ) {
     const parsedFromIslandId = fromIslandId !== undefined ? Number(fromIslandId) : undefined;
     const parsedToIslandId = toIslandId !== undefined ? Number(toIslandId) : undefined;
+    const parsedAnchorIslandId = anchorIslandId !== undefined ? Number(anchorIslandId) : undefined;
+    const parsedPreferredAtollId = preferredAtollId !== undefined ? Number(preferredAtollId) : undefined;
 
     return this.transportsService.list({
       fromIslandId: Number.isFinite(parsedFromIslandId) ? parsedFromIslandId : undefined,
       toIslandId: Number.isFinite(parsedToIslandId) ? parsedToIslandId : undefined,
       type: type?.trim() ? type.trim() : undefined,
       date: date?.trim() ? date.trim() : undefined,
+      anchorIslandId: Number.isFinite(parsedAnchorIslandId) ? parsedAnchorIslandId : undefined,
+      preferredAtollId: Number.isFinite(parsedPreferredAtollId) ? parsedPreferredAtollId : undefined,
     });
   }
 
@@ -43,15 +49,21 @@ export class TransportsController {
     @Query('fromIslandId') fromIslandId?: string,
     @Query('toIslandId') toIslandId?: string,
     @Query('type') type?: string,
+    @Query('anchorIslandId') anchorIslandId?: string,
+    @Query('preferredAtollId') preferredAtollId?: string,
   ) {
     const parsedFromIslandId = fromIslandId !== undefined ? Number(fromIslandId) : undefined;
     const parsedToIslandId = toIslandId !== undefined ? Number(toIslandId) : undefined;
+    const parsedAnchorIslandId = anchorIslandId !== undefined ? Number(anchorIslandId) : undefined;
+    const parsedPreferredAtollId = preferredAtollId !== undefined ? Number(preferredAtollId) : undefined;
 
     return this.transportsService.listSchedule({
       date: date?.trim() ? date.trim() : undefined,
       fromIslandId: Number.isFinite(parsedFromIslandId) ? parsedFromIslandId : undefined,
       toIslandId: Number.isFinite(parsedToIslandId) ? parsedToIslandId : undefined,
       type: type?.trim() ? type.trim() : undefined,
+      anchorIslandId: Number.isFinite(parsedAnchorIslandId) ? parsedAnchorIslandId : undefined,
+      preferredAtollId: Number.isFinite(parsedPreferredAtollId) ? parsedPreferredAtollId : undefined,
     });
   }
 
@@ -61,14 +73,20 @@ export class TransportsController {
     @Query('date') date?: string,
     @Query('fromIslandId') fromIslandId?: string,
     @Query('toIslandId') toIslandId?: string,
+    @Query('anchorIslandId') anchorIslandId?: string,
+    @Query('preferredAtollId') preferredAtollId?: string,
   ) {
     const parsedFromIslandId = fromIslandId !== undefined ? Number(fromIslandId) : undefined;
     const parsedToIslandId = toIslandId !== undefined ? Number(toIslandId) : undefined;
+    const parsedAnchorIslandId = anchorIslandId !== undefined ? Number(anchorIslandId) : undefined;
+    const parsedPreferredAtollId = preferredAtollId !== undefined ? Number(preferredAtollId) : undefined;
 
     return this.transportsService.listFlightSchedule({
       date: date?.trim() ? date.trim() : undefined,
       fromIslandId: Number.isFinite(parsedFromIslandId) ? parsedFromIslandId : undefined,
       toIslandId: Number.isFinite(parsedToIslandId) ? parsedToIslandId : undefined,
+      anchorIslandId: Number.isFinite(parsedAnchorIslandId) ? parsedAnchorIslandId : undefined,
+      preferredAtollId: Number.isFinite(parsedPreferredAtollId) ? parsedPreferredAtollId : undefined,
     });
   }
 

@@ -27,7 +27,7 @@ Core customer outcomes:
 - [x] Add vendor-scoped authorization rules (tenant ownership boundaries).
 - [x] Add customer identity lifecycle (profile completeness, preferences).
 - [x] Add audit logging for admin actions across all write endpoints.
-- [ ] Add permission matrix docs + automated tests for all role/resource combinations.
+- [x] Add permission matrix docs + automated tests for all role/resource combinations.
 
 ## C. Geographic and Catalog Core
 - [x] Islands/atolls read APIs.

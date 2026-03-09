@@ -119,6 +119,9 @@ jobs:
       - name: Enforce API contract/version policy
         run: npm run contract:policy
 
+      - name: Check auth permission matrix
+        run: npm run permissions:matrix:check
+
       - name: Run JS coverage
         run: |
           npm run coverage

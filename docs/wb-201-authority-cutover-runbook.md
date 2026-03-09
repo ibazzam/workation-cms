@@ -55,6 +55,13 @@ Notes
   - `GET /api/v1/reviews/services/:id`
   - review creation accepts `targetType` in `{ACCOMMODATION, TRANSPORT, ACTIVITY, SERVICE}`
   - moderation queue supports optional `targetType` filter across all four target types.
+- Social integration now includes embed policy and UGC safety controls:
+  - `SocialLink.embedPolicy` supports `PLATFORM_EMBED`, `LINK_ONLY`, `NO_EMBED`
+  - `SocialLink.ugcSafetyStatus` supports `SAFE`, `REVIEW`, `BLOCKED`
+  - URL safety validation blocks localhost/private-network targets and validates platform-host compatibility
+  - public social listing returns only links with `active=true`, `verified=true`, and `ugcSafetyStatus=SAFE`
+  - moderation queue includes links with `ugcSafetyStatus != SAFE` for trust/safety review
+  - optional env blocklist for domains: `SOCIAL_LINK_BLOCKED_DOMAINS` (comma-separated)
 - Emergency rollback flag for Laravel legacy routes:
   - `LEGACY_LARAVEL_BUSINESS_ROUTES_ENABLED=true` (temporary rollback only)
   - Default should remain `false` in normal runtime.

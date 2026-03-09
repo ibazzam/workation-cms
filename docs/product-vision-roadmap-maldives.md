@@ -181,7 +181,7 @@ Core customer outcomes:
 
 ### C) Next Sprint Build List (Product Expansion)
 - [x] Implement activity/service review targets and include moderation queue support.
-- [ ] Extend social integration with embed policy controls and UGC safety validation.
+- [x] Extend social integration with embed policy controls and UGC safety validation.
 - [ ] Complete frontend typed hook migration for remaining customer flows.
 - [ ] Add deployment gate in CI requiring full contract matrix pass before promote.
 
@@ -414,6 +414,22 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `composer audit` -> no advisories
 		- `npm --prefix infra/backend run build` -> pass
 		- `npm test` -> pass
+- 2026-03-09: Social integration hardening completed for embed policy and UGC safety controls.
+	- Extended `SocialLink` schema with explicit policy/safety metadata:
+		- `embedPolicy` (`PLATFORM_EMBED`, `LINK_ONLY`, `NO_EMBED`)
+		- `ugcSafetyStatus` (`SAFE`, `REVIEW`, `BLOCKED`)
+		- `ugcSafetyReason` (optional reviewer/system reason)
+	- Added migration for policy/safety columns and indexing:
+		- `infra/prisma/migrations/20260309101500_add_social_embed_policy_and_ugc_safety/migration.sql`
+	- Added UGC safety validation in social links service:
+		- URL normalization and public-host constraints (no localhost/private-network hosts)
+		- Platform-to-host compatibility validation (`INSTAGRAM`, `FACEBOOK`, `TIKTOK`, `X`, `YOUTUBE`, `LINKEDIN`, `WHATSAPP`, `TELEGRAM`, `WEBSITE`)
+		- Blocked-domain safety gate via `SOCIAL_LINK_BLOCKED_DOMAINS` plus baseline blocked shorteners
+	- Public social link listing now returns only safety-cleared links (`ugcSafetyStatus=SAFE`) in addition to existing `active` + `verified` filters.
+	- Moderation queue now includes links requiring safety review (`ugcSafetyStatus != SAFE`) in addition to inactive/unverified entries.
+	- Build validation:
+		- `npm --prefix infra/backend run prisma:generate` -> pass
+		- `npm --prefix infra/backend run build` -> pass
 - 2026-03-08: Expanded reviews target coverage to activities/services with moderation queue support.
 	- Added public listing endpoints for new review targets:
 		- `GET /api/v1/reviews/activities/:id`

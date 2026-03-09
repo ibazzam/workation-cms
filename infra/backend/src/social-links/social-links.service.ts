@@ -2,11 +2,15 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 
+type EmbedPolicy = 'PLATFORM_EMBED' | 'LINK_ONLY' | 'NO_EMBED';
+type UgcSafetyStatus = 'SAFE' | 'REVIEW' | 'BLOCKED';
+
 type SocialLinkPayload = {
   targetType?: unknown;
   targetId?: unknown;
   platform?: unknown;
   url?: unknown;
+  embedPolicy?: unknown;
   handle?: unknown;
   verified?: unknown;
   displayOrder?: unknown;
@@ -18,6 +22,26 @@ type RequestActor = {
   role?: string;
   vendorId?: string;
 };
+
+type SocialLinkModerationSnapshot = {
+  embedPolicy?: string | null;
+  ugcSafetyStatus?: string | null;
+  ugcSafetyReason?: string | null;
+};
+
+const PLATFORM_HOST_MAP: Record<string, string[]> = {
+  INSTAGRAM: ['instagram.com'],
+  FACEBOOK: ['facebook.com', 'fb.watch'],
+  TIKTOK: ['tiktok.com'],
+  X: ['x.com', 'twitter.com'],
+  YOUTUBE: ['youtube.com', 'youtu.be'],
+  LINKEDIN: ['linkedin.com'],
+  WHATSAPP: ['whatsapp.com', 'wa.me'],
+  TELEGRAM: ['telegram.org', 't.me', 'telegram.me'],
+  WEBSITE: [],
+};
+
+const BASE_BLOCKED_SOCIAL_DOMAINS = new Set(['bit.ly', 'tinyurl.com', 'rb.gy']);
 
 type ModerationActionPayload = {
   reasonCode?: unknown;
@@ -44,7 +68,7 @@ export class SocialLinksService {
     const queue = await this.prisma.socialLink.findMany({
       where: {
         ...(normalizedTargetType ? { targetType: normalizedTargetType } : {}),
-        OR: [{ active: false }, { verified: false }],
+        OR: [{ active: false }, { verified: false }, { ugcSafetyStatus: { not: 'SAFE' } }],
       },
       orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
     });
@@ -65,6 +89,7 @@ export class SocialLinksService {
         accommodationId,
         active: true,
         verified: true,
+        ugcSafetyStatus: 'SAFE',
       },
       orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
     });
@@ -78,6 +103,7 @@ export class SocialLinksService {
         transportId,
         active: true,
         verified: true,
+        ugcSafetyStatus: 'SAFE',
       },
       orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
     });
@@ -91,6 +117,7 @@ export class SocialLinksService {
         vendorId,
         active: true,
         verified: true,
+        ugcSafetyStatus: 'SAFE',
       },
       orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
     });
@@ -118,7 +145,17 @@ export class SocialLinksService {
       vendorId: existing.vendorId ?? undefined,
     });
 
-    const normalized = await this.normalizePayload(payload, { partial: true, existingTargetType: existing.targetType });
+    const normalized = await this.normalizePayload(payload, {
+      partial: true,
+      existingTargetType: existing.targetType,
+      existingPlatform: existing.platform,
+      existingUrl: existing.url,
+      existingModeration: {
+        embedPolicy: existing.embedPolicy,
+        ugcSafetyStatus: existing.ugcSafetyStatus,
+        ugcSafetyReason: existing.ugcSafetyReason,
+      },
+    });
     const merged = {
       targetType: existing.targetType,
       accommodationId: existing.accommodationId ?? undefined,
@@ -314,7 +351,13 @@ export class SocialLinksService {
 
   private async normalizePayload(
     payload: SocialLinkPayload,
-    options: { partial: boolean; existingTargetType?: string },
+    options: {
+      partial: boolean;
+      existingTargetType?: string;
+      existingPlatform?: string;
+      existingUrl?: string;
+      existingModeration?: SocialLinkModerationSnapshot;
+    },
   ) {
     const targetType = options.partial
       ? this.parseOptionalTargetType(payload.targetType)
@@ -324,6 +367,7 @@ export class SocialLinksService {
     const platform = this.parseOptionalString(payload.platform)?.toUpperCase();
     const url = this.parseOptionalString(payload.url);
     const handle = this.parseOptionalNullableString(payload.handle);
+    const embedPolicy = this.parseOptionalEmbedPolicy(payload.embedPolicy);
     const verified = this.parseOptionalBoolean(payload.verified);
     const displayOrder = this.parseOptionalInteger(payload.displayOrder);
     const active = this.parseOptionalBoolean(payload.active);
@@ -366,10 +410,50 @@ export class SocialLinksService {
     }
 
     if (url !== undefined) {
-      if (!/^https?:\/\//i.test(url)) {
-        throw new BadRequestException('url must be an absolute http/https URL');
-      }
+      this.validatePublicUrl(url);
       data.url = url;
+    }
+
+    const effectivePlatform = (
+      platform
+      ?? (typeof data.platform === 'string' ? data.platform : undefined)
+      ?? options.existingPlatform
+    ) as string | undefined;
+    const effectiveUrl = (
+      url
+      ?? (typeof data.url === 'string' ? data.url : undefined)
+      ?? options.existingUrl
+    ) as string | undefined;
+
+    const shouldRecalculateSafety = !options.partial || url !== undefined || platform !== undefined;
+
+    if (effectivePlatform && effectiveUrl && shouldRecalculateSafety) {
+      this.validatePlatformUrlCompatibility(effectivePlatform, effectiveUrl);
+
+      const safety = this.evaluateUgcSafety(effectiveUrl);
+      data.ugcSafetyStatus = safety.status;
+      data.ugcSafetyReason = safety.reason;
+
+      if (safety.status === 'BLOCKED') {
+        data.active = false;
+        data.verified = false;
+      }
+
+      data.embedPolicy = embedPolicy
+        ?? options.existingModeration?.embedPolicy
+        ?? this.defaultEmbedPolicyForPlatform(effectivePlatform);
+    } else if (embedPolicy !== undefined) {
+      data.embedPolicy = embedPolicy;
+    } else if (options.partial && options.existingModeration?.embedPolicy) {
+      data.embedPolicy = options.existingModeration.embedPolicy;
+    }
+
+    if (options.partial && !shouldRecalculateSafety) {
+      if (options.existingModeration?.ugcSafetyStatus) {
+        data.ugcSafetyStatus = options.existingModeration.ugcSafetyStatus;
+      }
+
+      data.ugcSafetyReason = options.existingModeration?.ugcSafetyReason ?? null;
     }
 
     if (handle !== undefined) data.handle = handle;
@@ -380,6 +464,14 @@ export class SocialLinksService {
     if (!options.partial) {
       if (!data.platform || !data.url) {
         throw new BadRequestException('platform and url are required');
+      }
+
+      if (!data.embedPolicy) {
+        data.embedPolicy = this.defaultEmbedPolicyForPlatform(String(data.platform));
+      }
+
+      if (!data.ugcSafetyStatus) {
+        data.ugcSafetyStatus = 'REVIEW';
       }
     }
 
@@ -467,6 +559,23 @@ export class SocialLinksService {
     return value.trim();
   }
 
+  private parseOptionalEmbedPolicy(value: unknown): EmbedPolicy | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('embedPolicy must be PLATFORM_EMBED, LINK_ONLY, or NO_EMBED');
+    }
+
+    const normalized = value.trim().toUpperCase();
+    if (normalized === 'PLATFORM_EMBED' || normalized === 'LINK_ONLY' || normalized === 'NO_EMBED') {
+      return normalized;
+    }
+
+    throw new BadRequestException('embedPolicy must be PLATFORM_EMBED, LINK_ONLY, or NO_EMBED');
+  }
+
   private parseOptionalNullableString(value: unknown): string | null | undefined {
     if (value === undefined) return undefined;
     if (value === null) return null;
@@ -494,6 +603,87 @@ export class SocialLinksService {
     }
 
     return parsed;
+  }
+
+  private validatePublicUrl(value: string) {
+    let parsed: URL;
+
+    try {
+      parsed = new URL(value);
+    } catch {
+      throw new BadRequestException('url must be a valid absolute URL');
+    }
+
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      throw new BadRequestException('url protocol must be http or https');
+    }
+
+    if (parsed.username || parsed.password) {
+      throw new BadRequestException('url must not contain embedded credentials');
+    }
+
+    const host = parsed.hostname.toLowerCase();
+    if (host === 'localhost' || host.endsWith('.local')) {
+      throw new BadRequestException('url host is not allowed for public social links');
+    }
+
+    if (
+      /^127\./.test(host)
+      || /^10\./.test(host)
+      || /^192\.168\./.test(host)
+      || /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host)
+    ) {
+      throw new BadRequestException('url host is not allowed for public social links');
+    }
+  }
+
+  private validatePlatformUrlCompatibility(platform: string, value: string) {
+    const host = new URL(value).hostname.toLowerCase();
+
+    const allowedHosts = PLATFORM_HOST_MAP[platform] ?? [];
+    if (allowedHosts.length === 0) {
+      return;
+    }
+
+    const compatible = allowedHosts.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+    if (!compatible) {
+      throw new BadRequestException(`url host is not compatible with platform ${platform}`);
+    }
+  }
+
+  private evaluateUgcSafety(value: string): { status: UgcSafetyStatus; reason: string | null } {
+    const host = new URL(value).hostname.toLowerCase();
+    const blockedFromEnv = (process.env.SOCIAL_LINK_BLOCKED_DOMAINS ?? '')
+      .split(',')
+      .map((entry) => entry.trim().toLowerCase())
+      .filter((entry) => entry.length > 0);
+
+    const blockedDomains = new Set(BASE_BLOCKED_SOCIAL_DOMAINS);
+    for (const domain of blockedFromEnv) {
+      blockedDomains.add(domain);
+    }
+
+    const isBlocked = Array.from(blockedDomains).some((domain) => host === domain || host.endsWith(`.${domain}`));
+    if (isBlocked) {
+      return {
+        status: 'BLOCKED',
+        reason: `Blocked domain: ${host}`,
+      };
+    }
+
+    return {
+      status: 'SAFE',
+      reason: null,
+    };
+  }
+
+  private defaultEmbedPolicyForPlatform(platform: string): EmbedPolicy {
+    const normalized = platform.trim().toUpperCase();
+    if (normalized === 'WEBSITE') {
+      return 'LINK_ONLY';
+    }
+
+    return 'PLATFORM_EMBED';
   }
 
   private async ensureAccommodationExists(id: string) {

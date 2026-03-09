@@ -93,7 +93,7 @@ export async function fetchAccommodations(): Promise<Accommodation[]> {
         islandName: toStringValue(item.islandName ?? item.island_name) || undefined,
       };
     })
-    .filter((item): item is Accommodation => item.id.length > 0);
+    .filter((item) => item.id.length > 0);
 }
 
 export async function fetchIslands(): Promise<Island[]> {
@@ -108,7 +108,7 @@ export async function fetchIslands(): Promise<Island[]> {
         atollName: toStringValue(item.atollName ?? item.atoll_name) || undefined,
       };
     })
-    .filter((item): item is Island => item.id.length > 0);
+    .filter((item) => item.id.length > 0);
 }
 
 export async function fetchVendors(): Promise<Vendor[]> {
@@ -122,7 +122,7 @@ export async function fetchVendors(): Promise<Vendor[]> {
         name: toStringValue(item.name, 'Untitled vendor'),
       };
     })
-    .filter((item): item is Vendor => item.id.length > 0);
+    .filter((item) => item.id.length > 0);
 }
 
 export async function fetchBookings(): Promise<Booking[]> {
@@ -138,5 +138,5 @@ export async function fetchBookings(): Promise<Booking[]> {
         createdAt: toStringValue(item.createdAt ?? item.created_at) || undefined,
       };
     })
-    .filter((item): item is Booking => item.id.length > 0);
+    .filter((item) => item.id.length > 0);
 }

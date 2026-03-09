@@ -42,26 +42,21 @@ async function requestWithFallbacks(method, paths, body) {
 }
 
 async function checkHealth() {
-  const candidates = ['/api/v1/health'];
-  let lastError = null;
-
-  for (const path of candidates) {
-    try {
-      const health = await client.get(path);
-      if (health.status === 200) {
-        console.log(`Health endpoint OK at ${path}`);
-        return;
-      }
-    } catch (err) {
-      lastError = err;
+  try {
+    const health = await client.get('/api/v1/health');
+    if (health.status === 200) {
+      console.log('Health endpoint OK at /api/v1/health');
+      return;
     }
+  } catch (err) {
+    if (err?.response) {
+      throw new Error(`health failed: HTTP ${err.response.status}`);
+    }
+
+    throw new Error(`health failed: ${err?.message || 'request failed'}`);
   }
 
-  if (lastError?.response) {
-    throw new Error(`health failed: HTTP ${lastError.response.status}`);
-  }
-
-  throw new Error(`health failed: ${lastError?.message || 'no healthy endpoint found'}`);
+  throw new Error('health failed: unexpected status');
 }
 
 async function checkOpsSlo() {
@@ -94,7 +89,7 @@ async function checkWorkationCrud() {
     price: 199.99,
   };
 
-  const { res: created } = await requestWithFallbacks('post', ['/api/v1/workations'], createPayload);
+  const created = await client.post('/api/v1/workations', createPayload);
   const basePath = '/api/v1/workations';
 
   if (created.status !== 201) {
@@ -125,21 +120,14 @@ async function checkWorkationCrud() {
 async function checkTransportScheduleFlow() {
   const today = new Date().toISOString().slice(0, 10);
 
-  const { res: listRes, path: listPath } = await requestWithFallbacks('get', [
-    '/api/v1/transports',
-    '/api/transports',
-  ]);
+  const listPath = '/api/v1/transports';
+  const listRes = await client.get(listPath);
 
   if (listRes.status !== 200) {
     throw new Error(`transport list failed: ${listRes.status}`);
   }
 
-  const { res: scheduleRes } = await requestWithFallbacks('get', [
-    `/api/v1/transports/schedule?date=${today}`,
-    `/api/transports/schedule?date=${today}`,
-    `/api/v1/transports/flights/schedule?date=${today}`,
-    `/api/transports/flights/schedule?date=${today}`,
-  ]);
+  const scheduleRes = await client.get(`/api/v1/transports/schedule?date=${today}`);
 
   if (scheduleRes.status !== 200) {
     throw new Error(`transport schedule failed: ${scheduleRes.status}`);

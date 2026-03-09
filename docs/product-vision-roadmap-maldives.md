@@ -16,7 +16,7 @@ Core customer outcomes:
 ## 2) Complete Task List (Master To-Do)
 
 ## A. Foundation and Architecture
-- [ ] Finalize single-backend authority and decommission legacy Laravel API paths.
+- [x] Finalize single-backend authority and decommission legacy Laravel API paths.
 - [x] Lock environment configs to PostgreSQL everywhere (dev/staging/prod + docs + templates).
 - [ ] Enforce API contract/version policy for all new domains.
 - [x] Implement schema governance (migration checklist, rollback playbook, seed strategy).
@@ -455,8 +455,8 @@ Owners are role-based so this can be applied immediately even if personnel shift
 	- Verified live API and preflight against `https://api.workation.mv`:
 		- `GET /api/v1/health` = 200
 		- `node tests/e2e/live-preflight.mjs` = `Live preflight passed`
-- 2026-03-07: `WB-201` guarded decommission completed.
-	- Legacy Laravel business routes moved behind emergency rollback flag:
-		- `routes/web.php` now requires `LEGACY_LARAVEL_BUSINESS_ROUTES_ENABLED=true` to re-enable legacy routes outside testing.
-	- Added rollback flag documentation in root env template:
-		- `.env.example`
+- 2026-03-09: `WB-201` final decommission completed.
+	- Legacy Laravel business routes are no longer runtime-toggleable.
+	- `routes/web.php` now mounts legacy workation/transport-hold routes only in `testing` environment.
+	- `.env.example` rollback flag removed (`LEGACY_LARAVEL_BUSINESS_ROUTES_ENABLED`).
+	- `tests/e2e/live-preflight.mjs` now validates authority backend v1 paths only.

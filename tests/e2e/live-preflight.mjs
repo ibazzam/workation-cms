@@ -42,7 +42,7 @@ async function requestWithFallbacks(method, paths, body) {
 }
 
 async function checkHealth() {
-  const candidates = ['/api/v1/health', '/health'];
+  const candidates = ['/api/v1/health'];
   let lastError = null;
 
   for (const path of candidates) {
@@ -94,8 +94,8 @@ async function checkWorkationCrud() {
     price: 199.99,
   };
 
-  const { res: created, path: createPath } = await requestWithFallbacks('post', ['/api/workations', '/api/v1/workations'], createPayload);
-  const basePath = createPath.replace(/\/workations$/, '/workations');
+  const { res: created } = await requestWithFallbacks('post', ['/api/v1/workations'], createPayload);
+  const basePath = '/api/v1/workations';
 
   if (created.status !== 201) {
     throw new Error(`workation create failed: ${created.status}`);
@@ -119,38 +119,6 @@ async function checkWorkationCrud() {
   const deleted = await client.delete(`${basePath}/${id}`);
   if (deleted.status !== 204) {
     throw new Error(`workation delete failed: ${deleted.status}`);
-  }
-}
-
-async function checkTransportHoldFlow() {
-  const holdPayload = {
-    schedule_id: scheduleId,
-    seat_class: 'standard',
-    seats: 1,
-    idempotency_key: `live-preflight-${Date.now()}`,
-    ttl_seconds: 120,
-  };
-
-  const { res: hold, path: holdPath } = await requestWithFallbacks('post', ['/api/transport/holds', '/api/v1/transport/holds'], holdPayload);
-  const holdsBase = holdPath.replace(/\/holds$/, '/holds');
-
-  if (hold.status !== 201) {
-    throw new Error(`hold create failed: ${hold.status}`);
-  }
-
-  const holdId = hold.data?.hold?.id;
-  if (!holdId) {
-    throw new Error('hold create did not return hold id');
-  }
-
-  const confirmed = await client.post(`${holdsBase}/${holdId}/confirm`);
-  if (confirmed.status !== 200) {
-    throw new Error(`hold confirm failed: ${confirmed.status}`);
-  }
-
-  const released = await client.post(`${holdsBase}/${holdId}/release`);
-  if (released.status !== 200) {
-    throw new Error(`hold release failed: ${released.status}`);
   }
 }
 
@@ -243,30 +211,12 @@ async function checkTransportScheduleFlow() {
 
 async function checkTransportFlow() {
   try {
-    await checkTransportHoldFlow();
-    console.log('Transport hold flow OK (legacy endpoints)');
-    return;
+    await checkTransportScheduleFlow();
   } catch (err) {
     if (err?.response?.status === 401 && !bearerToken) {
       console.warn('Skipping transport flow smoke: AUTH_BEARER_TOKEN not set');
       return;
     }
-
-    if (err?.response?.status !== 404) {
-      throw err;
-    }
-
-    console.warn('Legacy transport hold endpoints unavailable; running transport schedule smoke instead');
-  }
-
-  try {
-    await checkTransportScheduleFlow();
-  } catch (err) {
-    if (err?.response?.status === 401 && !bearerToken) {
-      console.warn('Skipping transport schedule smoke: AUTH_BEARER_TOKEN not set');
-      return;
-    }
-
     throw err;
   }
 }

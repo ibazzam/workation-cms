@@ -6,16 +6,9 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Emergency rollback switch for legacy Laravel business routes.
-// Default: disabled outside testing so authority backend remains single writer.
-$legacyBusinessRoutesEnabled = app()->environment('testing')
-    ? true
-    : filter_var(
-        env('LEGACY_LARAVEL_BUSINESS_ROUTES_ENABLED', false),
-        FILTER_VALIDATE_BOOL,
-    );
-
-if ($legacyBusinessRoutesEnabled) {
+// Legacy Laravel business routes are decommissioned in runtime.
+// Keep these endpoints available only in testing for legacy feature-test coverage.
+if (app()->environment('testing')) {
     Route::prefix('api')->group(function () {
         Route::get('workations', [\App\Http\Controllers\WorkationController::class, 'index']);
         Route::get('workations/{workation}', [\App\Http\Controllers\WorkationController::class, 'show']);

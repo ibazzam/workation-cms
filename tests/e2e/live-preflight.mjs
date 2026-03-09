@@ -42,26 +42,21 @@ async function requestWithFallbacks(method, paths, body) {
 }
 
 async function checkHealth() {
-  const candidates = ['/api/v1/health', '/health'];
-  let lastError = null;
-
-  for (const path of candidates) {
-    try {
-      const health = await client.get(path);
-      if (health.status === 200) {
-        console.log(`Health endpoint OK at ${path}`);
-        return;
-      }
-    } catch (err) {
-      lastError = err;
+  try {
+    const health = await client.get('/api/v1/health');
+    if (health.status === 200) {
+      console.log('Health endpoint OK at /api/v1/health');
+      return;
     }
+  } catch (err) {
+    if (err?.response) {
+      throw new Error(`health failed: HTTP ${err.response.status}`);
+    }
+
+    throw new Error(`health failed: ${err?.message || 'request failed'}`);
   }
 
-  if (lastError?.response) {
-    throw new Error(`health failed: HTTP ${lastError.response.status}`);
-  }
-
-  throw new Error(`health failed: ${lastError?.message || 'no healthy endpoint found'}`);
+  throw new Error('health failed: unexpected status');
 }
 
 async function checkOpsSlo() {
@@ -94,8 +89,8 @@ async function checkWorkationCrud() {
     price: 199.99,
   };
 
-  const { res: created, path: createPath } = await requestWithFallbacks('post', ['/api/workations', '/api/v1/workations'], createPayload);
-  const basePath = createPath.replace(/\/workations$/, '/workations');
+  const created = await client.post('/api/v1/workations', createPayload);
+  const basePath = '/api/v1/workations';
 
   if (created.status !== 201) {
     throw new Error(`workation create failed: ${created.status}`);
@@ -122,56 +117,17 @@ async function checkWorkationCrud() {
   }
 }
 
-async function checkTransportHoldFlow() {
-  const holdPayload = {
-    schedule_id: scheduleId,
-    seat_class: 'standard',
-    seats: 1,
-    idempotency_key: `live-preflight-${Date.now()}`,
-    ttl_seconds: 120,
-  };
-
-  const { res: hold, path: holdPath } = await requestWithFallbacks('post', ['/api/transport/holds', '/api/v1/transport/holds'], holdPayload);
-  const holdsBase = holdPath.replace(/\/holds$/, '/holds');
-
-  if (hold.status !== 201) {
-    throw new Error(`hold create failed: ${hold.status}`);
-  }
-
-  const holdId = hold.data?.hold?.id;
-  if (!holdId) {
-    throw new Error('hold create did not return hold id');
-  }
-
-  const confirmed = await client.post(`${holdsBase}/${holdId}/confirm`);
-  if (confirmed.status !== 200) {
-    throw new Error(`hold confirm failed: ${confirmed.status}`);
-  }
-
-  const released = await client.post(`${holdsBase}/${holdId}/release`);
-  if (released.status !== 200) {
-    throw new Error(`hold release failed: ${released.status}`);
-  }
-}
-
 async function checkTransportScheduleFlow() {
   const today = new Date().toISOString().slice(0, 10);
 
-  const { res: listRes, path: listPath } = await requestWithFallbacks('get', [
-    '/api/v1/transports',
-    '/api/transports',
-  ]);
+  const listPath = '/api/v1/transports';
+  const listRes = await client.get(listPath);
 
   if (listRes.status !== 200) {
     throw new Error(`transport list failed: ${listRes.status}`);
   }
 
-  const { res: scheduleRes } = await requestWithFallbacks('get', [
-    `/api/v1/transports/schedule?date=${today}`,
-    `/api/transports/schedule?date=${today}`,
-    `/api/v1/transports/flights/schedule?date=${today}`,
-    `/api/transports/flights/schedule?date=${today}`,
-  ]);
+  const scheduleRes = await client.get(`/api/v1/transports/schedule?date=${today}`);
 
   if (scheduleRes.status !== 200) {
     throw new Error(`transport schedule failed: ${scheduleRes.status}`);
@@ -243,30 +199,12 @@ async function checkTransportScheduleFlow() {
 
 async function checkTransportFlow() {
   try {
-    await checkTransportHoldFlow();
-    console.log('Transport hold flow OK (legacy endpoints)');
-    return;
+    await checkTransportScheduleFlow();
   } catch (err) {
     if (err?.response?.status === 401 && !bearerToken) {
       console.warn('Skipping transport flow smoke: AUTH_BEARER_TOKEN not set');
       return;
     }
-
-    if (err?.response?.status !== 404) {
-      throw err;
-    }
-
-    console.warn('Legacy transport hold endpoints unavailable; running transport schedule smoke instead');
-  }
-
-  try {
-    await checkTransportScheduleFlow();
-  } catch (err) {
-    if (err?.response?.status === 401 && !bearerToken) {
-      console.warn('Skipping transport schedule smoke: AUTH_BEARER_TOKEN not set');
-      return;
-    }
-
     throw err;
   }
 }

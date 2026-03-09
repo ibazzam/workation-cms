@@ -1,16 +1,15 @@
 ## WB-201 Authority Cutover Runbook
 
-Status: In progress (live authority backend on main; Laravel legacy routes guarded by rollback flag)
+Status: Completed (authority backend is single runtime business API; legacy Laravel routes are test-only)
 Owner: Backend Lead
 
 Purpose
 - Establish `infra/backend` as the single business API authority.
 - Decommission Laravel business routes after parity and smoke checks.
-- Keep a controlled rollback path for one release window.
 
 Current state (repo evidence)
-- Legacy Laravel business routes are guarded in `routes/web.php` and disabled by default outside testing.
-- Current Laravel endpoints:
+- Legacy Laravel business routes are test-only in `routes/web.php` (`app()->environment('testing')`).
+- Legacy Laravel endpoints kept for test coverage only:
   - `GET /api/workations`
   - `GET /api/workations/{workation}`
   - `POST /api/workations`
@@ -19,16 +18,15 @@ Current state (repo evidence)
   - `POST /api/transport/holds`
   - `POST /api/transport/holds/{hold}/confirm`
   - `POST /api/transport/holds/{hold}/release`
-- New authority backend now exposes parity endpoints for workations and transport holds with Prisma-backed persistence:
-  - `GET /health`
-  - `GET/POST/PUT/DELETE /api/workations...`
+- New authority backend exposes active business endpoints under `/api/v1/*`:
+  - `GET /api/v1/health`
+  - `GET/POST/PUT/DELETE /api/v1/workations...`
   - `POST /api/transport/holds`, `/confirm`, `/release`
 
 Definition of done (WB-201)
 - Endpoint parity checklist completed for all in-scope business endpoints.
 - Staging smoke journey green against `infra/backend`.
-- Laravel business routes disabled (or guarded behind emergency flag).
-- Rollback tested and documented.
+- Laravel business routes decommissioned from runtime and retained only for tests.
 
 ## Latest Validation Snapshot (2026-03-07)
 
@@ -44,8 +42,8 @@ Definition of done (WB-201)
   - `8c370957` (`Make live preflight compatible with transports schedule endpoints`)
 
 Notes
-- Legacy transport hold endpoints (`/api/v1/transport/holds`) are not exposed on current live runtime.
-- Preflight now validates transports using legacy hold flow when present, otherwise current transports schedule/list smoke.
+- Legacy transport hold endpoints are not exposed on current live runtime.
+- Preflight validates transports using `/api/v1/transports*` authority routes only.
 - Review and social moderation actions now accept optional moderation metadata:
   - `reasonCode` (`SPAM`, `ABUSIVE_LANGUAGE`, `HARASSMENT`, `MISLEADING_CONTENT`, `INAPPROPRIATE_CONTENT`, `POLICY_VIOLATION`, `OTHER`)
   - `reviewerNote` (optional free-text note, up to 500 chars)
@@ -62,9 +60,6 @@ Notes
   - public social listing returns only links with `active=true`, `verified=true`, and `ugcSafetyStatus=SAFE`
   - moderation queue includes links with `ugcSafetyStatus != SAFE` for trust/safety review
   - optional env blocklist for domains: `SOCIAL_LINK_BLOCKED_DOMAINS` (comma-separated)
-- Emergency rollback flag for Laravel legacy routes:
-  - `LEGACY_LARAVEL_BUSINESS_ROUTES_ENABLED=true` (temporary rollback only)
-  - Default should remain `false` in normal runtime.
 - Observability baseline endpoints are available on authority backend:
   - `GET /api/v1/ops/slo-summary`
   - `GET /api/v1/ops/metrics`
@@ -95,14 +90,12 @@ Phase 2: Verification and shadow smoke
 
 Phase 3: Controlled cutover
 - Point staging API traffic to `infra/backend`.
-- Keep Laravel business routes available behind emergency fallback for one release window.
 - Monitor error rate, latency, and booking/hold failure metrics.
 
 Phase 4: Laravel business route decommission
-- Completed as guarded decommission:
-  - Legacy Laravel business routes are disabled by default.
-  - Emergency rollback path is env-guarded via `LEGACY_LARAVEL_BUSINESS_ROUTES_ENABLED`.
-  - Keep only temporary rollback enablement during incident handling.
+- Completed as final decommission:
+  - Legacy Laravel business routes are available only in testing.
+  - Runtime rollback flag has been removed from environment configuration.
 
 ## Endpoint Parity Checklist
 
@@ -115,9 +108,9 @@ Use this table before cutover. Mark each item `done` only after tests pass.
 | `POST /api/workations` | yes | implemented | implemented | passed | Live preflight pass on 2026-03-07 |
 | `PUT /api/workations/{workation}` | yes | implemented | implemented | passed | Live preflight pass on 2026-03-07 |
 | `DELETE /api/workations/{workation}` | yes | implemented | implemented | passed | Live preflight pass on 2026-03-07 |
-| `POST /api/transport/holds` | yes | legacy path only | implemented | n/a | Live runtime validates transports via `/api/v1/transports*` routes |
-| `POST /api/transport/holds/{hold}/confirm` | yes | legacy path only | implemented | n/a | Live runtime validates transports via `/api/v1/transports*` routes |
-| `POST /api/transport/holds/{hold}/release` | yes | legacy path only | implemented | n/a | Live runtime validates transports via `/api/v1/transports*` routes |
+| `POST /api/transport/holds` | yes | decommissioned (test-only legacy) | implemented | n/a | Runtime transport flow uses `/api/v1/transports*` routes |
+| `POST /api/transport/holds/{hold}/confirm` | yes | decommissioned (test-only legacy) | implemented | n/a | Runtime transport flow uses `/api/v1/transports*` routes |
+| `POST /api/transport/holds/{hold}/release` | yes | decommissioned (test-only legacy) | implemented | n/a | Runtime transport flow uses `/api/v1/transports*` routes |
 
 Contract test command
 - `cd infra/backend && npm.cmd run contract:test`
@@ -206,11 +199,9 @@ Trigger conditions
 - Critical booking or payment flow regression detected.
 
 Rollback steps
-1. Repoint API ingress back to Laravel business routes.
-2. Disable `infra/backend` business route exposure at edge/gateway.
-3. Re-run smoke checks on Laravel path:
-   - workation CRUD
-   - transport hold create/confirm/release
+1. Repoint API ingress to a known-good authority backend release.
+2. Disable newly introduced authority backend changes via deployment rollback.
+3. Re-run smoke checks on `/api/v1/*` authority paths.
 4. Preserve logs and request ids from failed interval for postmortem.
 5. Open incident timeline and corrective ticket before re-attempt.
 

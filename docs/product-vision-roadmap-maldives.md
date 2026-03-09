@@ -32,7 +32,7 @@ Core customer outcomes:
 ## C. Geographic and Catalog Core
 - [x] Islands/atolls read APIs.
 - [x] Countries + service categories APIs.
-- [ ] Add island metadata completeness (facilities, connectivity, emergency services).
+- [x] Add island metadata completeness (facilities, connectivity, emergency services).
 - [ ] Add geospatial search support (by atoll + nearby + route relevance).
 - [ ] Build canonical taxonomy for accommodation/transport/activity categories.
 

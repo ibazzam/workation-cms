@@ -5,7 +5,7 @@ This document is generated from backend controller decorators in `infra/backend/
 Generation command: `npm run permissions:matrix:write`
 Validation command: `npm run permissions:matrix:check`
 
-Total endpoint policies: **121**
+Total endpoint policies: **122**
 
 Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE`, `ADMIN_FINANCE`
 
@@ -24,8 +24,8 @@ Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE
 | DELETE | /api/v1/accommodations/admin/:id/seasonal-rates/:rateId | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/accommodations/accommodations.controller.ts |
 | GET | /api/v1/admin/settings/commercial | roles | ADMIN, ADMIN_CARE, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | Y | Y | infra/backend/src/admin-settings/admin-settings.controller.ts |
 | POST | /api/v1/admin/settings/commercial | roles | ADMIN, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | N | Y | infra/backend/src/admin-settings/admin-settings.controller.ts |
-| GET | /api/v1/atolls | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/islands/islands.controller.ts |
-| GET | /api/v1/atolls/:id | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/islands/islands.controller.ts |
+| GET | /api/v1/atolls | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/islands/islands.controller.ts |
+| GET | /api/v1/atolls/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/islands/islands.controller.ts |
 | GET | /api/v1/auth/admin/ping | roles | ADMIN, ADMIN_CARE, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | Y | Y | infra/backend/src/auth/auth.controller.ts |
 | GET | /api/v1/auth/me | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/auth/auth.controller.ts |
 | GET | /api/v1/bookings | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/bookings/bookings.controller.ts |
@@ -47,8 +47,9 @@ Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE
 | DELETE | /api/v1/countries/admin/:id | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/countries/countries.controller.ts |
 | PUT | /api/v1/countries/admin/:id | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/countries/countries.controller.ts |
 | GET | /api/v1/health | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/health.controller.ts |
-| GET | /api/v1/islands | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/islands/islands.controller.ts |
-| GET | /api/v1/islands/:id | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/islands/islands.controller.ts |
+| GET | /api/v1/islands | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/islands/islands.controller.ts |
+| GET | /api/v1/islands/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/islands/islands.controller.ts |
+| PUT | /api/v1/islands/admin/:id/metadata | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/islands/islands.controller.ts |
 | GET | /api/v1/loyalty/me | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/loyalty/loyalty.controller.ts |
 | POST | /api/v1/loyalty/me/redeem | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/loyalty/loyalty.controller.ts |
 | GET | /api/v1/loyalty/me/transactions | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/loyalty/loyalty.controller.ts |

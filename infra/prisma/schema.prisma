@@ -57,6 +57,9 @@ model Island {
   atollId   Int
   lat       Float?
   lng       Float?
+  facilitiesSummary     String?
+  connectivitySummary   String?
+  emergencyServicesInfo String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

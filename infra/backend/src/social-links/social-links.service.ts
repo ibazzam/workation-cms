@@ -23,6 +23,26 @@ type RequestActor = {
   vendorId?: string;
 };
 
+type SocialLinkModerationSnapshot = {
+  embedPolicy?: string | null;
+  ugcSafetyStatus?: string | null;
+  ugcSafetyReason?: string | null;
+};
+
+const PLATFORM_HOST_MAP: Record<string, string[]> = {
+  INSTAGRAM: ['instagram.com'],
+  FACEBOOK: ['facebook.com', 'fb.watch'],
+  TIKTOK: ['tiktok.com'],
+  X: ['x.com', 'twitter.com'],
+  YOUTUBE: ['youtube.com', 'youtu.be'],
+  LINKEDIN: ['linkedin.com'],
+  WHATSAPP: ['whatsapp.com', 'wa.me'],
+  TELEGRAM: ['telegram.org', 't.me', 'telegram.me'],
+  WEBSITE: [],
+};
+
+const BASE_BLOCKED_SOCIAL_DOMAINS = new Set(['bit.ly', 'tinyurl.com', 'rb.gy']);
+
 type ModerationActionPayload = {
   reasonCode?: unknown;
   reviewerNote?: unknown;
@@ -130,6 +150,11 @@ export class SocialLinksService {
       existingTargetType: existing.targetType,
       existingPlatform: existing.platform,
       existingUrl: existing.url,
+      existingModeration: {
+        embedPolicy: existing.embedPolicy,
+        ugcSafetyStatus: existing.ugcSafetyStatus,
+        ugcSafetyReason: existing.ugcSafetyReason,
+      },
     });
     const merged = {
       targetType: existing.targetType,
@@ -326,7 +351,13 @@ export class SocialLinksService {
 
   private async normalizePayload(
     payload: SocialLinkPayload,
-    options: { partial: boolean; existingTargetType?: string; existingPlatform?: string; existingUrl?: string },
+    options: {
+      partial: boolean;
+      existingTargetType?: string;
+      existingPlatform?: string;
+      existingUrl?: string;
+      existingModeration?: SocialLinkModerationSnapshot;
+    },
   ) {
     const targetType = options.partial
       ? this.parseOptionalTargetType(payload.targetType)
@@ -394,7 +425,9 @@ export class SocialLinksService {
       ?? options.existingUrl
     ) as string | undefined;
 
-    if (effectivePlatform && effectiveUrl) {
+    const shouldRecalculateSafety = !options.partial || url !== undefined || platform !== undefined;
+
+    if (effectivePlatform && effectiveUrl && shouldRecalculateSafety) {
       this.validatePlatformUrlCompatibility(effectivePlatform, effectiveUrl);
 
       const safety = this.evaluateUgcSafety(effectiveUrl);
@@ -406,9 +439,21 @@ export class SocialLinksService {
         data.verified = false;
       }
 
-      data.embedPolicy = embedPolicy ?? this.defaultEmbedPolicyForPlatform(effectivePlatform);
+      data.embedPolicy = embedPolicy
+        ?? options.existingModeration?.embedPolicy
+        ?? this.defaultEmbedPolicyForPlatform(effectivePlatform);
     } else if (embedPolicy !== undefined) {
       data.embedPolicy = embedPolicy;
+    } else if (options.partial && options.existingModeration?.embedPolicy) {
+      data.embedPolicy = options.existingModeration.embedPolicy;
+    }
+
+    if (options.partial && !shouldRecalculateSafety) {
+      if (options.existingModeration?.ugcSafetyStatus) {
+        data.ugcSafetyStatus = options.existingModeration.ugcSafetyStatus;
+      }
+
+      data.ugcSafetyReason = options.existingModeration?.ugcSafetyReason ?? null;
     }
 
     if (handle !== undefined) data.handle = handle;
@@ -582,7 +627,12 @@ export class SocialLinksService {
       throw new BadRequestException('url host is not allowed for public social links');
     }
 
-    if (/^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host)) {
+    if (
+      /^127\./.test(host)
+      || /^10\./.test(host)
+      || /^192\.168\./.test(host)
+      || /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host)
+    ) {
       throw new BadRequestException('url host is not allowed for public social links');
     }
   }
@@ -590,19 +640,7 @@ export class SocialLinksService {
   private validatePlatformUrlCompatibility(platform: string, value: string) {
     const host = new URL(value).hostname.toLowerCase();
 
-    const hostMap: Record<string, string[]> = {
-      INSTAGRAM: ['instagram.com'],
-      FACEBOOK: ['facebook.com', 'fb.watch'],
-      TIKTOK: ['tiktok.com'],
-      X: ['x.com', 'twitter.com'],
-      YOUTUBE: ['youtube.com', 'youtu.be'],
-      LINKEDIN: ['linkedin.com'],
-      WHATSAPP: ['whatsapp.com', 'wa.me'],
-      TELEGRAM: ['telegram.org', 't.me', 'telegram.me'],
-      WEBSITE: [],
-    };
-
-    const allowedHosts = hostMap[platform] ?? [];
+    const allowedHosts = PLATFORM_HOST_MAP[platform] ?? [];
     if (allowedHosts.length === 0) {
       return;
     }
@@ -620,12 +658,10 @@ export class SocialLinksService {
       .map((entry) => entry.trim().toLowerCase())
       .filter((entry) => entry.length > 0);
 
-    const blockedDomains = new Set([
-      'bit.ly',
-      'tinyurl.com',
-      'rb.gy',
-      ...blockedFromEnv,
-    ]);
+    const blockedDomains = new Set(BASE_BLOCKED_SOCIAL_DOMAINS);
+    for (const domain of blockedFromEnv) {
+      blockedDomains.add(domain);
+    }
 
     const isBlocked = Array.from(blockedDomains).some((domain) => host === domain || host.endsWith(`.${domain}`));
     if (isBlocked) {

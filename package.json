@@ -12,7 +12,9 @@
         "e2e": "node tests/e2e/run-e2e.mjs",
         "live:preflight": "node tests/e2e/live-preflight.mjs",
         "perf:booking-payments": "node tests/perf/booking-payments-baseline.mjs",
-        "contract:policy": "node scripts/enforce-api-version-policy.mjs"
+        "contract:policy": "node scripts/enforce-api-version-policy.mjs",
+        "permissions:matrix:write": "node scripts/permission-matrix.mjs --write",
+        "permissions:matrix:check": "node scripts/permission-matrix.mjs --check"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

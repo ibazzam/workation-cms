@@ -1,0 +1,2248 @@
+{
+  "roles": [
+    "ANONYMOUS",
+    "USER",
+    "VENDOR",
+    "ADMIN",
+    "ADMIN_SUPER",
+    "ADMIN_CARE",
+    "ADMIN_FINANCE"
+  ],
+  "totalEndpoints": 121,
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/accommodations",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/accommodations/accommodations.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/accommodations/:id",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/accommodations/accommodations.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/accommodations/:id/availability",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/accommodations/accommodations.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/accommodations/:id/quote",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/accommodations/accommodations.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/accommodations/admin",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/accommodations/accommodations.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/accommodations/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/accommodations/accommodations.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/accommodations/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/accommodations/accommodations.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/accommodations/admin/:id/blackouts",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/accommodations/accommodations.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/accommodations/admin/:id/blackouts/:blackoutId",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/accommodations/accommodations.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/accommodations/admin/:id/seasonal-rates",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/accommodations/accommodations.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/accommodations/admin/:id/seasonal-rates/:rateId",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/accommodations/accommodations.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/settings/commercial",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/admin-settings/admin-settings.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/settings/commercial",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/admin-settings/admin-settings.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": false,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/atolls",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/islands/islands.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/atolls/:id",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/islands/islands.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/admin/ping",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/auth/auth.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/auth/auth.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/bookings",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/bookings/bookings.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/bookings",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/bookings/bookings.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/bookings/:id/cancel",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/bookings/bookings.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/bookings/:id/confirm",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/bookings/bookings.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/bookings/:id/hold",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/bookings/bookings.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/bookings/:id/rebook",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/bookings/bookings.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/bookings/:id/rebook/template",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/bookings/bookings.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/bookings/:id/refund",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/bookings/bookings.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": false,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/bookings/itinerary/validate",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/bookings/bookings.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cart",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/cart/cart.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cart/checkout",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/cart/cart.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cart/items",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/cart/cart.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/cart/items/:itemId",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/cart/cart.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/countries",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/countries/countries.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/countries/:id",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/countries/countries.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/countries/admin",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/countries/countries.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/countries/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/countries/countries.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/countries/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/countries/countries.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/health",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/health.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/islands",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/islands/islands.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/islands/:id",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/islands/islands.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/loyalty/me",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/loyalty/loyalty.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/loyalty/me/redeem",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/loyalty/loyalty.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/loyalty/me/transactions",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/loyalty/loyalty.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/loyalty/offers/admin",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/loyalty/loyalty.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/loyalty/offers/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/loyalty/loyalty.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/loyalty/offers/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/loyalty/loyalty.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/loyalty/offers/vendors/:vendorId",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/loyalty/loyalty.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/alerts",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/observability/observability.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/metrics",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/observability/observability.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/runbooks",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/observability/observability.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/slo-summary",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/observability/observability.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/payments/admin/alerts",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/payments/admin/bml/health",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/payments/admin/jobs",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payments/admin/jobs/:id/cancel",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": false,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payments/admin/jobs/:id/complete",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": false,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payments/admin/jobs/:id/requeue",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": false,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/payments/admin/jobs/health",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payments/admin/jobs/prune",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": false,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/payments/admin/mib/health",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/payments/admin/reconcile/alerts",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/payments/admin/reconcile/history",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payments/admin/reconcile/pending",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": false,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payments/admin/reconcile/run-now",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": false,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/payments/admin/reconcile/status",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payments/admin/refunds",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": false,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/payments/admin/settlements/report",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": false,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payments/disputes",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payments/intents",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payments/refunds",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payments/webhooks/bml",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payments/webhooks/mib",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payments/webhooks/stripe",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/reviews",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER",
+        "USER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/reviews/reviews.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/reviews/:id/flag",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER",
+        "USER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/reviews/reviews.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reviews/accommodations/:id",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/reviews/reviews.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reviews/activities/:id",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/reviews/reviews.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/reviews/admin/:id/hide",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/reviews/reviews.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/reviews/admin/:id/publish",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/reviews/reviews.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reviews/admin/moderation",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/reviews/reviews.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reviews/services/:id",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/reviews/reviews.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reviews/transports/:id",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/reviews/reviews.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/service-categories",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/service-categories/service-categories.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/service-categories/:id",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/service-categories/service-categories.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/service-categories/admin",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/service-categories/service-categories.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/service-categories/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/service-categories/service-categories.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/service-categories/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/service-categories/service-categories.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/social-links/:id/flag",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER",
+        "USER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/social-links/social-links.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/social-links/accommodations/:id",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/social-links/social-links.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/social-links/admin",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/social-links/social-links.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/social-links/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/social-links/social-links.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/social-links/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/social-links/social-links.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/social-links/admin/:id/approve",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/social-links/social-links.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/social-links/admin/:id/hide",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/social-links/social-links.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/social-links/admin/moderation",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/social-links/social-links.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/social-links/transports/:id",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/social-links/social-links.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/social-links/vendors/:id",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/social-links/social-links.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/transports",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/transports/transports.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/transports/:id",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/transports/transports.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/transports/:id/fare-classes",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/transports/transports.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/transports/:id/quote",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/transports/transports.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/transports/admin",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/transports/transports.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/transports/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/transports/transports.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/transports/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/transports/transports.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/transports/admin/:id/disruptions",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/transports/transports.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/transports/admin/:id/disruptions/:disruptionId/reaccommodate",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/transports/transports.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/transports/admin/:id/disruptions/:disruptionId/resolve",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/transports/transports.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/transports/flights/schedule",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/transports/transports.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/transports/schedule",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/transports/transports.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users/me/profile",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/users/users.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/users/me/profile",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/users/users.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/vendors/vendors.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/:id",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/vendors/vendors.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vendors/admin",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/vendors/vendors.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/vendors/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/vendors/vendors.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/vendors/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/vendors/vendors.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vendors/me",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/vendors/vendors.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": false,
+        "ADMIN_SUPER": false,
+        "ADMIN_CARE": false,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/vendors/me",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/vendors/vendors.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": false,
+        "ADMIN_SUPER": false,
+        "ADMIN_CARE": false,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workations",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/workations/workations.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workations",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/workations/workations.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/workations/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/workations/workations.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workations/:id",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/workations/workations.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/workations/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/workations/workations.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    }
+  ]
+}

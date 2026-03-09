@@ -116,6 +116,9 @@ jobs:
       - name: Install Node dependencies
         run: npm ci --prefer-offline --no-audit --progress=false
 
+      - name: Enforce API contract/version policy
+        run: npm run contract:policy
+
       - name: Run JS coverage
         run: |
           npm run coverage

@@ -54,6 +54,32 @@ type SettlementReportPayload = {
   currency?: unknown;
 };
 
+type RefundQueuePayload = {
+  status?: unknown;
+  bookingId?: unknown;
+  paymentId?: unknown;
+  limit?: unknown;
+  offset?: unknown;
+};
+
+type DisputeQueuePayload = {
+  status?: unknown;
+  bookingId?: unknown;
+  paymentId?: unknown;
+  limit?: unknown;
+  offset?: unknown;
+};
+
+type RefundStatusUpdatePayload = {
+  status?: unknown;
+  note?: unknown;
+};
+
+type DisputeStatusUpdatePayload = {
+  status?: unknown;
+  note?: unknown;
+};
+
 type RefundRecordStatus = 'PENDING' | 'APPROVED' | 'COMPLETED' | 'REJECTED' | 'FAILED';
 type DisputeRecordStatus = 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED' | 'REJECTED';
 
@@ -69,6 +95,10 @@ type RefundRecord = {
   idempotencyKey: string | null;
   actorUserId: string;
   actorRole: string;
+  resolvedByUserId?: string;
+  resolvedByRole?: string;
+  resolutionNote?: string | null;
+  resolvedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -84,6 +114,10 @@ type DisputeRecord = {
   idempotencyKey: string | null;
   actorUserId: string;
   actorRole: string;
+  resolvedByUserId?: string;
+  resolvedByRole?: string;
+  resolutionNote?: string | null;
+  resolvedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -305,6 +339,166 @@ export class PaymentsService {
     return {
       created: true,
       dispute: created,
+    };
+  }
+
+  async listRefundRequests(payload: RefundQueuePayload = {}) {
+    const statusFilter = this.parseRefundStatusFilter(payload.status);
+    const bookingId = this.parseOptionalId(payload.bookingId);
+    const paymentId = this.parseOptionalId(payload.paymentId);
+    const { limit, offset } = this.parsePagination(payload.limit, payload.offset, 200);
+
+    const refunds = await this.readRefundRecords();
+    const filtered = refunds.filter((record) => {
+      if (statusFilter && record.status !== statusFilter) {
+        return false;
+      }
+
+      if (bookingId && record.bookingId !== bookingId) {
+        return false;
+      }
+
+      if (paymentId && record.paymentId !== paymentId) {
+        return false;
+      }
+
+      return true;
+    });
+
+    const items = filtered.slice(offset, offset + limit);
+    return {
+      total: filtered.length,
+      limit,
+      offset,
+      items,
+    };
+  }
+
+  async updateRefundRequestStatus(
+    refundId: string,
+    payload: RefundStatusUpdatePayload,
+    actor: { id: string; role: string },
+  ) {
+    const normalizedId = this.parseRequiredText(refundId, 'refund id', 120);
+    const nextStatus = this.parseRefundStatusTransition(payload.status);
+    const note = this.parseOptionalText(payload.note, 1000);
+
+    const refunds = await this.readRefundRecords();
+    const index = refunds.findIndex((record) => record.id === normalizedId);
+    if (index === -1) {
+      throw new NotFoundException('Refund request not found');
+    }
+
+    const existing = refunds[index];
+    if (existing.status === nextStatus) {
+      return {
+        updated: false,
+        refund: existing,
+        booking: null,
+      };
+    }
+
+    this.ensureRefundTransitionAllowed(existing.status, nextStatus);
+
+    const nowIso = new Date().toISOString();
+    const updated: RefundRecord = {
+      ...existing,
+      status: nextStatus,
+      resolutionNote: note,
+      resolvedByUserId: actor.id,
+      resolvedByRole: actor.role,
+      resolvedAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    const nextRecords = [...refunds];
+    nextRecords[index] = updated;
+    await this.writeRefundRecords(nextRecords);
+
+    const bookingAdjustment = await this.applyBookingRefundStatusFromRecords(updated.bookingId, updated.paymentId, nextRecords);
+
+    return {
+      updated: true,
+      refund: updated,
+      booking: bookingAdjustment,
+    };
+  }
+
+  async listDisputes(payload: DisputeQueuePayload = {}) {
+    const statusFilter = this.parseDisputeStatusFilter(payload.status);
+    const bookingId = this.parseOptionalId(payload.bookingId);
+    const paymentId = this.parseOptionalId(payload.paymentId);
+    const { limit, offset } = this.parsePagination(payload.limit, payload.offset, 200);
+
+    const disputes = await this.readDisputeRecords();
+    const filtered = disputes.filter((record) => {
+      if (statusFilter && record.status !== statusFilter) {
+        return false;
+      }
+
+      if (bookingId && record.bookingId !== bookingId) {
+        return false;
+      }
+
+      if (paymentId && record.paymentId !== paymentId) {
+        return false;
+      }
+
+      return true;
+    });
+
+    const items = filtered.slice(offset, offset + limit);
+    return {
+      total: filtered.length,
+      limit,
+      offset,
+      items,
+    };
+  }
+
+  async updateDisputeStatus(
+    disputeId: string,
+    payload: DisputeStatusUpdatePayload,
+    actor: { id: string; role: string },
+  ) {
+    const normalizedId = this.parseRequiredText(disputeId, 'dispute id', 120);
+    const nextStatus = this.parseDisputeStatusTransition(payload.status);
+    const note = this.parseOptionalText(payload.note, 1000);
+
+    const disputes = await this.readDisputeRecords();
+    const index = disputes.findIndex((record) => record.id === normalizedId);
+    if (index === -1) {
+      throw new NotFoundException('Dispute not found');
+    }
+
+    const existing = disputes[index];
+    if (existing.status === nextStatus) {
+      return {
+        updated: false,
+        dispute: existing,
+      };
+    }
+
+    this.ensureDisputeTransitionAllowed(existing.status, nextStatus);
+
+    const nowIso = new Date().toISOString();
+    const updated: DisputeRecord = {
+      ...existing,
+      status: nextStatus,
+      resolutionNote: note,
+      resolvedByUserId: actor.id,
+      resolvedByRole: actor.role,
+      resolvedAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    const nextRecords = [...disputes];
+    nextRecords[index] = updated;
+    await this.writeDisputeRecords(nextRecords);
+
+    return {
+      updated: true,
+      dispute: updated,
     };
   }
 
@@ -1348,6 +1542,168 @@ export class PaymentsService {
       reason,
       details,
       idempotencyKey,
+    };
+  }
+
+  private parseRefundStatusFilter(value: unknown): RefundRecordStatus | null {
+    if (value === undefined) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('status must be one of PENDING, APPROVED, COMPLETED, REJECTED, FAILED');
+    }
+
+    const normalized = value.trim().toUpperCase();
+    if (normalized === 'PENDING' || normalized === 'APPROVED' || normalized === 'COMPLETED' || normalized === 'REJECTED' || normalized === 'FAILED') {
+      return normalized;
+    }
+
+    throw new BadRequestException('status must be one of PENDING, APPROVED, COMPLETED, REJECTED, FAILED');
+  }
+
+  private parseDisputeStatusFilter(value: unknown): DisputeRecordStatus | null {
+    if (value === undefined) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('status must be one of OPEN, UNDER_REVIEW, RESOLVED, REJECTED');
+    }
+
+    const normalized = value.trim().toUpperCase();
+    if (normalized === 'OPEN' || normalized === 'UNDER_REVIEW' || normalized === 'RESOLVED' || normalized === 'REJECTED') {
+      return normalized;
+    }
+
+    throw new BadRequestException('status must be one of OPEN, UNDER_REVIEW, RESOLVED, REJECTED');
+  }
+
+  private parseRefundStatusTransition(value: unknown): RefundRecordStatus {
+    if (typeof value !== 'string') {
+      throw new BadRequestException('status is required and must be one of APPROVED, COMPLETED, REJECTED, FAILED');
+    }
+
+    const normalized = value.trim().toUpperCase();
+    if (normalized === 'APPROVED' || normalized === 'COMPLETED' || normalized === 'REJECTED' || normalized === 'FAILED') {
+      return normalized;
+    }
+
+    throw new BadRequestException('status must be one of APPROVED, COMPLETED, REJECTED, FAILED');
+  }
+
+  private parseDisputeStatusTransition(value: unknown): DisputeRecordStatus {
+    if (typeof value !== 'string') {
+      throw new BadRequestException('status is required and must be one of UNDER_REVIEW, RESOLVED, REJECTED');
+    }
+
+    const normalized = value.trim().toUpperCase();
+    if (normalized === 'UNDER_REVIEW' || normalized === 'RESOLVED' || normalized === 'REJECTED') {
+      return normalized;
+    }
+
+    throw new BadRequestException('status must be one of UNDER_REVIEW, RESOLVED, REJECTED');
+  }
+
+  private ensureRefundTransitionAllowed(current: RefundRecordStatus, next: RefundRecordStatus) {
+    const transitions: Record<RefundRecordStatus, RefundRecordStatus[]> = {
+      PENDING: ['APPROVED', 'REJECTED', 'FAILED'],
+      APPROVED: ['COMPLETED', 'FAILED'],
+      COMPLETED: [],
+      REJECTED: [],
+      FAILED: [],
+    };
+
+    if (!transitions[current].includes(next)) {
+      throw new BadRequestException(`Refund status transition ${current} -> ${next} is not allowed`);
+    }
+  }
+
+  private ensureDisputeTransitionAllowed(current: DisputeRecordStatus, next: DisputeRecordStatus) {
+    const transitions: Record<DisputeRecordStatus, DisputeRecordStatus[]> = {
+      OPEN: ['UNDER_REVIEW', 'RESOLVED', 'REJECTED'],
+      UNDER_REVIEW: ['RESOLVED', 'REJECTED'],
+      RESOLVED: [],
+      REJECTED: [],
+    };
+
+    if (!transitions[current].includes(next)) {
+      throw new BadRequestException(`Dispute status transition ${current} -> ${next} is not allowed`);
+    }
+  }
+
+  private parsePagination(limitValue: unknown, offsetValue: unknown, maxLimit: number) {
+    const limitParsed = this.parseBackgroundJobListLimit(limitValue);
+    if (limitValue !== undefined && limitParsed === null) {
+      throw new BadRequestException(`limit must be an integer between 1 and ${maxLimit}`);
+    }
+
+    const offsetParsed = this.parseBackgroundJobListOffset(offsetValue);
+    if (offsetValue !== undefined && offsetParsed === null) {
+      throw new BadRequestException('offset must be an integer between 0 and 10000');
+    }
+
+    return {
+      limit: Math.min(limitParsed ?? 50, maxLimit),
+      offset: offsetParsed ?? 0,
+    };
+  }
+
+  private async applyBookingRefundStatusFromRecords(bookingId: string, paymentId: string, refunds: RefundRecord[]) {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      select: { amount: true },
+    });
+    if (!payment) {
+      return null;
+    }
+
+    const completedAmount = refunds
+      .filter((record) => record.paymentId === paymentId && record.status === 'COMPLETED')
+      .reduce((sum, record) => sum + record.requestedAmount, 0);
+    const paymentAmount = Number(payment.amount);
+    const fullyRefunded = completedAmount >= (paymentAmount - 0.009);
+
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: { id: true, status: true },
+    });
+    if (!booking) {
+      return {
+        id: bookingId,
+        adjusted: false,
+        status: null,
+        fullyRefunded,
+      };
+    }
+
+    if (!fullyRefunded || booking.status === 'REFUNDED') {
+      return {
+        id: booking.id,
+        adjusted: false,
+        status: booking.status,
+        fullyRefunded,
+      };
+    }
+
+    const updated = await this.prisma.booking.update({
+      where: { id: booking.id },
+      data: {
+        status: 'REFUNDED',
+        holdExpiresAt: null,
+        fareLockExpiresAt: null,
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    return {
+      id: updated.id,
+      adjusted: true,
+      status: updated.status,
+      fullyRefunded,
     };
   }
 

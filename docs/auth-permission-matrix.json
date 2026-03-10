@@ -8,7 +8,7 @@
     "ADMIN_CARE",
     "ADMIN_FINANCE"
   ],
-  "totalEndpoints": 132,
+  "totalEndpoints": 137,
   "endpoints": [
     {
       "method": "GET",
@@ -1197,6 +1197,47 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/payments/admin/ledger/report",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payments/admin/ledger/sync",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": false,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/payments/admin/mib/health",
       "accessMode": "roles",
       "allowedRoles": [
@@ -1401,6 +1442,47 @@
       }
     },
     {
+      "method": "GET",
+      "path": "/api/v1/payments/admin/tax-invoices",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payments/admin/tax-invoices/generate",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_FINANCE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": false,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
       "method": "POST",
       "path": "/api/v1/payments/disputes",
       "accessMode": "authenticated",
@@ -1435,6 +1517,22 @@
     {
       "method": "POST",
       "path": "/api/v1/payments/refunds",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/payments/payments.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/payments/tax-invoices/me",
       "accessMode": "authenticated",
       "allowedRoles": [],
       "source": "infra/backend/src/payments/payments.controller.ts",

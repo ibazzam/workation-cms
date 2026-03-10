@@ -61,6 +61,40 @@ type VendorSettlementReportPayload = {
   currency?: unknown;
 };
 
+type LedgerSyncPayload = {
+  from?: unknown;
+  to?: unknown;
+};
+
+type LedgerReportPayload = {
+  from?: unknown;
+  to?: unknown;
+  provider?: unknown;
+  currency?: unknown;
+  entryType?: unknown;
+  limit?: unknown;
+  offset?: unknown;
+};
+
+type TaxInvoiceGeneratePayload = {
+  bookingId?: unknown;
+  paymentId?: unknown;
+  idempotencyKey?: unknown;
+  taxRate?: unknown;
+  issuerName?: unknown;
+  issuerTaxId?: unknown;
+  notes?: unknown;
+};
+
+type TaxInvoiceListPayload = {
+  bookingId?: unknown;
+  paymentId?: unknown;
+  customerEmail?: unknown;
+  invoiceNumber?: unknown;
+  limit?: unknown;
+  offset?: unknown;
+};
+
 type RefundQueuePayload = {
   status?: unknown;
   bookingId?: unknown;
@@ -89,6 +123,49 @@ type DisputeStatusUpdatePayload = {
 
 type RefundRecordStatus = 'PENDING' | 'APPROVED' | 'COMPLETED' | 'REJECTED' | 'FAILED';
 type DisputeRecordStatus = 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED' | 'REJECTED';
+type FinanceLedgerEntryType = 'PAYMENT_CAPTURED' | 'REFUND_COMPLETED';
+
+type FinanceLedgerEntry = {
+  id: string;
+  externalRef: string;
+  entryType: FinanceLedgerEntryType;
+  bookingId: string;
+  paymentId: string;
+  provider: string;
+  currency: string;
+  grossAmount: number;
+  taxAmount: number;
+  netAmount: number;
+  occurredAt: string;
+  source: string;
+  createdAt: string;
+};
+
+type TaxInvoiceRecord = {
+  id: string;
+  invoiceNumber: string;
+  bookingId: string;
+  paymentId: string;
+  userId: string;
+  customerName: string | null;
+  customerEmail: string | null;
+  provider: string;
+  currency: string;
+  subtotalAmount: number;
+  taxRate: number;
+  taxAmount: number;
+  totalAmount: number;
+  status: 'ISSUED' | 'VOID';
+  issuerName: string;
+  issuerTaxId: string;
+  notes: string | null;
+  idempotencyKey: string | null;
+  issuedAt: string;
+  createdByUserId: string;
+  createdByRole: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 type RefundRecord = {
   id: string;
@@ -824,6 +901,357 @@ export class PaymentsService {
       },
       byProviderCurrency,
       generatedAt: new Date().toISOString(),
+    };
+  }
+
+  async syncFinanceLedger(payload: LedgerSyncPayload = {}) {
+    const dateRange = this.parseSettlementDateRange(payload);
+    const taxRate = this.readRateEnv('PAYMENTS_LEDGER_TAX_RATE', 0.08);
+
+    const [existingEntries, succeededPayments, refundRecords] = await Promise.all([
+      this.readFinanceLedgerEntries(),
+      this.prisma.payment.findMany({
+        where: {
+          status: 'SUCCEEDED',
+          createdAt: {
+            gte: dateRange.from,
+            lte: dateRange.to,
+          },
+        },
+        select: {
+          id: true,
+          bookingId: true,
+          provider: true,
+          currency: true,
+          amount: true,
+          createdAt: true,
+        },
+      }),
+      this.readRefundRecords(),
+    ]);
+
+    const completedRefunds = refundRecords.filter((record) => {
+      const createdAt = new Date(record.createdAt);
+      return record.status === 'COMPLETED' && createdAt >= dateRange.from && createdAt <= dateRange.to;
+    });
+
+    const byExternalRef = new Map(existingEntries.map((entry) => [entry.externalRef, entry]));
+    let inserted = 0;
+    let updated = 0;
+
+    for (const payment of succeededPayments) {
+      const totalAmount = Number(payment.amount);
+      const subtotalAmount = totalAmount / (1 + taxRate);
+      const taxAmount = totalAmount - subtotalAmount;
+      const externalRef = `payment:${payment.id}`;
+      const nextEntry: FinanceLedgerEntry = {
+        id: byExternalRef.get(externalRef)?.id ?? `ledger_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        externalRef,
+        entryType: 'PAYMENT_CAPTURED',
+        bookingId: payment.bookingId,
+        paymentId: payment.id,
+        provider: payment.provider,
+        currency: payment.currency,
+        grossAmount: Number(totalAmount.toFixed(2)),
+        taxAmount: Number(taxAmount.toFixed(2)),
+        netAmount: Number((totalAmount - taxAmount).toFixed(2)),
+        occurredAt: payment.createdAt.toISOString(),
+        source: 'PAYMENT',
+        createdAt: byExternalRef.get(externalRef)?.createdAt ?? new Date().toISOString(),
+      };
+
+      if (byExternalRef.has(externalRef)) {
+        updated += 1;
+      } else {
+        inserted += 1;
+      }
+
+      byExternalRef.set(externalRef, nextEntry);
+    }
+
+    for (const refund of completedRefunds) {
+      const totalAmount = Number(refund.requestedAmount);
+      const subtotalAmount = totalAmount / (1 + taxRate);
+      const taxAmount = totalAmount - subtotalAmount;
+      const externalRef = `refund:${refund.id}`;
+      const nextEntry: FinanceLedgerEntry = {
+        id: byExternalRef.get(externalRef)?.id ?? `ledger_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        externalRef,
+        entryType: 'REFUND_COMPLETED',
+        bookingId: refund.bookingId,
+        paymentId: refund.paymentId,
+        provider: refund.provider,
+        currency: refund.currency,
+        grossAmount: Number((-totalAmount).toFixed(2)),
+        taxAmount: Number((-taxAmount).toFixed(2)),
+        netAmount: Number((-(totalAmount - taxAmount)).toFixed(2)),
+        occurredAt: refund.createdAt,
+        source: 'REFUND',
+        createdAt: byExternalRef.get(externalRef)?.createdAt ?? new Date().toISOString(),
+      };
+
+      if (byExternalRef.has(externalRef)) {
+        updated += 1;
+      } else {
+        inserted += 1;
+      }
+
+      byExternalRef.set(externalRef, nextEntry);
+    }
+
+    const items = Array.from(byExternalRef.values())
+      .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
+    await this.writeFinanceLedgerEntries(items);
+
+    return {
+      synced: true,
+      window: {
+        from: dateRange.from.toISOString(),
+        to: dateRange.to.toISOString(),
+      },
+      taxRate,
+      totals: {
+        paymentsSeen: succeededPayments.length,
+        refundsSeen: completedRefunds.length,
+        inserted,
+        updated,
+        ledgerEntries: items.length,
+      },
+      syncedAt: new Date().toISOString(),
+    };
+  }
+
+  async getFinanceLedgerReport(payload: LedgerReportPayload = {}) {
+    const dateRange = this.parseSettlementDateRange(payload);
+    const providerFilter = this.parseProviderFilter(payload.provider);
+    if (payload.provider !== undefined && !providerFilter) {
+      throw new BadRequestException('provider must be one of STRIPE, BML, MIB');
+    }
+
+    const currencyFilter = this.parseCurrency(payload.currency);
+    if (payload.currency !== undefined && !currencyFilter) {
+      throw new BadRequestException('currency must be one of USD, MVR');
+    }
+
+    const entryTypeFilter = this.parseLedgerEntryTypeFilter(payload.entryType);
+    const { limit, offset } = this.parsePagination(payload.limit, payload.offset, 500);
+
+    const entries = await this.readFinanceLedgerEntries();
+    const filtered = entries.filter((entry) => {
+      const occurredAt = new Date(entry.occurredAt);
+      if (occurredAt < dateRange.from || occurredAt > dateRange.to) {
+        return false;
+      }
+
+      if (providerFilter && entry.provider !== providerFilter) {
+        return false;
+      }
+
+      if (currencyFilter && entry.currency !== currencyFilter) {
+        return false;
+      }
+
+      if (entryTypeFilter && entry.entryType !== entryTypeFilter) {
+        return false;
+      }
+
+      return true;
+    });
+
+    const totals = filtered.reduce((acc, entry) => {
+      acc.grossAmount += entry.grossAmount;
+      acc.taxAmount += entry.taxAmount;
+      acc.netAmount += entry.netAmount;
+      return acc;
+    }, {
+      grossAmount: 0,
+      taxAmount: 0,
+      netAmount: 0,
+    });
+
+    const items = filtered.slice(offset, offset + limit);
+    return {
+      window: {
+        from: dateRange.from.toISOString(),
+        to: dateRange.to.toISOString(),
+      },
+      filters: {
+        provider: providerFilter ?? 'ALL',
+        currency: currencyFilter ?? 'ALL',
+        entryType: entryTypeFilter ?? 'ALL',
+      },
+      totals: {
+        grossAmount: Number(totals.grossAmount.toFixed(2)),
+        taxAmount: Number(totals.taxAmount.toFixed(2)),
+        netAmount: Number(totals.netAmount.toFixed(2)),
+        entriesCount: filtered.length,
+      },
+      limit,
+      offset,
+      items,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  async generateTaxInvoice(payload: TaxInvoiceGeneratePayload, actor: { id: string; role: string }) {
+    const bookingId = this.parseOptionalId(payload.bookingId);
+    const paymentId = this.parseOptionalId(payload.paymentId);
+    const idempotencyKey = this.parseOptionalKey(payload.idempotencyKey, 100);
+    const taxRate = this.parseOptionalRate(payload.taxRate, 'taxRate') ?? this.readRateEnv('PAYMENTS_TAX_RATE', 0.08);
+    const issuerName = this.parseOptionalText(payload.issuerName, 120) ?? process.env.PAYMENTS_TAX_INVOICE_ISSUER_NAME ?? 'Workation Maldives';
+    const issuerTaxId = this.parseOptionalText(payload.issuerTaxId, 120) ?? process.env.PAYMENTS_TAX_INVOICE_ISSUER_TAX_ID ?? 'MV-TAX-UNREGISTERED';
+    const notes = this.parseOptionalText(payload.notes, 1000);
+
+    const payment = await this.resolvePaymentForAdjustment(bookingId, paymentId);
+    if (payment.status !== 'SUCCEEDED') {
+      throw new BadRequestException('Tax invoices can only be generated for succeeded payments');
+    }
+
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: payment.bookingId },
+      select: {
+        id: true,
+        userId: true,
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    const invoices = await this.readTaxInvoiceRecords();
+    if (idempotencyKey) {
+      const existingByIdempotency = invoices.find((invoice) => invoice.idempotencyKey === idempotencyKey);
+      if (existingByIdempotency) {
+        return {
+          created: false,
+          invoice: existingByIdempotency,
+        };
+      }
+    }
+
+    const existingByPayment = invoices.find((invoice) => invoice.paymentId === payment.id && invoice.status === 'ISSUED');
+    if (existingByPayment) {
+      return {
+        created: false,
+        invoice: existingByPayment,
+      };
+    }
+
+    const totalAmount = Number(payment.amount);
+    const subtotalAmount = totalAmount / (1 + taxRate);
+    const taxAmount = totalAmount - subtotalAmount;
+
+    const now = new Date();
+    const issuedAt = now.toISOString();
+    const invoiceNumber = this.generateTaxInvoiceNumber(now, invoices);
+    const created: TaxInvoiceRecord = {
+      id: `taxinv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      invoiceNumber,
+      bookingId: booking.id,
+      paymentId: payment.id,
+      userId: booking.userId,
+      customerName: booking.user?.name ?? null,
+      customerEmail: booking.user?.email ?? null,
+      provider: payment.provider,
+      currency: payment.currency,
+      subtotalAmount: Number(subtotalAmount.toFixed(2)),
+      taxRate: Number(taxRate.toFixed(4)),
+      taxAmount: Number(taxAmount.toFixed(2)),
+      totalAmount: Number(totalAmount.toFixed(2)),
+      status: 'ISSUED',
+      issuerName,
+      issuerTaxId,
+      notes,
+      idempotencyKey,
+      issuedAt,
+      createdByUserId: actor.id,
+      createdByRole: actor.role,
+      createdAt: issuedAt,
+      updatedAt: issuedAt,
+    };
+
+    await this.writeTaxInvoiceRecords([created, ...invoices]);
+
+    return {
+      created: true,
+      invoice: created,
+    };
+  }
+
+  async listTaxInvoices(payload: TaxInvoiceListPayload = {}) {
+    const bookingId = this.parseOptionalId(payload.bookingId);
+    const paymentId = this.parseOptionalId(payload.paymentId);
+    const customerEmail = this.parseOptionalText(payload.customerEmail, 320)?.toLowerCase() ?? null;
+    const invoiceNumber = this.parseOptionalText(payload.invoiceNumber, 64)?.toUpperCase() ?? null;
+    const { limit, offset } = this.parsePagination(payload.limit, payload.offset, 500);
+
+    const invoices = await this.readTaxInvoiceRecords();
+    const filtered = invoices.filter((invoice) => {
+      if (bookingId && invoice.bookingId !== bookingId) {
+        return false;
+      }
+
+      if (paymentId && invoice.paymentId !== paymentId) {
+        return false;
+      }
+
+      if (customerEmail && (invoice.customerEmail ?? '').toLowerCase() !== customerEmail) {
+        return false;
+      }
+
+      if (invoiceNumber && invoice.invoiceNumber.toUpperCase() !== invoiceNumber) {
+        return false;
+      }
+
+      return true;
+    });
+
+    return {
+      total: filtered.length,
+      limit,
+      offset,
+      items: filtered.slice(offset, offset + limit),
+    };
+  }
+
+  async listTaxInvoicesForUser(userId: string, payload: TaxInvoiceListPayload = {}) {
+    const bookingId = this.parseOptionalId(payload.bookingId);
+    const paymentId = this.parseOptionalId(payload.paymentId);
+    const invoiceNumber = this.parseOptionalText(payload.invoiceNumber, 64)?.toUpperCase() ?? null;
+    const { limit, offset } = this.parsePagination(payload.limit, payload.offset, 200);
+
+    const invoices = await this.readTaxInvoiceRecords();
+    const filtered = invoices.filter((invoice) => {
+      if (invoice.userId !== userId) {
+        return false;
+      }
+
+      if (bookingId && invoice.bookingId !== bookingId) {
+        return false;
+      }
+
+      if (paymentId && invoice.paymentId !== paymentId) {
+        return false;
+      }
+
+      if (invoiceNumber && invoice.invoiceNumber.toUpperCase() !== invoiceNumber) {
+        return false;
+      }
+
+      return true;
+    });
+
+    return {
+      total: filtered.length,
+      limit,
+      offset,
+      items: filtered.slice(offset, offset + limit),
     };
   }
 
@@ -1772,6 +2200,23 @@ export class PaymentsService {
     throw new BadRequestException('status must be one of OPEN, UNDER_REVIEW, RESOLVED, REJECTED');
   }
 
+  private parseLedgerEntryTypeFilter(value: unknown): FinanceLedgerEntryType | null {
+    if (value === undefined) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('entryType must be one of PAYMENT_CAPTURED, REFUND_COMPLETED');
+    }
+
+    const normalized = value.trim().toUpperCase();
+    if (normalized === 'PAYMENT_CAPTURED' || normalized === 'REFUND_COMPLETED') {
+      return normalized;
+    }
+
+    throw new BadRequestException('entryType must be one of PAYMENT_CAPTURED, REFUND_COMPLETED');
+  }
+
   private parseRefundStatusTransition(value: unknown): RefundRecordStatus {
     if (typeof value !== 'string') {
       throw new BadRequestException('status is required and must be one of APPROVED, COMPLETED, REJECTED, FAILED');
@@ -1934,6 +2379,22 @@ export class PaymentsService {
     await this.writeJsonArrayConfig(this.disputeConfigKey(), records);
   }
 
+  private async readFinanceLedgerEntries(): Promise<FinanceLedgerEntry[]> {
+    return this.readJsonArrayConfig<FinanceLedgerEntry>(this.financeLedgerConfigKey());
+  }
+
+  private async writeFinanceLedgerEntries(records: FinanceLedgerEntry[]) {
+    await this.writeJsonArrayConfig(this.financeLedgerConfigKey(), records);
+  }
+
+  private async readTaxInvoiceRecords(): Promise<TaxInvoiceRecord[]> {
+    return this.readJsonArrayConfig<TaxInvoiceRecord>(this.taxInvoicesConfigKey());
+  }
+
+  private async writeTaxInvoiceRecords(records: TaxInvoiceRecord[]) {
+    await this.writeJsonArrayConfig(this.taxInvoicesConfigKey(), records);
+  }
+
   private async readJsonArrayConfig<T>(key: string): Promise<T[]> {
     const row = await this.prisma.appConfig.findUnique({ where: { key } });
     if (!row) {
@@ -1970,6 +2431,14 @@ export class PaymentsService {
 
   private disputeConfigKey() {
     return 'payments:disputes:v1';
+  }
+
+  private financeLedgerConfigKey() {
+    return 'payments:finance-ledger:v1';
+  }
+
+  private taxInvoicesConfigKey() {
+    return 'payments:tax-invoices:v1';
   }
 
   private providerCircuitConfigKey(provider: ProviderName) {
@@ -2553,6 +3022,23 @@ export class PaymentsService {
     return value.trim();
   }
 
+  private generateTaxInvoiceNumber(now: Date, existing: TaxInvoiceRecord[]) {
+    const y = now.getUTCFullYear();
+    const m = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(now.getUTCDate()).padStart(2, '0');
+    const prefix = `INV-${y}${m}${d}`;
+
+    let sequence = existing.filter((item) => item.invoiceNumber.startsWith(prefix)).length + 1;
+    let invoiceNumber = `${prefix}-${String(sequence).padStart(4, '0')}`;
+    const used = new Set(existing.map((item) => item.invoiceNumber));
+    while (used.has(invoiceNumber)) {
+      sequence += 1;
+      invoiceNumber = `${prefix}-${String(sequence).padStart(4, '0')}`;
+    }
+
+    return invoiceNumber;
+  }
+
   private getAdapter(provider: ProviderName): PaymentProviderAdapter {
     if (provider === 'BML') {
       return this.bmlAdapter;
@@ -2647,6 +3133,19 @@ export class PaymentsService {
     }
 
     return normalized;
+  }
+
+  private parseOptionalRate(value: unknown, fieldName: string): number | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    const parsed = typeof value === 'string' ? Number(value) : value;
+    if (typeof parsed !== 'number' || !Number.isFinite(parsed) || parsed < 0 || parsed > 1) {
+      throw new BadRequestException(`${fieldName} must be a number between 0 and 1`);
+    }
+
+    return parsed;
   }
 
   private parseDate(value: unknown, fieldName: string): Date {

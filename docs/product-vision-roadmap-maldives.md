@@ -63,7 +63,7 @@ Core customer outcomes:
 - [x] Provider hardening to production-grade SLA behavior (timeouts, circuit breaking, dead-letter escalation).
 - [x] Refunds/partial refunds + charge dispute handling.
 - [x] Settlement and payout reporting for vendors.
-- [ ] Finance-ledger integration and tax invoice generation.
+- [x] Finance-ledger integration and tax invoice generation.
 
 ## H. New Marketplace Verticals (Vision Gaps)
 - [ ] Car & bike rental domain (inventory, pickup/drop rules, age/license checks).

@@ -42,6 +42,11 @@ on:
         required: true
         type: boolean
         default: false
+      require_new_verticals:
+        description: Fail when new vertical integration checks are skipped/unavailable
+        required: true
+        type: boolean
+        default: false
 
 jobs:
   live-preflight:
@@ -72,4 +77,5 @@ jobs:
           PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY: ${{ github.event.inputs.require_payments_reliability || vars.LIVE_PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY || 'false' }}
           PREFLIGHT_REQUIRE_MODERATION_PATHS: ${{ github.event.inputs.require_moderation_paths || vars.LIVE_PREFLIGHT_REQUIRE_MODERATION_PATHS || 'false' }}
           PREFLIGHT_REQUIRE_SCHEDULER_HEALTH: ${{ github.event.inputs.require_scheduler_health || vars.LIVE_PREFLIGHT_REQUIRE_SCHEDULER_HEALTH || 'false' }}
+          PREFLIGHT_REQUIRE_NEW_VERTICALS: ${{ github.event.inputs.require_new_verticals || vars.LIVE_PREFLIGHT_REQUIRE_NEW_VERTICALS || 'false' }}
         run: npm run live:preflight

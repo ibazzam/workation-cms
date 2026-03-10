@@ -10,6 +10,7 @@ const requireCheckoutReliability = (process.env.PREFLIGHT_REQUIRE_CHECKOUT_RELIA
 const requirePaymentsReliability = (process.env.PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY ?? 'false').toLowerCase() === 'true';
 const requireModerationPaths = (process.env.PREFLIGHT_REQUIRE_MODERATION_PATHS ?? 'false').toLowerCase() === 'true';
 const requireSchedulerHealth = (process.env.PREFLIGHT_REQUIRE_SCHEDULER_HEALTH ?? 'false').toLowerCase() === 'true';
+const requireNewVerticals = (process.env.PREFLIGHT_REQUIRE_NEW_VERTICALS ?? 'false').toLowerCase() === 'true';
 
 if (!baseUrl) {
   console.error('BASE_URL is required. Example: BASE_URL=https://api.workation.mv');
@@ -662,6 +663,135 @@ async function checkSchedulerHealth() {
   }
 }
 
+async function checkNewVerticalsCoverage() {
+  const domains = [
+    {
+      key: 'excursions',
+      listPath: '/api/v1/excursions',
+      detailPath: (id) => `/api/v1/excursions/${id}`,
+      childListPath: (id) => `/api/v1/excursions/${id}/slots`,
+      quotePath: (id, childRows) => {
+        const slotId = childRows[0]?.id;
+        return slotId
+          ? `/api/v1/excursions/${id}/quote?participants=1&slotId=${encodeURIComponent(slotId)}`
+          : `/api/v1/excursions/${id}/quote?participants=1`;
+      },
+    },
+    {
+      key: 'restaurants',
+      listPath: '/api/v1/restaurants',
+      detailPath: (id) => `/api/v1/restaurants/${id}`,
+      childListPath: (id) => `/api/v1/restaurants/${id}/windows`,
+      quotePath: (id, childRows) => {
+        const windowId = childRows[0]?.id;
+        return windowId
+          ? `/api/v1/restaurants/${id}/quote?partySize=2&windowId=${encodeURIComponent(windowId)}`
+          : `/api/v1/restaurants/${id}/quote?partySize=2`;
+      },
+    },
+    {
+      key: 'resort-day-visits',
+      listPath: '/api/v1/resort-day-visits',
+      detailPath: (id) => `/api/v1/resort-day-visits/${id}`,
+      childListPath: (id) => `/api/v1/resort-day-visits/${id}/windows`,
+      quotePath: (id, childRows) => {
+        const windowId = childRows[0]?.id;
+        return windowId
+          ? `/api/v1/resort-day-visits/${id}/quote?passesRequested=1&travelerCategory=ADULT&travelerAge=30&windowId=${encodeURIComponent(windowId)}`
+          : null;
+      },
+    },
+    {
+      key: 'remote-work-spaces',
+      listPath: '/api/v1/remote-work-spaces',
+      detailPath: (id) => `/api/v1/remote-work-spaces/${id}`,
+      childListPath: (id) => `/api/v1/remote-work-spaces/${id}/pass-windows`,
+      quotePath: (id, childRows) => {
+        const windowId = childRows[0]?.id;
+        return windowId
+          ? `/api/v1/remote-work-spaces/${id}/quote?passesRequested=1&passType=DAY&deskType=DESK&windowId=${encodeURIComponent(windowId)}`
+          : null;
+      },
+    },
+    {
+      key: 'vehicle-rentals',
+      listPath: '/api/v1/vehicle-rentals',
+      detailPath: (id) => `/api/v1/vehicle-rentals/${id}`,
+      childListPath: (id) => {
+        const startDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        const endDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        return `/api/v1/vehicle-rentals/${id}/availability?startDate=${startDate}&endDate=${endDate}&unitsRequested=1`;
+      },
+      quotePath: (id) => {
+        const startDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        const endDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        return `/api/v1/vehicle-rentals/${id}/quote?startDate=${startDate}&endDate=${endDate}&unitsRequested=1&driverAge=30&hasLicense=true`;
+      },
+    },
+  ];
+
+  for (const domain of domains) {
+    let list;
+    try {
+      list = await client.get(domain.listPath);
+    } catch (err) {
+      if (requireNewVerticals) {
+        throw err;
+      }
+
+      const status = err?.response?.status;
+      console.warn(`Skipping ${domain.key} checks: list endpoint unavailable (${status ?? 'request error'})`);
+      continue;
+    }
+
+    if (list.status !== 200) {
+      if (requireNewVerticals) {
+        throw new Error(`${domain.key} list failed: ${list.status}`);
+      }
+
+      console.warn(`Skipping ${domain.key} checks: list endpoint returned ${list.status}`);
+      continue;
+    }
+
+    const rows = Array.isArray(list.data)
+      ? list.data
+      : (Array.isArray(list.data?.items) ? list.data.items : []);
+
+    const first = rows.find((item) => typeof item?.id === 'string');
+    if (!first?.id) {
+      console.warn(`Skipping deep ${domain.key} checks: no fixtures returned`);
+      continue;
+    }
+
+    const detail = await client.get(domain.detailPath(first.id));
+    if (detail.status !== 200) {
+      throw new Error(`${domain.key} detail failed: ${detail.status}`);
+    }
+
+    const childList = await client.get(domain.childListPath(first.id));
+    if (childList.status !== 200) {
+      throw new Error(`${domain.key} window/availability list failed: ${childList.status}`);
+    }
+
+    const childRows = Array.isArray(childList.data)
+      ? childList.data
+      : (Array.isArray(childList.data?.items) ? childList.data.items : []);
+
+    const quotePath = domain.quotePath(first.id, childRows);
+    if (!quotePath) {
+      console.warn(`Skipping ${domain.key} quote check: no slot/window fixtures available`);
+      continue;
+    }
+
+    const quote = await client.get(quotePath);
+    if (quote.status !== 200) {
+      throw new Error(`${domain.key} quote failed: ${quote.status}`);
+    }
+  }
+
+  console.log('New verticals integration coverage checks completed');
+}
+
 (async () => {
   try {
     console.log(`Running live preflight against ${baseUrl} (schedule ${scheduleId})`);
@@ -682,6 +812,7 @@ async function checkSchedulerHealth() {
     await checkPaymentsReliabilityFlow();
     await checkModerationAdminPaths();
     await checkSchedulerHealth();
+    await checkNewVerticalsCoverage();
     console.log('Live preflight passed');
     process.exit(0);
   } catch (err) {

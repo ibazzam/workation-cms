@@ -5,7 +5,7 @@ This document is generated from backend controller decorators in `infra/backend/
 Generation command: `npm run permissions:matrix:write`
 Validation command: `npm run permissions:matrix:check`
 
-Total endpoint policies: **146**
+Total endpoint policies: **156**
 
 Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE`, `ADMIN_FINANCE`
 
@@ -50,6 +50,16 @@ Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE
 | POST | /api/v1/countries/admin | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/countries/countries.controller.ts |
 | DELETE | /api/v1/countries/admin/:id | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/countries/countries.controller.ts |
 | PUT | /api/v1/countries/admin/:id | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/countries/countries.controller.ts |
+| GET | /api/v1/excursions | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/excursions/excursions.controller.ts |
+| GET | /api/v1/excursions/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/excursions/excursions.controller.ts |
+| GET | /api/v1/excursions/:id/quote | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/excursions/excursions.controller.ts |
+| GET | /api/v1/excursions/:id/slots | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/excursions/excursions.controller.ts |
+| POST | /api/v1/excursions/admin | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/excursions/excursions.controller.ts |
+| DELETE | /api/v1/excursions/admin/:id | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/excursions/excursions.controller.ts |
+| PUT | /api/v1/excursions/admin/:id | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/excursions/excursions.controller.ts |
+| POST | /api/v1/excursions/admin/:id/slots | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/excursions/excursions.controller.ts |
+| DELETE | /api/v1/excursions/admin/:id/slots/:slotId | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/excursions/excursions.controller.ts |
+| PUT | /api/v1/excursions/admin/:id/slots/:slotId | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/excursions/excursions.controller.ts |
 | GET | /api/v1/health | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/health.controller.ts |
 | GET | /api/v1/islands | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/islands/islands.controller.ts |
 | GET | /api/v1/islands/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/islands/islands.controller.ts |

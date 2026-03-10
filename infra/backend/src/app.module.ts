@@ -20,6 +20,7 @@ import { ObservabilityModule } from './observability/observability.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { SocialLinksModule } from './social-links/social-links.module';
 import { TransportsModule } from './transports/transports.module';
+import { ExcursionsModule } from './excursions/excursions.module';
 import { UsersModule } from './users/users.module';
 import { VendorsModule } from './vendors/vendors.module';
 import { VehicleRentalsModule } from './vehicle-rentals/vehicle-rentals.module';
@@ -44,6 +45,7 @@ import { WorkationsModule } from './workations/workations.module';
     LoyaltyModule,
     ReviewsModule,
     SocialLinksModule,
+    ExcursionsModule,
     WorkationsModule,
     VendorsModule,
     ServiceCategoriesModule,

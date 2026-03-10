@@ -36,6 +36,7 @@ model Vendor {
 
   accommodations Accommodation[]
   transports     Transport[]
+  excursions     Excursion[]
   vehicleRentals VehicleRental[]
   socialLinks    SocialLink[]
   loyaltyOffers  VendorLoyaltyOffer[]
@@ -68,6 +69,7 @@ model Island {
   accommodations Accommodation[]
   fromTransports   Transport[] @relation("fromIsland")
   toTransports     Transport[] @relation("toIsland")
+  excursions       Excursion[]
   pickupVehicleRentals  VehicleRental[] @relation("rentalPickupIsland")
   dropoffVehicleRentals VehicleRental[] @relation("rentalDropoffIsland")
 }
@@ -193,6 +195,50 @@ model TransportFareClass {
 
   @@unique([transportId, code])
   @@index([transportId])
+}
+
+model Excursion {
+  id                String   @id @default(uuid())
+  vendorId          String
+  islandId          Int
+  type              String
+  title             String
+  description       String?
+  durationMinutes   Int
+  baseCapacity      Int      @default(1)
+  equipmentRequired Boolean  @default(false)
+  equipmentStock    Int      @default(0)
+  price             Decimal  @default("0.00")
+  currency          String   @default("USD")
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  vendor            Vendor   @relation(fields: [vendorId], references: [id])
+  island            Island   @relation(fields: [islandId], references: [id])
+  slots             ExcursionSlot[]
+
+  @@index([vendorId, active])
+  @@index([islandId, active])
+  @@index([type, active])
+}
+
+model ExcursionSlot {
+  id                   String   @id @default(uuid())
+  excursionId          String
+  startAt              DateTime
+  endAt                DateTime
+  capacityOverride     Int?
+  equipmentStockOverride Int?
+  status               String   @default("OPEN")
+  note                 String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  excursion            Excursion @relation(fields: [excursionId], references: [id])
+
+  @@index([excursionId, startAt])
+  @@index([status, startAt])
 }
 
 model VehicleRental {

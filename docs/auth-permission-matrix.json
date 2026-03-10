@@ -8,7 +8,7 @@
     "ADMIN_CARE",
     "ADMIN_FINANCE"
   ],
-  "totalEndpoints": 146,
+  "totalEndpoints": 156,
   "endpoints": [
     {
       "method": "GET",
@@ -710,6 +710,196 @@
         "ANONYMOUS": false,
         "USER": false,
         "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/excursions",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/excursions/excursions.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/excursions/:id",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/excursions/excursions.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/excursions/:id/quote",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/excursions/excursions.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/excursions/:id/slots",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/excursions/excursions.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/excursions/admin",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/excursions/excursions.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/excursions/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/excursions/excursions.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/excursions/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/excursions/excursions.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/excursions/admin/:id/slots",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/excursions/excursions.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/excursions/admin/:id/slots/:slotId",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/excursions/excursions.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/excursions/admin/:id/slots/:slotId",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/excursions/excursions.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
         "ADMIN": true,
         "ADMIN_SUPER": true,
         "ADMIN_CARE": true,

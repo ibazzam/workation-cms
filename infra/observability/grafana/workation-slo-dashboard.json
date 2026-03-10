@@ -1,0 +1,77 @@
+{
+  "title": "Workation API SLO Dashboard",
+  "uid": "workation-slo",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "tags": ["workation", "slo", "api"],
+  "panels": [
+    {
+      "title": "Requests in SLO Window",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "workation_http_requests_total",
+          "legendFormat": "requests"
+        }
+      ],
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 }
+    },
+    {
+      "title": "Error Rate",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "workation_http_error_rate",
+          "legendFormat": "error_rate"
+        }
+      ],
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 }
+    },
+    {
+      "title": "P95 Latency (ms)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "workation_http_latency_p95_ms",
+          "legendFormat": "p95"
+        }
+      ],
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 }
+    },
+    {
+      "title": "P99 Latency (ms)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "workation_http_latency_p99_ms",
+          "legendFormat": "p99"
+        }
+      ],
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 }
+    },
+    {
+      "title": "Domain Request Volume",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "workation_http_domain_requests_total",
+          "legendFormat": "{{domain}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 }
+    },
+    {
+      "title": "Domain Error Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "workation_http_domain_error_rate",
+          "legendFormat": "{{domain}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 }
+    }
+  ]
+}

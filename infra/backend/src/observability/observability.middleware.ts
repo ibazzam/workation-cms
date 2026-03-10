@@ -8,6 +8,14 @@ export class ObservabilityMiddleware implements NestMiddleware {
 
   use(request: any, response: any, next: () => void): void {
     const start = process.hrtime.bigint();
+    const requestIdHeader = request?.headers?.['x-request-id'];
+    const requestId = typeof requestIdHeader === 'string' && requestIdHeader.trim().length > 0
+      ? requestIdHeader
+      : randomUUID();
+    const traceId = this.resolveTraceId(request?.headers, requestId);
+
+    response.setHeader('x-request-id', requestId);
+    response.setHeader('x-trace-id', traceId);
 
     response.on('finish', () => {
       const elapsedNs = process.hrtime.bigint() - start;
@@ -20,10 +28,6 @@ export class ObservabilityMiddleware implements NestMiddleware {
             ? request.url
             : '') || '';
       const statusCode = Number(response?.statusCode ?? 500);
-      const requestIdHeader = request?.headers?.['x-request-id'];
-      const requestId = typeof requestIdHeader === 'string' && requestIdHeader.trim().length > 0
-        ? requestIdHeader
-        : randomUUID();
 
       this.observabilityService.record({
         ts: Date.now(),
@@ -37,6 +41,7 @@ export class ObservabilityMiddleware implements NestMiddleware {
       console.log(JSON.stringify({
         event: 'http_request',
         requestId,
+        traceId,
         method,
         path,
         statusCode,
@@ -48,5 +53,22 @@ export class ObservabilityMiddleware implements NestMiddleware {
     });
 
     next();
+  }
+
+  private resolveTraceId(headers: Record<string, unknown> | undefined, fallback: string): string {
+    const traceParent = typeof headers?.traceparent === 'string' ? headers.traceparent.trim() : '';
+    if (traceParent.length > 0) {
+      const parts = traceParent.split('-');
+      if (parts.length >= 2 && /^[0-9a-f]{32}$/i.test(parts[1])) {
+        return parts[1].toLowerCase();
+      }
+    }
+
+    const xTraceId = typeof headers?.['x-trace-id'] === 'string' ? headers['x-trace-id'].trim() : '';
+    if (xTraceId.length > 0) {
+      return xTraceId;
+    }
+
+    return fallback;
   }
 }

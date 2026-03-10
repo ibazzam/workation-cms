@@ -255,6 +255,44 @@ export class PaymentsController {
     return this.paymentsService.getVendorSettlementReport(user.vendorId, query);
   }
 
+  @Post('admin/ledger/sync')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
+  async syncFinanceLedger(@Body() body: Record<string, unknown>) {
+    return this.paymentsService.syncFinanceLedger(body);
+  }
+
+  @Get('admin/ledger/report')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE', 'ADMIN_CARE')
+  async financeLedgerReport(@Query() query: Record<string, unknown>) {
+    return this.paymentsService.getFinanceLedgerReport(query);
+  }
+
+  @Post('admin/tax-invoices/generate')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
+  async generateTaxInvoice(
+    @CurrentUser() user: RequestUser,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.paymentsService.generateTaxInvoice(body, {
+      id: user.id,
+      role: user.role,
+    });
+  }
+
+  @Get('admin/tax-invoices')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE', 'ADMIN_CARE')
+  async listTaxInvoices(@Query() query: Record<string, unknown>) {
+    return this.paymentsService.listTaxInvoices(query);
+  }
+
+  @Get('tax-invoices/me')
+  async listMyTaxInvoices(
+    @CurrentUser() user: RequestUser,
+    @Query() query: Record<string, unknown>,
+  ) {
+    return this.paymentsService.listTaxInvoicesForUser(user.id, query);
+  }
+
   @Post('webhooks/stripe')
   @Public()
   @HttpCode(HttpStatus.OK)

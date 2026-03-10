@@ -54,6 +54,13 @@ type SettlementReportPayload = {
   currency?: unknown;
 };
 
+type VendorSettlementReportPayload = {
+  from?: unknown;
+  to?: unknown;
+  provider?: unknown;
+  currency?: unknown;
+};
+
 type RefundQueuePayload = {
   status?: unknown;
   bookingId?: unknown;
@@ -626,6 +633,192 @@ export class PaymentsService {
         grossAmount: Number(totals.grossAmount.toFixed(2)),
         refundedAmount: Number(totals.refundedAmount.toFixed(2)),
         netAmount: Number(totals.netAmount.toFixed(2)),
+        paymentsCount: totals.paymentsCount,
+        refundsCount: totals.refundsCount,
+      },
+      byProviderCurrency,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  async getVendorSettlementReport(actorVendorId: unknown, payload: VendorSettlementReportPayload) {
+    const vendorId = this.parseActorVendorId(actorVendorId);
+    const dateRange = this.parseSettlementDateRange(payload);
+    const providerFilter = this.parseProviderFilter(payload.provider);
+    if (payload.provider !== undefined && !providerFilter) {
+      throw new BadRequestException('provider must be one of STRIPE, BML, MIB');
+    }
+
+    const currencyFilter = this.parseCurrency(payload.currency);
+    if (payload.currency !== undefined && !currencyFilter) {
+      throw new BadRequestException('currency must be one of USD, MVR');
+    }
+
+    const succeededPayments = await this.prisma.payment.findMany({
+      where: {
+        status: 'SUCCEEDED',
+        ...(providerFilter ? { provider: providerFilter } : {}),
+        ...(currencyFilter ? { currency: currencyFilter } : {}),
+        createdAt: {
+          gte: dateRange.from,
+          lte: dateRange.to,
+        },
+      },
+      select: {
+        id: true,
+        bookingId: true,
+        provider: true,
+        currency: true,
+        amount: true,
+        createdAt: true,
+        booking: {
+          select: {
+            accommodation: {
+              select: {
+                vendorId: true,
+              },
+            },
+            transport: {
+              select: {
+                vendorId: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const vendorPayments = succeededPayments.filter((payment) => this.resolveBookingVendorId(payment.booking) === vendorId);
+    const vendorPaymentIds = new Set(vendorPayments.map((payment) => payment.id));
+
+    const refunds = await this.readRefundRecords();
+    const completedRefunds = refunds.filter((record) => {
+      const createdAt = new Date(record.createdAt);
+      return record.status === 'COMPLETED'
+        && createdAt >= dateRange.from
+        && createdAt <= dateRange.to
+        && (!providerFilter || record.provider === providerFilter)
+        && (!currencyFilter || record.currency === currencyFilter)
+        && vendorPaymentIds.has(record.paymentId);
+    });
+
+    const payoutFeeRate = this.readRateEnv('PAYMENTS_VENDOR_PAYOUT_FEE_RATE', 0.08);
+    const reserveRate = this.readRateEnv('PAYMENTS_VENDOR_PAYOUT_RESERVE_RATE', 0.03);
+
+    const bucketByProviderCurrency = new Map<string, {
+      provider: string;
+      currency: string;
+      grossAmount: number;
+      refundedAmount: number;
+      netAmount: number;
+      feesAmount: number;
+      reserveAmount: number;
+      estimatedPayoutAmount: number;
+      paymentsCount: number;
+      refundsCount: number;
+    }>();
+
+    for (const payment of vendorPayments) {
+      const key = `${payment.provider}:${payment.currency}`;
+      const existing = bucketByProviderCurrency.get(key) ?? {
+        provider: payment.provider,
+        currency: payment.currency,
+        grossAmount: 0,
+        refundedAmount: 0,
+        netAmount: 0,
+        feesAmount: 0,
+        reserveAmount: 0,
+        estimatedPayoutAmount: 0,
+        paymentsCount: 0,
+        refundsCount: 0,
+      };
+
+      existing.grossAmount += Number(payment.amount);
+      existing.netAmount += Number(payment.amount);
+      existing.paymentsCount += 1;
+      bucketByProviderCurrency.set(key, existing);
+    }
+
+    for (const refund of completedRefunds) {
+      const key = `${refund.provider}:${refund.currency}`;
+      const existing = bucketByProviderCurrency.get(key) ?? {
+        provider: refund.provider,
+        currency: refund.currency,
+        grossAmount: 0,
+        refundedAmount: 0,
+        netAmount: 0,
+        feesAmount: 0,
+        reserveAmount: 0,
+        estimatedPayoutAmount: 0,
+        paymentsCount: 0,
+        refundsCount: 0,
+      };
+
+      existing.refundedAmount += refund.requestedAmount;
+      existing.netAmount -= refund.requestedAmount;
+      existing.refundsCount += 1;
+      bucketByProviderCurrency.set(key, existing);
+    }
+
+    const byProviderCurrency = Array.from(bucketByProviderCurrency.values())
+      .map((entry) => {
+        const feesAmount = Math.max(entry.netAmount, 0) * payoutFeeRate;
+        const reserveAmount = Math.max(entry.netAmount, 0) * reserveRate;
+        const estimatedPayoutAmount = Math.max(entry.netAmount - feesAmount - reserveAmount, 0);
+        return {
+          ...entry,
+          grossAmount: Number(entry.grossAmount.toFixed(2)),
+          refundedAmount: Number(entry.refundedAmount.toFixed(2)),
+          netAmount: Number(entry.netAmount.toFixed(2)),
+          feesAmount: Number(feesAmount.toFixed(2)),
+          reserveAmount: Number(reserveAmount.toFixed(2)),
+          estimatedPayoutAmount: Number(estimatedPayoutAmount.toFixed(2)),
+        };
+      })
+      .sort((a, b) => a.provider.localeCompare(b.provider) || a.currency.localeCompare(b.currency));
+
+    const totals = byProviderCurrency.reduce((acc, item) => {
+      acc.grossAmount += item.grossAmount;
+      acc.refundedAmount += item.refundedAmount;
+      acc.netAmount += item.netAmount;
+      acc.feesAmount += item.feesAmount;
+      acc.reserveAmount += item.reserveAmount;
+      acc.estimatedPayoutAmount += item.estimatedPayoutAmount;
+      acc.paymentsCount += item.paymentsCount;
+      acc.refundsCount += item.refundsCount;
+      return acc;
+    }, {
+      grossAmount: 0,
+      refundedAmount: 0,
+      netAmount: 0,
+      feesAmount: 0,
+      reserveAmount: 0,
+      estimatedPayoutAmount: 0,
+      paymentsCount: 0,
+      refundsCount: 0,
+    });
+
+    return {
+      vendorId,
+      window: {
+        from: dateRange.from.toISOString(),
+        to: dateRange.to.toISOString(),
+      },
+      filters: {
+        provider: providerFilter ?? 'ALL',
+        currency: currencyFilter ?? 'ALL',
+      },
+      payoutModel: {
+        feeRate: payoutFeeRate,
+        reserveRate,
+      },
+      totals: {
+        grossAmount: Number(totals.grossAmount.toFixed(2)),
+        refundedAmount: Number(totals.refundedAmount.toFixed(2)),
+        netAmount: Number(totals.netAmount.toFixed(2)),
+        feesAmount: Number(totals.feesAmount.toFixed(2)),
+        reserveAmount: Number(totals.reserveAmount.toFixed(2)),
+        estimatedPayoutAmount: Number(totals.estimatedPayoutAmount.toFixed(2)),
         paymentsCount: totals.paymentsCount,
         refundsCount: totals.refundsCount,
       },
@@ -2332,6 +2525,32 @@ export class PaymentsService {
     }
 
     return null;
+  }
+
+  private resolveBookingVendorId(booking: {
+    accommodation: { vendorId: string } | null;
+    transport: { vendorId: string | null } | null;
+  } | null): string | null {
+    if (!booking) {
+      return null;
+    }
+
+    const accommodationVendorId = booking.accommodation?.vendorId ?? null;
+    const transportVendorId = booking.transport?.vendorId ?? null;
+
+    if (accommodationVendorId && transportVendorId) {
+      return accommodationVendorId === transportVendorId ? accommodationVendorId : null;
+    }
+
+    return accommodationVendorId ?? transportVendorId;
+  }
+
+  private parseActorVendorId(value: unknown): string {
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      throw new ForbiddenException('Vendor scope is missing for authenticated vendor user');
+    }
+
+    return value.trim();
   }
 
   private getAdapter(provider: ProviderName): PaymentProviderAdapter {

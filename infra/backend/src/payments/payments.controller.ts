@@ -10,6 +10,7 @@ import { PaymentsService } from './payments.service';
 type RequestUser = {
   id: string;
   role: 'USER' | 'VENDOR' | 'ADMIN' | 'ADMIN_SUPER' | 'ADMIN_CARE' | 'ADMIN_FINANCE';
+  vendorId?: string;
 };
 
 @Controller('payments')
@@ -243,6 +244,15 @@ export class PaymentsController {
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
   async settlementReport(@Query() query: Record<string, unknown>) {
     return this.paymentsService.getSettlementReport(query);
+  }
+
+  @Get('vendor/me/settlements/report')
+  @Roles('VENDOR')
+  async vendorSettlementReport(
+    @CurrentUser() user: RequestUser,
+    @Query() query: Record<string, unknown>,
+  ) {
+    return this.paymentsService.getVendorSettlementReport(user.vendorId, query);
   }
 
   @Post('webhooks/stripe')

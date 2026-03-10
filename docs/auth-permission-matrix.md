@@ -5,7 +5,7 @@ This document is generated from backend controller decorators in `infra/backend/
 Generation command: `npm run permissions:matrix:write`
 Validation command: `npm run permissions:matrix:check`
 
-Total endpoint policies: **131**
+Total endpoint policies: **132**
 
 Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE`, `ADMIN_FINANCE`
 
@@ -88,6 +88,7 @@ Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE
 | POST | /api/v1/payments/disputes | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
 | POST | /api/v1/payments/intents | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
 | POST | /api/v1/payments/refunds | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
+| GET | /api/v1/payments/vendor/me/settlements/report | roles | VENDOR | N | N | Y | N | N | N | N | infra/backend/src/payments/payments.controller.ts |
 | POST | /api/v1/payments/webhooks/bml | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
 | POST | /api/v1/payments/webhooks/mib | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
 | POST | /api/v1/payments/webhooks/stripe | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |

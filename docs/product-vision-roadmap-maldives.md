@@ -68,7 +68,7 @@ Core customer outcomes:
 ## H. New Marketplace Verticals (Vision Gaps)
 - [x] Car & bike rental domain (inventory, pickup/drop rules, age/license checks).
 - [x] Excursions/leisure booking domain (slots, capacity, equipment constraints).
-- [ ] Restaurant reservation domain (tables, seating windows, deposit policies).
+- [x] Restaurant reservation domain (tables, seating windows, deposit policies).
 - [ ] Resort day visit domain (quota windows, transfer bundles, pass restrictions).
 - [ ] Remote work spaces/digital nomad services domain (desk inventory, passes, connectivity quality).
 - [x] Baseline customer reviews APIs for accommodations/transports (create + public listing + rating summary + verified-stay flag).

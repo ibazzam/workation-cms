@@ -62,7 +62,7 @@ Core customer outcomes:
 - [x] Baseline loyalty program engine (tiered wallet + booking accrual + redemption + vendor offers).
 - [x] Provider hardening to production-grade SLA behavior (timeouts, circuit breaking, dead-letter escalation).
 - [x] Refunds/partial refunds + charge dispute handling.
-- [ ] Settlement and payout reporting for vendors.
+- [x] Settlement and payout reporting for vendors.
 - [ ] Finance-ledger integration and tax invoice generation.
 
 ## H. New Marketplace Verticals (Vision Gaps)

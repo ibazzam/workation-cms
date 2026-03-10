@@ -118,6 +118,8 @@ export class ObservabilityService {
       onCall: process.env.OPS_RUNBOOK_ONCALL_URL ?? null,
       incident: process.env.OPS_RUNBOOK_INCIDENT_URL ?? null,
       payments: process.env.OPS_RUNBOOK_PAYMENTS_URL ?? null,
+      weatherDisruptions: process.env.OPS_RUNBOOK_WEATHER_URL ?? null,
+      providerOutages: process.env.OPS_RUNBOOK_PROVIDER_OUTAGE_URL ?? null,
       updatedAt: new Date().toISOString(),
     };
   }

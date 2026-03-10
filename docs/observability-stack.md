@@ -24,6 +24,8 @@ The request middleware now propagates and emits trace context:
    - `OPS_RUNBOOK_ONCALL_URL`
    - `OPS_RUNBOOK_INCIDENT_URL`
    - `OPS_RUNBOOK_PAYMENTS_URL`
+   - `OPS_RUNBOOK_WEATHER_URL`
+   - `OPS_RUNBOOK_PROVIDER_OUTAGE_URL`
 4. Verify metrics endpoint is reachable from monitoring infrastructure.
 
 ## Verification Commands

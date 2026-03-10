@@ -76,7 +76,7 @@ Core customer outcomes:
 - [x] Moderation baseline for customer reviews (flagging + admin queue + hide/publish for accommodation/transport reviews).
 - [x] Moderation baseline for social links (public approved-only visibility + flagging + admin queue + approve/hide).
 - [x] Expanded customer reviews/ratings domain (activity/service reviews, moderation reasons, and deeper trust/safety workflows).
-- [ ] Expanded social media integration layer (embed policies, richer UGC trust/safety controls, and content quality tooling).
+- [x] Expanded social media integration layer (embed policies, richer UGC trust/safety controls, and content quality tooling).
 
 ## I. Frontend Product UX
 - [x] React Query + typed client migration started for admin and key public pages.

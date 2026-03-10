@@ -13,8 +13,17 @@ export class SocialLinksController {
 
   @Get('admin/moderation')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE')
-  async listModerationQueue(@Query('targetType') targetType?: string) {
-    return this.socialLinksService.listModerationQueue(targetType);
+  async listModerationQueue(
+    @Query('status') status?: string,
+    @Query('targetType') targetType?: string,
+    @Query('qualityStatus') qualityStatus?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.socialLinksService.listModerationQueue(status, targetType, qualityStatus, {
+      limit,
+      offset,
+    });
   }
 
   @Get('accommodations/:id')
@@ -83,5 +92,27 @@ export class SocialLinksController {
   @WriteRateLimit({ key: 'social:admin:approve', max: 30, windowMs: 60_000 })
   async approve(@Param('id') id: string, @Body() body: Record<string, unknown>, @Req() request: any) {
     return this.socialLinksService.approve(id, request.user, body);
+  }
+
+  @Post('admin/:id/escalate')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE')
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'social:admin:escalate', max: 30, windowMs: 60_000 })
+  async escalate(@Param('id') id: string, @Body() body: Record<string, unknown>, @Req() request: any) {
+    return this.socialLinksService.escalate(id, request.user, body);
+  }
+
+  @Post('admin/:id/reassess-content-quality')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE')
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'social:admin:quality', max: 30, windowMs: 60_000 })
+  async reassessContentQuality(@Param('id') id: string, @Body() body: Record<string, unknown>, @Req() request: any) {
+    return this.socialLinksService.reassessContentQuality(id, request.user, body);
+  }
+
+  @Get('admin/:id/moderation-history')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE')
+  async moderationHistory(@Param('id') id: string) {
+    return this.socialLinksService.getModerationHistory(id);
   }
 }

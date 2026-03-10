@@ -502,6 +502,18 @@ model SocialLink {
   embedPolicy       String         @default("LINK_ONLY")
   ugcSafetyStatus   String         @default("SAFE")
   ugcSafetyReason   String?
+  trustSafetyStatus String         @default("CLEAR")
+  moderationReasonCode String?
+  moderationReviewerNote String?
+  flaggedCount      Int            @default(0)
+  lastFlaggedAt     DateTime?
+  escalatedToQueue  String?
+  escalatedAt       DateTime?
+  actionedAt        DateTime?
+  contentQualityStatus String      @default("GOOD")
+  contentQualityScore Int          @default(100)
+  contentQualityNotes String?
+  qualityReviewedAt DateTime?
   verified          Boolean        @default(false)
   displayOrder      Int            @default(0)
   active            Boolean        @default(true)
@@ -516,6 +528,7 @@ model SocialLink {
   @@index([targetType, transportId, active])
   @@index([targetType, vendorId, active])
   @@index([targetType, active, verified, ugcSafetyStatus])
+  @@index([trustSafetyStatus, contentQualityStatus])
 }
 
 model LoyaltyAccount {

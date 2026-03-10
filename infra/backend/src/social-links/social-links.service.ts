@@ -4,6 +4,8 @@ import { PrismaService } from '../prisma.service';
 
 type EmbedPolicy = 'PLATFORM_EMBED' | 'LINK_ONLY' | 'NO_EMBED';
 type UgcSafetyStatus = 'SAFE' | 'REVIEW' | 'BLOCKED';
+type TrustSafetyStatus = 'CLEAR' | 'UNDER_REVIEW' | 'ESCALATED' | 'ACTIONED';
+type ContentQualityStatus = 'GOOD' | 'REVIEW' | 'LOW';
 
 type SocialLinkPayload = {
   targetType?: unknown;
@@ -46,30 +48,53 @@ const BASE_BLOCKED_SOCIAL_DOMAINS = new Set(['bit.ly', 'tinyurl.com', 'rb.gy']);
 type ModerationActionPayload = {
   reasonCode?: unknown;
   reviewerNote?: unknown;
+  escalationQueue?: unknown;
 };
 
 type SocialLinkModerationEvent = {
   socialLinkId: string;
-  action: 'FLAG' | 'HIDE' | 'APPROVE';
+  action: 'FLAG' | 'HIDE' | 'APPROVE' | 'ESCALATE' | 'QUALITY_REVIEW';
   reasonCode: string | null;
   reviewerNote: string | null;
+  escalationQueue: string | null;
   actorUserId: string | null;
   actorRole: string | null;
   createdAt: string;
+};
+
+type ModerationQueueQuery = {
+  limit?: unknown;
+  offset?: unknown;
 };
 
 @Injectable()
 export class SocialLinksService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listModerationQueue(targetType?: string) {
+  async listModerationQueue(status?: string, targetType?: string, qualityStatus?: string, query?: ModerationQueueQuery) {
+    const normalizedTrustStatus = this.parseOptionalTrustSafetyStatus(status);
     const normalizedTargetType = this.parseOptionalTargetType(targetType);
+    const normalizedQualityStatus = this.parseOptionalContentQualityStatus(qualityStatus);
+    const pagination = this.parseModerationPagination(query);
 
     const queue = await this.prisma.socialLink.findMany({
       where: {
         ...(normalizedTargetType ? { targetType: normalizedTargetType } : {}),
-        OR: [{ active: false }, { verified: false }, { ugcSafetyStatus: { not: 'SAFE' } }],
+        ...(normalizedTrustStatus
+          ? { trustSafetyStatus: normalizedTrustStatus }
+          : {
+              OR: [
+                { active: false },
+                { verified: false },
+                { ugcSafetyStatus: { not: 'SAFE' } },
+                { trustSafetyStatus: { not: 'CLEAR' } },
+                { contentQualityStatus: { not: 'GOOD' } },
+              ],
+            }),
+        ...(normalizedQualityStatus ? { contentQualityStatus: normalizedQualityStatus } : {}),
       },
+      take: pagination.limit,
+      skip: pagination.offset,
       orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
     });
 
@@ -189,12 +214,26 @@ export class SocialLinksService {
   }
 
   async flag(id: string, actor?: RequestActor, payload?: ModerationActionPayload) {
-    await this.ensureSocialLinkExists(id);
+    const existing = await this.prisma.socialLink.findUnique({
+      where: { id },
+      select: { id: true, flaggedCount: true },
+    });
+    if (!existing) {
+      throw new NotFoundException('Social link not found');
+    }
+
+    const nextFlaggedCount = (existing.flaggedCount ?? 0) + 1;
     const updated = await this.prisma.socialLink.update({
       where: { id },
       data: {
         active: false,
         verified: false,
+        ugcSafetyStatus: 'REVIEW',
+        trustSafetyStatus: 'UNDER_REVIEW',
+        moderationReasonCode: this.parseOptionalModerationReasonCode(payload?.reasonCode),
+        moderationReviewerNote: this.parseOptionalReviewerNote(payload?.reviewerNote),
+        flaggedCount: nextFlaggedCount,
+        lastFlaggedAt: new Date(),
       },
     });
 
@@ -208,6 +247,10 @@ export class SocialLinksService {
       where: { id },
       data: {
         active: false,
+        trustSafetyStatus: 'ACTIONED',
+        moderationReasonCode: this.parseOptionalModerationReasonCode(payload?.reasonCode),
+        moderationReviewerNote: this.parseOptionalReviewerNote(payload?.reviewerNote),
+        actionedAt: new Date(),
       },
     });
 
@@ -216,12 +259,29 @@ export class SocialLinksService {
   }
 
   async approve(id: string, actor?: RequestActor, payload?: ModerationActionPayload) {
-    await this.ensureSocialLinkExists(id);
+    const existing = await this.prisma.socialLink.findUnique({
+      where: { id },
+      select: { id: true, ugcSafetyStatus: true },
+    });
+    if (!existing) {
+      throw new NotFoundException('Social link not found');
+    }
+
+    if (existing.ugcSafetyStatus === 'BLOCKED') {
+      throw new BadRequestException('Blocked links cannot be approved without URL remediation');
+    }
+
     const updated = await this.prisma.socialLink.update({
       where: { id },
       data: {
         active: true,
         verified: true,
+        ugcSafetyStatus: 'SAFE',
+        ugcSafetyReason: null,
+        trustSafetyStatus: 'CLEAR',
+        moderationReasonCode: this.parseOptionalModerationReasonCode(payload?.reasonCode),
+        moderationReviewerNote: this.parseOptionalReviewerNote(payload?.reviewerNote),
+        actionedAt: new Date(),
       },
     });
 
@@ -229,14 +289,73 @@ export class SocialLinksService {
     return updated;
   }
 
+  async escalate(id: string, actor?: RequestActor, payload?: ModerationActionPayload) {
+    await this.ensureSocialLinkExists(id);
+    const escalationQueue = this.parseEscalationQueue(payload?.escalationQueue);
+
+    const updated = await this.prisma.socialLink.update({
+      where: { id },
+      data: {
+        active: false,
+        verified: false,
+        trustSafetyStatus: 'ESCALATED',
+        moderationReasonCode: this.parseOptionalModerationReasonCode(payload?.reasonCode),
+        moderationReviewerNote: this.parseOptionalReviewerNote(payload?.reviewerNote),
+        escalatedToQueue: escalationQueue,
+        escalatedAt: new Date(),
+      },
+    });
+
+    await this.recordModerationEvent(id, 'ESCALATE', actor, payload);
+    return updated;
+  }
+
+  async reassessContentQuality(id: string, actor?: RequestActor, payload?: ModerationActionPayload) {
+    const existing = await this.prisma.socialLink.findUnique({
+      where: { id },
+      select: { id: true, platform: true, url: true },
+    });
+    if (!existing) {
+      throw new NotFoundException('Social link not found');
+    }
+
+    const quality = this.evaluateContentQuality(existing.url, existing.platform);
+
+    const updated = await this.prisma.socialLink.update({
+      where: { id },
+      data: {
+        contentQualityStatus: quality.status,
+        contentQualityScore: quality.score,
+        contentQualityNotes: quality.notes,
+        qualityReviewedAt: new Date(),
+        ...(quality.status === 'LOW'
+          ? {
+              trustSafetyStatus: 'UNDER_REVIEW' as TrustSafetyStatus,
+              verified: false,
+            }
+          : {}),
+      },
+    });
+
+    await this.recordModerationEvent(id, 'QUALITY_REVIEW', actor, payload);
+    return updated;
+  }
+
+  async getModerationHistory(id: string) {
+    await this.ensureSocialLinkExists(id);
+    const events = await this.readModerationEvents();
+    return events.filter((event) => event.socialLinkId === id);
+  }
+
   private async recordModerationEvent(
     socialLinkId: string,
-    action: 'FLAG' | 'HIDE' | 'APPROVE',
+    action: 'FLAG' | 'HIDE' | 'APPROVE' | 'ESCALATE' | 'QUALITY_REVIEW',
     actor?: RequestActor,
     payload?: ModerationActionPayload,
   ) {
     const reasonCode = this.parseOptionalModerationReasonCode(payload?.reasonCode);
     const reviewerNote = this.parseOptionalReviewerNote(payload?.reviewerNote);
+    const escalationQueue = this.parseEscalationQueue(payload?.escalationQueue);
     const events = await this.readModerationEvents();
 
     const nextEvent: SocialLinkModerationEvent = {
@@ -244,6 +363,7 @@ export class SocialLinksService {
       action,
       reasonCode,
       reviewerNote,
+      escalationQueue,
       actorUserId: typeof actor?.id === 'string' && actor.id.trim().length > 0 ? actor.id.trim() : null,
       actorRole: typeof actor?.role === 'string' && actor.role.trim().length > 0 ? actor.role.trim() : null,
       createdAt: new Date().toISOString(),
@@ -349,6 +469,85 @@ export class SocialLinksService {
     return normalized;
   }
 
+  private parseEscalationQueue(value: unknown): string | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('escalationQueue must be a string when provided');
+    }
+
+    const normalized = value.trim().toUpperCase();
+    if (normalized.length === 0) {
+      return null;
+    }
+
+    const allowed = new Set(['TRUST_AND_SAFETY', 'LEGAL', 'FRAUD', 'SUPPORT']);
+    if (!allowed.has(normalized)) {
+      throw new BadRequestException('escalationQueue is not supported');
+    }
+
+    return normalized;
+  }
+
+  private parseOptionalTrustSafetyStatus(value: unknown): TrustSafetyStatus | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('status must be CLEAR, UNDER_REVIEW, ESCALATED, or ACTIONED');
+    }
+
+    const normalized = value.trim().toUpperCase();
+    if (normalized === 'CLEAR' || normalized === 'UNDER_REVIEW' || normalized === 'ESCALATED' || normalized === 'ACTIONED') {
+      return normalized;
+    }
+
+    throw new BadRequestException('status must be CLEAR, UNDER_REVIEW, ESCALATED, or ACTIONED');
+  }
+
+  private parseOptionalContentQualityStatus(value: unknown): ContentQualityStatus | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('qualityStatus must be GOOD, REVIEW, or LOW');
+    }
+
+    const normalized = value.trim().toUpperCase();
+    if (normalized === 'GOOD' || normalized === 'REVIEW' || normalized === 'LOW') {
+      return normalized;
+    }
+
+    throw new BadRequestException('qualityStatus must be GOOD, REVIEW, or LOW');
+  }
+
+  private parseModerationPagination(query?: ModerationQueueQuery): { limit: number; offset: number } {
+    const parsedLimit = this.parseIntegerOrDefault(query?.limit, 50);
+    const parsedOffset = this.parseIntegerOrDefault(query?.offset, 0);
+
+    const limit = Math.min(Math.max(parsedLimit, 1), 200);
+    const offset = Math.max(parsedOffset, 0);
+
+    return { limit, offset };
+  }
+
+  private parseIntegerOrDefault(value: unknown, defaultValue: number): number {
+    if (value === undefined || value === null || value === '') {
+      return defaultValue;
+    }
+
+    const numeric = typeof value === 'number' ? value : Number(value);
+    if (!Number.isInteger(numeric)) {
+      throw new BadRequestException('Pagination values must be integers');
+    }
+
+    return numeric;
+  }
+
   private async normalizePayload(
     payload: SocialLinkPayload,
     options: {
@@ -433,6 +632,13 @@ export class SocialLinksService {
       const safety = this.evaluateUgcSafety(effectiveUrl);
       data.ugcSafetyStatus = safety.status;
       data.ugcSafetyReason = safety.reason;
+      data.trustSafetyStatus = safety.status === 'BLOCKED' ? 'UNDER_REVIEW' : 'CLEAR';
+
+      const quality = this.evaluateContentQuality(effectiveUrl, effectivePlatform);
+      data.contentQualityStatus = quality.status;
+      data.contentQualityScore = quality.score;
+      data.contentQualityNotes = quality.notes;
+      data.qualityReviewedAt = new Date();
 
       if (safety.status === 'BLOCKED') {
         data.active = false;
@@ -472,6 +678,22 @@ export class SocialLinksService {
 
       if (!data.ugcSafetyStatus) {
         data.ugcSafetyStatus = 'REVIEW';
+      }
+
+      if (!data.trustSafetyStatus) {
+        data.trustSafetyStatus = 'CLEAR';
+      }
+
+      if (!data.contentQualityStatus) {
+        data.contentQualityStatus = 'GOOD';
+      }
+
+      if (!data.contentQualityScore) {
+        data.contentQualityScore = 100;
+      }
+
+      if (data.contentQualityNotes === undefined) {
+        data.contentQualityNotes = null;
       }
     }
 
@@ -674,6 +896,49 @@ export class SocialLinksService {
     return {
       status: 'SAFE',
       reason: null,
+    };
+  }
+
+  private evaluateContentQuality(url: string, platform: string): { status: ContentQualityStatus; score: number; notes: string | null } {
+    const parsed = new URL(url);
+    let score = 100;
+    const notes: string[] = [];
+
+    if (parsed.pathname === '/' || parsed.pathname.trim() === '') {
+      score -= 15;
+      notes.push('URL points to profile root without deep content context');
+    }
+
+    if (parsed.search.length > 0) {
+      score -= 10;
+      notes.push('URL contains query parameters that may reduce link durability');
+    }
+
+    if (platform === 'WEBSITE') {
+      score -= 10;
+      notes.push('Website links have lower native social preview fidelity');
+    }
+
+    if (parsed.pathname.length > 120) {
+      score -= 10;
+      notes.push('Very long path may indicate tracking or low-quality share link');
+    }
+
+    if (score < 0) {
+      score = 0;
+    }
+
+    let status: ContentQualityStatus = 'GOOD';
+    if (score < 60) {
+      status = 'LOW';
+    } else if (score < 80) {
+      status = 'REVIEW';
+    }
+
+    return {
+      status,
+      score,
+      notes: notes.length > 0 ? notes.join('; ') : null,
     };
   }
 

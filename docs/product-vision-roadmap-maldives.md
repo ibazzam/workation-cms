@@ -90,7 +90,7 @@ Core customer outcomes:
 - [x] Cloudflare integration baseline runbook + preflight verification script added.
 - [x] Cloudflare staging cutover executed (DNS/SSL/cache/WAF) and preflight checks passed on hosted domains.
 - [x] External observability stack (metrics, tracing, structured logs, SLO dashboards).
-- [ ] Incident runbooks for weather/service disruptions and provider outages.
+- [x] Incident runbooks for weather/service disruptions and provider outages.
 - [ ] Queue SLOs and automated alert routing (pager/Slack/email).
 - [ ] Load/performance testing for peak season scenarios.
 

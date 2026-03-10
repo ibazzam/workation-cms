@@ -69,7 +69,7 @@ Core customer outcomes:
 - [x] Car & bike rental domain (inventory, pickup/drop rules, age/license checks).
 - [x] Excursions/leisure booking domain (slots, capacity, equipment constraints).
 - [x] Restaurant reservation domain (tables, seating windows, deposit policies).
-- [ ] Resort day visit domain (quota windows, transfer bundles, pass restrictions).
+- [x] Resort day visit domain (quota windows, transfer bundles, pass restrictions).
 - [ ] Remote work spaces/digital nomad services domain (desk inventory, passes, connectivity quality).
 - [x] Baseline customer reviews APIs for accommodations/transports (create + public listing + rating summary + verified-stay flag).
 - [x] Baseline social media links APIs for accommodations/transports (public listing + admin/vendor CRUD with scope rules).

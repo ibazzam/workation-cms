@@ -5,7 +5,7 @@ This document is generated from backend controller decorators in `infra/backend/
 Generation command: `npm run permissions:matrix:write`
 Validation command: `npm run permissions:matrix:check`
 
-Total endpoint policies: **124**
+Total endpoint policies: **127**
 
 Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE`, `ADMIN_FINANCE`
 
@@ -20,9 +20,12 @@ Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE
 | PUT | /api/v1/accommodations/admin/:id | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/accommodations/accommodations.controller.ts |
 | POST | /api/v1/accommodations/admin/:id/blackouts | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/accommodations/accommodations.controller.ts |
 | DELETE | /api/v1/accommodations/admin/:id/blackouts/:blackoutId | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/accommodations/accommodations.controller.ts |
+| POST | /api/v1/accommodations/admin/:id/hide | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/accommodations/accommodations.controller.ts |
 | PUT | /api/v1/accommodations/admin/:id/policies | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/accommodations/accommodations.controller.ts |
+| POST | /api/v1/accommodations/admin/:id/publish | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/accommodations/accommodations.controller.ts |
 | POST | /api/v1/accommodations/admin/:id/seasonal-rates | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/accommodations/accommodations.controller.ts |
 | DELETE | /api/v1/accommodations/admin/:id/seasonal-rates/:rateId | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/accommodations/accommodations.controller.ts |
+| GET | /api/v1/accommodations/admin/moderation | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/accommodations/accommodations.controller.ts |
 | GET | /api/v1/admin/settings/commercial | roles | ADMIN, ADMIN_CARE, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | Y | Y | infra/backend/src/admin-settings/admin-settings.controller.ts |
 | POST | /api/v1/admin/settings/commercial | roles | ADMIN, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | N | Y | infra/backend/src/admin-settings/admin-settings.controller.ts |
 | GET | /api/v1/atolls | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/islands/islands.controller.ts |

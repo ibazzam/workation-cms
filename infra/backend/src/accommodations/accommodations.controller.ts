@@ -9,6 +9,12 @@ import { AccommodationsService } from './accommodations.service';
 export class AccommodationsController {
   constructor(private readonly accommodationsService: AccommodationsService) {}
 
+  @Get('admin/moderation')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE')
+  async listModerationQueue(@Query('status') status?: string) {
+    return this.accommodationsService.listModerationQueue(status);
+  }
+
   @Get()
   @Public()
   async list(
@@ -75,6 +81,18 @@ export class AccommodationsController {
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'VENDOR')
   async updatePolicies(@Param('id') id: string, @Body() body: Record<string, unknown>, @Req() request: any) {
     return this.accommodationsService.updatePolicies(id, body, request.user);
+  }
+
+  @Post('admin/:id/hide')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE')
+  async hide(@Param('id') id: string, @Body() body: Record<string, unknown>, @Req() request: any) {
+    return this.accommodationsService.setModerationStatus(id, 'HIDDEN', request.user, body);
+  }
+
+  @Post('admin/:id/publish')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE')
+  async publish(@Param('id') id: string, @Body() body: Record<string, unknown>, @Req() request: any) {
+    return this.accommodationsService.setModerationStatus(id, 'APPROVED', request.user, body);
   }
 
   @Delete('admin/:id')

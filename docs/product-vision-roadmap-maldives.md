@@ -92,7 +92,7 @@ Core customer outcomes:
 - [x] External observability stack (metrics, tracing, structured logs, SLO dashboards).
 - [x] Incident runbooks for weather/service disruptions and provider outages.
 - [x] Queue SLOs and automated alert routing (pager/Slack/email).
-- [ ] Load/performance testing for peak season scenarios.
+- [x] Load/performance testing for peak season scenarios.
 
 ## K. Quality, Security, and Compliance
 - [x] Broad backend contract tests exist across current domains.
@@ -460,3 +460,14 @@ Owners are role-based so this can be applied immediately even if personnel shift
 	- `routes/web.php` now mounts legacy workation/transport-hold routes only in `testing` environment.
 	- `.env.example` rollback flag removed (`LEGACY_LARAVEL_BUSINESS_ROUTES_ENABLED`).
 	- `tests/e2e/live-preflight.mjs` now validates authority backend v1 paths only.
+- 2026-03-10: Peak-season performance profile executed and artifact captured.
+	- Expanded perf harness with profile support + resilient timeout/error sampling:
+		- `tests/perf/booking-payments-baseline.mjs`
+		- `package.json` -> `perf:peak-season`
+	- Peak artifact:
+		- `artifacts/perf/booking-payments-peak-season-1773148668113.json`
+	- Run config: `PERF_PROFILE=peak-season`, `iterations=40`, `concurrency=10`, `timeoutMs=30000`.
+	- Domain outcomes:
+		- Booking: `p95=21221.63ms`, `p99=30016.94ms`, `errorRate=1.0` (mix of `401` + timeout responses)
+		- Payments: `p95=331.69ms`, `p99=635.16ms`, `errorRate=1.0` (`401` responses)
+	- Budget evaluation: breach remains on booking p95 vs peak budget (`1200ms`).

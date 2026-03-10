@@ -13,6 +13,7 @@
         "live:preflight": "node tests/e2e/live-preflight.mjs",
         "cloudflare:staging:preflight": "node tests/e2e/cloudflare-staging-preflight.mjs",
         "perf:booking-payments": "node tests/perf/booking-payments-baseline.mjs",
+        "perf:peak-season": "node tests/perf/booking-payments-baseline.mjs",
         "contract:policy": "node scripts/enforce-api-version-policy.mjs",
         "permissions:matrix:write": "node scripts/permission-matrix.mjs --write",
         "permissions:matrix:check": "node scripts/permission-matrix.mjs --check"

@@ -70,3 +70,18 @@ curl.exe -sS -D - -o NUL https://api.workation.mv/api/v1/health -H "traceparent:
 Expected:
 - Response includes `x-request-id` and `x-trace-id`
 - `x-trace-id` should match trace id from `traceparent`
+
+## Peak Season Load Baseline
+Use the performance harness with the `peak-season` profile to validate booking/payments critical paths under heavier concurrency.
+
+PowerShell example:
+
+```powershell
+$env:BASE_URL = "https://api.workation.mv"
+$env:AUTH_BEARER_TOKEN = "<jwt>"
+$env:PERF_PROFILE = "peak-season"
+npm run perf:peak-season
+```
+
+Output artifact:
+- `artifacts/perf/booking-payments-peak-season-<timestamp>.json`

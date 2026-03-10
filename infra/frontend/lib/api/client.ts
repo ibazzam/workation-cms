@@ -150,6 +150,10 @@ export async function fetchBookings(): Promise<Booking[]> {
         status: toStringValue(item.status, 'unknown'),
         serviceType: toStringValue(item.serviceType ?? item.service_type) || undefined,
         createdAt: toStringValue(item.createdAt ?? item.created_at) || undefined,
+        startDate: toStringValue(item.startDate ?? item.start_date) || undefined,
+        endDate: toStringValue(item.endDate ?? item.end_date) || undefined,
+        totalPrice: toNumberValue(item.totalPrice ?? item.total_price, 0),
+        currency: toStringValue(item.currency, 'USD'),
       };
     })
     .filter((item) => item.id.length > 0);

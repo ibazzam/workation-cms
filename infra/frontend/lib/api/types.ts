@@ -25,6 +25,10 @@ export type Booking = {
   status: string;
   serviceType?: string;
   createdAt?: string;
+  startDate?: string;
+  endDate?: string;
+  totalPrice?: number;
+  currency?: string;
 };
 
 export type Transport = {

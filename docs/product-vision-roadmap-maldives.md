@@ -83,7 +83,7 @@ Core customer outcomes:
 - [x] Complete migration of all pages to shared typed hooks and query keys.
 - [x] End-user search/discovery UX by atoll/island with dependency-aware suggestions.
 - [x] Checkout UX for bundled transport + stay + activities.
-- [ ] Customer booking management UX (changes, cancellations, credits/refunds).
+- [x] Customer booking management UX (changes, cancellations, credits/refunds).
 
 ## J. Ops, Reliability, and Observability
 - [x] Background job runners and operational alert endpoints implemented.

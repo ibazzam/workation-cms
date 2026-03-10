@@ -137,10 +137,25 @@ export class PaymentsService {
         data: {
           status: 'CANCELLED',
           holdExpiresAt: null,
+          fareLockExpiresAt: null,
         },
       });
       throw new BadRequestException('Booking hold has expired and was cancelled');
     }
+
+    if (booking.status === 'HOLD' && booking.fareLockExpiresAt && booking.fareLockExpiresAt.getTime() < Date.now()) {
+      await this.prisma.booking.update({
+        where: { id: booking.id },
+        data: {
+          status: 'CANCELLED',
+          holdExpiresAt: null,
+          fareLockExpiresAt: null,
+        },
+      });
+      throw new BadRequestException('Transport fare lock has expired and booking was cancelled');
+    }
+
+    const payableAmount = booking.fareLockTotalPrice ?? booking.totalPrice;
 
     const existingPayment = await this.prisma.payment.findUnique({ where: { bookingId } });
     if (existingPayment && existingPayment.provider === provider) {
@@ -153,7 +168,7 @@ export class PaymentsService {
     const adapter = this.getAdapter(provider);
     const intent = await adapter.createIntent({
       bookingId,
-      amount: Number(booking.totalPrice),
+      amount: Number(payableAmount),
       currency,
       metadata: { bookingId },
     });
@@ -163,7 +178,7 @@ export class PaymentsService {
       update: {
         provider,
         providerId: intent.providerIntentId,
-        amount: booking.totalPrice,
+        amount: payableAmount,
         currency,
         status: intent.status,
       },
@@ -171,7 +186,7 @@ export class PaymentsService {
         bookingId,
         provider,
         providerId: intent.providerIntentId,
-        amount: booking.totalPrice,
+        amount: payableAmount,
         currency,
         status: intent.status,
       },

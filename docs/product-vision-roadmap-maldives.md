@@ -48,7 +48,7 @@ Core customer outcomes:
 - [x] Speedboat schedule model (operator timetables, frequency, seat inventory).
 - [x] Domestic flight schedule model (airline, class, baggage, fare families).
 - [x] Real-time/disruption model (delays, weather cancellations, re-accommodation rules).
-- [ ] Transport quoting + hold expiry + fare lock strategy.
+- [x] Transport quoting + hold expiry + fare lock strategy.
 
 ## F. Booking Orchestration
 - [x] Basic booking creation and dependency checks.

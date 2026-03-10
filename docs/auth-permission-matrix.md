@@ -5,7 +5,7 @@ This document is generated from backend controller decorators in `infra/backend/
 Generation command: `npm run permissions:matrix:write`
 Validation command: `npm run permissions:matrix:check`
 
-Total endpoint policies: **188**
+Total endpoint policies: **191**
 
 Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE`, `ADMIN_FINANCE`
 
@@ -159,7 +159,10 @@ Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE
 | DELETE | /api/v1/social-links/admin/:id | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/social-links/social-links.controller.ts |
 | PUT | /api/v1/social-links/admin/:id | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/social-links/social-links.controller.ts |
 | POST | /api/v1/social-links/admin/:id/approve | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/social-links/social-links.controller.ts |
+| POST | /api/v1/social-links/admin/:id/escalate | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/social-links/social-links.controller.ts |
 | POST | /api/v1/social-links/admin/:id/hide | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/social-links/social-links.controller.ts |
+| GET | /api/v1/social-links/admin/:id/moderation-history | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/social-links/social-links.controller.ts |
+| POST | /api/v1/social-links/admin/:id/reassess-content-quality | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/social-links/social-links.controller.ts |
 | GET | /api/v1/social-links/admin/moderation | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/social-links/social-links.controller.ts |
 | GET | /api/v1/social-links/transports/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/social-links/social-links.controller.ts |
 | GET | /api/v1/social-links/vendors/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/social-links/social-links.controller.ts |

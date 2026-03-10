@@ -8,7 +8,7 @@
     "ADMIN_CARE",
     "ADMIN_FINANCE"
   ],
-  "totalEndpoints": 188,
+  "totalEndpoints": 191,
   "endpoints": [
     {
       "method": "GET",
@@ -2798,7 +2798,67 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/social-links/admin/:id/escalate",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/social-links/social-links.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/social-links/admin/:id/hide",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/social-links/social-links.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/social-links/admin/:id/moderation-history",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/social-links/social-links.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/social-links/admin/:id/reassess-content-quality",
       "accessMode": "roles",
       "allowedRoles": [
         "ADMIN",

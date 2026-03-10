@@ -1,0 +1,105 @@
+{
+  "generatedAt": "2026-03-10T13:17:48.110Z",
+  "profile": "peak-season",
+  "baseUrl": "https://api.workation.mv",
+  "config": {
+    "iterations": 40,
+    "concurrency": 10,
+    "timeoutMs": 30000,
+    "bookingP95BudgetMs": 1200,
+    "paymentsP95BudgetMs": 1800
+  },
+  "scenarios": [
+    {
+      "key": "booking_list",
+      "domain": "booking",
+      "requests": 400,
+      "successRate": 0,
+      "errorRate": 1,
+      "statusCounts": {
+        "401": 393,
+        "408": 7
+      },
+      "latencyMs": {
+        "p50": 11171.34,
+        "p95": 22240.88,
+        "p99": 30020.17,
+        "max": 30033.68
+      }
+    },
+    {
+      "key": "booking_cart",
+      "domain": "booking",
+      "requests": 400,
+      "successRate": 0,
+      "errorRate": 1,
+      "statusCounts": {
+        "401": 394,
+        "408": 5,
+        "599": 1
+      },
+      "latencyMs": {
+        "p50": 244.62,
+        "p95": 18663.31,
+        "p99": 30013.17,
+        "max": 30017
+      }
+    },
+    {
+      "key": "payments_refund_validation",
+      "domain": "payments",
+      "requests": 400,
+      "successRate": 0,
+      "errorRate": 1,
+      "statusCounts": {
+        "401": 400
+      },
+      "latencyMs": {
+        "p50": 239.4,
+        "p95": 331.69,
+        "p99": 627.05,
+        "max": 928.78
+      }
+    },
+    {
+      "key": "payments_dispute_validation",
+      "domain": "payments",
+      "requests": 400,
+      "successRate": 0,
+      "errorRate": 1,
+      "statusCounts": {
+        "401": 400
+      },
+      "latencyMs": {
+        "p50": 237.67,
+        "p95": 330.93,
+        "p99": 676.51,
+        "max": 772.66
+      }
+    }
+  ],
+  "domains": {
+    "booking": {
+      "requests": 800,
+      "errorRate": 1,
+      "latencyMs": {
+        "p95": 21221.63,
+        "p99": 30016.94
+      }
+    },
+    "payments": {
+      "requests": 800,
+      "errorRate": 1,
+      "latencyMs": {
+        "p95": 331.69,
+        "p99": 635.16
+      }
+    }
+  },
+  "slo": {
+    "pass": false,
+    "breaches": [
+      "booking p95 21221.63ms > budget 1200ms"
+    ]
+  }
+}

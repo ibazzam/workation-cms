@@ -7,12 +7,15 @@ const bearerToken = process.env.AUTH_BEARER_TOKEN;
 const xUserId = process.env.X_USER_ID;
 const xUserRole = process.env.X_USER_ROLE;
 
-const iterations = Number(process.env.PERF_ITERATIONS ?? 20);
-const concurrency = Number(process.env.PERF_CONCURRENCY ?? 4);
-const timeoutMs = Number(process.env.PERF_TIMEOUT_MS ?? 30000);
+const profile = normalizeProfile(process.env.PERF_PROFILE);
+const defaults = profileDefaults(profile);
 
-const bookingP95BudgetMs = Number(process.env.SLO_BOOKING_P95_MS ?? 800);
-const paymentsP95BudgetMs = Number(process.env.SLO_PAYMENTS_P95_MS ?? 1200);
+const iterations = Number(process.env.PERF_ITERATIONS ?? defaults.iterations);
+const concurrency = Number(process.env.PERF_CONCURRENCY ?? defaults.concurrency);
+const timeoutMs = Number(process.env.PERF_TIMEOUT_MS ?? defaults.timeoutMs);
+
+const bookingP95BudgetMs = Number(process.env.SLO_BOOKING_P95_MS ?? defaults.bookingP95BudgetMs);
+const paymentsP95BudgetMs = Number(process.env.SLO_PAYMENTS_P95_MS ?? defaults.paymentsP95BudgetMs);
 const failOnBreach = (process.env.PERF_FAIL_ON_BREACH ?? 'false').toLowerCase() === 'true';
 
 if (!baseUrl) {
@@ -78,32 +81,47 @@ async function requestWithFallbacks(scenario) {
 
   for (const scenarioPath of scenario.paths) {
     const started = process.hrtime.bigint();
-    const response = await client.request({
-      method: scenario.method,
-      url: scenarioPath,
-      data: scenario.body,
-    });
-    const durationMs = Number(process.hrtime.bigint() - started) / 1_000_000;
+    try {
+      const response = await client.request({
+        method: scenario.method,
+        url: scenarioPath,
+        data: scenario.body,
+      });
+      const durationMs = Number(process.hrtime.bigint() - started) / 1_000_000;
 
-    if (response.status !== 404) {
-      return {
+      if (response.status !== 404) {
+        return {
+          scenario: scenario.key,
+          domain: scenario.domain,
+          path: scenarioPath,
+          status: response.status,
+          ok: scenario.expectedStatuses.includes(response.status),
+          durationMs,
+        };
+      }
+
+      lastResponse = {
         scenario: scenario.key,
         domain: scenario.domain,
         path: scenarioPath,
         status: response.status,
-        ok: scenario.expectedStatuses.includes(response.status),
+        ok: false,
+        durationMs,
+      };
+    } catch (error) {
+      const durationMs = Number(process.hrtime.bigint() - started) / 1_000_000;
+      const code = typeof error?.code === 'string' ? error.code : 'REQUEST_ERROR';
+      const status = code === 'ECONNABORTED' ? 408 : 599;
+
+      return {
+        scenario: scenario.key,
+        domain: scenario.domain,
+        path: scenarioPath,
+        status,
+        ok: false,
         durationMs,
       };
     }
-
-    lastResponse = {
-      scenario: scenario.key,
-      domain: scenario.domain,
-      path: scenarioPath,
-      status: response.status,
-      ok: false,
-      durationMs,
-    };
   }
 
   return lastResponse;
@@ -181,8 +199,36 @@ function summarizeDomain(domainKey, scenarioSummaries) {
   };
 }
 
+function normalizeProfile(value) {
+  const normalized = String(value ?? 'baseline').trim().toLowerCase();
+  if (normalized === 'peak' || normalized === 'peak-season') {
+    return 'peak-season';
+  }
+  return 'baseline';
+}
+
+function profileDefaults(profileKey) {
+  if (profileKey === 'peak-season') {
+    return {
+      iterations: 40,
+      concurrency: 10,
+      timeoutMs: 45000,
+      bookingP95BudgetMs: 1200,
+      paymentsP95BudgetMs: 1800,
+    };
+  }
+
+  return {
+    iterations: 20,
+    concurrency: 4,
+    timeoutMs: 30000,
+    bookingP95BudgetMs: 800,
+    paymentsP95BudgetMs: 1200,
+  };
+}
+
 (async () => {
-  console.log(`Running booking/payments performance baseline against ${baseUrl}`);
+  console.log(`Running booking/payments performance profile=${profile} against ${baseUrl}`);
   console.log(`Config: iterations=${iterations}, concurrency=${concurrency}, timeoutMs=${timeoutMs}`);
 
   const scenarioSummaries = [];
@@ -207,6 +253,7 @@ function summarizeDomain(domainKey, scenarioSummaries) {
 
   const report = {
     generatedAt: new Date().toISOString(),
+    profile,
     baseUrl,
     config: {
       iterations,
@@ -228,7 +275,7 @@ function summarizeDomain(domainKey, scenarioSummaries) {
 
   const outputDir = path.resolve('artifacts', 'perf');
   await mkdir(outputDir, { recursive: true });
-  const outputPath = path.join(outputDir, `booking-payments-baseline-${Date.now()}.json`);
+  const outputPath = path.join(outputDir, `booking-payments-${profile}-${Date.now()}.json`);
   await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 
   console.log(`Wrote baseline report to ${outputPath}`);

@@ -75,7 +75,7 @@ Core customer outcomes:
 - [x] Baseline social media links APIs for accommodations/transports (public listing + admin/vendor CRUD with scope rules).
 - [x] Moderation baseline for customer reviews (flagging + admin queue + hide/publish for accommodation/transport reviews).
 - [x] Moderation baseline for social links (public approved-only visibility + flagging + admin queue + approve/hide).
-- [ ] Expanded customer reviews/ratings domain (activity/service reviews, moderation reasons, and deeper trust/safety workflows).
+- [x] Expanded customer reviews/ratings domain (activity/service reviews, moderation reasons, and deeper trust/safety workflows).
 - [ ] Expanded social media integration layer (embed policies, richer UGC trust/safety controls, and content quality tooling).
 
 ## I. Frontend Product UX

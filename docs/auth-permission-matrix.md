@@ -5,7 +5,7 @@ This document is generated from backend controller decorators in `infra/backend/
 Generation command: `npm run permissions:matrix:write`
 Validation command: `npm run permissions:matrix:check`
 
-Total endpoint policies: **186**
+Total endpoint policies: **188**
 
 Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE`, `ADMIN_FINANCE`
 
@@ -141,7 +141,9 @@ Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE
 | POST | /api/v1/reviews/:id/flag | roles | ADMIN, ADMIN_CARE, ADMIN_FINANCE, ADMIN_SUPER, USER, VENDOR | N | Y | Y | Y | Y | Y | Y | infra/backend/src/reviews/reviews.controller.ts |
 | GET | /api/v1/reviews/accommodations/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/reviews/reviews.controller.ts |
 | GET | /api/v1/reviews/activities/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/reviews/reviews.controller.ts |
+| POST | /api/v1/reviews/admin/:id/escalate | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/reviews/reviews.controller.ts |
 | POST | /api/v1/reviews/admin/:id/hide | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/reviews/reviews.controller.ts |
+| GET | /api/v1/reviews/admin/:id/moderation-history | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/reviews/reviews.controller.ts |
 | POST | /api/v1/reviews/admin/:id/publish | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/reviews/reviews.controller.ts |
 | GET | /api/v1/reviews/admin/moderation | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/reviews/reviews.controller.ts |
 | GET | /api/v1/reviews/services/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/reviews/reviews.controller.ts |

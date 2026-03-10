@@ -12,6 +12,10 @@ type AccommodationUpsertPayload = {
   rooms?: unknown;
   minStayNights?: unknown;
   price?: unknown;
+  cancellationPolicy?: unknown;
+  noShowPolicy?: unknown;
+  childrenPolicy?: unknown;
+  taxesAndFeesPolicy?: unknown;
 };
 
 type AccommodationBlackoutPayload = {
@@ -27,6 +31,13 @@ type AccommodationSeasonalRatePayload = {
   nightlyPrice?: unknown;
   minNights?: unknown;
   priority?: unknown;
+};
+
+type AccommodationPoliciesPayload = {
+  cancellationPolicy?: unknown;
+  noShowPolicy?: unknown;
+  childrenPolicy?: unknown;
+  taxesAndFeesPolicy?: unknown;
 };
 
 type RequestActor = {
@@ -264,6 +275,39 @@ export class AccommodationsService {
     });
   }
 
+  async updatePolicies(id: string, payload: AccommodationPoliciesPayload, actor?: RequestActor) {
+    await this.assertVendorScopedAccess(id, undefined, actor);
+    await this.ensureAccommodationExists(id);
+
+    const cancellationPolicy = this.parseOptionalPolicyText(payload.cancellationPolicy, 'cancellationPolicy');
+    const noShowPolicy = this.parseOptionalPolicyText(payload.noShowPolicy, 'noShowPolicy');
+    const childrenPolicy = this.parseOptionalPolicyText(payload.childrenPolicy, 'childrenPolicy');
+    const taxesAndFeesPolicy = this.parseOptionalPolicyText(payload.taxesAndFeesPolicy, 'taxesAndFeesPolicy');
+
+    if (
+      cancellationPolicy === undefined
+      && noShowPolicy === undefined
+      && childrenPolicy === undefined
+      && taxesAndFeesPolicy === undefined
+    ) {
+      throw new BadRequestException('At least one policy field is required');
+    }
+
+    return this.prisma.accommodation.update({
+      where: { id },
+      data: {
+        ...(cancellationPolicy !== undefined ? { cancellationPolicy } : {}),
+        ...(noShowPolicy !== undefined ? { noShowPolicy } : {}),
+        ...(childrenPolicy !== undefined ? { childrenPolicy } : {}),
+        ...(taxesAndFeesPolicy !== undefined ? { taxesAndFeesPolicy } : {}),
+      },
+      include: {
+        island: true,
+        vendor: true,
+      },
+    });
+  }
+
   async remove(id: string, actor?: RequestActor) {
     await this.assertVendorScopedAccess(id, undefined, actor);
     await this.ensureAccommodationExists(id);
@@ -441,6 +485,10 @@ export class AccommodationsService {
     const rooms = this.parseOptionalNullableInt(payload.rooms);
     const minStayNights = this.parseOptionalPositiveInt(payload.minStayNights);
     const price = this.parseOptionalDecimal(payload.price);
+    const cancellationPolicy = this.parseOptionalPolicyText(payload.cancellationPolicy, 'cancellationPolicy');
+    const noShowPolicy = this.parseOptionalPolicyText(payload.noShowPolicy, 'noShowPolicy');
+    const childrenPolicy = this.parseOptionalPolicyText(payload.childrenPolicy, 'childrenPolicy');
+    const taxesAndFeesPolicy = this.parseOptionalPolicyText(payload.taxesAndFeesPolicy, 'taxesAndFeesPolicy');
 
     if (!options.partial) {
       if (!vendorId || !islandId || !title || price === null) {
@@ -472,6 +520,10 @@ export class AccommodationsService {
     if (rooms !== undefined) data.rooms = rooms;
     if (minStayNights !== undefined) data.minStayNights = minStayNights;
     if (price !== null) data.price = price;
+    if (cancellationPolicy !== undefined) data.cancellationPolicy = cancellationPolicy;
+    if (noShowPolicy !== undefined) data.noShowPolicy = noShowPolicy;
+    if (childrenPolicy !== undefined) data.childrenPolicy = childrenPolicy;
+    if (taxesAndFeesPolicy !== undefined) data.taxesAndFeesPolicy = taxesAndFeesPolicy;
 
     const effectiveSlug = slugInput ?? (title ? this.slugify(title) : undefined);
     if (effectiveSlug) {
@@ -511,6 +563,19 @@ export class AccommodationsService {
     }
 
     return value.trim();
+  }
+
+  private parseOptionalPolicyText(value: unknown, field: string): string | null | undefined {
+    const normalized = this.parseOptionalNullableString(value);
+    if (normalized === undefined || normalized === null) {
+      return normalized;
+    }
+
+    if (normalized.length > 2000) {
+      throw new BadRequestException(`${field} must be 2000 characters or less`);
+    }
+
+    return normalized;
   }
 
   private parseOptionalInt(value: unknown): number | undefined {

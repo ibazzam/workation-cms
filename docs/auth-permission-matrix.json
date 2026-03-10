@@ -8,7 +8,7 @@
     "ADMIN_CARE",
     "ADMIN_FINANCE"
   ],
-  "totalEndpoints": 123,
+  "totalEndpoints": 124,
   "endpoints": [
     {
       "method": "GET",
@@ -161,6 +161,27 @@
     {
       "method": "DELETE",
       "path": "/api/v1/accommodations/admin/:id/blackouts/:blackoutId",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/accommodations/accommodations.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/accommodations/admin/:id/policies",
       "accessMode": "roles",
       "allowedRoles": [
         "ADMIN",

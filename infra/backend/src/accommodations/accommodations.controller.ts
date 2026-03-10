@@ -71,6 +71,12 @@ export class AccommodationsController {
     return this.accommodationsService.update(id, body, request.user);
   }
 
+  @Put('admin/:id/policies')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'VENDOR')
+  async updatePolicies(@Param('id') id: string, @Body() body: Record<string, unknown>, @Req() request: any) {
+    return this.accommodationsService.updatePolicies(id, body, request.user);
+  }
+
   @Delete('admin/:id')
   @HttpCode(204)
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'VENDOR')

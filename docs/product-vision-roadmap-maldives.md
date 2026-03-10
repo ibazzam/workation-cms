@@ -60,7 +60,7 @@ Core customer outcomes:
 ## G. Payments and Financial Ops
 - [x] Payment intent creation + webhook processing + reconciliation background jobs.
 - [x] Baseline loyalty program engine (tiered wallet + booking accrual + redemption + vendor offers).
-- [ ] Provider hardening to production-grade SLA behavior (timeouts, circuit breaking, dead-letter escalation).
+- [x] Provider hardening to production-grade SLA behavior (timeouts, circuit breaking, dead-letter escalation).
 - [ ] Refunds/partial refunds + charge dispute handling.
 - [ ] Settlement and payout reporting for vendors.
 - [ ] Finance-ledger integration and tax invoice generation.

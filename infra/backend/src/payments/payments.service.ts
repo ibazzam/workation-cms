@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { PrismaService } from '../prisma.service';
@@ -88,6 +88,26 @@ type DisputeRecord = {
   updatedAt: string;
 };
 
+type ProviderCircuitState = {
+  provider: ProviderName;
+  consecutiveFailures: number;
+  openedAt: string | null;
+  openUntil: string | null;
+  lastError: string | null;
+  lastFailureAt: string | null;
+  lastSuccessAt: string | null;
+};
+
+type DeadLetterEscalationRecord = {
+  id: string;
+  type: string;
+  jobId: string;
+  attempts: number;
+  maxAttempts: number;
+  escalatedAt: string;
+  error: string;
+};
+
 @Injectable()
 export class PaymentsService {
   constructor(
@@ -166,7 +186,7 @@ export class PaymentsService {
     }
 
     const adapter = this.getAdapter(provider);
-    const intent = await adapter.createIntent({
+    const intent = await this.createIntentWithHardening(provider, adapter, {
       bookingId,
       amount: Number(payableAmount),
       currency,
@@ -533,7 +553,7 @@ export class PaymentsService {
         }
 
         try {
-          const providerStatus = await this.fetchWithRetry(() => adapter.fetchTransactionStatus!(payment.providerId!), 2);
+          const providerStatus = await this.fetchProviderStatusWithHardening(provider, adapter, payment.providerId!);
           if (!providerStatus || providerStatus.state === 'PENDING') {
             summary.unchanged += 1;
             summary.details.push({ paymentId: payment.id, provider, result: 'unchanged' });
@@ -1134,6 +1154,10 @@ export class PaymentsService {
             lastError: error instanceof Error ? error.message : 'unknown error',
           },
         });
+
+        if (!willRetry) {
+          await this.recordDeadLetterEscalation(job, error, attempt, maxAttempts);
+        }
       }
 
       processed += 1;
@@ -1397,6 +1421,14 @@ export class PaymentsService {
 
   private disputeConfigKey() {
     return 'payments:disputes:v1';
+  }
+
+  private providerCircuitConfigKey(provider: ProviderName) {
+    return `payments:provider:circuit:v1:${provider}`;
+  }
+
+  private deadLetterEscalationConfigKey() {
+    return 'payments:dead-letter-escalations:v1';
   }
 
   private async processWebhook(
@@ -1739,7 +1771,7 @@ export class PaymentsService {
       return null;
     }
 
-    return this.fetchWithRetry(() => adapter.fetchTransactionStatus!(referenceId), 2);
+    return this.fetchProviderStatusWithHardening(provider, adapter, referenceId);
   }
 
   private async fetchWithRetry<T>(factory: () => Promise<T>, retries: number): Promise<T> {
@@ -1759,6 +1791,146 @@ export class PaymentsService {
         attempt += 1;
       }
     }
+  }
+
+  private async createIntentWithHardening(
+    provider: ProviderName,
+    adapter: PaymentProviderAdapter,
+    input: { bookingId: string; amount: number; currency: string; metadata?: Record<string, string> },
+  ) {
+    return this.runProviderOperation(provider, 'create-intent', async () => {
+      const timeoutMs = this.readPositiveIntEnv('PAYMENTS_PROVIDER_CREATE_INTENT_TIMEOUT_MS', 8000);
+      return this.withTimeout(adapter.createIntent(input), timeoutMs, `create-intent timed out after ${timeoutMs}ms`);
+    });
+  }
+
+  private async fetchProviderStatusWithHardening(
+    provider: ProviderName,
+    adapter: PaymentProviderAdapter,
+    referenceId: string,
+  ) {
+    return this.runProviderOperation(provider, 'fetch-status', async () => {
+      const timeoutMs = this.readPositiveIntEnv('PAYMENTS_PROVIDER_STATUS_TIMEOUT_MS', 5000);
+      return this.fetchWithRetry(
+        () => this.withTimeout(adapter.fetchTransactionStatus!(referenceId), timeoutMs, `fetch-status timed out after ${timeoutMs}ms`),
+        2,
+      );
+    });
+  }
+
+  private async runProviderOperation<T>(provider: ProviderName, operation: string, factory: () => Promise<T>): Promise<T> {
+    const threshold = this.readPositiveIntEnv('PAYMENTS_PROVIDER_CIRCUIT_FAILURE_THRESHOLD', 3);
+    const cooldownMs = this.readPositiveIntEnv('PAYMENTS_PROVIDER_CIRCUIT_COOLDOWN_MS', 120000);
+    const now = Date.now();
+
+    const state = await this.readProviderCircuitState(provider);
+    if (state.openUntil) {
+      const openUntilMs = new Date(state.openUntil).getTime();
+      if (Number.isFinite(openUntilMs) && openUntilMs > now) {
+        throw new ServiceUnavailableException(`Payment provider ${provider} is temporarily unavailable (${operation})`);
+      }
+    }
+
+    try {
+      const result = await factory();
+      await this.writeProviderCircuitState(provider, {
+        ...state,
+        provider,
+        consecutiveFailures: 0,
+        openedAt: null,
+        openUntil: null,
+        lastError: null,
+        lastSuccessAt: new Date().toISOString(),
+      });
+      return result;
+    } catch (error) {
+      const failures = state.consecutiveFailures + 1;
+      const shouldOpen = failures >= threshold;
+      const openedAt = shouldOpen ? new Date().toISOString() : state.openedAt;
+      const openUntil = shouldOpen ? new Date(now + cooldownMs).toISOString() : null;
+
+      await this.writeProviderCircuitState(provider, {
+        ...state,
+        provider,
+        consecutiveFailures: failures,
+        openedAt,
+        openUntil,
+        lastError: error instanceof Error ? error.message : 'unknown error',
+        lastFailureAt: new Date().toISOString(),
+      });
+
+      throw error;
+    }
+  }
+
+  private withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(message));
+      }, timeoutMs);
+
+      promise
+        .then((value) => {
+          clearTimeout(timer);
+          resolve(value);
+        })
+        .catch((error) => {
+          clearTimeout(timer);
+          reject(error);
+        });
+    });
+  }
+
+  private async readProviderCircuitState(provider: ProviderName): Promise<ProviderCircuitState> {
+    const key = this.providerCircuitConfigKey(provider);
+    const row = await this.prisma.appConfig.findUnique({ where: { key } });
+    const value = row?.value as Record<string, unknown> | undefined;
+
+    return {
+      provider,
+      consecutiveFailures: typeof value?.consecutiveFailures === 'number' ? value.consecutiveFailures : 0,
+      openedAt: typeof value?.openedAt === 'string' ? value.openedAt : null,
+      openUntil: typeof value?.openUntil === 'string' ? value.openUntil : null,
+      lastError: typeof value?.lastError === 'string' ? value.lastError : null,
+      lastFailureAt: typeof value?.lastFailureAt === 'string' ? value.lastFailureAt : null,
+      lastSuccessAt: typeof value?.lastSuccessAt === 'string' ? value.lastSuccessAt : null,
+    };
+  }
+
+  private async writeProviderCircuitState(provider: ProviderName, state: ProviderCircuitState) {
+    await this.prisma.appConfig.upsert({
+      where: { key: this.providerCircuitConfigKey(provider) },
+      update: {
+        value: state as unknown as Prisma.JsonObject,
+      },
+      create: {
+        key: this.providerCircuitConfigKey(provider),
+        value: state as unknown as Prisma.JsonObject,
+      },
+    });
+  }
+
+  private async recordDeadLetterEscalation(
+    job: { id: string; type: string },
+    error: unknown,
+    attempts: number,
+    maxAttempts: number,
+  ) {
+    const records = await this.readJsonArrayConfig<DeadLetterEscalationRecord>(this.deadLetterEscalationConfigKey());
+    const item: DeadLetterEscalationRecord = {
+      id: `dead_letter_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      type: job.type,
+      jobId: job.id,
+      attempts,
+      maxAttempts,
+      escalatedAt: new Date().toISOString(),
+      error: error instanceof Error ? error.message : 'unknown error',
+    };
+
+    await this.writeJsonArrayConfig<DeadLetterEscalationRecord>(
+      this.deadLetterEscalationConfigKey(),
+      [item, ...records].slice(0, 200),
+    );
   }
 
   private isSucceededEvent(eventType: string, providerStatus: ProviderTransactionStatus | null): boolean {

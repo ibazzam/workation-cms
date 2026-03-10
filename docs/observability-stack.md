@@ -6,6 +6,7 @@ This document describes the external observability stack for Workation API runti
 - Metrics source: `GET /api/v1/ops/metrics` (Prometheus text format)
 - SLO API snapshot: `GET /api/v1/ops/slo-summary`
 - Alerts API snapshot: `GET /api/v1/ops/alerts`
+- Queue SLO snapshot in alerts payload (`queueSlo`) and queue metrics in `/api/v1/ops/metrics`
 - Structured logs: JSON logs emitted by `ObservabilityMiddleware` with correlation fields (`requestId`, `traceId`)
 - Dashboard template: `infra/observability/grafana/workation-slo-dashboard.json`
 - Prometheus scrape template: `infra/observability/prometheus/workation-scrape.example.yml`
@@ -27,6 +28,30 @@ The request middleware now propagates and emits trace context:
    - `OPS_RUNBOOK_WEATHER_URL`
    - `OPS_RUNBOOK_PROVIDER_OUTAGE_URL`
 4. Verify metrics endpoint is reachable from monitoring infrastructure.
+
+## Queue SLO and Alert Routing Configuration
+Queue SLO checks are derived from queue-related admin traffic in the SLO window.
+
+Queue thresholds:
+- `OPS_ALERT_QUEUE_MIN_SAMPLE_SIZE` (default `20`)
+- `OPS_ALERT_QUEUE_MAX_ERROR_RATE` (default `0.08`)
+- `OPS_ALERT_QUEUE_MAX_P95_MS` (default `1500`)
+
+Automated alert routing channels:
+- Pager:
+   - `OPS_ALERT_ROUTE_PAGER_ENABLED`
+   - `OPS_ALERT_ROUTE_PAGER_TARGET`
+   - `OPS_ALERT_ROUTE_PAGER_KEYS`
+- Slack:
+   - `OPS_ALERT_ROUTE_SLACK_ENABLED`
+   - `OPS_ALERT_ROUTE_SLACK_TARGET`
+   - `OPS_ALERT_ROUTE_SLACK_KEYS`
+- Email:
+   - `OPS_ALERT_ROUTE_EMAIL_ENABLED`
+   - `OPS_ALERT_ROUTE_EMAIL_TARGET`
+   - `OPS_ALERT_ROUTE_EMAIL_KEYS`
+
+`*_KEYS` variables accept comma-separated alert keys. If unset, defaults are applied by channel.
 
 ## Verification Commands
 From repository root:

@@ -11,6 +11,18 @@ type Sample = {
 type Alerts = {
   status: 'OK' | 'WARN';
   activeAlerts: Array<{ key: string; severity: 'WARN'; message: string }>;
+  routing: {
+    pager: { enabled: boolean; target: string | null; matches: string[] };
+    slack: { enabled: boolean; target: string | null; matches: string[] };
+    email: { enabled: boolean; target: string | null; matches: string[] };
+  };
+  queueSlo: {
+    sampleSize: number;
+    minSampleSize: number;
+    errorRate: number;
+    latencyMs: { p95: number; p99: number };
+  };
+  generatedAt: string;
 };
 
 @Injectable()
@@ -57,6 +69,7 @@ export class ObservabilityService {
 
   getPrometheusMetrics(): string {
     const summary = this.getSloSummary();
+    const queue = this.getQueueSloSnapshot();
     const lines = [
       '# HELP workation_http_requests_total Total requests in SLO window',
       '# TYPE workation_http_requests_total gauge',
@@ -78,6 +91,18 @@ export class ObservabilityService {
       '# TYPE workation_http_domain_error_rate gauge',
       `workation_http_domain_error_rate{domain="payments"} ${summary.domains.payments.errorRate}`,
       `workation_http_domain_error_rate{domain="bookings"} ${summary.domains.bookings.errorRate}`,
+      '# HELP workation_queue_requests_total Queue-related admin request totals in SLO window',
+      '# TYPE workation_queue_requests_total gauge',
+      `workation_queue_requests_total ${queue.sampleSize}`,
+      '# HELP workation_queue_error_rate Queue-related error rate for status >= 500 in SLO window',
+      '# TYPE workation_queue_error_rate gauge',
+      `workation_queue_error_rate ${queue.errorRate}`,
+      '# HELP workation_queue_latency_p95_ms Queue-related p95 latency in milliseconds',
+      '# TYPE workation_queue_latency_p95_ms gauge',
+      `workation_queue_latency_p95_ms ${queue.latencyMs.p95}`,
+      '# HELP workation_queue_latency_p99_ms Queue-related p99 latency in milliseconds',
+      '# TYPE workation_queue_latency_p99_ms gauge',
+      `workation_queue_latency_p99_ms ${queue.latencyMs.p99}`,
     ];
 
     return `${lines.join('\n')}\n`;
@@ -85,9 +110,12 @@ export class ObservabilityService {
 
   getOperationalAlerts(): Alerts {
     const summary = this.getSloSummary();
+    const queue = this.getQueueSloSnapshot();
     const maxErrorRate = Number(process.env.OPS_ALERT_MAX_ERROR_RATE ?? 0.05);
     const maxP95 = Number(process.env.OPS_ALERT_MAX_P95_MS ?? 1200);
     const minSamples = Number(process.env.OPS_ALERT_MIN_SAMPLE_SIZE ?? 50);
+    const maxQueueErrorRate = Number(process.env.OPS_ALERT_QUEUE_MAX_ERROR_RATE ?? 0.08);
+    const maxQueueP95 = Number(process.env.OPS_ALERT_QUEUE_MAX_P95_MS ?? 1500);
 
     const activeAlerts: Alerts['activeAlerts'] = [];
 
@@ -107,9 +135,31 @@ export class ObservabilityService {
       });
     }
 
+    if (queue.sampleSize >= queue.minSampleSize && queue.errorRate > maxQueueErrorRate) {
+      activeAlerts.push({
+        key: 'OPS_QUEUE_ERROR_RATE_HIGH',
+        severity: 'WARN',
+        message: `Queue error rate ${queue.errorRate.toFixed(4)} exceeds threshold ${maxQueueErrorRate.toFixed(4)}`,
+      });
+    }
+
+    if (queue.sampleSize >= queue.minSampleSize && queue.latencyMs.p95 > maxQueueP95) {
+      activeAlerts.push({
+        key: 'OPS_QUEUE_P95_HIGH',
+        severity: 'WARN',
+        message: `Queue p95 ${queue.latencyMs.p95.toFixed(2)}ms exceeds threshold ${maxQueueP95.toFixed(2)}ms`,
+      });
+    }
+
+    const activeKeys = activeAlerts.map((alert) => alert.key);
+    const routing = this.buildAlertRouting(activeKeys);
+
     return {
       status: activeAlerts.length === 0 ? 'OK' : 'WARN',
       activeAlerts,
+      routing,
+      queueSlo: queue,
+      generatedAt: new Date().toISOString(),
     };
   }
 
@@ -137,6 +187,117 @@ export class ObservabilityService {
         p99: percentile(durations, 0.99),
       },
     };
+  }
+
+  private getQueueSloSnapshot() {
+    const windowMinutes = Number(process.env.OPS_SLO_WINDOW_MINUTES ?? 15);
+    const cutoff = Date.now() - windowMinutes * 60_000;
+    const minSampleSize = Number(process.env.OPS_ALERT_QUEUE_MIN_SAMPLE_SIZE ?? 20);
+    const queueSamples = this.samples.filter((sample) => {
+      if (sample.ts < cutoff) {
+        return false;
+      }
+
+      return sample.path.includes('/payments/admin/jobs')
+        || sample.path.includes('/payments/admin/reconcile')
+        || sample.path.includes('/ops/alerts');
+    });
+
+    const durations = queueSamples.map((sample) => sample.durationMs).sort((a, b) => a - b);
+    const errors = queueSamples.filter((sample) => sample.statusCode >= 500).length;
+    const sampleSize = queueSamples.length;
+
+    return {
+      sampleSize,
+      minSampleSize,
+      errorRate: sampleSize === 0 ? 0 : errors / sampleSize,
+      latencyMs: {
+        p95: percentile(durations, 0.95),
+        p99: percentile(durations, 0.99),
+      },
+    };
+  }
+
+  private buildAlertRouting(activeKeys: string[]) {
+    const pager = this.channelRouting(
+      process.env.OPS_ALERT_ROUTE_PAGER_ENABLED,
+      process.env.OPS_ALERT_ROUTE_PAGER_TARGET,
+      process.env.OPS_ALERT_ROUTE_PAGER_KEYS,
+      activeKeys,
+      ['OPS_ERROR_RATE_HIGH', 'OPS_QUEUE_ERROR_RATE_HIGH'],
+    );
+    const slack = this.channelRouting(
+      process.env.OPS_ALERT_ROUTE_SLACK_ENABLED,
+      process.env.OPS_ALERT_ROUTE_SLACK_TARGET,
+      process.env.OPS_ALERT_ROUTE_SLACK_KEYS,
+      activeKeys,
+      ['OPS_ERROR_RATE_HIGH', 'OPS_P95_HIGH', 'OPS_QUEUE_ERROR_RATE_HIGH', 'OPS_QUEUE_P95_HIGH'],
+    );
+    const email = this.channelRouting(
+      process.env.OPS_ALERT_ROUTE_EMAIL_ENABLED,
+      process.env.OPS_ALERT_ROUTE_EMAIL_TARGET,
+      process.env.OPS_ALERT_ROUTE_EMAIL_KEYS,
+      activeKeys,
+      ['OPS_P95_HIGH', 'OPS_QUEUE_P95_HIGH'],
+    );
+
+    return { pager, slack, email };
+  }
+
+  private channelRouting(
+    enabledValue: string | undefined,
+    targetValue: string | undefined,
+    configuredKeys: string | undefined,
+    activeKeys: string[],
+    fallbackKeys: string[],
+  ) {
+    const enabled = this.readBool(enabledValue, true);
+    const target = this.readText(targetValue);
+    const keys = this.readKeyList(configuredKeys, fallbackKeys);
+    const matches = enabled ? activeKeys.filter((key) => keys.includes(key)) : [];
+
+    return {
+      enabled,
+      target,
+      matches,
+    };
+  }
+
+  private readBool(value: string | undefined, fallback: boolean): boolean {
+    if (!value) {
+      return fallback;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+      return true;
+    }
+    if (['0', 'false', 'no', 'off'].includes(normalized)) {
+      return false;
+    }
+    return fallback;
+  }
+
+  private readText(value: string | undefined): string | null {
+    if (!value) {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private readKeyList(value: string | undefined, fallback: string[]): string[] {
+    if (!value) {
+      return fallback;
+    }
+
+    const parsed = value
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+
+    return parsed.length > 0 ? parsed : fallback;
   }
 }
 

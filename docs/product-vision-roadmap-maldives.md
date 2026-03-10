@@ -88,7 +88,7 @@ Core customer outcomes:
 ## J. Ops, Reliability, and Observability
 - [x] Background job runners and operational alert endpoints implemented.
 - [x] Cloudflare integration baseline runbook + preflight verification script added.
-- [ ] Cloudflare staging cutover executed (DNS/SSL/cache/WAF) and preflight checks passed on hosted domains.
+- [x] Cloudflare staging cutover executed (DNS/SSL/cache/WAF) and preflight checks passed on hosted domains.
 - [ ] External observability stack (metrics, tracing, structured logs, SLO dashboards).
 - [ ] Incident runbooks for weather/service disruptions and provider outages.
 - [ ] Queue SLOs and automated alert routing (pager/Slack/email).

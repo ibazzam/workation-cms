@@ -1,4 +1,4 @@
-import { Accommodation, Booking, HealthStatus, Island, Vendor } from './types';
+import { Accommodation, Booking, Excursion, HealthStatus, Island, Transport, Vendor } from './types';
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'https://api.workation.mv').replace(/\/$/, '');
 
@@ -59,6 +59,21 @@ function toStringValue(input: unknown, fallback = ''): string {
 
   if (typeof input === 'number') {
     return String(input);
+  }
+
+  return fallback;
+}
+
+function toNumberValue(input: unknown, fallback = 0): number {
+  if (typeof input === 'number' && Number.isFinite(input)) {
+    return input;
+  }
+
+  if (typeof input === 'string' && input.trim().length > 0) {
+    const parsed = Number(input);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
   }
 
   return fallback;
@@ -135,6 +150,41 @@ export async function fetchBookings(): Promise<Booking[]> {
         status: toStringValue(item.status, 'unknown'),
         serviceType: toStringValue(item.serviceType ?? item.service_type) || undefined,
         createdAt: toStringValue(item.createdAt ?? item.created_at) || undefined,
+      };
+    })
+    .filter((item) => item.id.length > 0);
+}
+
+export async function fetchTransports(): Promise<Transport[]> {
+  const payload = await fetchJsonWithFallback<unknown>(['/api/v1/transports']);
+
+  return pickCollection(payload)
+    .map((entry) => {
+      const item = (entry ?? {}) as Record<string, unknown>;
+      return {
+        id: toStringValue(item.id),
+        name: toStringValue(item.name ?? item.code, 'Untitled transport'),
+        fromIslandName: toStringValue(item.fromIslandName ?? item.from_island_name) || undefined,
+        toIslandName: toStringValue(item.toIslandName ?? item.to_island_name) || undefined,
+        price: toNumberValue(item.price, 0),
+        currency: toStringValue(item.currency, 'USD'),
+      };
+    })
+    .filter((item) => item.id.length > 0);
+}
+
+export async function fetchExcursions(): Promise<Excursion[]> {
+  const payload = await fetchJsonWithFallback<unknown>(['/api/v1/excursions']);
+
+  return pickCollection(payload)
+    .map((entry) => {
+      const item = (entry ?? {}) as Record<string, unknown>;
+      return {
+        id: toStringValue(item.id),
+        title: toStringValue(item.title, 'Untitled activity'),
+        islandName: toStringValue(item.islandName ?? item.island_name) || undefined,
+        price: toNumberValue(item.price, 0),
+        currency: toStringValue(item.currency, 'USD'),
       };
     })
     .filter((item) => item.id.length > 0);

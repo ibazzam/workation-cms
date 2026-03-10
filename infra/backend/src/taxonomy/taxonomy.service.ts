@@ -12,6 +12,11 @@ type CanonicalCategory = {
   origin: 'BASELINE' | 'CUSTOM';
 };
 
+type CanonicalDomainBucket = {
+  domain: CanonicalDomain;
+  merged: Map<string, CanonicalCategory>;
+};
+
 const DOMAIN_ORDER: CanonicalDomain[] = ['ACCOMMODATION', 'TRANSPORT', 'ACTIVITY'];
 
 const BASELINE_CATEGORIES: Record<CanonicalDomain, Array<{ code: string; name: string }>> = {
@@ -47,15 +52,14 @@ export class TaxonomyService {
 
   async listCanonicalCategories(filters: { domain?: CanonicalDomain; active?: boolean | undefined }) {
     const domainFilter = this.parseDomainFilter(filters.domain);
+    const requestedDomains = domainFilter ? [domainFilter] : DOMAIN_ORDER;
 
     const customCategories = await this.prisma.serviceCategory.findMany({
-      where: {
-        ...(filters.active === undefined ? {} : { active: filters.active }),
-      },
       orderBy: [{ scope: 'asc' }, { name: 'asc' }],
     });
 
-    const domains = (domainFilter ? [domainFilter] : DOMAIN_ORDER).map((domain) => {
+    const domainBuckets = new Map<CanonicalDomain, CanonicalDomainBucket>();
+    for (const domain of requestedDomains) {
       const merged = new Map<string, CanonicalCategory>();
 
       for (const baseline of BASELINE_CATEGORIES[domain]) {
@@ -68,21 +72,29 @@ export class TaxonomyService {
         });
       }
 
-      for (const category of customCategories) {
-        const categoryDomains = this.mapScopeToDomains(category.scope as ServiceCategoryScope);
-        if (!categoryDomains.includes(domain)) {
+      domainBuckets.set(domain, { domain, merged });
+    }
+
+    for (const category of customCategories) {
+      const categoryDomains = this.mapScopeToDomains(category.scope);
+      for (const categoryDomain of categoryDomains) {
+        const bucket = domainBuckets.get(categoryDomain);
+        if (!bucket) {
           continue;
         }
 
-        merged.set(category.code, {
+        bucket.merged.set(category.code, {
           code: category.code,
           name: category.name,
-          domain,
+          domain: categoryDomain,
           active: category.active,
           origin: 'CUSTOM',
         });
       }
+    }
 
+    const domains = requestedDomains.map((domain) => {
+      const merged = domainBuckets.get(domain)?.merged ?? new Map<string, CanonicalCategory>();
       const categories = Array.from(merged.values())
         .filter((entry) => (filters.active === undefined ? true : entry.active === filters.active))
         .sort((a, b) => a.name.localeCompare(b.name));
@@ -110,10 +122,11 @@ export class TaxonomyService {
     throw new BadRequestException('domain must be ACCOMMODATION, TRANSPORT, or ACTIVITY');
   }
 
-  private mapScopeToDomains(scope: ServiceCategoryScope): CanonicalDomain[] {
+  private mapScopeToDomains(scope: string): CanonicalDomain[] {
     if (scope === 'ACCOMMODATION') return ['ACCOMMODATION'];
     if (scope === 'TRANSPORT') return ['TRANSPORT'];
     if (scope === 'ACTIVITY') return ['ACTIVITY'];
-    return ['ACCOMMODATION', 'TRANSPORT'];
+    if (scope === 'BOTH') return ['ACCOMMODATION', 'TRANSPORT'];
+    return [];
   }
 }

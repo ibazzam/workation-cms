@@ -5,7 +5,7 @@ This document is generated from backend controller decorators in `infra/backend/
 Generation command: `npm run permissions:matrix:write`
 Validation command: `npm run permissions:matrix:check`
 
-Total endpoint policies: **122**
+Total endpoint policies: **123**
 
 Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE`, `ADMIN_FINANCE`
 
@@ -107,6 +107,7 @@ Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE
 | GET | /api/v1/social-links/admin/moderation | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/social-links/social-links.controller.ts |
 | GET | /api/v1/social-links/transports/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/social-links/social-links.controller.ts |
 | GET | /api/v1/social-links/vendors/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/social-links/social-links.controller.ts |
+| GET | /api/v1/taxonomy/categories | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/taxonomy/taxonomy.controller.ts |
 | GET | /api/v1/transports | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/transports/transports.controller.ts |
 | GET | /api/v1/transports/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/transports/transports.controller.ts |
 | GET | /api/v1/transports/:id/fare-classes | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/transports/transports.controller.ts |

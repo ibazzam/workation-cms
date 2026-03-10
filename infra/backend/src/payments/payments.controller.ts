@@ -175,12 +175,68 @@ export class PaymentsController {
     });
   }
 
+  @Get('admin/refunds')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE', 'ADMIN_CARE')
+  async listRefundRequests(@Query() query: Record<string, unknown>) {
+    return this.paymentsService.listRefundRequests({
+      status: query.status,
+      bookingId: query.bookingId,
+      paymentId: query.paymentId,
+      limit: query.limit,
+      offset: query.offset,
+    });
+  }
+
+  @Post('admin/refunds/:id/status')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
+  async updateRefundRequestStatus(
+    @Param('id') id: string,
+    @CurrentUser() user: RequestUser,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.paymentsService.updateRefundRequestStatus(id, {
+      status: body.status,
+      note: body.note,
+    }, {
+      id: user.id,
+      role: user.role,
+    });
+  }
+
   @Post('disputes')
   async openDispute(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, unknown>,
   ) {
     return this.paymentsService.createDisputeForUser(user.id, body);
+  }
+
+  @Get('admin/disputes')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE', 'ADMIN_CARE')
+  async listDisputes(@Query() query: Record<string, unknown>) {
+    return this.paymentsService.listDisputes({
+      status: query.status,
+      bookingId: query.bookingId,
+      paymentId: query.paymentId,
+      limit: query.limit,
+      offset: query.offset,
+    });
+  }
+
+  @Post('admin/disputes/:id/status')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
+  async updateDisputeStatus(
+    @Param('id') id: string,
+    @CurrentUser() user: RequestUser,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.paymentsService.updateDisputeStatus(id, {
+      status: body.status,
+      note: body.note,
+    }, {
+      id: user.id,
+      role: user.role,
+    });
   }
 
   @Get('admin/settlements/report')

@@ -5,7 +5,7 @@ This document is generated from backend controller decorators in `infra/backend/
 Generation command: `npm run permissions:matrix:write`
 Validation command: `npm run permissions:matrix:check`
 
-Total endpoint policies: **127**
+Total endpoint policies: **131**
 
 Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE`, `ADMIN_FINANCE`
 
@@ -67,6 +67,8 @@ Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE
 | GET | /api/v1/ops/slo-summary | roles | ADMIN, ADMIN_CARE, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | Y | Y | infra/backend/src/observability/observability.controller.ts |
 | GET | /api/v1/payments/admin/alerts | roles | ADMIN, ADMIN_CARE, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
 | GET | /api/v1/payments/admin/bml/health | roles | ADMIN, ADMIN_CARE, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
+| GET | /api/v1/payments/admin/disputes | roles | ADMIN, ADMIN_CARE, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
+| POST | /api/v1/payments/admin/disputes/:id/status | roles | ADMIN, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | N | Y | infra/backend/src/payments/payments.controller.ts |
 | GET | /api/v1/payments/admin/jobs | roles | ADMIN, ADMIN_CARE, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
 | POST | /api/v1/payments/admin/jobs/:id/cancel | roles | ADMIN, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | N | Y | infra/backend/src/payments/payments.controller.ts |
 | POST | /api/v1/payments/admin/jobs/:id/complete | roles | ADMIN, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | N | Y | infra/backend/src/payments/payments.controller.ts |
@@ -79,7 +81,9 @@ Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE
 | POST | /api/v1/payments/admin/reconcile/pending | roles | ADMIN, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | N | Y | infra/backend/src/payments/payments.controller.ts |
 | POST | /api/v1/payments/admin/reconcile/run-now | roles | ADMIN, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | N | Y | infra/backend/src/payments/payments.controller.ts |
 | GET | /api/v1/payments/admin/reconcile/status | roles | ADMIN, ADMIN_CARE, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
+| GET | /api/v1/payments/admin/refunds | roles | ADMIN, ADMIN_CARE, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
 | POST | /api/v1/payments/admin/refunds | roles | ADMIN, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | N | Y | infra/backend/src/payments/payments.controller.ts |
+| POST | /api/v1/payments/admin/refunds/:id/status | roles | ADMIN, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | N | Y | infra/backend/src/payments/payments.controller.ts |
 | GET | /api/v1/payments/admin/settlements/report | roles | ADMIN, ADMIN_FINANCE, ADMIN_SUPER | N | N | N | Y | Y | N | Y | infra/backend/src/payments/payments.controller.ts |
 | POST | /api/v1/payments/disputes | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
 | POST | /api/v1/payments/intents | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |

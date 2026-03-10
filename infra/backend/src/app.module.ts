@@ -23,6 +23,7 @@ import { TransportsModule } from './transports/transports.module';
 import { UsersModule } from './users/users.module';
 import { VendorsModule } from './vendors/vendors.module';
 import { ServiceCategoriesModule } from './service-categories/service-categories.module';
+import { TaxonomyModule } from './taxonomy/taxonomy.module';
 import { WorkationsModule } from './workations/workations.module';
 
 @Module({
@@ -45,6 +46,7 @@ import { WorkationsModule } from './workations/workations.module';
     WorkationsModule,
     VendorsModule,
     ServiceCategoriesModule,
+    TaxonomyModule,
   ],
   controllers: [HealthController],
   providers: [

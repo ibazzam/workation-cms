@@ -8,7 +8,7 @@
     "ADMIN_CARE",
     "ADMIN_FINANCE"
   ],
-  "totalEndpoints": 122,
+  "totalEndpoints": 123,
   "endpoints": [
     {
       "method": "GET",
@@ -1779,6 +1779,22 @@
       "accessMode": "public",
       "allowedRoles": [],
       "source": "infra/backend/src/social-links/social-links.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/taxonomy/categories",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/taxonomy/taxonomy.controller.ts",
       "roles": {
         "ANONYMOUS": true,
         "USER": true,

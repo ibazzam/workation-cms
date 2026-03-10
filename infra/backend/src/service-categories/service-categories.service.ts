@@ -2,7 +2,8 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 
-type CategoryScope = 'ACCOMMODATION' | 'TRANSPORT' | 'BOTH';
+type CategoryScope = 'ACCOMMODATION' | 'TRANSPORT' | 'BOTH' | 'ACTIVITY';
+const ALLOWED_SCOPES: ReadonlyArray<CategoryScope> = ['ACCOMMODATION', 'TRANSPORT', 'BOTH', 'ACTIVITY'];
 
 type CategoryUpsertPayload = {
   code?: unknown;
@@ -120,16 +121,18 @@ export class ServiceCategoriesService {
 
   private parseOptionalScope(value: unknown): CategoryScope | undefined {
     if (value === undefined) return undefined;
+    const errorMessage = `scope must be one of: ${ALLOWED_SCOPES.join(', ')}`;
+
     if (typeof value !== 'string') {
-      throw new BadRequestException('scope must be ACCOMMODATION, TRANSPORT, or BOTH');
+      throw new BadRequestException(errorMessage);
     }
 
-    const normalized = value.toUpperCase();
-    if (normalized === 'ACCOMMODATION' || normalized === 'TRANSPORT' || normalized === 'BOTH') {
+    const normalized = value.toUpperCase() as CategoryScope;
+    if (ALLOWED_SCOPES.includes(normalized)) {
       return normalized;
     }
 
-    throw new BadRequestException('scope must be ACCOMMODATION, TRANSPORT, or BOTH');
+    throw new BadRequestException(errorMessage);
   }
 
   private parseOptionalBoolean(value: unknown): boolean | undefined {

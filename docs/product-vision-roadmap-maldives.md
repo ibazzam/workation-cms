@@ -34,7 +34,7 @@ Core customer outcomes:
 - [x] Countries + service categories APIs.
 - [x] Add island metadata completeness (facilities, connectivity, emergency services).
 - [x] Add geospatial search support (by atoll + nearby + route relevance).
-- [ ] Build canonical taxonomy for accommodation/transport/activity categories.
+- [x] Build canonical taxonomy for accommodation/transport/activity categories.
 
 ## D. Accommodation Domain
 - [x] Base accommodation CRUD/read endpoints.

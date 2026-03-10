@@ -12,7 +12,7 @@ export class ServiceCategoriesController {
   @Get()
   @Public()
   async list(@Query('q') q?: string, @Query('scope') scope?: string, @Query('active') active?: string) {
-    const scopeFilter = scope ? scope.toUpperCase() as 'ACCOMMODATION' | 'TRANSPORT' | 'BOTH' : undefined;
+    const scopeFilter = scope ? scope.toUpperCase() as 'ACCOMMODATION' | 'TRANSPORT' | 'BOTH' | 'ACTIVITY' : undefined;
     const activeFilter = active === undefined ? undefined : active.toLowerCase() === 'true';
 
     return this.serviceCategoriesService.list({

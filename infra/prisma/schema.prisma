@@ -199,6 +199,10 @@ model Booking {
   endDate         DateTime?
   guests          Int?          @default(1)
   totalPrice      Decimal       @default("0.00")
+  fareLockUnitPrice  Decimal?
+  fareLockTotalPrice Decimal?
+  fareLockCurrency   String?
+  fareLockExpiresAt  DateTime?
   status          String @default("PENDING")
   holdExpiresAt   DateTime?
   createdAt       DateTime      @default(now())

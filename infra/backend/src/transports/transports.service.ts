@@ -229,6 +229,8 @@ export class TransportsService {
 
     const unitPrice = selectedFareClass?.price ?? transport.price;
     const totalPrice = unitPrice.mul(new Prisma.Decimal(guests));
+    const fareLockMinutes = this.getFareLockMinutes();
+    const fareLockExpiresAt = new Date(Date.now() + fareLockMinutes * 60 * 1000);
 
     const disruptionStatus = activeDisruption?.status?.toUpperCase();
     const serviceUnavailable = disruptionStatus === 'CANCELLED' || disruptionStatus === 'WEATHER_CANCELLED';
@@ -242,6 +244,14 @@ export class TransportsService {
       pricing: {
         unitPrice: String(unitPrice),
         totalPrice: String(totalPrice),
+      },
+      fareLock: {
+        supported: true,
+        currency: 'USD',
+        lockWindowMinutes: fareLockMinutes,
+        lockedUnitPrice: String(unitPrice),
+        lockedTotalPrice: String(totalPrice),
+        expiresAt: fareLockExpiresAt.toISOString(),
       },
       inventory: {
         capacity,
@@ -509,6 +519,24 @@ export class TransportsService {
       skipped,
       details,
     };
+  }
+
+  private getFareLockMinutes(): number {
+    return this.parsePositiveIntegerEnv('TRANSPORT_FARE_LOCK_MINUTES', this.parsePositiveIntegerEnv('BOOKING_HOLD_MINUTES', 30));
+  }
+
+  private parsePositiveIntegerEnv(name: string, fallback: number): number {
+    const raw = process.env[name];
+    if (!raw) {
+      return fallback;
+    }
+
+    const parsed = Number(raw);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      return fallback;
+    }
+
+    return parsed;
   }
 
   async create(payload: TransportUpsertPayload, actor?: RequestActor) {

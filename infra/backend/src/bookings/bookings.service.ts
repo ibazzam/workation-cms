@@ -54,13 +54,15 @@ export class BookingsService {
     return bookings.map((booking) => {
       const status = booking.status as BookingLifecycleStatus;
       const holdExpired = booking.holdExpiresAt ? booking.holdExpiresAt.getTime() < Date.now() : false;
+      const fareLockExpired = booking.fareLockExpiresAt ? booking.fareLockExpiresAt.getTime() < Date.now() : false;
 
       return {
         ...booking,
         management: {
           holdExpired,
+          fareLockExpired,
           canMoveToHold: this.isAllowedTransition(status, 'HOLD'),
-          canConfirm: this.isAllowedTransition(status, 'CONFIRMED') && !holdExpired,
+          canConfirm: this.isAllowedTransition(status, 'CONFIRMED') && !holdExpired && !fareLockExpired,
           canCancel: this.isAllowedTransition(status, 'CANCELLED'),
           canRebook: ['HOLD', 'PENDING', 'CONFIRMED'].includes(status),
           canRefund: this.isAllowedTransition(status, 'REFUNDED'),
@@ -268,8 +270,11 @@ export class BookingsService {
       }
     }
 
-    const totalPrice = accommodationTotalPrice.plus(new Prisma.Decimal(Number(selectedFareClass?.price ?? transport?.price ?? 0)));
+    const transportUnitPrice = selectedFareClass?.price ?? transport?.price ?? new Prisma.Decimal(0);
+    const transportTotalPrice = transportUnitPrice.mul(new Prisma.Decimal(parsedGuests));
+    const totalPrice = accommodationTotalPrice.plus(transportTotalPrice);
     const holdExpiresAt = this.computeHoldExpiryDate();
+    const fareLockExpiresAt = transport ? this.computeFareLockExpiryDate() : null;
 
     return this.prisma.booking.create({
       data: {
@@ -281,6 +286,10 @@ export class BookingsService {
         endDate,
         guests: parsedGuests,
         totalPrice,
+        fareLockUnitPrice: transport ? transportUnitPrice : null,
+        fareLockTotalPrice: transport ? transportTotalPrice : null,
+        fareLockCurrency: transport ? 'USD' : null,
+        fareLockExpiresAt,
         status: 'HOLD',
         holdExpiresAt,
       },
@@ -457,7 +466,13 @@ export class BookingsService {
       throw new ForbiddenException('Booking does not belong to authenticated user');
     }
 
-    return this.transitionBooking(booking.id, booking.status as BookingLifecycleStatus, targetStatus, booking.holdExpiresAt);
+    return this.transitionBooking(
+      booking.id,
+      booking.status as BookingLifecycleStatus,
+      targetStatus,
+      booking.holdExpiresAt,
+      booking.fareLockExpiresAt,
+    );
   }
 
   async refundBooking(bookingId: string) {
@@ -466,7 +481,13 @@ export class BookingsService {
       throw new NotFoundException('Booking not found');
     }
 
-    return this.transitionBooking(booking.id, booking.status as BookingLifecycleStatus, 'REFUNDED', booking.holdExpiresAt);
+    return this.transitionBooking(
+      booking.id,
+      booking.status as BookingLifecycleStatus,
+      'REFUNDED',
+      booking.holdExpiresAt,
+      booking.fareLockExpiresAt,
+    );
   }
 
   async rebookForUser(userId: string, bookingId: string, payload: RebookPayload) {
@@ -517,6 +538,7 @@ export class BookingsService {
       data: {
         status: 'CANCELLED',
         holdExpiresAt: null,
+        fareLockExpiresAt: null,
       },
     });
 
@@ -532,6 +554,7 @@ export class BookingsService {
         data: {
           status: currentStatus,
           holdExpiresAt: booking.holdExpiresAt,
+          fareLockExpiresAt: booking.fareLockExpiresAt,
         },
       });
       throw error;
@@ -543,6 +566,7 @@ export class BookingsService {
     currentStatus: BookingLifecycleStatus,
     targetStatus: 'HOLD' | 'CONFIRMED' | 'CANCELLED' | 'REFUNDED',
     holdExpiresAt: Date | null,
+    fareLockExpiresAt: Date | null,
   ) {
     if (currentStatus === targetStatus) {
       return this.prisma.booking.findUnique({
@@ -570,12 +594,53 @@ export class BookingsService {
       throw new BadRequestException('Booking hold has expired and was cancelled');
     }
 
+    if (targetStatus === 'CONFIRMED' && fareLockExpiresAt && fareLockExpiresAt.getTime() < Date.now()) {
+      await this.prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: 'CANCELLED',
+          holdExpiresAt: null,
+          fareLockExpiresAt: null,
+        },
+      });
+      throw new BadRequestException('Transport fare lock has expired and booking was cancelled');
+    }
+
+    const holdUpdateData: Prisma.BookingUncheckedUpdateInput = {
+      status: targetStatus,
+      holdExpiresAt: targetStatus === 'HOLD' ? this.computeHoldExpiryDate() : null,
+    };
+
+    if (targetStatus === 'HOLD') {
+      const booking = await this.prisma.booking.findUnique({
+        where: { id: bookingId },
+        select: {
+          transportId: true,
+          transportFareClassCode: true,
+          guests: true,
+        },
+      });
+
+      const guests = booking?.guests ?? 1;
+      if (booking?.transportId) {
+        const fareLock = await this.resolveTransportFareLock(booking.transportId, booking.transportFareClassCode, guests);
+        holdUpdateData.fareLockUnitPrice = fareLock.unitPrice;
+        holdUpdateData.fareLockTotalPrice = fareLock.totalPrice;
+        holdUpdateData.fareLockCurrency = fareLock.currency;
+        holdUpdateData.fareLockExpiresAt = fareLock.expiresAt;
+      } else {
+        holdUpdateData.fareLockUnitPrice = null;
+        holdUpdateData.fareLockTotalPrice = null;
+        holdUpdateData.fareLockCurrency = null;
+        holdUpdateData.fareLockExpiresAt = null;
+      }
+    } else {
+      holdUpdateData.fareLockExpiresAt = null;
+    }
+
     const updated = await this.prisma.booking.update({
       where: { id: bookingId },
-      data: {
-        status: targetStatus,
-        holdExpiresAt: targetStatus === 'HOLD' ? this.computeHoldExpiryDate() : null,
-      },
+      data: holdUpdateData,
       include: {
         accommodation: true,
         transport: true,
@@ -609,6 +674,57 @@ export class BookingsService {
   private computeHoldExpiryDate() {
     const holdMinutes = this.parsePositiveIntegerEnv('BOOKING_HOLD_MINUTES', 30);
     return new Date(Date.now() + holdMinutes * 60 * 1000);
+  }
+
+  private computeFareLockExpiryDate() {
+    const fareLockMinutes = this.parsePositiveIntegerEnv('TRANSPORT_FARE_LOCK_MINUTES', this.parsePositiveIntegerEnv('BOOKING_HOLD_MINUTES', 30));
+    return new Date(Date.now() + fareLockMinutes * 60 * 1000);
+  }
+
+  private async resolveTransportFareLock(transportId: string, fareClassCode: string | null, guests: number) {
+    const transport = await this.prisma.transport.findUnique({
+      where: { id: transportId },
+      select: {
+        id: true,
+        type: true,
+        price: true,
+      },
+    });
+
+    if (!transport) {
+      throw new NotFoundException('Transport not found');
+    }
+
+    if (fareClassCode && transport.type !== 'DOMESTIC_FLIGHT') {
+      throw new BadRequestException('transportFareClassCode is only supported for DOMESTIC_FLIGHT transports');
+    }
+
+    let unitPrice = transport.price;
+    if (fareClassCode) {
+      const fareClass = await this.prisma.transportFareClass.findFirst({
+        where: {
+          transportId: transport.id,
+          code: fareClassCode,
+        },
+        select: {
+          code: true,
+          price: true,
+        },
+      });
+
+      if (!fareClass) {
+        throw new BadRequestException('transportFareClassCode is invalid for selected transport');
+      }
+
+      unitPrice = fareClass.price;
+    }
+
+    return {
+      unitPrice,
+      totalPrice: unitPrice.mul(new Prisma.Decimal(guests)),
+      currency: 'USD',
+      expiresAt: this.computeFareLockExpiryDate(),
+    };
   }
 
   private parsePositiveIntegerEnv(name: string, fallback: number): number {

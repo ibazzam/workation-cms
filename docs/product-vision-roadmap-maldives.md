@@ -99,7 +99,7 @@ Core customer outcomes:
 - [x] Expand contract + integration coverage for all new verticals.
 - [x] Add E2E user journey tests (search → book → pay → manage).
 - [x] Security hardening (rate limits, abuse prevention, secret rotation, dependency scanning).
-- [ ] Data governance (PII retention, backups/restore drills, GDPR-like controls as required).
+- [x] Data governance (PII retention, backups/restore drills, GDPR-like controls as required).
 
 ## L. Business and Launch Readiness
 - [ ] Vendor onboarding workflows and SLA contracts.
@@ -486,5 +486,15 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `infra/backend/src/payments/payments.module.ts`
 	- Added security operations guide covering secret rotation and dependency scanning cadence:
 		- `docs/security-hardening.md`
+	- Build validation:
+		- `npm --prefix infra/backend run build` (pass)
+- 2026-03-10: Data governance baseline implemented for PII retention and backup/restore operations.
+	- Added governance runbook with retention policy, backup/restore drill workflow, and GDPR-like operational controls:
+		- `docs/data-governance.md`
+	- Added admin audit log retention utility:
+		- `infra/backend/scripts/prune-admin-audit-logs.cjs`
+		- `infra/backend/package.json` -> `audit:prune`
+	- Hardened audit payload storage to redact sensitive/PII fields before persistence:
+		- `infra/backend/src/audit/admin-write-audit.service.ts`
 	- Build validation:
 		- `npm --prefix infra/backend run build` (pass)

@@ -43,7 +43,8 @@ export class AdminWriteAuditService {
     }
 
     try {
-      const raw = JSON.stringify(value);
+      const redacted = this.redact(value, 0);
+      const raw = JSON.stringify(redacted);
       if (!raw) {
         return null;
       }
@@ -52,5 +53,45 @@ export class AdminWriteAuditService {
     } catch {
       return null;
     }
+  }
+
+  private redact(value: unknown, depth: number): unknown {
+    if (depth > 6) {
+      return '[truncated]';
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((item) => this.redact(item, depth + 1));
+    }
+
+    if (!value || typeof value !== 'object') {
+      return value;
+    }
+
+    const asRecord = value as Record<string, unknown>;
+    const output: Record<string, unknown> = {};
+    for (const [key, fieldValue] of Object.entries(asRecord)) {
+      if (this.isSensitiveKey(key)) {
+        output[key] = '[redacted]';
+      } else {
+        output[key] = this.redact(fieldValue, depth + 1);
+      }
+    }
+
+    return output;
+  }
+
+  private isSensitiveKey(key: string): boolean {
+    const normalized = key.trim().toLowerCase();
+    return normalized.includes('password')
+      || normalized.includes('secret')
+      || normalized.includes('token')
+      || normalized.includes('authorization')
+      || normalized.includes('api_key')
+      || normalized.includes('apikey')
+      || normalized === 'email'
+      || normalized.endsWith('email')
+      || normalized === 'phone'
+      || normalized.endsWith('phone');
   }
 }

@@ -5,7 +5,7 @@ This document is generated from backend controller decorators in `infra/backend/
 Generation command: `npm run permissions:matrix:write`
 Validation command: `npm run permissions:matrix:check`
 
-Total endpoint policies: **137**
+Total endpoint policies: **146**
 
 Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE`, `ADMIN_FINANCE`
 
@@ -136,6 +136,15 @@ Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE
 | GET | /api/v1/transports/schedule | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/transports/transports.controller.ts |
 | GET | /api/v1/users/me/profile | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/users/users.controller.ts |
 | PUT | /api/v1/users/me/profile | authenticated | - | N | Y | Y | Y | Y | Y | Y | infra/backend/src/users/users.controller.ts |
+| GET | /api/v1/vehicle-rentals | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts |
+| GET | /api/v1/vehicle-rentals/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts |
+| GET | /api/v1/vehicle-rentals/:id/availability | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts |
+| GET | /api/v1/vehicle-rentals/:id/quote | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts |
+| POST | /api/v1/vehicle-rentals/admin | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts |
+| DELETE | /api/v1/vehicle-rentals/admin/:id | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts |
+| PUT | /api/v1/vehicle-rentals/admin/:id | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts |
+| POST | /api/v1/vehicle-rentals/admin/:id/blackouts | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts |
+| DELETE | /api/v1/vehicle-rentals/admin/:id/blackouts/:blackoutId | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts |
 | GET | /api/v1/vendors | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/vendors/vendors.controller.ts |
 | GET | /api/v1/vendors/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/vendors/vendors.controller.ts |
 | POST | /api/v1/vendors/admin | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER | N | N | N | Y | Y | Y | N | infra/backend/src/vendors/vendors.controller.ts |

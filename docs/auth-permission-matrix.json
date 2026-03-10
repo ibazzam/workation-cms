@@ -8,7 +8,7 @@
     "ADMIN_CARE",
     "ADMIN_FINANCE"
   ],
-  "totalEndpoints": 137,
+  "totalEndpoints": 146,
   "endpoints": [
     {
       "method": "GET",
@@ -2336,6 +2336,175 @@
         "ADMIN_SUPER": true,
         "ADMIN_CARE": true,
         "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vehicle-rentals",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vehicle-rentals/:id",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vehicle-rentals/:id/availability",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vehicle-rentals/:id/quote",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vehicle-rentals/admin",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/vehicle-rentals/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/vehicle-rentals/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vehicle-rentals/admin/:id/blackouts",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/vehicle-rentals/admin/:id/blackouts/:blackoutId",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/vehicle-rentals/vehicle-rentals.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
       }
     },
     {

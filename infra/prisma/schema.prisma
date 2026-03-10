@@ -36,6 +36,7 @@ model Vendor {
 
   accommodations Accommodation[]
   transports     Transport[]
+  vehicleRentals VehicleRental[]
   socialLinks    SocialLink[]
   loyaltyOffers  VendorLoyaltyOffer[]
 }
@@ -67,6 +68,8 @@ model Island {
   accommodations Accommodation[]
   fromTransports   Transport[] @relation("fromIsland")
   toTransports     Transport[] @relation("toIsland")
+  pickupVehicleRentals  VehicleRental[] @relation("rentalPickupIsland")
+  dropoffVehicleRentals VehicleRental[] @relation("rentalDropoffIsland")
 }
 
 model Accommodation {
@@ -190,6 +193,51 @@ model TransportFareClass {
 
   @@unique([transportId, code])
   @@index([transportId])
+}
+
+model VehicleRental {
+  id                    String   @id @default(uuid())
+  vendorId              String
+  pickupIslandId        Int
+  dropoffIslandId       Int?
+  vehicleType           String
+  title                 String
+  description           String?
+  inventoryTotal        Int      @default(1)
+  minDriverAge          Int      @default(18)
+  requiresLicense       Boolean  @default(true)
+  acceptedLicenseClasses String?
+  allowsDifferentDropoff Boolean @default(false)
+  dailyPrice            Decimal  @default("0.00")
+  currency              String   @default("USD")
+  active                Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  vendor                Vendor   @relation(fields: [vendorId], references: [id])
+  pickupIsland          Island   @relation("rentalPickupIsland", fields: [pickupIslandId], references: [id])
+  dropoffIsland         Island?  @relation("rentalDropoffIsland", fields: [dropoffIslandId], references: [id])
+  blackouts             VehicleRentalBlackout[]
+
+  @@index([vendorId, active])
+  @@index([pickupIslandId, active])
+  @@index([dropoffIslandId, active])
+  @@index([vehicleType, active])
+}
+
+model VehicleRentalBlackout {
+  id              String   @id @default(uuid())
+  vehicleRentalId String
+  startDate       DateTime
+  endDate         DateTime
+  unitsBlocked    Int      @default(1)
+  reason          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  vehicleRental   VehicleRental @relation(fields: [vehicleRentalId], references: [id])
+
+  @@index([vehicleRentalId, startDate, endDate])
 }
 
 model Booking {

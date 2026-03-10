@@ -98,7 +98,7 @@ Core customer outcomes:
 - [x] Broad backend contract tests exist across current domains.
 - [x] Expand contract + integration coverage for all new verticals.
 - [x] Add E2E user journey tests (search → book → pay → manage).
-- [ ] Security hardening (rate limits, abuse prevention, secret rotation, dependency scanning).
+- [x] Security hardening (rate limits, abuse prevention, secret rotation, dependency scanning).
 - [ ] Data governance (PII retention, backups/restore drills, GDPR-like controls as required).
 
 ## L. Business and Launch Readiness
@@ -480,3 +480,11 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `vehicle-rentals` (`list`, `detail`, `availability`, `quote`)
 	- These checks now execute inside the existing CI-enforced live preflight gate on PRs and `main`.
 	- Added strict-mode gate flag `PREFLIGHT_REQUIRE_NEW_VERTICALS` (workflow input/var `LIVE_PREFLIGHT_REQUIRE_NEW_VERTICALS`) to fail CI when vertical endpoints are unavailable.
+- 2026-03-10: Security hardening expanded across payments abuse controls and ops runbooks.
+	- Added write-rate limits to high-risk payment write surfaces and public webhooks:
+		- `infra/backend/src/payments/payments.controller.ts`
+		- `infra/backend/src/payments/payments.module.ts`
+	- Added security operations guide covering secret rotation and dependency scanning cadence:
+		- `docs/security-hardening.md`
+	- Build validation:
+		- `npm --prefix infra/backend run build` (pass)

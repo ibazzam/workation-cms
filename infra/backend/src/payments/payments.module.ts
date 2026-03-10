@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
 import { PrismaService } from '../prisma.service';
+import { WriteRateLimitGuard } from '../security/rate-limit.guard';
 import { BankOfMaldivesAdapter } from './adapters/bank-of-maldives.adapter';
 import { MaldivesIslamicBankAdapter } from './adapters/maldives-islamic-bank.adapter';
 import { PAYMENT_PROVIDER_BML, PAYMENT_PROVIDER_MIB, PAYMENT_PROVIDER_STRIPE } from './adapters/payment-provider.tokens';
@@ -21,6 +22,7 @@ import { PaymentsService } from './payments.service';
     StripeMockAdapter,
     BankOfMaldivesAdapter,
     MaldivesIslamicBankAdapter,
+    WriteRateLimitGuard,
     { provide: PAYMENT_PROVIDER_STRIPE, useExisting: StripeMockAdapter },
     { provide: PAYMENT_PROVIDER_BML, useExisting: BankOfMaldivesAdapter },
     { provide: PAYMENT_PROVIDER_MIB, useExisting: MaldivesIslamicBankAdapter },

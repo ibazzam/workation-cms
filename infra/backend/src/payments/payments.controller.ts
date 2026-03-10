@@ -1,8 +1,10 @@
-import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { FeatureDomain } from '../feature-flags/feature-domain.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { WriteRateLimit } from '../security/rate-limit.decorator';
+import { WriteRateLimitGuard } from '../security/rate-limit.guard';
 import { PaymentsBackgroundJobsRunner } from './payments-background-jobs.runner';
 import { PaymentsReconciliationRunner } from './payments-reconciliation.runner';
 import { PaymentsService } from './payments.service';
@@ -36,6 +38,8 @@ export class PaymentsController {
 
   @Post('admin/reconcile/pending')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'payments:admin:reconcile:pending', max: 20, windowMs: 60_000 })
   async reconcilePending(
     @Body() body: Record<string, unknown>,
   ) {
@@ -44,6 +48,8 @@ export class PaymentsController {
 
   @Post('admin/reconcile/run-now')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'payments:admin:reconcile:run-now', max: 10, windowMs: 60_000 })
   async reconcileRunNow(@Body() body: Record<string, unknown>) {
     return this.reconciliationRunner.runNow(body);
   }
@@ -116,6 +122,8 @@ export class PaymentsController {
 
   @Post('admin/jobs/prune')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'payments:admin:jobs:prune', max: 20, windowMs: 60_000 })
   async pruneBackgroundJobs(@Body() body: Record<string, unknown>) {
     return this.paymentsService.pruneCompletedBackgroundJobs({
       olderThanHours: body.olderThanHours,
@@ -125,6 +133,8 @@ export class PaymentsController {
 
   @Post('admin/jobs/:id/requeue')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'payments:admin:jobs:requeue', max: 40, windowMs: 60_000 })
   async requeueBackgroundJob(@Param('id') id: string, @Body() body: Record<string, unknown>) {
     return this.paymentsService.requeueBackgroundJob(id, {
       delaySeconds: body.delaySeconds,
@@ -133,17 +143,23 @@ export class PaymentsController {
 
   @Post('admin/jobs/:id/cancel')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'payments:admin:jobs:cancel', max: 30, windowMs: 60_000 })
   async cancelBackgroundJob(@Param('id') id: string) {
     return this.paymentsService.cancelBackgroundJob(id);
   }
 
   @Post('admin/jobs/:id/complete')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'payments:admin:jobs:complete', max: 30, windowMs: 60_000 })
   async completeBackgroundJob(@Param('id') id: string) {
     return this.paymentsService.completeBackgroundJob(id);
   }
 
   @Post('intents')
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'payments:intents:create', max: 20, windowMs: 60_000 })
   async createIntent(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, unknown>,
@@ -157,6 +173,8 @@ export class PaymentsController {
   }
 
   @Post('refunds')
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'payments:refunds:create', max: 10, windowMs: 60_000 })
   async requestRefund(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, unknown>,
@@ -166,6 +184,8 @@ export class PaymentsController {
 
   @Post('admin/refunds')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'payments:admin:refunds:create', max: 30, windowMs: 60_000 })
   async requestRefundAsAdmin(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, unknown>,
@@ -190,6 +210,8 @@ export class PaymentsController {
 
   @Post('admin/refunds/:id/status')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'payments:admin:refunds:status', max: 40, windowMs: 60_000 })
   async updateRefundRequestStatus(
     @Param('id') id: string,
     @CurrentUser() user: RequestUser,
@@ -205,6 +227,8 @@ export class PaymentsController {
   }
 
   @Post('disputes')
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'payments:disputes:create', max: 10, windowMs: 60_000 })
   async openDispute(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, unknown>,
@@ -226,6 +250,8 @@ export class PaymentsController {
 
   @Post('admin/disputes/:id/status')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'payments:admin:disputes:status', max: 40, windowMs: 60_000 })
   async updateDisputeStatus(
     @Param('id') id: string,
     @CurrentUser() user: RequestUser,
@@ -257,6 +283,8 @@ export class PaymentsController {
 
   @Post('admin/ledger/sync')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'payments:admin:ledger:sync', max: 15, windowMs: 60_000 })
   async syncFinanceLedger(@Body() body: Record<string, unknown>) {
     return this.paymentsService.syncFinanceLedger(body);
   }
@@ -269,6 +297,8 @@ export class PaymentsController {
 
   @Post('admin/tax-invoices/generate')
   @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_FINANCE')
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'payments:admin:tax-invoices:generate', max: 20, windowMs: 60_000 })
   async generateTaxInvoice(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, unknown>,
@@ -296,6 +326,8 @@ export class PaymentsController {
   @Post('webhooks/stripe')
   @Public()
   @HttpCode(HttpStatus.OK)
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'payments:webhook:stripe', max: 180, windowMs: 60_000 })
   async stripeWebhook(
     @Headers('x-webhook-signature') signature: string | undefined,
     @Body() body: unknown,
@@ -306,6 +338,8 @@ export class PaymentsController {
   @Post('webhooks/bml')
   @Public()
   @HttpCode(HttpStatus.OK)
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'payments:webhook:bml', max: 180, windowMs: 60_000 })
   async bmlWebhook(
     @Headers('x-signature-nonce') nonce: string | undefined,
     @Headers('x-signature-timestamp') timestamp: string | undefined,
@@ -320,6 +354,8 @@ export class PaymentsController {
   @Post('webhooks/mib')
   @Public()
   @HttpCode(HttpStatus.OK)
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'payments:webhook:mib', max: 180, windowMs: 60_000 })
   async mibWebhook(
     @Headers('x-webhook-signature') signature: string | undefined,
     @Body() body: unknown,

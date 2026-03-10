@@ -22,6 +22,7 @@ import { SocialLinksModule } from './social-links/social-links.module';
 import { TransportsModule } from './transports/transports.module';
 import { ExcursionsModule } from './excursions/excursions.module';
 import { RestaurantsModule } from './restaurants/restaurants.module';
+import { ResortDayVisitsModule } from './resort-day-visits/resort-day-visits.module';
 import { UsersModule } from './users/users.module';
 import { VendorsModule } from './vendors/vendors.module';
 import { VehicleRentalsModule } from './vehicle-rentals/vehicle-rentals.module';
@@ -48,6 +49,7 @@ import { WorkationsModule } from './workations/workations.module';
     SocialLinksModule,
     ExcursionsModule,
     RestaurantsModule,
+    ResortDayVisitsModule,
     WorkationsModule,
     VendorsModule,
     ServiceCategoriesModule,

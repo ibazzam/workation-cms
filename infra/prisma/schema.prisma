@@ -38,6 +38,7 @@ model Vendor {
   transports     Transport[]
   excursions     Excursion[]
   restaurants    Restaurant[]
+  resortDayVisits ResortDayVisit[]
   vehicleRentals VehicleRental[]
   socialLinks    SocialLink[]
   loyaltyOffers  VendorLoyaltyOffer[]
@@ -72,6 +73,7 @@ model Island {
   toTransports     Transport[] @relation("toIsland")
   excursions       Excursion[]
   restaurants      Restaurant[]
+  resortDayVisits  ResortDayVisit[]
   pickupVehicleRentals  VehicleRental[] @relation("rentalPickupIsland")
   dropoffVehicleRentals VehicleRental[] @relation("rentalDropoffIsland")
 }
@@ -285,6 +287,49 @@ model RestaurantSeatingWindow {
   restaurant         Restaurant @relation(fields: [restaurantId], references: [id])
 
   @@index([restaurantId, startAt])
+  @@index([status, startAt])
+}
+
+model ResortDayVisit {
+  id                 String   @id @default(uuid())
+  vendorId           String
+  islandId           Int
+  title              String
+  description        String?
+  quotaPerWindow     Int      @default(1)
+  includesTransfer   Boolean  @default(false)
+  transferMode       String   @default("NONE")
+  transferBundlePrice Decimal @default("0.00")
+  passRestrictionType String  @default("NONE")
+  minAllowedAge      Int      @default(0)
+  basePrice          Decimal  @default("0.00")
+  currency           String   @default("USD")
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  vendor             Vendor   @relation(fields: [vendorId], references: [id])
+  island             Island   @relation(fields: [islandId], references: [id])
+  windows            ResortDayVisitWindow[]
+
+  @@index([vendorId, active])
+  @@index([islandId, active])
+}
+
+model ResortDayVisitWindow {
+  id               String   @id @default(uuid())
+  resortDayVisitId String
+  startAt          DateTime
+  endAt            DateTime
+  quotaOverride    Int?
+  status           String   @default("OPEN")
+  note             String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  resortDayVisit   ResortDayVisit @relation(fields: [resortDayVisitId], references: [id])
+
+  @@index([resortDayVisitId, startAt])
   @@index([status, startAt])
 }
 

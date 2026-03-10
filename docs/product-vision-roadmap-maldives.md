@@ -102,7 +102,7 @@ Core customer outcomes:
 - [x] Data governance (PII retention, backups/restore drills, GDPR-like controls as required).
 
 ## L. Business and Launch Readiness
-- [ ] Vendor onboarding workflows and SLA contracts.
+- [x] Vendor onboarding workflows and SLA contracts.
 - [ ] Content ops workflows for island/service quality curation.
 - [ ] Customer support tooling (case management, compensation policies).
 - [ ] KPI instrumentation (conversion funnel by atoll, route completion, failed checkout reasons).
@@ -498,3 +498,8 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `infra/backend/src/audit/admin-write-audit.service.ts`
 	- Build validation:
 		- `npm --prefix infra/backend run build` (pass)
+- 2026-03-10: Vendor onboarding workflow and SLA contract baseline published.
+	- Added launch-ready onboarding workflow with stage gates and readiness criteria:
+		- `docs/vendor-onboarding-workflow.md`
+	- Added reusable SLA contract template for vendor signoff:
+		- `docs/vendor-sla-contract-template.md`

@@ -4,8 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import {
   fetchAccommodations,
   fetchBookings,
+  fetchExcursions,
   fetchHealthStatus,
   fetchIslands,
+  fetchTransports,
   fetchVendors,
 } from '../api/client';
 import { queryKeys } from '../query/keys';
@@ -42,5 +44,19 @@ export function useBookings() {
   return useQuery({
     queryKey: queryKeys.bookings,
     queryFn: fetchBookings,
+  });
+}
+
+export function useTransports() {
+  return useQuery({
+    queryKey: queryKeys.transports,
+    queryFn: fetchTransports,
+  });
+}
+
+export function useExcursions() {
+  return useQuery({
+    queryKey: queryKeys.excursions,
+    queryFn: fetchExcursions,
   });
 }

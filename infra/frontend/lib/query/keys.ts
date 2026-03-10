@@ -4,4 +4,6 @@ export const queryKeys = {
   islands: ['islands'] as const,
   vendors: ['vendors'] as const,
   bookings: ['bookings'] as const,
+  transports: ['transports'] as const,
+  excursions: ['excursions'] as const,
 };

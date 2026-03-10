@@ -41,7 +41,7 @@ Core customer outcomes:
 - [x] Availability model (room inventory, blackout dates, min-stay).
 - [x] Pricing model (seasonality, occupancy tiers, promotions, currency conversion).
 - [x] Policies (cancellation, no-show, children, taxes/fees).
-- [ ] Media/content quality rules and moderation pipeline.
+- [x] Media/content quality rules and moderation pipeline.
 
 ## E. Transport Domain (Maldives Reality-Critical)
 - [x] Base transport CRUD/read endpoints with route fields.

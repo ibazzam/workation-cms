@@ -8,7 +8,7 @@
     "ADMIN_CARE",
     "ADMIN_FINANCE"
   ],
-  "totalEndpoints": 124,
+  "totalEndpoints": 127,
   "endpoints": [
     {
       "method": "GET",
@@ -180,6 +180,26 @@
       }
     },
     {
+      "method": "POST",
+      "path": "/api/v1/accommodations/admin/:id/hide",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/accommodations/accommodations.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
       "method": "PUT",
       "path": "/api/v1/accommodations/admin/:id/policies",
       "accessMode": "roles",
@@ -194,6 +214,26 @@
         "ANONYMOUS": false,
         "USER": false,
         "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/accommodations/admin/:id/publish",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/accommodations/accommodations.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
         "ADMIN": true,
         "ADMIN_SUPER": true,
         "ADMIN_CARE": true,
@@ -236,6 +276,26 @@
         "ANONYMOUS": false,
         "USER": false,
         "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/accommodations/admin/moderation",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/accommodations/accommodations.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
         "ADMIN": true,
         "ADMIN_SUPER": true,
         "ADMIN_CARE": true,

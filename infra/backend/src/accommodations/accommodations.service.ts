@@ -40,6 +40,12 @@ type AccommodationPoliciesPayload = {
   taxesAndFeesPolicy?: unknown;
 };
 
+type ModerationActionPayload = {
+  reason?: unknown;
+};
+
+type AccommodationModerationStatus = 'APPROVED' | 'PENDING_REVIEW' | 'HIDDEN';
+
 type RequestActor = {
   id?: string;
   role?: string;
@@ -54,12 +60,24 @@ export class AccommodationsService {
     return this.prisma.accommodation.findMany({
       where: {
         islandId: filters.islandId,
-        OR: filters.q
-          ? [
-              { title: { contains: filters.q, mode: 'insensitive' } },
-              { slug: { contains: filters.q, mode: 'insensitive' } },
-            ]
-          : undefined,
+        AND: [
+          {
+            OR: [
+              { contentModerationStatus: 'APPROVED' },
+              { contentModerationStatus: null },
+            ],
+          },
+          ...(filters.q
+            ? [
+                {
+                  OR: [
+                    { title: { contains: filters.q, mode: 'insensitive' as const } },
+                    { slug: { contains: filters.q, mode: 'insensitive' as const } },
+                  ],
+                },
+              ]
+            : []),
+        ],
       },
       include: {
         island: true,
@@ -85,7 +103,32 @@ export class AccommodationsService {
       throw new NotFoundException('Accommodation not found');
     }
 
+    if (accommodation.contentModerationStatus && accommodation.contentModerationStatus !== 'APPROVED') {
+      throw new NotFoundException('Accommodation not found');
+    }
+
     return accommodation;
+  }
+
+  async listModerationQueue(status?: string) {
+    const normalizedStatus = this.parseOptionalModerationStatus(status);
+
+    return this.prisma.accommodation.findMany({
+      where: {
+        contentModerationStatus: normalizedStatus
+          ? normalizedStatus
+          : {
+              in: ['PENDING_REVIEW', 'HIDDEN'],
+            },
+      },
+      include: {
+        island: true,
+        vendor: true,
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
   }
 
   async getAvailability(id: string, payload: { startDate?: unknown; endDate?: unknown; roomsRequested?: unknown }) {
@@ -249,7 +292,10 @@ export class AccommodationsService {
 
   async create(payload: AccommodationUpsertPayload, actor?: RequestActor) {
     this.assertVendorScopedCreate(payload, actor);
-    const normalized = await this.normalizeAccommodationPayload(payload, { partial: false });
+    const normalized = await this.normalizeAccommodationPayload(payload, {
+      partial: false,
+      actorRole: actor?.role,
+    });
 
     return this.prisma.accommodation.create({
       data: normalized as Prisma.AccommodationUncheckedCreateInput,
@@ -263,7 +309,10 @@ export class AccommodationsService {
   async update(id: string, payload: AccommodationUpsertPayload, actor?: RequestActor) {
     await this.assertVendorScopedAccess(id, payload, actor);
     await this.ensureAccommodationExists(id);
-    const normalized = await this.normalizeAccommodationPayload(payload, { partial: true });
+    const normalized = await this.normalizeAccommodationPayload(payload, {
+      partial: true,
+      actorRole: actor?.role,
+    });
 
     return this.prisma.accommodation.update({
       where: { id },
@@ -300,6 +349,40 @@ export class AccommodationsService {
         ...(noShowPolicy !== undefined ? { noShowPolicy } : {}),
         ...(childrenPolicy !== undefined ? { childrenPolicy } : {}),
         ...(taxesAndFeesPolicy !== undefined ? { taxesAndFeesPolicy } : {}),
+        ...(actor?.role === 'VENDOR'
+          ? {
+              contentModerationStatus: 'PENDING_REVIEW',
+              contentModerationReason: 'Policy update submitted for review',
+              contentModeratedAt: null,
+            }
+          : {
+              contentModerationStatus: 'APPROVED',
+              contentModerationReason: null,
+              contentModeratedAt: new Date(),
+            }),
+      },
+      include: {
+        island: true,
+        vendor: true,
+      },
+    });
+  }
+
+  async setModerationStatus(
+    id: string,
+    targetStatus: 'APPROVED' | 'HIDDEN',
+    _actor?: RequestActor,
+    payload?: ModerationActionPayload,
+  ) {
+    await this.ensureAccommodationExists(id);
+    const reason = this.parseOptionalModerationReason(payload?.reason);
+
+    return this.prisma.accommodation.update({
+      where: { id },
+      data: {
+        contentModerationStatus: targetStatus,
+        contentModerationReason: reason,
+        contentModeratedAt: new Date(),
       },
       include: {
         island: true,
@@ -474,7 +557,7 @@ export class AccommodationsService {
     return value.trim();
   }
 
-  private async normalizeAccommodationPayload(payload: AccommodationUpsertPayload, options: { partial: boolean }) {
+  private async normalizeAccommodationPayload(payload: AccommodationUpsertPayload, options: { partial: boolean; actorRole?: string }) {
     const vendorId = this.parseOptionalString(payload.vendorId);
     const islandId = this.parseOptionalInt(payload.islandId);
     const title = this.parseOptionalString(payload.title);
@@ -515,6 +598,8 @@ export class AccommodationsService {
     if (vendorId) data.vendorId = vendorId;
     if (islandId) data.islandId = islandId;
     if (title) data.title = title;
+    if (title) this.assertTitleQuality(title);
+    if (description !== undefined) this.assertDescriptionQuality(description);
     if (description !== undefined) data.description = description;
     if (type !== undefined) data.type = type;
     if (rooms !== undefined) data.rooms = rooms;
@@ -524,6 +609,27 @@ export class AccommodationsService {
     if (noShowPolicy !== undefined) data.noShowPolicy = noShowPolicy;
     if (childrenPolicy !== undefined) data.childrenPolicy = childrenPolicy;
     if (taxesAndFeesPolicy !== undefined) data.taxesAndFeesPolicy = taxesAndFeesPolicy;
+
+    const touchingContentFields = [
+      title,
+      description,
+      cancellationPolicy,
+      noShowPolicy,
+      childrenPolicy,
+      taxesAndFeesPolicy,
+    ].some((entry) => entry !== undefined);
+
+    if (touchingContentFields) {
+      if (options.actorRole === 'VENDOR') {
+        data.contentModerationStatus = 'PENDING_REVIEW';
+        data.contentModerationReason = 'Vendor update submitted for review';
+        data.contentModeratedAt = null;
+      } else {
+        data.contentModerationStatus = 'APPROVED';
+        data.contentModerationReason = null;
+        data.contentModeratedAt = new Date();
+      }
+    }
 
     const effectiveSlug = slugInput ?? (title ? this.slugify(title) : undefined);
     if (effectiveSlug) {
@@ -576,6 +682,64 @@ export class AccommodationsService {
     }
 
     return normalized;
+  }
+
+  private parseOptionalModerationStatus(value: unknown): AccommodationModerationStatus | undefined {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('status must be APPROVED, PENDING_REVIEW, or HIDDEN');
+    }
+
+    const normalized = value.trim().toUpperCase();
+    if (normalized === 'APPROVED' || normalized === 'PENDING_REVIEW' || normalized === 'HIDDEN') {
+      return normalized;
+    }
+
+    throw new BadRequestException('status must be APPROVED, PENDING_REVIEW, or HIDDEN');
+  }
+
+  private parseOptionalModerationReason(value: unknown): string | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('reason must be a string when provided');
+    }
+
+    const trimmed = value.trim();
+    if (trimmed.length > 500) {
+      throw new BadRequestException('reason must be 500 characters or less');
+    }
+
+    return trimmed.length === 0 ? null : trimmed;
+  }
+
+  private assertTitleQuality(title: string) {
+    if (title.length < 5 || title.length > 120) {
+      throw new BadRequestException('title must be between 5 and 120 characters');
+    }
+  }
+
+  private assertDescriptionQuality(description: string | null) {
+    if (description === null) {
+      return;
+    }
+
+    if (description.length > 5000) {
+      throw new BadRequestException('description must be 5000 characters or less');
+    }
+
+    if (description.length > 0 && description.length < 30) {
+      throw new BadRequestException('description must be at least 30 characters when provided');
+    }
+
+    if (/https?:\/\//i.test(description)) {
+      throw new BadRequestException('description must not contain raw URLs');
+    }
   }
 
   private parseOptionalInt(value: unknown): number | undefined {

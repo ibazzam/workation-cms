@@ -5,6 +5,20 @@ import { PrismaService } from '../prisma.service';
 export class IslandsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private toRadians(value: number): number {
+    return (value * Math.PI) / 180;
+  }
+
+  private haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const earthRadiusKm = 6371;
+    const deltaLat = this.toRadians(lat2 - lat1);
+    const deltaLng = this.toRadians(lng2 - lng1);
+    const a = Math.sin(deltaLat / 2) ** 2
+      + Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) * Math.sin(deltaLng / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return earthRadiusKm * c;
+  }
+
   private parseOptionalMetadataField(value: unknown, field: string): string | null | undefined {
     if (value === undefined) {
       return undefined;
@@ -45,8 +59,19 @@ export class IslandsService {
     return atoll;
   }
 
-  async listIslands(filters: { atollId?: number; q?: string }) {
-    return this.prisma.island.findMany({
+  async listIslands(filters: { atollId?: number; q?: string; nearLat?: number; nearLng?: number; radiusKm?: number; sort?: string }) {
+    const hasNearbySearch = filters.nearLat !== undefined || filters.nearLng !== undefined || filters.radiusKm !== undefined;
+    if (hasNearbySearch) {
+      if (filters.nearLat === undefined || filters.nearLng === undefined) {
+        throw new BadRequestException('nearLat and nearLng are required when using nearby search');
+      }
+
+      if (filters.radiusKm !== undefined && (filters.radiusKm <= 0 || filters.radiusKm > 500)) {
+        throw new BadRequestException('radiusKm must be between 0 and 500');
+      }
+    }
+
+    const islands = await this.prisma.island.findMany({
       where: {
         atollId: filters.atollId,
         OR: filters.q
@@ -61,6 +86,36 @@ export class IslandsService {
       },
       orderBy: { name: 'asc' },
     });
+
+    if (!hasNearbySearch) {
+      return islands;
+    }
+
+    const nearLat = filters.nearLat as number;
+    const nearLng = filters.nearLng as number;
+    const radiusKm = filters.radiusKm ?? 50;
+
+    const withDistance = islands
+      .map((island) => {
+        if (island.lat === null || island.lng === null) {
+          return { island, distanceKm: null as number | null };
+        }
+
+        return {
+          island,
+          distanceKm: Math.round(this.haversineKm(nearLat, nearLng, island.lat, island.lng) * 100) / 100,
+        };
+      })
+      .filter((entry) => entry.distanceKm !== null && entry.distanceKm <= radiusKm);
+
+    if (filters.sort === 'distance') {
+      withDistance.sort((a, b) => (a.distanceKm as number) - (b.distanceKm as number));
+    }
+
+    return withDistance.map((entry) => ({
+      ...entry.island,
+      distanceKm: entry.distanceKm,
+    }));
   }
 
   async getIsland(id: number) {

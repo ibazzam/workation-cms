@@ -9,6 +9,15 @@ import { IslandsService } from './islands.service';
 export class IslandsController {
   constructor(private readonly islandsService: IslandsService) {}
 
+  private parseOptionalNumber(value?: string): number | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
   @Get('atolls')
   @Public()
   async listAtolls() {
@@ -26,12 +35,18 @@ export class IslandsController {
   async listIslands(
     @Query('atollId') atollId?: string,
     @Query('q') q?: string,
+    @Query('nearLat') nearLat?: string,
+    @Query('nearLng') nearLng?: string,
+    @Query('radiusKm') radiusKm?: string,
+    @Query('sort') sort?: string,
   ) {
-    const parsedAtollId = atollId !== undefined ? Number(atollId) : undefined;
-
     return this.islandsService.listIslands({
-      atollId: Number.isFinite(parsedAtollId) ? parsedAtollId : undefined,
+      atollId: this.parseOptionalNumber(atollId),
       q: q?.trim() ? q.trim() : undefined,
+      nearLat: this.parseOptionalNumber(nearLat),
+      nearLng: this.parseOptionalNumber(nearLng),
+      radiusKm: this.parseOptionalNumber(radiusKm),
+      sort: sort?.trim() ? sort.trim().toLowerCase() : undefined,
     });
   }
 

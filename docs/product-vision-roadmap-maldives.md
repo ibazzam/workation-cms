@@ -96,7 +96,7 @@ Core customer outcomes:
 
 ## K. Quality, Security, and Compliance
 - [x] Broad backend contract tests exist across current domains.
-- [ ] Expand contract + integration coverage for all new verticals.
+- [x] Expand contract + integration coverage for all new verticals.
 - [x] Add E2E user journey tests (search → book → pay → manage).
 - [ ] Security hardening (rate limits, abuse prevention, secret rotation, dependency scanning).
 - [ ] Data governance (PII retention, backups/restore drills, GDPR-like controls as required).
@@ -471,3 +471,12 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- Booking: `p95=21221.63ms`, `p99=30016.94ms`, `errorRate=1.0` (mix of `401` + timeout responses)
 		- Payments: `p95=331.69ms`, `p99=635.16ms`, `errorRate=1.0` (`401` responses)
 	- Budget evaluation: breach remains on booking p95 vs peak budget (`1200ms`).
+- 2026-03-10: Expanded integration coverage for all new marketplace verticals in live preflight gate.
+	- Added vertical integration checks in `tests/e2e/live-preflight.mjs` covering:
+		- `excursions` (`list`, `detail`, `slots`, `quote`)
+		- `restaurants` (`list`, `detail`, `windows`, `quote`)
+		- `resort-day-visits` (`list`, `detail`, `windows`, `quote`)
+		- `remote-work-spaces` (`list`, `detail`, `pass-windows`, `quote`)
+		- `vehicle-rentals` (`list`, `detail`, `availability`, `quote`)
+	- These checks now execute inside the existing CI-enforced live preflight gate on PRs and `main`.
+	- Added strict-mode gate flag `PREFLIGHT_REQUIRE_NEW_VERTICALS` (workflow input/var `LIVE_PREFLIGHT_REQUIRE_NEW_VERTICALS`) to fail CI when vertical endpoints are unavailable.

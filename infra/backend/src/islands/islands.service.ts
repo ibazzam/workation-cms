@@ -103,7 +103,7 @@ export class IslandsService {
 
         return {
           island,
-          distanceKm: Number(this.haversineKm(nearLat, nearLng, island.lat, island.lng).toFixed(2)),
+          distanceKm: Math.round(this.haversineKm(nearLat, nearLng, island.lat, island.lng) * 100) / 100,
         };
       })
       .filter((entry) => entry.distanceKm !== null && entry.distanceKm <= radiusKm);

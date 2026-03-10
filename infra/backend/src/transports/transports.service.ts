@@ -111,6 +111,7 @@ export class TransportsService {
     const withRelevance = withDisruption.map((transport) => ({
       ...transport,
       relevanceScore: this.computeRouteRelevanceScore(transport, filters),
+      departureEpoch: transport.departure ? new Date(transport.departure).getTime() : Number.MAX_SAFE_INTEGER,
     }));
 
     withRelevance.sort((a, b) => {
@@ -118,12 +119,10 @@ export class TransportsService {
         return b.relevanceScore - a.relevanceScore;
       }
 
-      const aDeparture = a.departure ? new Date(a.departure).getTime() : Number.MAX_SAFE_INTEGER;
-      const bDeparture = b.departure ? new Date(b.departure).getTime() : Number.MAX_SAFE_INTEGER;
-      return aDeparture - bDeparture;
+      return a.departureEpoch - b.departureEpoch;
     });
 
-    return withRelevance;
+    return withRelevance.map(({ departureEpoch: _departureEpoch, ...transport }) => transport);
   }
 
   async listSchedule(filters: {

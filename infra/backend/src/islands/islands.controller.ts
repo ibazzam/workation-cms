@@ -9,6 +9,15 @@ import { IslandsService } from './islands.service';
 export class IslandsController {
   constructor(private readonly islandsService: IslandsService) {}
 
+  private parseOptionalNumber(value?: string): number | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
   @Get('atolls')
   @Public()
   async listAtolls() {
@@ -31,17 +40,12 @@ export class IslandsController {
     @Query('radiusKm') radiusKm?: string,
     @Query('sort') sort?: string,
   ) {
-    const parsedAtollId = atollId !== undefined ? Number(atollId) : undefined;
-    const parsedNearLat = nearLat !== undefined ? Number(nearLat) : undefined;
-    const parsedNearLng = nearLng !== undefined ? Number(nearLng) : undefined;
-    const parsedRadiusKm = radiusKm !== undefined ? Number(radiusKm) : undefined;
-
     return this.islandsService.listIslands({
-      atollId: Number.isFinite(parsedAtollId) ? parsedAtollId : undefined,
+      atollId: this.parseOptionalNumber(atollId),
       q: q?.trim() ? q.trim() : undefined,
-      nearLat: Number.isFinite(parsedNearLat) ? parsedNearLat : undefined,
-      nearLng: Number.isFinite(parsedNearLng) ? parsedNearLng : undefined,
-      radiusKm: Number.isFinite(parsedRadiusKm) ? parsedRadiusKm : undefined,
+      nearLat: this.parseOptionalNumber(nearLat),
+      nearLng: this.parseOptionalNumber(nearLng),
+      radiusKm: this.parseOptionalNumber(radiusKm),
       sort: sort?.trim() ? sort.trim().toLowerCase() : undefined,
     });
   }

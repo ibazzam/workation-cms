@@ -22,6 +22,7 @@ import { SocialLinksModule } from './social-links/social-links.module';
 import { TransportsModule } from './transports/transports.module';
 import { UsersModule } from './users/users.module';
 import { VendorsModule } from './vendors/vendors.module';
+import { VehicleRentalsModule } from './vehicle-rentals/vehicle-rentals.module';
 import { ServiceCategoriesModule } from './service-categories/service-categories.module';
 import { TaxonomyModule } from './taxonomy/taxonomy.module';
 import { WorkationsModule } from './workations/workations.module';
@@ -47,6 +48,7 @@ import { WorkationsModule } from './workations/workations.module';
     VendorsModule,
     ServiceCategoriesModule,
     TaxonomyModule,
+    VehicleRentalsModule,
   ],
   controllers: [HealthController],
   providers: [

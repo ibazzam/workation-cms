@@ -39,6 +39,7 @@ model Vendor {
   excursions     Excursion[]
   restaurants    Restaurant[]
   resortDayVisits ResortDayVisit[]
+  remoteWorkSpaces RemoteWorkspace[]
   vehicleRentals VehicleRental[]
   socialLinks    SocialLink[]
   loyaltyOffers  VendorLoyaltyOffer[]
@@ -74,6 +75,7 @@ model Island {
   excursions       Excursion[]
   restaurants      Restaurant[]
   resortDayVisits  ResortDayVisit[]
+  remoteWorkSpaces RemoteWorkspace[]
   pickupVehicleRentals  VehicleRental[] @relation("rentalPickupIsland")
   dropoffVehicleRentals VehicleRental[] @relation("rentalDropoffIsland")
 }
@@ -330,6 +332,51 @@ model ResortDayVisitWindow {
   resortDayVisit   ResortDayVisit @relation(fields: [resortDayVisitId], references: [id])
 
   @@index([resortDayVisitId, startAt])
+  @@index([status, startAt])
+}
+
+model RemoteWorkspace {
+  id                   String   @id @default(uuid())
+  vendorId             String
+  islandId             Int
+  name                 String
+  description          String?
+  deskInventory        Int      @default(1)
+  privateBoothInventory Int     @default(0)
+  dayPassPrice         Decimal  @default("0.00")
+  weeklyPassPrice      Decimal  @default("0.00")
+  currency             String   @default("USD")
+  minMbps              Int      @default(10)
+  connectivityQuality  String   @default("BASIC")
+  hasMeetingRooms      Boolean  @default(false)
+  active               Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  vendor               Vendor   @relation(fields: [vendorId], references: [id])
+  island               Island   @relation(fields: [islandId], references: [id])
+  passWindows          RemoteWorkspacePassWindow[]
+
+  @@index([vendorId, active])
+  @@index([islandId, active])
+  @@index([connectivityQuality, active])
+}
+
+model RemoteWorkspacePassWindow {
+  id                         String   @id @default(uuid())
+  remoteWorkspaceId          String
+  startAt                    DateTime
+  endAt                      DateTime
+  deskInventoryOverride      Int?
+  privateBoothInventoryOverride Int?
+  status                     String   @default("OPEN")
+  note                       String?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  remoteWorkspace            RemoteWorkspace @relation(fields: [remoteWorkspaceId], references: [id])
+
+  @@index([remoteWorkspaceId, startAt])
   @@index([status, startAt])
 }
 

@@ -8,7 +8,7 @@
     "ADMIN_CARE",
     "ADMIN_FINANCE"
   ],
-  "totalEndpoints": 176,
+  "totalEndpoints": 186,
   "endpoints": [
     {
       "method": "GET",
@@ -1800,6 +1800,196 @@
         "ADMIN_SUPER": true,
         "ADMIN_CARE": true,
         "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/remote-work-spaces",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/remote-work-spaces/:id",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/remote-work-spaces/:id/pass-windows",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/remote-work-spaces/:id/quote",
+      "accessMode": "public",
+      "allowedRoles": [],
+      "source": "infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts",
+      "roles": {
+        "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/remote-work-spaces/admin",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/remote-work-spaces/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/remote-work-spaces/admin/:id",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/remote-work-spaces/admin/:id/pass-windows",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/remote-work-spaces/admin/:id/pass-windows/:windowId",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/remote-work-spaces/admin/:id/pass-windows/:windowId",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER",
+        "VENDOR"
+      ],
+      "source": "infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
       }
     },
     {

@@ -5,7 +5,7 @@ This document is generated from backend controller decorators in `infra/backend/
 Generation command: `npm run permissions:matrix:write`
 Validation command: `npm run permissions:matrix:check`
 
-Total endpoint policies: **176**
+Total endpoint policies: **186**
 
 Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE`, `ADMIN_FINANCE`
 
@@ -107,6 +107,16 @@ Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE
 | POST | /api/v1/payments/webhooks/bml | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
 | POST | /api/v1/payments/webhooks/mib | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
 | POST | /api/v1/payments/webhooks/stripe | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
+| GET | /api/v1/remote-work-spaces | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts |
+| GET | /api/v1/remote-work-spaces/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts |
+| GET | /api/v1/remote-work-spaces/:id/pass-windows | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts |
+| GET | /api/v1/remote-work-spaces/:id/quote | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts |
+| POST | /api/v1/remote-work-spaces/admin | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts |
+| DELETE | /api/v1/remote-work-spaces/admin/:id | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts |
+| PUT | /api/v1/remote-work-spaces/admin/:id | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts |
+| POST | /api/v1/remote-work-spaces/admin/:id/pass-windows | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts |
+| DELETE | /api/v1/remote-work-spaces/admin/:id/pass-windows/:windowId | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts |
+| PUT | /api/v1/remote-work-spaces/admin/:id/pass-windows/:windowId | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/remote-work-spaces/remote-work-spaces.controller.ts |
 | GET | /api/v1/resort-day-visits | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/resort-day-visits/resort-day-visits.controller.ts |
 | GET | /api/v1/resort-day-visits/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/resort-day-visits/resort-day-visits.controller.ts |
 | GET | /api/v1/resort-day-visits/:id/quote | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/resort-day-visits/resort-day-visits.controller.ts |

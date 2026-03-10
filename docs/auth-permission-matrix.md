@@ -5,7 +5,7 @@ This document is generated from backend controller decorators in `infra/backend/
 Generation command: `npm run permissions:matrix:write`
 Validation command: `npm run permissions:matrix:check`
 
-Total endpoint policies: **156**
+Total endpoint policies: **166**
 
 Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE`, `ADMIN_FINANCE`
 
@@ -107,6 +107,16 @@ Role columns: `ANONYMOUS`, `USER`, `VENDOR`, `ADMIN`, `ADMIN_SUPER`, `ADMIN_CARE
 | POST | /api/v1/payments/webhooks/bml | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
 | POST | /api/v1/payments/webhooks/mib | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
 | POST | /api/v1/payments/webhooks/stripe | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/payments/payments.controller.ts |
+| GET | /api/v1/restaurants | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/restaurants/restaurants.controller.ts |
+| GET | /api/v1/restaurants/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/restaurants/restaurants.controller.ts |
+| GET | /api/v1/restaurants/:id/quote | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/restaurants/restaurants.controller.ts |
+| GET | /api/v1/restaurants/:id/windows | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/restaurants/restaurants.controller.ts |
+| POST | /api/v1/restaurants/admin | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/restaurants/restaurants.controller.ts |
+| DELETE | /api/v1/restaurants/admin/:id | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/restaurants/restaurants.controller.ts |
+| PUT | /api/v1/restaurants/admin/:id | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/restaurants/restaurants.controller.ts |
+| POST | /api/v1/restaurants/admin/:id/windows | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/restaurants/restaurants.controller.ts |
+| DELETE | /api/v1/restaurants/admin/:id/windows/:windowId | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/restaurants/restaurants.controller.ts |
+| PUT | /api/v1/restaurants/admin/:id/windows/:windowId | roles | ADMIN, ADMIN_CARE, ADMIN_SUPER, VENDOR | N | N | Y | Y | Y | Y | N | infra/backend/src/restaurants/restaurants.controller.ts |
 | POST | /api/v1/reviews | roles | ADMIN, ADMIN_CARE, ADMIN_FINANCE, ADMIN_SUPER, USER, VENDOR | N | Y | Y | Y | Y | Y | Y | infra/backend/src/reviews/reviews.controller.ts |
 | POST | /api/v1/reviews/:id/flag | roles | ADMIN, ADMIN_CARE, ADMIN_FINANCE, ADMIN_SUPER, USER, VENDOR | N | Y | Y | Y | Y | Y | Y | infra/backend/src/reviews/reviews.controller.ts |
 | GET | /api/v1/reviews/accommodations/:id | public | - | Y | Y | Y | Y | Y | Y | Y | infra/backend/src/reviews/reviews.controller.ts |

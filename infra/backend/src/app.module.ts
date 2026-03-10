@@ -21,6 +21,7 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { SocialLinksModule } from './social-links/social-links.module';
 import { TransportsModule } from './transports/transports.module';
 import { ExcursionsModule } from './excursions/excursions.module';
+import { RestaurantsModule } from './restaurants/restaurants.module';
 import { UsersModule } from './users/users.module';
 import { VendorsModule } from './vendors/vendors.module';
 import { VehicleRentalsModule } from './vehicle-rentals/vehicle-rentals.module';
@@ -46,6 +47,7 @@ import { WorkationsModule } from './workations/workations.module';
     ReviewsModule,
     SocialLinksModule,
     ExcursionsModule,
+    RestaurantsModule,
     WorkationsModule,
     VendorsModule,
     ServiceCategoriesModule,

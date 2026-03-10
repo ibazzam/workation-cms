@@ -37,6 +37,7 @@ model Vendor {
   accommodations Accommodation[]
   transports     Transport[]
   excursions     Excursion[]
+  restaurants    Restaurant[]
   vehicleRentals VehicleRental[]
   socialLinks    SocialLink[]
   loyaltyOffers  VendorLoyaltyOffer[]
@@ -70,6 +71,7 @@ model Island {
   fromTransports   Transport[] @relation("fromIsland")
   toTransports     Transport[] @relation("toIsland")
   excursions       Excursion[]
+  restaurants      Restaurant[]
   pickupVehicleRentals  VehicleRental[] @relation("rentalPickupIsland")
   dropoffVehicleRentals VehicleRental[] @relation("rentalDropoffIsland")
 }
@@ -238,6 +240,51 @@ model ExcursionSlot {
   excursion            Excursion @relation(fields: [excursionId], references: [id])
 
   @@index([excursionId, startAt])
+  @@index([status, startAt])
+}
+
+model Restaurant {
+  id                String   @id @default(uuid())
+  vendorId          String
+  islandId          Int
+  name              String
+  description       String?
+  cuisineType       String
+  totalTables       Int      @default(1)
+  minPartySize      Int      @default(1)
+  maxPartySize      Int      @default(10)
+  depositPolicyType String   @default("NONE")
+  depositAmount     Decimal  @default("0.00")
+  depositCurrency   String   @default("USD")
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  vendor            Vendor   @relation(fields: [vendorId], references: [id])
+  island            Island   @relation(fields: [islandId], references: [id])
+  seatingWindows    RestaurantSeatingWindow[]
+
+  @@index([vendorId, active])
+  @@index([islandId, active])
+  @@index([cuisineType, active])
+}
+
+model RestaurantSeatingWindow {
+  id                 String   @id @default(uuid())
+  restaurantId       String
+  startAt            DateTime
+  endAt              DateTime
+  tableCountOverride Int?
+  minPartySizeOverride Int?
+  maxPartySizeOverride Int?
+  status             String   @default("OPEN")
+  note               String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  restaurant         Restaurant @relation(fields: [restaurantId], references: [id])
+
+  @@index([restaurantId, startAt])
   @@index([status, startAt])
 }
 

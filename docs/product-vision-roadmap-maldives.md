@@ -81,7 +81,7 @@ Core customer outcomes:
 ## I. Frontend Product UX
 - [x] React Query + typed client migration started for admin and key public pages.
 - [x] Complete migration of all pages to shared typed hooks and query keys.
-- [ ] End-user search/discovery UX by atoll/island with dependency-aware suggestions.
+- [x] End-user search/discovery UX by atoll/island with dependency-aware suggestions.
 - [ ] Checkout UX for bundled transport + stay + activities.
 - [ ] Customer booking management UX (changes, cancellations, credits/refunds).
 

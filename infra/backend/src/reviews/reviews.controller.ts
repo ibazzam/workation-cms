@@ -80,4 +80,18 @@ export class ReviewsController {
   async publish(@Param('id') id: string, @Body() body: Record<string, unknown>, @Req() request: any) {
     return this.reviewsService.setStatus(id, 'PUBLISHED', request.user, body);
   }
+
+  @Post('admin/:id/escalate')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE')
+  @UseGuards(WriteRateLimitGuard)
+  @WriteRateLimit({ key: 'reviews:admin:escalate', max: 30, windowMs: 60_000 })
+  async escalate(@Param('id') id: string, @Body() body: Record<string, unknown>, @Req() request: any) {
+    return this.reviewsService.escalate(id, request.user, body);
+  }
+
+  @Get('admin/:id/moderation-history')
+  @Roles('ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE')
+  async moderationHistory(@Param('id') id: string) {
+    return this.reviewsService.getModerationHistory(id);
+  }
 }

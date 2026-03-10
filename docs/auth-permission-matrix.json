@@ -8,7 +8,7 @@
     "ADMIN_CARE",
     "ADMIN_FINANCE"
   ],
-  "totalEndpoints": 186,
+  "totalEndpoints": 188,
   "endpoints": [
     {
       "method": "GET",
@@ -2452,7 +2452,47 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/reviews/admin/:id/escalate",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/reviews/reviews.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/reviews/admin/:id/hide",
+      "accessMode": "roles",
+      "allowedRoles": [
+        "ADMIN",
+        "ADMIN_CARE",
+        "ADMIN_SUPER"
+      ],
+      "source": "infra/backend/src/reviews/reviews.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
+        "USER": false,
+        "VENDOR": false,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reviews/admin/:id/moderation-history",
       "accessMode": "roles",
       "allowedRoles": [
         "ADMIN",

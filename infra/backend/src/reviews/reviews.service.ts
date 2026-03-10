@@ -17,6 +17,7 @@ type RequestActor = {
 type ModerationActionPayload = {
   reasonCode?: unknown;
   reviewerNote?: unknown;
+  escalationQueue?: unknown;
 };
 
 type ModerationQueueQuery = {
@@ -26,9 +27,10 @@ type ModerationQueueQuery = {
 
 type ReviewModerationEvent = {
   reviewId: string;
-  action: 'FLAG' | 'HIDE' | 'PUBLISH';
+  action: 'FLAG' | 'HIDE' | 'PUBLISH' | 'ESCALATE';
   reasonCode: string | null;
   reviewerNote: string | null;
+  escalationQueue: string | null;
   actorUserId: string | null;
   actorRole: string | null;
   createdAt: string;
@@ -381,9 +383,20 @@ export class ReviewsService {
       return unchanged;
     }
 
+    const current = await this.prisma.review.findUnique({
+      where: { id },
+      select: { flaggedCount: true },
+    });
+    const nextFlaggedCount = (current?.flaggedCount ?? 0) + 1;
+
     const updated = await this.prisma.review.update({
       where: { id },
-      data: { status: 'FLAGGED' },
+      data: {
+        status: 'FLAGGED',
+        trustSafetyStatus: 'UNDER_REVIEW',
+        flaggedCount: nextFlaggedCount,
+        lastFlaggedAt: new Date(),
+      },
       include: {
         user: {
           select: {
@@ -406,7 +419,13 @@ export class ReviewsService {
 
     const updated = await this.prisma.review.update({
       where: { id },
-      data: { status },
+      data: {
+        status,
+        trustSafetyStatus: status === 'HIDDEN' ? 'ACTIONED' : 'CLEAR',
+        moderationReasonCode: this.parseOptionalModerationReasonCode(payload?.reasonCode),
+        moderationReviewerNote: this.parseOptionalReviewerNote(payload?.reviewerNote),
+        actionedAt: new Date(),
+      },
       include: {
         user: {
           select: {
@@ -421,14 +440,59 @@ export class ReviewsService {
     return updated;
   }
 
+  async escalate(id: string, actor?: RequestActor, payload?: ModerationActionPayload) {
+    const existing = await this.prisma.review.findUnique({ where: { id }, select: { id: true } });
+    if (!existing) {
+      throw new NotFoundException('Review not found');
+    }
+
+    const escalationQueue = this.parseEscalationQueue(payload?.escalationQueue);
+    const reasonCode = this.parseOptionalModerationReasonCode(payload?.reasonCode);
+    const reviewerNote = this.parseOptionalReviewerNote(payload?.reviewerNote);
+
+    const updated = await this.prisma.review.update({
+      where: { id },
+      data: {
+        status: 'FLAGGED',
+        trustSafetyStatus: 'ESCALATED',
+        moderationReasonCode: reasonCode,
+        moderationReviewerNote: reviewerNote,
+        escalatedToQueue: escalationQueue,
+        escalatedAt: new Date(),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    await this.recordModerationEvent(id, 'ESCALATE', actor, payload);
+    return updated;
+  }
+
+  async getModerationHistory(id: string) {
+    const existing = await this.prisma.review.findUnique({ where: { id }, select: { id: true } });
+    if (!existing) {
+      throw new NotFoundException('Review not found');
+    }
+
+    const events = await this.readModerationEvents();
+    return events.filter((event) => event.reviewId === id);
+  }
+
   private async recordModerationEvent(
     reviewId: string,
-    action: 'FLAG' | 'HIDE' | 'PUBLISH',
+    action: 'FLAG' | 'HIDE' | 'PUBLISH' | 'ESCALATE',
     actor?: RequestActor,
     payload?: ModerationActionPayload,
   ) {
     const reasonCode = this.parseOptionalModerationReasonCode(payload?.reasonCode);
     const reviewerNote = this.parseOptionalReviewerNote(payload?.reviewerNote);
+    const escalationQueue = this.parseEscalationQueue(payload?.escalationQueue);
     const events = await this.readModerationEvents();
 
     const nextEvent: ReviewModerationEvent = {
@@ -436,6 +500,7 @@ export class ReviewsService {
       action,
       reasonCode,
       reviewerNote,
+      escalationQueue,
       actorUserId: typeof actor?.id === 'string' && actor.id.trim().length > 0 ? actor.id.trim() : null,
       actorRole: typeof actor?.role === 'string' && actor.role.trim().length > 0 ? actor.role.trim() : null,
       createdAt: new Date().toISOString(),
@@ -536,6 +601,28 @@ export class ReviewsService {
 
     if (normalized.length > 500) {
       throw new BadRequestException('reviewerNote exceeds 500 characters');
+    }
+
+    return normalized;
+  }
+
+  private parseEscalationQueue(value: unknown): string | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('escalationQueue must be a string when provided');
+    }
+
+    const normalized = value.trim().toUpperCase();
+    if (normalized.length === 0) {
+      return null;
+    }
+
+    const allowed = new Set(['TRUST_AND_SAFETY', 'LEGAL', 'FRAUD', 'SUPPORT']);
+    if (!allowed.has(normalized)) {
+      throw new BadRequestException('escalationQueue is not supported');
     }
 
     return normalized;

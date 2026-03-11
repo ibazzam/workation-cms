@@ -370,6 +370,10 @@ export class ReviewsService {
           },
         });
       } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+          throw new BadRequestException('You have already reviewed this transport');
+        }
+
         if (!this.isReviewSchemaDriftError(error)) {
           throw error;
         }

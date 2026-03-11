@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { BookingsService } from '../bookings/bookings.service';
 import { PrismaService } from '../prisma.service';
@@ -91,11 +91,16 @@ export class CartService {
           throw new BadRequestException(`Cart transport item ${transportItem.id} is missing transportId`);
         }
 
-        const created = await this.bookingsService.createForUser(userId, {
-          transportId: transportItem.transportId,
-          transportFareClassCode: transportItem.transportFareClassCode,
-          guests: transportItem.guests,
-        });
+        let created;
+        try {
+          created = await this.bookingsService.createForUser(userId, {
+            transportId: transportItem.transportId,
+            transportFareClassCode: transportItem.transportFareClassCode,
+            guests: transportItem.guests,
+          });
+        } catch (error) {
+          throw this.normalizeCheckoutItemError(error, transportItem.id, 'transport');
+        }
         createdBookingIds.push(String(created.id));
         createdBookings.push({
           cartItemId: transportItem.id,
@@ -122,15 +127,20 @@ export class CartService {
           throw new BadRequestException(`Cart accommodation item ${accommodationItem.id} requires a related transport item`);
         }
 
-        const created = await this.bookingsService.createForUser(userId, {
-          accommodationId: accommodationItem.accommodationId,
-          transportId: matchedTransport.transportId,
-          itineraryTransportIds: matchedTransport.itineraryTransportIds,
-          transportFareClassCode: matchedTransport.transportFareClassCode,
-          startDate: accommodationItem.startDate,
-          endDate: accommodationItem.endDate,
-          guests: accommodationItem.guests,
-        });
+        let created;
+        try {
+          created = await this.bookingsService.createForUser(userId, {
+            accommodationId: accommodationItem.accommodationId,
+            transportId: matchedTransport.transportId,
+            itineraryTransportIds: matchedTransport.itineraryTransportIds,
+            transportFareClassCode: matchedTransport.transportFareClassCode,
+            startDate: accommodationItem.startDate,
+            endDate: accommodationItem.endDate,
+            guests: accommodationItem.guests,
+          });
+        } catch (error) {
+          throw this.normalizeCheckoutItemError(error, accommodationItem.id, 'accommodation');
+        }
         createdBookingIds.push(String(created.id));
 
         createdBookings.push({
@@ -376,5 +386,13 @@ export class CartService {
     }
 
     return (error.message ?? '').toLowerCase().includes('booking');
+  }
+
+  private normalizeCheckoutItemError(error: unknown, cartItemId: string, itemType: 'transport' | 'accommodation') {
+    if (error instanceof HttpException) {
+      return error;
+    }
+
+    return new BadRequestException(`Cart ${itemType} item ${cartItemId} could not be fulfilled`);
   }
 }

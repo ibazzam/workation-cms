@@ -309,15 +309,23 @@ export class BookingsService {
     }
 
     if (transport?.capacity !== null && transport?.capacity !== undefined) {
-      const reservedSeatsAggregate = await this.prisma.booking.aggregate({
-        where: {
-          transportId: transport.id,
-          status: { in: ACTIVE_RESERVATION_STATUSES },
-        },
-        _sum: { guests: true },
-      });
+      let reservedSeats = 0;
+      try {
+        const reservedSeatsAggregate = await this.prisma.booking.aggregate({
+          where: {
+            transportId: transport.id,
+            status: { in: ACTIVE_RESERVATION_STATUSES },
+          },
+          _sum: { guests: true },
+        });
 
-      const reservedSeats = reservedSeatsAggregate._sum.guests ?? 0;
+        reservedSeats = reservedSeatsAggregate._sum.guests ?? 0;
+      } catch (error) {
+        if (!this.isBookingSchemaDriftError(error)) {
+          throw error;
+        }
+      }
+
       const availableSeats = Math.max(transport.capacity - reservedSeats, 0);
       if (parsedGuests > availableSeats) {
         throw new BadRequestException('guests exceeds available transport seats');

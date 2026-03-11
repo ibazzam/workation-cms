@@ -19,22 +19,34 @@ This record is the execution artifact for WS2 launch rehearsal.
 - Execution plan: `docs/remaining-tasks-todo.md`
 
 ## M8 Blocker Evidence
-- [ ] Observability stack operational
-  - Evidence link: ____________________
-- [ ] Security and data-governance checks validated
-  - Evidence link: ____________________
-- [ ] Load/performance and live preflight gates passed
-  - Evidence link: ____________________
-- [ ] Support tooling and compensation governance active
-  - Evidence link: ____________________
+- [x] Observability stack operational
+  - Evidence links:
+    - `https://github.com/ibazzam/workation-cms/actions/runs/22946547451`
+    - `docs/observability-stack.md`
+- [x] Security and data-governance checks validated
+  - Evidence links:
+    - `https://github.com/ibazzam/workation-cms/actions/runs/22946547442`
+    - `docs/security-hardening.md`
+    - `docs/data-governance.md`
+- [x] Load/performance and live preflight gates passed
+  - Evidence links:
+    - `https://github.com/ibazzam/workation-cms/actions/runs/22946547451`
+    - `artifacts/perf/booking-payments-peak-season-1773148668113.json`
+    - `artifacts/perf/booking-payments-baseline-1772969015649.json`
+- [x] Support tooling and compensation governance active
+  - Evidence links:
+    - `docs/customer-support-tooling-workflow.md`
+    - `docs/customer-compensation-policy-matrix.md`
 - [ ] Rollback owner and rollback procedure confirmed
-  - Evidence link: ____________________
+  - Evidence links:
+    - `docs/release-candidate-scope-freeze.md`
+    - `docs/wb-201-authority-cutover-runbook.md`
 
 ## Verification Summary
-- Hosted live preflight result: PASS / FAIL
-- Alert routing test result: PASS / FAIL
-- Runbook link validation result: PASS / FAIL
-- Support escalation chain validation result: PASS / FAIL
+- Hosted live preflight result: PASS
+- Alert routing test result: PENDING (end-to-end launch-day channel confirmation required)
+- Runbook link validation result: PASS
+- Support escalation chain validation result: PENDING (active roster confirmation pending)
 
 ## Rollback Trigger Matrix
 

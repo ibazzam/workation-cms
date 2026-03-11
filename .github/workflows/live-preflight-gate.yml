@@ -65,7 +65,30 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run live preflight gate
+      - name: Run live preflight gate (advisory on PR)
+        if: github.event_name == 'pull_request'
+        id: preflight_pr
+        continue-on-error: true
+        env:
+          BASE_URL: ${{ vars.LIVE_PREFLIGHT_BASE_URL || 'https://api.workation.mv' }}
+          SCHEDULE_ID: ${{ vars.LIVE_PREFLIGHT_SCHEDULE_ID || '1' }}
+          AUTH_BEARER_TOKEN: ${{ secrets.LIVE_PREFLIGHT_BEARER_TOKEN }}
+          X_USER_ID: ${{ secrets.LIVE_PREFLIGHT_X_USER_ID }}
+          X_USER_ROLE: ${{ secrets.LIVE_PREFLIGHT_X_USER_ROLE }}
+          PREFLIGHT_REQUIRE_OPS_SLO: 'false'
+          PREFLIGHT_REQUIRE_CHECKOUT_RELIABILITY: 'false'
+          PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY: 'false'
+          PREFLIGHT_REQUIRE_MODERATION_PATHS: 'false'
+          PREFLIGHT_REQUIRE_SCHEDULER_HEALTH: 'false'
+          PREFLIGHT_REQUIRE_NEW_VERTICALS: 'false'
+        run: npm run live:preflight
+
+      - name: Report advisory preflight result
+        if: github.event_name == 'pull_request' && steps.preflight_pr.outcome == 'failure'
+        run: echo "::warning::Live preflight advisory failed on PR. Strict enforcement still applies on main/workflow_dispatch."
+
+      - name: Run live preflight gate (strict)
+        if: github.event_name != 'pull_request'
         env:
           BASE_URL: ${{ github.event.inputs.base_url || vars.LIVE_PREFLIGHT_BASE_URL || 'https://api.workation.mv' }}
           SCHEDULE_ID: ${{ github.event.inputs.schedule_id || vars.LIVE_PREFLIGHT_SCHEDULE_ID || '1' }}

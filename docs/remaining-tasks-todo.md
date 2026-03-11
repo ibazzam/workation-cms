@@ -58,11 +58,12 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
 - Dependencies: WS2 (can begin in parallel after RC tag exists)
 - Tasks:
   - [ ] Re-run hosted live preflight against launch target environment.
+    - attempted strict run failed due to missing `LIVE_PREFLIGHT_BEARER_TOKEN` (`https://github.com/ibazzam/workation-cms/actions/runs/22947199645`)
   - [ ] Validate launch-day incident alert routing (pager/slack/email) end-to-end.
-  - [ ] Validate incident runbook links are reachable and current.
-  - [ ] Verify customer support escalation roster and compensation approval chain are active.
+  - [x] Validate incident runbook links are reachable and current.
+  - [x] Verify customer support escalation roster and compensation approval chain are active.
 - Deliverable:
-  - Verification report with pass/fail outcomes and remediation notes.
+  - Verification report with pass/fail outcomes and remediation notes (`docs/production-verification-report-2026-03-18.md`).
 - Exit criteria:
   - [ ] No unresolved critical verification failures.
 

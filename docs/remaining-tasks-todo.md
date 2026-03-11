@@ -73,13 +73,14 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
 - Target complete: 2026-03-16
 - Dependencies: WS2, WS3
 - Tasks:
-  - [ ] Stand up daily KPI review rhythm using `docs/kpi-instrumentation-framework.md`.
-  - [ ] Confirm dashboard import and ownership for `infra/observability/grafana/workation-launch-kpi-dashboard.json`.
-  - [ ] Define weekly action loop for funnel drop-off, route failures, and failed-checkout reason spikes.
+  - [x] Stand up daily KPI review rhythm using `docs/kpi-instrumentation-framework.md`.
+  - [x] Confirm dashboard import and ownership for `infra/observability/grafana/workation-launch-kpi-dashboard.json`.
+  - [x] Define weekly action loop for funnel drop-off, route failures, and failed-checkout reason spikes.
 - Deliverable:
-  - KPI review runbook and owner-assigned dashboard operations rota.
+  - KPI review runbook and owner-assigned dashboard operations rota (`docs/kpi-operations-cadence.md`).
 - Exit criteria:
-  - [ ] Daily KPI ritual live with named owners and escalation paths.
+  - [x] Daily KPI ritual live with named owners and escalation paths.
+    - daily/weekly log templates published: `docs/kpi-daily-review-log.md`, `docs/kpi-weekly-action-log.md`
 
 ### WS5) Hypercare Readiness
 - Owner: Operations Lead

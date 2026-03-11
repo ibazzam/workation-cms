@@ -35,6 +35,16 @@ This report captures WS3 verification status for launch readiness.
   - Token configuration is no longer the active blocker.
   - Active blocker moved to production API reliability on bookings endpoint.
 
+### 1c) Deployment Attempt to Roll Out Bookings Fix
+- Workflow run: `https://github.com/ibazzam/workation-cms/actions/runs/22951012154`
+- Outcome: `failure`
+- Root cause: deployment hook secret missing.
+- Evidence from logs:
+  - `RENDER_DEPLOY_HOOK_URL secret is required for non-dry-run promotion.`
+- Notes:
+  - Promotion contract gate passed (including break-glass override behavior).
+  - The production runtime did not receive the remediation build because deploy hook execution was blocked.
+
 ### 2) Alert Routing Validation
 - Current status: `BLOCKED`
 - Tracking record: `docs/alert-routing-verification-2026-03-18.md`
@@ -65,6 +75,7 @@ This report captures WS3 verification status for launch readiness.
 
 ## Open Blockers
 - Production endpoint reliability failure: `GET /api/v1/bookings` returns `500` during strict preflight checkout validation.
+- Deployment pipeline configuration gap: `RENDER_DEPLOY_HOOK_URL` secret is missing, preventing rollout of remediation.
 - Pending authenticated alert-routing channel delivery proof (pager/slack/email)
 
 ## Exit Criteria to Close WS3

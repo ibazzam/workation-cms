@@ -39,7 +39,7 @@ jobs:
               'security-audit',
             ];
 
-            const allowFailedLivePreflight = (core.getInput('allow_failed_live_preflight') || 'false') === 'true';
+            const allowFailedLivePreflight = String(context.payload.inputs?.allow_failed_live_preflight ?? 'false') === 'true';
             if (!allowFailedLivePreflight) {
               requiredChecks.push('live-preflight');
             } else {

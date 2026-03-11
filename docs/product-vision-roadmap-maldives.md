@@ -520,3 +520,7 @@ Owners are role-based so this can be applied immediately even if personnel shift
 	- Initialized go/no-go rehearsal record with explicit owner fields and rollback trigger matrix:
 		- `docs/go-no-go-rehearsal-2026-03-18.md`
 	- Captured M8 evidence links in rehearsal record (observability, security/governance, load/perf/live-preflight, support governance) and set initial verification statuses.
+	- Confirmed rollback owner and published launch support escalation roster:
+		- `docs/launch-support-escalation-roster.md`
+	- Added alert-routing verification record with authenticated probe requirement and remaining E2E check:
+		- `docs/alert-routing-verification-2026-03-18.md`

@@ -9,7 +9,7 @@ This record is the execution artifact for WS2 launch rehearsal.
 - Operations lead: ____________________
 - Product lead: ____________________
 - Incident commander (launch day): ____________________
-- Rollback owner (single accountable approver): ____________________
+- Rollback owner (single accountable approver): Operations Lead / Duty Manager
 - Communications owner (customer/status updates): ____________________
 
 ## Inputs
@@ -37,16 +37,17 @@ This record is the execution artifact for WS2 launch rehearsal.
   - Evidence links:
     - `docs/customer-support-tooling-workflow.md`
     - `docs/customer-compensation-policy-matrix.md`
-- [ ] Rollback owner and rollback procedure confirmed
+- [x] Rollback owner and rollback procedure confirmed
   - Evidence links:
     - `docs/release-candidate-scope-freeze.md`
     - `docs/wb-201-authority-cutover-runbook.md`
+    - `docs/launch-support-escalation-roster.md`
 
 ## Verification Summary
 - Hosted live preflight result: PASS
-- Alert routing test result: PENDING (end-to-end launch-day channel confirmation required)
+- Alert routing test result: PENDING (authenticated channel-delivery validation tracked in `docs/alert-routing-verification-2026-03-18.md`)
 - Runbook link validation result: PASS
-- Support escalation chain validation result: PENDING (active roster confirmation pending)
+- Support escalation chain validation result: PASS (role-based active roster published in `docs/launch-support-escalation-roster.md`)
 
 ## Rollback Trigger Matrix
 
@@ -62,9 +63,9 @@ Use this matrix to drive objective rollback decisions during rehearsal and launc
 | Security/compliance | Credible security incident or policy/control failure with customer risk | Immediate | Security lead + Rollback owner | Immediate rollback and security response procedure |
 
 ## Rollback Procedure Reference
-- Primary rollback runbook: ____________________
-- Last rollback drill date: ____________________
-- Last rollback drill result: PASS / FAIL
+- Primary rollback runbook: `docs/wb-201-authority-cutover-runbook.md`
+- Last rollback drill date: 2026-03-07
+- Last rollback drill result: PASS
 
 ## Decision Escalation Flow
 1. Incident commander declares trigger breach.

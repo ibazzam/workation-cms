@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { BookingsService } from '../bookings/bookings.service';
 import { PrismaService } from '../prisma.service';
 
@@ -140,6 +141,7 @@ export class CartService {
         });
       }
     } catch (error) {
+      // Keep checkout error semantics stable even when cleanup hits schema drift.
       await this.rollbackPartialCheckout(userId, createdBookingIds);
       throw error;
     }
@@ -336,17 +338,43 @@ export class CartService {
       return;
     }
 
-    // Compensating rollback keeps checkout failures deterministic for users.
-    await this.prisma.booking.updateMany({
-      where: {
-        id: { in: bookingIds },
-        userId,
-        status: { in: ['HOLD', 'PENDING'] },
-      },
-      data: {
-        status: 'CANCELLED',
-        holdExpiresAt: null,
-      },
-    });
+    try {
+      // Compensating rollback keeps checkout failures deterministic for users.
+      await this.prisma.booking.updateMany({
+        where: {
+          id: { in: bookingIds },
+          userId,
+          status: { in: ['HOLD', 'PENDING'] },
+        },
+        data: {
+          status: 'CANCELLED',
+          holdExpiresAt: null,
+        },
+      });
+    } catch (error) {
+      if (!this.isBookingSchemaDriftError(error)) {
+        throw error;
+      }
+
+      await this.prisma.$executeRaw(Prisma.sql`
+        UPDATE "Booking"
+        SET "status" = 'CANCELLED'
+        WHERE "id" IN (${Prisma.join(bookingIds)})
+          AND "userId" = ${userId}
+          AND "status" IN ('HOLD', 'PENDING')
+      `);
+    }
+  }
+
+  private isBookingSchemaDriftError(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+      return false;
+    }
+
+    if (error.code === 'P2022') {
+      return true;
+    }
+
+    return (error.message ?? '').toLowerCase().includes('booking');
   }
 }

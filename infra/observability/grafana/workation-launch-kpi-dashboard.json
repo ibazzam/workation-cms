@@ -1,0 +1,77 @@
+{
+  "title": "Workation Launch KPI Dashboard",
+  "uid": "workation-launch-kpi",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "tags": ["workation", "kpi", "launch"],
+  "panels": [
+    {
+      "title": "Search to Confirm Conversion (All Atolls)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "workation_kpi_search_to_confirm_conversion_ratio",
+          "legendFormat": "conversion"
+        }
+      ],
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 0 }
+    },
+    {
+      "title": "Route Completion Rate",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "workation_kpi_route_completion_ratio",
+          "legendFormat": "route_completion"
+        }
+      ],
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 0 }
+    },
+    {
+      "title": "Failed Checkout Rate",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "workation_kpi_failed_checkout_ratio",
+          "legendFormat": "failed_checkout_rate"
+        }
+      ],
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 0 }
+    },
+    {
+      "title": "Funnel Conversion by Atoll",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "workation_kpi_funnel_stage_conversion_ratio_by_atoll",
+          "legendFormat": "{{atoll}} {{from_stage}}->{{to_stage}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 }
+    },
+    {
+      "title": "Route Completion by Atoll",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "workation_kpi_route_completion_ratio_by_atoll",
+          "legendFormat": "{{atoll}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 }
+    },
+    {
+      "title": "Failed Checkout Reasons",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "workation_kpi_failed_checkout_total_by_reason",
+          "legendFormat": "{{reason}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 }
+    }
+  ]
+}

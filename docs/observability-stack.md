@@ -9,7 +9,9 @@ This document describes the external observability stack for Workation API runti
 - Queue SLO snapshot in alerts payload (`queueSlo`) and queue metrics in `/api/v1/ops/metrics`
 - Structured logs: JSON logs emitted by `ObservabilityMiddleware` with correlation fields (`requestId`, `traceId`)
 - Dashboard template: `infra/observability/grafana/workation-slo-dashboard.json`
+- Launch KPI dashboard template: `infra/observability/grafana/workation-launch-kpi-dashboard.json`
 - Prometheus scrape template: `infra/observability/prometheus/workation-scrape.example.yml`
+- KPI definition and event contract: `docs/kpi-instrumentation-framework.md`
 
 ## Tracing Correlation
 The request middleware now propagates and emits trace context:

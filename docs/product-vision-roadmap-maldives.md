@@ -105,7 +105,7 @@ Core customer outcomes:
 - [x] Vendor onboarding workflows and SLA contracts.
 - [x] Content ops workflows for island/service quality curation.
 - [x] Customer support tooling (case management, compensation policies).
-- [ ] KPI instrumentation (conversion funnel by atoll, route completion, failed checkout reasons).
+- [x] KPI instrumentation (conversion funnel by atoll, route completion, failed checkout reasons).
 - [ ] Go-live readiness checklist per milestone.
 
 ## 3) Milestone Chart
@@ -515,3 +515,10 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `docs/customer-support-tooling-workflow.md`
 	- Added compensation policy matrix with approval bands, decision ranges, reason codes, and audit requirements:
 		- `docs/customer-compensation-policy-matrix.md`
+- 2026-03-11: KPI instrumentation baseline published for launch-readiness business metrics.
+	- Added KPI framework for conversion funnel by atoll, route completion, and failed checkout reasons with event contract and taxonomy:
+		- `docs/kpi-instrumentation-framework.md`
+	- Added launch KPI dashboard template for Grafana import:
+		- `infra/observability/grafana/workation-launch-kpi-dashboard.json`
+	- Updated observability stack documentation to include KPI assets:
+		- `docs/observability-stack.md`

@@ -42,13 +42,14 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
     - `docs/go-live-signoff-template.md`
     - rehearsal record initialized: `docs/go-no-go-rehearsal-2026-03-18.md`
   - [x] Capture and store signoff evidence links for all M8 blocker gates.
-  - [ ] Confirm rollback owner and rollback trigger matrix (metric/incident thresholds).
+  - [x] Confirm rollback owner and rollback trigger matrix (metric/incident thresholds).
     - rollback matrix drafted in `docs/go-no-go-rehearsal-2026-03-18.md`
-    - owner confirmation still pending in rehearsal metadata
+    - owner confirmed in rehearsal metadata and support escalation roster
 - Deliverable:
   - Completed rehearsal packet and signed go/no-go rehearsal record.
 - Exit criteria:
   - [ ] Full rehearsal completed with evidence links for each blocker check.
+    - remaining blocker: authenticated end-to-end alert routing confirmation (`docs/alert-routing-verification-2026-03-18.md`)
 
 ### WS3) Production Verification
 - Owner: SRE / Platform Lead

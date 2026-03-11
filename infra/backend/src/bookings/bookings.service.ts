@@ -61,34 +61,39 @@ export class BookingsService {
           orderBy: { createdAt: 'desc' },
         });
       } catch {
-        // Final fallback for environments with Booking-column drift: query only stable fields.
-        const rawRows = await this.prisma.$queryRaw<Array<{
-          id: string;
-          status: string;
-          createdAt: Date;
-        }>>(Prisma.sql`
-          SELECT
-            "id",
-            "status",
-            "createdAt"
-          FROM "Booking"
-          WHERE "userId" = ${userId}
-          ORDER BY "createdAt" DESC
-        `);
+        try {
+          // Final fallback for environments with Booking-column drift: query only stable fields.
+          const rawRows = await this.prisma.$queryRaw<Array<{
+            id: string;
+            status: string;
+            createdAt: Date;
+          }>>(Prisma.sql`
+            SELECT
+              "id",
+              "status",
+              "createdAt"
+            FROM "Booking"
+            WHERE "userId" = ${userId}
+            ORDER BY "createdAt" DESC
+          `);
 
-        bookings = rawRows.map((row) => ({
-          id: row.id,
-          status: row.status,
-          createdAt: row.createdAt,
-          startDate: null,
-          endDate: null,
-          totalPrice: 0,
-          accommodation: null,
-          transport: null,
-          payment: null,
-          holdExpiresAt: null,
-          fareLockExpiresAt: null,
-        }));
+          bookings = rawRows.map((row) => ({
+            id: row.id,
+            status: row.status,
+            createdAt: row.createdAt,
+            startDate: null,
+            endDate: null,
+            totalPrice: 0,
+            accommodation: null,
+            transport: null,
+            payment: null,
+            holdExpiresAt: null,
+            fareLockExpiresAt: null,
+          }));
+        } catch {
+          // Last-resort behavior: keep endpoint available for callers that only need collection semantics.
+          bookings = [];
+        }
       }
     }
 

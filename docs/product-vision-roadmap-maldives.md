@@ -533,3 +533,7 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `docs/kpi-operations-cadence.md`
 		- `docs/kpi-daily-review-log.md`
 		- `docs/kpi-weekly-action-log.md`
+	- Completed WS5 hypercare readiness package:
+		- `docs/launch-week-oncall-schedule.md`
+		- `docs/incident-communication-cadence.md`
+		- `docs/hypercare-d0-d7-plan.md`

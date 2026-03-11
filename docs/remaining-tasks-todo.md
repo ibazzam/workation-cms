@@ -49,7 +49,7 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
   - Completed rehearsal packet and signed go/no-go rehearsal record.
 - Exit criteria:
   - [ ] Full rehearsal completed with evidence links for each blocker check.
-    - remaining blocker: authenticated end-to-end alert routing confirmation (`docs/alert-routing-verification-2026-03-18.md`)
+    - remaining blocker: set `LIVE_PREFLIGHT_BEARER_TOKEN`, rerun authenticated preflight, then complete channel-delivery confirmation (`docs/alert-routing-verification-2026-03-18.md`)
 
 ### WS3) Production Verification
 - Owner: SRE / Platform Lead

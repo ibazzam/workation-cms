@@ -41,15 +41,25 @@ export class BookingsService {
   ) {}
 
   async listByUser(userId: string) {
-    const bookings = await this.prisma.booking.findMany({
-      where: { userId },
-      include: {
-        accommodation: true,
-        transport: true,
-        payment: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    let bookings: Array<any> = [];
+
+    try {
+      bookings = await this.prisma.booking.findMany({
+        where: { userId },
+        include: {
+          accommodation: true,
+          transport: true,
+          payment: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    } catch {
+      // Fallback to base booking rows when relation hydration fails in partially migrated environments.
+      bookings = await this.prisma.booking.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
 
     return bookings.map((booking) => {
       const status = booking.status as BookingLifecycleStatus;

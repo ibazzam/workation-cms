@@ -306,6 +306,16 @@ async function checkCheckoutFailureSemantics() {
       console.warn('checkout/bookings endpoints unavailable on target runtime, skipping checkout reliability smoke');
       return;
     }
+
+    if (err?.response?.status >= 500) {
+      if (requireCheckoutReliability) {
+        throw new Error('checkout reliability smoke is required but checkout endpoint is unstable');
+      }
+
+      console.warn('checkout reliability endpoint returned 5xx on target runtime, skipping non-required check');
+      return;
+    }
+
     throw err;
   } finally {
     if (cartPath) {

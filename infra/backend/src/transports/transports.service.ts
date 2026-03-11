@@ -405,13 +405,41 @@ export class TransportsService {
       throw new BadRequestException('No replacement transport is configured for this disruption');
     }
 
-    const bookings = await this.prisma.booking.findMany({
-      where: {
-        transportId: id,
-        status: { in: ['PENDING', 'HOLD', 'CONFIRMED'] },
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    let bookings: Array<{ id: string; guests: number | null; transportFareClassCode: string | null }>;
+    try {
+      bookings = await this.prisma.booking.findMany({
+        where: {
+          transportId: id,
+          status: { in: ['PENDING', 'HOLD', 'CONFIRMED'] },
+        },
+        select: {
+          id: true,
+          guests: true,
+          transportFareClassCode: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+    } catch (error) {
+      if (!this.isBookingSchemaDriftError(error)) {
+        throw error;
+      }
+
+      const fallbackRows = await this.prisma.$queryRaw<Array<{ id: string; guests: number | null }>>(Prisma.sql`
+        SELECT
+          "id",
+          "guests"
+        FROM "Booking"
+        WHERE "transportId" = ${id}
+          AND "status" IN ('PENDING', 'HOLD', 'CONFIRMED')
+        ORDER BY "createdAt" ASC
+      `);
+
+      bookings = fallbackRows.map((row) => ({
+        id: row.id,
+        guests: row.guests,
+        transportFareClassCode: null,
+      }));
+    }
 
     if (bookings.length === 0) {
       return {
@@ -443,16 +471,24 @@ export class TransportsService {
         continue;
       }
 
-      const reservedForClass = await this.prisma.booking.aggregate({
-        where: {
-          transportId: disruption.replacementTransport.id,
-          transportFareClassCode: fareClass.code,
-          status: { in: ['PENDING', 'HOLD', 'CONFIRMED'] },
-        },
-        _sum: { guests: true },
-      });
+      try {
+        const reservedForClass = await this.prisma.booking.aggregate({
+          where: {
+            transportId: disruption.replacementTransport.id,
+            transportFareClassCode: fareClass.code,
+            status: { in: ['PENDING', 'HOLD', 'CONFIRMED'] },
+          },
+          _sum: { guests: true },
+        });
 
-      replacementFareClassSeatMap.set(fareClass.code, Math.max(fareClass.seats - (reservedForClass._sum.guests ?? 0), 0));
+        replacementFareClassSeatMap.set(fareClass.code, Math.max(fareClass.seats - (reservedForClass._sum.guests ?? 0), 0));
+      } catch (error) {
+        if (!this.isBookingSchemaDriftError(error)) {
+          throw error;
+        }
+
+        replacementFareClassSeatMap.set(fareClass.code, fareClass.seats);
+      }
     }
 
     const details: Array<{ bookingId: string; moved: boolean; reason?: string }> = [];
@@ -537,6 +573,19 @@ export class TransportsService {
     }
 
     return parsed;
+  }
+
+  private isBookingSchemaDriftError(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+      return false;
+    }
+
+    if (error.code === 'P2022') {
+      return true;
+    }
+
+    const message = (error.message ?? '').toLowerCase();
+    return message.includes('transportfareclasscode') || message.includes('booking');
   }
 
   async create(payload: TransportUpsertPayload, actor?: RequestActor) {

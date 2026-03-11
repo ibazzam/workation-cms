@@ -527,3 +527,5 @@ Owners are role-based so this can be applied immediately even if personnel shift
 	- Triggered strict authenticated live-preflight gate for alert-routing validation:
 		- `https://github.com/ibazzam/workation-cms/actions/runs/22947199645`
 		- Result: failed because `AUTH_BEARER_TOKEN` was empty in workflow env; follow-up required to set `LIVE_PREFLIGHT_BEARER_TOKEN` and rerun.
+	- Published WS3 production verification report with current pass/blocker outcomes:
+		- `docs/production-verification-report-2026-03-18.md`

@@ -1,38 +1,97 @@
-# Remaining Tasks To-Do
+# Remaining Tasks Execution Plan
 
-This list consolidates remaining work after the launch-readiness checklist completion.
+This plan converts remaining launch work into an ordered, owner-assigned schedule.
 
-## 1) Roadmap Consistency Cleanup
-- [ ] Reconcile `docs/product-vision-roadmap-maldives.md` so section 4 (`Still Pending`) matches completed checklist status.
-- [ ] Remove or annotate outdated gap statements in section 9 (`Repository Reality Scan`) that no longer reflect current implementation.
-- [ ] Re-run a full roadmap evidence pass so each completed claim has a current dated artifact reference.
+## Planning Window
+- Plan start: 2026-03-11
+- Target launch-readiness signoff: 2026-03-18
+- Status cadence: daily update in launch command thread by 18:00 local time
 
-## 2) Launch Execution Tasks
-- [ ] Create a release-candidate tag from `main` and document scope freeze rules.
-- [ ] Run one full go/no-go rehearsal using:
-  - `docs/go-live-readiness-checklist-by-milestone.md`
-  - `docs/go-live-signoff-template.md`
-- [ ] Capture and store signoff evidence links for all M8 blocker gates.
-- [ ] Confirm rollback owner and rollback trigger matrix (metric/incident thresholds).
+## Priority Sequence
+1. Roadmap consistency cleanup
+2. Launch execution rehearsal and evidence pack
+3. Production verification and alert/runbook validation
+4. KPI operating rhythm activation
+5. Hypercare operating model finalization
 
-## 3) Production Verification Tasks
-- [ ] Re-run hosted live preflight against launch target environment.
-- [ ] Validate launch-day incident alert routing (pager/slack/email) end-to-end.
-- [ ] Validate incident runbook links are reachable and current.
-- [ ] Verify customer support escalation roster and compensation approval chain are active.
+## Workstream Plan
 
-## 4) KPI Operations Tasks
-- [ ] Stand up daily KPI review rhythm using `docs/kpi-instrumentation-framework.md`.
-- [ ] Confirm dashboard import and ownership for:
-  - `infra/observability/grafana/workation-launch-kpi-dashboard.json`
-- [ ] Define weekly action loop for funnel drop-off, route failures, and failed-checkout reason spikes.
+### WS1) Roadmap Consistency Cleanup
+- Owner: Product Ops Lead
+- Start: 2026-03-11
+- Target complete: 2026-03-12
+- Dependencies: none
+- Tasks:
+  - [ ] Reconcile `docs/product-vision-roadmap-maldives.md` so section 4 (`Still Pending`) matches completed checklist status.
+  - [ ] Remove or annotate outdated gap statements in section 9 (`Repository Reality Scan`) that no longer reflect current implementation.
+  - [ ] Re-run roadmap evidence pass so each completed claim has a current dated artifact reference.
+- Deliverable:
+  - Updated roadmap with consistent completion narrative and evidence links.
+- Exit criteria:
+  - [ ] No contradictory "pending" statements remain for already completed section-L items.
 
-## 5) Hypercare Readiness Tasks
-- [ ] Publish launch-week on-call schedule and backup contacts.
-- [ ] Define severity-based communication cadence for incidents.
-- [ ] Set first-week post-launch review checkpoints and decision owners.
+### WS2) Launch Execution Rehearsal
+- Owner: Release Manager
+- Start: 2026-03-12
+- Target complete: 2026-03-14
+- Dependencies: WS1
+- Tasks:
+  - [ ] Create release-candidate tag from `main` and document scope freeze rules.
+  - [ ] Run one full go/no-go rehearsal using:
+    - `docs/go-live-readiness-checklist-by-milestone.md`
+    - `docs/go-live-signoff-template.md`
+  - [ ] Capture and store signoff evidence links for all M8 blocker gates.
+  - [ ] Confirm rollback owner and rollback trigger matrix (metric/incident thresholds).
+- Deliverable:
+  - Completed rehearsal packet and signed go/no-go rehearsal record.
+- Exit criteria:
+  - [ ] Full rehearsal completed with evidence links for each blocker check.
 
-## Completion Criteria
+### WS3) Production Verification
+- Owner: SRE / Platform Lead
+- Start: 2026-03-13
+- Target complete: 2026-03-15
+- Dependencies: WS2 (can begin in parallel after RC tag exists)
+- Tasks:
+  - [ ] Re-run hosted live preflight against launch target environment.
+  - [ ] Validate launch-day incident alert routing (pager/slack/email) end-to-end.
+  - [ ] Validate incident runbook links are reachable and current.
+  - [ ] Verify customer support escalation roster and compensation approval chain are active.
+- Deliverable:
+  - Verification report with pass/fail outcomes and remediation notes.
+- Exit criteria:
+  - [ ] No unresolved critical verification failures.
+
+### WS4) KPI Operations Activation
+- Owner: Product Analytics Lead
+- Start: 2026-03-14
+- Target complete: 2026-03-16
+- Dependencies: WS2, WS3
+- Tasks:
+  - [ ] Stand up daily KPI review rhythm using `docs/kpi-instrumentation-framework.md`.
+  - [ ] Confirm dashboard import and ownership for `infra/observability/grafana/workation-launch-kpi-dashboard.json`.
+  - [ ] Define weekly action loop for funnel drop-off, route failures, and failed-checkout reason spikes.
+- Deliverable:
+  - KPI review runbook and owner-assigned dashboard operations rota.
+- Exit criteria:
+  - [ ] Daily KPI ritual live with named owners and escalation paths.
+
+### WS5) Hypercare Readiness
+- Owner: Operations Lead
+- Start: 2026-03-15
+- Target complete: 2026-03-17
+- Dependencies: WS3, WS4
+- Tasks:
+  - [ ] Publish launch-week on-call schedule and backup contacts.
+  - [ ] Define severity-based communication cadence for incidents.
+  - [ ] Set first-week post-launch review checkpoints and decision owners.
+- Deliverable:
+  - Hypercare operations plan covering D0-D7 after launch.
+- Exit criteria:
+  - [ ] Hypercare plan approved by Engineering, Operations, and Product owners.
+
+## Final Go/No-Go Criteria (2026-03-18)
 - [ ] All roadmap sections are internally consistent.
 - [ ] M8 go-live checklist has no open blocker items.
 - [ ] Launch-day command process and rollback path are documented and rehearsed.
+- [ ] Rehearsal, verification, KPI operations, and hypercare evidence links are compiled in one signoff record.

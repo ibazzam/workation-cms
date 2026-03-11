@@ -20,6 +20,10 @@ Validate that pager/slack/email routing is functioning end-to-end for launch cri
   - Result: `failure`
   - Verified cause from logs: preflight failed with `HTTP 500` after health check.
   - Local checkpoint repro with same bearer token narrowed failure to `GET /api/v1/bookings` returning `500` during checkout reliability validation.
+- Promotion attempt for remediation rollout:
+  - Run URL: `https://github.com/ibazzam/workation-cms/actions/runs/22951012154`
+  - Result: `failure`
+  - Verified cause from logs: `RENDER_DEPLOY_HOOK_URL` secret missing, so deployment hook was not triggered.
 
 ## Verification Status
 - Config-level readiness: PASS (routing config and docs exist)
@@ -27,6 +31,7 @@ Validate that pager/slack/email routing is functioning end-to-end for launch cri
 
 ## Required Final Checks
 - [x] Set repository secret `LIVE_PREFLIGHT_BEARER_TOKEN` with valid launch/admin bearer token.
+- [ ] Set repository secret `RENDER_DEPLOY_HOOK_URL` so promotion workflow can deploy remediation build.
 - [ ] Remediate production `GET /api/v1/bookings` `500` under bearer-authenticated path.
 - [ ] Re-run workflow: `Live preflight gate` with strict options enabled.
 - [ ] Confirm workflow passes checkout reliability and remaining strict checks.

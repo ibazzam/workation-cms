@@ -54,11 +54,48 @@ export class BookingsService {
         orderBy: { createdAt: 'desc' },
       });
     } catch {
-      // Fallback to base booking rows when relation hydration fails in partially migrated environments.
-      bookings = await this.prisma.booking.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-      });
+      try {
+        // Fallback to base booking rows when relation hydration fails in partially migrated environments.
+        bookings = await this.prisma.booking.findMany({
+          where: { userId },
+          orderBy: { createdAt: 'desc' },
+        });
+      } catch {
+        // Final fallback for environments with Booking-column drift: query only stable fields.
+        const rawRows = await this.prisma.$queryRaw<Array<{
+          id: string;
+          status: string;
+          createdAt: Date;
+          startDate: Date | null;
+          endDate: Date | null;
+          totalPrice: Prisma.Decimal | string | number | null;
+        }>>(Prisma.sql`
+          SELECT
+            "id",
+            "status",
+            "createdAt",
+            "startDate",
+            "endDate",
+            "totalPrice"
+          FROM "Booking"
+          WHERE "userId" = ${userId}
+          ORDER BY "createdAt" DESC
+        `);
+
+        bookings = rawRows.map((row) => ({
+          id: row.id,
+          status: row.status,
+          createdAt: row.createdAt,
+          startDate: row.startDate,
+          endDate: row.endDate,
+          totalPrice: row.totalPrice ?? 0,
+          accommodation: null,
+          transport: null,
+          payment: null,
+          holdExpiresAt: null,
+          fareLockExpiresAt: null,
+        }));
+      }
     }
 
     return bookings.map((booking) => {

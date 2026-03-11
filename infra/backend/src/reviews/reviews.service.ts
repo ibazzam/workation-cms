@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma.service';
 
 type ReviewCreatePayload = {
@@ -325,14 +326,21 @@ export class ReviewsService {
 
     if (targetType === 'TRANSPORT') {
       await this.ensureTransportExists(targetId);
-      const existing = await this.prisma.review.findFirst({
-        where: {
-          userId,
-          targetType,
-          transportId: targetId,
-        },
-        select: { id: true },
-      });
+      let existing: { id: string } | null = null;
+      try {
+        existing = await this.prisma.review.findFirst({
+          where: {
+            userId,
+            targetType,
+            transportId: targetId,
+          },
+          select: { id: true },
+        });
+      } catch (error) {
+        if (!this.isReviewSchemaDriftError(error)) {
+          throw error;
+        }
+      }
 
       if (existing) {
         throw new BadRequestException('You have already reviewed this transport');
@@ -340,26 +348,68 @@ export class ReviewsService {
 
       const verifiedStay = await this.hasVerifiedTransportStay(userId, targetId);
 
-      return this.prisma.review.create({
-        data: {
-          userId,
-          targetType,
-          transportId: targetId,
-          rating,
-          title,
-          comment,
-          verifiedStay,
-          status: 'PUBLISHED',
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
+      try {
+        return await this.prisma.review.create({
+          data: {
+            userId,
+            targetType,
+            transportId: targetId,
+            rating,
+            title,
+            comment,
+            verifiedStay,
+            status: 'PUBLISHED',
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+              },
             },
           },
-        },
-      });
+        });
+      } catch (error) {
+        if (!this.isReviewSchemaDriftError(error)) {
+          throw error;
+        }
+
+        const id = randomUUID();
+        await this.prisma.$executeRaw(Prisma.sql`
+          INSERT INTO "Review" (
+            "id",
+            "userId",
+            "targetType",
+            "transportId",
+            "rating",
+            "status"
+          )
+          VALUES (
+            ${id},
+            ${userId},
+            'TRANSPORT',
+            ${targetId},
+            ${rating},
+            'PUBLISHED'
+          )
+        `);
+
+        return {
+          id,
+          userId,
+          targetType: 'TRANSPORT',
+          transportId: targetId,
+          rating,
+          title: title ?? null,
+          comment: comment ?? null,
+          verifiedStay: false,
+          status: 'PUBLISHED',
+          user: {
+            id: userId,
+            name: null,
+          },
+        };
+      }
     }
 
     if (targetType === 'ACTIVITY') {

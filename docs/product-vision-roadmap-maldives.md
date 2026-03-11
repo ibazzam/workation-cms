@@ -104,7 +104,7 @@ Core customer outcomes:
 ## L. Business and Launch Readiness
 - [x] Vendor onboarding workflows and SLA contracts.
 - [x] Content ops workflows for island/service quality curation.
-- [ ] Customer support tooling (case management, compensation policies).
+- [x] Customer support tooling (case management, compensation policies).
 - [ ] KPI instrumentation (conversion funnel by atoll, route completion, failed checkout reasons).
 - [ ] Go-live readiness checklist per milestone.
 
@@ -510,3 +510,8 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `docs/content-curation-checklist-template.md`
 	- Build validation:
 		- `npm --prefix infra/backend run build` (pass)
+- 2026-03-11: Customer support tooling baseline published for case management and compensation decisions.
+	- Added support workflow covering case taxonomy, severity model, SLA targets, ownership routing, resolution decisioning, and escalation matrix:
+		- `docs/customer-support-tooling-workflow.md`
+	- Added compensation policy matrix with approval bands, decision ranges, reason codes, and audit requirements:
+		- `docs/customer-compensation-policy-matrix.md`

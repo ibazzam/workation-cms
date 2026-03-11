@@ -259,16 +259,24 @@ export class BookingsService {
           }
 
           if (selectedFareClass.seats !== null) {
-            const reservedSeatsAggregate = await this.prisma.booking.aggregate({
-              where: {
-                transportId: transport.id,
-                transportFareClassCode: selectedFareClass.code,
-                status: { in: ACTIVE_RESERVATION_STATUSES },
-              },
-              _sum: { guests: true },
-            });
+            let reservedSeats = 0;
+            try {
+              const reservedSeatsAggregate = await this.prisma.booking.aggregate({
+                where: {
+                  transportId: transport.id,
+                  transportFareClassCode: selectedFareClass.code,
+                  status: { in: ACTIVE_RESERVATION_STATUSES },
+                },
+                _sum: { guests: true },
+              });
 
-            const reservedSeats = reservedSeatsAggregate._sum.guests ?? 0;
+              reservedSeats = reservedSeatsAggregate._sum.guests ?? 0;
+            } catch (error) {
+              if (!this.isBookingSchemaDriftError(error)) {
+                throw error;
+              }
+            }
+
             const availableSeats = Math.max(selectedFareClass.seats - reservedSeats, 0);
             if (parsedGuests > availableSeats) {
               throw new BadRequestException('guests exceeds available seats for selected fare class');
@@ -322,28 +330,51 @@ export class BookingsService {
     const holdExpiresAt = this.computeHoldExpiryDate();
     const fareLockExpiresAt = transport ? this.computeFareLockExpiryDate() : null;
 
-    return this.prisma.booking.create({
-      data: {
-        userId,
-        accommodationId: accommodation?.id,
-        transportId: transport?.id,
-        transportFareClassCode: selectedFareClass?.code,
-        startDate,
-        endDate,
-        guests: parsedGuests,
-        totalPrice,
-        fareLockUnitPrice: transport ? transportUnitPrice : null,
-        fareLockTotalPrice: transport ? transportTotalPrice : null,
-        fareLockCurrency: transport ? 'USD' : null,
-        fareLockExpiresAt,
-        status: 'HOLD',
-        holdExpiresAt,
-      },
-      include: {
-        accommodation: true,
-        transport: true,
-      },
-    });
+    try {
+      return await this.prisma.booking.create({
+        data: {
+          userId,
+          accommodationId: accommodation?.id,
+          transportId: transport?.id,
+          transportFareClassCode: selectedFareClass?.code,
+          startDate,
+          endDate,
+          guests: parsedGuests,
+          totalPrice,
+          fareLockUnitPrice: transport ? transportUnitPrice : null,
+          fareLockTotalPrice: transport ? transportTotalPrice : null,
+          fareLockCurrency: transport ? 'USD' : null,
+          fareLockExpiresAt,
+          status: 'HOLD',
+          holdExpiresAt,
+        },
+        include: {
+          accommodation: true,
+          transport: true,
+        },
+      });
+    } catch (error) {
+      if (!this.isBookingSchemaDriftError(error)) {
+        throw error;
+      }
+
+      return this.prisma.booking.create({
+        data: {
+          userId,
+          accommodationId: accommodation?.id,
+          transportId: transport?.id,
+          startDate,
+          endDate,
+          guests: parsedGuests,
+          totalPrice,
+          status: 'HOLD',
+        },
+        include: {
+          accommodation: true,
+          transport: true,
+        },
+      });
+    }
   }
 
   async validateItineraryForUser(userId: string, payload: ValidateItineraryPayload) {
@@ -785,6 +816,19 @@ export class BookingsService {
     }
 
     return parsed;
+  }
+
+  private isBookingSchemaDriftError(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+      return false;
+    }
+
+    if (error.code === 'P2022') {
+      return true;
+    }
+
+    const message = (error.message ?? '').toLowerCase();
+    return message.includes('booking') || message.includes('transportfareclasscode') || message.includes('holdexpiresat');
   }
 
   private parseDate(value: unknown, fieldName: string) {

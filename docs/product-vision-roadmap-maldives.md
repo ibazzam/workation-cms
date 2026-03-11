@@ -529,3 +529,7 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- Result: failed because `AUTH_BEARER_TOKEN` was empty in workflow env; follow-up required to set `LIVE_PREFLIGHT_BEARER_TOKEN` and rerun.
 	- Published WS3 production verification report with current pass/blocker outcomes:
 		- `docs/production-verification-report-2026-03-18.md`
+	- Activated WS4 KPI operations cadence and ownership model:
+		- `docs/kpi-operations-cadence.md`
+		- `docs/kpi-daily-review-log.md`
+		- `docs/kpi-weekly-action-log.md`

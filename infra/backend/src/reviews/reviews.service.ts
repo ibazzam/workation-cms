@@ -639,6 +639,18 @@ export class ReviewsService {
     return (error.message ?? '').toLowerCase().includes('review');
   }
 
+  private isBookingSchemaDriftError(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+      return false;
+    }
+
+    if (error.code === 'P2022') {
+      return true;
+    }
+
+    return (error.message ?? '').toLowerCase().includes('booking');
+  }
+
   private parseOptionalModerationReasonCode(value: unknown): string | null {
     if (value === undefined || value === null) {
       return null;
@@ -714,27 +726,41 @@ export class ReviewsService {
   }
 
   private async hasVerifiedAccommodationStay(userId: string, accommodationId: string) {
-    const booking = await this.prisma.booking.findFirst({
-      where: {
-        userId,
-        accommodationId,
-        status: 'CONFIRMED',
-      },
-      select: { id: true },
-    });
+    let booking: { id: string } | null = null;
+    try {
+      booking = await this.prisma.booking.findFirst({
+        where: {
+          userId,
+          accommodationId,
+          status: 'CONFIRMED',
+        },
+        select: { id: true },
+      });
+    } catch (error) {
+      if (!this.isBookingSchemaDriftError(error)) {
+        throw error;
+      }
+    }
 
     return Boolean(booking);
   }
 
   private async hasVerifiedTransportStay(userId: string, transportId: string) {
-    const booking = await this.prisma.booking.findFirst({
-      where: {
-        userId,
-        transportId,
-        status: 'CONFIRMED',
-      },
-      select: { id: true },
-    });
+    let booking: { id: string } | null = null;
+    try {
+      booking = await this.prisma.booking.findFirst({
+        where: {
+          userId,
+          transportId,
+          status: 'CONFIRMED',
+        },
+        select: { id: true },
+      });
+    } catch (error) {
+      if (!this.isBookingSchemaDriftError(error)) {
+        throw error;
+      }
+    }
 
     return Boolean(booking);
   }

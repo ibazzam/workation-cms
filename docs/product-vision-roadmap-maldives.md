@@ -517,3 +517,5 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `rc-2026-03-11-launch`
 	- Added scope-freeze controls and change-governance checklist:
 		- `docs/release-candidate-scope-freeze.md`
+	- Initialized go/no-go rehearsal record with explicit owner fields and rollback trigger matrix:
+		- `docs/go-no-go-rehearsal-2026-03-18.md`

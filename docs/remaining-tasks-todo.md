@@ -43,6 +43,7 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
     - rehearsal record initialized: `docs/go-no-go-rehearsal-2026-03-18.md`
   - [ ] Capture and store signoff evidence links for all M8 blocker gates.
   - [ ] Confirm rollback owner and rollback trigger matrix (metric/incident thresholds).
+    - rollback matrix drafted in `docs/go-no-go-rehearsal-2026-03-18.md`
 - Deliverable:
   - Completed rehearsal packet and signed go/no-go rehearsal record.
 - Exit criteria:

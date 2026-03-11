@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 
 type ReviewCreatePayload = {
@@ -86,22 +87,58 @@ export class ReviewsService {
   async listAccommodationReviews(accommodationId: string) {
     await this.ensureAccommodationExists(accommodationId);
 
-    const items = await this.prisma.review.findMany({
-      where: {
-        targetType: 'ACCOMMODATION',
-        accommodationId,
-        status: 'PUBLISHED',
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
+    let items: Array<any> = [];
+    try {
+      items = await this.prisma.review.findMany({
+        where: {
+          targetType: 'ACCOMMODATION',
+          accommodationId,
+          status: 'PUBLISHED',
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+      });
+    } catch (error) {
+      if (!this.isReviewSchemaDriftError(error)) {
+        throw error;
+      }
+
+      const rawRows = await this.prisma.$queryRaw<Array<{
+        id: string;
+        rating: number;
+        title: string | null;
+        comment: string | null;
+        status: string;
+        createdAt: Date;
+      }>>(Prisma.sql`
+        SELECT
+          "id",
+          "rating",
+          "title",
+          "comment",
+          "status",
+          "createdAt"
+        FROM "Review"
+        WHERE "targetType" = 'ACCOMMODATION'
+          AND "accommodationId" = ${accommodationId}
+          AND "status" = 'PUBLISHED'
+        ORDER BY "createdAt" DESC
+      `);
+
+      items = rawRows.map((row) => ({
+        ...row,
+        targetType: 'ACCOMMODATION',
+        accommodationId,
+        user: null,
+      }));
+    }
 
     const ratingSummary = this.computeRatingSummary(items.map((item) => item.rating));
 
@@ -116,22 +153,58 @@ export class ReviewsService {
   async listTransportReviews(transportId: string) {
     await this.ensureTransportExists(transportId);
 
-    const items = await this.prisma.review.findMany({
-      where: {
-        targetType: 'TRANSPORT',
-        transportId,
-        status: 'PUBLISHED',
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
+    let items: Array<any> = [];
+    try {
+      items = await this.prisma.review.findMany({
+        where: {
+          targetType: 'TRANSPORT',
+          transportId,
+          status: 'PUBLISHED',
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+      });
+    } catch (error) {
+      if (!this.isReviewSchemaDriftError(error)) {
+        throw error;
+      }
+
+      const rawRows = await this.prisma.$queryRaw<Array<{
+        id: string;
+        rating: number;
+        title: string | null;
+        comment: string | null;
+        status: string;
+        createdAt: Date;
+      }>>(Prisma.sql`
+        SELECT
+          "id",
+          "rating",
+          "title",
+          "comment",
+          "status",
+          "createdAt"
+        FROM "Review"
+        WHERE "targetType" = 'TRANSPORT'
+          AND "transportId" = ${transportId}
+          AND "status" = 'PUBLISHED'
+        ORDER BY "createdAt" DESC
+      `);
+
+      items = rawRows.map((row) => ({
+        ...row,
+        targetType: 'TRANSPORT',
+        transportId,
+        user: null,
+      }));
+    }
 
     const ratingSummary = this.computeRatingSummary(items.map((item) => item.rating));
 
@@ -552,6 +625,18 @@ export class ReviewsService {
 
   private reviewModerationEventsKey() {
     return 'reviews:moderation_events:v1';
+  }
+
+  private isReviewSchemaDriftError(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+      return false;
+    }
+
+    if (error.code === 'P2022') {
+      return true;
+    }
+
+    return (error.message ?? '').toLowerCase().includes('review');
   }
 
   private parseOptionalModerationReasonCode(value: unknown): string | null {

@@ -88,13 +88,14 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
 - Target complete: 2026-03-17
 - Dependencies: WS3, WS4
 - Tasks:
-  - [ ] Publish launch-week on-call schedule and backup contacts.
-  - [ ] Define severity-based communication cadence for incidents.
-  - [ ] Set first-week post-launch review checkpoints and decision owners.
+  - [x] Publish launch-week on-call schedule and backup contacts.
+  - [x] Define severity-based communication cadence for incidents.
+  - [x] Set first-week post-launch review checkpoints and decision owners.
 - Deliverable:
-  - Hypercare operations plan covering D0-D7 after launch.
+  - Hypercare operations plan covering D0-D7 after launch (`docs/hypercare-d0-d7-plan.md`).
 - Exit criteria:
   - [ ] Hypercare plan approved by Engineering, Operations, and Product owners.
+    - role-based plan artifacts published: `docs/launch-week-oncall-schedule.md`, `docs/incident-communication-cadence.md`
 
 ## Final Go/No-Go Criteria (2026-03-18)
 - [ ] All roadmap sections are internally consistent.

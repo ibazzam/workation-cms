@@ -12,6 +12,11 @@ on:
         required: true
         type: boolean
         default: true
+      allow_failed_live_preflight:
+        description: Break-glass override to allow promotion when live-preflight is failing for known runtime issues
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -32,8 +37,14 @@ jobs:
               'JS Coverage',
               'smoke',
               'security-audit',
-              'live-preflight',
             ];
+
+            const allowFailedLivePreflight = (core.getInput('allow_failed_live_preflight') || 'false') === 'true';
+            if (!allowFailedLivePreflight) {
+              requiredChecks.push('live-preflight');
+            } else {
+              core.warning('Break-glass override enabled: live-preflight is not required for this promotion run.');
+            }
 
             const { owner, repo } = context.repo;
             const commit = await github.rest.repos.getCommit({ owner, repo, ref: targetRef });

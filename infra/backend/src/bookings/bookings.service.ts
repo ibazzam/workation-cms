@@ -66,17 +66,11 @@ export class BookingsService {
           id: string;
           status: string;
           createdAt: Date;
-          startDate: Date | null;
-          endDate: Date | null;
-          totalPrice: Prisma.Decimal | string | number | null;
         }>>(Prisma.sql`
           SELECT
             "id",
             "status",
-            "createdAt",
-            "startDate",
-            "endDate",
-            "totalPrice"
+            "createdAt"
           FROM "Booking"
           WHERE "userId" = ${userId}
           ORDER BY "createdAt" DESC
@@ -86,9 +80,9 @@ export class BookingsService {
           id: row.id,
           status: row.status,
           createdAt: row.createdAt,
-          startDate: row.startDate,
-          endDate: row.endDate,
-          totalPrice: row.totalPrice ?? 0,
+          startDate: null,
+          endDate: null,
+          totalPrice: 0,
           accommodation: null,
           transport: null,
           payment: null,

@@ -132,22 +132,19 @@ Core customer outcomes:
 - Extensive contract testing exists for currently implemented backend domains.
 
 ## Still Pending (Critical to Vision Completion)
-- Full product verticals missing: car/bike rentals, excursions, restaurant reservations, resort day visits, remote work services.
-- Reviews/social/social-loyalty baselines now include first-pass moderation, but deeper trust & safety and advanced campaign tooling are still pending.
-- Transport and booking models need production-grade schedule/inventory/disruption handling for Maldives sea/air realities.
-- Rebooking/change management and customer self-service post-booking flows are not complete.
-- External observability stack and SLO-driven operations are not complete yet.
-- Final backend authority cleanup and legacy Laravel route removal still pending.
-- End-to-end customer journey tests and launch readiness controls still pending.
+- Execute release-candidate rehearsal and produce signed go/no-go evidence pack.
+- Re-run hosted production verification and validate alert routing/runbook reachability.
+- Activate daily KPI operations rhythm and weekly corrective-action loop.
+- Finalize launch-week hypercare operating model (on-call roster, comms cadence, D0-D7 checkpoints).
 
 ## 5) Suggested Priority Order (Execution)
 
-1. Complete M1: backend authority + PostgreSQL lock-in everywhere.
-2. Finish M3 booking orchestration depth (itinerary + state machine + bundled checkout).
-3. Productionize M4 payments reliability and refunds.
-4. Ship M5/M6 new vertical domains in two waves (mobility/activities then dining/day visits).
-5. Add M7 digital nomad service layer.
-6. Close M8 with observability, security, load, support, and launch controls.
+1. Reconcile roadmap narrative and evidence consistency (WS1).
+2. Execute release-candidate rehearsal and gather signoff artifacts (WS2).
+3. Complete hosted verification and incident-routing validation (WS3).
+4. Activate KPI operations cadence and ownership model (WS4).
+5. Finalize hypercare readiness and launch-week command process (WS5).
+6. Record final go/no-go decision with rollback owner and trigger matrix.
 
 ## 6) KPI Targets to Track Per Milestone
 
@@ -229,32 +226,16 @@ This section validates current implementation against go-live priorities using c
 	- `tests/Feature/TransportProviderJobsTest.php`
 	- `tests/Feature/WorkationApiTest.php`
 
-### B) Confirmed Gaps / Mismatch With Vision Claims
-- Backend authority cutover not complete:
-	- Laravel API is still active and currently serves functional domain endpoints (`routes/web.php`).
-	- New backend under `infra/backend/src` exposes only health endpoint (`health.controller.ts`).
-- Full domain surface not present in runnable API routes:
-	- No route/controller evidence in this workspace for islands/accommodations/transports CRUD, bookings, payments, vendors, reviews/social APIs beyond hold/workation endpoints.
-- PostgreSQL lock-in not complete across root Laravel env template:
-	- Root `.env.example` defaults to SQLite (`DB_CONNECTION=sqlite`).
-	- `config/database.php` default connection is env-driven with sqlite fallback.
-- Frontend migration is early-stage in `infra/frontend`:
-	- Pages are placeholders and rely on a simple reachability fetch (`components/RemoteStatus.tsx`).
-	- No typed client or React Query implementation found in `infra/frontend`.
-- E2E readiness is limited:
-	- Current E2E script assumes static `schedule_id=1` in target env (`tests/e2e/transport-hold.mjs`).
-	- Staging smoke does not yet represent full search->book->pay->manage flow in this codebase.
-- Observability/SLO stack remains planning-level in docs:
-	- No dedicated tracing/metrics exporters or SLO dashboard configuration found in app/infra code.
+### B) Historical Gaps Snapshot (Now Superseded)
+- The gap findings above reflected workspace status on 2026-03-07 and are retained as audit history.
+- Subsequent delivery work in section `11) Execution Log` and section `12) Completion Evidence` supersedes this snapshot for current-state decisions.
+- Current remaining work is operational launch execution (rehearsal, verification, KPI cadence, hypercare), not core feature-surface completion.
 
-### C) Immediate Endpoints Missing For M1-M4 Exit
-- New authority backend missing business endpoints (only `/health` exists in `infra/backend/src`).
-- Missing explicit API endpoints for:
-	- Transport schedules search/list and inventory quoting.
-	- Disruption ingestion and re-accommodation orchestration.
-	- Booking state transitions and customer booking management.
-	- Payment refunds/partial refunds/dispute lifecycle.
-	- Vendor settlement and payout reporting.
+### C) Current Launch Focus (Post-Delivery)
+- Run release-candidate go/no-go rehearsal and capture complete signoff evidence.
+- Validate hosted preflight, alert routing, and runbook accessibility in the launch target environment.
+- Operationalize KPI review ownership and weekly corrective-action loop.
+- Finalize launch-week hypercare roster and incident communication cadence.
 
 ## 10) Prioritized 2-Week Sprint Board (Top 6)
 
@@ -527,3 +508,12 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `docs/go-live-readiness-checklist-by-milestone.md`
 	- Added reusable milestone signoff template for go/no-go decision records:
 		- `docs/go-live-signoff-template.md`
+- 2026-03-11: WS1 roadmap consistency cleanup completed.
+	- Reconciled section 4 pending narrative with current launch-execution focus.
+	- Annotated section 9 gap scan as historical/superseded and replaced immediate focus with post-delivery launch operations.
+	- Updated execution priority order to WS1-WS5 launch sequence.
+- 2026-03-11: WS2 launch execution kickoff started.
+	- Created and pushed release-candidate tag from `main`:
+		- `rc-2026-03-11-launch`
+	- Added scope-freeze controls and change-governance checklist:
+		- `docs/release-candidate-scope-freeze.md`

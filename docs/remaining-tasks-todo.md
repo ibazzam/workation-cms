@@ -22,13 +22,13 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
 - Target complete: 2026-03-12
 - Dependencies: none
 - Tasks:
-  - [ ] Reconcile `docs/product-vision-roadmap-maldives.md` so section 4 (`Still Pending`) matches completed checklist status.
-  - [ ] Remove or annotate outdated gap statements in section 9 (`Repository Reality Scan`) that no longer reflect current implementation.
-  - [ ] Re-run roadmap evidence pass so each completed claim has a current dated artifact reference.
+  - [x] Reconcile `docs/product-vision-roadmap-maldives.md` so section 4 (`Still Pending`) matches completed checklist status.
+  - [x] Remove or annotate outdated gap statements in section 9 (`Repository Reality Scan`) that no longer reflect current implementation.
+  - [x] Re-run roadmap evidence pass so each completed claim has a current dated artifact reference.
 - Deliverable:
   - Updated roadmap with consistent completion narrative and evidence links.
 - Exit criteria:
-  - [ ] No contradictory "pending" statements remain for already completed section-L items.
+  - [x] No contradictory "pending" statements remain for already completed section-L items.
 
 ### WS2) Launch Execution Rehearsal
 - Owner: Release Manager
@@ -36,7 +36,7 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
 - Target complete: 2026-03-14
 - Dependencies: WS1
 - Tasks:
-  - [ ] Create release-candidate tag from `main` and document scope freeze rules.
+  - [x] Create release-candidate tag from `main` and document scope freeze rules (`rc-2026-03-11-launch`, `docs/release-candidate-scope-freeze.md`).
   - [ ] Run one full go/no-go rehearsal using:
     - `docs/go-live-readiness-checklist-by-milestone.md`
     - `docs/go-live-signoff-template.md`

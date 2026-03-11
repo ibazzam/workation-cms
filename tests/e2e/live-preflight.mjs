@@ -804,14 +804,23 @@ async function checkNewVerticalsCoverage() {
     if (bearerToken) {
       console.log('Using bearer token authentication');
     }
+    console.log('Preflight checkpoint: health');
     await checkHealth();
+    console.log('Preflight checkpoint: ops-slo');
     await checkOpsSlo();
+    console.log('Preflight checkpoint: workation-crud');
     await checkWorkationCrud();
+    console.log('Preflight checkpoint: transport-flow');
     await checkTransportFlow();
+    console.log('Preflight checkpoint: checkout-reliability');
     await checkCheckoutFailureSemantics();
+    console.log('Preflight checkpoint: payments-reliability');
     await checkPaymentsReliabilityFlow();
+    console.log('Preflight checkpoint: moderation-paths');
     await checkModerationAdminPaths();
+    console.log('Preflight checkpoint: scheduler-health');
     await checkSchedulerHealth();
+    console.log('Preflight checkpoint: new-verticals');
     await checkNewVerticalsCoverage();
     console.log('Live preflight passed');
     process.exit(0);

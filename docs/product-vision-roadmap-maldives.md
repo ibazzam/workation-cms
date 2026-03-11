@@ -103,7 +103,7 @@ Core customer outcomes:
 
 ## L. Business and Launch Readiness
 - [x] Vendor onboarding workflows and SLA contracts.
-- [ ] Content ops workflows for island/service quality curation.
+- [x] Content ops workflows for island/service quality curation.
 - [ ] Customer support tooling (case management, compensation policies).
 - [ ] KPI instrumentation (conversion funnel by atoll, route completion, failed checkout reasons).
 - [ ] Go-live readiness checklist per milestone.
@@ -503,3 +503,10 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `docs/vendor-onboarding-workflow.md`
 	- Added reusable SLA contract template for vendor signoff:
 		- `docs/vendor-sla-contract-template.md`
+- 2026-03-11: Content ops workflow baseline published for island/service quality curation.
+	- Added content-ops workflow with intake, completeness review, editorial quality, trust/safety review, publish QA, and recertification stages:
+		- `docs/content-ops-curation-workflow.md`
+	- Added reusable checklist template for per-listing curation signoff:
+		- `docs/content-curation-checklist-template.md`
+	- Build validation:
+		- `npm --prefix infra/backend run build` (pass)

@@ -106,7 +106,7 @@ Core customer outcomes:
 - [x] Content ops workflows for island/service quality curation.
 - [x] Customer support tooling (case management, compensation policies).
 - [x] KPI instrumentation (conversion funnel by atoll, route completion, failed checkout reasons).
-- [ ] Go-live readiness checklist per milestone.
+- [x] Go-live readiness checklist per milestone.
 
 ## 3) Milestone Chart
 
@@ -522,3 +522,8 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `infra/observability/grafana/workation-launch-kpi-dashboard.json`
 	- Updated observability stack documentation to include KPI assets:
 		- `docs/observability-stack.md`
+- 2026-03-11: Go-live readiness checklist baseline published per milestone.
+	- Added milestone-by-milestone go-live readiness checklist with blocker/readiness/evidence gates from M1 through M8:
+		- `docs/go-live-readiness-checklist-by-milestone.md`
+	- Added reusable milestone signoff template for go/no-go decision records:
+		- `docs/go-live-signoff-template.md`

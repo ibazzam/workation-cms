@@ -58,8 +58,10 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
 - Dependencies: WS2 (can begin in parallel after RC tag exists)
 - Tasks:
   - [ ] Re-run hosted live preflight against launch target environment.
-    - attempted strict run failed due to missing `LIVE_PREFLIGHT_BEARER_TOKEN` (`https://github.com/ibazzam/workation-cms/actions/runs/22947199645`)
-    - use `scripts/ops/verify-alert-routing.ps1 -RunWorkflow` once token secret is configured
+    - initial strict run failed due to missing `LIVE_PREFLIGHT_BEARER_TOKEN` (`https://github.com/ibazzam/workation-cms/actions/runs/22947199645`)
+    - rerun with token secret configured also failed (`https://github.com/ibazzam/workation-cms/actions/runs/22948887462`) due to `HTTP 500` in checkout reliability path
+    - isolated failing endpoint: `GET /api/v1/bookings` returns `500` under bearer-authenticated flow
+    - use `scripts/ops/verify-alert-routing.ps1 -RunWorkflow` after `/bookings` production fix is deployed
   - [ ] Validate launch-day incident alert routing (pager/slack/email) end-to-end.
   - [x] Validate incident runbook links are reachable and current.
   - [x] Verify customer support escalation roster and compensation approval chain are active.
@@ -67,6 +69,7 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
   - Verification report with pass/fail outcomes and remediation notes (`docs/production-verification-report-2026-03-18.md`).
 - Exit criteria:
   - [ ] No unresolved critical verification failures.
+    - current critical blocker: production `/api/v1/bookings` `500` during strict live preflight
 
 ### WS4) KPI Operations Activation
 - Owner: Product Analytics Lead

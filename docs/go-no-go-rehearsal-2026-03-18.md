@@ -45,7 +45,7 @@ This record is the execution artifact for WS2 launch rehearsal.
 
 ## Verification Summary
 - Hosted live preflight result: PASS (public-health and prior gate evidence)
-- Alert routing test result: BLOCKED (CI authenticated check failed due to missing `LIVE_PREFLIGHT_BEARER_TOKEN`; see `docs/alert-routing-verification-2026-03-18.md`)
+- Alert routing test result: BLOCKED (latest strict authenticated preflight run failed on checkout reliability due to `GET /api/v1/bookings` `HTTP 500`; see `docs/alert-routing-verification-2026-03-18.md`)
 - Runbook link validation result: PASS
 - Support escalation chain validation result: PASS (role-based active roster published in `docs/launch-support-escalation-roster.md`)
 

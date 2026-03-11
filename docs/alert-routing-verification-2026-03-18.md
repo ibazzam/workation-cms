@@ -15,15 +15,21 @@ Validate that pager/slack/email routing is functioning end-to-end for launch cri
   - Run URL: `https://github.com/ibazzam/workation-cms/actions/runs/22947199645`
   - Result: `failure`
   - Verified cause from logs: `AUTH_BEARER_TOKEN` was empty in workflow env, so strict auth checks failed (`ops/slo-summary is required but unavailable`).
+- Authenticated preflight re-attempt after secret setup:
+  - Run URL: `https://github.com/ibazzam/workation-cms/actions/runs/22948887462`
+  - Result: `failure`
+  - Verified cause from logs: preflight failed with `HTTP 500` after health check.
+  - Local checkpoint repro with same bearer token narrowed failure to `GET /api/v1/bookings` returning `500` during checkout reliability validation.
 
 ## Verification Status
 - Config-level readiness: PASS (routing config and docs exist)
-- End-to-end channel delivery: BLOCKED (missing bearer token secret for authenticated ops verification)
+- End-to-end channel delivery: BLOCKED (checkout reliability path returns `500`, preventing strict preflight completion)
 
 ## Required Final Checks
-- [ ] Set repository secret `LIVE_PREFLIGHT_BEARER_TOKEN` with valid launch/admin bearer token.
+- [x] Set repository secret `LIVE_PREFLIGHT_BEARER_TOKEN` with valid launch/admin bearer token.
+- [ ] Remediate production `GET /api/v1/bookings` `500` under bearer-authenticated path.
 - [ ] Re-run workflow: `Live preflight gate` with strict options enabled.
-- [ ] Confirm workflow shows authenticated ops checks pass (no auth-related skip/failure).
+- [ ] Confirm workflow passes checkout reliability and remaining strict checks.
 - [ ] Trigger a controlled test alert for each channel (pager/slack/email).
 - [ ] Capture receipt screenshots/log references in each target channel.
 - [ ] Record acknowledgment timestamps and responder identity.

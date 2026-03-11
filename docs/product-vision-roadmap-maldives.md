@@ -524,3 +524,6 @@ Owners are role-based so this can be applied immediately even if personnel shift
 		- `docs/launch-support-escalation-roster.md`
 	- Added alert-routing verification record with authenticated probe requirement and remaining E2E check:
 		- `docs/alert-routing-verification-2026-03-18.md`
+	- Triggered strict authenticated live-preflight gate for alert-routing validation:
+		- `https://github.com/ibazzam/workation-cms/actions/runs/22947199645`
+		- Result: failed because `AUTH_BEARER_TOKEN` was empty in workflow env; follow-up required to set `LIVE_PREFLIGHT_BEARER_TOKEN` and rerun.

@@ -28,6 +28,20 @@ Validate that pager/slack/email routing is functioning end-to-end for launch cri
 - [ ] Capture receipt screenshots/log references in each target channel.
 - [ ] Record acknowledgment timestamps and responder identity.
 
+## Execution Commands
+Set secret (run once with a valid token value):
+
+```powershell
+gh secret set LIVE_PREFLIGHT_BEARER_TOKEN --body "<valid_launch_admin_bearer_token>"
+```
+
+Run authenticated endpoint probe + optional strict workflow dispatch:
+
+```powershell
+$env:AUTH_BEARER_TOKEN = "<valid_launch_admin_bearer_token>"
+powershell -ExecutionPolicy Bypass -File scripts/ops/verify-alert-routing.ps1 -RunWorkflow
+```
+
 ## References
 - `docs/observability-stack.md`
 - `docs/go-no-go-rehearsal-2026-03-18.md`

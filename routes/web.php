@@ -146,14 +146,17 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
     $portalUser = null;
     if (Schema::hasColumns('users', ['username', 'portal_enabled', 'portal_role'])) {
         $portalUser = User::query()
-            ->whereRaw('LOWER(username) = ?', [$usernameLower])
+            ->where(function ($query) use ($usernameLower) {
+                $query->whereRaw('LOWER(username) = ?', [$usernameLower])
+                    ->orWhereRaw('LOWER(email) = ?', [$usernameLower]);
+            })
             ->where('portal_enabled', true)
             ->whereIn('portal_role', $config['allowed_roles'])
             ->first();
     }
 
     $isBootstrapAdmin = false;
-    if (!$portalUser && $portal === 'admin') {
+    if ($portal === 'admin') {
         $bootstrapUsername = trim((string) env('PORTAL_ADMIN_USERNAME', env('WORKATION_ADMIN_PORTAL_USERNAME', '')));
         $bootstrapPassword = (string) env('PORTAL_ADMIN_PASSWORD', env('WORKATION_ADMIN_PORTAL_PASSWORD', ''));
 

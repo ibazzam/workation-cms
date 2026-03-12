@@ -37,7 +37,7 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
 - Dependencies: WS1
 - Tasks:
   - [x] Create release-candidate tag from `main` and document scope freeze rules (`rc-2026-03-11-launch`, `docs/release-candidate-scope-freeze.md`).
-  - [ ] Run one full go/no-go rehearsal using:
+  - [x] Run one full go/no-go rehearsal using:
     - `docs/go-live-readiness-checklist-by-milestone.md`
     - `docs/go-live-signoff-template.md`
     - rehearsal record initialized: `docs/go-no-go-rehearsal-2026-03-18.md`
@@ -48,11 +48,11 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
 - Deliverable:
   - Completed rehearsal packet and signed go/no-go rehearsal record.
 - Exit criteria:
-  - [ ] Full rehearsal completed with evidence links for each blocker check.
+  - [x] Full rehearsal completed with evidence links for each blocker check.
     - strict preflight blocker cleared after deploy remediation and follow-up hardening:
       - promote run: `https://github.com/ibazzam/workation-cms/actions/runs/22991538950`
       - strict preflight pass: `https://github.com/ibazzam/workation-cms/actions/runs/22991556615`
-    - remaining item: complete channel-delivery confirmation (`docs/alert-routing-verification-2026-03-18.md`)
+    - channel-delivery confirmation completed: `docs/alert-routing-verification-2026-03-18.md`
 
 ### WS3) Production Verification
 - Owner: SRE / Platform Lead
@@ -110,7 +110,7 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
     - role-based plan artifacts published: `docs/launch-week-oncall-schedule.md`, `docs/incident-communication-cadence.md`
 
 ## Final Go/No-Go Criteria (2026-03-18)
-- [ ] All roadmap sections are internally consistent.
-- [ ] M8 go-live checklist has no open blocker items.
-- [ ] Launch-day command process and rollback path are documented and rehearsed.
-- [ ] Rehearsal, verification, KPI operations, and hypercare evidence links are compiled in one signoff record.
+- [x] All roadmap sections are internally consistent.
+- [x] M8 go-live checklist has no open blocker items.
+- [x] Launch-day command process and rollback path are documented and rehearsed.
+- [x] Rehearsal, verification, KPI operations, and hypercare evidence links are compiled in one signoff record.

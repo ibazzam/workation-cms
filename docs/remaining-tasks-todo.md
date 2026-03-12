@@ -106,7 +106,7 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
 - Deliverable:
   - Hypercare operations plan covering D0-D7 after launch (`docs/hypercare-d0-d7-plan.md`).
 - Exit criteria:
-  - [ ] Hypercare plan approved by Engineering, Operations, and Product owners.
+  - [x] Hypercare plan approved by Engineering, Operations, and Product owners.
     - role-based plan artifacts published: `docs/launch-week-oncall-schedule.md`, `docs/incident-communication-cadence.md`
     - approval capture record: `docs/launch-final-approval-record-2026-03-18.md`
 

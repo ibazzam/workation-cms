@@ -4,60 +4,97 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Workation Maldives</title>
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
     <style>
         :root {
-            --bg: #f5f3ef;
-            --ink: #1f2328;
-            --muted: #566071;
-            --card: #ffffff;
-            --brand: #0d8a7a;
-            --brand-dark: #0a6257;
-            --warn: #f78f1e;
-            --ok: #16a34a;
-            --down: #dc2626;
+            --sand: #efe4d2;
+            --seafoam: #d9e9e4;
+            --ink: #19232f;
+            --muted: #5e6978;
+            --card: #fffefb;
+            --line: #d8dee6;
+            --hero-1: #123550;
+            --hero-2: #0f6d80;
+            --hero-3: #1f9a86;
+            --ok-text: #0b5c2a;
+            --ok-bg: #d8f7e2;
+            --warn-text: #7a4606;
+            --warn-bg: #ffeccd;
+            --down-text: #6d1111;
+            --down-bg: #ffe0de;
         }
 
-        * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+        }
 
         body {
             margin: 0;
-            font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+            font-family: "Outfit", "Trebuchet MS", sans-serif;
             color: var(--ink);
             background:
-                radial-gradient(circle at 15% 15%, #d9efe8 0, #d9efe800 35%),
-                radial-gradient(circle at 85% 5%, #ffe9c8 0, #ffe9c800 30%),
-                var(--bg);
+                radial-gradient(circle at 12% 20%, #c8e8df 0, #c8e8df00 35%),
+                radial-gradient(circle at 88% 12%, #ffe7bf 0, #ffe7bf00 32%),
+                linear-gradient(110deg, var(--seafoam) 0%, var(--sand) 100%);
         }
 
         .page {
             max-width: 1120px;
             margin: 0 auto;
-            padding: 28px 20px 36px;
+            padding: 28px 20px 42px;
         }
 
         .hero {
-            background: linear-gradient(135deg, #123040 0%, #154d63 45%, #0d8a7a 100%);
+            background: linear-gradient(135deg, var(--hero-1) 0%, var(--hero-2) 46%, var(--hero-3) 100%);
             color: #fff;
-            border-radius: 18px;
-            padding: 28px;
-            box-shadow: 0 20px 40px rgba(21, 37, 56, 0.18);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 24px 46px rgba(18, 38, 58, 0.2);
+            position: relative;
+            overflow: hidden;
+            animation: rise-in 500ms ease-out both;
+        }
+
+        .hero::after {
+            content: "";
+            position: absolute;
+            right: -80px;
+            top: -80px;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0) 65%);
+            pointer-events: none;
+        }
+
+        .eyebrow {
+            display: inline-block;
+            margin-bottom: 10px;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            font-size: 0.78rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #cdebef;
         }
 
         .hero h1 {
-            margin: 0 0 8px;
-            font-size: clamp(1.6rem, 3vw, 2.5rem);
-            letter-spacing: 0.02em;
+            margin: 0 0 10px;
+            font-size: clamp(1.7rem, 3.1vw, 2.65rem);
+            letter-spacing: 0.01em;
+            line-height: 1.1;
         }
 
         .hero p {
             margin: 0;
             color: #dbf2f0;
-            max-width: 760px;
-            line-height: 1.45;
+            max-width: 780px;
+            line-height: 1.5;
+            font-size: 1.02rem;
         }
 
         .cta {
-            margin-top: 18px;
+            margin-top: 20px;
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
@@ -65,15 +102,17 @@
 
         .btn {
             text-decoration: none;
-            border-radius: 10px;
-            padding: 10px 14px;
-            font-weight: 600;
+            border-radius: 11px;
+            padding: 10px 15px;
+            font-weight: 700;
             display: inline-block;
+            transition: transform 180ms ease, box-shadow 180ms ease;
         }
 
         .btn-primary {
             background: #fff;
             color: #073d36;
+            box-shadow: 0 6px 16px rgba(11, 36, 54, 0.2);
         }
 
         .btn-secondary {
@@ -81,60 +120,122 @@
             color: #e8f8f7;
         }
 
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .hero-meta {
+            margin-top: 14px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .meta-pill {
+            font-size: 0.75rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            padding: 6px 9px;
+            border-radius: 999px;
+            border: 1px solid rgba(206, 238, 235, 0.5);
+            color: #e3f5f2;
+            background: rgba(12, 52, 73, 0.28);
+        }
+
         .grid {
             display: grid;
             grid-template-columns: repeat(12, minmax(0, 1fr));
             gap: 14px;
-            margin-top: 16px;
+            margin-top: 18px;
         }
 
         .card {
             background: var(--card);
-            border-radius: 14px;
+            border-radius: 16px;
             padding: 16px;
-            border: 1px solid #dde4ea;
+            border: 1px solid var(--line);
+            box-shadow: 0 2px 0 rgba(39, 58, 79, 0.04);
+            animation: rise-in 460ms ease-out both;
         }
 
         .kpi { grid-column: span 3; }
         .wide { grid-column: span 6; }
 
         .label {
-            font-size: 0.78rem;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            font-size: 0.75rem;
             color: var(--muted);
             text-transform: uppercase;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.13em;
             margin-bottom: 6px;
         }
 
         .value {
-            font-size: 1.4rem;
+            font-size: 1.9rem;
             font-weight: 700;
+            line-height: 1.1;
         }
 
         .status {
-            font-size: 0.9rem;
+            font-size: 0.82rem;
             font-weight: 700;
             display: inline-block;
-            padding: 4px 8px;
+            letter-spacing: 0.03em;
+            padding: 5px 9px;
             border-radius: 999px;
-            margin-top: 6px;
+            margin-top: 8px;
         }
 
-        .ok { color: #0b5c2a; background: #d8f7e2; }
-        .warn { color: #7a4606; background: #ffeccd; }
-        .down { color: #6d1111; background: #ffe0de; }
+        .ok { color: var(--ok-text); background: var(--ok-bg); }
+        .warn { color: var(--warn-text); background: var(--warn-bg); }
+        .down { color: var(--down-text); background: var(--down-bg); }
 
-        .list { margin: 0; padding-left: 18px; line-height: 1.5; }
-        .list li { margin-bottom: 6px; }
+        .list {
+            margin: 0;
+            padding-left: 18px;
+            line-height: 1.6;
+        }
+
+        .list li {
+            margin-bottom: 6px;
+        }
+
+        .list a {
+            color: #0f4f8f;
+            text-underline-offset: 2px;
+        }
+
+        .list a:hover {
+            color: #093965;
+        }
+
+        .kpi:nth-child(1) { animation-delay: 70ms; }
+        .kpi:nth-child(2) { animation-delay: 120ms; }
+        .kpi:nth-child(3) { animation-delay: 170ms; }
+        .kpi:nth-child(4) { animation-delay: 220ms; }
+
+        @keyframes rise-in {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
         @media (max-width: 900px) {
             .kpi, .wide { grid-column: span 12; }
+            .hero { padding: 24px; }
+            .value { font-size: 1.75rem; }
         }
     </style>
 </head>
 <body>
     <div class="page" data-api-base="{{ $apiBase }}">
         <section class="hero">
+            <span class="eyebrow">Production Surface</span>
             <h1>Workation Maldives Launch Console</h1>
             <p>
                 The platform is live with strict preflight checks passing, alert routing configured,
@@ -144,6 +245,11 @@
             <div class="cta">
                 <a class="btn btn-primary" href="{{ $apiBase }}/api/v1/health" target="_blank" rel="noopener">Open API Health</a>
                 <a class="btn btn-secondary" href="https://github.com/ibazzam/workation-cms/actions/runs/22991556615" target="_blank" rel="noopener">Strict Preflight Evidence</a>
+            </div>
+            <div class="hero-meta">
+                <span class="meta-pill">Strict Gate: Passed</span>
+                <span class="meta-pill">Routing: Pager, Slack, Email</span>
+                <span class="meta-pill">Domain: workation.mv</span>
             </div>
         </section>
 

@@ -4,8 +4,10 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 if (!function_exists('workationApiBase')) {
     function workationApiBase(): string
@@ -157,6 +159,83 @@ Route::get('/portal/{portal}/login', function (string $portal) {
         'portalName' => $config['name'],
     ]);
 });
+
+Route::get('/portal/admin/forgot-password', function () {
+    return view('portal-forgot-password');
+});
+
+Route::post('/portal/admin/forgot-password', function (Request $request) {
+    $validated = $request->validate([
+        'email' => ['required', 'email'],
+    ]);
+
+    $email = strtolower(trim((string) $validated['email']));
+    $adminConfig = portalConfig('admin');
+    $portalUser = User::query()
+        ->whereRaw('LOWER(email) = ?', [$email])
+        ->where('portal_enabled', true)
+        ->whereIn('portal_role', $adminConfig['allowed_roles'])
+        ->first();
+
+    if ($portalUser) {
+        $token = Password::broker()->createToken($portalUser);
+        $portalUser->sendPasswordResetNotification($token);
+    }
+
+    return back()->with('status', 'If the email is registered for an admin account, a reset link has been sent.');
+})->name('password.email');
+
+Route::get('/portal/admin/reset-password/{token}', function (Request $request, string $token) {
+    return view('portal-reset-password', [
+        'token' => $token,
+        'email' => (string) $request->query('email', ''),
+    ]);
+})->name('password.reset');
+
+Route::post('/portal/admin/reset-password', function (Request $request) {
+    $validated = $request->validate([
+        'token' => ['required', 'string'],
+        'email' => ['required', 'email'],
+        'password' => ['required', 'string', 'min:8', 'confirmed'],
+    ]);
+
+    $email = strtolower(trim((string) $validated['email']));
+    $adminConfig = portalConfig('admin');
+    $portalUser = User::query()
+        ->whereRaw('LOWER(email) = ?', [$email])
+        ->where('portal_enabled', true)
+        ->whereIn('portal_role', $adminConfig['allowed_roles'])
+        ->first();
+
+    if (!$portalUser) {
+        return back()->withErrors([
+            'email' => 'Unable to reset password for this account.',
+        ])->withInput($request->only('email'));
+    }
+
+    $status = Password::broker()->reset(
+        [
+            'email' => $email,
+            'password' => (string) $validated['password'],
+            'password_confirmation' => (string) $validated['password_confirmation'],
+            'token' => (string) $validated['token'],
+        ],
+        function (User $user, string $password) {
+            $user->forceFill([
+                'password' => $password,
+                'remember_token' => Str::random(60),
+            ])->save();
+        }
+    );
+
+    if ($status === Password::PASSWORD_RESET) {
+        return redirect('/portal/admin/login')->with('status', __($status));
+    }
+
+    return back()->withErrors([
+        'email' => __($status),
+    ])->withInput($request->only('email'));
+})->name('password.update');
 
 Route::post('/portal/{portal}/login', function (Request $request, string $portal) {
     if (!in_array($portal, ['admin', 'vendor'], true)) {

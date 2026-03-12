@@ -40,6 +40,36 @@ if (!function_exists('portalRoutePath')) {
     }
 }
 
+if (!function_exists('firstNonEmptyEnv')) {
+    function firstNonEmptyEnv(array $keys): string
+    {
+        foreach ($keys as $key) {
+            $value = trim((string) env($key, ''));
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '';
+    }
+}
+
+if (!function_exists('bootstrapPasswordMatches')) {
+    function bootstrapPasswordMatches(string $expected, string $provided): bool
+    {
+        if ($expected === '') {
+            return false;
+        }
+
+        $isHash = str_starts_with($expected, '$2y$') || str_starts_with($expected, '$argon2');
+        if ($isHash) {
+            return Hash::check($provided, $expected);
+        }
+
+        return hash_equals($expected, $provided);
+    }
+}
+
 Route::get('/', function () {
     $apiBase = workationApiBase();
 
@@ -157,11 +187,26 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
 
     $isBootstrapAdmin = false;
     if ($portal === 'admin') {
-        $bootstrapUsername = trim((string) env('PORTAL_ADMIN_USERNAME', env('WORKATION_ADMIN_PORTAL_USERNAME', '')));
-        $bootstrapPassword = (string) env('PORTAL_ADMIN_PASSWORD', env('WORKATION_ADMIN_PORTAL_PASSWORD', ''));
+        $bootstrapUsername = firstNonEmptyEnv([
+            'PORTAL_ADMIN_USERNAME',
+            'WORKATION_ADMIN_PORTAL_USERNAME',
+            'ADMIN_PORTAL_USERNAME',
+            'WORKATION_ADMIN_USERNAME',
+            'ADMIN_USERNAME',
+            'ADMIN_USER',
+        ]);
+        $bootstrapPassword = firstNonEmptyEnv([
+            'PORTAL_ADMIN_PASSWORD',
+            'WORKATION_ADMIN_PORTAL_PASSWORD',
+            'ADMIN_PORTAL_PASSWORD',
+            'WORKATION_ADMIN_PASSWORD',
+            'ADMIN_PASSWORD',
+            'ADMIN_PASS',
+        ]);
 
         if ($bootstrapUsername !== '' && $bootstrapPassword !== '') {
-            $isBootstrapAdmin = strtolower($bootstrapUsername) === $usernameLower && hash_equals($bootstrapPassword, $password);
+            $isBootstrapAdmin = strtolower($bootstrapUsername) === $usernameLower
+                && bootstrapPasswordMatches($bootstrapPassword, $password);
         }
     }
 

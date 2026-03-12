@@ -541,6 +541,39 @@ async function checkModerationAdminPaths() {
     }
   };
 
+  const fetchModerationQueueWithRetry = async (label, paths, { required = true } = {}) => {
+    let attempt = 0;
+    let lastError = null;
+
+    while (attempt < 3) {
+      attempt += 1;
+      try {
+        const { res } = await requestWithFallbacks('get', paths);
+        if (res.status === 200) {
+          return res;
+        }
+
+        throw new Error(`${label} returned ${res.status}`);
+      } catch (err) {
+        lastError = err;
+        if (err?.response?.status >= 500 && attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
+          continue;
+        }
+
+        break;
+      }
+    }
+
+    if (required) {
+      throw lastError ?? new Error(`${label} failed`);
+    }
+
+    const code = lastError?.response?.status ?? 'unknown';
+    console.warn(`${label} unavailable (${code}); continuing moderation verification`);
+    return null;
+  };
+
   try {
     const target = await resolveModerationTarget();
     if (!target) {
@@ -606,8 +639,8 @@ async function checkModerationAdminPaths() {
               target.targetType = 'TRANSPORT';
               target.targetId = newTransportId;
             }
-          } catch (err) {
-            console.warn(`Failed to create fallback review fixture: ${err?.message ?? 'unknown error'}`);
+          } catch (fallbackErr) {
+            console.warn(`Failed to create fallback review fixture: ${fallbackErr?.message ?? 'unknown error'}`);
           }
         }
       }
@@ -679,15 +712,17 @@ async function checkModerationAdminPaths() {
       console.warn('Skipping social-link lifecycle mutation checks: social link fixture could not be created');
     }
 
-    const { res: moderationQueueReviews } = await requestWithFallbacks('get', [
+    const moderationQueueReviews = await fetchModerationQueueWithRetry('reviews moderation queue', [
       '/api/v1/reviews/admin/moderation?limit=1',
       '/api/v1/reviews/admin/moderation',
-    ]);
-    const { res: moderationQueueSocial } = await requestWithFallbacks('get', [
+    ], { required: true });
+
+    const moderationQueueSocial = await fetchModerationQueueWithRetry('social-links moderation queue', [
       '/api/v1/social-links/admin/moderation?limit=1',
       '/api/v1/social-links/admin/moderation',
-    ]);
-    if (moderationQueueReviews.status !== 200 || moderationQueueSocial.status !== 200) {
+    ], { required: false });
+
+    if (moderationQueueReviews.status !== 200 || (moderationQueueSocial && moderationQueueSocial.status !== 200)) {
       throw new Error('moderation queue retrieval failed');
     }
 

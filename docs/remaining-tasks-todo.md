@@ -49,7 +49,10 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
   - Completed rehearsal packet and signed go/no-go rehearsal record.
 - Exit criteria:
   - [ ] Full rehearsal completed with evidence links for each blocker check.
-    - remaining blocker: deploy remediation build (currently blocked by missing `RENDER_DEPLOY_HOOK_URL`), rerun authenticated preflight, then complete channel-delivery confirmation (`docs/alert-routing-verification-2026-03-18.md`)
+    - strict preflight blocker cleared after deploy remediation and follow-up hardening:
+      - promote run: `https://github.com/ibazzam/workation-cms/actions/runs/22991538950`
+      - strict preflight pass: `https://github.com/ibazzam/workation-cms/actions/runs/22991556615`
+    - remaining item: complete channel-delivery confirmation (`docs/alert-routing-verification-2026-03-18.md`)
 
 ### WS3) Production Verification
 - Owner: SRE / Platform Lead
@@ -57,12 +60,12 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
 - Target complete: 2026-03-15
 - Dependencies: WS2 (can begin in parallel after RC tag exists)
 - Tasks:
-  - [ ] Re-run hosted live preflight against launch target environment.
+  - [x] Re-run hosted live preflight against launch target environment.
     - initial strict run failed due to missing `LIVE_PREFLIGHT_BEARER_TOKEN` (`https://github.com/ibazzam/workation-cms/actions/runs/22947199645`)
     - rerun with token secret configured also failed (`https://github.com/ibazzam/workation-cms/actions/runs/22948887462`) due to `HTTP 500` in checkout reliability path
-    - isolated failing endpoint: `GET /api/v1/bookings` returns `500` under bearer-authenticated flow
-    - attempted promotion blocked by missing deploy-hook secret (`https://github.com/ibazzam/workation-cms/actions/runs/22951012154`)
-    - use `scripts/ops/verify-alert-routing.ps1 -RunWorkflow` after `/bookings` production fix is deployed
+    - iterative fixes merged for moderation/new-vertical reliability and production-hardening
+    - successful promotion: `https://github.com/ibazzam/workation-cms/actions/runs/22991538950`
+    - successful strict required run: `https://github.com/ibazzam/workation-cms/actions/runs/22991556615`
   - [ ] Validate launch-day incident alert routing (pager/slack/email) end-to-end.
   - [x] Validate incident runbook links are reachable and current.
   - [x] Verify customer support escalation roster and compensation approval chain are active.
@@ -70,7 +73,7 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
   - Verification report with pass/fail outcomes and remediation notes (`docs/production-verification-report-2026-03-18.md`).
 - Exit criteria:
   - [ ] No unresolved critical verification failures.
-    - current critical blockers: production `/api/v1/bookings` `500` during strict live preflight, and missing `RENDER_DEPLOY_HOOK_URL` deployment secret
+    - strict preflight blockers cleared; remaining verification task is alert-routing channel confirmation.
 
 ### WS4) KPI Operations Activation
 - Owner: Product Analytics Lead

@@ -24,20 +24,37 @@ Validate that pager/slack/email routing is functioning end-to-end for launch cri
   - Run URL: `https://github.com/ibazzam/workation-cms/actions/runs/22951012154`
   - Result: `failure`
   - Verified cause from logs: `RENDER_DEPLOY_HOOK_URL` secret missing, so deployment hook was not triggered.
+- Promotion rerun after workflow/remediation fixes:
+  - Run URL: `https://github.com/ibazzam/workation-cms/actions/runs/22991538950`
+  - Result: `success`
+  - Outcome: deploy remediation path completed and strict rerun could proceed.
+- Strict authenticated preflight rerun after rollout:
+  - Run URL: `https://github.com/ibazzam/workation-cms/actions/runs/22991556615`
+  - Result: `success`
+  - Outcome: checkout reliability and required strict gates passed.
 
 ## Verification Status
 - Config-level readiness: PASS (routing config and docs exist)
-- End-to-end channel delivery: BLOCKED (checkout reliability path returns `500`, preventing strict preflight completion)
+- Strict production gate status: PASS (required strict preflight checks completed)
+- End-to-end channel delivery receipts: PENDING (manual controlled alert proof capture not yet attached)
 
 ## Required Final Checks
 - [x] Set repository secret `LIVE_PREFLIGHT_BEARER_TOKEN` with valid launch/admin bearer token.
-- [ ] Set repository secret `RENDER_DEPLOY_HOOK_URL` so promotion workflow can deploy remediation build.
-- [ ] Remediate production `GET /api/v1/bookings` `500` under bearer-authenticated path.
-- [ ] Re-run workflow: `Live preflight gate` with strict options enabled.
-- [ ] Confirm workflow passes checkout reliability and remaining strict checks.
+- [x] Set repository secret `RENDER_DEPLOY_HOOK_URL` so promotion workflow can deploy remediation build.
+- [x] Remediate production `GET /api/v1/bookings` `500` under bearer-authenticated path.
+- [x] Re-run workflow: `Live preflight gate` with strict options enabled.
+- [x] Confirm workflow passes checkout reliability and remaining strict checks.
 - [ ] Trigger a controlled test alert for each channel (pager/slack/email).
 - [ ] Capture receipt screenshots/log references in each target channel.
 - [ ] Record acknowledgment timestamps and responder identity.
+
+## Pending Receipt Capture
+
+| Channel | Test Triggered | Receipt Link / Evidence | Acknowledged By | Ack Timestamp (UTC) | Status |
+|---|---|---|---|---|---|
+| Pager | Pending | Pending | Pending | Pending | OPEN |
+| Slack | Pending | Pending | Pending | Pending | OPEN |
+| Email | Pending | Pending | Pending | Pending | OPEN |
 
 ## Execution Commands
 Set secret (run once with a valid token value):

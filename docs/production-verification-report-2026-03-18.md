@@ -9,8 +9,8 @@ This report captures WS3 verification status for launch readiness.
 - Support escalation and compensation governance readiness
 
 ## Summary Status
-- Hosted preflight re-run: EXECUTED, BLOCKED
-- Alert routing E2E: BLOCKED
+- Hosted preflight re-run: PASS
+- Alert routing E2E: IN PROGRESS (channel receipts pending)
 - Runbook reachability/currentness: PASS
 - Support escalation + compensation chain: PASS
 
@@ -45,14 +45,21 @@ This report captures WS3 verification status for launch readiness.
   - Promotion contract gate passed (including break-glass override behavior).
   - The production runtime did not receive the remediation build because deploy hook execution was blocked.
 
+### 1d) Successful Promotion and Strict Hosted Re-Run
+- Promotion workflow run: `https://github.com/ibazzam/workation-cms/actions/runs/22991538950`
+- Promotion outcome: `success`
+- Strict hosted preflight run: `https://github.com/ibazzam/workation-cms/actions/runs/22991556615`
+- Strict hosted preflight outcome: `success`
+- Notes:
+  - Prior token and deployment-hook blockers are no longer active.
+  - Required strict checks, including checkout reliability path, completed successfully.
+
 ### 2) Alert Routing Validation
-- Current status: `BLOCKED`
+- Current status: `IN PROGRESS`
 - Tracking record: `docs/alert-routing-verification-2026-03-18.md`
-- Blocker:
-  - strict preflight cannot complete while `/api/v1/bookings` returns `500` in checkout reliability checks.
+- Remaining gap:
+  - controlled channel-delivery proof capture (pager/slack/email) still needs to be recorded.
 - Remaining actions:
-  - remediate production `/api/v1/bookings` failure path
-  - rerun strict preflight
   - execute controlled pager/slack/email delivery checks and capture receipts
 
 ### 3) Incident Runbook Reachability and Currency
@@ -74,8 +81,6 @@ This report captures WS3 verification status for launch readiness.
   - Role-based escalation and compensation governance are documented and linked.
 
 ## Open Blockers
-- Production endpoint reliability failure: `GET /api/v1/bookings` returns `500` during strict preflight checkout validation.
-- Deployment pipeline configuration gap: `RENDER_DEPLOY_HOOK_URL` secret is missing, preventing rollout of remediation.
 - Pending authenticated alert-routing channel delivery proof (pager/slack/email)
 
 ## Exit Criteria to Close WS3

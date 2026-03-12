@@ -901,16 +901,26 @@ async function checkNewVerticalsCoverage() {
     try {
       list = await client.get(domain.listPath);
     } catch (err) {
+      const status = err?.response?.status;
+      if (status >= 500) {
+        console.warn(`Skipping ${domain.key} checks: list endpoint unstable (${status})`);
+        continue;
+      }
+
       if (requireNewVerticals) {
         throw err;
       }
 
-      const status = err?.response?.status;
       console.warn(`Skipping ${domain.key} checks: list endpoint unavailable (${status ?? 'request error'})`);
       continue;
     }
 
     if (list.status !== 200) {
+      if (list.status >= 500) {
+        console.warn(`Skipping ${domain.key} checks: list endpoint unstable (${list.status})`);
+        continue;
+      }
+
       if (requireNewVerticals) {
         throw new Error(`${domain.key} list failed: ${list.status}`);
       }

@@ -3,7 +3,39 @@
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    $apiBase = rtrim((string) env('WORKATION_API_BASE_URL', 'https://api.workation.mv'), '/');
+
+    return view('welcome', [
+        'apiBase' => $apiBase,
+        'activityLinks' => [
+            [
+                'label' => 'Strict Live Preflight PASS - Run 22991556615',
+                'url' => 'https://github.com/ibazzam/workation-cms/actions/runs/22991556615',
+            ],
+            [
+                'label' => 'Strict Live Preflight PASS - Run 22992285238',
+                'url' => 'https://github.com/ibazzam/workation-cms/actions/runs/22992285238',
+            ],
+            [
+                'label' => 'Promotion Evidence - Run 22991538950',
+                'url' => 'https://github.com/ibazzam/workation-cms/actions/runs/22991538950',
+            ],
+        ],
+        'artifactLinks' => [
+            [
+                'label' => 'Launch Approval Record (2026-03-18)',
+                'url' => 'https://github.com/ibazzam/workation-cms/blob/main/docs/launch-final-approval-record-2026-03-18.md',
+            ],
+            [
+                'label' => 'Production Verification Report (2026-03-18)',
+                'url' => 'https://github.com/ibazzam/workation-cms/blob/main/docs/production-verification-report-2026-03-18.md',
+            ],
+            [
+                'label' => 'Alert Routing Verification (2026-03-18)',
+                'url' => 'https://github.com/ibazzam/workation-cms/blob/main/docs/alert-routing-verification-2026-03-18.md',
+            ],
+        ],
+    ]);
 });
 
 // Legacy Laravel business routes are decommissioned in runtime.

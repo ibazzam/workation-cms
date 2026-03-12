@@ -3,33 +3,39 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-function workationApiBase(): string
-{
-    return rtrim((string) env('WORKATION_API_BASE_URL', 'https://api.workation.mv'), '/');
+if (!function_exists('workationApiBase')) {
+    function workationApiBase(): string
+    {
+        return rtrim((string) env('WORKATION_API_BASE_URL', 'https://api.workation.mv'), '/');
+    }
 }
 
-function portalConfig(string $portal): array
-{
-    if ($portal === 'admin') {
+if (!function_exists('portalConfig')) {
+    function portalConfig(string $portal): array
+    {
+        if ($portal === 'admin') {
+            return [
+                'username' => (string) env('WORKATION_ADMIN_PORTAL_USERNAME', ''),
+                'password' => (string) env('WORKATION_ADMIN_PORTAL_PASSWORD', ''),
+                'session_key' => 'portal_admin_authenticated',
+                'name' => 'Admin',
+            ];
+        }
+
         return [
-            'username' => (string) env('WORKATION_ADMIN_PORTAL_USERNAME', ''),
-            'password' => (string) env('WORKATION_ADMIN_PORTAL_PASSWORD', ''),
-            'session_key' => 'portal_admin_authenticated',
-            'name' => 'Admin',
+            'username' => (string) env('WORKATION_VENDOR_PORTAL_USERNAME', ''),
+            'password' => (string) env('WORKATION_VENDOR_PORTAL_PASSWORD', ''),
+            'session_key' => 'portal_vendor_authenticated',
+            'name' => 'Vendor',
         ];
     }
-
-    return [
-        'username' => (string) env('WORKATION_VENDOR_PORTAL_USERNAME', ''),
-        'password' => (string) env('WORKATION_VENDOR_PORTAL_PASSWORD', ''),
-        'session_key' => 'portal_vendor_authenticated',
-        'name' => 'Vendor',
-    ];
 }
 
-function portalRoutePath(string $portal): string
-{
-    return $portal === 'admin' ? '/admin' : '/vendor';
+if (!function_exists('portalRoutePath')) {
+    function portalRoutePath(string $portal): string
+    {
+        return $portal === 'admin' ? '/admin' : '/vendor';
+    }
 }
 
 Route::get('/', function () {

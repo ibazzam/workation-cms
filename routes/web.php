@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 
 if (!function_exists('workationApiBase')) {
@@ -15,18 +18,16 @@ if (!function_exists('portalConfig')) {
     {
         if ($portal === 'admin') {
             return [
-                'username' => (string) env('WORKATION_ADMIN_PORTAL_USERNAME', ''),
-                'password' => (string) env('WORKATION_ADMIN_PORTAL_PASSWORD', ''),
                 'session_key' => 'portal_admin_authenticated',
                 'name' => 'Admin',
+                'allowed_roles' => ['ADMIN', 'ADMIN_SUPER'],
             ];
         }
 
         return [
-            'username' => (string) env('WORKATION_VENDOR_PORTAL_USERNAME', ''),
-            'password' => (string) env('WORKATION_VENDOR_PORTAL_PASSWORD', ''),
             'session_key' => 'portal_vendor_authenticated',
             'name' => 'Vendor',
+            'allowed_roles' => ['VENDOR'],
         ];
     }
 }
@@ -81,9 +82,19 @@ Route::get('/admin', function () {
         return redirect('/portal/' . $portal . '/login');
     }
 
+    $canManageUsers = Gate::allows('manage-portal-users');
+    $portalUsers = User::query()
+        ->whereNotNull('portal_role')
+        ->orderBy('portal_role')
+        ->orderBy('username')
+        ->get(['id', 'name', 'username', 'email', 'portal_role', 'portal_enabled', 'portal_vendor_id']);
+
     return view('admin-portal', [
         'apiBase' => workationApiBase(),
         'portalUser' => session('portal_admin_user', $config['name']),
+        'portalRole' => session('portal_admin_role', 'ADMIN'),
+        'canManageUsers' => $canManageUsers,
+        'portalUsers' => $portalUsers,
     ]);
 });
 
@@ -127,18 +138,13 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
     ]);
 
     $config = portalConfig($portal);
-    $expectedUsername = $config['username'];
-    $expectedPassword = $config['password'];
+    $portalUser = User::query()
+        ->where('username', (string) $validated['username'])
+        ->where('portal_enabled', true)
+        ->whereIn('portal_role', $config['allowed_roles'])
+        ->first();
 
-    if ($expectedUsername === '' || $expectedPassword === '') {
-        return back()->withErrors([
-            'username' => 'Portal credentials are not configured on server environment variables.',
-        ])->withInput();
-    }
-
-    $usernameMatches = hash_equals($expectedUsername, (string) $validated['username']);
-    $passwordMatches = hash_equals($expectedPassword, (string) $validated['password']);
-    if (!($usernameMatches && $passwordMatches)) {
+    if (!$portalUser || !Hash::check((string) $validated['password'], (string) $portalUser->password)) {
         return back()->withErrors([
             'username' => 'Invalid username or password.',
         ])->withInput();
@@ -147,7 +153,9 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
     $request->session()->regenerate();
     session([
         $config['session_key'] => true,
-        'portal_' . $portal . '_user' => $validated['username'],
+        'portal_' . $portal . '_user' => $portalUser->name,
+        'portal_' . $portal . '_user_id' => $portalUser->id,
+        'portal_' . $portal . '_role' => $portalUser->portal_role,
     ]);
 
     return redirect(portalRoutePath($portal));
@@ -159,11 +167,47 @@ Route::post('/portal/{portal}/logout', function (Request $request, string $porta
     }
 
     $config = portalConfig($portal);
-    session()->forget([$config['session_key'], 'portal_' . $portal . '_user']);
+    session()->forget([$config['session_key'], 'portal_' . $portal . '_user', 'portal_' . $portal . '_user_id', 'portal_' . $portal . '_role']);
     $request->session()->invalidate();
     $request->session()->regenerateToken();
 
     return redirect('/portal/' . $portal . '/login');
+});
+
+Route::post('/portal/admin/users/{user}/manage', function (Request $request, User $user) {
+    if (!Gate::allows('manage-portal-users')) {
+        abort(403);
+    }
+
+    $validated = $request->validate([
+        'portal_role' => ['required', 'in:ADMIN,ADMIN_SUPER,VENDOR'],
+        'portal_enabled' => ['required', 'in:1,0'],
+        'portal_vendor_id' => ['nullable', 'string', 'max:255'],
+    ]);
+
+    $isSelf = (int) session('portal_admin_user_id') === (int) $user->id;
+    $nextEnabled = $validated['portal_enabled'] === '1';
+    if ($isSelf && !$nextEnabled) {
+        return back()->withErrors([
+            'portal_enabled' => 'You cannot suspend your own active session.',
+        ]);
+    }
+
+    $nextRole = (string) $validated['portal_role'];
+    if ($isSelf && $nextRole !== 'ADMIN_SUPER') {
+        return back()->withErrors([
+            'portal_role' => 'You cannot remove your own Super Admin role from this screen.',
+        ]);
+    }
+
+    $vendorId = trim((string) ($validated['portal_vendor_id'] ?? ''));
+
+    $user->portal_role = $nextRole;
+    $user->portal_enabled = $nextEnabled;
+    $user->portal_vendor_id = ($nextRole === 'VENDOR' && $vendorId !== '') ? $vendorId : null;
+    $user->save();
+
+    return back()->with('portal_notice', 'Portal user updated: ' . ($user->username ?: ('#' . $user->id)));
 });
 
 // Legacy Laravel business routes are decommissioned in runtime.

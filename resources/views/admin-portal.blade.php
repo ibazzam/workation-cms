@@ -222,6 +222,115 @@
             line-height: 1.4;
         }
 
+        .manage {
+            margin-top: 14px;
+        }
+
+        .notice {
+            margin-top: 12px;
+            border-radius: 10px;
+            border: 1px solid #b7e2c3;
+            background: #eaf9ef;
+            color: #135028;
+            padding: 10px 12px;
+            font-size: 0.88rem;
+        }
+
+        .error-box {
+            margin-top: 12px;
+            border-radius: 10px;
+            border: 1px solid #f0b7b3;
+            background: #fff0ef;
+            color: #731e1a;
+            padding: 10px 12px;
+            font-size: 0.88rem;
+        }
+
+        .role-pill {
+            display: inline-block;
+            border-radius: 999px;
+            padding: 4px 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            border: 1px solid #c8d4df;
+            background: #f2f7fb;
+            color: #1b3856;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .user-row {
+            border: 1px solid #d7dee6;
+            border-radius: 10px;
+            padding: 10px;
+            background: #fff;
+        }
+
+        .user-head {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .user-name {
+            font-weight: 700;
+        }
+
+        .small {
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
+
+        .manage-form {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            align-items: end;
+        }
+
+        .manage-form label {
+            font-size: 0.75rem;
+            color: var(--muted);
+            display: block;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .manage-form input,
+        .manage-form select {
+            width: 100%;
+            border: 1px solid #c8d3df;
+            border-radius: 8px;
+            padding: 8px 9px;
+            font-size: 0.88rem;
+            font-family: "Outfit", "Trebuchet MS", sans-serif;
+            background: #fff;
+        }
+
+        .manage-form button {
+            border: 0;
+            border-radius: 8px;
+            background: #155f83;
+            color: #fff;
+            padding: 8px 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        @media (max-width: 980px) {
+            .manage-form {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
         @media (max-width: 900px) {
             .layout {
                 grid-template-columns: 1fr;
@@ -242,12 +351,21 @@
             </div>
             <div class="auth-bar">
                 <span class="auth-user">Signed in as {{ $portalUser }}</span>
+                <span class="role-pill">Role: {{ $portalRole }}</span>
                 <form method="POST" action="/portal/admin/logout">
                     @csrf
                     <button class="logout" type="submit">Log Out</button>
                 </form>
             </div>
         </section>
+
+        @if (session('portal_notice'))
+            <div class="notice">{{ session('portal_notice') }}</div>
+        @endif
+
+        @if ($errors->any())
+            <div class="error-box">{{ $errors->first() }}</div>
+        @endif
 
         <section class="layout">
             <article class="card">
@@ -284,6 +402,56 @@
                 </div>
                 <pre id="output">Ready. Save token, then run an endpoint.</pre>
             </article>
+        </section>
+
+        <section class="card manage">
+            <p class="label">Portal User Moderation</p>
+            @if (!$canManageUsers)
+                <p class="small">Super Admin role required to modify users, roles, and suspension status.</p>
+            @else
+                <p class="small">Change role permissions and suspend/reactivate accounts directly in the application.</p>
+                <div class="grid">
+                    @foreach ($portalUsers as $managedUser)
+                        <div class="user-row">
+                            <div class="user-head">
+                                <span class="user-name">{{ $managedUser->username ?: 'no-username' }}</span>
+                                <span class="role-pill">{{ $managedUser->portal_role ?: 'NONE' }}</span>
+                                <span class="small">{{ $managedUser->name }} | {{ $managedUser->email }}</span>
+                                @if (!$managedUser->portal_enabled)
+                                    <span class="state err">SUSPENDED</span>
+                                @else
+                                    <span class="state ok">ACTIVE</span>
+                                @endif
+                            </div>
+                            <form class="manage-form" method="POST" action="/portal/admin/users/{{ $managedUser->id }}/manage">
+                                @csrf
+                                <div>
+                                    <label>Role</label>
+                                    <select name="portal_role">
+                                        <option value="ADMIN" @selected($managedUser->portal_role === 'ADMIN')>ADMIN</option>
+                                        <option value="ADMIN_SUPER" @selected($managedUser->portal_role === 'ADMIN_SUPER')>ADMIN_SUPER</option>
+                                        <option value="VENDOR" @selected($managedUser->portal_role === 'VENDOR')>VENDOR</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label>Status</label>
+                                    <select name="portal_enabled">
+                                        <option value="1" @selected($managedUser->portal_enabled)>ACTIVE</option>
+                                        <option value="0" @selected(!$managedUser->portal_enabled)>SUSPENDED</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label>Vendor ID</label>
+                                    <input name="portal_vendor_id" value="{{ $managedUser->portal_vendor_id ?? '' }}" placeholder="Required for VENDOR">
+                                </div>
+                                <div>
+                                    <button type="submit">Save</button>
+                                </div>
+                            </form>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
         </section>
     </main>
 

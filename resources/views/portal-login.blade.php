@@ -111,7 +111,7 @@
     <section class="card">
         <span class="eyebrow">Secure Access</span>
         <h1>{{ $portalName }} Portal Login</h1>
-        <p>Sign in with your portal username and password to continue.</p>
+        <p>Sign in with your assigned portal account username and password.</p>
 
         @if ($errors->any())
             <div class="error">{{ $errors->first() }}</div>

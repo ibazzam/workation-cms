@@ -136,7 +136,9 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
         ])->withInput();
     }
 
-    if (!hash_equals($expectedUsername, (string) $validated['username']) || !hash_equals($expectedPassword, (string) $validated['password'])) {
+    $usernameMatches = hash_equals($expectedUsername, (string) $validated['username']);
+    $passwordMatches = hash_equals($expectedPassword, (string) $validated['password']);
+    if (!($usernameMatches && $passwordMatches)) {
         return back()->withErrors([
             'username' => 'Invalid username or password.',
         ])->withInput();

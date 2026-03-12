@@ -286,7 +286,7 @@
     <script>
         (function () {
             const root = document.querySelector(".page");
-            const apiBase = root ? root.getAttribute("data-api-base") : "https://api.workation.mv";
+            const apiBase = root ? root.getAttribute("data-api-base") : "";
             const tokenInput = document.getElementById("tokenInput");
             const tokenState = document.getElementById("tokenState");
             const output = document.getElementById("output");

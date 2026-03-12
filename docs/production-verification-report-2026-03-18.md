@@ -10,7 +10,7 @@ This report captures WS3 verification status for launch readiness.
 
 ## Summary Status
 - Hosted preflight re-run: PASS
-- Alert routing E2E: IN PROGRESS (channel receipts pending)
+- Alert routing E2E: PASS
 - Runbook reachability/currentness: PASS
 - Support escalation + compensation chain: PASS
 
@@ -61,10 +61,8 @@ This report captures WS3 verification status for launch readiness.
   - Confirms strict gate stability after documentation/closure pass.
 
 ### 2) Alert Routing Validation
-- Current status: `IN PROGRESS`
+- Current status: `PASS`
 - Tracking record: `docs/alert-routing-verification-2026-03-18.md`
-- Remaining gap:
-  - controlled channel-delivery proof capture (pager/slack/email) still needs to be recorded.
 - Latest authenticated probe evidence:
   - `GET /api/v1/ops/alerts` returned `200`.
   - `GET /api/v1/ops/runbooks` returned `200`.
@@ -73,8 +71,10 @@ This report captures WS3 verification status for launch readiness.
   - pager target active: `pager:oncall-primary`
   - slack target active: `slack:#launch-alerts`
   - email target active: `email:ops@workation.mv`
-- Remaining actions:
-  - execute controlled pager/slack/email delivery checks and capture receipts
+- Channel evidence captured:
+  - Pager receipt, ack owner, and UTC timestamp recorded.
+  - Slack receipt, ack owner, and UTC timestamp recorded.
+  - Email receipt, ack owner, and UTC timestamp recorded.
 
 ### 3) Incident Runbook Reachability and Currency
 - Status: `PASS`
@@ -95,7 +95,7 @@ This report captures WS3 verification status for launch readiness.
   - Role-based escalation and compensation governance are documented and linked.
 
 ## Open Blockers
-- Pending authenticated alert-routing channel delivery proof (pager/slack/email)
+- None
 
 ## Exit Criteria to Close WS3
 - Strict authenticated preflight run passes with token configured.

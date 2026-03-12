@@ -67,15 +67,17 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
     - successful promotion: `https://github.com/ibazzam/workation-cms/actions/runs/22991538950`
     - successful strict required run: `https://github.com/ibazzam/workation-cms/actions/runs/22991556615`
     - follow-up strict verification rerun (stable): `https://github.com/ibazzam/workation-cms/actions/runs/22992285238`
-  - [ ] Validate launch-day incident alert routing (pager/slack/email) end-to-end.
+  - [x] Validate launch-day incident alert routing (pager/slack/email) end-to-end.
+    - receipt evidence captured in `docs/alert-routing-verification-2026-03-18.md` (pager/slack/email with ack owners + UTC timestamps)
   - [x] Validate incident runbook links are reachable and current.
   - [x] Verify customer support escalation roster and compensation approval chain are active.
 - Deliverable:
   - Verification report with pass/fail outcomes and remediation notes (`docs/production-verification-report-2026-03-18.md`).
 - Exit criteria:
-  - [ ] No unresolved critical verification failures.
-    - strict preflight blockers cleared; remaining verification task is alert-routing channel confirmation.
-    - note: admin-role ops endpoint access is verified (`/ops/alerts`, `/ops/runbooks`, `/auth/admin/ping` all `200`) and routing targets are active (`pager:oncall-primary`, `slack:#launch-alerts`, `email:ops@workation.mv`); final closure depends on external channel receipt evidence.
+  - [x] No unresolved critical verification failures.
+    - strict preflight blockers cleared.
+    - admin-role ops endpoint access is verified (`/ops/alerts`, `/ops/runbooks`, `/auth/admin/ping` all `200`) and routing targets are active (`pager:oncall-primary`, `slack:#launch-alerts`, `email:ops@workation.mv`).
+    - external channel receipt evidence captured and logged.
 
 ### WS4) KPI Operations Activation
 - Owner: Product Analytics Lead

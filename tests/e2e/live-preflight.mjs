@@ -956,7 +956,7 @@ async function checkNewVerticalsCoverage() {
       }
     } catch (err) {
       const status = err?.response?.status;
-      if (!requireNewVerticals && status >= 500) {
+      if (status >= 500) {
         console.warn(`Skipping ${domain.key} deep checks: endpoint unstable (${status})`);
         continue;
       }

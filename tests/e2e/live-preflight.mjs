@@ -679,8 +679,14 @@ async function checkModerationAdminPaths() {
       console.warn('Skipping social-link lifecycle mutation checks: social link fixture could not be created');
     }
 
-    const moderationQueueReviews = await client.get('/api/v1/reviews/admin/moderation');
-    const moderationQueueSocial = await client.get('/api/v1/social-links/admin/moderation');
+    const { res: moderationQueueReviews } = await requestWithFallbacks('get', [
+      '/api/v1/reviews/admin/moderation?limit=1',
+      '/api/v1/reviews/admin/moderation',
+    ]);
+    const { res: moderationQueueSocial } = await requestWithFallbacks('get', [
+      '/api/v1/social-links/admin/moderation?limit=1',
+      '/api/v1/social-links/admin/moderation',
+    ]);
     if (moderationQueueReviews.status !== 200 || moderationQueueSocial.status !== 200) {
       throw new Error('moderation queue retrieval failed');
     }

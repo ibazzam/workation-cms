@@ -108,6 +108,7 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
 - Exit criteria:
   - [ ] Hypercare plan approved by Engineering, Operations, and Product owners.
     - role-based plan artifacts published: `docs/launch-week-oncall-schedule.md`, `docs/incident-communication-cadence.md`
+    - approval capture record: `docs/launch-final-approval-record-2026-03-18.md`
 
 ## Final Go/No-Go Criteria (2026-03-18)
 - [x] All roadmap sections are internally consistent.

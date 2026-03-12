@@ -503,6 +503,17 @@ async function checkModerationAdminPaths() {
     }
   };
 
+  const tryResolveModerationQueueReviewId = async () => {
+    try {
+      const queue = await client.get('/api/v1/reviews/admin/moderation?limit=1');
+      const items = Array.isArray(queue.data) ? queue.data : (Array.isArray(queue.data?.items) ? queue.data.items : []);
+      const first = items.find((item) => typeof item?.id === 'string');
+      return first?.id ?? null;
+    } catch {
+      return null;
+    }
+  };
+
   try {
     const target = await resolveModerationTarget();
     if (!target) {
@@ -522,10 +533,23 @@ async function checkModerationAdminPaths() {
       comment: `live-preflight-${Date.now()}`,
     });
 
-    let reviewCreated;
-    try {
-      reviewCreated = await client.post('/api/v1/reviews', createReviewPayload(target.targetType, target.targetId));
-    } catch (err) {
+    let reviewCreated = null;
+    const existingReviewId = await tryResolveExistingReviewId(target.targetType, target.targetId);
+    if (existingReviewId) {
+      reviewCreated = { data: { id: existingReviewId } };
+    }
+
+    if (!reviewCreated) {
+      const queueReviewId = await tryResolveModerationQueueReviewId();
+      if (queueReviewId) {
+        reviewCreated = { data: { id: queueReviewId } };
+      }
+    }
+
+    if (!reviewCreated) {
+      try {
+        reviewCreated = await client.post('/api/v1/reviews', createReviewPayload(target.targetType, target.targetId));
+      } catch (err) {
       const message = String(err?.response?.data?.message ?? '');
       const duplicateReview = err?.response?.status === 400 && message.toLowerCase().includes('already reviewed');
       const unstableCreate = err?.response?.status >= 500;
@@ -545,9 +569,7 @@ async function checkModerationAdminPaths() {
         }
       }
 
-      if (reviewCreated?.data?.id) {
-        // Proceed with moderation lifecycle checks using existing review fixture.
-      } else {
+      if (!reviewCreated?.data?.id) {
         // Duplicate-review path fallback: create isolated transport fixture and retry once.
         const newTransport = await client.post('/api/v1/transports/admin', {
           type: 'SPEEDBOAT',
@@ -563,6 +585,7 @@ async function checkModerationAdminPaths() {
         reviewCreated = await client.post('/api/v1/reviews', createReviewPayload('TRANSPORT', newTransportId));
         target.targetType = 'TRANSPORT';
         target.targetId = newTransportId;
+      }
       }
     }
 

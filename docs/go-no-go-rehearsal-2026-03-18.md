@@ -45,7 +45,7 @@ This record is the execution artifact for WS2 launch rehearsal.
 
 ## Verification Summary
 - Hosted live preflight result: PASS (public-health and prior gate evidence)
-- Alert routing test result: IN PROGRESS (strict authenticated preflight now passes; controlled pager/slack/email delivery receipts remain to be captured in `docs/alert-routing-verification-2026-03-18.md`)
+- Alert routing test result: PASS (pager/slack/email controlled alert receipts captured in `docs/alert-routing-verification-2026-03-18.md`)
 - Runbook link validation result: PASS
 - Support escalation chain validation result: PASS (role-based active roster published in `docs/launch-support-escalation-roster.md`)
 
@@ -79,9 +79,9 @@ Use this matrix to drive objective rollback decisions during rehearsal and launc
 - Risk 3: ____________________ | Owner: ____________________ | ETA: ____________________
 
 ## Decision
-- Rehearsal outcome: GO / NO-GO
-- Decision timestamp: ____________________
-- Decision rationale: ____________________
+- Rehearsal outcome: GO
+- Decision timestamp: 2026-03-12T09:42:57Z
+- Decision rationale: Required strict preflight gates passed, rollback controls documented, and launch-day alert-routing evidence (pager/slack/email) captured.
 
 ## Signoff
 - Engineering owner: ____________________

@@ -419,16 +419,29 @@ async function resolveModerationTarget() {
     ? transportsResponse.data
     : (Array.isArray(transportsResponse.data?.items) ? transportsResponse.data.items : []);
 
+  if (!xUserId) {
+    const firstTransport = transportRows.find((item) => typeof item?.id === 'string');
+    if (firstTransport?.id) {
+      return {
+        targetType: 'TRANSPORT',
+        targetId: firstTransport.id,
+      };
+    }
+  }
+
   for (const transport of transportRows) {
     if (typeof transport?.id !== 'string') {
       continue;
     }
 
-    const existingReviews = await client.get(`/api/v1/reviews/transports/${transport.id}`);
-    const items = Array.isArray(existingReviews.data?.items) ? existingReviews.data.items : [];
-    const hasActorReview = xUserId
-      ? items.some((item) => String(item?.user?.id ?? '') === String(xUserId))
-      : false;
+    let hasActorReview = false;
+    try {
+      const existingReviews = await client.get(`/api/v1/reviews/transports/${transport.id}`);
+      const items = Array.isArray(existingReviews.data?.items) ? existingReviews.data.items : [];
+      hasActorReview = items.some((item) => String(item?.user?.id ?? '') === String(xUserId));
+    } catch {
+      continue;
+    }
 
     if (!hasActorReview) {
       return {

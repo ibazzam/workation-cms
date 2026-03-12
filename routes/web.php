@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 
@@ -35,13 +36,6 @@ if (!function_exists('portalRoutePath')) {
     function portalRoutePath(string $portal): string
     {
         return $portal === 'admin' ? '/admin' : '/vendor';
-    }
-}
-
-if (!function_exists('canManagePortalUsers')) {
-    function canManagePortalUsers(): bool
-    {
-        return session('portal_admin_authenticated', false) && session('portal_admin_role') === 'ADMIN_SUPER';
     }
 }
 
@@ -88,7 +82,7 @@ Route::get('/admin', function () {
         return redirect('/portal/' . $portal . '/login');
     }
 
-    $canManageUsers = canManagePortalUsers();
+    $canManageUsers = Gate::allows('manage-portal-users');
     $portalUsers = User::query()
         ->whereNotNull('portal_role')
         ->orderBy('portal_role')
@@ -181,7 +175,7 @@ Route::post('/portal/{portal}/logout', function (Request $request, string $porta
 });
 
 Route::post('/portal/admin/users/{user}/manage', function (Request $request, User $user) {
-    if (!canManagePortalUsers()) {
+    if (!Gate::allows('manage-portal-users')) {
         abort(403);
     }
 
@@ -206,11 +200,11 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
         ]);
     }
 
+    $vendorId = trim((string) ($validated['portal_vendor_id'] ?? ''));
+
     $user->portal_role = $nextRole;
     $user->portal_enabled = $nextEnabled;
-    $user->portal_vendor_id = $nextRole === 'VENDOR'
-        ? (trim((string) ($validated['portal_vendor_id'] ?? '')) ?: null)
-        : null;
+    $user->portal_vendor_id = ($nextRole === 'VENDOR' && $vendorId !== '') ? $vendorId : null;
     $user->save();
 
     return back()->with('portal_notice', 'Portal user updated: ' . ($user->username ?: ('#' . $user->id)));

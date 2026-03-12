@@ -54,7 +54,7 @@ return new class extends Migration
             }
 
             if (Schema::hasColumn('users', 'username')) {
-                $table->dropUnique('users_username_unique');
+                $table->dropUnique(['username']);
                 $table->dropColumn('username');
             }
         });

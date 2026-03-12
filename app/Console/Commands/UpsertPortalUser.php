@@ -51,21 +51,21 @@ class UpsertPortalUser extends Command
 
         $user = User::query()->where('username', $username)->first();
 
-        if (!$user) {
-            $existingEmail = User::query()->where('email', $email)->first();
-            if ($existingEmail) {
-                $this->error('Email is already used by another user. Provide a unique --email.');
-                return self::FAILURE;
+        if (($user && $user->email !== $email) || !$user) {
+            $emailQuery = User::query()->where('email', $email);
+            if ($user) {
+                $emailQuery->where('id', '!=', $user->id);
             }
 
-            $user = new User();
-            $user->username = $username;
-        } elseif ($user->email !== $email) {
-            $existingEmail = User::query()->where('email', $email)->where('id', '!=', $user->id)->first();
-            if ($existingEmail) {
+            if ($emailQuery->exists()) {
                 $this->error('Email is already used by another user. Provide a unique --email.');
                 return self::FAILURE;
             }
+        }
+
+        if (!$user) {
+            $user = new User();
+            $user->username = $username;
         }
 
         $user->name = $name;
@@ -73,7 +73,7 @@ class UpsertPortalUser extends Command
         $user->password = $password;
         $user->portal_role = $role;
         $user->portal_enabled = $enabled;
-        $user->portal_vendor_id = $role === 'VENDOR' ? ($vendorId !== '' ? $vendorId : null) : null;
+        $user->portal_vendor_id = ($role === 'VENDOR' && $vendorId !== '') ? $vendorId : null;
         $user->save();
 
         $this->info('Portal user saved successfully.');

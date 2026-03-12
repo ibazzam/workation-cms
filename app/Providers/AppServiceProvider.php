@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use App\Services\TransportProviderAdapterInterface;
 use App\Services\HttpTransportProviderAdapter;
+use Illuminate\Support\Facades\Gate;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,6 +23,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Gate::define('manage-portal-users', function (): bool {
+            return session('portal_admin_authenticated', false) && session('portal_admin_role') === 'ADMIN_SUPER';
+        });
     }
 }

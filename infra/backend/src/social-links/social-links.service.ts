@@ -370,33 +370,42 @@ export class SocialLinksService {
     };
 
     const next = [nextEvent, ...events].slice(0, 5000);
-    await this.prisma.appConfig.upsert({
-      where: { key: this.socialModerationEventsKey() },
-      update: {
-        value: {
-          updatedAt: new Date().toISOString(),
-          items: next,
-        } as unknown as object,
-      },
-      create: {
-        key: this.socialModerationEventsKey(),
-        value: {
-          updatedAt: new Date().toISOString(),
-          items: next,
-        } as unknown as object,
-      },
-    });
+    try {
+      await this.prisma.appConfig.upsert({
+        where: { key: this.socialModerationEventsKey() },
+        update: {
+          value: {
+            updatedAt: new Date().toISOString(),
+            items: next,
+          } as unknown as object,
+        },
+        create: {
+          key: this.socialModerationEventsKey(),
+          value: {
+            updatedAt: new Date().toISOString(),
+            items: next,
+          } as unknown as object,
+        },
+      });
+    } catch {
+      // Moderation history persistence should not fail write-path endpoints.
+    }
   }
 
   private async readModerationEvents(): Promise<SocialLinkModerationEvent[]> {
-    const row = await this.prisma.appConfig.findUnique({ where: { key: this.socialModerationEventsKey() } });
-    if (!row) {
+    try {
+      const row = await this.prisma.appConfig.findUnique({ where: { key: this.socialModerationEventsKey() } });
+      if (!row) {
+        return [];
+      }
+
+      const value = row.value as Record<string, unknown>;
+      const items = Array.isArray(value.items) ? value.items : [];
+      return items as SocialLinkModerationEvent[];
+    } catch {
+      // When config storage is unavailable, serve queue/history without enrichment.
       return [];
     }
-
-    const value = row.value as Record<string, unknown>;
-    const items = Array.isArray(value.items) ? value.items : [];
-    return items as SocialLinkModerationEvent[];
   }
 
   private async getLatestModerationEventsBySocialLinkId() {

@@ -634,33 +634,42 @@ export class ReviewsService {
     };
 
     const next = [nextEvent, ...events].slice(0, 5000);
-    await this.prisma.appConfig.upsert({
-      where: { key: this.reviewModerationEventsKey() },
-      update: {
-        value: {
-          updatedAt: new Date().toISOString(),
-          items: next,
-        } as unknown as object,
-      },
-      create: {
-        key: this.reviewModerationEventsKey(),
-        value: {
-          updatedAt: new Date().toISOString(),
-          items: next,
-        } as unknown as object,
-      },
-    });
+    try {
+      await this.prisma.appConfig.upsert({
+        where: { key: this.reviewModerationEventsKey() },
+        update: {
+          value: {
+            updatedAt: new Date().toISOString(),
+            items: next,
+          } as unknown as object,
+        },
+        create: {
+          key: this.reviewModerationEventsKey(),
+          value: {
+            updatedAt: new Date().toISOString(),
+            items: next,
+          } as unknown as object,
+        },
+      });
+    } catch {
+      // Moderation history persistence should not fail write-path endpoints.
+    }
   }
 
   private async readModerationEvents(): Promise<ReviewModerationEvent[]> {
-    const row = await this.prisma.appConfig.findUnique({ where: { key: this.reviewModerationEventsKey() } });
-    if (!row) {
+    try {
+      const row = await this.prisma.appConfig.findUnique({ where: { key: this.reviewModerationEventsKey() } });
+      if (!row) {
+        return [];
+      }
+
+      const value = row.value as Record<string, unknown>;
+      const items = Array.isArray(value.items) ? value.items : [];
+      return items as ReviewModerationEvent[];
+    } catch {
+      // When config storage is unavailable, serve queue/history without enrichment.
       return [];
     }
-
-    const value = row.value as Record<string, unknown>;
-    const items = Array.isArray(value.items) ? value.items : [];
-    return items as ReviewModerationEvent[];
   }
 
   private async getLatestModerationEventsByReviewId() {

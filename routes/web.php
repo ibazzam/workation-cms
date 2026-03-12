@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 
 if (!function_exists('workationApiBase')) {
     function workationApiBase(): string
@@ -138,24 +139,46 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
     ]);
 
     $config = portalConfig($portal);
-    $portalUser = User::query()
-        ->where('username', (string) $validated['username'])
-        ->where('portal_enabled', true)
-        ->whereIn('portal_role', $config['allowed_roles'])
-        ->first();
+    $username = trim((string) $validated['username']);
+    $password = (string) $validated['password'];
+    $usernameLower = strtolower($username);
 
-    if (!$portalUser || !Hash::check((string) $validated['password'], (string) $portalUser->password)) {
+    $portalUser = null;
+    if (Schema::hasColumns('users', ['username', 'portal_enabled', 'portal_role'])) {
+        $portalUser = User::query()
+            ->whereRaw('LOWER(username) = ?', [$usernameLower])
+            ->where('portal_enabled', true)
+            ->whereIn('portal_role', $config['allowed_roles'])
+            ->first();
+    }
+
+    $isBootstrapAdmin = false;
+    if (!$portalUser && $portal === 'admin') {
+        $bootstrapUsername = trim((string) env('PORTAL_ADMIN_USERNAME', env('WORKATION_ADMIN_PORTAL_USERNAME', '')));
+        $bootstrapPassword = (string) env('PORTAL_ADMIN_PASSWORD', env('WORKATION_ADMIN_PORTAL_PASSWORD', ''));
+
+        if ($bootstrapUsername !== '' && $bootstrapPassword !== '') {
+            $isBootstrapAdmin = strtolower($bootstrapUsername) === $usernameLower && hash_equals($bootstrapPassword, $password);
+        }
+    }
+
+    $isValidDbUser = $portalUser && Hash::check($password, (string) $portalUser->password);
+    if (!$isValidDbUser && !$isBootstrapAdmin) {
         return back()->withErrors([
             'username' => 'Invalid username or password.',
         ])->withInput();
     }
 
     $request->session()->regenerate();
+    $sessionUserName = $portalUser ? $portalUser->name : 'Bootstrap Admin';
+    $sessionUserId = $portalUser ? $portalUser->id : null;
+    $sessionRole = $portalUser ? $portalUser->portal_role : 'ADMIN_SUPER';
+
     session([
         $config['session_key'] => true,
-        'portal_' . $portal . '_user' => $portalUser->name,
-        'portal_' . $portal . '_user_id' => $portalUser->id,
-        'portal_' . $portal . '_role' => $portalUser->portal_role,
+        'portal_' . $portal . '_user' => $sessionUserName,
+        'portal_' . $portal . '_user_id' => $sessionUserId,
+        'portal_' . $portal . '_role' => $sessionRole,
     ]);
 
     return redirect(portalRoutePath($portal));

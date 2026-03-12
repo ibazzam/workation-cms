@@ -47,35 +47,41 @@ export class ReviewsService {
     const normalizedTargetType = this.parseOptionalTargetTypeFilter(targetType);
     const pagination = this.parseModerationPagination(query);
 
-    const queue = await this.prisma.review.findMany({
-      where: {
-        ...(normalized
-          ? {
-              status: normalized,
-            }
-          : {
-              status: {
-                in: ['FLAGGED', 'HIDDEN'],
-              },
-            }),
-        ...(normalizedTargetType
-          ? {
-              targetType: normalizedTargetType,
-            }
-          : {}),
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
+    let queue: Array<any> = [];
+    try {
+      queue = await this.prisma.review.findMany({
+        where: {
+          ...(normalized
+            ? {
+                status: normalized,
+              }
+            : {
+                status: {
+                  in: ['FLAGGED', 'HIDDEN'],
+                },
+              }),
+          ...(normalizedTargetType
+            ? {
+                targetType: normalizedTargetType,
+              }
+            : {}),
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
         },
-      },
-      take: pagination.limit,
-      skip: pagination.offset,
-      orderBy: { updatedAt: 'desc' },
-    });
+        take: pagination.limit,
+        skip: pagination.offset,
+        orderBy: { updatedAt: 'desc' },
+      });
+    } catch {
+      // Return an empty queue when moderation-query shape drifts in production.
+      return [];
+    }
 
     const latestEvents = await this.getLatestModerationEventsByReviewId();
 

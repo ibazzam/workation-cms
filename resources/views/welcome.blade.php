@@ -230,6 +230,31 @@
             .hero { padding: 24px; }
             .value { font-size: 1.75rem; }
         }
+
+        .footer-nav {
+            margin-top: 18px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .footer-link {
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            font-size: 0.78rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #0b446a;
+            text-decoration: none;
+            padding: 8px 10px;
+            border: 1px solid #bfd2df;
+            border-radius: 10px;
+            background: #f8fbff;
+        }
+
+        .footer-link:hover {
+            background: #edf5fd;
+        }
     </style>
 </head>
 <body>
@@ -296,6 +321,12 @@
                 </ul>
             </article>
         </section>
+
+        <footer class="footer-nav" aria-label="Portal links">
+            <a class="footer-link" href="/admin">Admin Portal</a>
+            <a class="footer-link" href="/vendor">Vendor Portal</a>
+            <a class="footer-link" href="{{ $apiBase }}/api/v1/ops/metrics" target="_blank" rel="noopener">Public Metrics</a>
+        </footer>
     </div>
 
     <script>

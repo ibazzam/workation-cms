@@ -535,7 +535,8 @@ async function checkModerationAdminPaths() {
       const items = Array.isArray(queue.data) ? queue.data : (Array.isArray(queue.data?.items) ? queue.data.items : []);
       const first = items.find((item) => typeof item?.id === 'string');
       return first?.id ?? null;
-    } catch {
+    } catch (err) {
+      console.warn(`Failed to resolve moderation queue review ID: ${err?.message ?? 'unknown error'}`);
       return null;
     }
   };
@@ -605,8 +606,8 @@ async function checkModerationAdminPaths() {
               target.targetType = 'TRANSPORT';
               target.targetId = newTransportId;
             }
-          } catch {
-            // Review fixture creation is best-effort; queue endpoint checks below remain required.
+          } catch (err) {
+            console.warn(`Failed to create fallback review fixture: ${err?.message ?? 'unknown error'}`);
           }
         }
       }

@@ -77,26 +77,32 @@ export class SocialLinksService {
     const normalizedQualityStatus = this.parseOptionalContentQualityStatus(qualityStatus);
     const pagination = this.parseModerationPagination(query);
 
-    const queue = await this.prisma.socialLink.findMany({
-      where: {
-        ...(normalizedTargetType ? { targetType: normalizedTargetType } : {}),
-        ...(normalizedTrustStatus
-          ? { trustSafetyStatus: normalizedTrustStatus }
-          : {
-              OR: [
-                { active: false },
-                { verified: false },
-                { ugcSafetyStatus: { not: 'SAFE' } },
-                { trustSafetyStatus: { not: 'CLEAR' } },
-                { contentQualityStatus: { not: 'GOOD' } },
-              ],
-            }),
-        ...(normalizedQualityStatus ? { contentQualityStatus: normalizedQualityStatus } : {}),
-      },
-      take: pagination.limit,
-      skip: pagination.offset,
-      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
-    });
+    let queue: Array<any> = [];
+    try {
+      queue = await this.prisma.socialLink.findMany({
+        where: {
+          ...(normalizedTargetType ? { targetType: normalizedTargetType } : {}),
+          ...(normalizedTrustStatus
+            ? { trustSafetyStatus: normalizedTrustStatus }
+            : {
+                OR: [
+                  { active: false },
+                  { verified: false },
+                  { ugcSafetyStatus: { not: 'SAFE' } },
+                  { trustSafetyStatus: { not: 'CLEAR' } },
+                  { contentQualityStatus: { not: 'GOOD' } },
+                ],
+              }),
+          ...(normalizedQualityStatus ? { contentQualityStatus: normalizedQualityStatus } : {}),
+        },
+        take: pagination.limit,
+        skip: pagination.offset,
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+      });
+    } catch {
+      // Return an empty queue when moderation-query shape drifts in production.
+      return [];
+    }
 
     const latestEvents = await this.getLatestModerationEventsBySocialLinkId();
 

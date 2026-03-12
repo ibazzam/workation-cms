@@ -75,7 +75,7 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
 - Exit criteria:
   - [ ] No unresolved critical verification failures.
     - strict preflight blockers cleared; remaining verification task is alert-routing channel confirmation.
-    - note: local shell bearer token returns `401` on ops-admin endpoints; final closure depends on launch-role alert tests and external receipt evidence.
+    - note: admin-role ops endpoint access is verified (`/ops/alerts`, `/ops/runbooks`, `/auth/admin/ping` all `200`) and routing targets are active (`pager:oncall-primary`, `slack:#launch-alerts`, `email:ops@workation.mv`); final closure depends on external channel receipt evidence.
 
 ### WS4) KPI Operations Activation
 - Owner: Product Analytics Lead

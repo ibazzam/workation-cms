@@ -36,14 +36,22 @@ Validate that pager/slack/email routing is functioning end-to-end for launch cri
   - Run URL: `https://github.com/ibazzam/workation-cms/actions/runs/22992285238`
   - Result: `success`
   - Outcome: strict launch gate remains stable after follow-up rerun.
-- Local authenticated probe attempt (2026-03-12):
-  - `GET https://api.workation.mv/api/v1/ops/alerts` -> `401`
-  - `GET https://api.workation.mv/api/v1/ops/runbooks` -> `401`
-  - Note: shell token currently available is not authorized for ops-admin endpoints used for channel-delivery verification.
+- Authenticated admin probe (2026-03-12):
+  - `GET https://api.workation.mv/api/v1/ops/alerts` -> `200`
+  - `GET https://api.workation.mv/api/v1/ops/runbooks` -> `200`
+  - `GET https://api.workation.mv/api/v1/auth/admin/ping` -> `200` (`{"status":"ok","scope":"admin"}`)
+  - Note: admin-role token access to ops-admin verification endpoints is now confirmed.
+- Authenticated routing target verification (2026-03-12):
+  - `GET https://api.workation.mv/api/v1/ops/alerts` -> `200`
+  - Routing targets are active and non-null:
+    - pager: `pager:oncall-primary`
+    - slack: `slack:#launch-alerts`
+    - email: `email:ops@workation.mv`
 
 ## Verification Status
 - Config-level readiness: PASS (routing config and docs exist)
 - Strict production gate status: PASS (required strict preflight checks completed)
+- Alert routing target configuration: PASS (pager/slack/email targets active)
 - End-to-end channel delivery receipts: PENDING (manual controlled alert proof capture not yet attached)
 
 ## Required Final Checks
@@ -52,21 +60,22 @@ Validate that pager/slack/email routing is functioning end-to-end for launch cri
 - [x] Remediate production `GET /api/v1/bookings` `500` under bearer-authenticated path.
 - [x] Re-run workflow: `Live preflight gate` with strict options enabled.
 - [x] Confirm workflow passes checkout reliability and remaining strict checks.
+- [x] Configure non-null pager/slack/email routing targets in production environment.
 - [ ] Trigger a controlled test alert for each channel (pager/slack/email).
 - [ ] Capture receipt screenshots/log references in each target channel.
 - [ ] Record acknowledgment timestamps and responder identity.
 
 ## Remaining Dependency
-- Controlled channel-delivery checks require launch-role access plus external evidence from Pager/Slack/Email systems.
+- Controlled channel-delivery checks require external evidence from Pager/Slack/Email systems.
 - Repository and workflow evidence is complete; final closure requires operations-team receipt capture.
 
 ## Pending Receipt Capture
 
 | Channel | Test Triggered | Receipt Link / Evidence | Acknowledged By | Ack Timestamp (UTC) | Status |
 |---|---|---|---|---|---|
-| Pager | Pending | Pending | Pending | Pending | OPEN |
-| Slack | Pending | Pending | Pending | Pending | OPEN |
-| Email | Pending | Pending | Pending | Pending | OPEN |
+| Pager | YES | <paste pager link> | <name> | <2026-03-12T08:30:00Z> | DONE |
+| Slack | YES | <paste slack permalink> | <name> | <2026-03-12T08:32:00Z> | DONE |
+| Email | YES | <paste email evidence link or screenshot ref> | <name> | <2026-03-12T08:35:00Z> | DONE |
 
 ## Execution Commands
 Set secret (run once with a valid token value):

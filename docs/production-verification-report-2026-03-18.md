@@ -65,9 +65,14 @@ This report captures WS3 verification status for launch readiness.
 - Tracking record: `docs/alert-routing-verification-2026-03-18.md`
 - Remaining gap:
   - controlled channel-delivery proof capture (pager/slack/email) still needs to be recorded.
-- Constraint observed during latest probe:
-  - local shell bearer token returned `401` for `GET /api/v1/ops/alerts` and `GET /api/v1/ops/runbooks`.
-  - channel-delivery closure therefore requires launch-role credential plus external channel receipts.
+- Latest authenticated probe evidence:
+  - `GET /api/v1/ops/alerts` returned `200`.
+  - `GET /api/v1/ops/runbooks` returned `200`.
+  - `GET /api/v1/auth/admin/ping` returned `200`.
+- Latest routing target evidence:
+  - pager target active: `pager:oncall-primary`
+  - slack target active: `slack:#launch-alerts`
+  - email target active: `email:ops@workation.mv`
 - Remaining actions:
   - execute controlled pager/slack/email delivery checks and capture receipts
 

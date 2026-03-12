@@ -32,6 +32,14 @@ Validate that pager/slack/email routing is functioning end-to-end for launch cri
   - Run URL: `https://github.com/ibazzam/workation-cms/actions/runs/22991556615`
   - Result: `success`
   - Outcome: checkout reliability and required strict gates passed.
+- Latest strict verification rerun:
+  - Run URL: `https://github.com/ibazzam/workation-cms/actions/runs/22992285238`
+  - Result: `success`
+  - Outcome: strict launch gate remains stable after follow-up rerun.
+- Local authenticated probe attempt (2026-03-12):
+  - `GET https://api.workation.mv/api/v1/ops/alerts` -> `401`
+  - `GET https://api.workation.mv/api/v1/ops/runbooks` -> `401`
+  - Note: shell token currently available is not authorized for ops-admin endpoints used for channel-delivery verification.
 
 ## Verification Status
 - Config-level readiness: PASS (routing config and docs exist)
@@ -47,6 +55,10 @@ Validate that pager/slack/email routing is functioning end-to-end for launch cri
 - [ ] Trigger a controlled test alert for each channel (pager/slack/email).
 - [ ] Capture receipt screenshots/log references in each target channel.
 - [ ] Record acknowledgment timestamps and responder identity.
+
+## Remaining Dependency
+- Controlled channel-delivery checks require launch-role access plus external evidence from Pager/Slack/Email systems.
+- Repository and workflow evidence is complete; final closure requires operations-team receipt capture.
 
 ## Pending Receipt Capture
 

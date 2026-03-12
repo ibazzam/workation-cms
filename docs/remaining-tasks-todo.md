@@ -66,6 +66,7 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
     - iterative fixes merged for moderation/new-vertical reliability and production-hardening
     - successful promotion: `https://github.com/ibazzam/workation-cms/actions/runs/22991538950`
     - successful strict required run: `https://github.com/ibazzam/workation-cms/actions/runs/22991556615`
+    - follow-up strict verification rerun (stable): `https://github.com/ibazzam/workation-cms/actions/runs/22992285238`
   - [ ] Validate launch-day incident alert routing (pager/slack/email) end-to-end.
   - [x] Validate incident runbook links are reachable and current.
   - [x] Verify customer support escalation roster and compensation approval chain are active.
@@ -74,6 +75,7 @@ This plan converts remaining launch work into an ordered, owner-assigned schedul
 - Exit criteria:
   - [ ] No unresolved critical verification failures.
     - strict preflight blockers cleared; remaining verification task is alert-routing channel confirmation.
+    - note: local shell bearer token returns `401` on ops-admin endpoints; final closure depends on launch-role alert tests and external receipt evidence.
 
 ### WS4) KPI Operations Activation
 - Owner: Product Analytics Lead

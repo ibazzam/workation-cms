@@ -54,11 +54,20 @@ This report captures WS3 verification status for launch readiness.
   - Prior token and deployment-hook blockers are no longer active.
   - Required strict checks, including checkout reliability path, completed successfully.
 
+### 1e) Follow-Up Strict Verification Re-Run
+- Strict hosted preflight run: `https://github.com/ibazzam/workation-cms/actions/runs/22992285238`
+- Strict hosted preflight outcome: `success`
+- Notes:
+  - Confirms strict gate stability after documentation/closure pass.
+
 ### 2) Alert Routing Validation
 - Current status: `IN PROGRESS`
 - Tracking record: `docs/alert-routing-verification-2026-03-18.md`
 - Remaining gap:
   - controlled channel-delivery proof capture (pager/slack/email) still needs to be recorded.
+- Constraint observed during latest probe:
+  - local shell bearer token returned `401` for `GET /api/v1/ops/alerts` and `GET /api/v1/ops/runbooks`.
+  - channel-delivery closure therefore requires launch-role credential plus external channel receipts.
 - Remaining actions:
   - execute controlled pager/slack/email delivery checks and capture receipts
 

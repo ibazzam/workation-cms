@@ -1,9 +1,39 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+function workationApiBase(): string
+{
+    return rtrim((string) env('WORKATION_API_BASE_URL', 'https://api.workation.mv'), '/');
+}
+
+function portalConfig(string $portal): array
+{
+    if ($portal === 'admin') {
+        return [
+            'username' => (string) env('WORKATION_ADMIN_PORTAL_USERNAME', ''),
+            'password' => (string) env('WORKATION_ADMIN_PORTAL_PASSWORD', ''),
+            'session_key' => 'portal_admin_authenticated',
+            'name' => 'Admin',
+        ];
+    }
+
+    return [
+        'username' => (string) env('WORKATION_VENDOR_PORTAL_USERNAME', ''),
+        'password' => (string) env('WORKATION_VENDOR_PORTAL_PASSWORD', ''),
+        'session_key' => 'portal_vendor_authenticated',
+        'name' => 'Vendor',
+    ];
+}
+
+function portalRoutePath(string $portal): string
+{
+    return $portal === 'admin' ? '/admin' : '/vendor';
+}
+
 Route::get('/', function () {
-    $apiBase = rtrim((string) env('WORKATION_API_BASE_URL', 'https://api.workation.mv'), '/');
+    $apiBase = workationApiBase();
 
     return view('welcome', [
         'apiBase' => $apiBase,
@@ -36,6 +66,96 @@ Route::get('/', function () {
             ],
         ],
     ]);
+});
+
+Route::get('/admin', function () {
+    $portal = 'admin';
+    $config = portalConfig($portal);
+    if (!session()->get($config['session_key'], false)) {
+        return redirect('/portal/' . $portal . '/login');
+    }
+
+    return view('admin-portal', [
+        'apiBase' => workationApiBase(),
+        'portalUser' => session('portal_admin_user', $config['name']),
+    ]);
+});
+
+Route::get('/vendor', function () {
+    $portal = 'vendor';
+    $config = portalConfig($portal);
+    if (!session()->get($config['session_key'], false)) {
+        return redirect('/portal/' . $portal . '/login');
+    }
+
+    return view('vendor-portal', [
+        'apiBase' => workationApiBase(),
+        'portalUser' => session('portal_vendor_user', $config['name']),
+    ]);
+});
+
+Route::get('/portal/{portal}/login', function (string $portal) {
+    if (!in_array($portal, ['admin', 'vendor'], true)) {
+        abort(404);
+    }
+
+    $config = portalConfig($portal);
+    if (session()->get($config['session_key'], false)) {
+        return redirect(portalRoutePath($portal));
+    }
+
+    return view('portal-login', [
+        'portal' => $portal,
+        'portalName' => $config['name'],
+    ]);
+});
+
+Route::post('/portal/{portal}/login', function (Request $request, string $portal) {
+    if (!in_array($portal, ['admin', 'vendor'], true)) {
+        abort(404);
+    }
+
+    $validated = $request->validate([
+        'username' => ['required', 'string'],
+        'password' => ['required', 'string'],
+    ]);
+
+    $config = portalConfig($portal);
+    $expectedUsername = $config['username'];
+    $expectedPassword = $config['password'];
+
+    if ($expectedUsername === '' || $expectedPassword === '') {
+        return back()->withErrors([
+            'username' => 'Portal credentials are not configured on server environment variables.',
+        ])->withInput();
+    }
+
+    if (!hash_equals($expectedUsername, (string) $validated['username']) || !hash_equals($expectedPassword, (string) $validated['password'])) {
+        return back()->withErrors([
+            'username' => 'Invalid username or password.',
+        ])->withInput();
+    }
+
+    $request->session()->regenerate();
+    session([
+        $config['session_key'] => true,
+        'portal_' . $portal . '_user' => $validated['username'],
+    ]);
+
+    return redirect(portalRoutePath($portal));
+});
+
+Route::post('/portal/{portal}/logout', function (Request $request, string $portal) {
+    if (!in_array($portal, ['admin', 'vendor'], true)) {
+        abort(404);
+    }
+
+    $config = portalConfig($portal);
+    session()->forget([$config['session_key'], 'portal_' . $portal . '_user']);
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect('/portal/' . $portal . '/login');
 });
 
 // Legacy Laravel business routes are decommissioned in runtime.

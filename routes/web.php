@@ -2,8 +2,11 @@
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -213,34 +216,58 @@ Route::post('/portal/admin/reset-password', function (Request $request) {
         ])->withInput($request->only('email'));
     }
 
-    $status = Password::broker()->reset(
-        [
-            'email' => $email,
-            'password' => (string) $validated['password'],
-            'password_confirmation' => (string) $validated['password_confirmation'],
-            'token' => (string) $validated['token'],
-        ],
-        function (User $user, string $password) {
-            $updates = [
-                'password' => $password,
-            ];
+    try {
+        $tokenTable = (string) config('auth.passwords.users.table', 'password_reset_tokens');
+        $resetRow = DB::table($tokenTable)
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->first();
 
-            // Some production databases may not include remember_token on legacy users schemas.
-            if (Schema::hasColumn('users', 'remember_token')) {
-                $updates['remember_token'] = Str::random(60);
-            }
-
-            $user->forceFill($updates)->save();
+        if (!$resetRow) {
+            return back()->withErrors([
+                'email' => __('passwords.token'),
+            ])->withInput($request->only('email'));
         }
-    );
 
-    if ($status === Password::PASSWORD_RESET) {
-        return redirect('/portal/admin/login')->with('status', __($status));
+        $providedToken = (string) $validated['token'];
+        $storedToken = (string) $resetRow->token;
+        $tokenMatches = Hash::check($providedToken, $storedToken) || hash_equals($storedToken, $providedToken);
+        if (!$tokenMatches) {
+            return back()->withErrors([
+                'email' => __('passwords.token'),
+            ])->withInput($request->only('email'));
+        }
+
+        $expireMinutes = (int) config('auth.passwords.users.expire', 60);
+        $createdAt = Carbon::parse((string) $resetRow->created_at);
+        if ($createdAt->addMinutes($expireMinutes)->isPast()) {
+            return back()->withErrors([
+                'email' => __('passwords.token'),
+            ])->withInput($request->only('email'));
+        }
+
+        $updates = [
+            'password' => (string) $validated['password'],
+        ];
+
+        // Some production databases may not include remember_token on legacy users schemas.
+        if (Schema::hasColumn('users', 'remember_token')) {
+            $updates['remember_token'] = Str::random(60);
+        }
+
+        $portalUser->forceFill($updates)->save();
+        DB::table($tokenTable)->whereRaw('LOWER(email) = ?', [$email])->delete();
+
+        return redirect('/portal/admin/login')->with('status', __('passwords.reset'));
+    } catch (\Throwable $e) {
+        Log::error('Portal admin password reset failed', [
+            'email' => $email,
+            'error' => $e->getMessage(),
+        ]);
+
+        return back()->withErrors([
+            'email' => 'Unable to reset password at the moment. Please request a new reset link and try again.',
+        ])->withInput($request->only('email'));
     }
-
-    return back()->withErrors([
-        'email' => __($status),
-    ])->withInput($request->only('email'));
 })->name('password.update');
 
 Route::post('/portal/{portal}/login', function (Request $request, string $portal) {

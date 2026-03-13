@@ -120,10 +120,10 @@ Route::get('/admin', function () {
 
     $canManageUsers = Gate::allows('manage-portal-users');
     $portalUsers = User::query()
-        ->whereNotNull('portal_role')
-        ->orderBy('portal_role')
+        ->whereIn('role', ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'VENDOR'])
+        ->orderBy('role')
         ->orderBy('username')
-        ->get(['id', 'name', 'username', 'email', 'portal_role', 'portal_enabled', 'portal_vendor_id']);
+        ->get(['id', 'name', 'username', 'email', 'role', 'portal_enabled', 'portal_vendor_id']);
 
     return view('admin-portal', [
         'apiBase' => workationApiBase(),
@@ -133,6 +133,31 @@ Route::get('/admin', function () {
         'portalUsers' => $portalUsers,
     ]);
 });
+
+    Route::post('/portal/admin/users/create', function (\Illuminate\Http\Request $request) {
+        if (!Gate::allows('manage-portal-users')) {
+            return back()->withErrors(['auth' => 'Super Admin privileges required.']);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+            'username' => 'required|string|max:50|unique:users,username',
+            'email' => 'required|email|max:100|unique:users,email',
+            'role' => 'required|in:ADMIN,ADMIN_SUPER,ADMIN_CARE',
+            'portal_enabled' => 'required|boolean',
+        ]);
+
+        $user = new \App\Models\User();
+        $user->name = $validated['name'];
+        $user->username = $validated['username'];
+        $user->email = $validated['email'];
+        $user->role = $validated['role'];
+        $user->portal_enabled = $validated['portal_enabled'];
+        $user->password = \Illuminate\Support\Str::random(16); // Set random password, force reset later
+        $user->save();
+
+        return back()->with('portal_notice', 'User created: ' . $user->username);
+    });
 
 Route::get('/vendor', function () {
     $portal = 'vendor';

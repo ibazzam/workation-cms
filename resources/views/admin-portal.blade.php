@@ -336,6 +336,17 @@
                 grid-template-columns: 1fr;
             }
         }
+        .prominent {
+            font-size: 1.05rem;
+            font-weight: 700;
+            box-shadow: 0 2px 12px rgba(220, 38, 38, 0.08);
+            border-width: 2px;
+            animation: fade-in 0.4s;
+        }
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -362,21 +373,17 @@
         @if (session('portal_notice'))
             <div class="notice prominent" id="successBox">{{ session('portal_notice') }}</div>
         @endif
-
+            <main class="page" data-api-base="{{ $apiBase }}">
+                <section class="card">
+                    <p class="label">Session Debug</p>
+                    <pre style="background:#f7f7f7;border-radius:8px;padding:8px;font-size:0.9rem;">portal_admin_authenticated: {{ session('portal_admin_authenticated') ? 'true' : 'false' }}
+        portal_admin_role: {{ session('portal_admin_role') ?? 'null' }}
+        portal_admin_user: {{ session('portal_admin_user') ?? 'null' }}
+        portal_admin_user_id: {{ session('portal_admin_user_id') ?? 'null' }}</pre>
+                </section>
         @if ($errors->any())
             <div class="error-box prominent" id="errorBox">{{ $errors->first() }}</div>
         @endif
-        .prominent {
-            font-size: 1.05rem;
-            font-weight: 700;
-            box-shadow: 0 2px 12px rgba(220, 38, 38, 0.08);
-            border-width: 2px;
-            animation: fade-in 0.4s;
-        }
-        @keyframes fade-in {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
 
         <section class="layout">
             <article class="card">

@@ -221,10 +221,16 @@ Route::post('/portal/admin/reset-password', function (Request $request) {
             'token' => (string) $validated['token'],
         ],
         function (User $user, string $password) {
-            $user->forceFill([
+            $updates = [
                 'password' => $password,
-                'remember_token' => Str::random(60),
-            ])->save();
+            ];
+
+            // Some production databases may not include remember_token on legacy users schemas.
+            if (Schema::hasColumn('users', 'remember_token')) {
+                $updates['remember_token'] = Str::random(60);
+            }
+
+            $user->forceFill($updates)->save();
         }
     );
 

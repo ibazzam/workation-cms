@@ -360,12 +360,23 @@
         </section>
 
         @if (session('portal_notice'))
-            <div class="notice">{{ session('portal_notice') }}</div>
+            <div class="notice prominent" id="successBox">{{ session('portal_notice') }}</div>
         @endif
 
         @if ($errors->any())
-            <div class="error-box">{{ $errors->first() }}</div>
+            <div class="error-box prominent" id="errorBox">{{ $errors->first() }}</div>
         @endif
+        .prominent {
+            font-size: 1.05rem;
+            font-weight: 700;
+            box-shadow: 0 2px 12px rgba(220, 38, 38, 0.08);
+            border-width: 2px;
+            animation: fade-in 0.4s;
+        }
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
         <section class="layout">
             <article class="card">
@@ -456,6 +467,38 @@
     </main>
 
     <script>
+                // Ensure feedback messages are always visible and scroll into view
+                window.addEventListener('DOMContentLoaded', function () {
+                    var successBox = document.getElementById('successBox');
+                    var errorBox = document.getElementById('errorBox');
+                    if (successBox) {
+                        successBox.style.display = 'block';
+                        successBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    if (errorBox) {
+                        errorBox.style.display = 'block';
+                        errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                });
+
+                // Client-side validation for moderation form
+                document.querySelectorAll('.manage-form').forEach(function(form) {
+                    form.addEventListener('submit', function(e) {
+                        var role = form.querySelector('[name="portal_role"]').value;
+                        var enabled = form.querySelector('[name="portal_enabled"]').value;
+                        var vendorId = form.querySelector('[name="portal_vendor_id"]').value;
+                        if (!role || !enabled) {
+                            e.preventDefault();
+                            alert('Role and status are required.');
+                            return false;
+                        }
+                        if (role === 'VENDOR' && !vendorId.trim()) {
+                            e.preventDefault();
+                            alert('Vendor ID is required for VENDOR role.');
+                            return false;
+                        }
+                    });
+                });
         (function () {
             const root = document.querySelector(".page");
             const apiBase = root ? root.getAttribute("data-api-base") : "";

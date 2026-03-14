@@ -68,7 +68,7 @@ jobs:
       # JWT generation for PR runs
       - name: Generate JWT for preflight (PR)
         if: github.event_name == 'pull_request'
-        run: node scripts/generate-jwt.js > jwt.txt
+        run: node scripts/generate-jwt.cjs > jwt.txt
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
 

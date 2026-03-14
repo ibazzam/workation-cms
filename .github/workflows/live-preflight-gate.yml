@@ -101,7 +101,7 @@ jobs:
       # JWT generation for strict runs (main, workflow_dispatch)
       - name: Generate JWT for preflight (strict)
         if: github.event_name != 'pull_request'
-        run: node .github/scripts/generate-jwt.js > jwt.txt
+        run: node scripts/generate-jwt.cjs > jwt.txt
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
 

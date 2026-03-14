@@ -1,5 +1,4 @@
 {
-  // Trivial change to trigger CI
   "name": "workation-backend",
   "version": "0.1.0",
   "private": true,

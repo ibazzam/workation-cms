@@ -199,14 +199,27 @@ Route::post('/portal/admin/forgot-password', function (Request $request) {
 
     $email = strtolower(trim((string) $validated['email']));
     $adminConfig = portalConfig('admin');
-    $portalUser = User::query()
-        ->whereRaw('LOWER(email) = ?', [$email])
-        ->where('portal_enabled', true)
-        ->whereIn('portal_role', $adminConfig['allowed_roles'])
-        ->first();
+
+    // Use backend_users provider for admin/vendor, customer_users for customers
+    $portalUser = null;
+    if (in_array('ADMIN', $adminConfig['allowed_roles'], true) || in_array('VENDOR', $adminConfig['allowed_roles'], true)) {
+        $portalUser = \App\Models\User::query()
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->where('portal_enabled', true)
+            ->whereIn('portal_role', $adminConfig['allowed_roles'])
+            ->first();
+    } else {
+        $portalUser = \App\Models\Customer::query()
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->first();
+    }
+
 
     if ($portalUser) {
-        $token = Password::broker()->createToken($portalUser);
+        $broker = ($portalUser instanceof \App\Models\User)
+            ? Password::broker('backend_users')
+            : Password::broker('customer_users');
+        $token = $broker->createToken($portalUser);
         $portalUser->sendPasswordResetNotification($token);
     }
 
@@ -229,11 +242,19 @@ Route::post('/portal/admin/reset-password', function (Request $request) {
 
     $email = strtolower(trim((string) $validated['email']));
     $adminConfig = portalConfig('admin');
-    $portalUser = User::query()
-        ->whereRaw('LOWER(email) = ?', [$email])
-        ->where('portal_enabled', true)
-        ->whereIn('portal_role', $adminConfig['allowed_roles'])
-        ->first();
+
+    $portalUser = null;
+    if (in_array('ADMIN', $adminConfig['allowed_roles'], true) || in_array('VENDOR', $adminConfig['allowed_roles'], true)) {
+        $portalUser = \App\Models\User::query()
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->where('portal_enabled', true)
+            ->whereIn('portal_role', $adminConfig['allowed_roles'])
+            ->first();
+    } else {
+        $portalUser = \App\Models\Customer::query()
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->first();
+    }
 
     if (!$portalUser) {
         return back()->withErrors([
@@ -242,7 +263,10 @@ Route::post('/portal/admin/reset-password', function (Request $request) {
     }
 
     try {
-        $tokenTable = (string) config('auth.passwords.users.table', 'password_reset_tokens');
+        $broker = ($portalUser instanceof \App\Models\User)
+            ? 'backend_users'
+            : 'customer_users';
+        $tokenTable = (string) config("auth.passwords.$broker.table", 'password_reset_tokens');
         $resetRow = DB::table($tokenTable)
             ->whereRaw('LOWER(email) = ?', [$email])
             ->first();
@@ -262,7 +286,7 @@ Route::post('/portal/admin/reset-password', function (Request $request) {
             ])->withInput($request->only('email'));
         }
 
-        $expireMinutes = (int) config('auth.passwords.users.expire', 60);
+        $expireMinutes = (int) config("auth.passwords.$broker.expire", 60);
         $createdAt = Carbon::parse((string) $resetRow->created_at);
         if ($createdAt->addMinutes($expireMinutes)->isPast()) {
             return back()->withErrors([
@@ -311,14 +335,24 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
     $usernameLower = strtolower($username);
 
     $portalUser = null;
-    if (Schema::hasColumns('users', ['username', 'portal_enabled', 'portal_role'])) {
-        $portalUser = User::query()
+
+    // Admin/vendor login: users table; customer login: User table
+    if (in_array('ADMIN', $config['allowed_roles'], true) || in_array('VENDOR', $config['allowed_roles'], true)) {
+        if (Schema::hasColumns('users', ['username', 'portal_enabled', 'portal_role'])) {
+            $portalUser = \App\Models\User::query()
+                ->where(function ($query) use ($usernameLower) {
+                    $query->whereRaw('LOWER(username) = ?', [$usernameLower])
+                        ->orWhereRaw('LOWER(email) = ?', [$usernameLower]);
+                })
+                ->where('portal_enabled', true)
+                ->whereIn('portal_role', $config['allowed_roles'])
+                ->first();
+        }
+    } else {
+        $portalUser = \App\Models\Customer::query()
             ->where(function ($query) use ($usernameLower) {
-                $query->whereRaw('LOWER(username) = ?', [$usernameLower])
-                    ->orWhereRaw('LOWER(email) = ?', [$usernameLower]);
+                $query->whereRaw('LOWER(email) = ?', [$usernameLower]);
             })
-            ->where('portal_enabled', true)
-            ->whereIn('portal_role', $config['allowed_roles'])
             ->first();
     }
 

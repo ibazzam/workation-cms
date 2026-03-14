@@ -1,23 +1,126 @@
-// .github/scripts/generate-jwt.js
-const crypto = require('crypto');
+name: Live preflight gate
 
-const secret = process.env.JWT_SECRET;
-const now = Math.floor(Date.now() / 1000);
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: API base URL to validate (for example https://api.workation.mv)
+        required: true
+        default: https://api.workation.mv
+      schedule_id:
+        description: Schedule id fixture used by transport smoke checks
+        required: true
+        default: "1"
+      require_ops_slo:
+        description: Fail when ops SLO endpoint is unavailable
+        required: true
+        type: boolean
+        default: false
+      require_checkout_reliability:
+        description: Fail when checkout reliability check is skipped
+        required: true
+        type: boolean
+        default: false
+      require_payments_reliability:
+        description: Fail when payments reliability check is skipped
+        required: true
+        type: boolean
+        default: false
+      require_moderation_paths:
+        description: Fail when moderation lifecycle checks are skipped
+        required: true
+        type: boolean
+        default: false
+      require_scheduler_health:
+        description: Fail when payments scheduler health checks are skipped
+        required: true
+        type: boolean
+        default: false
+      require_new_verticals:
+        description: Fail when new vertical integration checks are skipped/unavailable
+        required: true
+        type: boolean
+        default: false
 
-const header = { alg: 'HS256', typ: 'JWT' };
-const payload = {
-  sub: 'launch-admin', // must match a real admin user in your DB
-  role: 'ADMIN_SUPER',
-  email: 'admin@workation.mv',
-  iat: now,
-  exp: now + 3600 // 1 hour expiry
-};
+jobs:
+  live-preflight:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-function base64url(obj) {
-  return Buffer.from(JSON.stringify(obj)).toString('base64url');
-}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
-const h = base64url(header);
-const p = base64url(payload);
-const sig = crypto.createHmac('sha256', secret).update(`${h}.${p}`).digest('base64url');
-process.stdout.write(`${h}.${p}.${sig}`);
+      - name: Install dependencies
+        run: npm ci
+
+      # JWT generation for PR runs
+      - name: Generate JWT for preflight (PR)
+        if: github.event_name == 'pull_request'
+        run: node .github/scripts/generate-jwt.js > jwt.txt
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Set JWT as environment variable (PR)
+        if: github.event_name == 'pull_request'
+        run: echo "AUTH_BEARER_TOKEN=$(cat jwt.txt)" >> $GITHUB_ENV
+
+      - name: Run live preflight gate (advisory on PR)
+        if: github.event_name == 'pull_request'
+        id: preflight_pr
+        continue-on-error: true
+        env:
+          BASE_URL: ${{ vars.LIVE_PREFLIGHT_BASE_URL || 'https://api.workation.mv' }}
+          SCHEDULE_ID: ${{ vars.LIVE_PREFLIGHT_SCHEDULE_ID || '1' }}
+          AUTH_BEARER_TOKEN: ${{ env.AUTH_BEARER_TOKEN }}
+          X_USER_ID: ${{ secrets.LIVE_PREFLIGHT_X_USER_ID }}
+          X_USER_ROLE: ${{ secrets.LIVE_PREFLIGHT_X_USER_ROLE }}
+          PREFLIGHT_REQUIRE_OPS_SLO: 'false'
+          PREFLIGHT_REQUIRE_CHECKOUT_RELIABILITY: 'false'
+          PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY: 'false'
+          PREFLIGHT_REQUIRE_MODERATION_PATHS: 'false'
+          PREFLIGHT_REQUIRE_SCHEDULER_HEALTH: 'false'
+          PREFLIGHT_REQUIRE_NEW_VERTICALS: 'false'
+        run: npm run live:preflight
+
+      - name: Report advisory preflight result
+        if: github.event_name == 'pull_request' && steps.preflight_pr.outcome == 'failure'
+        run: echo "::warning::Live preflight advisory failed on PR. Strict enforcement still applies on main/workflow_dispatch."
+
+      # JWT generation for strict runs (main, workflow_dispatch)
+      - name: Generate JWT for preflight (strict)
+        if: github.event_name != 'pull_request'
+        run: node .github/scripts/generate-jwt.js > jwt.txt
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Set JWT as environment variable (strict)
+        if: github.event_name != 'pull_request'
+        run: echo "AUTH_BEARER_TOKEN=$(cat jwt.txt)" >> $GITHUB_ENV
+
+      - name: Run live preflight gate (strict)
+        if: github.event_name != 'pull_request'
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || vars.LIVE_PREFLIGHT_BASE_URL || 'https://api.workation.mv' }}
+          SCHEDULE_ID: ${{ github.event.inputs.schedule_id || vars.LIVE_PREFLIGHT_SCHEDULE_ID || '1' }}
+          AUTH_BEARER_TOKEN: ${{ env.AUTH_BEARER_TOKEN }}
+          X_USER_ID: ${{ secrets.LIVE_PREFLIGHT_X_USER_ID }}
+          X_USER_ROLE: ${{ secrets.LIVE_PREFLIGHT_X_USER_ROLE }}
+          PREFLIGHT_REQUIRE_OPS_SLO: ${{ github.event.inputs.require_ops_slo || vars.LIVE_PREFLIGHT_REQUIRE_OPS_SLO || 'false' }}
+          PREFLIGHT_REQUIRE_CHECKOUT_RELIABILITY: ${{ github.event.inputs.require_checkout_reliability || vars.LIVE_PREFLIGHT_REQUIRE_CHECKOUT_RELIABILITY || 'false' }}
+          PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY: ${{ github.event.inputs.require_payments_reliability || vars.LIVE_PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY || 'false' }}
+          PREFLIGHT_REQUIRE_MODERATION_PATHS: ${{ github.event.inputs.require_moderation_paths || vars.LIVE_PREFLIGHT_REQUIRE_MODERATION_PATHS || 'false' }}
+          PREFLIGHT_REQUIRE_SCHEDULER_HEALTH: ${{ github.event.inputs.require_scheduler_health || vars.LIVE_PREFLIGHT_REQUIRE_SCHEDULER_HEALTH || 'false' }}
+          PREFLIGHT_REQUIRE_NEW_VERTICALS: ${{ github.event.inputs.require_new_verticals || vars.LIVE_PREFLIGHT_REQUIRE_NEW_VERTICALS || 'false' }}
+        run: npm run live:preflight

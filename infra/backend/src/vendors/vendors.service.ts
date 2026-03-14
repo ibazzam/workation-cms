@@ -11,7 +11,7 @@ type VendorUpsertPayload = {
 type RequestActor = {
   id?: string;
   role?: string;
-  vendorId?: string;
+  vendorId?: string | bigint;
 };
 
 @Injectable()
@@ -32,12 +32,12 @@ export class VendorsService {
     });
   }
 
-  async getById(id: string) {
-    const vendor = await this.prisma.vendor.findUnique({ where: { id } });
+  async getById(id: string | bigint) {
+    const vendorId = typeof id === 'bigint' ? id : BigInt(id);
+    const vendor = await this.prisma.vendor.findUnique({ where: { id: vendorId } });
     if (!vendor) {
       throw new NotFoundException('Vendor not found');
     }
-
     return vendor;
   }
 
@@ -59,55 +59,60 @@ export class VendorsService {
     return this.update(vendorId, payload, actor);
   }
 
-  async update(id: string, payload: VendorUpsertPayload, actor?: RequestActor) {
-    this.assertVendorScopedAccess(id, actor);
-    await this.ensureVendorExists(id);
+  async update(id: string | bigint, payload: VendorUpsertPayload, actor?: RequestActor) {
+    const vendorId = typeof id === 'bigint' ? id : BigInt(id);
+    this.assertVendorScopedAccess(vendorId, actor);
+    await this.ensureVendorExists(vendorId);
     const normalized = this.normalizeVendorPayload(payload, { partial: true });
-
     return this.prisma.vendor.update({
-      where: { id },
+      where: { id: vendorId },
       data: normalized as Prisma.VendorUncheckedUpdateInput,
     });
   }
 
-  async remove(id: string) {
-    await this.ensureVendorExists(id);
-
+  async remove(id: string | bigint) {
+    const vendorId = typeof id === 'bigint' ? id : BigInt(id);
+    await this.ensureVendorExists(vendorId);
     try {
-      await this.prisma.vendor.delete({ where: { id } });
+      await this.prisma.vendor.delete({ where: { id: vendorId } });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
         throw new BadRequestException('Vendor cannot be deleted while linked to services');
       }
-
       throw error;
     }
   }
 
-  private async ensureVendorExists(id: string) {
-    const vendor = await this.prisma.vendor.findUnique({ where: { id }, select: { id: true } });
+  private async ensureVendorExists(id: string | bigint) {
+    const vendorId = typeof id === 'bigint' ? id : BigInt(id);
+    const vendor = await this.prisma.vendor.findUnique({ where: { id: vendorId }, select: { id: true } });
     if (!vendor) {
       throw new NotFoundException('Vendor not found');
     }
   }
 
-  private assertVendorScopedAccess(id: string, actor?: RequestActor) {
+  private assertVendorScopedAccess(id: string | bigint, actor?: RequestActor) {
     if (actor?.role !== 'VENDOR') {
       return;
     }
-
     const vendorId = this.parseActorVendorId(actor.vendorId);
-    if (vendorId !== id) {
+    if (vendorId !== (typeof id === 'bigint' ? id : BigInt(id))) {
       throw new ForbiddenException('Vendor users can only manage their own vendor profile');
     }
   }
 
-  private parseActorVendorId(value: unknown): string {
-    if (typeof value !== 'string' || value.trim().length === 0) {
-      throw new ForbiddenException('Vendor scope is missing for authenticated vendor user');
+  private parseActorVendorId(value: unknown): bigint {
+    if (typeof value === 'bigint') {
+      return value;
     }
-
-    return value.trim();
+    if (typeof value === 'string' && value.trim().length > 0) {
+      try {
+        return BigInt(value.trim());
+      } catch {
+        throw new ForbiddenException('Vendor scope is not a valid BigInt');
+      }
+    }
+    throw new ForbiddenException('Vendor scope is missing for authenticated vendor user');
   }
 
   private normalizeVendorPayload(payload: VendorUpsertPayload, options: { partial: boolean }) {

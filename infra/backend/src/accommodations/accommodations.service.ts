@@ -49,7 +49,7 @@ type AccommodationModerationStatus = 'APPROVED' | 'PENDING_REVIEW' | 'HIDDEN';
 type RequestActor = {
   id?: string;
   role?: string;
-  vendorId?: string;
+  vendorId?: string | bigint;
 };
 
 @Injectable()
@@ -501,14 +501,11 @@ export class AccommodationsService {
     if (actor?.role !== 'VENDOR') {
       return;
     }
-
     const scopedVendorId = this.parseActorVendorId(actor.vendorId);
     const providedVendorId = this.parsePayloadVendorId(payload.vendorId);
-
-    if (providedVendorId && providedVendorId !== scopedVendorId) {
+    if (providedVendorId !== undefined && providedVendorId !== scopedVendorId) {
       throw new ForbiddenException('Vendor users can only manage their own vendor resources');
     }
-
     payload.vendorId = scopedVendorId;
   }
 
@@ -516,49 +513,73 @@ export class AccommodationsService {
     if (actor?.role !== 'VENDOR') {
       return;
     }
-
     const scopedVendorId = this.parseActorVendorId(actor.vendorId);
     const existing = await this.prisma.accommodation.findUnique({ where: { id }, select: { vendorId: true } });
     if (!existing) {
       throw new NotFoundException('Accommodation not found');
     }
-
-    if (existing.vendorId !== scopedVendorId) {
+    if (BigInt(existing.vendorId) !== scopedVendorId) {
       throw new ForbiddenException('Vendor users can only manage their own vendor resources');
     }
-
     if (payload && Object.prototype.hasOwnProperty.call(payload, 'vendorId')) {
       const providedVendorId = this.parsePayloadVendorId(payload.vendorId);
       if (providedVendorId !== undefined && providedVendorId !== scopedVendorId) {
         throw new ForbiddenException('Vendor users can only manage their own vendor resources');
       }
-
       payload.vendorId = scopedVendorId;
     }
   }
 
-  private parseActorVendorId(value: unknown): string {
-    if (typeof value !== 'string' || value.trim().length === 0) {
-      throw new ForbiddenException('Vendor scope is missing for authenticated vendor user');
+  private parseActorVendorId(value: unknown): bigint {
+    if (typeof value === 'bigint') {
+      return value;
     }
-
-    return value.trim();
+    if (typeof value === 'string' && value.trim().length > 0) {
+      try {
+        return BigInt(value.trim());
+      } catch {
+        throw new ForbiddenException('Vendor scope is not a valid BigInt');
+      }
+    }
+    throw new ForbiddenException('Vendor scope is missing for authenticated vendor user');
   }
 
-  private parsePayloadVendorId(value: unknown): string | undefined {
+  private parsePayloadVendorId(value: unknown): bigint | undefined {
     if (value === undefined) {
       return undefined;
     }
-
-    if (typeof value !== 'string' || value.trim().length === 0) {
-      throw new BadRequestException('Expected non-empty string value');
+    if (typeof value === 'bigint') {
+      return value;
     }
-
-    return value.trim();
+    if (typeof value === 'string' && value.trim().length > 0) {
+      try {
+        return BigInt(value.trim());
+      } catch {
+        throw new BadRequestException('Expected vendorId to be a valid BigInt');
+      }
+    }
+    throw new BadRequestException('Expected non-empty string or BigInt value');
+  }
+  // Add a helper for optional BigInt parsing
+  private parseOptionalBigInt(value: unknown): bigint | undefined {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+    if (typeof value === 'bigint') {
+      return value;
+    }
+    if (typeof value === 'string' && value.trim().length > 0) {
+      try {
+        return BigInt(value.trim());
+      } catch {
+        throw new BadRequestException('Expected a valid BigInt');
+      }
+    }
+    throw new BadRequestException('Expected a string or BigInt');
   }
 
   private async normalizeAccommodationPayload(payload: AccommodationUpsertPayload, options: { partial: boolean; actorRole?: string }) {
-    const vendorId = this.parseOptionalString(payload.vendorId);
+    const vendorId = this.parseOptionalBigInt(payload.vendorId);
     const islandId = this.parseOptionalInt(payload.islandId);
     const title = this.parseOptionalString(payload.title);
     const slugInput = this.parseOptionalString(payload.slug);
@@ -579,7 +600,7 @@ export class AccommodationsService {
       }
     }
 
-    if (vendorId) {
+    if (vendorId !== undefined) {
       const vendor = await this.prisma.vendor.findUnique({ where: { id: vendorId }, select: { id: true } });
       if (!vendor) {
         throw new BadRequestException('vendorId does not exist');
@@ -595,7 +616,7 @@ export class AccommodationsService {
 
     const data: Record<string, unknown> = {};
 
-    if (vendorId) data.vendorId = vendorId;
+    if (vendorId !== undefined) data.vendorId = vendorId;
     if (islandId) data.islandId = islandId;
     if (title) data.title = title;
     if (title) this.assertTitleQuality(title);

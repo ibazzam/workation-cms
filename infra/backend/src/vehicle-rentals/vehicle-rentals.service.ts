@@ -28,7 +28,7 @@ type VehicleRentalBlackoutPayload = {
 
 type RequestActor = {
   role?: string;
-  vendorId?: string;
+  vendorId?: string | bigint;
 };
 
 @Injectable()
@@ -39,7 +39,7 @@ export class VehicleRentalsService {
     pickupIslandId?: number;
     dropoffIslandId?: number;
     vehicleType?: string;
-    vendorId?: string;
+    vendorId?: string | bigint;
     q?: string;
   }) {
     const vehicleType = this.parseOptionalVehicleType(filters.vehicleType);
@@ -51,7 +51,7 @@ export class VehicleRentalsService {
         pickupIslandId: filters.pickupIslandId,
         dropoffIslandId: filters.dropoffIslandId,
         vehicleType: vehicleType ?? undefined,
-        vendorId: filters.vendorId?.trim() || undefined,
+        vendorId: filters.vendorId ? BigInt(filters.vendorId) : undefined,
         ...(q
           ? {
               OR: [
@@ -212,7 +212,9 @@ export class VehicleRentalsService {
 
   async create(payload: VehicleRentalUpsertPayload, actor?: RequestActor) {
     const normalized = this.normalizeUpsertPayload(payload, { partial: false, actor });
-
+    if (normalized.vendorId && typeof normalized.vendorId === 'string') {
+      normalized.vendorId = BigInt(normalized.vendorId);
+    }
     return this.prisma.vehicleRental.create({
       data: normalized as Prisma.VehicleRentalUncheckedCreateInput,
       include: {
@@ -228,11 +230,11 @@ export class VehicleRentalsService {
     if (!existing) {
       throw new NotFoundException('Vehicle rental not found');
     }
-
     this.assertVendorScopedAccess(existing.vendorId, actor);
-
     const normalized = this.normalizeUpsertPayload(payload, { partial: true, actor, existing });
-
+    if (normalized.vendorId && typeof normalized.vendorId === 'string') {
+      normalized.vendorId = BigInt(normalized.vendorId);
+    }
     return this.prisma.vehicleRental.update({
       where: { id },
       data: normalized as Prisma.VehicleRentalUncheckedUpdateInput,
@@ -308,7 +310,7 @@ export class VehicleRentalsService {
 
   private normalizeUpsertPayload(
     payload: VehicleRentalUpsertPayload,
-    options: { partial: boolean; actor?: RequestActor; existing?: { vendorId: string; pickupIslandId: number } },
+    options: { partial: boolean; actor?: RequestActor; existing?: { vendorId: string | bigint; pickupIslandId: number } },
   ) {
     const vendorId = this.resolveVendorId(payload.vendorId, options.actor, options.existing?.vendorId, options.partial);
     const pickupIslandId = this.parseOptionalInt(payload.pickupIslandId, 'pickupIslandId');
@@ -369,35 +371,33 @@ export class VehicleRentalsService {
   private resolveVendorId(
     payloadVendorId: unknown,
     actor: RequestActor | undefined,
-    existingVendorId: string | undefined,
+    existingVendorId: string | bigint | undefined,
     partial: boolean,
-  ): string | undefined {
+  ): bigint | undefined {
     if (actor?.role === 'VENDOR') {
       const scopedVendorId = this.parseActorVendorId(actor.vendorId);
-      if (payloadVendorId !== undefined && payloadVendorId !== scopedVendorId) {
+      if (payloadVendorId !== undefined && BigInt(payloadVendorId) !== scopedVendorId) {
         throw new ForbiddenException('Vendor users cannot assign other vendor IDs');
       }
-
       return scopedVendorId;
     }
-
-    const parsed = this.parseOptionalText(payloadVendorId, 120);
-    if (parsed !== null) {
-      return parsed;
+    if (payloadVendorId !== undefined && payloadVendorId !== null) {
+      try {
+        return BigInt(payloadVendorId);
+      } catch {
+        throw new BadRequestException('vendorId must be a valid BigInt');
+      }
     }
-
     if (partial) {
       return undefined;
     }
-
-    return existingVendorId;
+    return typeof existingVendorId === 'string' ? BigInt(existingVendorId) : existingVendorId;
   }
 
-  private assertVendorScopedAccess(resourceVendorId: string, actor?: RequestActor) {
+  private assertVendorScopedAccess(resourceVendorId: bigint, actor?: RequestActor) {
     if (actor?.role !== 'VENDOR') {
       return;
     }
-
     const scopedVendorId = this.parseActorVendorId(actor.vendorId);
     if (scopedVendorId !== resourceVendorId) {
       throw new ForbiddenException('Vendor users can only manage their own vehicle rentals');
@@ -650,11 +650,17 @@ export class VehicleRentalsService {
     return acceptedClasses.includes(requestedClass.toUpperCase());
   }
 
-  private parseActorVendorId(value: unknown): string {
-    if (typeof value !== 'string' || value.trim().length === 0) {
-      throw new ForbiddenException('Vendor scope is missing for authenticated vendor user');
+  private parseActorVendorId(value: unknown): bigint {
+    if (typeof value === 'bigint') {
+      return value;
     }
-
-    return value.trim();
+    if (typeof value === 'string' && value.trim().length > 0) {
+      try {
+        return BigInt(value.trim());
+      } catch {
+        throw new ForbiddenException('Vendor scope is not a valid BigInt');
+      }
+    }
+    throw new ForbiddenException('Vendor scope is missing for authenticated vendor user');
   }
 }

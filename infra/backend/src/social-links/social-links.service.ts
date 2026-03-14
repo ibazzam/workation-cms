@@ -22,7 +22,7 @@ type SocialLinkPayload = {
 type RequestActor = {
   id?: string;
   role?: string;
-  vendorId?: string;
+  vendorId?: string | bigint;
 };
 
 type SocialLinkModerationSnapshot = {
@@ -140,12 +140,13 @@ export class SocialLinksService {
     });
   }
 
-  async listVendorLinks(vendorId: string) {
-    await this.ensureVendorExists(vendorId);
+  async listVendorLinks(vendorId: string | bigint) {
+    const vendorIdBigInt = typeof vendorId === 'string' ? BigInt(vendorId) : vendorId;
+    await this.ensureVendorExists(vendorIdBigInt);
     return this.prisma.socialLink.findMany({
       where: {
         targetType: 'VENDOR',
-        vendorId,
+        vendorId: vendorIdBigInt,
         active: true,
         verified: true,
         ugcSafetyStatus: 'SAFE',
@@ -723,44 +724,56 @@ export class SocialLinksService {
     if (actor?.role !== 'VENDOR') {
       return;
     }
-
-    if (typeof actor.vendorId !== 'string' || actor.vendorId.trim().length === 0) {
+    let scopedVendorId: bigint;
+    if (typeof actor.vendorId === 'bigint') {
+      scopedVendorId = actor.vendorId;
+    } else if (typeof actor.vendorId === 'string' && actor.vendorId.trim().length > 0) {
+      try {
+        scopedVendorId = BigInt(actor.vendorId.trim());
+      } catch {
+        throw new ForbiddenException('Vendor scope is not a valid BigInt');
+      }
+    } else {
       throw new ForbiddenException('Vendor scope is missing for authenticated vendor user');
     }
-
-    const scopedVendorId = actor.vendorId.trim();
     const targetType = typeof data.targetType === 'string' ? data.targetType : undefined;
     if (!targetType) {
       return;
     }
-
     if (targetType === 'VENDOR') {
-      const vendorId = typeof data.vendorId === 'string' ? data.vendorId : undefined;
+      let vendorId: bigint | undefined;
+      if (typeof data.vendorId === 'bigint') {
+        vendorId = data.vendorId;
+      } else if (typeof data.vendorId === 'string' && data.vendorId.length > 0) {
+        try {
+          vendorId = BigInt(data.vendorId);
+        } catch {
+          throw new ForbiddenException('Vendor ID is not a valid BigInt');
+        }
+      }
       if (!vendorId || vendorId !== scopedVendorId) {
         throw new ForbiddenException('Vendor users can only manage their own vendor social links');
       }
       return;
     }
-
     if (targetType === 'ACCOMMODATION') {
       const accommodationId = typeof data.accommodationId === 'string' ? data.accommodationId : undefined;
       if (!accommodationId) {
         return;
       }
       const row = await this.prisma.accommodation.findUnique({ where: { id: accommodationId }, select: { vendorId: true } });
-      if (!row || row.vendorId !== scopedVendorId) {
+      if (!row || BigInt(row.vendorId) !== scopedVendorId) {
         throw new ForbiddenException('Vendor users can only manage social links for their own accommodations');
       }
       return;
     }
-
     if (targetType === 'TRANSPORT') {
       const transportId = typeof data.transportId === 'string' ? data.transportId : undefined;
       if (!transportId) {
         return;
       }
       const row = await this.prisma.transport.findUnique({ where: { id: transportId }, select: { vendorId: true } });
-      if (!row || row.vendorId !== scopedVendorId) {
+      if (!row || BigInt(row.vendorId) !== scopedVendorId) {
         throw new ForbiddenException('Vendor users can only manage social links for their own transports');
       }
     }
@@ -980,8 +993,9 @@ export class SocialLinksService {
     }
   }
 
-  private async ensureVendorExists(id: string) {
-    const row = await this.prisma.vendor.findUnique({ where: { id }, select: { id: true } });
+  private async ensureVendorExists(id: string | bigint) {
+    const vendorIdBigInt = typeof id === 'string' ? BigInt(id) : id;
+    const row = await this.prisma.vendor.findUnique({ where: { id: vendorIdBigInt }, select: { id: true } });
     if (!row) {
       throw new NotFoundException('Vendor not found');
     }

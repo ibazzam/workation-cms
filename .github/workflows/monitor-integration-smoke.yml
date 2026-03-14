@@ -19,9 +19,6 @@ jobs:
       - name: Show gh version
         run: gh --version || true
 
-      - name: Authenticate gh
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
-
       - name: Run monitor script (download latest integration-smoke logs)
         shell: pwsh
         run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/monitor_integration_smoke.ps1 -TimeoutMinutes 20

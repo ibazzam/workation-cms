@@ -65,6 +65,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # JWT generation for PR runs
+      - name: Generate JWT for preflight (PR)
+        if: github.event_name == 'pull_request'
+        run: node scripts/generate-jwt.cjs > jwt.txt
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Set JWT as environment variable (PR)
+        if: github.event_name == 'pull_request'
+        run: echo "AUTH_BEARER_TOKEN=$(cat jwt.txt)" >> $GITHUB_ENV
+
       - name: Run live preflight gate (advisory on PR)
         if: github.event_name == 'pull_request'
         id: preflight_pr
@@ -72,7 +83,7 @@ jobs:
         env:
           BASE_URL: ${{ vars.LIVE_PREFLIGHT_BASE_URL || 'https://api.workation.mv' }}
           SCHEDULE_ID: ${{ vars.LIVE_PREFLIGHT_SCHEDULE_ID || '1' }}
-          AUTH_BEARER_TOKEN: ${{ secrets.LIVE_PREFLIGHT_BEARER_TOKEN }}
+          AUTH_BEARER_TOKEN: ${{ env.AUTH_BEARER_TOKEN }}
           X_USER_ID: ${{ secrets.LIVE_PREFLIGHT_X_USER_ID }}
           X_USER_ROLE: ${{ secrets.LIVE_PREFLIGHT_X_USER_ROLE }}
           PREFLIGHT_REQUIRE_OPS_SLO: 'false'
@@ -87,12 +98,23 @@ jobs:
         if: github.event_name == 'pull_request' && steps.preflight_pr.outcome == 'failure'
         run: echo "::warning::Live preflight advisory failed on PR. Strict enforcement still applies on main/workflow_dispatch."
 
+      # JWT generation for strict runs (main, workflow_dispatch)
+      - name: Generate JWT for preflight (strict)
+        if: github.event_name != 'pull_request'
+        run: node .github/scripts/generate-jwt.js > jwt.txt
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Set JWT as environment variable (strict)
+        if: github.event_name != 'pull_request'
+        run: echo "AUTH_BEARER_TOKEN=$(cat jwt.txt)" >> $GITHUB_ENV
+
       - name: Run live preflight gate (strict)
         if: github.event_name != 'pull_request'
         env:
           BASE_URL: ${{ github.event.inputs.base_url || vars.LIVE_PREFLIGHT_BASE_URL || 'https://api.workation.mv' }}
           SCHEDULE_ID: ${{ github.event.inputs.schedule_id || vars.LIVE_PREFLIGHT_SCHEDULE_ID || '1' }}
-          AUTH_BEARER_TOKEN: ${{ secrets.LIVE_PREFLIGHT_BEARER_TOKEN }}
+          AUTH_BEARER_TOKEN: ${{ env.AUTH_BEARER_TOKEN }}
           X_USER_ID: ${{ secrets.LIVE_PREFLIGHT_X_USER_ID }}
           X_USER_ROLE: ${{ secrets.LIVE_PREFLIGHT_X_USER_ROLE }}
           PREFLIGHT_REQUIRE_OPS_SLO: ${{ github.event.inputs.require_ops_slo || vars.LIVE_PREFLIGHT_REQUIRE_OPS_SLO || 'false' }}

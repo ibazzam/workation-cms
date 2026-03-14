@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-// .github/scripts/generate-jwt.js
->>>>>>> 1776e9bd (Rename JWT script to .cjs for CommonJS compatibility)
 const crypto = require('crypto');
 
 const secret = process.env.JWT_SECRET;
@@ -24,7 +20,3 @@ const h = base64url(header);
 const p = base64url(payload);
 const sig = crypto.createHmac('sha256', secret).update(`${h}.${p}`).digest('base64url');
 process.stdout.write(`${h}.${p}.${sig}`);
-<<<<<<< HEAD
-
-=======
->>>>>>> 1776e9bd (Rename JWT script to .cjs for CommonJS compatibility)

@@ -1,4 +1,4 @@
-const crypto = import crypto from 'crypto';
+const crypto = require('crypto');
 
 const secret = process.env.JWT_SECRET;
 const now = Math.floor(Date.now() / 1000);

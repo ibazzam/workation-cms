@@ -14,7 +14,7 @@ export class AuthService {
     return {
       id: user.id,
       email: user.email,
-      role: user.role,
+      role: undefined, // No longer present on User model
       name: user.name,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,

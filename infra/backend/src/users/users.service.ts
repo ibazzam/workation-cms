@@ -40,13 +40,11 @@ export class UsersService {
     return this.prisma.user.upsert({
       where: { id: context.id },
       update: {
-        role: context.role,
         email: normalizedEmail,
       },
       create: {
         id: context.id,
         email: normalizedEmail,
-        role: context.role,
       },
     });
   }
@@ -61,7 +59,6 @@ export class UsersService {
       select: {
         id: true,
         email: true,
-        role: true,
         name: true,
       },
     });

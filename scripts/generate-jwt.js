@@ -67,9 +67,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-    - name: List .github/scripts directory
-      run: ls -lR .github/scripts
-
       # JWT generation for PR runs
       - name: Generate JWT for preflight (PR)
         if: github.event_name == 'pull_request'

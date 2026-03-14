@@ -20,4 +20,3 @@ const h = base64url(header);
 const p = base64url(payload);
 const sig = crypto.createHmac('sha256', secret).update(`${h}.${p}`).digest('base64url');
 process.stdout.write(`${h}.${p}.${sig}`);
-

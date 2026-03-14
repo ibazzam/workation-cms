@@ -27,7 +27,7 @@ export class AdminWriteAuditService {
         actorRole: payload.actorRole,
         actorEmail: payload.actorEmail,
         actorVendorId: payload.actorVendorId,
-        method: payload.method,
+        // method removed, not in schema
         path: payload.path,
         statusCode: payload.statusCode,
         success: payload.success,

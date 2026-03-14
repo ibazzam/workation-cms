@@ -65,6 +65,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: List .github/scripts directory
+        run: ls -lR .github/scripts || echo "Directory not found"
+
       # JWT generation for PR runs
       - name: Generate JWT for preflight (PR)
         if: github.event_name == 'pull_request'

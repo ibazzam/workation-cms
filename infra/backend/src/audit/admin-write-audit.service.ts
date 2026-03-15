@@ -26,7 +26,7 @@ export class AdminWriteAuditService {
         actorUserId: payload.actorUserId,
         actorRole: payload.actorRole,
         actorEmail: payload.actorEmail,
-        vendorId: payload.vendorId ? payload.vendorId.toString() : null,
+        method: payload.method,
         path: payload.path,
         statusCode: payload.statusCode,
         success: payload.success,

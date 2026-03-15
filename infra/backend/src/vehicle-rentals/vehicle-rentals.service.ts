@@ -51,7 +51,7 @@ export class VehicleRentalsService {
         pickupIslandId: filters.pickupIslandId,
         dropoffIslandId: filters.dropoffIslandId,
         vehicleType: vehicleType ?? undefined,
-        vendorId: filters.vendorId ? BigInt(filters.vendorId) : undefined,
+        vendorId: filters.vendorId ? filters.vendorId.toString() : undefined,
         ...(q
           ? {
               OR: [
@@ -212,8 +212,8 @@ export class VehicleRentalsService {
 
   async create(payload: VehicleRentalUpsertPayload, actor?: RequestActor) {
     const normalized = this.normalizeUpsertPayload(payload, { partial: false, actor });
-    if (normalized.vendorId && typeof normalized.vendorId === 'string') {
-      normalized.vendorId = BigInt(normalized.vendorId);
+    if (normalized.vendorId && typeof normalized.vendorId !== 'string') {
+      normalized.vendorId = normalized.vendorId.toString();
     }
     return this.prisma.vehicleRental.create({
       data: normalized as Prisma.VehicleRentalUncheckedCreateInput,
@@ -232,8 +232,8 @@ export class VehicleRentalsService {
     }
     this.assertVendorScopedAccess(existing.vendorId, actor);
     const normalized = this.normalizeUpsertPayload(payload, { partial: true, actor, existing });
-    if (normalized.vendorId && typeof normalized.vendorId === 'string') {
-      normalized.vendorId = BigInt(normalized.vendorId);
+    if (normalized.vendorId && typeof normalized.vendorId !== 'string') {
+      normalized.vendorId = normalized.vendorId.toString();
     }
     return this.prisma.vehicleRental.update({
       where: { id },

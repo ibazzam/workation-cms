@@ -50,7 +50,7 @@ export class ExcursionsService {
       where: {
         active: true,
         islandId: filters.islandId,
-        vendorId: filters.vendorId ? BigInt(filters.vendorId) : undefined,
+        vendorId: filters.vendorId ? filters.vendorId.toString() : undefined,
         type: normalizedType ?? undefined,
         ...(normalizedQ
           ? {
@@ -396,14 +396,14 @@ export class ExcursionsService {
   ): bigint | undefined {
     if (actor?.role === 'VENDOR') {
       const scopedVendorId = this.parseActorVendorId(actor.vendorId);
-      if (payloadVendorId !== undefined && BigInt(payloadVendorId) !== BigInt(scopedVendorId)) {
+      if (payloadVendorId !== undefined && BigInt(String(payloadVendorId)) !== BigInt(scopedVendorId)) {
         throw new ForbiddenException('Vendor users cannot assign other vendor IDs');
       }
       return BigInt(scopedVendorId);
     }
 
     if (payloadVendorId !== undefined) {
-      return BigInt(payloadVendorId);
+      return BigInt(String(payloadVendorId));
     }
 
     if (partial) {

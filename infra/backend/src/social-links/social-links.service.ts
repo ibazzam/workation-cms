@@ -141,12 +141,12 @@ export class SocialLinksService {
   }
 
   async listVendorLinks(vendorId: string | bigint) {
-    const vendorIdBigInt = typeof vendorId === 'string' ? BigInt(vendorId) : vendorId;
-    await this.ensureVendorExists(vendorIdBigInt);
+    const vendorIdStr = vendorId.toString();
+    await this.ensureVendorExists(vendorIdStr);
     return this.prisma.socialLink.findMany({
       where: {
         targetType: 'VENDOR',
-        vendorId: vendorIdBigInt,
+        vendorId: vendorIdStr,
         active: true,
         verified: true,
         ugcSafetyStatus: 'SAFE',
@@ -994,8 +994,8 @@ export class SocialLinksService {
   }
 
   private async ensureVendorExists(id: string | bigint) {
-    const vendorIdBigInt = typeof id === 'string' ? BigInt(id) : id;
-    const row = await this.prisma.vendor.findUnique({ where: { id: vendorIdBigInt }, select: { id: true } });
+    const vendorIdStr = id.toString();
+    const row = await this.prisma.vendor.findUnique({ where: { id: vendorIdStr }, select: { id: true } });
     if (!row) {
       throw new NotFoundException('Vendor not found');
     }

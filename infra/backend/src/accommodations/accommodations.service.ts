@@ -615,8 +615,7 @@ export class AccommodationsService {
     }
 
     const data: Record<string, unknown> = {};
-
-    if (vendorId !== undefined) data.vendorId = vendorId;
+  if (vendorId !== undefined) data.vendorId = vendorId.toString();
     if (islandId) data.islandId = islandId;
     if (title) data.title = title;
     if (title) this.assertTitleQuality(title);

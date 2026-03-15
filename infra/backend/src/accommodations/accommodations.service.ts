@@ -600,6 +600,8 @@ export class AccommodationsService {
       }
     }
 
+      const data: Record<string, unknown> = {}; // Keeping the correct declaration of 'data'
+
     if (vendorId !== undefined) {
       const vendor = await this.prisma.vendor.findUnique({ where: { id: vendorId.toString() }, select: { id: true } });
       if (!vendor) {
@@ -610,11 +612,9 @@ export class AccommodationsService {
     if (islandId) {
       const island = await this.prisma.island.findUnique({ where: { id: islandId }, select: { id: true } });
       if (!island) {
-          data.vendorId = vendorId.toString();
+        throw new BadRequestException('islandId does not exist');
       }
     }
-
-    const data: Record<string, unknown> = {};
     if (vendorId !== undefined) data.vendorId = vendorId.toString();
     if (islandId) data.islandId = islandId;
     if (title) data.title = title;
@@ -914,5 +914,3 @@ export class AccommodationsService {
       .replace(/-+/g, '-');
   }
 }
-
-

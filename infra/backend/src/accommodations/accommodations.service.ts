@@ -600,6 +600,8 @@ export class AccommodationsService {
       }
     }
 
+    const data: Record<string, unknown> = {};
+
     if (vendorId !== undefined) {
       const vendor = await this.prisma.vendor.findUnique({ where: { id: vendorId.toString() }, select: { id: true } });
       if (!vendor) {
@@ -613,10 +615,7 @@ export class AccommodationsService {
         throw new BadRequestException('islandId does not exist');
       }
     }
-
-    const data: Record<string, unknown> = {};
-  if (vendorId !== undefined) data.vendorId = vendorId.toString();
-      // vendorId is now always a string
+    if (vendorId !== undefined) data.vendorId = vendorId.toString();
     if (islandId) data.islandId = islandId;
     if (title) data.title = title;
     if (title) this.assertTitleQuality(title);

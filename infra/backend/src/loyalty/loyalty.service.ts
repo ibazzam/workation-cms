@@ -21,7 +21,7 @@ type VendorOfferPayload = {
 type RequestActor = {
   id?: string;
   role?: string;
-  vendorId?: string;
+  vendorId?: string | bigint;
 };
 
 type LoyaltySettings = {
@@ -172,7 +172,7 @@ export class LoyaltyService {
     await this.ensureVendorExists(vendorId);
     return this.prisma.vendorLoyaltyOffer.findMany({
       where: {
-        vendorId,
+        vendorId: BigInt(vendorId),
         active: true,
       },
       orderBy: [{ pointsMultiplier: 'desc' }, { createdAt: 'desc' }],
@@ -181,10 +181,13 @@ export class LoyaltyService {
 
   async createVendorOffer(payload: VendorOfferPayload, actor?: RequestActor) {
     const normalized = await this.normalizeVendorOfferPayload(payload, { partial: false });
-    this.assertVendorOfferScope(normalized.vendorId as string, actor);
+    this.assertVendorOfferScope(normalized.vendorId ? normalized.vendorId.toString() : '', actor);
 
     return this.prisma.vendorLoyaltyOffer.create({
-      data: normalized as Prisma.VendorLoyaltyOfferUncheckedCreateInput,
+      data: {
+        ...normalized,
+        vendorId: normalized.vendorId ? BigInt(normalized.vendorId) : undefined,
+      } as Prisma.VendorLoyaltyOfferUncheckedCreateInput,
     });
   }
 
@@ -194,16 +197,19 @@ export class LoyaltyService {
       throw new NotFoundException('Vendor loyalty offer not found');
     }
 
-    this.assertVendorOfferScope(existing.vendorId, actor);
+    this.assertVendorOfferScope(existing.vendorId ? existing.vendorId.toString() : '', actor);
 
     const normalized = await this.normalizeVendorOfferPayload(payload, { partial: true });
     if (normalized.vendorId) {
-      this.assertVendorOfferScope(normalized.vendorId as string, actor);
+      this.assertVendorOfferScope(normalized.vendorId.toString(), actor);
     }
 
     return this.prisma.vendorLoyaltyOffer.update({
       where: { id },
-      data: normalized as Prisma.VendorLoyaltyOfferUncheckedUpdateInput,
+      data: {
+        ...normalized,
+        vendorId: normalized.vendorId ? BigInt(normalized.vendorId) : undefined,
+      } as Prisma.VendorLoyaltyOfferUncheckedUpdateInput,
     });
   }
 

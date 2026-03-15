@@ -10,7 +10,7 @@ class UpsertPortalUser extends Command
     protected $signature = 'portal:user:upsert
         {username : Portal username used at login}
         {password : Plain password to set for this portal user}
-        {--role=ADMIN : Portal role: ADMIN_SUPER, ADMIN, or VENDOR}
+        {--portal_role=ADMIN : Portal role: ADMIN_SUPER, ADMIN, or VENDOR}
         {--name= : Display name (defaults to username)}
         {--email= : Email (defaults to username@portal.local)}
         {--vendor-id= : Vendor identifier for VENDOR users}
@@ -22,10 +22,10 @@ class UpsertPortalUser extends Command
     {
         $username = trim((string) $this->argument('username'));
         $password = (string) $this->argument('password');
-        $role = strtoupper(trim((string) $this->option('role')));
+        $portal_role = strtoupper(trim((string) $this->option('portal_role')));
 
-        if (!in_array($role, ['ADMIN_SUPER', 'ADMIN', 'VENDOR'], true)) {
-            $this->error('Invalid role. Use ADMIN_SUPER, ADMIN, or VENDOR.');
+        if (!in_array($portal_role, ['ADMIN_SUPER', 'ADMIN', 'VENDOR'], true)) {
+            $this->error('Invalid portal_role. Use ADMIN_SUPER, ADMIN, or VENDOR.');
             return self::FAILURE;
         }
 
@@ -45,7 +45,7 @@ class UpsertPortalUser extends Command
         $vendorId = trim((string) $this->option('vendor-id'));
         $enabled = !$this->option('disable');
 
-        if ($role === 'VENDOR' && $vendorId === '') {
+        if ($portal_role === 'VENDOR' && $vendorId === '') {
             $this->warn('No --vendor-id provided for a VENDOR user; access will still work but vendor scoping may be limited.');
         }
 
@@ -71,9 +71,9 @@ class UpsertPortalUser extends Command
         $user->name = $name;
         $user->email = $email;
         $user->password = $password;
-        $user->portal_role = $role;
+        $user->portal_role = $portal_role;
         $user->portal_enabled = $enabled;
-        $user->portal_vendor_id = ($role === 'VENDOR' && $vendorId !== '') ? $vendorId : null;
+        $user->portal_vendor_id = ($portal_role === 'VENDOR' && $vendorId !== '') ? $vendorId : null;
         $user->save();
 
         $this->info('Portal user saved successfully.');

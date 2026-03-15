@@ -54,7 +54,7 @@ export class RemoteWorkSpacesService {
       where: {
         active: true,
         islandId: filters.islandId,
-        vendorId: filters.vendorId?.trim() || undefined,
+        vendorId: filters.vendorId ? filters.vendorId.toString().trim() : undefined,
         ...(requiredMbps !== undefined ? { minMbps: { gte: requiredMbps } } : {}),
         ...(meetingRoomRequired !== undefined ? { hasMeetingRooms: meetingRoomRequired } : {}),
         ...(q
@@ -318,6 +318,8 @@ export class RemoteWorkSpacesService {
     options: { partial: boolean; actor?: RequestActor; existingVendorId?: string },
   ) {
     const vendorId = this.resolveVendorId(payload.vendorId, options.actor, options.existingVendorId, options.partial);
+    // Always ensure vendorId is a string for Prisma
+    const normalizedVendorId = vendorId !== undefined ? vendorId.toString() : undefined;
     const islandId = this.parseOptionalInt(payload.islandId, 'islandId');
     const name = this.parseOptionalString(payload.name, 'name', 180);
     const description = this.parseOptionalNullableText(payload.description, 5000);
@@ -332,7 +334,7 @@ export class RemoteWorkSpacesService {
     const active = this.parseOptionalBoolean(payload.active, 'active');
 
     const normalized = {
-      ...(vendorId !== undefined ? { vendorId } : {}),
+      ...(normalizedVendorId !== undefined ? { vendorId: normalizedVendorId } : {}),
       ...(islandId !== undefined ? { islandId } : {}),
       ...(name !== undefined ? { name } : {}),
       ...(description !== undefined ? { description } : {}),

@@ -731,7 +731,16 @@ export class TransportsService {
     }
 
     if (existing.vendorId !== scopedVendorId) {
-      throw new ForbiddenException('Vendor users can only manage their own vendor resources');
+      // Ensure both are strings for comparison
+      if (typeof existing.vendorId === 'bigint') {
+        if (existing.vendorId.toString() !== scopedVendorId) {
+          throw new ForbiddenException('Vendor users can only manage their own vendor resources');
+        }
+      } else {
+        if (existing.vendorId !== scopedVendorId) {
+          throw new ForbiddenException('Vendor users can only manage their own vendor resources');
+        }
+      }
     }
 
     if (payload && Object.prototype.hasOwnProperty.call(payload, 'vendorId')) {
@@ -783,7 +792,7 @@ export class TransportsService {
     }
 
     if (vendorId) {
-      const vendor = await this.prisma.vendor.findUnique({ where: { id: vendorId }, select: { id: true } });
+      const vendor = await this.prisma.vendor.findUnique({ where: { id: vendorId.toString() }, select: { id: true } });
       if (!vendor) {
         throw new BadRequestException('vendorId does not exist');
       }
@@ -805,7 +814,7 @@ export class TransportsService {
 
     const data: Record<string, unknown> = {};
 
-    if (vendorId !== undefined) data.vendorId = vendorId;
+    if (vendorId !== undefined) data.vendorId = vendorId.toString();
     if (type !== undefined) data.type = type;
     if (code !== undefined) data.code = code;
     if (fromIslandId !== undefined) data.fromIslandId = fromIslandId;

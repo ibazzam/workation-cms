@@ -52,7 +52,7 @@ export class ResortDayVisitsService {
       where: {
         active: true,
         islandId: filters.islandId,
-        vendorId: filters.vendorId?.trim() || undefined,
+        vendorId: filters.vendorId ? filters.vendorId.toString().trim() : undefined,
         ...(includesTransfer !== undefined ? { includesTransfer } : {}),
         ...(q
           ? {
@@ -339,7 +339,7 @@ export class ResortDayVisitsService {
     }
 
     const data: Record<string, unknown> = {};
-    if (vendorId !== undefined) data.vendorId = vendorId;
+    if (vendorId !== undefined) data.vendorId = vendorId.toString();
     if (islandId !== undefined) data.islandId = islandId;
     if (title !== undefined) data.title = title;
     if (description !== undefined) data.description = description;

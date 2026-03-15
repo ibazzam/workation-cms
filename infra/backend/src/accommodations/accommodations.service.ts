@@ -610,13 +610,12 @@ export class AccommodationsService {
     if (islandId) {
       const island = await this.prisma.island.findUnique({ where: { id: islandId }, select: { id: true } });
       if (!island) {
-        throw new BadRequestException('islandId does not exist');
+          data.vendorId = vendorId.toString();
       }
     }
 
     const data: Record<string, unknown> = {};
-  if (vendorId !== undefined) data.vendorId = vendorId.toString();
-      // vendorId is now always a string
+    if (vendorId !== undefined) data.vendorId = vendorId.toString();
     if (islandId) data.islandId = islandId;
     if (title) data.title = title;
     if (title) this.assertTitleQuality(title);
@@ -915,3 +914,5 @@ export class AccommodationsService {
       .replace(/-+/g, '-');
   }
 }
+
+

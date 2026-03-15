@@ -730,12 +730,9 @@ export class TransportsService {
       throw new NotFoundException('Transport not found');
     }
 
-    if (existing.vendorId !== scopedVendorId) {
-      // Ensure both are strings for comparison
-      const existingVendorIdStr = existing.vendorId != null ? existing.vendorId.toString() : '';
-      if (existingVendorIdStr !== scopedVendorId) {
-        throw new ForbiddenException('Vendor users can only manage their own vendor resources');
-      }
+    const existingVendorIdStr = existing.vendorId != null ? existing.vendorId.toString() : '';
+    if (existingVendorIdStr !== scopedVendorId) {
+      throw new ForbiddenException('Vendor users can only manage their own vendor resources');
     }
 
     if (payload && Object.prototype.hasOwnProperty.call(payload, 'vendorId')) {
@@ -1122,3 +1119,4 @@ export class TransportsService {
     }));
   }
 }
+

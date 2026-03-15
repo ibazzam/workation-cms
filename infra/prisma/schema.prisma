@@ -828,3 +828,4 @@ model users {
   @@index([portal_role], map: "users_portal_role_index")
   @@index([portal_vendor_id], map: "users_portal_vendor_id_index")
 }
+

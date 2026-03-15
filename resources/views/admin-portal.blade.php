@@ -432,45 +432,10 @@
                 <p class="small">Super Admin role required to modify users, roles, and suspension status.</p>
             @else
                 <p class="small">Change role permissions and suspend/reactivate accounts directly in the application.</p>
-                <!-- User Creation Form -->
-                <form class="manage-form" method="POST" action="/portal/admin/users/create" style="margin-bottom:18px;background:#f7f7f7;padding:14px;border-radius:10px;">
-                    @csrf
-                    <div style="margin-bottom:8px;">
-                        <label>Name</label>
-                        <input name="name" required placeholder="Full Name">
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <label>Username</label>
-                        <input name="username" required placeholder="Username">
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <label>Email</label>
-                        <input name="email" type="email" required placeholder="Email">
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <label>Role</label>
-                        <select name="portal_role" required>
-                            <option value="ADMIN">ADMIN</option>
-                            <option value="ADMIN_SUPER">ADMIN_SUPER</option>
-                            <option value="ADMIN_CARE">ADMIN_CARE</option>
-                            <option value="VENDOR">VENDOR</option>
-                        </select>
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <label>Status</label>
-                        <select name="portal_enabled" required>
-                            <option value="1">ACTIVE</option>
-                            <option value="0">SUSPENDED</option>
-                        </select>
-                    </div>
-                    <div>
-                        <button type="submit">Create User</button>
-                    </div>
-                </form>
                 <!-- Existing Users Moderation -->
-                <div class="grid">
+                <div class="grid" id="userList">
                     @foreach ($portalUsers as $managedUser)
-                        <div class="user-row">
+                        <div class="user-row" data-user-id="{{ $managedUser->id }}">
                             <div class="user-head">
                                 <span class="user-name">{{ $managedUser->username ?: 'no-username' }}</span>
                                 <span class="role-pill">{{ $managedUser->portal_role ?: 'NONE' }}</span>
@@ -480,33 +445,37 @@
                                 @else
                                     <span class="state ok">ACTIVE</span>
                                 @endif
+                                <button type="button" class="btn btn-secondary edit-user-btn" data-user-id="{{ $managedUser->id }}" style="margin-left:auto;">Edit</button>
                             </div>
-                            <form class="manage-form" method="POST" action="/portal/admin/users/{{ $managedUser->id }}/manage">
-                                @csrf
-                                <div>
-                                    <label>Role</label>
-                                    <select name="portal_role">
-                                        <option value="ADMIN" @selected($managedUser->portal_role === 'ADMIN')>ADMIN</option>
-                                        <option value="ADMIN_SUPER" @selected($managedUser->portal_role === 'ADMIN_SUPER')>ADMIN_SUPER</option>
-                                        <option value="ADMIN_CARE" @selected($managedUser->portal_role === 'ADMIN_CARE')>ADMIN_CARE</option>
-                                        <option value="VENDOR" @selected($managedUser->portal_role === 'VENDOR')>VENDOR</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label>Status</label>
-                                    <select name="portal_enabled">
-                                        <option value="1" @selected($managedUser->portal_enabled)>ACTIVE</option>
-                                        <option value="0" @selected(!$managedUser->portal_enabled)>SUSPENDED</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label>Vendor ID</label>
-                                    <input name="portal_vendor_id" value="{{ $managedUser->portal_vendor_id ?? '' }}" placeholder="Required for VENDOR">
-                                </div>
-                                <div>
-                                    <button type="submit">Save</button>
-                                </div>
-                            </form>
+                            <div class="edit-user-form" id="edit-user-form-{{ $managedUser->id }}" style="display:none;">
+                                <form class="manage-form" method="POST" action="/portal/admin/users/{{ $managedUser->id }}/manage">
+                                    @csrf
+                                    <div>
+                                        <label>Role</label>
+                                        <select name="portal_role">
+                                            <option value="ADMIN" @selected($managedUser->portal_role === 'ADMIN')>ADMIN</option>
+                                            <option value="ADMIN_SUPER" @selected($managedUser->portal_role === 'ADMIN_SUPER')>ADMIN_SUPER</option>
+                                            <option value="ADMIN_CARE" @selected($managedUser->portal_role === 'ADMIN_CARE')>ADMIN_CARE</option>
+                                            <option value="VENDOR" @selected($managedUser->portal_role === 'VENDOR')>VENDOR</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label>Status</label>
+                                        <select name="portal_enabled">
+                                            <option value="1" @selected($managedUser->portal_enabled)>ACTIVE</option>
+                                            <option value="0" @selected(!$managedUser->portal_enabled)>SUSPENDED</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label>Vendor ID</label>
+                                        <input name="portal_vendor_id" value="{{ $managedUser->portal_vendor_id ?? '' }}" placeholder="Required for VENDOR">
+                                    </div>
+                                    <div>
+                                        <button type="submit">Save</button>
+                                        <button type="button" class="btn btn-secondary cancel-edit-btn" data-user-id="{{ $managedUser->id }}">Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     @endforeach
                 </div>
@@ -515,6 +484,29 @@
     </main>
 
     <script>
+                // User list edit/cancel logic
+                document.addEventListener('DOMContentLoaded', function () {
+                    var editButtons = document.querySelectorAll('.edit-user-btn');
+                    var cancelButtons = document.querySelectorAll('.cancel-edit-btn');
+                    var forms = document.querySelectorAll('.edit-user-form');
+                    editButtons.forEach(function(btn) {
+                        btn.addEventListener('click', function() {
+                            var userId = btn.getAttribute('data-user-id');
+                            // Hide all forms first
+                            forms.forEach(function(f) { f.style.display = 'none'; });
+                            // Show only this user's form
+                            var form = document.getElementById('edit-user-form-' + userId);
+                            if (form) form.style.display = 'block';
+                        });
+                    });
+                    cancelButtons.forEach(function(btn) {
+                        btn.addEventListener('click', function() {
+                            var userId = btn.getAttribute('data-user-id');
+                            var form = document.getElementById('edit-user-form-' + userId);
+                            if (form) form.style.display = 'none';
+                        });
+                    });
+                });
         // Toggle moderation panel on button click
         document.addEventListener('DOMContentLoaded', function () {
             var btn = document.getElementById('toggleModerationBtn');
@@ -652,3 +644,4 @@
     </script>
 </body>
 </html>
+

@@ -615,8 +615,7 @@ export class AccommodationsService {
     }
 
     const data: Record<string, unknown> = {};
-  if (vendorId !== undefined) data.vendorId = vendorId.toString();
-      // vendorId is now always a string
+    if (vendorId !== undefined) data.vendorId = vendorId.toString();
     if (islandId) data.islandId = islandId;
     if (title) data.title = title;
     if (title) this.assertTitleQuality(title);
@@ -915,3 +914,4 @@ export class AccommodationsService {
       .replace(/-+/g, '-');
   }
 }
+

@@ -230,7 +230,7 @@ export class VehicleRentalsService {
     if (!existing) {
       throw new NotFoundException('Vehicle rental not found');
     }
-    this.assertVendorScopedAccess(existing.vendorId, actor);
+    this.assertVendorScopedAccess(BigInt(existing.vendorId), actor);
     const normalized = this.normalizeUpsertPayload(payload, { partial: true, actor, existing });
     if (normalized.vendorId && typeof normalized.vendorId !== 'string') {
       normalized.vendorId = normalized.vendorId.toString();
@@ -252,7 +252,7 @@ export class VehicleRentalsService {
       throw new NotFoundException('Vehicle rental not found');
     }
 
-    this.assertVendorScopedAccess(existing.vendorId, actor);
+    this.assertVendorScopedAccess(BigInt(existing.vendorId), actor);
 
     await this.prisma.vehicleRental.delete({ where: { id } });
   }
@@ -263,7 +263,7 @@ export class VehicleRentalsService {
       throw new NotFoundException('Vehicle rental not found');
     }
 
-    this.assertVendorScopedAccess(rental.vendorId, actor);
+    this.assertVendorScopedAccess(BigInt(rental.vendorId), actor);
 
     const startDate = this.parseDate(payload.startDate, 'startDate');
     const endDate = this.parseDate(payload.endDate, 'endDate');
@@ -298,7 +298,7 @@ export class VehicleRentalsService {
       throw new NotFoundException('Vehicle rental not found');
     }
 
-    this.assertVendorScopedAccess(rental.vendorId, actor);
+    this.assertVendorScopedAccess(BigInt(rental.vendorId), actor);
 
     const blackout = await this.prisma.vehicleRentalBlackout.findUnique({ where: { id: blackoutId } });
     if (!blackout || blackout.vehicleRentalId !== id) {

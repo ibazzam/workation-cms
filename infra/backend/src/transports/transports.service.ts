@@ -732,14 +732,9 @@ export class TransportsService {
 
     if (existing.vendorId !== scopedVendorId) {
       // Ensure both are strings for comparison
-      if (typeof existing.vendorId === 'bigint') {
-        if (existing.vendorId.toString() !== scopedVendorId) {
-          throw new ForbiddenException('Vendor users can only manage their own vendor resources');
-        }
-      } else {
-        if (existing.vendorId !== scopedVendorId) {
-          throw new ForbiddenException('Vendor users can only manage their own vendor resources');
-        }
+      const existingVendorIdStr = existing.vendorId != null ? existing.vendorId.toString() : '';
+      if (existingVendorIdStr !== scopedVendorId) {
+        throw new ForbiddenException('Vendor users can only manage their own vendor resources');
       }
     }
 

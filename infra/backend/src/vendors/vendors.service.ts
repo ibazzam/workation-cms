@@ -33,7 +33,7 @@ export class VendorsService {
   }
 
   async getById(id: string | bigint) {
-    const vendorId = typeof id === 'bigint' ? id : BigInt(id);
+    const vendorId = id.toString();
     const vendor = await this.prisma.vendor.findUnique({ where: { id: vendorId } });
     if (!vendor) {
       throw new NotFoundException('Vendor not found');
@@ -60,7 +60,7 @@ export class VendorsService {
   }
 
   async update(id: string | bigint, payload: VendorUpsertPayload, actor?: RequestActor) {
-    const vendorId = typeof id === 'bigint' ? id : BigInt(id);
+    const vendorId = id.toString();
     this.assertVendorScopedAccess(vendorId, actor);
     await this.ensureVendorExists(vendorId);
     const normalized = this.normalizeVendorPayload(payload, { partial: true });
@@ -71,7 +71,7 @@ export class VendorsService {
   }
 
   async remove(id: string | bigint) {
-    const vendorId = typeof id === 'bigint' ? id : BigInt(id);
+    const vendorId = id.toString();
     await this.ensureVendorExists(vendorId);
     try {
       await this.prisma.vendor.delete({ where: { id: vendorId } });
@@ -84,7 +84,7 @@ export class VendorsService {
   }
 
   private async ensureVendorExists(id: string | bigint) {
-    const vendorId = typeof id === 'bigint' ? id : BigInt(id);
+    const vendorId = id.toString();
     const vendor = await this.prisma.vendor.findUnique({ where: { id: vendorId }, select: { id: true } });
     if (!vendor) {
       throw new NotFoundException('Vendor not found');

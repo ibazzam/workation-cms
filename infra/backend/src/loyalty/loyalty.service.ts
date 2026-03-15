@@ -172,7 +172,7 @@ export class LoyaltyService {
     await this.ensureVendorExists(vendorId);
     return this.prisma.vendorLoyaltyOffer.findMany({
       where: {
-        vendorId: BigInt(vendorId),
+        vendorId: vendorId,
         active: true,
       },
       orderBy: [{ pointsMultiplier: 'desc' }, { createdAt: 'desc' }],
@@ -186,7 +186,7 @@ export class LoyaltyService {
     return this.prisma.vendorLoyaltyOffer.create({
       data: {
         ...normalized,
-        vendorId: normalized.vendorId ? BigInt(normalized.vendorId) : undefined,
+        vendorId: normalized.vendorId ? normalized.vendorId.toString() : undefined,
       } as Prisma.VendorLoyaltyOfferUncheckedCreateInput,
     });
   }
@@ -208,7 +208,7 @@ export class LoyaltyService {
       where: { id },
       data: {
         ...normalized,
-        vendorId: normalized.vendorId ? BigInt(normalized.vendorId) : undefined,
+        vendorId: normalized.vendorId ? normalized.vendorId.toString() : undefined,
       } as Prisma.VendorLoyaltyOfferUncheckedUpdateInput,
     });
   }
@@ -219,7 +219,7 @@ export class LoyaltyService {
       throw new NotFoundException('Vendor loyalty offer not found');
     }
 
-    this.assertVendorOfferScope(existing.vendorId, actor);
+    this.assertVendorOfferScope(existing.vendorId ? existing.vendorId.toString() : '', actor);
     await this.prisma.vendorLoyaltyOffer.delete({ where: { id } });
   }
 
@@ -259,7 +259,7 @@ export class LoyaltyService {
       const now = new Date();
       const activeOffer = await this.prisma.vendorLoyaltyOffer.findFirst({
         where: {
-          vendorId: typeof vendorId === 'bigint' ? vendorId : BigInt(vendorId),
+          vendorId: vendorId.toString(),
           active: true,
           OR: [
             { startsAt: null, endsAt: null },

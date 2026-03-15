@@ -445,10 +445,11 @@
                     </div>
                     <div style="margin-bottom:8px;">
                         <label>Role</label>
-                        <select name="role" required>
+                        <select name="portal_role" required>
                             <option value="ADMIN">ADMIN</option>
                             <option value="ADMIN_SUPER">ADMIN_SUPER</option>
                             <option value="ADMIN_CARE">ADMIN_CARE</option>
+                            <option value="VENDOR">VENDOR</option>
                         </select>
                     </div>
                     <div style="margin-bottom:8px;">
@@ -468,7 +469,7 @@
                         <div class="user-row">
                             <div class="user-head">
                                 <span class="user-name">{{ $managedUser->username ?: 'no-username' }}</span>
-                                <span class="role-pill">{{ $managedUser->role ?: 'NONE' }}</span>
+                                <span class="role-pill">{{ $managedUser->portal_role ?: 'NONE' }}</span>
                                 <span class="small">{{ $managedUser->name }} | {{ $managedUser->email }}</span>
                                 @if (!$managedUser->portal_enabled)
                                     <span class="state err">SUSPENDED</span>
@@ -480,10 +481,11 @@
                                 @csrf
                                 <div>
                                     <label>Role</label>
-                                    <select name="role">
-                                        <option value="ADMIN" @selected($managedUser->role === 'ADMIN')>ADMIN</option>
-                                        <option value="ADMIN_SUPER" @selected($managedUser->role === 'ADMIN_SUPER')>ADMIN_SUPER</option>
-                                        <option value="VENDOR" @selected($managedUser->role === 'VENDOR')>VENDOR</option>
+                                    <select name="portal_role">
+                                        <option value="ADMIN" @selected($managedUser->portal_role === 'ADMIN')>ADMIN</option>
+                                        <option value="ADMIN_SUPER" @selected($managedUser->portal_role === 'ADMIN_SUPER')>ADMIN_SUPER</option>
+                                        <option value="ADMIN_CARE" @selected($managedUser->portal_role === 'ADMIN_CARE')>ADMIN_CARE</option>
+                                        <option value="VENDOR" @selected($managedUser->portal_role === 'VENDOR')>VENDOR</option>
                                     </select>
                                 </div>
                                 <div>
@@ -526,9 +528,9 @@
                 // Client-side validation for moderation form
                 document.querySelectorAll('.manage-form').forEach(function(form) {
                     form.addEventListener('submit', function(e) {
-                        var role = form.querySelector('[name="portal_role"]').value;
-                        var enabled = form.querySelector('[name="portal_enabled"]').value;
-                        var vendorId = form.querySelector('[name="portal_vendor_id"]').value;
+                        var role = form.querySelector('[name="portal_role"]') ? form.querySelector('[name="portal_role"]').value : null;
+                        var enabled = form.querySelector('[name="portal_enabled"]') ? form.querySelector('[name="portal_enabled"]').value : null;
+                        var vendorId = form.querySelector('[name="portal_vendor_id"]') ? form.querySelector('[name="portal_vendor_id"]').value : null;
                         if (!role || !enabled) {
                             e.preventDefault();
                             alert('Role and status are required.');

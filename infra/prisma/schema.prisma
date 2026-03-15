@@ -420,31 +420,31 @@ model Booking {
 }
 
 model Review {
-  id                     String         @id @default(uuid())
-  userId                 String
-  targetType             String
-  accommodationId        String?
-  transportId            String?
-  rating                 Int
-  title                  String?
-  comment                String?
-  verifiedStay           Boolean        @default(false)
-  status                 String         @default("PUBLISHED")
-  createdAt              DateTime       @default(now())
-  updatedAt              DateTime       @updatedAt
-  activityRefId          String?
-  serviceRefId           String?
-  trustSafetyStatus      String         @default("CLEAR")
-  moderationReasonCode   String?
+  id                   String         @id @default(uuid())
+  userId               String
+  targetType           String
+  accommodationId      String?
+  transportId          String?
+  rating               Int
+  title                String?
+  comment              String?
+  verifiedStay         Boolean        @default(false)
+  status               String         @default("PUBLISHED")
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  activityRefId        String?
+  serviceRefId         String?
+  trustSafetyStatus    String         @default("CLEAR")
+  moderationReasonCode String?
   moderationReviewerNote String?
-  flaggedCount           Int            @default(0)
-  lastFlaggedAt          DateTime?
-  escalatedToQueue       String?
-  escalatedAt            DateTime?
-  actionedAt             DateTime?
-  accommodation          Accommodation? @relation(fields: [accommodationId], references: [id])
-  transport              Transport?     @relation(fields: [transportId], references: [id])
-  user                   User           @relation(fields: [userId], references: [id])
+  flaggedCount         Int            @default(0)
+  lastFlaggedAt        DateTime?
+  escalatedToQueue     String?
+  escalatedAt          DateTime?
+  actionedAt           DateTime?
+  accommodation        Accommodation? @relation(fields: [accommodationId], references: [id])
+  transport            Transport?     @relation(fields: [transportId], references: [id])
+  user                 User           @relation(fields: [userId], references: [id])
 
   @@index([targetType, activityRefId])
   @@index([targetType, serviceRefId])

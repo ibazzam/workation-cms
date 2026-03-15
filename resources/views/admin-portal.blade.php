@@ -425,7 +425,8 @@
             </article>
         </section>
 
-        <section class="card manage">
+        <button id="toggleModerationBtn" class="btn btn-primary" type="button" style="margin-bottom:18px;">Show Moderation Panel</button>
+        <section class="card manage" id="moderationPanel" style="display:none;">
             <p class="label">Portal User Moderation</p>
             @if (!$canManageUsers)
                 <p class="small">Super Admin role required to modify users, roles, and suspension status.</p>
@@ -514,6 +515,22 @@
     </main>
 
     <script>
+        // Toggle moderation panel on button click
+        document.addEventListener('DOMContentLoaded', function () {
+            var btn = document.getElementById('toggleModerationBtn');
+            var panel = document.getElementById('moderationPanel');
+            if (btn && panel) {
+                btn.addEventListener('click', function () {
+                    if (panel.style.display === 'none') {
+                        panel.style.display = 'block';
+                        btn.textContent = 'Hide Moderation Panel';
+                    } else {
+                        panel.style.display = 'none';
+                        btn.textContent = 'Show Moderation Panel';
+                    }
+                });
+            }
+        });
                 // Ensure feedback messages are always visible and scroll into view
                 window.addEventListener('DOMContentLoaded', function () {
                     var successBox = document.getElementById('successBox');

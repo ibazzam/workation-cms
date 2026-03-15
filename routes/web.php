@@ -143,7 +143,7 @@ Route::get('/admin', function () {
             'name' => 'required|string|max:100',
             'username' => 'required|string|max:50|unique:users,username',
             'email' => 'required|email|max:100|unique:users,email',
-            'portal_role' => 'required|in:ADMIN,ADMIN_SUPER,ADMIN_CARE',
+            'portal_role' => 'required|in:ADMIN,ADMIN_SUPER,ADMIN_CARE,VENDOR',
             'portal_enabled' => 'required|boolean',
         ]);
 

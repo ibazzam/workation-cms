@@ -111,6 +111,9 @@ Route::get('/', function () {
     ]);
 });
 
+
+use Illuminate\Support\Facades\Auth;
+
 Route::get('/admin', function () {
     $portal = 'admin';
     $config = portalConfig($portal);
@@ -118,7 +121,8 @@ Route::get('/admin', function () {
         return redirect('/portal/' . $portal . '/login');
     }
 
-    $canManageUsers = Gate::allows('manage-portal-users');
+    $user = Auth::user();
+    $canManageUsers = Gate::allows('manage-portal-users', $user);
     $portalUsers = User::query()
         ->whereIn('portal_role', ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'VENDOR'])
         ->orderBy('portal_role')
@@ -399,6 +403,11 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
         'portal_' . $portal . '_user_id' => $sessionUserId,
         'portal_' . $portal . '_role' => $sessionRole,
     ]);
+
+    // Log in the user using Laravel Auth if found
+    if ($portalUser) {
+        Auth::login($portalUser);
+    }
 
     return redirect(portalRoutePath($portal));
 });

@@ -432,41 +432,6 @@
                 <p class="small">Super Admin role required to modify users, roles, and suspension status.</p>
             @else
                 <p class="small">Change role permissions and suspend/reactivate accounts directly in the application.</p>
-                <!-- User Creation Form -->
-                <form class="manage-form" method="POST" action="/portal/admin/users/create" style="margin-bottom:18px;background:#f7f7f7;padding:14px;border-radius:10px;">
-                    @csrf
-                    <div style="margin-bottom:8px;">
-                        <label>Name</label>
-                        <input name="name" required placeholder="Full Name">
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <label>Username</label>
-                        <input name="username" required placeholder="Username">
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <label>Email</label>
-                        <input name="email" type="email" required placeholder="Email">
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <label>Role</label>
-                        <select name="portal_role" required>
-                            <option value="ADMIN">ADMIN</option>
-                            <option value="ADMIN_SUPER">ADMIN_SUPER</option>
-                            <option value="ADMIN_CARE">ADMIN_CARE</option>
-                            <option value="VENDOR">VENDOR</option>
-                        </select>
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <label>Status</label>
-                        <select name="portal_enabled" required>
-                            <option value="1">ACTIVE</option>
-                            <option value="0">SUSPENDED</option>
-                        </select>
-                    </div>
-                    <div>
-                        <button type="submit">Create User</button>
-                    </div>
-                </form>
                 <!-- Existing Users Moderation -->
                 <div class="grid" id="userList">
                     @foreach ($portalUsers as $managedUser)
@@ -679,3 +644,4 @@
     </script>
 </body>
 </html>
+

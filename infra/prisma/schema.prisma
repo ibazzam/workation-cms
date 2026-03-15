@@ -245,6 +245,7 @@ model Excursion {
   equipmentRequired Boolean  @default(false)
   equipmentStock    Int      @default(0)
   price             Decimal  @default("0.00")
+  currency          String   @default("USD")
   // username field removed (was not needed for Excursion)
   active            Boolean  @default(true)
   createdAt         DateTime @default(now())

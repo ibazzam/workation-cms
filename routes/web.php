@@ -120,10 +120,10 @@ Route::get('/admin', function () {
 
     $canManageUsers = Gate::allows('manage-portal-users');
     $portalUsers = User::query()
-        ->whereIn('role', ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'VENDOR'])
-        ->orderBy('role')
+        ->whereIn('portal_role', ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'VENDOR'])
+        ->orderBy('portal_role')
         ->orderBy('username')
-        ->get(['id', 'name', 'username', 'email', 'role', 'portal_enabled', 'portal_vendor_id']);
+        ->get(['id', 'name', 'username', 'email', 'portal_role', 'portal_enabled', 'portal_vendor_id']);
 
     return view('admin-portal', [
         'apiBase' => workationApiBase(),
@@ -143,7 +143,7 @@ Route::get('/admin', function () {
             'name' => 'required|string|max:100',
             'username' => 'required|string|max:50|unique:users,username',
             'email' => 'required|email|max:100|unique:users,email',
-            'role' => 'required|in:ADMIN,ADMIN_SUPER,ADMIN_CARE',
+            'portal_role' => 'required|in:ADMIN,ADMIN_SUPER,ADMIN_CARE',
             'portal_enabled' => 'required|boolean',
         ]);
 
@@ -151,7 +151,7 @@ Route::get('/admin', function () {
         $user->name = $validated['name'];
         $user->username = $validated['username'];
         $user->email = $validated['email'];
-        $user->role = $validated['role'];
+        $user->portal_role = $validated['portal_role'];
         $user->portal_enabled = $validated['portal_enabled'];
         $user->password = \Illuminate\Support\Str::random(16); // Set random password, force reset later
         $user->save();

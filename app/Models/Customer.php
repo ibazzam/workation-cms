@@ -16,7 +16,7 @@ class Customer extends Authenticatable
         'name',
         'email',
         'password',
-        'role',
+        'portal_role',
         'createdAt',
         'updatedAt',
         // Add other customer-specific fields as needed

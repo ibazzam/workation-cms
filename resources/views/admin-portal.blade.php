@@ -377,9 +377,12 @@
                 <section class="card">
                     <p class="label">Session Debug</p>
                     <pre style="background:#f7f7f7;border-radius:8px;padding:8px;font-size:0.9rem;">portal_admin_authenticated: {{ session('portal_admin_authenticated') ? 'true' : 'false' }}
-        portal_admin_role: {{ session('portal_admin_role') ?? 'null' }}
-        portal_admin_user: {{ session('portal_admin_user') ?? 'null' }}
-        portal_admin_user_id: {{ session('portal_admin_user_id') ?? 'null' }}</pre>
+                portal_admin_role: {{ session('portal_admin_role') ?? 'null' }}
+                portal_admin_user: {{ session('portal_admin_user') ?? 'null' }}
+                portal_admin_user_id: {{ session('portal_admin_user_id') ?? 'null' }}
+
+                canManageUsers: {{ var_export($canManageUsers, true) }}
+                </pre>
                 </section>
         @if ($errors->any())
             <div class="error-box prominent" id="errorBox">{{ $errors->first() }}</div>

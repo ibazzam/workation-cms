@@ -79,7 +79,7 @@ export class AuthGuard implements CanActivate {
       const ensuredUser = await this.usersService.ensureUserFromAuthContext(authContext);
       request.user = {
         id: ensuredUser.id,
-        role: ensuredUser.role,
+        role: role, // Use role from AuthContext, not ensuredUser
         email: ensuredUser.email,
         vendorId: authContext.vendorId,
       };
@@ -124,7 +124,7 @@ export class AuthGuard implements CanActivate {
     const ensuredUser = await this.usersService.ensureUserFromAuthContext(authContext);
     request.user = {
       id: ensuredUser.id,
-      role: ensuredUser.role,
+      role: role, // Use role from AuthContext, not ensuredUser
       email: ensuredUser.email,
       vendorId: authContext.vendorId,
     };

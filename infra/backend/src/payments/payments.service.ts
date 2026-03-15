@@ -719,7 +719,8 @@ export class PaymentsService {
   }
 
   async getVendorSettlementReport(actorVendorId: unknown, payload: VendorSettlementReportPayload) {
-    const vendorId = this.parseActorVendorId(actorVendorId);
+    // Always treat vendorId as BigInt for logic, string for Prisma
+    const vendorId = BigInt(this.parseActorVendorId(actorVendorId));
     const dateRange = this.parseSettlementDateRange(payload);
     const providerFilter = this.parseProviderFilter(payload.provider);
     if (payload.provider !== undefined && !providerFilter) {
@@ -765,7 +766,10 @@ export class PaymentsService {
       },
     });
 
-    const vendorPayments = succeededPayments.filter((payment) => this.resolveBookingVendorId(payment.booking) === vendorId);
+    const vendorPayments = succeededPayments.filter((payment) => {
+      const resolved = this.resolveBookingVendorId(payment.booking);
+      return resolved && BigInt(resolved) === vendorId;
+    });
     const vendorPaymentIds = new Set(vendorPayments.map((payment) => payment.id));
 
     const refunds = await this.readRefundRecords();
@@ -2997,29 +3001,28 @@ export class PaymentsService {
   }
 
   private resolveBookingVendorId(booking: {
-    accommodation: { vendorId: string } | null;
-    transport: { vendorId: string | null } | null;
+    accommodation: { vendorId: string | bigint } | null;
+    transport: { vendorId: string | bigint | null } | null;
   } | null): string | null {
     if (!booking) {
       return null;
     }
-
-    const accommodationVendorId = booking.accommodation?.vendorId ?? null;
-    const transportVendorId = booking.transport?.vendorId ?? null;
-
+    const accommodationVendorId = booking.accommodation?.vendorId ? BigInt(booking.accommodation.vendorId) : null;
+    const transportVendorId = booking.transport?.vendorId ? BigInt(booking.transport.vendorId as string) : null;
     if (accommodationVendorId && transportVendorId) {
-      return accommodationVendorId === transportVendorId ? accommodationVendorId : null;
+      return accommodationVendorId === transportVendorId ? accommodationVendorId.toString() : null;
     }
-
-    return accommodationVendorId ?? transportVendorId;
+    return (accommodationVendorId ?? transportVendorId)?.toString() ?? null;
   }
 
   private parseActorVendorId(value: unknown): string {
-    if (typeof value !== 'string' || value.trim().length === 0) {
-      throw new ForbiddenException('Vendor scope is missing for authenticated vendor user');
+    if (typeof value === 'bigint') return value.toString();
+    if (typeof value === 'number') return BigInt(value).toString();
+    if (typeof value === 'string' && value.trim().length > 0) {
+      // Accept stringified BigInt
+      return BigInt(value.trim()).toString();
     }
-
-    return value.trim();
+    throw new ForbiddenException('Vendor scope is missing for authenticated vendor user');
   }
 
   private generateTaxInvoiceNumber(now: Date, existing: TaxInvoiceRecord[]) {

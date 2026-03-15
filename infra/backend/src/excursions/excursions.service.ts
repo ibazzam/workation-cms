@@ -28,7 +28,7 @@ type ExcursionSlotUpsertPayload = {
 
 type RequestActor = {
   role?: string;
-  vendorId?: string;
+  vendorId?: string | bigint;
 };
 
 @Injectable()
@@ -50,7 +50,7 @@ export class ExcursionsService {
       where: {
         active: true,
         islandId: filters.islandId,
-        vendorId: filters.vendorId?.trim() || undefined,
+        vendorId: filters.vendorId ? BigInt(filters.vendorId) : undefined,
         type: normalizedType ?? undefined,
         ...(normalizedQ
           ? {
@@ -382,9 +382,8 @@ export class ExcursionsService {
     if (actor?.role !== 'VENDOR') {
       return;
     }
-
     const scopedVendorId = this.parseActorVendorId(actor.vendorId);
-    if (scopedVendorId !== resourceVendorId) {
+    if (BigInt(scopedVendorId) !== BigInt(resourceVendorId)) {
       throw new ForbiddenException('Vendor users can only manage their own excursions');
     }
   }
@@ -392,27 +391,26 @@ export class ExcursionsService {
   private resolveVendorId(
     payloadVendorId: unknown,
     actor: RequestActor | undefined,
-    existingVendorId: string | undefined,
+    existingVendorId: string | bigint | undefined,
     partial: boolean,
-  ): string | undefined {
+  ): bigint | undefined {
     if (actor?.role === 'VENDOR') {
       const scopedVendorId = this.parseActorVendorId(actor.vendorId);
-      if (payloadVendorId !== undefined && payloadVendorId !== scopedVendorId) {
+      if (payloadVendorId !== undefined && BigInt(payloadVendorId) !== BigInt(scopedVendorId)) {
         throw new ForbiddenException('Vendor users cannot assign other vendor IDs');
       }
-      return scopedVendorId;
+      return BigInt(scopedVendorId);
     }
 
-    const parsedVendorId = this.parseOptionalString(payloadVendorId, 'vendorId', 120);
-    if (parsedVendorId !== undefined) {
-      return parsedVendorId;
+    if (payloadVendorId !== undefined) {
+      return BigInt(payloadVendorId);
     }
 
     if (partial) {
       return undefined;
     }
 
-    return existingVendorId;
+    return existingVendorId !== undefined ? BigInt(existingVendorId) : undefined;
   }
 
   private parseDateRange(value: string) {
@@ -604,10 +602,12 @@ export class ExcursionsService {
   }
 
   private parseActorVendorId(value: unknown): string {
-    if (typeof value !== 'string' || value.trim().length === 0) {
-      throw new ForbiddenException('Vendor scope is missing for authenticated vendor user');
+    if (typeof value === 'bigint') {
+      return value.toString();
     }
-
-    return value.trim();
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+    throw new ForbiddenException('Vendor scope is missing for authenticated vendor user');
   }
 }

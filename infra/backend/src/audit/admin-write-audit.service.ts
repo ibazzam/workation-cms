@@ -26,8 +26,8 @@ export class AdminWriteAuditService {
         actorUserId: payload.actorUserId,
         actorRole: payload.actorRole,
         actorEmail: payload.actorEmail,
-        actorVendorId: payload.actorVendorId,
-        // method removed, not in schema
+        // actorVendorId is not in schema, only vendorId is required
+        vendorId: payload.actorVendorId ? BigInt(payload.actorVendorId) : 0n,
         path: payload.path,
         statusCode: payload.statusCode,
         success: payload.success,

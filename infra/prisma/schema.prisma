@@ -8,70 +8,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// String-backed enums are used for portability across environments
-
-// Core models
 model User {
-  id         String   @id @default(uuid())
-  email      String   @unique
-  name       String?
-  password   String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  bookings   Booking[]
-  reviews    Review[]
+  id             String          @id @default(uuid())
+  email          String          @unique
+  name           String?
+  password       String?
+  role           String          @default("USER")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  bookings       Booking[]
   loyaltyAccount LoyaltyAccount?
-  loyaltyTransactions LoyaltyTransaction[]
-}
-
-model Admin {
-  id                BigInt    @id @default(autoincrement())
-  name              String
-  email             String    @unique(map: "admins_email_unique")
-  email_verified_at DateTime?
-  password          String
-  remember_token    String?
-  created_at        DateTime  @default(now())
-  updated_at        DateTime  @updatedAt
-  username          String    @unique(map: "admins_username_unique")
-  portal_role       String?
-  portal_enabled    Boolean   @default(false)
-  portal_vendor_id  BigInt?
-
-  @@index([portal_enabled], name: "admins_portal_enabled_index")
-  @@index([portal_role], name: "admins_portal_role_index")
-  @@index([portal_vendor_id], name: "admins_portal_vendor_id_index")
+  reviews        Review[]
 }
 
 model Vendor {
-  id                BigInt    @id @default(autoincrement())
-  name              String
-  email             String    @unique(map: "vendors_email_unique")
-  email_verified_at DateTime?
-  password          String
-  remember_token    String?
-  created_at        DateTime  @default(now())
-  updated_at        DateTime  @updatedAt
-  username          String    @unique(map: "vendors_username_unique")
-  portal_role       String?
-  portal_enabled    Boolean   @default(false)
-  portal_vendor_id  BigInt?
-  phone             String?
-
-  accommodations Accommodation[]
-  transports     Transport[]
-  excursions     Excursion[]
-  restaurants    Restaurant[]
-  resortDayVisits ResortDayVisit[]
+  id               String               @id
+  name             String
+  email            String?              @unique
+  phone            String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime
+  accommodations   Accommodation[]
+  excursions       Excursion[]
   remoteWorkSpaces RemoteWorkspace[]
-  vehicleRentals VehicleRental[]
-  socialLinks    SocialLink[]
-  loyaltyOffers  VendorLoyaltyOffer[]
-
-  @@index([portal_enabled], name: "vendors_portal_enabled_index")
-  @@index([portal_role], name: "vendors_portal_role_index")
-  @@index([portal_vendor_id], name: "vendors_portal_vendor_id_index")
+  resortDayVisits  ResortDayVisit[]
+  restaurants      Restaurant[]
+  socialLinks      SocialLink[]
+  transports       Transport[]
+  vehicleRentals   VehicleRental[]
+  loyaltyOffers    VendorLoyaltyOffer[]
 }
 
 model Atoll {
@@ -80,139 +45,125 @@ model Atoll {
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   islands   Island[]
 }
 
 model Island {
-  id        Int      @id @default(autoincrement())
-  name      String
-  slug      String   @unique
-  atollId   Int
-  lat       Float?
-  lng       Float?
+  id                    Int               @id @default(autoincrement())
+  name                  String
+  slug                  String            @unique
+  atollId               Int
+  lat                   Float?
+  lng                   Float?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
   facilitiesSummary     String?
   connectivitySummary   String?
   emergencyServicesInfo String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  atoll     Atoll    @relation(fields: [atollId], references: [id])
-  accommodations Accommodation[]
-  fromTransports   Transport[] @relation("fromIsland")
-  toTransports     Transport[] @relation("toIsland")
-  excursions       Excursion[]
-  restaurants      Restaurant[]
-  resortDayVisits  ResortDayVisit[]
-  remoteWorkSpaces RemoteWorkspace[]
-  pickupVehicleRentals  VehicleRental[] @relation("rentalPickupIsland")
-  dropoffVehicleRentals VehicleRental[] @relation("rentalDropoffIsland")
+  accommodations        Accommodation[]
+  excursions            Excursion[]
+  atoll                 Atoll             @relation(fields: [atollId], references: [id])
+  remoteWorkSpaces      RemoteWorkspace[]
+  resortDayVisits       ResortDayVisit[]
+  restaurants           Restaurant[]
+  fromTransports        Transport[]       @relation("fromIsland")
+  toTransports          Transport[]       @relation("toIsland")
+  dropoffVehicleRentals VehicleRental[]   @relation("rentalDropoffIsland")
+  pickupVehicleRentals  VehicleRental[]   @relation("rentalPickupIsland")
 }
 
 model Accommodation {
-  id          String   @id @default(uuid())
-    vendorId    BigInt
-  islandId    Int
-  title       String
-  slug        String   @unique
-  description String?
-  type        String?  
-  rooms       Int?     
-  minStayNights Int    @default(1)
-  price       Decimal  @default("0.00")
-  cancellationPolicy String?
-  noShowPolicy       String?
-  childrenPolicy     String?
-  taxesAndFeesPolicy String?
-  contentModerationStatus String   @default("APPROVED")
+  id                      String                      @id @default(uuid())
+  vendorId                String
+  islandId                Int
+  title                   String
+  slug                    String                      @unique
+  description             String?
+  type                    String?
+  rooms                   Int?
+  price                   Decimal                     @default(0.00)
+  createdAt               DateTime                    @default(now())
+  updatedAt               DateTime                    @updatedAt
+  minStayNights           Int                         @default(1)
+  cancellationPolicy      String?
+  noShowPolicy            String?
+  childrenPolicy          String?
+  taxesAndFeesPolicy      String?
+  contentModerationStatus String?                     @default("APPROVED")
   contentModerationReason String?
   contentModeratedAt      DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  vendor      Vendor   @relation(fields: [vendorId], references: [id])
-  island      Island   @relation(fields: [islandId], references: [id])
-  bookings    Booking[]
-  blackouts   AccommodationBlackout[]
-  seasonalRates AccommodationSeasonalRate[]
-  reviews     Review[]
-  socialLinks SocialLink[]
+  island                  Island                      @relation(fields: [islandId], references: [id])
+  vendor                  Vendor                      @relation(fields: [vendorId], references: [id])
+  blackouts               AccommodationBlackout[]
+  seasonalRates           AccommodationSeasonalRate[]
+  bookings                Booking[]
+  reviews                 Review[]
+  socialLinks             SocialLink[]
 }
 
 model AccommodationSeasonalRate {
-  id              String   @id @default(uuid())
+  id              String        @id @default(uuid())
   accommodationId String
   name            String
   startDate       DateTime
   endDate         DateTime
-  nightlyPrice    Decimal  @default("0.00")
+  nightlyPrice    Decimal       @default(0.00)
   minNights       Int?
-  priority        Int      @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
+  priority        Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   accommodation   Accommodation @relation(fields: [accommodationId], references: [id])
-
-  @@index([accommodationId, startDate, endDate])
-  @@index([accommodationId, priority])
 }
 
 model AccommodationBlackout {
-  id              String   @id @default(uuid())
+  id              String        @id @default(uuid())
   accommodationId String
   startDate       DateTime
   endDate         DateTime
   reason          String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   accommodation   Accommodation @relation(fields: [accommodationId], references: [id])
-
-  @@index([accommodationId, startDate, endDate])
 }
 
 model Transport {
-  id          String       @id @default(uuid())
-  vendorId    BigInt?
-  type        String
-  code        String?      
-  fromIslandId Int?
-  toIslandId   Int?
-  departure    DateTime?
-  arrival      DateTime?
-  capacity     Int?
-  price        Decimal      @default("0.00")
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-
-  vendor       Vendor?      @relation(fields: [vendorId], references: [id])
-  fromIsland   Island?      @relation("fromIsland", fields: [fromIslandId], references: [id])
-  toIsland     Island?      @relation("toIsland", fields: [toIslandId], references: [id])
-  bookings     Booking[]
-  fareClasses  TransportFareClass[]
-  disruptions  TransportDisruption[] @relation("disruptionPrimaryTransport")
+  id                        String                @id @default(uuid())
+  vendorId                  String?
+  type                      String
+  code                      String?
+  fromIslandId              Int?
+  toIslandId                Int?
+  departure                 DateTime?
+  arrival                   DateTime?
+  capacity                  Int?
+  price                     Decimal               @default(0.00)
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+  name                      String?
+  bookings                  Booking[]
+  reviews                   Review[]
+  socialLinks               SocialLink[]
+  fromIsland                Island?               @relation("fromIsland", fields: [fromIslandId], references: [id])
+  toIsland                  Island?               @relation("toIsland", fields: [toIslandId], references: [id])
+  vendor                    Vendor?               @relation(fields: [vendorId], references: [id])
   replacementForDisruptions TransportDisruption[] @relation("disruptionReplacementTransport")
-  reviews      Review[]
-  socialLinks  SocialLink[]
+  disruptions               TransportDisruption[] @relation("disruptionPrimaryTransport")
+  fareClasses               TransportFareClass[]
 }
 
 model TransportDisruption {
-  id                   String   @id @default(uuid())
-  transportId          String
-  status               String
-  reason               String?
-  delayMinutes         Int?
+  id                     String     @id @default(uuid())
+  transportId            String
+  status                 String
+  reason                 String?
+  delayMinutes           Int?
   replacementTransportId String?
-  startsAt             DateTime @default(now())
-  resolvedAt           DateTime?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-
-  transport            Transport @relation("disruptionPrimaryTransport", fields: [transportId], references: [id])
-  replacementTransport Transport? @relation("disruptionReplacementTransport", fields: [replacementTransportId], references: [id])
-
-  @@index([transportId, resolvedAt])
-  @@index([replacementTransportId])
+  startsAt               DateTime   @default(now())
+  resolvedAt             DateTime?
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+  replacementTransport   Transport? @relation("disruptionReplacementTransport", fields: [replacementTransportId], references: [id])
+  transport              Transport  @relation("disruptionPrimaryTransport", fields: [transportId], references: [id])
 }
 
 model TransportFareClass {
@@ -222,35 +173,30 @@ model TransportFareClass {
   name        String
   baggageKg   Int?
   seats       Int?
-  price       Decimal   @default("0.00")
+  price       Decimal   @default(0.00)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-
   transport   Transport @relation(fields: [transportId], references: [id])
-
-  @@unique([transportId, code])
-  @@index([transportId])
 }
 
 model Excursion {
-  id                String   @id @default(uuid())
-  vendorId          BigInt
-  vendor            Vendor   @relation(fields: [vendorId], references: [id])
+  id                String          @id @default(uuid())
+  vendorId          String
   islandId          Int
   type              String
   title             String
   description       String?
   durationMinutes   Int
-  baseCapacity      Int      @default(1)
-  equipmentRequired Boolean  @default(false)
-  equipmentStock    Int      @default(0)
-  price             Decimal  @default("0.00")
-  // username field removed (was not needed for Excursion)
-  active            Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  island            Island   @relation(fields: [islandId], references: [id])
+  baseCapacity      Int             @default(1)
+  equipmentRequired Boolean         @default(false)
+  equipmentStock    Int             @default(0)
+  price             Decimal         @default(0.00)
+  currency          String          @default("USD")
+  active            Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  island            Island          @relation(fields: [islandId], references: [id])
+  vendor            Vendor          @relation(fields: [vendorId], references: [id])
   slots             ExcursionSlot[]
 
   @@index([vendorId, active])
@@ -259,42 +205,40 @@ model Excursion {
 }
 
 model ExcursionSlot {
-  id                   String   @id @default(uuid())
-  excursionId          String
-  startAt              DateTime
-  endAt                DateTime
-  capacityOverride     Int?
+  id                     String    @id @default(uuid())
+  excursionId            String
+  startAt                DateTime
+  endAt                  DateTime
+  capacityOverride       Int?
   equipmentStockOverride Int?
-  status               String   @default("OPEN")
-  note                 String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-
-  excursion            Excursion @relation(fields: [excursionId], references: [id])
+  status                 String    @default("OPEN")
+  note                   String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  excursion              Excursion @relation(fields: [excursionId], references: [id], onDelete: Cascade)
 
   @@index([excursionId, startAt])
   @@index([status, startAt])
 }
 
 model Restaurant {
-  id                String   @id @default(uuid())
-  vendorId          BigInt
+  id                String                    @id @default(uuid())
+  vendorId          String
   islandId          Int
   name              String
   description       String?
   cuisineType       String
-  totalTables       Int      @default(1)
-  minPartySize      Int      @default(1)
-  maxPartySize      Int      @default(10)
-  depositPolicyType String   @default("NONE")
-  depositAmount     Decimal  @default("0.00")
-  depositCurrency   String   @default("USD")
-  active            Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  vendor            Vendor   @relation(fields: [vendorId], references: [id])
-  island            Island   @relation(fields: [islandId], references: [id])
+  totalTables       Int                       @default(1)
+  minPartySize      Int                       @default(1)
+  maxPartySize      Int                       @default(10)
+  depositPolicyType String                    @default("NONE")
+  depositAmount     Decimal                   @default(0.00)
+  depositCurrency   String                    @default("USD")
+  active            Boolean                   @default(true)
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  island            Island                    @relation(fields: [islandId], references: [id])
+  vendor            Vendor                    @relation(fields: [vendorId], references: [id])
   seatingWindows    RestaurantSeatingWindow[]
 
   @@index([vendorId, active])
@@ -303,88 +247,84 @@ model Restaurant {
 }
 
 model RestaurantSeatingWindow {
-  id                 String   @id @default(uuid())
-  restaurantId       String
-  startAt            DateTime
-  endAt              DateTime
-  tableCountOverride Int?
+  id                   String     @id @default(uuid())
+  restaurantId         String
+  startAt              DateTime
+  endAt                DateTime
+  tableCountOverride   Int?
   minPartySizeOverride Int?
   maxPartySizeOverride Int?
-  status             String   @default("OPEN")
-  note               String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  restaurant         Restaurant @relation(fields: [restaurantId], references: [id])
+  status               String     @default("OPEN")
+  note                 String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  restaurant           Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@index([restaurantId, startAt])
   @@index([status, startAt])
 }
 
 model ResortDayVisit {
-  id                 String   @id @default(uuid())
-  vendorId           BigInt
-  islandId           Int
-  title              String
-  description        String?
-  quotaPerWindow     Int      @default(1)
-  includesTransfer   Boolean  @default(false)
-  transferMode       String   @default("NONE")
-  transferBundlePrice Decimal @default("0.00")
-  passRestrictionType String  @default("NONE")
-  minAllowedAge      Int      @default(0)
-  basePrice          Decimal  @default("0.00")
-  currency           String   @default("USD")
-  active             Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  vendor             Vendor   @relation(fields: [vendorId], references: [id])
-  island             Island   @relation(fields: [islandId], references: [id])
-  windows            ResortDayVisitWindow[]
+  id                  String                 @id @default(uuid())
+  vendorId            String
+  islandId            Int
+  title               String
+  description         String?
+  quotaPerWindow      Int                    @default(1)
+  includesTransfer    Boolean                @default(false)
+  transferMode        String                 @default("NONE")
+  transferBundlePrice Decimal                @default(0.00)
+  passRestrictionType String                 @default("NONE")
+  minAllowedAge       Int                    @default(0)
+  basePrice           Decimal                @default(0.00)
+  currency            String                 @default("USD")
+  active              Boolean                @default(true)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  island              Island                 @relation(fields: [islandId], references: [id])
+  vendor              Vendor                 @relation(fields: [vendorId], references: [id])
+  windows             ResortDayVisitWindow[]
 
   @@index([vendorId, active])
   @@index([islandId, active])
 }
 
 model ResortDayVisitWindow {
-  id               String   @id @default(uuid())
+  id               String         @id @default(uuid())
   resortDayVisitId String
   startAt          DateTime
   endAt            DateTime
   quotaOverride    Int?
-  status           String   @default("OPEN")
+  status           String         @default("OPEN")
   note             String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  resortDayVisit   ResortDayVisit @relation(fields: [resortDayVisitId], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  resortDayVisit   ResortDayVisit @relation(fields: [resortDayVisitId], references: [id], onDelete: Cascade)
 
   @@index([resortDayVisitId, startAt])
   @@index([status, startAt])
 }
 
 model RemoteWorkspace {
-  id                   String   @id @default(uuid())
-  vendorId             BigInt
-  islandId             Int
-  name                 String
-  description          String?
-  deskInventory        Int      @default(1)
-  privateBoothInventory Int     @default(0)
-  dayPassPrice         Decimal  @default("0.00")
-  weeklyPassPrice      Decimal  @default("0.00")
-  currency             String   @default("USD")
-  minMbps              Int      @default(10)
-  connectivityQuality  String   @default("BASIC")
-  hasMeetingRooms      Boolean  @default(false)
-  active               Boolean  @default(true)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-
-  vendor               Vendor   @relation(fields: [vendorId], references: [id])
-  island               Island   @relation(fields: [islandId], references: [id])
-  passWindows          RemoteWorkspacePassWindow[]
+  id                    String                      @id @default(uuid())
+  vendorId              String
+  islandId              Int
+  name                  String
+  description           String?
+  deskInventory         Int                         @default(1)
+  privateBoothInventory Int                         @default(0)
+  dayPassPrice          Decimal                     @default(0.00)
+  weeklyPassPrice       Decimal                     @default(0.00)
+  currency              String                      @default("USD")
+  minMbps               Int                         @default(10)
+  connectivityQuality   String                      @default("BASIC")
+  hasMeetingRooms       Boolean                     @default(false)
+  active                Boolean                     @default(true)
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
+  island                Island                      @relation(fields: [islandId], references: [id])
+  vendor                Vendor                      @relation(fields: [vendorId], references: [id])
+  passWindows           RemoteWorkspacePassWindow[]
 
   @@index([vendorId, active])
   @@index([islandId, active])
@@ -392,46 +332,44 @@ model RemoteWorkspace {
 }
 
 model RemoteWorkspacePassWindow {
-  id                         String   @id @default(uuid())
-  remoteWorkspaceId          String
-  startAt                    DateTime
-  endAt                      DateTime
-  deskInventoryOverride      Int?
+  id                            String          @id @default(uuid())
+  remoteWorkspaceId             String
+  startAt                       DateTime
+  endAt                         DateTime
+  deskInventoryOverride         Int?
   privateBoothInventoryOverride Int?
-  status                     String   @default("OPEN")
-  note                       String?
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
-
-  remoteWorkspace            RemoteWorkspace @relation(fields: [remoteWorkspaceId], references: [id])
+  status                        String          @default("OPEN")
+  note                          String?
+  createdAt                     DateTime        @default(now())
+  updatedAt                     DateTime        @updatedAt
+  remoteWorkspace               RemoteWorkspace @relation(fields: [remoteWorkspaceId], references: [id], onDelete: Cascade)
 
   @@index([remoteWorkspaceId, startAt])
   @@index([status, startAt])
 }
 
 model VehicleRental {
-  id                    String   @id @default(uuid())
-  vendorId              BigInt
-  pickupIslandId        Int
-  dropoffIslandId       Int?
-  vehicleType           String
-  title                 String
-  description           String?
-  inventoryTotal        Int      @default(1)
-  minDriverAge          Int      @default(18)
-  requiresLicense       Boolean  @default(true)
+  id                     String                  @id @default(uuid())
+  vendorId               String
+  pickupIslandId         Int
+  dropoffIslandId        Int?
+  vehicleType            String
+  title                  String
+  description            String?
+  inventoryTotal         Int                     @default(1)
+  minDriverAge           Int                     @default(18)
+  requiresLicense        Boolean                 @default(true)
   acceptedLicenseClasses String?
-  allowsDifferentDropoff Boolean @default(false)
-  dailyPrice            Decimal  @default("0.00")
-  currency              String   @default("USD")
-  active                Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  vendor                Vendor   @relation(fields: [vendorId], references: [id])
-  pickupIsland          Island   @relation("rentalPickupIsland", fields: [pickupIslandId], references: [id])
-  dropoffIsland         Island?  @relation("rentalDropoffIsland", fields: [dropoffIslandId], references: [id])
-  blackouts             VehicleRentalBlackout[]
+  allowsDifferentDropoff Boolean                 @default(false)
+  dailyPrice             Decimal                 @default(0.00)
+  currency               String                  @default("USD")
+  active                 Boolean                 @default(true)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  dropoffIsland          Island?                 @relation("rentalDropoffIsland", fields: [dropoffIslandId], references: [id])
+  pickupIsland           Island                  @relation("rentalPickupIsland", fields: [pickupIslandId], references: [id])
+  vendor                 Vendor                  @relation(fields: [vendorId], references: [id])
+  blackouts              VehicleRentalBlackout[]
 
   @@index([vendorId, active])
   @@index([pickupIslandId, active])
@@ -440,184 +378,168 @@ model VehicleRental {
 }
 
 model VehicleRentalBlackout {
-  id              String   @id @default(uuid())
+  id              String        @id @default(uuid())
   vehicleRentalId String
   startDate       DateTime
   endDate         DateTime
-  unitsBlocked    Int      @default(1)
+  unitsBlocked    Int           @default(1)
   reason          String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  vehicleRental   VehicleRental @relation(fields: [vehicleRentalId], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  vehicleRental   VehicleRental @relation(fields: [vehicleRentalId], references: [id], onDelete: Cascade)
 
   @@index([vehicleRentalId, startDate, endDate])
 }
 
 model Booking {
-  id              String        @id @default(uuid())
-  userId          String
-  accommodationId String? 
-  transportId     String?
+  id                     String               @id @default(uuid())
+  userId                 String
+  accommodationId        String?
+  transportId            String?
+  startDate              DateTime?
+  endDate                DateTime?
+  guests                 Int?                 @default(1)
+  totalPrice             Decimal              @default(0.00)
+  status                 String               @default("PENDING")
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  holdExpiresAt          DateTime?
   transportFareClassCode String?
-  startDate       DateTime?
-  endDate         DateTime?
-  guests          Int?          @default(1)
-  totalPrice      Decimal       @default("0.00")
-  fareLockUnitPrice  Decimal?
-  fareLockTotalPrice Decimal?
-  fareLockCurrency   String?
-  fareLockExpiresAt  DateTime?
-  status          String @default("PENDING")
-  holdExpiresAt   DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  minStayNights          Int?
+  fareLockUnitPrice      Decimal?
+  fareLockTotalPrice     Decimal?
+  fareLockCurrency       String?
+  fareLockExpiresAt      DateTime?
+  accommodation          Accommodation?       @relation(fields: [accommodationId], references: [id])
+  transport              Transport?           @relation(fields: [transportId], references: [id])
+  user                   User                 @relation(fields: [userId], references: [id])
+  loyaltyTransactions    LoyaltyTransaction[]
+  payment                Payment?
 
-  user            User          @relation(fields: [userId], references: [id])
-  accommodation   Accommodation? @relation(fields: [accommodationId], references: [id])
-  transport       Transport?    @relation(fields: [transportId], references: [id])
-  payment         Payment?
-  loyaltyTransactions LoyaltyTransaction[]
+  @@index([status, holdExpiresAt])
 }
 
 model Review {
-  id              String         @id @default(uuid())
-  userId          String
-  targetType      String
-  accommodationId String?
-  transportId     String?
-  activityRefId   String?
-  serviceRefId    String?
-  rating          Int
-  title           String?
-  comment         String?
-  verifiedStay    Boolean        @default(false)
-  status          String         @default("PUBLISHED")
-  trustSafetyStatus String       @default("CLEAR")
+  id                   String         @id @default(uuid())
+  userId               String
+  targetType           String
+  accommodationId      String?
+  transportId          String?
+  rating               Int
+  title                String?
+  comment              String?
+  verifiedStay         Boolean        @default(false)
+  status               String         @default("PUBLISHED")
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  activityRefId        String?
+  serviceRefId         String?
+  trustSafetyStatus    String         @default("CLEAR")
   moderationReasonCode String?
   moderationReviewerNote String?
-  flaggedCount    Int            @default(0)
-  // username field removed (was not needed for Review)
-  escalatedToQueue String?
-  escalatedAt     DateTime?
-  actionedAt      DateTime?
-  lastFlaggedAt   DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  flaggedCount         Int            @default(0)
+  lastFlaggedAt        DateTime?
+  escalatedToQueue     String?
+  escalatedAt          DateTime?
+  actionedAt           DateTime?
+  accommodation        Accommodation? @relation(fields: [accommodationId], references: [id])
+  transport            Transport?     @relation(fields: [transportId], references: [id])
+  user                 User           @relation(fields: [userId], references: [id])
 
-  user            User           @relation(fields: [userId], references: [id])
-  accommodation   Accommodation? @relation(fields: [accommodationId], references: [id])
-  transport       Transport?     @relation(fields: [transportId], references: [id])
-
-  @@index([targetType, accommodationId])
-  @@index([targetType, transportId])
   @@index([targetType, activityRefId])
   @@index([targetType, serviceRefId])
-  @@index([userId, targetType, accommodationId])
   @@index([userId, targetType, activityRefId])
   @@index([userId, targetType, serviceRefId])
   @@index([status, trustSafetyStatus])
 }
 
 model SocialLink {
-  id                String         @id @default(uuid())
-  targetType        String
-  accommodationId   String?
-  transportId       String?
-  vendorId          BigInt?
-  platform          String
-  url               String
-  handle            String?
-  embedPolicy       String         @default("LINK_ONLY")
-  ugcSafetyStatus   String         @default("SAFE")
-  ugcSafetyReason   String?
-  trustSafetyStatus String         @default("CLEAR")
-  moderationReasonCode String?
+  id                     String         @id @default(uuid())
+  targetType             String
+  accommodationId        String?
+  transportId            String?
+  vendorId               String?
+  platform               String
+  url                    String
+  handle                 String?
+  verified               Boolean        @default(false)
+  displayOrder           Int            @default(0)
+  active                 Boolean        @default(true)
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  embedPolicy            String         @default("LINK_ONLY")
+  ugcSafetyStatus        String         @default("SAFE")
+  ugcSafetyReason        String?
+  trustSafetyStatus      String         @default("CLEAR")
+  moderationReasonCode   String?
   moderationReviewerNote String?
-  flaggedCount      Int            @default(0)
-  lastFlaggedAt     DateTime?
-  escalatedToQueue  String?
-  escalatedAt       DateTime?
-  actionedAt        DateTime?
-  contentQualityStatus String      @default("GOOD")
-  contentQualityScore Int          @default(100)
-  contentQualityNotes String?
-  qualityReviewedAt DateTime?
-  verified          Boolean        @default(false)
-  displayOrder      Int            @default(0)
-  active            Boolean        @default(true)
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  flaggedCount           Int            @default(0)
+  lastFlaggedAt          DateTime?
+  escalatedToQueue       String?
+  escalatedAt            DateTime?
+  actionedAt             DateTime?
+  contentQualityStatus   String         @default("GOOD")
+  contentQualityScore    Int            @default(100)
+  contentQualityNotes    String?
+  qualityReviewedAt      DateTime?
+  accommodation          Accommodation? @relation(fields: [accommodationId], references: [id])
+  transport              Transport?     @relation(fields: [transportId], references: [id])
+  vendor                 Vendor?        @relation(fields: [vendorId], references: [id])
 
-  accommodation     Accommodation? @relation(fields: [accommodationId], references: [id])
-  transport         Transport?     @relation(fields: [transportId], references: [id])
-  vendor            Vendor?        @relation(fields: [vendorId], references: [id])
-
-  @@index([targetType, accommodationId, active])
-  @@index([targetType, transportId, active])
-  @@index([targetType, vendorId, active])
   @@index([targetType, active, verified, ugcSafetyStatus])
   @@index([trustSafetyStatus, contentQualityStatus])
 }
 
 model LoyaltyAccount {
-  userId            String         @id
-  pointsBalance     Int            @default(0)
-  lifetimePoints    Int            @default(0)
-  tier              String         @default("BRONZE")
-  updatedAt         DateTime       @updatedAt
-
-  user              User           @relation(fields: [userId], references: [id])
+  userId              String               @id
+  pointsBalance       Int                  @default(0)
+  lifetimePoints      Int                  @default(0)
+  tier                String               @default("BRONZE")
+  updatedAt           DateTime             @updatedAt
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loyaltyTransactions LoyaltyTransaction[]
 }
 
 model LoyaltyTransaction {
-  id                String         @id @default(uuid())
-  userId            String
-  bookingId         String?
-  type              String
-  points            Int
-  amount            Decimal?       @default("0.00")
-  currency          String?
-  description       String?
-  createdAt         DateTime       @default(now())
-
-  user              User           @relation(fields: [userId], references: [id])
-  booking           Booking?       @relation(fields: [bookingId], references: [id])
-
-  @@index([userId, createdAt])
-  @@index([bookingId, type])
+  id          String         @id @default(uuid())
+  userId      String
+  bookingId   String?
+  type        String
+  points      Int
+  amount      Decimal?       @default(0.00)
+  currency    String?
+  description String?
+  createdAt   DateTime       @default(now())
+  booking     Booking?       @relation(fields: [bookingId], references: [id])
+  user        LoyaltyAccount @relation(fields: [userId], references: [userId], onDelete: Cascade)
 }
 
 model VendorLoyaltyOffer {
-  id                String         @id @default(uuid())
-  vendorId          BigInt
-  title             String
-  description       String?
-  pointsMultiplier  Decimal        @default("1.00")
-  discountPercent   Int            @default(0)
-  active            Boolean        @default(true)
-  startsAt          DateTime?
-  endsAt            DateTime?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-
-  vendor            Vendor         @relation(fields: [vendorId], references: [id])
-
-  @@index([vendorId, active])
+  id               String    @id @default(uuid())
+  vendorId         String
+  title            String
+  description      String?
+  pointsMultiplier Decimal   @default(1.00)
+  discountPercent  Int       @default(0)
+  active           Boolean   @default(true)
+  startsAt         DateTime?
+  endsAt           DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  vendor           Vendor    @relation(fields: [vendorId], references: [id])
 }
 
 model Payment {
-  id           String    @id @default(uuid())
-  bookingId    String    @unique
-  vendorId    BigInt
-  providerId   String?   
-  amount       Decimal   @default("0.00")
-  currency     String    @default("USD")
-  status       String    
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  booking      Booking   @relation(fields: [bookingId], references: [id])
+  id         String   @id @default(uuid())
+  bookingId  String   @unique
+  provider   String
+  providerId String?
+  amount     Decimal  @default(0.00)
+  currency   String   @default("USD")
+  status     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  booking    Booking  @relation(fields: [bookingId], references: [id])
 }
 
 model PaymentWebhookEvent {
@@ -629,56 +551,50 @@ model PaymentWebhookEvent {
   status    String   @default("PROCESSED")
   createdAt DateTime @default(now())
 
-  @@unique([provider, eventId], map: "provider_event_unique")
+  @@unique([provider, eventId])
 }
 
 model PaymentReconciliationRun {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   source         String
-  providerFilter String   @default("ALL")
+  providerFilter String    @default("ALL")
   limitUsed      Int
-  dryRun         Boolean  @default(false)
+  dryRun         Boolean   @default(false)
   status         String
-  scanned        Int      @default(0)
-  reconciled     Int      @default(0)
-  succeeded      Int      @default(0)
-  failed         Int      @default(0)
-  unchanged      Int      @default(0)
-  skipped        Int      @default(0)
-  errors         Int      @default(0)
+  scanned        Int       @default(0)
+  reconciled     Int       @default(0)
+  succeeded      Int       @default(0)
+  failed         Int       @default(0)
+  unchanged      Int       @default(0)
+  skipped        Int       @default(0)
+  errors         Int       @default(0)
   errorMessage   String?
   startedAt      DateTime
   finishedAt     DateTime?
   durationMs     Int?
-  createdAt      DateTime @default(now())
-
-  @@index([createdAt])
+  createdAt      DateTime  @default(now())
 }
 
 model PaymentBackgroundJob {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   type        String
-  dedupeKey   String?
-  status      String   @default("PENDING")
-  attempts    Int      @default(0)
-  maxAttempts Int      @default(5)
-  runAt       DateTime @default(now())
+  status      String    @default("PENDING")
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
+  runAt       DateTime  @default(now())
   payload     Json
   lastError   String?
   processedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([type, dedupeKey])
-  @@index([status, runAt])
-  @@index([createdAt])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  dedupeKey   String?   @unique
 }
 
 model AppConfig {
   key       String   @id
   value     Json
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model AdminAuditLog {
@@ -687,15 +603,13 @@ model AdminAuditLog {
   actorRole     String?
   actorEmail    String?
   actorVendorId String?
-  vendorId          BigInt
+  method        String
   path          String
   statusCode    Int
   success       Boolean
   requestBody   String?
   errorMessage  String?
   createdAt     DateTime @default(now())
-
-  @@index([actorRole, createdAt])
 }
 
 model Country {
@@ -724,9 +638,193 @@ model Workation {
   location    String
   start_date  DateTime
   end_date    DateTime
-  price       Decimal  @db.Decimal(10, 2)
+  price       Decimal
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@map("workations")
+}
+
+model cache {
+  key        String @id @db.VarChar(255)
+  value      String
+  expiration Int
+
+  @@index([expiration], map: "cache_expiration_index")
+}
+
+model cache_locks {
+  key        String @id @db.VarChar(255)
+  owner      String @db.VarChar(255)
+  expiration Int
+
+  @@index([expiration], map: "cache_locks_expiration_index")
+}
+
+model failed_jobs {
+  id         BigInt   @id @default(autoincrement())
+  uuid       String   @unique(map: "failed_jobs_uuid_unique") @db.VarChar(255)
+  connection String
+  queue      String
+  payload    String
+  exception  String
+  failed_at  DateTime @default(now()) @db.Timestamp(0)
+}
+
+model islands {
+  id                                                               BigInt             @id @default(autoincrement())
+  name                                                             String             @db.VarChar(255)
+  created_at                                                       DateTime?          @db.Timestamp(0)
+  updated_at                                                       DateTime?          @db.Timestamp(0)
+  transport_routes_transport_routes_destination_island_idToislands transport_routes[] @relation("transport_routes_destination_island_idToislands")
+  transport_routes_transport_routes_origin_island_idToislands      transport_routes[] @relation("transport_routes_origin_island_idToislands")
+}
+
+model job_batches {
+  id             String  @id @db.VarChar(255)
+  name           String  @db.VarChar(255)
+  total_jobs     Int
+  pending_jobs   Int
+  failed_jobs    Int
+  failed_job_ids String
+  options        String?
+  cancelled_at   Int?
+  created_at     Int
+  finished_at    Int?
+}
+
+model jobs {
+  id           BigInt @id @default(autoincrement())
+  queue        String @db.VarChar(255)
+  payload      String
+  attempts     Int    @db.SmallInt
+  reserved_at  Int?
+  available_at Int
+  created_at   Int
+
+  @@index([queue], map: "jobs_queue_index")
+}
+
+model migrations {
+  id        Int    @id @default(autoincrement())
+  migration String @db.VarChar(255)
+  batch     Int
+}
+
+model password_reset_tokens {
+  email      String    @id @db.VarChar(255)
+  token      String    @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+}
+
+model sessions {
+  id            String  @id @db.VarChar(255)
+  user_id       BigInt?
+  ip_address    String? @db.VarChar(45)
+  user_agent    String?
+  payload       String
+  last_activity Int
+
+  @@index([last_activity], map: "sessions_last_activity_index")
+  @@index([user_id], map: "sessions_user_id_index")
+}
+
+model transport_holds {
+  id                  BigInt              @id @default(autoincrement())
+  quote_id            String?             @db.VarChar(255)
+  schedule_id         BigInt
+  seat_class          String?             @db.VarChar(255)
+  seats_reserved      Int                 @default(0)
+  status              String              @default("held") @db.VarChar(255)
+  ttl_expires_at      DateTime?           @db.Timestamptz(0)
+  idempotency_key     String?             @db.VarChar(255)
+  created_by          Json?               @db.Json
+  created_at          DateTime?           @db.Timestamp(0)
+  updated_at          DateTime?           @db.Timestamp(0)
+  transport_schedules transport_schedules @relation(fields: [schedule_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "transport_holds_schedule_id_foreign")
+}
+
+model transport_inventory {
+  id                  BigInt              @id @default(autoincrement())
+  schedule_id         BigInt
+  seat_class          String?             @db.VarChar(255)
+  total_seats         Int                 @default(0)
+  reserved_seats      Int                 @default(0)
+  metadata            Json?               @db.Json
+  created_at          DateTime?           @db.Timestamp(0)
+  updated_at          DateTime?           @db.Timestamp(0)
+  transport_schedules transport_schedules @relation(fields: [schedule_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "transport_inventory_schedule_id_foreign")
+}
+
+model transport_operators {
+  id                  BigInt                @id @default(autoincrement())
+  name                String                @db.VarChar(255)
+  provider_type       String?               @db.VarChar(255)
+  config              Json?                 @db.Json
+  created_at          DateTime?             @db.Timestamp(0)
+  updated_at          DateTime?             @db.Timestamp(0)
+  transport_schedules transport_schedules[]
+}
+
+model transport_provider_jobs {
+  id              BigInt    @id @default(autoincrement())
+  provider        String?   @db.VarChar(255)
+  action          String    @db.VarChar(255)
+  payload         Json?     @db.Json
+  status          String    @default("pending") @db.VarChar(255)
+  attempts        Int       @default(0)
+  next_attempt_at DateTime? @db.Timestamptz(0)
+  last_error      String?
+  created_at      DateTime? @db.Timestamp(0)
+  updated_at      DateTime? @db.Timestamp(0)
+  request_id      String?   @db.VarChar(255)
+
+  @@index([request_id], map: "transport_provider_jobs_request_id_index")
+}
+
+model transport_routes {
+  id                                                      BigInt                @id @default(autoincrement())
+  origin_island_id                                        BigInt
+  destination_island_id                                   BigInt
+  distance_km                                             Int?
+  route_meta                                              Json?                 @db.Json
+  created_at                                              DateTime?             @db.Timestamp(0)
+  updated_at                                              DateTime?             @db.Timestamp(0)
+  islands_transport_routes_destination_island_idToislands islands               @relation("transport_routes_destination_island_idToislands", fields: [destination_island_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "transport_routes_destination_island_id_foreign")
+  islands_transport_routes_origin_island_idToislands      islands               @relation("transport_routes_origin_island_idToislands", fields: [origin_island_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "transport_routes_origin_island_id_foreign")
+  transport_schedules                                     transport_schedules[]
+}
+
+model transport_schedules {
+  id                  BigInt                @id @default(autoincrement())
+  route_id            BigInt
+  operator_id         BigInt
+  departure_at        DateTime              @db.Timestamptz(0)
+  arrival_at          DateTime?             @db.Timestamptz(0)
+  published_version   String?               @db.VarChar(255)
+  created_at          DateTime?             @db.Timestamp(0)
+  updated_at          DateTime?             @db.Timestamp(0)
+  transport_holds     transport_holds[]
+  transport_inventory transport_inventory[]
+  transport_operators transport_operators   @relation(fields: [operator_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "transport_schedules_operator_id_foreign")
+  transport_routes    transport_routes      @relation(fields: [route_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "transport_schedules_route_id_foreign")
+}
+
+model users {
+  id                BigInt    @id @default(autoincrement())
+  name              String    @db.VarChar(255)
+  email             String    @unique(map: "users_email_unique") @db.VarChar(255)
+  email_verified_at DateTime? @db.Timestamp(0)
+  password          String    @db.VarChar(255)
+  remember_token    String?   @db.VarChar(100)
+  created_at        DateTime? @db.Timestamp(0)
+  updated_at        DateTime? @db.Timestamp(0)
+  username          String?   @unique(map: "users_username_unique") @db.VarChar(255)
+  portal_role       String?   @db.VarChar(32)
+  portal_enabled    Boolean   @default(false)
+  portal_vendor_id  String?   @db.VarChar(255)
+
+  @@index([portal_enabled], map: "users_portal_enabled_index")
+  @@index([portal_role], map: "users_portal_role_index")
+  @@index([portal_vendor_id], map: "users_portal_vendor_id_index")
 }

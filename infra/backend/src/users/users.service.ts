@@ -38,13 +38,15 @@ export class UsersService {
       : `${context.id}@local.workation.test`;
 
     return this.prisma.user.upsert({
-      where: { id: context.id },
+      where: { email: normalizedEmail },
       update: {
-        email: normalizedEmail,
+        id: context.id,
+        // add other fields to update if needed
       },
       create: {
         id: context.id,
         email: normalizedEmail,
+        // add other fields to create if needed
       },
     });
   }

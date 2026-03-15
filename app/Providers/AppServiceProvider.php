@@ -23,8 +23,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Gate::define('manage-portal-users', function (): bool {
-            return session('portal_admin_authenticated', false) && session('portal_admin_role') === 'ADMIN_SUPER';
+        Gate::define('manage-portal-users', function () {
+            $request = request();
+            return $request->session()->get('portal_admin_authenticated', false)
+                && $request->session()->get('portal_admin_role') === 'ADMIN_SUPER';
         });
     }
 }

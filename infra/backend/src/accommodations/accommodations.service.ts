@@ -600,7 +600,7 @@ export class AccommodationsService {
       }
     }
 
-    const data: Record<string, unknown> = {};
+      const data: Record<string, unknown> = {};
 
     if (vendorId !== undefined) {
       const vendor = await this.prisma.vendor.findUnique({ where: { id: vendorId.toString() }, select: { id: true } });

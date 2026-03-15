@@ -501,6 +501,7 @@ model Review {
   escalatedToQueue String?
   escalatedAt     DateTime?
   actionedAt      DateTime?
+  lastFlaggedAt   DateTime?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 

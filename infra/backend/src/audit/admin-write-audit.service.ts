@@ -26,10 +26,8 @@ export class AdminWriteAuditService {
         actorUserId: payload.actorUserId,
         actorRole: payload.actorRole,
         actorEmail: payload.actorEmail,
-        
         // actorVendorId is not in schema, only vendorId is required
         vendorId: payload.actorVendorId ? BigInt(payload.actorVendorId) : 0n,
-        // ...existing code...
         path: payload.path,
         statusCode: payload.statusCode,
         success: payload.success,
@@ -97,3 +95,4 @@ export class AdminWriteAuditService {
       || normalized.endsWith('phone');
   }
 }
+

@@ -51,7 +51,7 @@ export class RestaurantsService {
       where: {
         active: true,
         islandId: filters.islandId,
-        vendorId: filters.vendorId?.trim() || undefined,
+        vendorId: filters.vendorId ? filters.vendorId.toString().trim() : undefined,
         cuisineType: cuisineType ?? undefined,
         ...(q
           ? {
@@ -319,7 +319,7 @@ export class RestaurantsService {
     }
 
     const data: Record<string, unknown> = {};
-    if (vendorId !== undefined) data.vendorId = vendorId;
+    if (vendorId !== undefined) data.vendorId = vendorId.toString();
     if (islandId !== undefined) data.islandId = islandId;
     if (name !== undefined) data.name = name;
     if (description !== undefined) data.description = description;

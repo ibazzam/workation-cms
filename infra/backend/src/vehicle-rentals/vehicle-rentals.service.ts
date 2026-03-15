@@ -376,14 +376,14 @@ export class VehicleRentalsService {
   ): bigint | undefined {
     if (actor?.role === 'VENDOR') {
       const scopedVendorId = this.parseActorVendorId(actor.vendorId);
-      if (payloadVendorId !== undefined && BigInt(payloadVendorId) !== scopedVendorId) {
+      if (payloadVendorId !== undefined && BigInt(String(payloadVendorId)) !== scopedVendorId) {
         throw new ForbiddenException('Vendor users cannot assign other vendor IDs');
       }
       return scopedVendorId;
     }
     if (payloadVendorId !== undefined && payloadVendorId !== null) {
       try {
-        return BigInt(payloadVendorId);
+        return BigInt(String(payloadVendorId));
       } catch {
         throw new BadRequestException('vendorId must be a valid BigInt');
       }

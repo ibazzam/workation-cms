@@ -259,7 +259,7 @@ export class LoyaltyService {
       const now = new Date();
       const activeOffer = await this.prisma.vendorLoyaltyOffer.findFirst({
         where: {
-          vendorId,
+          vendorId: typeof vendorId === 'bigint' ? vendorId : BigInt(vendorId),
           active: true,
           OR: [
             { startsAt: null, endsAt: null },
@@ -438,7 +438,7 @@ export class LoyaltyService {
     if (title !== undefined) data.title = title;
     if (description !== undefined) data.description = description;
     if (pointsMultiplier !== undefined) data.pointsMultiplier = new Prisma.Decimal(pointsMultiplier);
-    if (discountPercent !== undefined) data.discountPercent = discountPercent;
+    if (discountPercent !== undefined) data.discountPercent = typeof discountPercent === 'string' ? Number(discountPercent) : discountPercent;
     if (active !== undefined) data.active = active;
     if (startsAt !== undefined) data.startsAt = startsAt;
     if (endsAt !== undefined) data.endsAt = endsAt;
@@ -454,22 +454,23 @@ export class LoyaltyService {
     if (actor?.role !== 'VENDOR') {
       return;
     }
-
-    if (!actor.vendorId || actor.vendorId.trim().length === 0) {
+    const actorVendorId = typeof actor.vendorId === 'bigint' ? actor.vendorId.toString() : (actor.vendorId || '').trim();
+    if (!actorVendorId) {
       throw new ForbiddenException('Vendor scope is missing for authenticated vendor user');
     }
-
-    if (actor.vendorId.trim() !== vendorId) {
+    if (actorVendorId !== vendorId) {
       throw new ForbiddenException('Vendor users can only manage loyalty offers for their own vendor');
     }
   }
 
   private parseRequiredString(value: unknown, field: string): string {
-    if (typeof value !== 'string' || value.trim().length === 0) {
-      throw new BadRequestException(`${field} must be a non-empty string`);
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
     }
-
-    return value.trim();
+    if (typeof value === 'bigint') {
+      return value.toString();
+    }
+    throw new BadRequestException(`${field} must be a non-empty string`);
   }
 
   private parseRequiredPositiveInt(value: unknown, field: string): number {
@@ -488,11 +489,15 @@ export class LoyaltyService {
 
   private parseOptionalString(value: unknown): string | undefined {
     if (value === undefined) return undefined;
-    if (typeof value !== 'string' || value.trim().length === 0) {
-      throw new BadRequestException('Expected non-empty string value');
+    if (value === null) return undefined;
+    if (typeof value === 'string') {
+      if (value.trim().length === 0) throw new BadRequestException('Expected non-empty string value');
+      return value.trim();
     }
-
-    return value.trim();
+    if (typeof value === 'bigint') {
+      return value.toString();
+    }
+    throw new BadRequestException('Expected non-empty string value');
   }
 
   private parseOptionalNullableString(value: unknown): string | null | undefined {

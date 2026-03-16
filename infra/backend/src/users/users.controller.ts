@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Put } from '@nestjs/common';
+import { Body, Controller, Get, Put, Post } from '@nestjs/common';
+import { EmailService } from '../email/email.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UsersService } from './users.service';
 
@@ -7,8 +8,20 @@ type RequestUser = {
 };
 
 @Controller('users')
-export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly emailService: EmailService,
+  ) {}
+  @Post('admin/create')
+  async adminCreateUser(@Body() body: { email: string; name?: string }) {
+    // 1. Create user (if not exists)
+    const user = await this.usersService.createUserWithResetToken(body.email, body.name);
+    // 2. Generate reset link
+    const resetLink = `${process.env.FRONTEND_URL || 'https://workation.mv'}/reset-password?token=${user.resetToken}`;
+    // 3. Send welcome email
+    await this.emailService.sendWelcome(user.email, user.name || '', resetLink);
+    return { success: true };
+  }
 
   @Get('me/profile')
   async getOwnProfile(@CurrentUser() user: RequestUser) {

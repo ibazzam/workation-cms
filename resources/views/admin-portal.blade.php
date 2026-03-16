@@ -437,16 +437,11 @@
                 <p class="small">Super Admin role required to modify users, roles, and suspension status.</p>
             @else
                 <p class="small">Change role permissions and suspend/reactivate accounts directly in the application.</p>
-                <!-- User Creation Form -->
-                <form class="manage-form" method="POST" action="/portal/admin/users/create" style="margin-bottom:18px;background:#f7f7f7;padding:14px;border-radius:10px;">
-                    @csrf
+                <!-- User Creation Form (AJAX, with role/status) -->
+                <form class="manage-form" id="userCreateForm" autocomplete="off" style="margin-bottom:18px;background:#f7f7f7;padding:14px;border-radius:10px;">
                     <div style="margin-bottom:8px;">
                         <label>Name</label>
                         <input name="name" required placeholder="Full Name">
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <label>Username</label>
-                        <input name="username" required placeholder="Username">
                     </div>
                     <div style="margin-bottom:8px;">
                         <label>Email</label>
@@ -472,6 +467,7 @@
                         <button type="submit">Create User</button>
                     </div>
                 </form>
+                <div id="userCreateNotice" style="display:none;margin-bottom:12px;"></div>
                 <!-- Existing Users Moderation -->
                 <div class="user-list" id="userList">
                     @foreach ($portalUsers as $managedUser)
@@ -531,6 +527,52 @@
     </main>
 
     <script>
+    // User creation AJAX logic (with role/status)
+    document.addEventListener('DOMContentLoaded', function () {
+        var userCreateForm = document.getElementById('userCreateForm');
+        var userCreateNotice = document.getElementById('userCreateNotice');
+        if (userCreateForm) {
+            userCreateForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                userCreateNotice.style.display = 'none';
+                userCreateNotice.textContent = '';
+                const name = userCreateForm.elements['name'].value.trim();
+                const email = userCreateForm.elements['email'].value.trim();
+                const portal_role = userCreateForm.elements['portal_role'].value;
+                const portal_enabled = userCreateForm.elements['portal_enabled'].value;
+                if (!name || !email || !portal_role || !portal_enabled) {
+                    userCreateNotice.style.display = 'block';
+                    userCreateNotice.style.color = '#b91c1c';
+                    userCreateNotice.textContent = 'All fields are required.';
+                    return;
+                }
+                try {
+                    const res = await fetch('/api/users/admin/create', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ name, email, portal_role, portal_enabled })
+                    });
+                    if (res.ok) {
+                        userCreateNotice.style.display = 'block';
+                        userCreateNotice.style.color = '#166534';
+                        userCreateNotice.textContent = 'User created and password reset email sent.';
+                        userCreateForm.reset();
+                    } else {
+                        const data = await res.json().catch(() => ({}));
+                        userCreateNotice.style.display = 'block';
+                        userCreateNotice.style.color = '#b91c1c';
+                        userCreateNotice.textContent = data.message || 'Failed to create user.';
+                    }
+                } catch (err) {
+                    userCreateNotice.style.display = 'block';
+                    userCreateNotice.style.color = '#b91c1c';
+                    userCreateNotice.textContent = 'Network error.';
+                }
+            });
+        }
+    });
                 // User list edit/cancel logic
                 document.addEventListener('DOMContentLoaded', function () {
                     var editButtons = document.querySelectorAll('.edit-user-btn');
@@ -691,3 +733,4 @@
     </script>
 </body>
 </html>
+

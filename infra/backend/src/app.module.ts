@@ -30,6 +30,7 @@ import { VehicleRentalsModule } from './vehicle-rentals/vehicle-rentals.module';
 import { ServiceCategoriesModule } from './service-categories/service-categories.module';
 import { TaxonomyModule } from './taxonomy/taxonomy.module';
 import { WorkationsModule } from './workations/workations.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { WorkationsModule } from './workations/workations.module';
     ServiceCategoriesModule,
     TaxonomyModule,
     VehicleRentalsModule,
+    EmailModule,
   ],
   controllers: [HealthController],
   providers: [

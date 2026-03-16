@@ -8,7 +8,7 @@
     "ADMIN_CARE",
     "ADMIN_FINANCE"
   ],
-  "totalEndpoints": 191,
+  "totalEndpoints": 192,
   "endpoints": [
     {
       "method": "GET",
@@ -3158,6 +3158,22 @@
       "source": "infra/backend/src/transports/transports.controller.ts",
       "roles": {
         "ANONYMOUS": true,
+        "USER": true,
+        "VENDOR": true,
+        "ADMIN": true,
+        "ADMIN_SUPER": true,
+        "ADMIN_CARE": true,
+        "ADMIN_FINANCE": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/admin/create",
+      "accessMode": "authenticated",
+      "allowedRoles": [],
+      "source": "infra/backend/src/users/users.controller.ts",
+      "roles": {
+        "ANONYMOUS": false,
         "USER": true,
         "VENDOR": true,
         "ADMIN": true,

@@ -8,10 +8,12 @@ type RequestUser = {
 };
 
 @Controller('users')
+export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly emailService: EmailService,
   ) {}
+
   @Post('admin/create')
   async adminCreateUser(@Body() body: { email: string; name?: string }) {
     // 1. Create user (if not exists)

@@ -259,9 +259,11 @@
 
         .grid {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 8px;
-            margin-top: 8px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 18px;
+            margin-top: 18px;
+            align-items: start;
+            justify-items: stretch;
         }
 
         .user-row {

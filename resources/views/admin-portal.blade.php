@@ -291,7 +291,6 @@
         .user-row:not(:last-child) {
             margin-bottom: 0;
         }
-        }
 
         .user-head {
             display: flex;
@@ -706,3 +705,5 @@
     </script>
 </body>
 </html>
+
+

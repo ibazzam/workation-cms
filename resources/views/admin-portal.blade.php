@@ -260,25 +260,36 @@
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 18px;
+            gap: 24px;
             margin-top: 18px;
             align-items: start;
             justify-items: stretch;
+            /* Prevent nested stacking */
+            > .user-row {
+                margin-bottom: 0;
+                box-shadow: none;
+                border: 1px solid #d7dee6;
+                border-radius: 10px;
+                padding: 14px 12px;
+                background: #fff;
+                overflow: hidden;
+                transition: border-color 0.2s;
+            }
         }
 
         .user-row {
+            /* Remove box-shadow and margin-bottom to prevent nesting */
             border: 1px solid #d7dee6;
             border-radius: 10px;
             padding: 14px 12px;
             background: #fff;
             margin-bottom: 0;
-            box-shadow: 0 2px 12px rgba(18,38,58,0.08);
+            box-shadow: none;
             overflow: hidden;
-            transition: box-shadow 0.2s;
+            transition: border-color 0.2s;
         }
         .user-row:not(:last-child) {
             margin-bottom: 0;
-        }
         }
 
         .user-head {

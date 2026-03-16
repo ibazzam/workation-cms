@@ -481,36 +481,47 @@
                                     <span class="state ok">ACTIVE</span>
                                 @endif
                                 <button type="button" class="btn btn-secondary edit-user-btn" data-user-id="{{ $managedUser->id }}" style="margin-left:auto;">Edit</button>
-                            </div>
-                            <div class="edit-user-form" id="edit-user-form-{{ $managedUser->id }}" style="display:none;">
-                                <form class="manage-form" method="POST" action="/portal/admin/users/{{ $managedUser->id }}/manage">
+                                <form method="POST" action="/portal/admin/users/{{ $managedUser->id }}/delete" style="display:inline; margin-left:8px;">
                                     @csrf
-                                    <div>
-                                        <label>Role</label>
-                                        <select name="portal_role">
-                                            <option value="ADMIN" @selected($managedUser->portal_role === 'ADMIN')>ADMIN</option>
-                                            <option value="ADMIN_SUPER" @selected($managedUser->portal_role === 'ADMIN_SUPER')>ADMIN_SUPER</option>
-                                            <option value="ADMIN_CARE" @selected($managedUser->portal_role === 'ADMIN_CARE')>ADMIN_CARE</option>
-                                            <option value="VENDOR" @selected($managedUser->portal_role === 'VENDOR')>VENDOR</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label>Status</label>
-                                        <select name="portal_enabled">
-                                            <option value="1" @selected($managedUser->portal_enabled)>ACTIVE</option>
-                                            <option value="0" @selected(!$managedUser->portal_enabled)>SUSPENDED</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label>Vendor ID</label>
-                                        <input name="portal_vendor_id" value="{{ $managedUser->portal_vendor_id ?? '' }}" placeholder="Required for VENDOR">
-                                    </div>
-                                    <div>
-                                        <button type="submit">Save</button>
-                                        <button type="button" class="btn btn-secondary cancel-edit-btn" data-user-id="{{ $managedUser->id }}">Cancel</button>
-                                    </div>
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-secondary delete-user-btn" onclick="return confirm('Are you sure you want to delete this user?');">Delete</button>
                                 </form>
                             </div>
+                            <div class="edit-user-form" id="edit-user-form-{{ $managedUser->id }}" style="display:none;">
+                                <form method="POST" action="/portal/admin/users/{{ $managedUser->id }}/delete" style="display:inline; margin-left:8px;">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-secondary delete-user-btn" onclick="return confirm('Are you sure you want to delete this user?');">Delete</button>
+                                </form>
+                                <div class="edit-user-form" id="edit-user-form-{{ $managedUser->id }}" style="display:none;">
+                                    <form class="manage-form" method="POST" action="/portal/admin/users/{{ $managedUser->id }}/manage">
+                                        @csrf
+                                        <div>
+                                            <label>Role</label>
+                                            <select name="portal_role">
+                                                <option value="ADMIN" @selected($managedUser->portal_role === 'ADMIN')>ADMIN</option>
+                                                <option value="ADMIN_SUPER" @selected($managedUser->portal_role === 'ADMIN_SUPER')>ADMIN_SUPER</option>
+                                                <option value="ADMIN_CARE" @selected($managedUser->portal_role === 'ADMIN_CARE')>ADMIN_CARE</option>
+                                                <option value="VENDOR" @selected($managedUser->portal_role === 'VENDOR')>VENDOR</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label>Status</label>
+                                            <select name="portal_enabled">
+                                                <option value="1" @selected($managedUser->portal_enabled)>ACTIVE</option>
+                                                <option value="0" @selected(!$managedUser->portal_enabled)>SUSPENDED</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label>Vendor ID</label>
+                                            <input name="portal_vendor_id" value="{{ $managedUser->portal_vendor_id ?? '' }}" placeholder="Required for VENDOR">
+                                        </div>
+                                        <div>
+                                            <button type="submit">Save</button>
+                                            <button type="button" class="btn btn-secondary cancel-edit-btn" data-user-id="{{ $managedUser->id }}">Cancel</button>
+                                        </div>
+                                    </form>
+                                </div>
                         </div>
                     @endforeach
                 </div>
@@ -679,4 +690,5 @@
     </script>
 </body>
 </html>
+
 

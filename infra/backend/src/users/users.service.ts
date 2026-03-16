@@ -1,3 +1,19 @@
+import { randomBytes } from 'crypto';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { EmailService } from '../email/email.service';
+  async createUserWithResetToken(email: string, name?: string) {
+    if (!email || typeof email !== 'string') throw new BadRequestException('Email required');
+    const normalizedEmail = email.trim().toLowerCase();
+    // Generate a reset token
+    const resetToken = randomBytes(32).toString('hex');
+    // Upsert user and store reset token (assumes user table has resetToken column)
+    const user = await this.prisma.user.upsert({
+      where: { email: normalizedEmail },
+      update: { name, resetToken },
+      create: { email: normalizedEmail, name, resetToken },
+    });
+    return { ...user, resetToken };
+  }
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 

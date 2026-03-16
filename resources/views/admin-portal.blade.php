@@ -2,9 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Admin Portal | Workation</title>
-    <link rel="preconnect" href="https://fonts.bunny.net">
+            display: none; /* Removed grid display */
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
     <style>
         :root {
@@ -439,41 +437,21 @@
                 <p class="small">Super Admin role required to modify users, roles, and suspension status.</p>
             @else
                 <p class="small">Change role permissions and suspend/reactivate accounts directly in the application.</p>
-                <!-- User Creation Form -->
-                <form class="manage-form" method="POST" action="/portal/admin/users/create" style="margin-bottom:18px;background:#f7f7f7;padding:14px;border-radius:10px;">
-                    @csrf
+                <!-- User Creation Form (AJAX) -->
+                <form class="manage-form" id="userCreateForm" autocomplete="off" style="margin-bottom:18px;background:#f7f7f7;padding:14px;border-radius:10px;">
                     <div style="margin-bottom:8px;">
                         <label>Name</label>
                         <input name="name" required placeholder="Full Name">
                     </div>
                     <div style="margin-bottom:8px;">
-                        <label>Username</label>
-                        <input name="username" required placeholder="Username">
-                    </div>
-                    <div style="margin-bottom:8px;">
                         <label>Email</label>
                         <input name="email" type="email" required placeholder="Email">
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <label>Role</label>
-                        <select name="portal_role" required>
-                            <option value="ADMIN">ADMIN</option>
-                            <option value="ADMIN_SUPER">ADMIN_SUPER</option>
-                            <option value="ADMIN_CARE">ADMIN_CARE</option>
-                            <option value="VENDOR">VENDOR</option>
-                        </select>
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <label>Status</label>
-                        <select name="portal_enabled" required>
-                            <option value="1">ACTIVE</option>
-                            <option value="0">SUSPENDED</option>
-                        </select>
                     </div>
                     <div>
                         <button type="submit">Create User</button>
                     </div>
                 </form>
+                <div id="userCreateNotice" style="display:none;margin-bottom:12px;"></div>
                 <!-- Existing Users Moderation -->
                 <div class="user-list" id="userList">
                     @foreach ($portalUsers as $managedUser)
@@ -533,6 +511,50 @@
     </main>
 
     <script>
+    // User creation AJAX logic
+    document.addEventListener('DOMContentLoaded', function () {
+        var userCreateForm = document.getElementById('userCreateForm');
+        var userCreateNotice = document.getElementById('userCreateNotice');
+        if (userCreateForm) {
+            userCreateForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                userCreateNotice.style.display = 'none';
+                userCreateNotice.textContent = '';
+                const name = userCreateForm.elements['name'].value.trim();
+                const email = userCreateForm.elements['email'].value.trim();
+                if (!name || !email) {
+                    userCreateNotice.style.display = 'block';
+                    userCreateNotice.style.color = '#b91c1c';
+                    userCreateNotice.textContent = 'Name and email are required.';
+                    return;
+                }
+                try {
+                    const res = await fetch('/api/users/admin/create', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ name, email })
+                    });
+                    if (res.ok) {
+                        userCreateNotice.style.display = 'block';
+                        userCreateNotice.style.color = '#166534';
+                        userCreateNotice.textContent = 'User created and password reset email sent.';
+                        userCreateForm.reset();
+                    } else {
+                        const data = await res.json().catch(() => ({}));
+                        userCreateNotice.style.display = 'block';
+                        userCreateNotice.style.color = '#b91c1c';
+                        userCreateNotice.textContent = data.message || 'Failed to create user.';
+                    }
+                } catch (err) {
+                    userCreateNotice.style.display = 'block';
+                    userCreateNotice.style.color = '#b91c1c';
+                    userCreateNotice.textContent = 'Network error.';
+                }
+            });
+        }
+    });
                 // User list edit/cancel logic
                 document.addEventListener('DOMContentLoaded', function () {
                     var editButtons = document.querySelectorAll('.edit-user-btn');

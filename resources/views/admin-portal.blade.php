@@ -481,6 +481,11 @@
                                     <span class="state ok">ACTIVE</span>
                                 @endif
                                 <button type="button" class="btn btn-secondary edit-user-btn" data-user-id="{{ $managedUser->id }}" style="margin-left:auto;">Edit</button>
+                                <form method="POST" action="/portal/admin/users/{{ $managedUser->id }}/delete" style="display:inline; margin-left:8px;">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-secondary delete-user-btn" onclick="return confirm('Are you sure you want to delete this user?');">Delete</button>
+                                </form>
                             </div>
                             <div class="edit-user-form" id="edit-user-form-{{ $managedUser->id }}" style="display:none;">
                                 <form class="manage-form" method="POST" action="/portal/admin/users/{{ $managedUser->id }}/manage">

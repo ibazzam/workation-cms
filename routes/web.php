@@ -163,6 +163,18 @@ Route::get('/admin', function () {
         return back()->with('portal_notice', 'User created: ' . $user->username);
     });
 
+Route::delete('/portal/admin/users/{user}/delete', function (User $user) {
+    if (!Gate::allows('manage-portal-users')) {
+        abort(403);
+    }
+    // Prevent deleting your own account
+    if ((int) session('portal_admin_user_id') === (int) $user->id) {
+        return back()->withErrors(['delete' => 'You cannot delete your own account.']);
+    }
+    $user->delete();
+    return back()->with('portal_notice', 'User deleted.');
+});
+
 Route::get('/vendor', function () {
     $portal = 'vendor';
     $config = portalConfig($portal);

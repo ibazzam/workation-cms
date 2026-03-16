@@ -481,7 +481,7 @@
                                     <span class="state ok">ACTIVE</span>
                                 @endif
                                 <span style="flex:1 1 auto;"></span>
-                                <button type="button" class="btn btn-secondary edit-user-btn" data-user-id="{{ $managedUser->id }}">Edit</button>
+                                <button type="button" class="btn btn-secondary edit-user-btn" data-user-id="{{ $managedUser->id }}" style="margin-left:auto;">Edit</button>
                                 <form method="POST" action="/portal/admin/users/{{ $managedUser->id }}/delete" style="display:inline; margin-left:8px;">
                                     @csrf
                                     @method('DELETE')
@@ -684,3 +684,5 @@
     </script>
 </body>
 </html>
+
+

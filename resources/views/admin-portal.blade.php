@@ -269,8 +269,16 @@
         .user-row {
             border: 1px solid #d7dee6;
             border-radius: 10px;
-            padding: 10px;
+            padding: 14px 12px;
             background: #fff;
+            margin-bottom: 0;
+            box-shadow: 0 2px 12px rgba(18,38,58,0.08);
+            overflow: hidden;
+            transition: box-shadow 0.2s;
+        }
+        .user-row:not(:last-child) {
+            margin-bottom: 0;
+        }
         }
 
         .user-head {

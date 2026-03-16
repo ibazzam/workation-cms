@@ -2,9 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Admin Portal | Workation</title>
-    <link rel="preconnect" href="https://fonts.bunny.net">
+            display: none; /* Removed grid display */
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
     <style>
         :root {
@@ -257,24 +255,11 @@
             color: #1b3856;
         }
 
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 24px;
+        .user-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
             margin-top: 18px;
-            align-items: start;
-            justify-items: stretch;
-            /* Prevent nested stacking */
-            > .user-row {
-                margin-bottom: 0;
-                box-shadow: none;
-                border: 1px solid #d7dee6;
-                border-radius: 10px;
-                padding: 14px 12px;
-                background: #fff;
-                overflow: hidden;
-                transition: border-color 0.2s;
-            }
         }
 
         .user-row {
@@ -488,7 +473,7 @@
                     </div>
                 </form>
                 <!-- Existing Users Moderation -->
-                <div class="grid" id="userList">
+                <div class="user-list" id="userList">
                     @foreach ($portalUsers as $managedUser)
                         <div class="user-row" data-user-id="{{ $managedUser->id }}">
                             <div class="user-head">

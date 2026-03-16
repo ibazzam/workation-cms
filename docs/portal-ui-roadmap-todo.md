@@ -2,18 +2,22 @@
 
 ## General & Landing Page
 - [ ] Improve responsiveness and accessibility for all portals and landing page
-- [ ] Add global error handling and user-friendly error messages
-- [ ] Enhance visual styling and theme consistency (fonts, colors, spacing)
+- [x] Display error and success messages for actions (UI feedback, error box, success box)
+- [x] Enhance visual styling and theme consistency (fonts, colors, spacing)
 - [ ] Add animated transitions for page loads and actions
 - [ ] Optimize welcome page content and CTAs for conversion
 
 ## Admin Portal
-- [ ] Add loading indicators and error states for API actions
+- [x] Enhance user moderation UI: vertical list, inline edit, delete, create user, status/role display
+- [x] Add confirmation dialogs for critical actions (delete user confirmation)
+- [x] Client-side validation for moderation form
+- [x] Role and status display for users (role-pill, state badge)
+- [x] Responsive layout for moderation panel and forms
+- [ ] Add loading indicators and error states for API actions (basic error/success, but no loading spinners)
 - [ ] Improve token input UX (validation, feedback, expiry warning)
 - [ ] Enhance user moderation UI: add search, filter, and bulk actions
-- [ ] Add role management and permission display for users
+- [ ] Add role management and permission display for users (role shown, but no full management UI)
 - [ ] Provide audit logs and activity history for admin actions
-- [ ] Add confirmation dialogs for critical actions (e.g., user suspension)
 - [ ] Improve navigation (breadcrumbs, sidebar, or tabs)
 - [ ] Add dashboard widgets (metrics, alerts, system health)
 
@@ -31,10 +35,10 @@
 - [ ] Add customer notifications and messaging
 
 ## Styling & Components
-- [ ] Refactor inline styles to reusable CSS classes or Tailwind
-- [ ] Unify button, input, card, and modal components across portals
+- [ ] Refactor inline styles to reusable CSS classes or Tailwind (some custom CSS, but not fully refactored)
+- [ ] Unify button, input, card, and modal components across portals (partially unified, not fully componentized)
 - [ ] Add dark mode support
-- [ ] Improve mobile and tablet layouts
+- [x] Improve mobile and tablet layouts
 
 ## Error Handling
 - [ ] Add global error boundary for React/Vue/JS components

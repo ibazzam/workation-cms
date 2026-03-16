@@ -437,7 +437,7 @@
                 <p class="small">Super Admin role required to modify users, roles, and suspension status.</p>
             @else
                 <p class="small">Change role permissions and suspend/reactivate accounts directly in the application.</p>
-                <!-- User Creation Form (AJAX) -->
+                <!-- User Creation Form (AJAX, with role/status) -->
                 <form class="manage-form" id="userCreateForm" autocomplete="off" style="margin-bottom:18px;background:#f7f7f7;padding:14px;border-radius:10px;">
                     <div style="margin-bottom:8px;">
                         <label>Name</label>
@@ -446,6 +446,22 @@
                     <div style="margin-bottom:8px;">
                         <label>Email</label>
                         <input name="email" type="email" required placeholder="Email">
+                    </div>
+                    <div style="margin-bottom:8px;">
+                        <label>Role</label>
+                        <select name="portal_role" required>
+                            <option value="ADMIN">ADMIN</option>
+                            <option value="ADMIN_SUPER">ADMIN_SUPER</option>
+                            <option value="ADMIN_CARE">ADMIN_CARE</option>
+                            <option value="VENDOR">VENDOR</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom:8px;">
+                        <label>Status</label>
+                        <select name="portal_enabled" required>
+                            <option value="1">ACTIVE</option>
+                            <option value="0">SUSPENDED</option>
+                        </select>
                     </div>
                     <div>
                         <button type="submit">Create User</button>
@@ -511,7 +527,7 @@
     </main>
 
     <script>
-    // User creation AJAX logic
+    // User creation AJAX logic (with role/status)
     document.addEventListener('DOMContentLoaded', function () {
         var userCreateForm = document.getElementById('userCreateForm');
         var userCreateNotice = document.getElementById('userCreateNotice');
@@ -522,10 +538,12 @@
                 userCreateNotice.textContent = '';
                 const name = userCreateForm.elements['name'].value.trim();
                 const email = userCreateForm.elements['email'].value.trim();
-                if (!name || !email) {
+                const portal_role = userCreateForm.elements['portal_role'].value;
+                const portal_enabled = userCreateForm.elements['portal_enabled'].value;
+                if (!name || !email || !portal_role || !portal_enabled) {
                     userCreateNotice.style.display = 'block';
                     userCreateNotice.style.color = '#b91c1c';
-                    userCreateNotice.textContent = 'Name and email are required.';
+                    userCreateNotice.textContent = 'All fields are required.';
                     return;
                 }
                 try {
@@ -534,7 +552,7 @@
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ name, email })
+                        body: JSON.stringify({ name, email, portal_role, portal_enabled })
                     });
                     if (res.ok) {
                         userCreateNotice.style.display = 'block';

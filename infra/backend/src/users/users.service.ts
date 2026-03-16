@@ -1,4 +1,3 @@
-
 import { randomBytes } from 'crypto';
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';

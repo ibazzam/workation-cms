@@ -16,13 +16,13 @@ export class WorkationsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll() {
-    return this.prisma.workation.findMany({
+    return this.prisma.workations.findMany({
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async findOne(id: number) {
-    const record = await this.prisma.workation.findUnique({ where: { id } });
+    const record = await this.prisma.workations.findUnique({ where: { id } });
     if (!record) {
       throw new NotFoundException('Workation not found');
     }
@@ -32,23 +32,24 @@ export class WorkationsService {
 
   async create(payload: WorkationPayload) {
     const validated = this.validateCreatePayload(payload);
-    return this.prisma.workation.create({ data: validated });
+    return this.prisma.workations.create({ data: validated });
   }
 
   async update(id: number, payload: WorkationPayload) {
     await this.findOne(id);
     const validated = this.validateUpdatePayload(payload);
-    return this.prisma.workation.update({ where: { id }, data: validated });
+    return this.prisma.workations.update({ where: { id }, data: validated });
   }
 
   async remove(id: number) {
     await this.findOne(id);
-    await this.prisma.workation.delete({ where: { id } });
+    await this.prisma.workations.delete({ where: { id } });
   }
 
-  private validateCreatePayload(payload: WorkationPayload): Prisma.WorkationCreateInput {
+  private validateCreatePayload(payload: WorkationPayload): Prisma.workationsCreateInput {
     const validated = this.validatePayload(payload, false);
 
+    const now = new Date();
     return {
       title: validated.title as string,
       description: validated.description as string | null | undefined,
@@ -56,10 +57,11 @@ export class WorkationsService {
       start_date: validated.start_date as Date,
       end_date: validated.end_date as Date,
       price: validated.price as number,
+      updatedAt: now,
     };
   }
 
-  private validateUpdatePayload(payload: WorkationPayload): Prisma.WorkationUpdateInput {
+  private validateUpdatePayload(payload: WorkationPayload): Prisma.workationsUpdateInput {
     const validated = this.validatePayload(payload, true);
 
     return {

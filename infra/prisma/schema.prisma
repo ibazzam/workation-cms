@@ -622,7 +622,7 @@ model AdminAuditLog {
   actorRole     String?
   actorEmail    String?
   actorVendorId String?
-  vendorId      BigInt
+  method        String
   path          String
   statusCode    Int
   success       Boolean
@@ -845,3 +845,4 @@ model workations {
   createdAt   DateTime @default(now())
   updatedAt   DateTime
 }
+

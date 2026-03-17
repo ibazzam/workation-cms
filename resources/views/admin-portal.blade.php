@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-            display: none; /* Removed grid display */
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
     <style>
         :root {
@@ -547,12 +546,13 @@
                     return;
                 }
                 try {
+                    // Only send name and email to match backend API
                     const res = await fetch('/api/users/admin/create', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ name, email, portal_role, portal_enabled })
+                        body: JSON.stringify({ name, email })
                     });
                     if (res.ok) {
                         userCreateNotice.style.display = 'block';

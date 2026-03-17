@@ -1,4 +1,16 @@
 import axios from 'axios';
+// Debug: Log critical environment variables for CI/CD troubleshooting
+console.log('BASE_URL:', process.env.BASE_URL);
+console.log('SCHEDULE_ID:', process.env.SCHEDULE_ID);
+console.log('X_USER_ID:', process.env.X_USER_ID);
+console.log('X_USER_ROLE:', process.env.X_USER_ROLE);
+console.log('AUTH_BEARER_TOKEN:', process.env.AUTH_BEARER_TOKEN ? '[set]' : '[not set]');
+console.log('PREFLIGHT_REQUIRE_OPS_SLO:', process.env.PREFLIGHT_REQUIRE_OPS_SLO);
+console.log('PREFLIGHT_REQUIRE_CHECKOUT_RELIABILITY:', process.env.PREFLIGHT_REQUIRE_CHECKOUT_RELIABILITY);
+console.log('PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY:', process.env.PREFLIGHT_REQUIRE_PAYMENTS_RELIABILITY);
+console.log('PREFLIGHT_REQUIRE_MODERATION_PATHS:', process.env.PREFLIGHT_REQUIRE_MODERATION_PATHS);
+console.log('PREFLIGHT_REQUIRE_SCHEDULER_HEALTH:', process.env.PREFLIGHT_REQUIRE_SCHEDULER_HEALTH);
+console.log('PREFLIGHT_REQUIRE_NEW_VERTICALS:', process.env.PREFLIGHT_REQUIRE_NEW_VERTICALS);
 
 const baseUrl = process.env.BASE_URL;
 const scheduleId = Number(process.env.SCHEDULE_ID || 1);

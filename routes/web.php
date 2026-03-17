@@ -140,25 +140,57 @@ Route::get('/admin', function () {
 
     Route::post('/portal/admin/users/create', function (\Illuminate\Http\Request $request) {
         if (!Gate::allows('manage-portal-users')) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Super Admin privileges required.'], 403);
+            }
+
             return back()->withErrors(['auth' => 'Super Admin privileges required.']);
         }
 
         $validated = $request->validate([
             'name' => 'required|string|max:100',
-            'username' => 'required|string|max:50|unique:users,username',
             'email' => 'required|email|max:100|unique:users,email',
-                'portal_role' => 'required|in:ADMIN,ADMIN_SUPER,ADMIN_CARE,VENDOR',
+            'portal_role' => 'required|in:ADMIN,ADMIN_SUPER,ADMIN_CARE,VENDOR',
             'portal_enabled' => 'required|boolean',
         ]);
 
+        $baseUsername = \Illuminate\Support\Str::of(strtolower((string) \Illuminate\Support\Str::before($validated['email'], '@')))
+            ->replaceMatches('/[^a-z0-9_]+/', '_')
+            ->trim('_')
+            ->value();
+        if ($baseUsername === '') {
+            $baseUsername = 'user';
+        }
+
+        $username = $baseUsername;
+        $suffix = 1;
+        while (\App\Models\User::where('username', $username)->exists()) {
+            $username = $baseUsername . '_' . $suffix;
+            $suffix++;
+        }
+
         $user = new \App\Models\User();
         $user->name = $validated['name'];
-        $user->username = $validated['username'];
+        $user->username = $username;
         $user->email = $validated['email'];
         $user->portal_role = $validated['portal_role'];
         $user->portal_enabled = $validated['portal_enabled'];
-        $user->password = \Illuminate\Support\Str::random(16); // Set random password, force reset later
+        $user->password = \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(24));
         $user->save();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'User created successfully.',
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'portal_role' => $user->portal_role,
+                    'portal_enabled' => (bool) $user->portal_enabled,
+                ],
+            ], 201);
+        }
 
         return back()->with('portal_notice', 'User created: ' . $user->username);
     });

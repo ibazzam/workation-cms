@@ -438,6 +438,7 @@
                 <p class="small">Change role permissions and suspend/reactivate accounts directly in the application.</p>
                 <!-- User Creation Form (AJAX, with role/status) -->
                 <form class="manage-form" id="userCreateForm" autocomplete="off" style="margin-bottom:18px;background:#f7f7f7;padding:14px;border-radius:10px;">
+                    @csrf
                     <div style="margin-bottom:8px;">
                         <label>Name</label>
                         <input name="name" required placeholder="Full Name">
@@ -546,24 +547,27 @@
                     return;
                 }
                 try {
-                    // Only send name and email to match backend API
-                    const res = await fetch('/api/users/admin/create', {
+                    const csrfToken = userCreateForm.querySelector('input[name="_token"]')?.value || '';
+                    const res = await fetch('/portal/admin/users/create', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json',
                         },
-                        body: JSON.stringify({ name, email })
+                        body: JSON.stringify({ name, email, portal_role, portal_enabled })
                     });
                     if (res.ok) {
                         userCreateNotice.style.display = 'block';
                         userCreateNotice.style.color = '#166534';
-                        userCreateNotice.textContent = 'User created and password reset email sent.';
+                        userCreateNotice.textContent = 'User created successfully.';
                         userCreateForm.reset();
                     } else {
                         const data = await res.json().catch(() => ({}));
+                        const errors = data.errors ? Object.values(data.errors).flat() : [];
                         userCreateNotice.style.display = 'block';
                         userCreateNotice.style.color = '#b91c1c';
-                        userCreateNotice.textContent = data.message || 'Failed to create user.';
+                        userCreateNotice.textContent = errors[0] || data.message || 'Failed to create user.';
                     }
                 } catch (err) {
                     userCreateNotice.style.display = 'block';

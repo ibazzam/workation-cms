@@ -39,10 +39,11 @@ export class UsersService {
     // Generate a reset token
     const resetToken = randomBytes(32).toString('hex');
       // Upsert user (do not store reset token on user)
+      const now = new Date();
       const user = await this.prisma.user.upsert({
         where: { email: normalizedEmail },
-        update: { name },
-        create: { email: normalizedEmail, name },
+        update: { name, updatedAt: now },
+        create: { email: normalizedEmail, name, updatedAt: now, createdAt: now },
       });
       // Store reset token in password_reset_tokens table
       await this.prisma.password_reset_tokens.upsert({
@@ -58,15 +59,19 @@ export class UsersService {
       ? context.email.trim().toLowerCase()
       : `${context.id}@local.workation.test`;
 
+    const now = new Date();
     return this.prisma.user.upsert({
       where: { email: normalizedEmail },
       update: {
         id: context.id,
+        updatedAt: now,
         // add other fields to update if needed
       },
       create: {
         id: context.id,
         email: normalizedEmail,
+        updatedAt: now,
+        createdAt: now,
         // add other fields to create if needed
       },
     });
@@ -242,4 +247,5 @@ export class UsersService {
     return `user:profile:${userId}`;
   }
 }
+
 

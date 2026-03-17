@@ -8,21 +8,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id             String          @id @default(uuid())
-  email          String          @unique
-  name           String?
-  password       String?
-  role           String          @default("USER")
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  bookings       Booking[]
-  loyaltyAccount LoyaltyAccount?
-  reviews        Review[]
+model Transport {
+  id                        String                @id @default(uuid())
+  vendorId                  String?
+  type                      String
+  code                      String?
+  fromIslandId              Int?
+  toIslandId                Int?
+  departure                 DateTime?
+  arrival                   DateTime?
+  capacity                  Int?
+  price                     Decimal               @default(0.00)
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+  name                      String?
+  bookings                  Booking[]
+  reviews                   Review[]
+  socialLinks               SocialLink[]
+  fromIsland                Island?               @relation("fromIsland", fields: [fromIslandId], references: [id])
+  toIsland                  Island?               @relation("toIsland", fields: [toIslandId], references: [id])
+  vendor                    Vendor?               @relation(fields: [vendorId], references: [id])
+  replacementForDisruptions TransportDisruption[] @relation("disruptionReplacementTransport")
+  disruptions               TransportDisruption[] @relation("disruptionPrimaryTransport")
+  fareClasses               TransportFareClass[]
+}
+
+model AccommodationBlackout {
+  id              String        @id @default(uuid())
+  accommodationId String
+  startDate       DateTime
+  endDate         DateTime
+  reason          String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  accommodation   Accommodation @relation(fields: [accommodationId], references: [id])
 }
 
 model Vendor {
-  id               String               @id
+  id               String               @id @default(uuid())
   name             String
   email            String?              @unique
   phone            String?
@@ -39,12 +62,25 @@ model Vendor {
   loyaltyOffers    VendorLoyaltyOffer[]
 }
 
+model User {
+  id              String          @id @default(uuid())
+  email           String          @unique
+  name            String?
+  password        String?
+  role            String          @default("USER")
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime
+  bookings        Booking[]
+  loyaltyAccounts LoyaltyAccount?
+  reviews         Review[]
+}
+
 model Atoll {
   id        Int      @id @default(autoincrement())
   code      String   @unique
   name      String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime
   islands   Island[]
 }
 
@@ -113,42 +149,6 @@ model AccommodationSeasonalRate {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   accommodation   Accommodation @relation(fields: [accommodationId], references: [id])
-}
-
-model AccommodationBlackout {
-  id              String        @id @default(uuid())
-  accommodationId String
-  startDate       DateTime
-  endDate         DateTime
-  reason          String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  accommodation   Accommodation @relation(fields: [accommodationId], references: [id])
-}
-
-model Transport {
-  id                        String                @id @default(uuid())
-  vendorId                  String?
-  type                      String
-  code                      String?
-  fromIslandId              Int?
-  toIslandId                Int?
-  departure                 DateTime?
-  arrival                   DateTime?
-  capacity                  Int?
-  price                     Decimal               @default(0.00)
-  createdAt                 DateTime              @default(now())
-  updatedAt                 DateTime              @updatedAt
-  name                      String?
-  bookings                  Booking[]
-  reviews                   Review[]
-  socialLinks               SocialLink[]
-  fromIsland                Island?               @relation("fromIsland", fields: [fromIslandId], references: [id])
-  toIsland                  Island?               @relation("toIsland", fields: [toIslandId], references: [id])
-  vendor                    Vendor?               @relation(fields: [vendorId], references: [id])
-  replacementForDisruptions TransportDisruption[] @relation("disruptionReplacementTransport")
-  disruptions               TransportDisruption[] @relation("disruptionPrimaryTransport")
-  fareClasses               TransportFareClass[]
 }
 
 model TransportDisruption {
@@ -511,7 +511,7 @@ model LoyaltyTransaction {
   description String?
   createdAt   DateTime       @default(now())
   booking     Booking?       @relation(fields: [bookingId], references: [id])
-  user        LoyaltyAccount @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  user        LoyaltyAccount @relation(fields: [userId], references: [userId], onDelete: Cascade, map: "LoyaltyTransaction_userId_user_fk")
 }
 
 model VendorLoyaltyOffer {
@@ -629,55 +629,6 @@ model ServiceCategory {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-model Workation {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String?
-  location    String
-  start_date  DateTime
-  end_date    DateTime
-  price       Decimal
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("workations")
-}
-
-model cache {
-  key        String @id @db.VarChar(255)
-  value      String
-  expiration Int
-
-  @@index([expiration], map: "cache_expiration_index")
-}
-
-model cache_locks {
-  key        String @id @db.VarChar(255)
-  owner      String @db.VarChar(255)
-  expiration Int
-
-  @@index([expiration], map: "cache_locks_expiration_index")
-}
-
-model failed_jobs {
-  id         BigInt   @id @default(autoincrement())
-  uuid       String   @unique(map: "failed_jobs_uuid_unique") @db.VarChar(255)
-  connection String
-  queue      String
-  payload    String
-  exception  String
-  failed_at  DateTime @default(now()) @db.Timestamp(0)
-}
-
-model islands {
-  id                                                               BigInt             @id @default(autoincrement())
-  name                                                             String             @db.VarChar(255)
-  created_at                                                       DateTime?          @db.Timestamp(0)
-  updated_at                                                       DateTime?          @db.Timestamp(0)
-  transport_routes_transport_routes_destination_island_idToislands transport_routes[] @relation("transport_routes_destination_island_idToislands")
-  transport_routes_transport_routes_origin_island_idToislands      transport_routes[] @relation("transport_routes_origin_island_idToislands")
 }
 
 model job_batches {
@@ -829,3 +780,49 @@ model users {
   @@index([portal_vendor_id], map: "users_portal_vendor_id_index")
 }
 
+model cache {
+  key        String @id @db.VarChar(255)
+  value      String
+  expiration Int
+
+  @@index([expiration], map: "cache_expiration_index")
+}
+
+model cache_locks {
+  key        String @id @db.VarChar(255)
+  owner      String @db.VarChar(255)
+  expiration Int
+
+  @@index([expiration], map: "cache_locks_expiration_index")
+}
+
+model failed_jobs {
+  id         BigInt   @id @default(autoincrement())
+  uuid       String   @unique(map: "failed_jobs_uuid_unique") @db.VarChar(255)
+  connection String
+  queue      String
+  payload    String
+  exception  String
+  failed_at  DateTime @default(now()) @db.Timestamp(0)
+}
+
+model islands {
+  id                                                               BigInt             @id @default(autoincrement())
+  name                                                             String             @db.VarChar(255)
+  created_at                                                       DateTime?          @db.Timestamp(0)
+  updated_at                                                       DateTime?          @db.Timestamp(0)
+  transport_routes_transport_routes_destination_island_idToislands transport_routes[] @relation("transport_routes_destination_island_idToislands")
+  transport_routes_transport_routes_origin_island_idToislands      transport_routes[] @relation("transport_routes_origin_island_idToislands")
+}
+
+model workations {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  location    String
+  start_date  DateTime
+  end_date    DateTime
+  price       Decimal
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+}

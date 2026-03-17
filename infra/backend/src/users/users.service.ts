@@ -38,11 +38,17 @@ export class UsersService {
     const normalizedEmail = email.trim().toLowerCase();
     // Generate a reset token
     const resetToken = randomBytes(32).toString('hex');
-    // Upsert user and store reset token (assumes user table has resetToken column)
+    // Upsert user (do not store reset token on user)
     const user = await this.prisma.user.upsert({
       where: { email: normalizedEmail },
-      update: { name, resetToken },
-      create: { email: normalizedEmail, name, resetToken },
+      update: { name },
+      create: { email: normalizedEmail, name },
+    });
+    // Store reset token in password_reset_tokens table
+    await this.prisma.password_reset_tokens.upsert({
+      where: { email: normalizedEmail },
+      update: { token: resetToken, created_at: new Date() },
+      create: { email: normalizedEmail, token: resetToken, created_at: new Date() },
     });
     return { ...user, resetToken };
   }

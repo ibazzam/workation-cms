@@ -36,7 +36,9 @@
     },
     "dependencies": {
         "@prisma/client": "^4.16.0",
+        "@types/nodemailer": "^7.0.11",
         "jsonwebtoken": "^9.0.3",
+        "nodemailer": "^8.0.2",
         "yaml": "^2.8.2"
     }
 }

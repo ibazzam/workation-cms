@@ -1,4 +1,5 @@
 // .github/scripts/generate-jwt.js
+// .github/scripts/generate-jwt.js
 const crypto = require('crypto');
 
 const secret = process.env.JWT_SECRET;

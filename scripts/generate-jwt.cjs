@@ -1,5 +1,3 @@
-// .github/scripts/generate-jwt.js
-// .github/scripts/generate-jwt.js
 const crypto = require('crypto');
 
 const secret = process.env.JWT_SECRET;
@@ -23,12 +21,6 @@ const p = base64url(payload);
 const sig = crypto.createHmac('sha256', secret).update(`${h}.${p}`).digest('base64url');
 process.stdout.write(`${h}.${p}.${sig}`);
 <<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> f06fa84a (Rename JWT script to .cjs for CommonJS compatibility)
-=======
->>>>>>> ab69246f (refactor: separate admin/vendor/user models and fix all vendorId types for Prisma)
 // .github/scripts/generate-jwt.js
 const crypto = require('crypto');
 
@@ -52,13 +44,5 @@ const h = base64url(header);
 const p = base64url(payload);
 const sig = crypto.createHmac('sha256', secret).update(`${h}.${p}`).digest('base64url');
 process.stdout.write(`${h}.${p}.${sig}`);
-<<<<<<< HEAD
-<<<<<<< HEAD
 =======
 >>>>>>> 8ebfe2b2 (refactor: separate admin/vendor/user models and fix all vendorId types for Prisma)
-=======
->>>>>>> f06fa84a (Rename JWT script to .cjs for CommonJS compatibility)
-=======
-=======
->>>>>>> 8ebfe2b2 (refactor: separate admin/vendor/user models and fix all vendorId types for Prisma)
->>>>>>> ab69246f (refactor: separate admin/vendor/user models and fix all vendorId types for Prisma)

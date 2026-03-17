@@ -178,9 +178,32 @@ Route::get('/admin', function () {
         $user->password = \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(24));
         $user->save();
 
+        $resetEmailSent = false;
+        $resetEmailError = null;
+        if ((bool) $user->portal_enabled) {
+            try {
+                $token = Password::broker('backend_users')->createToken($user);
+                $user->sendPasswordResetNotification($token);
+                $resetEmailSent = true;
+            } catch (\Throwable $e) {
+                $resetEmailError = $e->getMessage();
+                Log::error('Failed to send portal user reset email after creation.', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         if ($request->expectsJson()) {
+            $message = $resetEmailSent
+                ? 'User created and password reset email sent.'
+                : ($user->portal_enabled
+                    ? 'User created, but password reset email could not be sent.'
+                    : 'User created in suspended state. Reset email not sent.');
+
             return response()->json([
-                'message' => 'User created successfully.',
+                'message' => $message,
                 'user' => [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -189,10 +212,20 @@ Route::get('/admin', function () {
                     'portal_role' => $user->portal_role,
                     'portal_enabled' => (bool) $user->portal_enabled,
                 ],
+                'password_reset_email_sent' => $resetEmailSent,
+                'password_reset_email_error' => $resetEmailError,
             ], 201);
         }
 
-        return back()->with('portal_notice', 'User created: ' . $user->username);
+        if ($resetEmailSent) {
+            return back()->with('portal_notice', 'User created and reset email sent: ' . $user->username);
+        }
+
+        if ((bool) $user->portal_enabled) {
+            return back()->withErrors(['email' => 'User created, but password reset email could not be sent. Please check mail configuration and logs.']);
+        }
+
+        return back()->with('portal_notice', 'User created in suspended state (no reset email sent): ' . $user->username);
     });
 
 Route::delete('/portal/admin/users/{user}/delete', function (User $user) {

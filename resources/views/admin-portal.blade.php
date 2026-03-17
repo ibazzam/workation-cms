@@ -558,9 +558,10 @@
                         body: JSON.stringify({ name, email, portal_role, portal_enabled })
                     });
                     if (res.ok) {
+                        const data = await res.json().catch(() => ({}));
                         userCreateNotice.style.display = 'block';
                         userCreateNotice.style.color = '#166534';
-                        userCreateNotice.textContent = 'User created successfully.';
+                        userCreateNotice.textContent = data.message || 'User created successfully.';
                         userCreateForm.reset();
                     } else {
                         const data = await res.json().catch(() => ({}));

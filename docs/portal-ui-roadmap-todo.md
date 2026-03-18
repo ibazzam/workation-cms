@@ -15,11 +15,10 @@
 - [x] Responsive layout for moderation panel and forms
 - [x] Add loading indicators and error states for API actions (run buttons now show loading/disabled state, plus existing success/error feedback)
 - [x] Improve token input UX (validation, feedback, expiry warning)
-=======
 - [ ] Improve token input UX (validation, feedback, expiry warning)
 - [x] Enhance user moderation UI: add search, filter, and bulk actions
 - [ ] Add role management and permission display for users (role shown, but no full management UI)
-- [ ] Provide audit logs and activity history for admin actions
+- [x] Provide audit logs and activity history for admin actions
 - [ ] Improve navigation (breadcrumbs, sidebar, or tabs)
 - [ ] Add dashboard widgets (metrics, alerts, system health)
 

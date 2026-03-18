@@ -12,6 +12,34 @@ class PortalVendorWorkflowSmokeTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_vendor_registration_accepts_minimal_partner_profile(): void
+    {
+        $response = $this
+            ->withoutMiddleware(VerifyCsrfToken::class)
+            ->post('/portal/vendor/register', [
+                'business_name' => '',
+                'contact_name' => 'Partner Owner',
+                'email' => 'partner.minimal@example.com',
+                'phone' => '',
+                'vendor_type' => 'accommodation',
+                'business_registration_number' => '',
+                'license_number' => '',
+            ]);
+
+        $response
+            ->assertStatus(302)
+            ->assertSessionHas('status');
+
+        $this->assertDatabaseHas('vendor_registration_requests', [
+            'business_name' => 'Partner Owner',
+            'email' => 'partner.minimal@example.com',
+            'vendor_type' => 'accommodation',
+            'business_license_document_path' => '',
+            'verification_document_path' => null,
+            'status' => 'pending',
+        ]);
+    }
+
     public function test_admin_care_creates_vendor_registration_approval_request(): void
     {
         $adminCare = User::factory()->create([

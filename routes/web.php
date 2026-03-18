@@ -179,6 +179,60 @@ Route::get('/admin', function () {
         })
         ->values();
 
+    $rolePermissions = [
+        'ADMIN_SUPER' => [
+            'label' => 'ADMIN_SUPER',
+            'summary' => 'Full control of portal users, roles, suspension, and audit visibility.',
+            'capabilities' => [
+                'Create, edit, suspend, and delete portal users',
+                'Run bulk user actions',
+                'View operational dashboard and audit history',
+                'Access admin API actions from portal',
+            ],
+        ],
+        'ADMIN' => [
+            'label' => 'ADMIN',
+            'summary' => 'General operational admin access without super-admin user governance.',
+            'capabilities' => [
+                'Access admin API actions from portal',
+                'View dashboard widgets and system health',
+                'View activity history for awareness',
+            ],
+        ],
+        'ADMIN_CARE' => [
+            'label' => 'ADMIN_CARE',
+            'summary' => 'Customer and account-care oriented access for support operations.',
+            'capabilities' => [
+                'Access admin portal tooling for care workflows',
+                'View user/account status indicators',
+                'Escalate role or suspension changes to super admin',
+            ],
+        ],
+        'ADMIN_FINANCE' => [
+            'label' => 'ADMIN_FINANCE',
+            'summary' => 'Finance and reconciliation focused access for payment operations.',
+            'capabilities' => [
+                'Use finance-related admin API checks',
+                'Review reconciliation and job health endpoints',
+                'Escalate user governance changes to super admin',
+            ],
+        ],
+        'VENDOR' => [
+            'label' => 'VENDOR',
+            'summary' => 'Vendor portal access only (no admin moderation privileges).',
+            'capabilities' => [
+                'Access vendor portal APIs and account data',
+            ],
+        ],
+    ];
+
+    $currentPortalRole = strtoupper((string) session('portal_admin_role', 'ADMIN'));
+    if ($currentPortalRole === 'ADMIN_FINACE') {
+        $currentPortalRole = 'ADMIN_FINANCE';
+    }
+
+    $currentRolePermissions = $rolePermissions[$currentPortalRole] ?? null;
+
     $dashboardStats = [
         'total_users' => $portalUsers->count(),
         'admin_users' => $adminPortalUsers->count(),
@@ -248,6 +302,8 @@ Route::get('/admin', function () {
         'vendorPortalUsers' => $vendorPortalUsers,
         'dashboardStats' => $dashboardStats,
         'systemHealth' => $systemHealth,
+        'rolePermissions' => $rolePermissions,
+        'currentRolePermissions' => $currentRolePermissions,
         'recentAuditCount' => $recentAuditCount,
         'alerts' => $alerts,
         'auditLogs' => $auditLogs,

@@ -132,6 +132,65 @@
             background: #f5f9fc;
         }
 
+        .permissions-section {
+            margin-top: 12px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 14px;
+        }
+
+        .permissions-grid {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .permission-card {
+            border: 1px solid #d7dee6;
+            border-radius: 10px;
+            background: #fff;
+            padding: 10px;
+        }
+
+        .permission-card.current {
+            border-color: #3d88b0;
+            box-shadow: inset 0 0 0 1px #9bc6dd;
+            background: #f2f9fd;
+        }
+
+        .permission-title {
+            margin: 0 0 5px;
+            font-size: 0.82rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #20415f;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .permission-summary {
+            margin: 0 0 7px;
+            font-size: 0.82rem;
+            color: #2c4055;
+            line-height: 1.35;
+        }
+
+        .permission-list {
+            margin: 0;
+            padding-left: 16px;
+            font-size: 0.8rem;
+            color: #30485f;
+            line-height: 1.35;
+        }
+
+        .role-help {
+            margin-top: 5px;
+            font-size: 0.76rem;
+            color: #47607a;
+            line-height: 1.3;
+        }
+
         .widget-grid {
             margin-top: 14px;
             display: grid;
@@ -551,6 +610,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .permissions-grid {
+                grid-template-columns: 1fr;
+            }
+
             .portal-nav {
                 overflow-x: auto;
                 white-space: nowrap;
@@ -592,6 +655,7 @@
 
         <nav class="portal-nav" aria-label="Admin navigation">
             <a href="#dashboardWidgets">Dashboard</a>
+            <a href="#rolePermissionsPanel">Role Permissions</a>
             <a href="#sessionDebug">Session</a>
             <a href="#authApiSection">Auth and API</a>
             <a href="#moderationPanel" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Moderation</a>
@@ -643,6 +707,28 @@
                 </ul>
             </section>
         @endif
+
+        <section class="permissions-section" id="rolePermissionsPanel">
+            <p class="label">Role Permissions</p>
+            @if ($currentRolePermissions)
+                <p class="small">Current session role: <span class="role-pill">{{ $currentRolePermissions['label'] }}</span> — {{ $currentRolePermissions['summary'] }}</p>
+            @else
+                <p class="small">Current session role: <span class="role-pill">{{ strtoupper((string) $portalRole) }}</span></p>
+            @endif
+            <div class="permissions-grid">
+                @foreach ($rolePermissions as $roleCode => $roleMeta)
+                    <article class="permission-card {{ strtoupper((string) $portalRole) === $roleCode || (strtoupper((string) $portalRole) === 'ADMIN_FINACE' && $roleCode === 'ADMIN_FINANCE') ? 'current' : '' }}">
+                        <p class="permission-title">{{ $roleMeta['label'] }}</p>
+                        <p class="permission-summary">{{ $roleMeta['summary'] }}</p>
+                        <ul class="permission-list">
+                            @foreach ($roleMeta['capabilities'] as $capability)
+                                <li>{{ $capability }}</li>
+                            @endforeach
+                        </ul>
+                    </article>
+                @endforeach
+            </div>
+        </section>
 
         @if (session('portal_notice'))
             <div class="notice prominent" id="successBox">{{ session('portal_notice') }}</div>
@@ -726,6 +812,7 @@
                             <option value="ADMIN_FINANCE">ADMIN_FINANCE</option>
                             <option value="VENDOR">VENDOR</option>
                         </select>
+                        <div class="role-help" data-role-help></div>
                     </div>
                     <div style="margin-bottom:8px;">
                         <label>Status</label>
@@ -788,6 +875,7 @@
                                         <option value="ADMIN_FINANCE" @selected(in_array($managedUser->portal_role, ['ADMIN_FINANCE', 'ADMIN_FINACE'], true))>ADMIN_FINANCE</option>
                                         <option value="VENDOR" @selected($managedUser->portal_role === 'VENDOR')>VENDOR</option>
                                     </select>
+                                    <div class="role-help" data-role-help></div>
                                 </div>
                                 <div>
                                     <label>Status</label>
@@ -860,6 +948,7 @@
                                         <option value="ADMIN_FINANCE" @selected(in_array($managedUser->portal_role, ['ADMIN_FINANCE', 'ADMIN_FINACE'], true))>ADMIN_FINANCE</option>
                                         <option value="VENDOR" @selected($managedUser->portal_role === 'VENDOR')>VENDOR</option>
                                     </select>
+                                    <div class="role-help" data-role-help></div>
                                 </div>
                                 <div>
                                     <label>Status</label>
@@ -1054,6 +1143,54 @@
                                 }
                             }
                         });
+                    });
+                });
+
+                document.addEventListener('DOMContentLoaded', function () {
+                    var roleMap = @json($rolePermissions);
+
+                    function normalizeRole(rawRole) {
+                        var role = String(rawRole || '').toUpperCase();
+                        return role === 'ADMIN_FINACE' ? 'ADMIN_FINANCE' : role;
+                    }
+
+                    function roleHintText(rawRole) {
+                        var role = normalizeRole(rawRole);
+                        var info = roleMap[role];
+                        if (!info) {
+                            return 'No permission summary available for this role.';
+                        }
+
+                        var capabilities = Array.isArray(info.capabilities) ? info.capabilities.slice(0, 2) : [];
+                        if (capabilities.length === 0) {
+                            return info.summary;
+                        }
+
+                        return info.summary + ' Top access: ' + capabilities.join(' | ');
+                    }
+
+                    function bindRoleHelp(container) {
+                        var select = container.querySelector('select[name="portal_role"]');
+                        var help = container.querySelector('[data-role-help]');
+                        if (!select || !help) {
+                            return;
+                        }
+
+                        function refresh() {
+                            help.textContent = roleHintText(select.value);
+                        }
+
+                        select.addEventListener('change', refresh);
+                        refresh();
+                    }
+
+                    var createForm = document.getElementById('userCreateForm');
+                    if (createForm) {
+                        bindRoleHelp(createForm);
+                    }
+
+                    document.querySelectorAll('.edit-user-form').forEach(function (form) {
+                        bindRoleHelp(form);
                     });
                 });
 
@@ -1416,6 +1553,3 @@
     </script>
 </body>
 </html>
-
-
-

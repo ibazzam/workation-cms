@@ -179,7 +179,31 @@ Route::get('/admin', function () {
         })
         ->values();
 
+    $dashboardStats = [
+        'total_users' => $portalUsers->count(),
+        'admin_users' => $adminPortalUsers->count(),
+        'vendor_users' => $vendorPortalUsers->count(),
+        'active_users' => $portalUsers->where('portal_enabled', true)->count(),
+        'suspended_users' => $portalUsers->where('portal_enabled', false)->count(),
+    ];
+
+    $systemHealth = [
+        'db_connected' => false,
+        'audit_table_ready' => Schema::hasTable('portal_admin_audit_logs'),
+        'manage_permission' => $canManageUsers,
+    ];
+
+    try {
+        DB::connection()->getPdo();
+        $systemHealth['db_connected'] = true;
+    } catch (\Throwable $e) {
+        Log::warning('Admin dashboard health check failed: database connection unavailable.', [
+            'error' => $e->getMessage(),
+        ]);
+    }
+
     $auditLogs = collect();
+    $recentAuditCount = 0;
     if (Schema::hasTable('portal_admin_audit_logs')) {
         $auditLogs = DB::table('portal_admin_audit_logs')
             ->orderByDesc('created_at')
@@ -194,6 +218,24 @@ Route::get('/admin', function () {
                 'details',
                 'created_at',
             ]);
+
+        $recentAuditCount = DB::table('portal_admin_audit_logs')
+            ->where('created_at', '>=', now()->subDay())
+            ->count();
+    }
+
+    $alerts = collect();
+    if ($dashboardStats['suspended_users'] > 0) {
+        $alerts->push('Suspended users detected: ' . $dashboardStats['suspended_users']);
+    }
+    if (!$systemHealth['audit_table_ready']) {
+        $alerts->push('Audit log table is missing. Run migrations to enable activity history.');
+    }
+    if (!$systemHealth['db_connected']) {
+        $alerts->push('Database connection health check failed.');
+    }
+    if (!$systemHealth['manage_permission']) {
+        $alerts->push('Current role cannot manage portal users.');
     }
 
     return view('admin-portal', [
@@ -204,6 +246,10 @@ Route::get('/admin', function () {
         'portalUsers' => $portalUsers,
         'adminPortalUsers' => $adminPortalUsers,
         'vendorPortalUsers' => $vendorPortalUsers,
+        'dashboardStats' => $dashboardStats,
+        'systemHealth' => $systemHealth,
+        'recentAuditCount' => $recentAuditCount,
+        'alerts' => $alerts,
         'auditLogs' => $auditLogs,
     ]);
 });

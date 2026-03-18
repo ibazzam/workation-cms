@@ -19,7 +19,7 @@
 - [ ] Add role management and permission display for users (role shown, but no full management UI)
 - [x] Provide audit logs and activity history for admin actions
 - [x] Improve navigation (breadcrumbs, sidebar, or tabs)
-- [ ] Add dashboard widgets (metrics, alerts, system health)
+- [x] Add dashboard widgets (metrics, alerts, system health)
 
 ## Vendor Portal
 - [ ] Add vendor-specific dashboard (bookings, payments, analytics)

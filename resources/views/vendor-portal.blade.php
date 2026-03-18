@@ -219,6 +219,13 @@
         .state.warn { color: var(--warn); background: var(--warn-bg); }
         .state.err { color: var(--err); background: var(--err-bg); }
 
+        .token-meta {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 0.8rem;
+            line-height: 1.35;
+        }
+
         pre {
             margin: 10px 0 0;
             border-radius: 10px;
@@ -267,6 +274,7 @@
                     <button id="clearToken" class="btn btn-secondary" type="button">Clear</button>
                 </div>
                 <div id="tokenState" class="state warn">TOKEN NOT SET</div>
+                <div id="tokenMeta" class="token-meta">Token is stored only in this browser tab session.</div>
             </article>
 
             <article class="card">
@@ -298,6 +306,7 @@
             const apiBase = root ? root.getAttribute("data-api-base") : "";
             const tokenInput = document.getElementById("tokenInput");
             const tokenState = document.getElementById("tokenState");
+            const tokenMeta = document.getElementById("tokenMeta");
             const output = document.getElementById("output");
 
             const SESSION_KEY = "workation_vendor_token";
@@ -307,32 +316,164 @@
                 tokenState.textContent = text;
             }
 
+            function setMeta(text) {
+                if (tokenMeta) {
+                    tokenMeta.textContent = text;
+                }
+            }
+
             function getToken() {
                 return sessionStorage.getItem(SESSION_KEY) || "";
+            }
+
+            function decodeBase64Url(value) {
+                try {
+                    const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+                    const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+                    return atob(padded);
+                } catch (error) {
+                    return "";
+                }
+            }
+
+            function parseJwtPayload(token) {
+                const parts = String(token || "").split(".");
+                if (parts.length !== 3) {
+                    return null;
+                }
+                const payloadRaw = decodeBase64Url(parts[1]);
+                if (!payloadRaw) {
+                    return null;
+                }
+                try {
+                    return JSON.parse(payloadRaw);
+                } catch (error) {
+                    return null;
+                }
+            }
+
+            function formatDuration(seconds) {
+                const total = Math.max(0, Math.floor(seconds));
+                const hours = Math.floor(total / 3600);
+                const minutes = Math.floor((total % 3600) / 60);
+                if (hours > 0) {
+                    return hours + "h " + minutes + "m";
+                }
+                return minutes + "m";
+            }
+
+            function formatDateTime(epochSeconds) {
+                return new Date(epochSeconds * 1000).toLocaleString();
+            }
+
+            function evaluateToken(token) {
+                const payload = parseJwtPayload(token);
+                if (!payload) {
+                    return {
+                        isValidFormat: false,
+                        isUsable: false,
+                        stateType: "err",
+                        stateText: "INVALID TOKEN FORMAT",
+                        metaText: "Expected a JWT with 3 parts: header.payload.signature"
+                    };
+                }
+
+                const exp = Number(payload.exp);
+                if (!Number.isFinite(exp)) {
+                    return {
+                        isValidFormat: true,
+                        isUsable: true,
+                        stateType: "warn",
+                        stateText: "TOKEN SAVED (NO EXP)",
+                        metaText: "No expiration claim found. Token expiry cannot be predicted."
+                    };
+                }
+
+                const now = Math.floor(Date.now() / 1000);
+                const secondsLeft = exp - now;
+                const expiresAt = formatDateTime(exp);
+                if (secondsLeft <= 0) {
+                    return {
+                        isValidFormat: true,
+                        isUsable: false,
+                        stateType: "err",
+                        stateText: "TOKEN EXPIRED",
+                        metaText: "Expired at " + expiresAt + ". Save a fresh token."
+                    };
+                }
+
+                if (secondsLeft <= 5 * 60) {
+                    return {
+                        isValidFormat: true,
+                        isUsable: true,
+                        stateType: "warn",
+                        stateText: "TOKEN EXPIRING SOON",
+                        metaText: "Expires in " + formatDuration(secondsLeft) + " (" + expiresAt + ")"
+                    };
+                }
+
+                return {
+                    isValidFormat: true,
+                    isUsable: true,
+                    stateType: "ok",
+                    stateText: "TOKEN READY",
+                    metaText: "Expires in " + formatDuration(secondsLeft) + " (" + expiresAt + ")"
+                };
+            }
+
+            function applyTokenFeedback(token, fallbackType, fallbackStateText, fallbackMetaText) {
+                if (!token) {
+                    setState(fallbackType || "warn", fallbackStateText || "TOKEN NOT SET");
+                    setMeta(fallbackMetaText || "Token is stored only in this browser tab session.");
+                    return;
+                }
+
+                const verdict = evaluateToken(token);
+                setState(verdict.stateType, verdict.stateText);
+                setMeta(verdict.metaText);
             }
 
             function saveToken() {
                 const value = (tokenInput.value || "").trim();
                 if (!value) {
                     setState("warn", "TOKEN NOT SET");
+                    setMeta("Paste a JWT token to continue.");
                     return;
                 }
+
+                const verdict = evaluateToken(value);
+                if (!verdict.isValidFormat || !verdict.isUsable) {
+                    setState(verdict.stateType, verdict.stateText);
+                    setMeta(verdict.metaText);
+                    return;
+                }
+
                 sessionStorage.setItem(SESSION_KEY, value);
                 tokenInput.value = "";
-                setState("ok", "TOKEN SAVED");
+                applyTokenFeedback(value, "ok", "TOKEN SAVED");
             }
 
             function clearToken() {
                 sessionStorage.removeItem(SESSION_KEY);
                 tokenInput.value = "";
                 setState("warn", "TOKEN CLEARED");
+                setMeta("Token removed from this tab session.");
             }
 
             async function run(path, triggerButton) {
                 const token = getToken();
                 if (!token) {
                     setState("warn", "TOKEN REQUIRED");
+                    setMeta("Save a vendor token before running requests.");
                     output.textContent = "Save a vendor token first.";
+                    return;
+                }
+
+                const verdict = evaluateToken(token);
+                if (!verdict.isUsable) {
+                    setState(verdict.stateType, verdict.stateText);
+                    setMeta(verdict.metaText);
+                    output.textContent = "Token is expired or invalid. Save a fresh vendor token first.";
                     return;
                 }
 
@@ -365,14 +506,16 @@
                     }
                     output.textContent = "Status: " + res.status + "\n\n" + parsed;
                     if (res.ok) {
-                        setState("ok", "TOKEN VALID");
+                        applyTokenFeedback(token, "ok", "TOKEN VALID");
                     } else if (res.status === 401 || res.status === 403) {
                         setState("err", "TOKEN INVALID FOR VENDOR");
+                        setMeta("The API rejected this token for vendor access.");
                     } else {
-                        setState("warn", "REQUEST COMPLETED WITH WARNINGS");
+                        applyTokenFeedback(token, "warn", "REQUEST COMPLETED WITH WARNINGS");
                     }
                 } catch (error) {
                     setState("err", "REQUEST FAILED");
+                    setMeta("Request failed before token validation could complete.");
                     output.textContent = "Network/CORS error. Ensure API allows origin https://www.workation.mv\n\n" + String(error);
                 } finally {
                     if (button) {
@@ -385,14 +528,29 @@
 
             document.getElementById("saveToken").addEventListener("click", saveToken);
             document.getElementById("clearToken").addEventListener("click", clearToken);
+            tokenInput.addEventListener("keydown", function (event) {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    saveToken();
+                }
+            });
             document.querySelectorAll("button[data-path]").forEach((button) => {
                 button.addEventListener("click", function () {
                     run(button.getAttribute("data-path"), button);
                 });
             });
 
+            setInterval(function () {
+                const token = getToken();
+                if (token) {
+                    applyTokenFeedback(token);
+                }
+            }, 60000);
+
             if (getToken()) {
-                setState("ok", "TOKEN READY");
+                applyTokenFeedback(getToken());
+            } else {
+                setMeta("Token is stored only in this browser tab session.");
             }
         })();
     </script>

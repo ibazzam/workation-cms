@@ -117,6 +117,24 @@
             background: rgba(11, 49, 75, 0.32);
         }
 
+        .portal-nav {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .portal-nav a {
+            text-decoration: none;
+            border: 1px solid #c8d4df;
+            border-radius: 999px;
+            padding: 7px 11px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #1f4a53;
+            background: #f4faf8;
+        }
+
         .layout {
             margin-top: 14px;
             display: grid;
@@ -242,6 +260,11 @@
             .layout {
                 grid-template-columns: 1fr;
             }
+
+            .portal-nav {
+                overflow-x: auto;
+                white-space: nowrap;
+            }
         }
     </style>
 </head>
@@ -265,8 +288,14 @@
             </div>
         </section>
 
-        <section class="layout">
-            <article class="card">
+        <nav class="portal-nav" aria-label="Vendor navigation">
+            <a href="#vendorAuthApi">Auth and API</a>
+            <a href="#vendorAuthCard">Token</a>
+            <a href="#vendorApiCard">API Actions</a>
+        </nav>
+
+        <section class="layout" id="vendorAuthApi">
+            <article class="card" id="vendorAuthCard">
                 <p class="label">Auth</p>
                 <input id="tokenInput" class="token-input" type="password" placeholder="Paste vendor JWT bearer token">
                 <div>
@@ -277,7 +306,7 @@
                 <div id="tokenMeta" class="token-meta">Token is stored only in this browser tab session.</div>
             </article>
 
-            <article class="card">
+            <article class="card" id="vendorApiCard">
                 <p class="label">Vendor API Actions</p>
                 <div class="endpoint">
                     <code>GET /api/v1/auth/me</code>

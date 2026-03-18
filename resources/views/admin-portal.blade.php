@@ -114,6 +114,24 @@
             background: rgba(11, 49, 75, 0.32);
         }
 
+        .portal-nav {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .portal-nav a {
+            text-decoration: none;
+            border: 1px solid #c8d4df;
+            border-radius: 999px;
+            padding: 7px 11px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #1e405f;
+            background: #f5f9fc;
+        }
+
         .layout {
             margin-top: 14px;
             display: grid;
@@ -463,6 +481,11 @@
             .layout {
                 grid-template-columns: 1fr;
             }
+
+            .portal-nav {
+                overflow-x: auto;
+                white-space: nowrap;
+            }
         }
         .prominent {
             font-size: 1.05rem;
@@ -498,10 +521,17 @@
             </div>
         </section>
 
+        <nav class="portal-nav" aria-label="Admin navigation">
+            <a href="#sessionDebug">Session</a>
+            <a href="#authApiSection">Auth and API</a>
+            <a href="#moderationPanel" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Moderation</a>
+            <a href="#auditPanel">Audit History</a>
+        </nav>
+
         @if (session('portal_notice'))
             <div class="notice prominent" id="successBox">{{ session('portal_notice') }}</div>
         @endif
-        <section class="card">
+        <section class="card" id="sessionDebug">
             <p class="label">Session Debug</p>
             <pre style="background:#f7f7f7;border-radius:8px;padding:8px;font-size:0.9rem;">portal_admin_authenticated: {{ session('portal_admin_authenticated') ? 'true' : 'false' }}
         portal_admin_role: {{ session('portal_admin_role') ?? 'null' }}
@@ -515,7 +545,7 @@
             <div class="error-box prominent" id="errorBox">{{ $errors->first() }}</div>
         @endif
 
-        <section class="layout">
+        <section class="layout" id="authApiSection">
             <article class="card">
                 <p class="label">Auth</p>
                 <input id="tokenInput" class="token-input" type="password" placeholder="Paste admin JWT bearer token">
@@ -890,6 +920,24 @@
                             alert('Vendor ID is required for VENDOR role.');
                             return false;
                         }
+                    });
+                });
+
+                document.addEventListener('DOMContentLoaded', function () {
+                    var navLinks = document.querySelectorAll('[data-open-panel]');
+                    navLinks.forEach(function (link) {
+                        link.addEventListener('click', function () {
+                            var panelId = link.getAttribute('data-open-panel');
+                            var buttonId = link.getAttribute('data-toggle-button');
+                            var panel = panelId ? document.getElementById(panelId) : null;
+                            var button = buttonId ? document.getElementById(buttonId) : null;
+                            if (panel && panel.style.display === 'none') {
+                                panel.style.display = 'block';
+                                if (button) {
+                                    button.textContent = 'Hide Moderation Panel';
+                                }
+                            }
+                        });
                     });
                 });
 

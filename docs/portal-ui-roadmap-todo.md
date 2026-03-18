@@ -18,7 +18,7 @@
 - [x] Enhance user moderation UI: add search, filter, and bulk actions
 - [ ] Add role management and permission display for users (role shown, but no full management UI)
 - [x] Provide audit logs and activity history for admin actions
-- [ ] Improve navigation (breadcrumbs, sidebar, or tabs)
+- [x] Improve navigation (breadcrumbs, sidebar, or tabs)
 - [ ] Add dashboard widgets (metrics, alerts, system health)
 
 ## Vendor Portal

@@ -23,7 +23,7 @@
 
 ## Vendor Portal
 - [ ] Add vendor-specific dashboard (bookings, payments, analytics)
-- [ ] Improve authentication flow and error handling
+- [x] Improve authentication flow and error handling
 - [ ] Add vendor profile management and settings
 - [ ] Provide notifications and status indicators for backend connectivity
 - [ ] Add support/help links and documentation access

@@ -13,9 +13,9 @@
 - [x] Client-side validation for moderation form
 - [x] Role and status display for users (role-pill, state badge)
 - [x] Responsive layout for moderation panel and forms
-- [ ] Add loading indicators and error states for API actions (basic error/success, but no loading spinners)
+- [x] Add loading indicators and error states for API actions (run buttons now show loading/disabled state, plus existing success/error feedback)
 - [ ] Improve token input UX (validation, feedback, expiry warning)
-- [ ] Enhance user moderation UI: add search, filter, and bulk actions
+- [x] Enhance user moderation UI: add search, filter, and bulk actions
 - [ ] Add role management and permission display for users (role shown, but no full management UI)
 - [ ] Provide audit logs and activity history for admin actions
 - [ ] Improve navigation (breadcrumbs, sidebar, or tabs)

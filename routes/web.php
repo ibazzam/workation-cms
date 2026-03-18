@@ -129,12 +129,26 @@ Route::get('/admin', function () {
         ->orderBy('username')
         ->get(['id', 'name', 'username', 'email', 'portal_role', 'portal_enabled', 'portal_vendor_id']);
 
+    $adminPortalUsers = $portalUsers
+        ->filter(function (User $managedUser) {
+            return strtoupper((string) $managedUser->portal_role) !== 'VENDOR';
+        })
+        ->values();
+
+    $vendorPortalUsers = $portalUsers
+        ->filter(function (User $managedUser) {
+            return strtoupper((string) $managedUser->portal_role) === 'VENDOR';
+        })
+        ->values();
+
     return view('admin-portal', [
         'apiBase' => workationApiBase(),
         'portalUser' => session('portal_admin_user', $config['name']),
         'portalRole' => session('portal_admin_role', 'ADMIN'),
         'canManageUsers' => $canManageUsers,
         'portalUsers' => $portalUsers,
+        'adminPortalUsers' => $adminPortalUsers,
+        'vendorPortalUsers' => $vendorPortalUsers,
     ]);
 });
 
@@ -242,6 +256,33 @@ Route::delete('/portal/admin/users/{user}/delete', function (User $user) {
     }
     $user->delete();
     return back()->with('portal_notice', 'User deleted.');
+});
+
+Route::post('/portal/admin/users/bulk-delete', function (Request $request) {
+    if (!Gate::allows('manage-portal-users')) {
+        abort(403);
+    }
+
+    $validated = $request->validate([
+        'user_ids' => ['required', 'array', 'min:1'],
+        'user_ids.*' => ['required', 'integer', 'exists:users,id'],
+    ]);
+
+    $ids = collect($validated['user_ids'])
+        ->map(function ($id) {
+            return (int) $id;
+        })
+        ->unique()
+        ->values();
+
+    $currentUserId = (int) session('portal_admin_user_id');
+    if ($ids->contains($currentUserId)) {
+        return back()->withErrors(['delete' => 'You cannot bulk delete your own account.']);
+    }
+
+    $deletedCount = User::query()->whereIn('id', $ids->all())->delete();
+
+    return back()->with('portal_notice', 'Deleted ' . $deletedCount . ' user(s).');
 });
 
 Route::get('/vendor', function () {

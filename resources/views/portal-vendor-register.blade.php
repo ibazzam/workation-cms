@@ -71,6 +71,13 @@
             grid-column: 1 / -1;
         }
 
+        .field-note {
+            margin-top: 5px;
+            color: var(--muted);
+            font-size: 0.78rem;
+            line-height: 1.35;
+        }
+
         label {
             display: block;
             margin-bottom: 6px;
@@ -78,12 +85,14 @@
             font-weight: 600;
         }
 
-        input {
+        input,
+        select {
             width: 100%;
             border: 1px solid #c8d2de;
             border-radius: 10px;
             padding: 10px 12px;
             font-size: 0.95rem;
+            background: #fff;
         }
 
         .error {
@@ -153,7 +162,7 @@
     <section class="card">
         <span class="eyebrow">Vendor Onboarding</span>
         <h1>Vendor Self Registration</h1>
-        <p>Submit your business details, license, and verification documents. Admins will review your request before vendor portal access is granted.</p>
+        <p>Submit your vendor details and verification documents. Admins will review your request before vendor portal access is granted.</p>
 
         <div class="hint">Approval is required before login is enabled. You will receive a password setup link after admin approval.</div>
 
@@ -188,19 +197,38 @@
                     <input id="phone" name="phone" type="text" value="{{ old('phone') }}">
                 </div>
 
+                <div class="field field-full">
+                    <label for="vendor_type">Vendor Type</label>
+                    <select id="vendor_type" name="vendor_type" required>
+                        <option value="" {{ old('vendor_type') === null || old('vendor_type') === '' ? 'selected' : '' }}>Select vendor type</option>
+                        <option value="accommodation" {{ old('vendor_type') === 'accommodation' ? 'selected' : '' }}>Accommodation</option>
+                        <option value="transport" {{ old('vendor_type') === 'transport' ? 'selected' : '' }}>Transport</option>
+                        <option value="restaurant" {{ old('vendor_type') === 'restaurant' ? 'selected' : '' }}>Restaurant / Cafe</option>
+                        <option value="excursions" {{ old('vendor_type') === 'excursions' ? 'selected' : '' }}>Excursions / Tours</option>
+                        <option value="major_vendor" {{ old('vendor_type') === 'major_vendor' ? 'selected' : '' }}>Major Vendor (Registered Business)</option>
+                        <option value="vehicle_rental" {{ old('vendor_type') === 'vehicle_rental' ? 'selected' : '' }}>Vehicle / Car Rental</option>
+                        <option value="small_service" {{ old('vendor_type') === 'small_service' ? 'selected' : '' }}>Small Local Service</option>
+                        <option value="other" {{ old('vendor_type') === 'other' ? 'selected' : '' }}>Other</option>
+                    </select>
+                    <div class="field-note">Accommodation, restaurant, and major vendors must provide registration and license details. Small service vendors can submit these if available.</div>
+                </div>
+
                 <div class="field">
                     <label for="business_registration_number">Business Registration Number</label>
-                    <input id="business_registration_number" name="business_registration_number" type="text" value="{{ old('business_registration_number') }}" required>
+                    <input id="business_registration_number" name="business_registration_number" type="text" value="{{ old('business_registration_number') }}">
+                    <div class="field-note">Required for accommodation, restaurant, and major vendors.</div>
                 </div>
 
                 <div class="field">
                     <label for="license_number">License Number</label>
-                    <input id="license_number" name="license_number" type="text" value="{{ old('license_number') }}" required>
+                    <input id="license_number" name="license_number" type="text" value="{{ old('license_number') }}">
+                    <div class="field-note">Required for accommodation, restaurant, and major vendors.</div>
                 </div>
 
                 <div class="field field-full">
                     <label for="business_license_document">Business License Document (PDF/JPG/PNG, max 10MB)</label>
-                    <input id="business_license_document" name="business_license_document" type="file" accept=".pdf,.jpg,.jpeg,.png" required>
+                    <input id="business_license_document" name="business_license_document" type="file" accept=".pdf,.jpg,.jpeg,.png">
+                    <div class="field-note">Required for accommodation, restaurant, and major vendors.</div>
                 </div>
 
                 <div class="field field-full">

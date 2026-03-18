@@ -902,6 +902,7 @@
                                             <span class="role-pill">PENDING</span>
                                             <span class="small">{{ $approvalRequest->business_name ?: 'Unknown Business' }} | {{ $approvalRequest->registration_email ?: $approvalRequest->target_identifier }}</span>
                                         </div>
+                                        <div class="small">Service Category: {{ ucwords(str_replace('_', ' ', (string) ($approvalRequest->vendor_type ?: 'other'))) }}</div>
                                         <div class="small">Requested by: {{ $approvalRequest->requested_by_name ?: 'Unknown' }}{{ $approvalRequest->requested_by_role ? ' (' . $approvalRequest->requested_by_role . ')' : '' }}</div>
                                         @if (!empty($approvalRequest->reason))
                                             <div class="small">Reason: {{ $approvalRequest->reason }}</div>
@@ -974,12 +975,15 @@
                                     <span class="role-pill">PENDING REVIEW</span>
                                     <span class="small">Contact: {{ $registration->contact_name }} | {{ $registration->email }}</span>
                                 </div>
-                                <div class="small">Business Reg #: {{ $registration->business_registration_number }} | License #: {{ $registration->license_number }}</div>
+                                <div class="small">Service Category: {{ ucwords(str_replace('_', ' ', (string) ($registration->vendor_type ?: 'other'))) }}</div>
+                                <div class="small">Business Reg #: {{ $registration->business_registration_number ?: 'N/A' }} | License #: {{ $registration->license_number ?: 'N/A' }}</div>
                                 @if (!empty($registration->phone))
                                     <div class="small">Phone: {{ $registration->phone }}</div>
                                 @endif
                                 <div class="doc-links">
-                                    <a class="doc-link" href="/portal/admin/vendor-registrations/{{ $registration->id }}/document/business_license" target="_blank" rel="noopener">View License Document</a>
+                                    @if (!empty($registration->business_license_document_path))
+                                        <a class="doc-link" href="/portal/admin/vendor-registrations/{{ $registration->id }}/document/business_license" target="_blank" rel="noopener">View License Document</a>
+                                    @endif
                                     @if (!empty($registration->verification_document_path))
                                         <a class="doc-link" href="/portal/admin/vendor-registrations/{{ $registration->id }}/document/verification" target="_blank" rel="noopener">View Verification Document</a>
                                     @endif
@@ -1021,7 +1025,8 @@
                                     <span class="role-pill">{{ strtoupper((string) $historyRow->status) }}</span>
                                     <span class="small">Contact: {{ $historyRow->contact_name }} | {{ $historyRow->email }}</span>
                                 </div>
-                                <div class="small">Business Reg #: {{ $historyRow->business_registration_number }} | License #: {{ $historyRow->license_number }}</div>
+                                <div class="small">Service Category: {{ ucwords(str_replace('_', ' ', (string) ($historyRow->vendor_type ?: 'other'))) }}</div>
+                                <div class="small">Business Reg #: {{ $historyRow->business_registration_number ?: 'N/A' }} | License #: {{ $historyRow->license_number ?: 'N/A' }}</div>
                                 <div class="small">Reviewed by: {{ $historyRow->reviewed_by_name ?: 'Unknown' }}{{ $historyRow->reviewed_by_role ? ' (' . $historyRow->reviewed_by_role . ')' : '' }} · {{ $historyRow->reviewed_at ? \Illuminate\Support\Carbon::parse($historyRow->reviewed_at)->format('Y-m-d H:i:s') : 'N/A' }}</div>
                                 @if (!empty($historyRow->approved_username) || !empty($historyRow->approved_vendor_id))
                                     <div class="small">Approved portal account: {{ $historyRow->approved_username ?: 'n/a' }}{{ $historyRow->approved_vendor_id ? ' · Vendor ID: ' . $historyRow->approved_vendor_id : '' }}</div>

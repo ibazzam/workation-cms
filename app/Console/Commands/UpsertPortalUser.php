@@ -10,7 +10,7 @@ class UpsertPortalUser extends Command
     protected $signature = 'portal:user:upsert
         {username : Portal username used at login}
         {password : Plain password to set for this portal user}
-        {--portal_role=ADMIN : Portal role: ADMIN_SUPER, ADMIN, or VENDOR}
+        {--portal_role=ADMIN : Portal role: ADMIN_SUPER, ADMIN, ADMIN_CARE, ADMIN_FINANCE, or VENDOR}
         {--name= : Display name (defaults to username)}
         {--email= : Email (defaults to username@portal.local)}
         {--vendor-id= : Vendor identifier for VENDOR users}
@@ -24,8 +24,12 @@ class UpsertPortalUser extends Command
         $password = (string) $this->argument('password');
         $portal_role = strtoupper(trim((string) $this->option('portal_role')));
 
-        if (!in_array($portal_role, ['ADMIN_SUPER', 'ADMIN', 'VENDOR'], true)) {
-            $this->error('Invalid portal_role. Use ADMIN_SUPER, ADMIN, or VENDOR.');
+        if ($portal_role === 'ADMIN_FINACE') {
+            $portal_role = 'ADMIN_FINANCE';
+        }
+
+        if (!in_array($portal_role, ['ADMIN_SUPER', 'ADMIN', 'ADMIN_CARE', 'ADMIN_FINANCE', 'VENDOR'], true)) {
+            $this->error('Invalid portal_role. Use ADMIN_SUPER, ADMIN, ADMIN_CARE, ADMIN_FINANCE, or VENDOR.');
             return self::FAILURE;
         }
 

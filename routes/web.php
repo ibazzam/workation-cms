@@ -26,7 +26,7 @@ if (!function_exists('portalConfig')) {
             return [
                 'session_key' => 'portal_admin_authenticated',
                 'name' => 'Admin',
-                'allowed_roles' => ['ADMIN', 'ADMIN_SUPER'],
+                'allowed_roles' => ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE', 'ADMIN_FINACE'],
             ];
         }
 
@@ -124,7 +124,7 @@ Route::get('/admin', function () {
     $user = Auth::user();
     $canManageUsers = Gate::allows('manage-portal-users', $user);
     $portalUsers = User::query()
-        ->whereIn('portal_role', ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'VENDOR'])
+        ->whereIn('portal_role', ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE', 'ADMIN_FINACE', 'VENDOR'])
         ->orderBy('portal_role')
         ->orderBy('username')
         ->get(['id', 'name', 'username', 'email', 'portal_role', 'portal_enabled', 'portal_vendor_id']);
@@ -150,9 +150,13 @@ Route::get('/admin', function () {
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'email' => 'required|email|max:100|unique:users,email',
-            'portal_role' => 'required|in:ADMIN,ADMIN_SUPER,ADMIN_CARE,VENDOR',
+            'portal_role' => 'required|in:ADMIN,ADMIN_SUPER,ADMIN_CARE,ADMIN_FINANCE,ADMIN_FINACE,VENDOR',
             'portal_enabled' => 'required|boolean',
         ]);
+
+        $normalizedRole = $validated['portal_role'] === 'ADMIN_FINACE'
+            ? 'ADMIN_FINANCE'
+            : $validated['portal_role'];
 
         $baseUsername = \Illuminate\Support\Str::of(strtolower((string) \Illuminate\Support\Str::before($validated['email'], '@')))
             ->replaceMatches('/[^a-z0-9_]+/', '_')
@@ -173,7 +177,7 @@ Route::get('/admin', function () {
         $user->name = $validated['name'];
         $user->username = $username;
         $user->email = $validated['email'];
-        $user->portal_role = $validated['portal_role'];
+        $user->portal_role = $normalizedRole;
         $user->portal_enabled = $validated['portal_enabled'];
         $user->password = \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(24));
         $user->save();
@@ -508,7 +512,7 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
     }
 
     $validated = $request->validate([
-        'portal_role' => ['required', 'in:ADMIN,ADMIN_SUPER,ADMIN_CARE,VENDOR'],
+        'portal_role' => ['required', 'in:ADMIN,ADMIN_SUPER,ADMIN_CARE,ADMIN_FINANCE,ADMIN_FINACE,VENDOR'],
         'portal_enabled' => ['required', 'in:1,0'],
         'portal_vendor_id' => ['nullable', 'string', 'max:255'],
     ]);
@@ -522,6 +526,9 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
     }
 
     $nextRole = (string) $validated['portal_role'];
+    if ($nextRole === 'ADMIN_FINACE') {
+        $nextRole = 'ADMIN_FINANCE';
+    }
     if ($isSelf && $nextRole !== 'ADMIN_SUPER') {
         return back()->withErrors([
             'portal_role' => 'You cannot remove your own Super Admin role from this screen.',

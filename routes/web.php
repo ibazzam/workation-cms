@@ -530,26 +530,49 @@ Route::get('/portal/{portal}/login', function (string $portal) {
     ]);
 });
 
-Route::get('/portal/admin/forgot-password', function () {
-    return view('portal-forgot-password');
+Route::get('/portal/{portal}/forgot-password', function (string $portal) {
+    if (!in_array($portal, ['admin', 'vendor'], true)) {
+        abort(404);
+    }
+
+    $config = portalConfig($portal);
+
+    return view('portal-forgot-password', [
+        'portal' => $portal,
+        'portalName' => $config['name'],
+    ]);
 });
 
-Route::post('/portal/admin/forgot-password', function (Request $request) {
+Route::post('/portal/{portal}/forgot-password', function (Request $request, string $portal) {
+    if (!in_array($portal, ['admin', 'vendor'], true)) {
+        abort(404);
+    }
+
     $validated = $request->validate([
         'email' => ['required', 'email'],
     ]);
 
     $email = strtolower(trim((string) $validated['email']));
-    $adminConfig = portalConfig('admin');
+    $config = portalConfig($portal);
+    $allowedRoles = collect($config['allowed_roles'])
+        ->map(function ($role) {
+            return normalizePortalRoleValue((string) $role);
+        })
+        ->unique()
+        ->values();
 
-    // Use backend_users provider for admin/vendor, customer_users for customers
     $portalUser = null;
-    if (in_array('ADMIN', $adminConfig['allowed_roles'], true) || in_array('VENDOR', $adminConfig['allowed_roles'], true)) {
+    if ($allowedRoles->isNotEmpty()) {
         $portalUser = \App\Models\User::query()
             ->whereRaw('LOWER(email) = ?', [$email])
-            ->where('portal_enabled', true)
-            ->whereIn('portal_role', $adminConfig['allowed_roles'])
             ->first();
+
+        if ($portalUser instanceof \App\Models\User) {
+            $resolvedRole = normalizePortalRoleValue((string) $portalUser->portal_role);
+            if (!$allowedRoles->contains($resolvedRole) || !$portalUser->portal_enabled) {
+                $portalUser = null;
+            }
+        }
     } else {
         $portalUser = \App\Models\Customer::query()
             ->whereRaw('LOWER(email) = ?', [$email])
@@ -565,17 +588,29 @@ Route::post('/portal/admin/forgot-password', function (Request $request) {
         $portalUser->sendPasswordResetNotification($token);
     }
 
-    return back()->with('status', 'If the email is registered for an admin account, a reset link has been sent.');
-})->name('password.email');
+    return back()->with('status', 'If the email is registered for a ' . strtolower($config['name']) . ' account, a reset link has been sent.');
+});
 
-Route::get('/portal/admin/reset-password/{token}', function (Request $request, string $token) {
+Route::get('/portal/{portal}/reset-password/{token}', function (Request $request, string $portal, string $token) {
+    if (!in_array($portal, ['admin', 'vendor'], true)) {
+        abort(404);
+    }
+
+    $config = portalConfig($portal);
+
     return view('portal-reset-password', [
+        'portal' => $portal,
+        'portalName' => $config['name'],
         'token' => $token,
         'email' => (string) $request->query('email', ''),
     ]);
-})->name('password.reset');
+});
 
-Route::post('/portal/admin/reset-password', function (Request $request) {
+Route::post('/portal/{portal}/reset-password', function (Request $request, string $portal) {
+    if (!in_array($portal, ['admin', 'vendor'], true)) {
+        abort(404);
+    }
+
     $validated = $request->validate([
         'token' => ['required', 'string'],
         'email' => ['required', 'email'],
@@ -583,8 +618,8 @@ Route::post('/portal/admin/reset-password', function (Request $request) {
     ]);
 
     $email = strtolower(trim((string) $validated['email']));
-    $adminConfig = portalConfig('admin');
-    $allowedRoles = collect($adminConfig['allowed_roles'])
+    $config = portalConfig($portal);
+    $allowedRoles = collect($config['allowed_roles'])
         ->map(function ($role) {
             return normalizePortalRoleValue((string) $role);
         })
@@ -592,7 +627,7 @@ Route::post('/portal/admin/reset-password', function (Request $request) {
         ->values();
 
     $portalUser = null;
-    if (in_array('ADMIN', $adminConfig['allowed_roles'], true) || in_array('VENDOR', $adminConfig['allowed_roles'], true)) {
+    if ($allowedRoles->isNotEmpty()) {
         $portalUser = \App\Models\User::query()
             ->whereRaw('LOWER(email) = ?', [$email])
             ->first();
@@ -611,11 +646,12 @@ Route::post('/portal/admin/reset-password', function (Request $request) {
 
     if (!$portalUser) {
         Log::warning('Portal password reset user resolution failed.', [
+            'portal' => $portal,
             'email' => $email,
             'allowed_roles' => $allowedRoles->all(),
         ]);
         return back()->withErrors([
-            'email' => 'Unable to reset password for this account.',
+            'email' => 'Unable to reset password for this ' . strtolower($config['name']) . ' account.',
         ])->withInput($request->only('email'));
     }
 
@@ -663,9 +699,10 @@ Route::post('/portal/admin/reset-password', function (Request $request) {
         $portalUser->forceFill($updates)->save();
         DB::table($tokenTable)->whereRaw('LOWER(email) = ?', [$email])->delete();
 
-        return redirect('/portal/admin/login')->with('status', __('passwords.reset'));
+        return redirect('/portal/' . $portal . '/login')->with('status', __('passwords.reset'));
     } catch (\Throwable $e) {
-        Log::error('Portal admin password reset failed', [
+        Log::error('Portal password reset failed', [
+            'portal' => $portal,
             'email' => $email,
             'error' => $e->getMessage(),
         ]);
@@ -674,7 +711,7 @@ Route::post('/portal/admin/reset-password', function (Request $request) {
             'email' => 'Unable to reset password at the moment. Please request a new reset link and try again.',
         ])->withInput($request->only('email'));
     }
-})->name('password.update');
+});
 
 Route::post('/portal/{portal}/login', function (Request $request, string $portal) {
     if (!in_array($portal, ['admin', 'vendor'], true)) {

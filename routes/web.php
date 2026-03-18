@@ -6,6 +6,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
@@ -14,6 +15,9 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Laravel\Socialite\Facades\Socialite;
+use Firebase\JWT\JWT;
+use Firebase\JWT\JWK;
 
 if (!function_exists('workationApiBase')) {
     function workationApiBase(): string
@@ -106,6 +110,37 @@ if (!function_exists('generatePortalUsernameFromEmail')) {
         }
 
         return $username;
+    }
+}
+
+if (!function_exists('supportedVendorSocialProviders')) {
+    function supportedVendorSocialProviders(): array
+    {
+        return ['google', 'facebook', 'apple'];
+    }
+}
+
+if (!function_exists('vendorSocialRedirectUrl')) {
+    function vendorSocialRedirectUrl(string $provider): string
+    {
+        return (string) config('services.' . $provider . '.redirect', url('/portal/vendor/oauth/' . $provider . '/callback'));
+    }
+}
+
+if (!function_exists('isVendorSocialProviderConfigured')) {
+    function isVendorSocialProviderConfigured(string $provider): bool
+    {
+        return match ($provider) {
+            'google' => trim((string) config('services.google.client_id', '')) !== ''
+                && trim((string) config('services.google.client_secret', '')) !== '',
+            'facebook' => trim((string) config('services.facebook.client_id', '')) !== ''
+                && trim((string) config('services.facebook.client_secret', '')) !== '',
+            'apple' => trim((string) config('services.apple.client_id', '')) !== ''
+                && trim((string) config('services.apple.team_id', '')) !== ''
+                && trim((string) config('services.apple.key_id', '')) !== ''
+                && trim((string) config('services.apple.private_key', '')) !== '',
+            default => false,
+        };
     }
 }
 
@@ -888,6 +923,189 @@ Route::get('/portal/vendor/register', function () {
     return view('portal-vendor-register');
 });
 
+Route::get('/portal/vendor/oauth/{provider}/redirect', function (Request $request, string $provider) {
+    $provider = strtolower(trim($provider));
+    if (!in_array($provider, supportedVendorSocialProviders(), true)) {
+        abort(404);
+    }
+
+    if (!isVendorSocialProviderConfigured($provider)) {
+        return redirect('/portal/vendor/register')->withErrors([
+            'registration' => ucfirst($provider) . ' sign-in is not configured yet. Please use email signup for now.',
+        ]);
+    }
+
+    if ($provider === 'apple') {
+        $state = Str::random(40);
+        $request->session()->put('vendor_oauth_state_apple', $state);
+
+        $query = http_build_query([
+            'response_type' => 'code',
+            'response_mode' => 'query',
+            'client_id' => (string) config('services.apple.client_id'),
+            'redirect_uri' => vendorSocialRedirectUrl('apple'),
+            'scope' => 'name email',
+            'state' => $state,
+        ]);
+
+        return redirect()->away('https://appleid.apple.com/auth/authorize?' . $query);
+    }
+
+    return Socialite::driver($provider)->stateless()->redirect();
+});
+
+Route::get('/portal/vendor/oauth/{provider}/callback', function (Request $request, string $provider) {
+    $provider = strtolower(trim($provider));
+    if (!in_array($provider, supportedVendorSocialProviders(), true)) {
+        abort(404);
+    }
+
+    if (!isVendorSocialProviderConfigured($provider)) {
+        return redirect('/portal/vendor/register')->withErrors([
+            'registration' => ucfirst($provider) . ' sign-in is not configured yet. Please use email signup for now.',
+        ]);
+    }
+
+    $providerColumn = $provider . '_oauth_id';
+    if (!Schema::hasColumn('users', $providerColumn)) {
+        return redirect('/portal/vendor/register')->withErrors([
+            'registration' => 'Social sign-in database columns are missing. Please run migrations and try again.',
+        ]);
+    }
+
+    try {
+        $oauthId = '';
+        $email = '';
+        $name = '';
+
+        if ($provider === 'apple') {
+            $expectedState = (string) $request->session()->pull('vendor_oauth_state_apple', '');
+            $receivedState = (string) $request->query('state', '');
+            if ($expectedState === '' || !hash_equals($expectedState, $receivedState)) {
+                throw new \RuntimeException('Invalid Apple sign-in state. Please try again.');
+            }
+
+            $code = trim((string) $request->query('code', ''));
+            if ($code === '') {
+                throw new \RuntimeException('Apple sign-in did not return an authorization code.');
+            }
+
+            $applePrivateKey = str_replace('\\n', "\n", (string) config('services.apple.private_key', ''));
+            $appleClientSecret = JWT::encode([
+                'iss' => (string) config('services.apple.team_id'),
+                'iat' => time(),
+                'exp' => time() + 300,
+                'aud' => 'https://appleid.apple.com',
+                'sub' => (string) config('services.apple.client_id'),
+            ], $applePrivateKey, 'ES256', (string) config('services.apple.key_id'));
+
+            $tokenResponse = Http::asForm()->post('https://appleid.apple.com/auth/token', [
+                'grant_type' => 'authorization_code',
+                'code' => $code,
+                'redirect_uri' => vendorSocialRedirectUrl('apple'),
+                'client_id' => (string) config('services.apple.client_id'),
+                'client_secret' => $appleClientSecret,
+            ]);
+
+            if (!$tokenResponse->ok()) {
+                throw new \RuntimeException('Apple token exchange failed.');
+            }
+
+            $idToken = trim((string) $tokenResponse->json('id_token', ''));
+            if ($idToken === '') {
+                throw new \RuntimeException('Apple sign-in did not return a valid identity token.');
+            }
+
+            $appleKeys = cache()->remember('vendor_oauth_apple_keys', 3600, function () {
+                $response = Http::get('https://appleid.apple.com/auth/keys');
+                if (!$response->ok()) {
+                    throw new \RuntimeException('Unable to download Apple signing keys.');
+                }
+
+                return $response->json();
+            });
+
+            $decodedAppleToken = (array) JWT::decode($idToken, JWK::parseKeySet($appleKeys));
+            $oauthId = trim((string) ($decodedAppleToken['sub'] ?? ''));
+            $email = strtolower(trim((string) ($decodedAppleToken['email'] ?? '')));
+            $name = trim((string) ($decodedAppleToken['name'] ?? ''));
+        } else {
+            $oauthUser = Socialite::driver($provider)->stateless()->user();
+            $oauthId = trim((string) $oauthUser->getId());
+            $email = strtolower(trim((string) $oauthUser->getEmail()));
+            $name = trim((string) ($oauthUser->getName() ?: ''));
+        }
+
+        if ($oauthId === '') {
+            throw new \RuntimeException('Unable to resolve your social account identity.');
+        }
+
+        if ($email === '' && $provider === 'apple') {
+            $email = 'apple_' . substr(md5($oauthId), 0, 20) . '@relay.workation.local';
+        }
+
+        if ($email === '') {
+            throw new \RuntimeException('Your social account did not provide an email address. Please use email signup.');
+        }
+
+        $portalUser = User::query()
+            ->where($providerColumn, $oauthId)
+            ->orWhereRaw('LOWER(email) = ?', [$email])
+            ->first();
+
+        if ($portalUser instanceof User) {
+            if (normalizePortalRoleValue((string) $portalUser->portal_role) !== 'VENDOR') {
+                throw new \RuntimeException('This email is already linked to a non-vendor account.');
+            }
+        } else {
+            $portalUser = new User();
+            $portalUser->email = $email;
+            $portalUser->username = generatePortalUsernameFromEmail($email);
+            $portalUser->password = Hash::make(Str::random(40));
+        }
+
+        if ($name === '') {
+            $name = trim((string) Str::of(Str::before($email, '@'))->replace(['.', '_', '-'], ' ')->title());
+        }
+        if ($name === '') {
+            $name = 'Vendor Partner';
+        }
+
+        $portalUser->name = $name;
+        $portalUser->portal_role = 'VENDOR';
+        $portalUser->portal_enabled = true;
+        if (trim((string) $portalUser->portal_vendor_id) === '') {
+            $portalUser->portal_vendor_id = strtoupper(substr($provider, 0, 3)) . '-' . strtoupper(substr(md5($oauthId), 0, 8));
+        }
+        $portalUser->{$providerColumn} = $oauthId;
+        if (empty($portalUser->email_verified_at)) {
+            $portalUser->email_verified_at = now();
+        }
+        $portalUser->save();
+
+        $request->session()->regenerate();
+        session([
+            'portal_vendor_authenticated' => true,
+            'portal_vendor_user' => $portalUser->name,
+            'portal_vendor_user_id' => $portalUser->id,
+            'portal_vendor_role' => $portalUser->portal_role,
+        ]);
+
+        Auth::login($portalUser);
+
+        return redirect('/vendor')->with('portal_notice', 'Signed in successfully with ' . ucfirst($provider) . '.');
+    } catch (\Throwable $e) {
+        Log::warning('Vendor social login failed.', [
+            'provider' => $provider,
+            'error' => $e->getMessage(),
+        ]);
+
+        return redirect('/portal/vendor/register')->withErrors([
+            'registration' => 'Unable to sign in with ' . ucfirst($provider) . '. Please use email signup or try again.',
+        ]);
+    }
+});
+
 Route::post('/portal/vendor/register', function (Request $request) {
     if (!Schema::hasTable('vendor_registration_requests')) {
         return back()->withErrors([
@@ -896,13 +1114,10 @@ Route::post('/portal/vendor/register', function (Request $request) {
     }
 
     $validated = $request->validate([
-        'business_name' => ['nullable', 'string', 'max:160'],
         'contact_name' => ['required', 'string', 'max:120'],
         'email' => ['required', 'email', 'max:160'],
         'phone' => ['required', 'string', 'max:40'],
         'vendor_type' => ['required', Rule::in(['accommodation', 'transport', 'restaurant', 'major_vendor', 'vehicle_rental', 'excursions', 'small_service', 'other'])],
-        'business_registration_number' => ['nullable', 'string', 'max:80'],
-        'license_number' => ['nullable', 'string', 'max:80'],
     ]);
 
     $email = strtolower(trim((string) $validated['email']));
@@ -929,10 +1144,7 @@ Route::post('/portal/vendor/register', function (Request $request) {
 
     $businessLicensePath = '';
     $verificationPath = null;
-    $partnerName = trim((string) ($validated['business_name'] ?? ''));
-    if ($partnerName === '') {
-        $partnerName = trim((string) $validated['contact_name']);
-    }
+    $partnerName = trim((string) $validated['contact_name']);
 
     DB::table('vendor_registration_requests')->insert([
         'business_name' => $partnerName,
@@ -940,8 +1152,8 @@ Route::post('/portal/vendor/register', function (Request $request) {
         'email' => $email,
         'phone' => trim((string) $validated['phone']),
         'vendor_type' => (string) $validated['vendor_type'],
-        'business_registration_number' => trim((string) ($validated['business_registration_number'] ?? '')),
-        'license_number' => trim((string) ($validated['license_number'] ?? '')),
+        'business_registration_number' => '',
+        'license_number' => '',
         'business_license_document_path' => $businessLicensePath,
         'verification_document_path' => $verificationPath,
         'status' => 'pending',

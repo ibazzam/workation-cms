@@ -508,7 +508,7 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
     }
 
     $validated = $request->validate([
-        'portal_role' => ['required', 'in:ADMIN,ADMIN_SUPER,VENDOR'],
+        'portal_role' => ['required', 'in:ADMIN,ADMIN_SUPER,ADMIN_CARE,VENDOR'],
         'portal_enabled' => ['required', 'in:1,0'],
         'portal_vendor_id' => ['nullable', 'string', 'max:255'],
     ]);

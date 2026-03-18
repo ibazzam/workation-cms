@@ -11,7 +11,8 @@
             --ink: #222222;
             --muted: #5a5a5a;
             --line: #d9d9d9;
-            --brand: #ff2d7a;
+            --brand: #0f6288;
+            --brand-dark: #0c4f6d;
             --bg: #f7f7f7;
         }
 
@@ -139,6 +140,33 @@
             line-height: 1.35;
         }
 
+        .social-auth {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 2px 0 14px;
+        }
+
+        .social-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            border: 1px solid #c8d2de;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #1d2b38;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 10px 12px;
+            text-decoration: none;
+        }
+
+        .social-btn:hover {
+            border-color: #a9bbcf;
+            background: #f7fbff;
+        }
+
         .actions {
             display: flex;
             gap: 10px;
@@ -157,6 +185,10 @@
             cursor: pointer;
             width: 100%;
             font-size: 1rem;
+        }
+
+        button:hover {
+            background: var(--brand-dark);
         }
 
         a {
@@ -178,9 +210,13 @@
             <div class="card">
             <span class="eyebrow">Partner Onboarding</span>
             <h1>Welcome to Workation</h1>
-            <p>Keep joining simple. Share your basic profile now and complete service verification after login when you upload listings.</p>
 
-            <div class="hint">After sign up: 1) account review, 2) upload properties/services, 3) quality and business verification by Workation team.</div>
+            <div class="social-auth">
+                <a class="social-btn" href="/portal/vendor/login" aria-label="Continue with Google">Continue with Google</a>
+                <a class="social-btn" href="/portal/vendor/login" aria-label="Continue with Apple">Continue with Apple</a>
+                <a class="social-btn" href="/portal/vendor/login" aria-label="Continue with Facebook">Continue with Facebook</a>
+                <a class="social-btn" href="/portal/vendor/login" aria-label="Continue with Email">Continue with Email</a>
+            </div>
 
             @if ($errors->any())
                 <div class="error">{{ $errors->first() }}</div>
@@ -204,8 +240,8 @@
                     </div>
 
                     <div class="field">
-                        <label for="phone">Phone Number (Optional)</label>
-                        <input id="phone" name="phone" type="text" value="{{ old('phone') }}">
+                        <label for="phone">Phone Number</label>
+                        <input id="phone" name="phone" type="text" value="{{ old('phone') }}" required>
                     </div>
 
                     <div class="field">

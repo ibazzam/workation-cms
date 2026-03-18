@@ -132,6 +132,67 @@
             background: #f5f9fc;
         }
 
+        .widget-grid {
+            margin-top: 14px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .widget-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 14px;
+        }
+
+        .widget-title {
+            margin: 0 0 6px;
+            font-size: 0.74rem;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            text-transform: uppercase;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .widget-value {
+            margin: 0;
+            font-size: 1.45rem;
+            font-weight: 800;
+            color: #173754;
+        }
+
+        .widget-sub {
+            margin-top: 5px;
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        .alert-list {
+            margin: 0;
+            padding-left: 18px;
+            color: #5f3a06;
+            font-size: 0.84rem;
+            line-height: 1.45;
+        }
+
+        .health-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            gap: 7px;
+        }
+
+        .health-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 0.82rem;
+            color: #203345;
+        }
+
         .layout {
             margin-top: 14px;
             display: grid;
@@ -471,6 +532,10 @@
                 grid-template-columns: 1fr 1fr;
             }
 
+            .widget-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
             .audit-row {
                 grid-template-columns: 1fr;
                 gap: 6px;
@@ -479,6 +544,10 @@
 
         @media (max-width: 900px) {
             .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .widget-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -522,11 +591,58 @@
         </section>
 
         <nav class="portal-nav" aria-label="Admin navigation">
+            <a href="#dashboardWidgets">Dashboard</a>
             <a href="#sessionDebug">Session</a>
             <a href="#authApiSection">Auth and API</a>
             <a href="#moderationPanel" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Moderation</a>
             <a href="#auditPanel">Audit History</a>
         </nav>
+
+        <section class="widget-grid" id="dashboardWidgets">
+            <article class="widget-card">
+                <p class="widget-title">Portal Users</p>
+                <p class="widget-value">{{ $dashboardStats['total_users'] }}</p>
+                <div class="widget-sub">Admins: {{ $dashboardStats['admin_users'] }} · Vendors: {{ $dashboardStats['vendor_users'] }}</div>
+            </article>
+            <article class="widget-card">
+                <p class="widget-title">Account Status</p>
+                <p class="widget-value">{{ $dashboardStats['active_users'] }}</p>
+                <div class="widget-sub">Active users · Suspended: {{ $dashboardStats['suspended_users'] }}</div>
+            </article>
+            <article class="widget-card">
+                <p class="widget-title">24h Activity</p>
+                <p class="widget-value">{{ $recentAuditCount }}</p>
+                <div class="widget-sub">Audit events in the last 24 hours</div>
+            </article>
+            <article class="widget-card">
+                <p class="widget-title">System Health</p>
+                <ul class="health-list">
+                    <li class="health-item">
+                        <span>Database</span>
+                        <span class="state {{ $systemHealth['db_connected'] ? 'ok' : 'err' }}">{{ $systemHealth['db_connected'] ? 'OK' : 'DOWN' }}</span>
+                    </li>
+                    <li class="health-item">
+                        <span>Audit Table</span>
+                        <span class="state {{ $systemHealth['audit_table_ready'] ? 'ok' : 'warn' }}">{{ $systemHealth['audit_table_ready'] ? 'READY' : 'MISSING' }}</span>
+                    </li>
+                    <li class="health-item">
+                        <span>Manage Access</span>
+                        <span class="state {{ $systemHealth['manage_permission'] ? 'ok' : 'warn' }}">{{ $systemHealth['manage_permission'] ? 'GRANTED' : 'LIMITED' }}</span>
+                    </li>
+                </ul>
+            </article>
+        </section>
+
+        @if ($alerts->isNotEmpty())
+            <section class="card" style="margin-top:12px;">
+                <p class="label">Operational Alerts</p>
+                <ul class="alert-list">
+                    @foreach ($alerts as $alert)
+                        <li>{{ $alert }}</li>
+                    @endforeach
+                </ul>
+            </section>
+        @endif
 
         @if (session('portal_notice'))
             <div class="notice prominent" id="successBox">{{ session('portal_notice') }}</div>
@@ -1300,5 +1416,6 @@
     </script>
 </body>
 </html>
+
 
 

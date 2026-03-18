@@ -33,10 +33,10 @@
 - [x] Provide audit logs and activity history for admin actions
 - [ ] Improve navigation (breadcrumbs, sidebar, or tabs)
 - [ ] Add dashboard widgets (metrics, alerts, system health)
-
+- [ ] 
 ## Vendor Portal
 - [ ] Add vendor-specific dashboard (bookings, payments, analytics)
-- [ ] Improve authentication flow and error handling
+- [x] Improve authentication flow and error handling
 - [ ] Add vendor profile management and settings
 - [ ] Provide notifications and status indicators for backend connectivity
 - [ ] Add support/help links and documentation access

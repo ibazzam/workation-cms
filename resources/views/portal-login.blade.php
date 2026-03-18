@@ -82,6 +82,17 @@
             font-size: 0.86rem;
         }
 
+        .hint {
+            color: #1f4a67;
+            background: #e9f4ff;
+            border: 1px solid #bedcf5;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 12px;
+            font-size: 0.84rem;
+            line-height: 1.35;
+        }
+
         .actions {
             display: flex;
             gap: 8px;
@@ -113,6 +124,12 @@
         <h1>{{ $portalName }} Portal Login</h1>
         <p>Sign in with your assigned portal account username and password.</p>
 
+        @if ($portal === 'vendor')
+            <div class="hint">Vendor access requires an enabled account with <strong>VENDOR</strong> role. Too many failed attempts will temporarily lock login for security.</div>
+        @else
+            <div class="hint">Admin access is restricted to enabled admin roles. Repeated failed attempts are rate-limited for security.</div>
+        @endif
+
         @if ($errors->any())
             <div class="error">{{ $errors->first() }}</div>
         @endif
@@ -130,7 +147,7 @@
             <input id="password" name="password" type="password" autocomplete="current-password" required>
 
             <div class="actions">
-                <button type="submit">Log In</button>
+                <button id="loginBtn" type="submit">Log In</button>
                 <a href="/">Back to Home</a>
                 @if ($portal === 'admin')
                     <a href="/portal/admin/forgot-password">Forgot Password?</a>
@@ -138,5 +155,20 @@
             </div>
         </form>
     </section>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var form = document.querySelector('form[action^="/portal/"]');
+            var button = document.getElementById('loginBtn');
+            if (!form || !button) {
+                return;
+            }
+
+            form.addEventListener('submit', function () {
+                button.disabled = true;
+                button.textContent = 'Signing In...';
+            });
+        });
+    </script>
 </body>
 </html>

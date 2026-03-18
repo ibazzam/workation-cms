@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -662,83 +663,122 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
         'password' => ['required', 'string'],
     ]);
 
-    $config = portalConfig($portal);
-    $username = trim((string) $validated['username']);
-    $password = (string) $validated['password'];
-    $usernameLower = strtolower($username);
+    $throttleKey = 'portal-login:' . $portal . '|' . strtolower(trim((string) $validated['username'])) . '|' . $request->ip();
+    $maxAttempts = $portal === 'vendor' ? 5 : 7;
+    $decaySeconds = $portal === 'vendor' ? 300 : 180;
 
-    $portalUser = null;
+    if (RateLimiter::tooManyAttempts($throttleKey, $maxAttempts)) {
+        $seconds = RateLimiter::availableIn($throttleKey);
+        $portalLabel = $portal === 'vendor' ? 'Vendor' : 'Admin';
+        return back()->withErrors([
+            'username' => $portalLabel . ' login temporarily locked due to repeated attempts. Try again in ' . $seconds . ' seconds.',
+        ])->withInput($request->only('username'));
+    }
 
-    // Admin/vendor login: users table; customer login: User table
-    if (in_array('ADMIN', $config['allowed_roles'], true) || in_array('VENDOR', $config['allowed_roles'], true)) {
-        if (Schema::hasColumns('users', ['username', 'portal_enabled', 'portal_role'])) {
-            $portalUser = \App\Models\User::query()
+    try {
+        $config = portalConfig($portal);
+        $username = trim((string) $validated['username']);
+        $password = (string) $validated['password'];
+        $usernameLower = strtolower($username);
+
+        $portalUser = null;
+
+        // Admin/vendor login: users table; customer login: User table
+        if (in_array('ADMIN', $config['allowed_roles'], true) || in_array('VENDOR', $config['allowed_roles'], true)) {
+            if (Schema::hasColumns('users', ['username', 'portal_enabled', 'portal_role'])) {
+                $portalUser = \App\Models\User::query()
+                    ->where(function ($query) use ($usernameLower) {
+                        $query->whereRaw('LOWER(username) = ?', [$usernameLower])
+                            ->orWhereRaw('LOWER(email) = ?', [$usernameLower]);
+                    })
+                    ->where('portal_enabled', true)
+                    ->whereIn('portal_role', $config['allowed_roles'])
+                    ->first();
+            }
+        } else {
+            $portalUser = \App\Models\Customer::query()
                 ->where(function ($query) use ($usernameLower) {
-                    $query->whereRaw('LOWER(username) = ?', [$usernameLower])
-                        ->orWhereRaw('LOWER(email) = ?', [$usernameLower]);
+                    $query->whereRaw('LOWER(email) = ?', [$usernameLower]);
                 })
-                ->where('portal_enabled', true)
-                ->whereIn('portal_role', $config['allowed_roles'])
                 ->first();
         }
-    } else {
-        $portalUser = \App\Models\Customer::query()
-            ->where(function ($query) use ($usernameLower) {
-                $query->whereRaw('LOWER(email) = ?', [$usernameLower]);
-            })
-            ->first();
-    }
 
-    $isBootstrapAdmin = false;
-    if ($portal === 'admin') {
-        $bootstrapUsername = firstNonEmptyEnv([
-            'PORTAL_ADMIN_USERNAME',
-            'WORKATION_ADMIN_PORTAL_USERNAME',
-            'ADMIN_PORTAL_USERNAME',
-            'WORKATION_ADMIN_USERNAME',
-            'ADMIN_USERNAME',
-            'ADMIN_USER',
-        ]);
-        $bootstrapPassword = firstNonEmptyEnv([
-            'PORTAL_ADMIN_PASSWORD',
-            'WORKATION_ADMIN_PORTAL_PASSWORD',
-            'ADMIN_PORTAL_PASSWORD',
-            'WORKATION_ADMIN_PASSWORD',
-            'ADMIN_PASSWORD',
-            'ADMIN_PASS',
-        ]);
+        $isBootstrapAdmin = false;
+        if ($portal === 'admin') {
+            $bootstrapUsername = firstNonEmptyEnv([
+                'PORTAL_ADMIN_USERNAME',
+                'WORKATION_ADMIN_PORTAL_USERNAME',
+                'ADMIN_PORTAL_USERNAME',
+                'WORKATION_ADMIN_USERNAME',
+                'ADMIN_USERNAME',
+                'ADMIN_USER',
+            ]);
+            $bootstrapPassword = firstNonEmptyEnv([
+                'PORTAL_ADMIN_PASSWORD',
+                'WORKATION_ADMIN_PORTAL_PASSWORD',
+                'ADMIN_PORTAL_PASSWORD',
+                'WORKATION_ADMIN_PASSWORD',
+                'ADMIN_PASSWORD',
+                'ADMIN_PASS',
+            ]);
 
-        if ($bootstrapUsername !== '' && $bootstrapPassword !== '') {
-            $isBootstrapAdmin = strtolower($bootstrapUsername) === $usernameLower
-                && bootstrapPasswordMatches($bootstrapPassword, $password);
+            if ($bootstrapUsername !== '' && $bootstrapPassword !== '') {
+                $isBootstrapAdmin = strtolower($bootstrapUsername) === $usernameLower
+                    && bootstrapPasswordMatches($bootstrapPassword, $password);
+            }
         }
-    }
 
-    $isValidDbUser = $portalUser && Hash::check($password, (string) $portalUser->password);
-    if (!$isValidDbUser && !$isBootstrapAdmin) {
+        $isValidDbUser = $portalUser && Hash::check($password, (string) $portalUser->password);
+        if (!$isValidDbUser && !$isBootstrapAdmin) {
+            RateLimiter::hit($throttleKey, $decaySeconds);
+            Log::warning('Portal login failed.', [
+                'portal' => $portal,
+                'username' => $usernameLower,
+                'ip' => $request->ip(),
+            ]);
+
+            $portalMessage = $portal === 'vendor'
+                ? 'Invalid vendor username/password, or account access is not enabled.'
+                : 'Invalid username or password.';
+
+            return back()->withErrors([
+                'username' => $portalMessage,
+            ])->withInput($request->only('username'));
+        }
+
+        RateLimiter::clear($throttleKey);
+
+        $request->session()->regenerate();
+        $sessionUserName = $portalUser ? $portalUser->name : 'Bootstrap Admin';
+        $sessionUserId = $portalUser ? $portalUser->id : null;
+        $sessionRole = $portalUser ? $portalUser->portal_role : 'ADMIN_SUPER';
+
+        session([
+            $config['session_key'] => true,
+            'portal_' . $portal . '_user' => $sessionUserName,
+            'portal_' . $portal . '_user_id' => $sessionUserId,
+            'portal_' . $portal . '_role' => $sessionRole,
+        ]);
+
+        // Log in the user using Laravel Auth if found
+        if ($portalUser) {
+            Auth::login($portalUser);
+        }
+
+        return redirect(portalRoutePath($portal));
+    } catch (\Throwable $e) {
+        RateLimiter::hit($throttleKey, $decaySeconds);
+        Log::error('Portal login failed with exception.', [
+            'portal' => $portal,
+            'username' => strtolower(trim((string) $validated['username'])),
+            'ip' => $request->ip(),
+            'error' => $e->getMessage(),
+        ]);
+
         return back()->withErrors([
-            'username' => 'Invalid username or password.',
-        ])->withInput();
+            'username' => 'Unable to sign in right now. Please try again in a moment.',
+        ])->withInput($request->only('username'));
     }
-
-    $request->session()->regenerate();
-    $sessionUserName = $portalUser ? $portalUser->name : 'Bootstrap Admin';
-    $sessionUserId = $portalUser ? $portalUser->id : null;
-    $sessionRole = $portalUser ? $portalUser->portal_role : 'ADMIN_SUPER';
-
-    session([
-        $config['session_key'] => true,
-        'portal_' . $portal . '_user' => $sessionUserName,
-        'portal_' . $portal . '_user_id' => $sessionUserId,
-        'portal_' . $portal . '_role' => $sessionRole,
-    ]);
-
-    // Log in the user using Laravel Auth if found
-    if ($portalUser) {
-        Auth::login($portalUser);
-    }
-
-    return redirect(portalRoutePath($portal));
 });
 
 Route::post('/portal/{portal}/logout', function (Request $request, string $portal) {

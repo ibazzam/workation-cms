@@ -20,7 +20,7 @@ class PortalVendorWorkflowSmokeTest extends TestCase
                 'business_name' => '',
                 'contact_name' => 'Partner Owner',
                 'email' => 'partner.minimal@example.com',
-                'phone' => '',
+                'phone' => '+9607700111',
                 'vendor_type' => 'accommodation',
                 'business_registration_number' => '',
                 'license_number' => '',
@@ -33,6 +33,7 @@ class PortalVendorWorkflowSmokeTest extends TestCase
         $this->assertDatabaseHas('vendor_registration_requests', [
             'business_name' => 'Partner Owner',
             'email' => 'partner.minimal@example.com',
+            'phone' => '+9607700111',
             'vendor_type' => 'accommodation',
             'business_license_document_path' => '',
             'verification_document_path' => null,

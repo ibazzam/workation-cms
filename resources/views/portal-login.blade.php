@@ -150,6 +150,9 @@
                 <button id="loginBtn" type="submit">Log In</button>
                 <a href="/">Back to Home</a>
                 <a href="/portal/{{ $portal }}/forgot-password">Forgot Password?</a>
+                @if ($portal === 'vendor')
+                    <a href="/portal/vendor/register">Register as Vendor</a>
+                @endif
             </div>
         </form>
     </section>

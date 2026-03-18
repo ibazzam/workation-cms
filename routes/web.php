@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 if (!function_exists('workationApiBase')) {
@@ -81,6 +82,138 @@ if (!function_exists('normalizePortalRoleValue')) {
     {
         $normalized = strtoupper(trim($role));
         return $normalized === 'ADMIN_FINACE' ? 'ADMIN_FINANCE' : $normalized;
+    }
+}
+
+if (!function_exists('generatePortalUsernameFromEmail')) {
+    function generatePortalUsernameFromEmail(string $email): string
+    {
+        $baseUsername = \Illuminate\Support\Str::of(strtolower((string) \Illuminate\Support\Str::before($email, '@')))
+            ->replaceMatches('/[^a-z0-9_]+/', '_')
+            ->trim('_')
+            ->value();
+
+        if ($baseUsername === '') {
+            $baseUsername = 'user';
+        }
+
+        $username = $baseUsername;
+        $suffix = 1;
+        while (\App\Models\User::where('username', $username)->exists()) {
+            $username = $baseUsername . '_' . $suffix;
+            $suffix++;
+        }
+
+        return $username;
+    }
+}
+
+if (!function_exists('canReviewVendorRegistrations')) {
+    function canReviewVendorRegistrations(): bool
+    {
+        if (!session('portal_admin_authenticated', false)) {
+            return false;
+        }
+
+        $role = normalizePortalRoleValue((string) session('portal_admin_role', ''));
+        return in_array($role, ['ADMIN_SUPER', 'ADMIN', 'ADMIN_CARE'], true);
+    }
+}
+
+if (!function_exists('currentPortalAdminRole')) {
+    function currentPortalAdminRole(): string
+    {
+        return normalizePortalRoleValue((string) session('portal_admin_role', ''));
+    }
+}
+
+if (!function_exists('canManageVendorUsers')) {
+    function canManageVendorUsers(): bool
+    {
+        if (!session('portal_admin_authenticated', false)) {
+            return false;
+        }
+
+        $role = currentPortalAdminRole();
+        return in_array($role, ['ADMIN_SUPER', 'ADMIN', 'ADMIN_CARE'], true);
+    }
+}
+
+if (!function_exists('canCreateVendorUsers')) {
+    function canCreateVendorUsers(): bool
+    {
+        if (!session('portal_admin_authenticated', false)) {
+            return false;
+        }
+
+        $role = currentPortalAdminRole();
+        return in_array($role, ['ADMIN_SUPER', 'ADMIN'], true);
+    }
+}
+
+if (!function_exists('canApproveVendorRegistrationRequest')) {
+    function canApproveVendorRegistrationRequest(): bool
+    {
+        if (!session('portal_admin_authenticated', false)) {
+            return false;
+        }
+
+        $role = currentPortalAdminRole();
+        return in_array($role, ['ADMIN_SUPER', 'ADMIN'], true);
+    }
+}
+
+if (!function_exists('canApproveVendorDeleteRequest')) {
+    function canApproveVendorDeleteRequest(): bool
+    {
+        if (!session('portal_admin_authenticated', false)) {
+            return false;
+        }
+
+        return currentPortalAdminRole() === 'ADMIN_SUPER';
+    }
+}
+
+if (!function_exists('canRequestVendorDeleteApproval')) {
+    function canRequestVendorDeleteApproval(): bool
+    {
+        if (!session('portal_admin_authenticated', false)) {
+            return false;
+        }
+
+        return in_array(currentPortalAdminRole(), ['ADMIN_SUPER', 'ADMIN'], true);
+    }
+}
+
+if (!function_exists('portalActionRequestsEnabled')) {
+    function portalActionRequestsEnabled(): bool
+    {
+        return Schema::hasTable('portal_admin_action_requests');
+    }
+}
+
+if (!function_exists('createPortalActionRequest')) {
+    function createPortalActionRequest(
+        string $actionType,
+        ?int $targetUserId,
+        ?int $targetRegistrationId,
+        ?string $targetIdentifier,
+        ?string $reason,
+        ?array $payload = null
+    ): int {
+        return (int) DB::table('portal_admin_action_requests')->insertGetId([
+            'action_type' => $actionType,
+            'requested_by_user_id' => is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null,
+            'requested_by_role' => (string) session('portal_admin_role', ''),
+            'target_user_id' => $targetUserId,
+            'target_registration_id' => $targetRegistrationId,
+            'target_identifier' => $targetIdentifier,
+            'reason' => $reason,
+            'payload' => $payload ? json_encode($payload) : null,
+            'status' => 'pending',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 }
 
@@ -170,6 +303,12 @@ Route::get('/admin', function () {
 
     $user = Auth::user();
     $canManageUsers = Gate::allows('manage-portal-users', $user);
+    $canManageVendorUsers = canManageVendorUsers();
+    $canCreateVendorUsers = canCreateVendorUsers();
+    $canReviewVendorRegistrations = canReviewVendorRegistrations();
+    $canApproveVendorRegistrationRequest = canApproveVendorRegistrationRequest();
+    $canApproveVendorDeleteRequest = canApproveVendorDeleteRequest();
+    $canRequestVendorDeleteApproval = canRequestVendorDeleteApproval();
     $portalUsers = User::query()
         ->whereIn('portal_role', ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE', 'ADMIN_FINACE', 'VENDOR'])
         ->orderBy('portal_role')
@@ -187,6 +326,89 @@ Route::get('/admin', function () {
             return strtoupper((string) $managedUser->portal_role) === 'VENDOR';
         })
         ->values();
+
+    $pendingVendorRegistrations = collect();
+    if (Schema::hasTable('vendor_registration_requests')) {
+        $pendingVendorRegistrations = DB::table('vendor_registration_requests')
+            ->where('status', 'pending')
+            ->orderBy('created_at')
+            ->limit(80)
+            ->get();
+    }
+
+    $vendorRegistrationHistory = collect();
+    if (Schema::hasTable('vendor_registration_requests')) {
+        $vendorRegistrationHistory = DB::table('vendor_registration_requests as vrr')
+            ->leftJoin('users as reviewers', 'reviewers.id', '=', 'vrr.reviewed_by_user_id')
+            ->leftJoin('users as approved_users', 'approved_users.id', '=', 'vrr.approved_user_id')
+            ->whereIn('vrr.status', ['approved', 'rejected'])
+            ->orderByDesc('vrr.reviewed_at')
+            ->limit(120)
+            ->get([
+                'vrr.id',
+                'vrr.business_name',
+                'vrr.contact_name',
+                'vrr.email',
+                'vrr.status',
+                'vrr.review_notes',
+                'vrr.reviewed_at',
+                'vrr.license_number',
+                'vrr.business_registration_number',
+                'reviewers.name as reviewed_by_name',
+                'reviewers.portal_role as reviewed_by_role',
+                'approved_users.username as approved_username',
+                'approved_users.portal_vendor_id as approved_vendor_id',
+            ]);
+    }
+
+    $pendingVendorDeleteRequests = collect();
+    $pendingVendorRegistrationApprovalRequests = collect();
+    if (Schema::hasTable('portal_admin_action_requests')) {
+        $pendingVendorDeleteRequests = DB::table('portal_admin_action_requests as par')
+            ->leftJoin('users as requested_by', 'requested_by.id', '=', 'par.requested_by_user_id')
+            ->leftJoin('users as target_user', 'target_user.id', '=', 'par.target_user_id')
+            ->where('par.status', 'pending')
+            ->where('par.action_type', 'vendor_delete')
+            ->orderBy('par.created_at')
+            ->limit(80)
+            ->get([
+                'par.id',
+                'par.action_type',
+                'par.reason',
+                'par.target_user_id',
+                'par.target_registration_id',
+                'par.target_identifier',
+                'par.created_at',
+                'requested_by.name as requested_by_name',
+                'requested_by.portal_role as requested_by_role',
+                'target_user.username as target_username',
+                'target_user.email as target_email',
+                'target_user.portal_vendor_id as target_vendor_id',
+            ]);
+
+        $pendingVendorRegistrationApprovalRequests = DB::table('portal_admin_action_requests as par')
+            ->leftJoin('users as requested_by', 'requested_by.id', '=', 'par.requested_by_user_id')
+            ->leftJoin('vendor_registration_requests as vrr', 'vrr.id', '=', 'par.target_registration_id')
+            ->where('par.status', 'pending')
+            ->where('par.action_type', 'vendor_registration_approve')
+            ->orderBy('par.created_at')
+            ->limit(80)
+            ->get([
+                'par.id',
+                'par.action_type',
+                'par.reason',
+                'par.target_user_id',
+                'par.target_registration_id',
+                'par.target_identifier',
+                'par.payload',
+                'par.created_at',
+                'requested_by.name as requested_by_name',
+                'requested_by.portal_role as requested_by_role',
+                'vrr.business_name',
+                'vrr.contact_name',
+                'vrr.email as registration_email',
+            ]);
+    }
 
     $rolePermissions = [
         'ADMIN_SUPER' => [
@@ -248,12 +470,19 @@ Route::get('/admin', function () {
         'vendor_users' => $vendorPortalUsers->count(),
         'active_users' => $portalUsers->where('portal_enabled', true)->count(),
         'suspended_users' => $portalUsers->where('portal_enabled', false)->count(),
+        'pending_vendor_registrations' => $pendingVendorRegistrations->count(),
     ];
 
     $systemHealth = [
         'db_connected' => false,
         'audit_table_ready' => Schema::hasTable('portal_admin_audit_logs'),
         'manage_permission' => $canManageUsers,
+        'vendor_manage_permission' => $canManageVendorUsers,
+        'vendor_create_permission' => $canCreateVendorUsers,
+        'vendor_review_permission' => $canReviewVendorRegistrations,
+        'vendor_registration_approval_permission' => $canApproveVendorRegistrationRequest,
+        'vendor_delete_approval_permission' => $canApproveVendorDeleteRequest,
+        'vendor_delete_request_permission' => $canRequestVendorDeleteApproval,
     ];
 
     try {
@@ -300,15 +529,31 @@ Route::get('/admin', function () {
     if (!$systemHealth['manage_permission']) {
         $alerts->push('Current role cannot manage portal users.');
     }
+    if (!$canReviewVendorRegistrations && $dashboardStats['pending_vendor_registrations'] > 0) {
+        $alerts->push('Pending vendor registrations exist, but current role cannot review them.');
+    }
+    if ($dashboardStats['pending_vendor_registrations'] > 0) {
+        $alerts->push('Pending vendor registrations waiting for review: ' . $dashboardStats['pending_vendor_registrations']);
+    }
 
     return view('admin-portal', [
         'apiBase' => workationApiBase(),
         'portalUser' => session('portal_admin_user', $config['name']),
         'portalRole' => session('portal_admin_role', 'ADMIN'),
         'canManageUsers' => $canManageUsers,
+        'canManageVendorUsers' => $canManageVendorUsers,
+        'canCreateVendorUsers' => $canCreateVendorUsers,
+        'canReviewVendorRegistrations' => $canReviewVendorRegistrations,
+        'canApproveVendorRegistrationRequest' => $canApproveVendorRegistrationRequest,
+        'canApproveVendorDeleteRequest' => $canApproveVendorDeleteRequest,
+        'canRequestVendorDeleteApproval' => $canRequestVendorDeleteApproval,
         'portalUsers' => $portalUsers,
         'adminPortalUsers' => $adminPortalUsers,
         'vendorPortalUsers' => $vendorPortalUsers,
+        'pendingVendorRegistrations' => $pendingVendorRegistrations,
+        'vendorRegistrationHistory' => $vendorRegistrationHistory,
+        'pendingVendorDeleteRequests' => $pendingVendorDeleteRequests,
+        'pendingVendorRegistrationApprovalRequests' => $pendingVendorRegistrationApprovalRequests,
         'dashboardStats' => $dashboardStats,
         'systemHealth' => $systemHealth,
         'rolePermissions' => $rolePermissions,
@@ -320,12 +565,14 @@ Route::get('/admin', function () {
 });
 
     Route::post('/portal/admin/users/create', function (\Illuminate\Http\Request $request) {
-        if (!Gate::allows('manage-portal-users')) {
+        $canManageUsers = Gate::allows('manage-portal-users');
+        $canCreateVendorUsers = canCreateVendorUsers();
+        if (!$canManageUsers && !$canCreateVendorUsers) {
             if ($request->expectsJson()) {
-                return response()->json(['message' => 'Super Admin privileges required.'], 403);
+                return response()->json(['message' => 'Insufficient privileges to create portal users.'], 403);
             }
 
-            return back()->withErrors(['auth' => 'Super Admin privileges required.']);
+            return back()->withErrors(['auth' => 'Insufficient privileges to create portal users.']);
         }
 
         $validated = $request->validate([
@@ -333,26 +580,31 @@ Route::get('/admin', function () {
             'email' => 'required|email|max:100|unique:users,email',
             'portal_role' => 'required|in:ADMIN,ADMIN_SUPER,ADMIN_CARE,ADMIN_FINANCE,ADMIN_FINACE,VENDOR',
             'portal_enabled' => 'required|boolean',
+            'portal_vendor_id' => 'nullable|string|max:255',
         ]);
 
         $normalizedRole = $validated['portal_role'] === 'ADMIN_FINACE'
             ? 'ADMIN_FINANCE'
             : $validated['portal_role'];
 
-        $baseUsername = \Illuminate\Support\Str::of(strtolower((string) \Illuminate\Support\Str::before($validated['email'], '@')))
-            ->replaceMatches('/[^a-z0-9_]+/', '_')
-            ->trim('_')
-            ->value();
-        if ($baseUsername === '') {
-            $baseUsername = 'user';
+        if (!$canManageUsers && $normalizedRole !== 'VENDOR') {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Admin role can only create VENDOR users.'], 403);
+            }
+
+            return back()->withErrors(['auth' => 'Admin role can only create VENDOR users.']);
         }
 
-        $username = $baseUsername;
-        $suffix = 1;
-        while (\App\Models\User::where('username', $username)->exists()) {
-            $username = $baseUsername . '_' . $suffix;
-            $suffix++;
+        $vendorId = trim((string) ($validated['portal_vendor_id'] ?? ''));
+        if ($normalizedRole === 'VENDOR' && $vendorId === '') {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Vendor ID is required for VENDOR users.'], 422);
+            }
+
+            return back()->withErrors(['portal_vendor_id' => 'Vendor ID is required for VENDOR users.']);
         }
+
+        $username = generatePortalUsernameFromEmail((string) $validated['email']);
 
         $user = new \App\Models\User();
         $user->name = $validated['name'];
@@ -360,6 +612,7 @@ Route::get('/admin', function () {
         $user->email = $validated['email'];
         $user->portal_role = $normalizedRole;
         $user->portal_enabled = $validated['portal_enabled'];
+        $user->portal_vendor_id = $normalizedRole === 'VENDOR' ? $vendorId : null;
         $user->password = \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(24));
         $user->save();
 
@@ -404,6 +657,7 @@ Route::get('/admin', function () {
                     'email' => $user->email,
                     'portal_role' => $user->portal_role,
                     'portal_enabled' => (bool) $user->portal_enabled,
+                    'portal_vendor_id' => $user->portal_vendor_id,
                 ],
                 'password_reset_email_sent' => $resetEmailSent,
                 'password_reset_email_error' => $resetEmailError,
@@ -422,7 +676,10 @@ Route::get('/admin', function () {
     });
 
 Route::delete('/portal/admin/users/{user}/delete', function (User $user) {
-    if (!Gate::allows('manage-portal-users')) {
+    $canManageUsers = Gate::allows('manage-portal-users');
+    $canRequestVendorDelete = canRequestVendorDeleteApproval();
+    $targetRole = normalizePortalRoleValue((string) $user->portal_role);
+    if (!$canManageUsers && !($canRequestVendorDelete && $targetRole === 'VENDOR')) {
         abort(403);
     }
     // Prevent deleting your own account
@@ -436,22 +693,58 @@ Route::delete('/portal/admin/users/{user}/delete', function (User $user) {
     }
 
     $targetIdentifier = (string) ($user->username ?: $user->email);
-    $targetRole = (string) $user->portal_role;
+    $targetRoleRaw = (string) $user->portal_role;
     $targetUserId = (int) $user->id;
+
+    // Vendor deletion by non-super roles requires explicit ADMIN_SUPER approval.
+    if ($targetRole === 'VENDOR' && !canApproveVendorDeleteRequest()) {
+        if (portalActionRequestsEnabled()) {
+            $existingPending = DB::table('portal_admin_action_requests')
+                ->where('status', 'pending')
+                ->where('action_type', 'vendor_delete')
+                ->where('target_user_id', $targetUserId)
+                ->exists();
+
+            if ($existingPending) {
+                return back()->withErrors(['delete' => 'A vendor delete approval request is already pending for this account.']);
+            }
+
+            $requestId = createPortalActionRequest(
+                'vendor_delete',
+                $targetUserId,
+                null,
+                $targetIdentifier,
+                'Vendor deletion requires ADMIN_SUPER approval.',
+            );
+
+            portalAdminAuditLog('vendor_delete.requested', [
+                'target_user_id' => $targetUserId,
+                'target_identifier' => $targetIdentifier,
+                'target_role' => $targetRoleRaw,
+                'action_request_id' => $requestId,
+            ]);
+
+            return back()->with('portal_notice', 'Vendor delete request submitted for ADMIN_SUPER approval.');
+        }
+
+        return back()->withErrors(['delete' => 'Vendor delete approval workflow is not available until migrations are applied.']);
+    }
 
     $user->delete();
 
     portalAdminAuditLog('user.deleted', [
         'target_user_id' => $targetUserId,
         'target_identifier' => $targetIdentifier,
-        'target_role' => $targetRole,
+        'target_role' => $targetRoleRaw,
     ]);
 
     return back()->with('portal_notice', 'User deleted.');
 });
 
 Route::post('/portal/admin/users/bulk-delete', function (Request $request) {
-    if (!Gate::allows('manage-portal-users')) {
+    $canManageUsers = Gate::allows('manage-portal-users');
+    $canRequestVendorDelete = canRequestVendorDeleteApproval();
+    if (!$canManageUsers && !$canRequestVendorDelete) {
         abort(403);
     }
 
@@ -480,6 +773,63 @@ Route::post('/portal/admin/users/bulk-delete', function (Request $request) {
     $targetUsers = User::query()
         ->whereIn('id', $ids->all())
         ->get(['id', 'username', 'email', 'portal_role']);
+
+    if (!$canManageUsers) {
+        $nonVendorTargets = $targetUsers
+            ->filter(function (User $managedUser) {
+                return normalizePortalRoleValue((string) $managedUser->portal_role) !== 'VENDOR';
+            })
+            ->count();
+
+        if ($nonVendorTargets > 0) {
+            return back()->withErrors(['delete' => 'Admin role can only bulk delete VENDOR users.']);
+        }
+    }
+
+    // Non-super roles can only submit vendor delete approval requests.
+    if (!$canApproveVendorDeleteRequest()) {
+        if (!portalActionRequestsEnabled()) {
+            return back()->withErrors(['delete' => 'Vendor delete approval workflow is not available until migrations are applied.']);
+        }
+
+        $requestedCount = 0;
+        foreach ($targetUsers as $managedUser) {
+            $normalizedTargetRole = normalizePortalRoleValue((string) $managedUser->portal_role);
+            if ($normalizedTargetRole !== 'VENDOR') {
+                continue;
+            }
+
+            $existingPending = DB::table('portal_admin_action_requests')
+                ->where('status', 'pending')
+                ->where('action_type', 'vendor_delete')
+                ->where('target_user_id', (int) $managedUser->id)
+                ->exists();
+
+            if ($existingPending) {
+                continue;
+            }
+
+            $requestId = createPortalActionRequest(
+                'vendor_delete',
+                (int) $managedUser->id,
+                null,
+                (string) ($managedUser->username ?: $managedUser->email),
+                'Bulk vendor deletion requires ADMIN_SUPER approval.',
+            );
+
+            portalAdminAuditLog('vendor_delete.requested', [
+                'target_user_id' => (int) $managedUser->id,
+                'target_identifier' => (string) ($managedUser->username ?: $managedUser->email),
+                'target_role' => (string) $managedUser->portal_role,
+                'action_request_id' => $requestId,
+                'bulk_request' => true,
+            ]);
+
+            $requestedCount++;
+        }
+
+        return back()->with('portal_notice', 'Submitted ' . $requestedCount . ' vendor delete request(s) for ADMIN_SUPER approval.');
+    }
 
     $deletedCount = User::query()->whereIn('id', $ids->all())->delete();
 
@@ -528,6 +878,72 @@ Route::get('/portal/{portal}/login', function (string $portal) {
         'portal' => $portal,
         'portalName' => $config['name'],
     ]);
+});
+
+Route::get('/portal/vendor/register', function () {
+    return view('portal-vendor-register');
+});
+
+Route::post('/portal/vendor/register', function (Request $request) {
+    if (!Schema::hasTable('vendor_registration_requests')) {
+        return back()->withErrors([
+            'registration' => 'Vendor self-registration is not available yet. Please contact support.',
+        ])->withInput($request->except(['business_license_document', 'verification_document']));
+    }
+
+    $validated = $request->validate([
+        'business_name' => ['required', 'string', 'max:160'],
+        'contact_name' => ['required', 'string', 'max:120'],
+        'email' => ['required', 'email', 'max:160'],
+        'phone' => ['nullable', 'string', 'max:40'],
+        'business_registration_number' => ['required', 'string', 'max:80'],
+        'license_number' => ['required', 'string', 'max:80'],
+        'business_license_document' => ['required', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png'],
+        'verification_document' => ['nullable', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png'],
+    ]);
+
+    $email = strtolower(trim((string) $validated['email']));
+    $existingUser = User::query()
+        ->whereRaw('LOWER(email) = ?', [$email])
+        ->first();
+
+    if ($existingUser instanceof User && normalizePortalRoleValue((string) $existingUser->portal_role) === 'VENDOR') {
+        return back()->withErrors([
+            'email' => 'A vendor account with this email already exists. Please use vendor login or forgot password.',
+        ])->withInput($request->except(['business_license_document', 'verification_document']));
+    }
+
+    $existingPending = DB::table('vendor_registration_requests')
+        ->whereRaw('LOWER(email) = ?', [$email])
+        ->where('status', 'pending')
+        ->exists();
+
+    if ($existingPending) {
+        return back()->withErrors([
+            'email' => 'A registration request for this email is already under review.',
+        ])->withInput($request->except(['business_license_document', 'verification_document']));
+    }
+
+    $businessLicensePath = $request->file('business_license_document')->store('vendor-registration-documents', 'local');
+    $verificationPath = $request->file('verification_document')
+        ? $request->file('verification_document')->store('vendor-registration-documents', 'local')
+        : null;
+
+    DB::table('vendor_registration_requests')->insert([
+        'business_name' => trim((string) $validated['business_name']),
+        'contact_name' => trim((string) $validated['contact_name']),
+        'email' => $email,
+        'phone' => trim((string) ($validated['phone'] ?? '')) ?: null,
+        'business_registration_number' => trim((string) $validated['business_registration_number']),
+        'license_number' => trim((string) $validated['license_number']),
+        'business_license_document_path' => $businessLicensePath,
+        'verification_document_path' => $verificationPath,
+        'status' => 'pending',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    return back()->with('status', 'Registration submitted successfully. Our admins will review your licenses and verification documents before granting portal access.');
 });
 
 Route::get('/portal/{portal}/forgot-password', function (string $portal) {
@@ -855,7 +1271,10 @@ Route::post('/portal/{portal}/logout', function (Request $request, string $porta
 });
 
 Route::post('/portal/admin/users/{user}/manage', function (Request $request, User $user) {
-    if (!Gate::allows('manage-portal-users')) {
+    $canManageUsers = Gate::allows('manage-portal-users');
+    $canManageVendorUsers = canManageVendorUsers();
+    $currentRole = normalizePortalRoleValue((string) $user->portal_role);
+    if (!$canManageUsers && !($canManageVendorUsers && $currentRole === 'VENDOR')) {
         abort(403);
     }
 
@@ -877,6 +1296,13 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
     if ($nextRole === 'ADMIN_FINACE') {
         $nextRole = 'ADMIN_FINANCE';
     }
+
+    if (!$canManageUsers && $nextRole !== 'VENDOR') {
+        return back()->withErrors([
+            'portal_role' => 'Admin role can only manage VENDOR accounts.',
+        ]);
+    }
+
     if ($isSelf && $nextRole !== 'ADMIN_SUPER') {
         return back()->withErrors([
             'portal_role' => 'You cannot remove your own Super Admin role from this screen.',
@@ -884,6 +1310,11 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
     }
 
     $vendorId = trim((string) ($validated['portal_vendor_id'] ?? ''));
+    if ($nextRole === 'VENDOR' && $vendorId === '') {
+        return back()->withErrors([
+            'portal_vendor_id' => 'Vendor ID is required for VENDOR users.',
+        ]);
+    }
 
     $before = [
         'portal_role' => (string) $user->portal_role,
@@ -909,6 +1340,465 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
     ]);
 
     return back()->with('portal_notice', 'Portal user updated: ' . ($user->username ?: ('#' . $user->id)));
+});
+
+Route::get('/portal/admin/vendor-registrations/{registration}/document/{documentType}', function (int $registration, string $documentType) {
+    if (!canReviewVendorRegistrations()) {
+        abort(403);
+    }
+
+    if (!Schema::hasTable('vendor_registration_requests')) {
+        abort(404);
+    }
+
+    if (!in_array($documentType, ['business_license', 'verification'], true)) {
+        abort(404);
+    }
+
+    $registrationRow = DB::table('vendor_registration_requests')
+        ->where('id', $registration)
+        ->first();
+
+    if (!$registrationRow) {
+        abort(404);
+    }
+
+    $path = $documentType === 'business_license'
+        ? (string) ($registrationRow->business_license_document_path ?? '')
+        : (string) ($registrationRow->verification_document_path ?? '');
+
+    if ($path === '' || !Storage::disk('local')->exists($path)) {
+        abort(404);
+    }
+
+    return Storage::disk('local')->download($path);
+});
+
+Route::post('/portal/admin/vendor-registrations/{registration}/approve', function (Request $request, int $registration) {
+    if (!canReviewVendorRegistrations()) {
+        abort(403);
+    }
+
+    if (!Schema::hasTable('vendor_registration_requests')) {
+        return back()->withErrors([
+            'registration' => 'Vendor registration table is missing. Run migrations first.',
+        ]);
+    }
+
+    $validated = $request->validate([
+        'portal_vendor_id' => ['required', 'string', 'max:255'],
+        'approval_notes' => ['nullable', 'string', 'max:2000'],
+    ]);
+
+    $registrationRow = DB::table('vendor_registration_requests')
+        ->where('id', $registration)
+        ->first();
+
+    if (!$registrationRow) {
+        return back()->withErrors([
+            'registration' => 'Vendor registration request not found.',
+        ]);
+    }
+
+    if ((string) $registrationRow->status !== 'pending') {
+        return back()->withErrors([
+            'registration' => 'Only pending registration requests can be approved.',
+        ]);
+    }
+
+    $email = strtolower(trim((string) $registrationRow->email));
+    $vendorId = trim((string) $validated['portal_vendor_id']);
+    $approvalNotes = trim((string) ($validated['approval_notes'] ?? ''));
+
+    // ADMIN_CARE can review and request approval, but final approval is ADMIN/ADMIN_SUPER only.
+    if (!canApproveVendorRegistrationRequest()) {
+        if (!portalActionRequestsEnabled()) {
+            return back()->withErrors([
+                'registration' => 'Approval request workflow is not available until migrations are applied.',
+            ]);
+        }
+
+        $existingPending = DB::table('portal_admin_action_requests')
+            ->where('status', 'pending')
+            ->where('action_type', 'vendor_registration_approve')
+            ->where('target_registration_id', $registration)
+            ->exists();
+
+        if ($existingPending) {
+            return back()->withErrors([
+                'registration' => 'An approval request is already pending for this vendor registration.',
+            ]);
+        }
+
+        $requestId = createPortalActionRequest(
+            'vendor_registration_approve',
+            null,
+            $registration,
+            (string) $registrationRow->email,
+            $approvalNotes !== '' ? $approvalNotes : 'Submitted by ADMIN_CARE for ADMIN/ADMIN_SUPER approval.',
+            [
+                'portal_vendor_id' => $vendorId,
+                'approval_notes' => $approvalNotes,
+            ]
+        );
+
+        portalAdminAuditLog('vendor_registration.approval_requested', [
+            'target_identifier' => (string) $registrationRow->email,
+            'target_role' => 'VENDOR',
+            'registration_id' => $registration,
+            'action_request_id' => $requestId,
+            'portal_vendor_id' => $vendorId,
+        ]);
+
+        return back()->with('portal_notice', 'Vendor approval request submitted for ADMIN/ADMIN_SUPER approval.');
+    }
+
+    $resetEmailSent = false;
+    $resetEmailError = null;
+    $approvedUserId = null;
+    $approvedUserIdentifier = null;
+
+    try {
+        DB::transaction(function () use (
+            $registration,
+            $email,
+            $vendorId,
+            $approvalNotes,
+            &$resetEmailSent,
+            &$resetEmailError,
+            &$approvedUserId,
+            &$approvedUserIdentifier
+        ) {
+            $requestRow = DB::table('vendor_registration_requests')
+                ->where('id', $registration)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$requestRow || (string) $requestRow->status !== 'pending') {
+                throw new \RuntimeException('This registration request is no longer pending.');
+            }
+
+            $existingUser = User::query()
+                ->whereRaw('LOWER(email) = ?', [$email])
+                ->first();
+
+            if ($existingUser instanceof User && normalizePortalRoleValue((string) $existingUser->portal_role) !== 'VENDOR') {
+                throw new \RuntimeException('An existing non-vendor account already uses this email.');
+            }
+
+            $portalUser = $existingUser;
+            if (!$portalUser instanceof User) {
+                $portalUser = new User();
+                $portalUser->username = generatePortalUsernameFromEmail($email);
+                $portalUser->email = $email;
+                $portalUser->password = Hash::make(Str::random(24));
+            }
+
+            $portalUser->name = (string) $requestRow->contact_name;
+            $portalUser->portal_role = 'VENDOR';
+            $portalUser->portal_enabled = true;
+            $portalUser->portal_vendor_id = $vendorId;
+            $portalUser->save();
+
+            $approvedUserId = (int) $portalUser->id;
+            $approvedUserIdentifier = (string) ($portalUser->username ?: $portalUser->email);
+
+            try {
+                $token = Password::broker('backend_users')->createToken($portalUser);
+                $portalUser->sendPasswordResetNotification($token);
+                $resetEmailSent = true;
+            } catch (\Throwable $mailError) {
+                $resetEmailSent = false;
+                $resetEmailError = $mailError->getMessage();
+                Log::error('Failed to send vendor portal reset email after registration approval.', [
+                    'registration_id' => (int) $requestRow->id,
+                    'user_id' => (int) $portalUser->id,
+                    'email' => $email,
+                    'error' => $mailError->getMessage(),
+                ]);
+            }
+
+            DB::table('vendor_registration_requests')
+                ->where('id', $registration)
+                ->update([
+                    'status' => 'approved',
+                    'review_notes' => $approvalNotes !== '' ? $approvalNotes : null,
+                    'reviewed_by_user_id' => session('portal_admin_user_id'),
+                    'reviewed_at' => now(),
+                    'approved_user_id' => $portalUser->id,
+                    'updated_at' => now(),
+                ]);
+        });
+    } catch (\Throwable $e) {
+        return back()->withErrors([
+            'registration' => $e->getMessage(),
+        ]);
+    }
+
+    portalAdminAuditLog('vendor_registration.approved', [
+        'target_user_id' => $approvedUserId,
+        'target_identifier' => $approvedUserIdentifier,
+        'target_role' => 'VENDOR',
+        'registration_id' => $registration,
+        'registration_email' => $email,
+        'portal_vendor_id' => $vendorId,
+        'reset_email_sent' => $resetEmailSent,
+    ]);
+
+    if ($resetEmailSent) {
+        return back()->with('portal_notice', 'Vendor registration approved and reset email sent.');
+    }
+
+    return back()->withErrors([
+        'registration' => 'Vendor registration approved, but password setup email failed to send. Please verify mail settings.',
+    ]);
+});
+
+Route::post('/portal/admin/action-requests/{requestId}/approve', function (int $requestId) {
+    if (!portalActionRequestsEnabled()) {
+        return back()->withErrors(['request' => 'Action request workflow table is missing. Run migrations first.']);
+    }
+
+    $requestRow = DB::table('portal_admin_action_requests')
+        ->where('id', $requestId)
+        ->first();
+
+    if (!$requestRow || (string) $requestRow->status !== 'pending') {
+        return back()->withErrors(['request' => 'Pending action request not found.']);
+    }
+
+    if ((string) $requestRow->action_type === 'vendor_delete') {
+        if (!canApproveVendorDeleteRequest()) {
+            abort(403);
+        }
+
+        $targetUserId = (int) ($requestRow->target_user_id ?? 0);
+        $targetUser = $targetUserId > 0 ? User::query()->find($targetUserId) : null;
+        if ($targetUser instanceof User) {
+            if (normalizePortalRoleValue((string) $targetUser->portal_role) !== 'VENDOR') {
+                return back()->withErrors(['request' => 'Target user is no longer a vendor account.']);
+            }
+            $targetUser->delete();
+        }
+
+        DB::table('portal_admin_action_requests')
+            ->where('id', $requestId)
+            ->update([
+                'status' => 'approved',
+                'approved_by_user_id' => session('portal_admin_user_id'),
+                'approved_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+        portalAdminAuditLog('vendor_delete.approved', [
+            'target_user_id' => $targetUserId > 0 ? $targetUserId : null,
+            'target_identifier' => (string) ($requestRow->target_identifier ?? 'unknown-vendor'),
+            'target_role' => 'VENDOR',
+            'action_request_id' => $requestId,
+        ]);
+
+        return back()->with('portal_notice', 'Vendor delete request approved and processed.');
+    }
+
+    if ((string) $requestRow->action_type === 'vendor_registration_approve') {
+        if (!canApproveVendorRegistrationRequest()) {
+            abort(403);
+        }
+
+        $registrationId = (int) ($requestRow->target_registration_id ?? 0);
+        if ($registrationId <= 0) {
+            return back()->withErrors(['request' => 'Vendor registration target is missing.']);
+        }
+
+        $registrationRow = DB::table('vendor_registration_requests')
+            ->where('id', $registrationId)
+            ->first();
+
+        if (!$registrationRow || (string) $registrationRow->status !== 'pending') {
+            return back()->withErrors(['request' => 'Vendor registration is no longer pending.']);
+        }
+
+        $payload = [];
+        if (!empty($requestRow->payload)) {
+            $decoded = json_decode((string) $requestRow->payload, true);
+            if (is_array($decoded)) {
+                $payload = $decoded;
+            }
+        }
+
+        $vendorId = trim((string) ($payload['portal_vendor_id'] ?? ''));
+        if ($vendorId === '') {
+            return back()->withErrors(['request' => 'Approval request payload is missing vendor ID.']);
+        }
+        $approvalNotes = trim((string) ($payload['approval_notes'] ?? ''));
+
+        $email = strtolower(trim((string) $registrationRow->email));
+        $resetEmailSent = false;
+
+        DB::transaction(function () use ($registrationId, $email, $vendorId, $approvalNotes, $requestId, &$resetEmailSent): void {
+            $requestRegistrationRow = DB::table('vendor_registration_requests')
+                ->where('id', $registrationId)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$requestRegistrationRow || (string) $requestRegistrationRow->status !== 'pending') {
+                throw new \RuntimeException('This registration request is no longer pending.');
+            }
+
+            $existingUser = User::query()
+                ->whereRaw('LOWER(email) = ?', [$email])
+                ->first();
+
+            if ($existingUser instanceof User && normalizePortalRoleValue((string) $existingUser->portal_role) !== 'VENDOR') {
+                throw new \RuntimeException('An existing non-vendor account already uses this email.');
+            }
+
+            $portalUser = $existingUser;
+            if (!$portalUser instanceof User) {
+                $portalUser = new User();
+                $portalUser->username = generatePortalUsernameFromEmail($email);
+                $portalUser->email = $email;
+                $portalUser->password = Hash::make(Str::random(24));
+            }
+
+            $portalUser->name = (string) $requestRegistrationRow->contact_name;
+            $portalUser->portal_role = 'VENDOR';
+            $portalUser->portal_enabled = true;
+            $portalUser->portal_vendor_id = $vendorId;
+            $portalUser->save();
+
+            $token = Password::broker('backend_users')->createToken($portalUser);
+            $portalUser->sendPasswordResetNotification($token);
+            $resetEmailSent = true;
+
+            DB::table('vendor_registration_requests')
+                ->where('id', $registrationId)
+                ->update([
+                    'status' => 'approved',
+                    'review_notes' => $approvalNotes !== '' ? $approvalNotes : null,
+                    'reviewed_by_user_id' => session('portal_admin_user_id'),
+                    'reviewed_at' => now(),
+                    'approved_user_id' => $portalUser->id,
+                    'updated_at' => now(),
+                ]);
+
+            DB::table('portal_admin_action_requests')
+                ->where('id', $requestId)
+                ->update([
+                    'status' => 'approved',
+                    'approved_by_user_id' => session('portal_admin_user_id'),
+                    'approved_at' => now(),
+                    'updated_at' => now(),
+                ]);
+        });
+
+        portalAdminAuditLog('vendor_registration.approval_request_approved', [
+            'target_identifier' => (string) $registrationRow->email,
+            'target_role' => 'VENDOR',
+            'registration_id' => $registrationId,
+            'action_request_id' => $requestId,
+            'reset_email_sent' => $resetEmailSent,
+        ]);
+
+        return back()->with('portal_notice', 'Vendor registration approval request processed successfully.');
+    }
+
+    return back()->withErrors(['request' => 'Unsupported action request type.']);
+});
+
+Route::post('/portal/admin/action-requests/{requestId}/reject', function (Request $request, int $requestId) {
+    if (!portalActionRequestsEnabled()) {
+        return back()->withErrors(['request' => 'Action request workflow table is missing. Run migrations first.']);
+    }
+
+    $validated = $request->validate([
+        'reason' => ['required', 'string', 'max:2000'],
+    ]);
+
+    $requestRow = DB::table('portal_admin_action_requests')
+        ->where('id', $requestId)
+        ->first();
+
+    if (!$requestRow || (string) $requestRow->status !== 'pending') {
+        return back()->withErrors(['request' => 'Pending action request not found.']);
+    }
+
+    $actionType = (string) $requestRow->action_type;
+    if ($actionType === 'vendor_delete' && !canApproveVendorDeleteRequest()) {
+        abort(403);
+    }
+    if ($actionType === 'vendor_registration_approve' && !canApproveVendorRegistrationRequest()) {
+        abort(403);
+    }
+
+    DB::table('portal_admin_action_requests')
+        ->where('id', $requestId)
+        ->update([
+            'status' => 'rejected',
+            'approved_by_user_id' => session('portal_admin_user_id'),
+            'approved_at' => now(),
+            'rejection_reason' => trim((string) $validated['reason']),
+            'updated_at' => now(),
+        ]);
+
+    portalAdminAuditLog('action_request.rejected', [
+        'target_identifier' => (string) ($requestRow->target_identifier ?? 'unknown-target'),
+        'action_type' => $actionType,
+        'action_request_id' => $requestId,
+    ]);
+
+    return back()->with('portal_notice', 'Action request rejected.');
+});
+
+Route::post('/portal/admin/vendor-registrations/{registration}/reject', function (Request $request, int $registration) {
+    if (!canReviewVendorRegistrations()) {
+        abort(403);
+    }
+
+    if (!Schema::hasTable('vendor_registration_requests')) {
+        return back()->withErrors([
+            'registration' => 'Vendor registration table is missing. Run migrations first.',
+        ]);
+    }
+
+    $validated = $request->validate([
+        'review_notes' => ['required', 'string', 'max:2000'],
+    ]);
+
+    $registrationRow = DB::table('vendor_registration_requests')
+        ->where('id', $registration)
+        ->first();
+
+    if (!$registrationRow) {
+        return back()->withErrors([
+            'registration' => 'Vendor registration request not found.',
+        ]);
+    }
+
+    if ((string) $registrationRow->status !== 'pending') {
+        return back()->withErrors([
+            'registration' => 'Only pending registration requests can be rejected.',
+        ]);
+    }
+
+    DB::table('vendor_registration_requests')
+        ->where('id', $registration)
+        ->update([
+            'status' => 'rejected',
+            'review_notes' => trim((string) $validated['review_notes']),
+            'reviewed_by_user_id' => session('portal_admin_user_id'),
+            'reviewed_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+    portalAdminAuditLog('vendor_registration.rejected', [
+        'target_identifier' => (string) $registrationRow->email,
+        'target_role' => 'VENDOR',
+        'registration_id' => $registration,
+        'registration_email' => (string) $registrationRow->email,
+    ]);
+
+    return back()->with('portal_notice', 'Vendor registration rejected.');
 });
 
 // Legacy Laravel business routes are decommissioned in runtime.

@@ -453,6 +453,7 @@
                             <option value="ADMIN">ADMIN</option>
                             <option value="ADMIN_SUPER">ADMIN_SUPER</option>
                             <option value="ADMIN_CARE">ADMIN_CARE</option>
+                            <option value="ADMIN_FINANCE">ADMIN_FINANCE</option>
                             <option value="VENDOR">VENDOR</option>
                         </select>
                     </div>
@@ -500,6 +501,7 @@
                                         <option value="ADMIN" @selected($managedUser->portal_role === 'ADMIN')>ADMIN</option>
                                         <option value="ADMIN_SUPER" @selected($managedUser->portal_role === 'ADMIN_SUPER')>ADMIN_SUPER</option>
                                         <option value="ADMIN_CARE" @selected($managedUser->portal_role === 'ADMIN_CARE')>ADMIN_CARE</option>
+                                        <option value="ADMIN_FINANCE" @selected(in_array($managedUser->portal_role, ['ADMIN_FINANCE', 'ADMIN_FINACE'], true))>ADMIN_FINANCE</option>
                                         <option value="VENDOR" @selected($managedUser->portal_role === 'VENDOR')>VENDOR</option>
                                     </select>
                                 </div>

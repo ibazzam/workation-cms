@@ -149,9 +149,7 @@
             <div class="actions">
                 <button id="loginBtn" type="submit">Log In</button>
                 <a href="/">Back to Home</a>
-                @if ($portal === 'admin')
-                    <a href="/portal/admin/forgot-password">Forgot Password?</a>
-                @endif
+                <a href="/portal/{{ $portal }}/forgot-password">Forgot Password?</a>
             </div>
         </form>
     </section>

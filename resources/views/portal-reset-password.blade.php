@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Admin Reset Password | Workation</title>
+    <title>{{ $portalName ?? 'Portal' }} Reset Password | Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
     <style>
@@ -72,18 +72,18 @@
 <body>
     <section class="card">
         <span class="eyebrow">Secure Access</span>
-        <h1>Reset Admin Password</h1>
-        <p>Choose a new password for your admin account.</p>
+        <h1>Reset {{ $portalName ?? 'Portal' }} Password</h1>
+        <p>Choose a new password for your {{ strtolower($portalName ?? 'portal') }} account.</p>
 
         @if ($errors->any())
             <div class="error">{{ $errors->first() }}</div>
         @endif
 
-        <form method="POST" action="/portal/admin/reset-password">
+        <form method="POST" action="/portal/{{ $portal ?? 'admin' }}/reset-password">
             @csrf
             <input type="hidden" name="token" value="{{ $token }}">
 
-            <label for="email">Admin Email</label>
+            <label for="email">{{ $portalName ?? 'Portal' }} Email</label>
             <input id="email" name="email" type="email" value="{{ old('email', $email) }}" autocomplete="email" required>
 
             <label for="password">New Password</label>
@@ -94,7 +94,7 @@
 
             <div class="actions">
                 <button type="submit">Reset Password</button>
-                <a href="/portal/admin/login">Back to Login</a>
+                <a href="/portal/{{ $portal ?? 'admin' }}/login">Back to Login</a>
             </div>
         </form>
     </section>

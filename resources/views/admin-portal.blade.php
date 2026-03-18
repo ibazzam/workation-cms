@@ -888,7 +888,7 @@
                 <p class="small">Current role cannot manage users/vendors or review vendor registrations.</p>
             @else
                 @if ($canReviewVendorRegistrations)
-                    <p class="small">Review vendor registration documents and approve or reject requests. Finance role is excluded from this workflow.</p>
+                    <p class="small">Review partner onboarding requests and approve or reject access. Property/service verification and quality checks happen after partners upload listings.</p>
 
                     @if ($canApproveVendorRegistrationRequest || $canApproveVendorDeleteRequest)
                         <p class="group-title">Pending Action Requests</p>
@@ -977,6 +977,7 @@
                                 </div>
                                 <div class="small">Service Category: {{ ucwords(str_replace('_', ' ', (string) ($registration->vendor_type ?: 'other'))) }}</div>
                                 <div class="small">Business Reg #: {{ $registration->business_registration_number ?: 'N/A' }} | License #: {{ $registration->license_number ?: 'N/A' }}</div>
+                                <div class="small">Listing quality-check status: Pending partner listing upload</div>
                                 @if (!empty($registration->phone))
                                     <div class="small">Phone: {{ $registration->phone }}</div>
                                 @endif

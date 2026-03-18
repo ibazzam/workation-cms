@@ -3,14 +3,16 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Vendor Registration | Workation</title>
+    <title>Partner Registration | Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
     <style>
         :root {
-            --ink: #192433;
-            --muted: #5a6778;
-            --line: #d6dfe8;
+            --ink: #222222;
+            --muted: #5a5a5a;
+            --line: #d9d9d9;
+            --brand: #ff2d7a;
+            --bg: #f7f7f7;
         }
 
         * { box-sizing: border-box; }
@@ -20,22 +22,33 @@
             font-family: "Outfit", "Trebuchet MS", sans-serif;
             color: var(--ink);
             min-height: 100vh;
-            display: grid;
-            place-items: center;
-            background:
-                radial-gradient(circle at 15% 10%, #d8ece9 0, #d8ece900 35%),
-                radial-gradient(circle at 85% 8%, #e4e9ff 0, #e4e9ff00 33%),
-                linear-gradient(120deg, #edf5f1 0%, #f2ede5 100%);
-            padding: 20px;
+            background: var(--bg);
+        }
+
+        .wrap {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 44px 16px;
+        }
+
+        .shell {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .shell-head {
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.45rem;
+            padding: 16px 18px;
+            border-bottom: 1px solid var(--line);
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
         }
 
         .card {
-            width: min(760px, 94vw);
-            background: #fffefb;
-            border: 1px solid var(--line);
-            border-radius: 16px;
             padding: 22px;
-            box-shadow: 0 22px 44px rgba(20, 38, 58, 0.14);
         }
 
         .eyebrow {
@@ -48,7 +61,7 @@
 
         h1 {
             margin: 8px 0 8px;
-            font-size: 1.75rem;
+            font-size: 2rem;
             line-height: 1.15;
         }
 
@@ -59,7 +72,7 @@
 
         .grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 12px;
         }
 
@@ -116,9 +129,9 @@
         }
 
         .hint {
-            color: #1f4a67;
-            background: #e9f4ff;
-            border: 1px solid #bedcf5;
+            color: #303030;
+            background: #fafafa;
+            border: 1px solid #ececec;
             border-radius: 10px;
             padding: 10px;
             margin-bottom: 14px;
@@ -136,12 +149,14 @@
 
         button {
             border: 0;
-            background: #0f6288;
+            background: var(--brand);
             color: #fff;
             border-radius: 10px;
             padding: 10px 14px;
             font-weight: 700;
             cursor: pointer;
+            width: 100%;
+            font-size: 1rem;
         }
 
         a {
@@ -151,98 +166,90 @@
             font-size: 0.9rem;
         }
 
-        @media (max-width: 760px) {
-            .grid {
-                grid-template-columns: 1fr;
-            }
+        @media (max-width: 900px) {
+            .wrap { padding: 20px 12px; }
         }
     </style>
 </head>
 <body>
-    <section class="card">
-        <span class="eyebrow">Vendor Onboarding</span>
-        <h1>Vendor Self Registration</h1>
-        <p>Submit your vendor details and verification documents. Admins will review your request before vendor portal access is granted.</p>
+    <main class="wrap">
+        <section class="shell">
+            <div class="shell-head">Log in or sign up as partner</div>
+            <div class="card">
+            <span class="eyebrow">Partner Onboarding</span>
+            <h1>Welcome to Workation</h1>
+            <p>Keep joining simple. Share your basic profile now and complete service verification after login when you upload listings.</p>
 
-        <div class="hint">Approval is required before login is enabled. You will receive a password setup link after admin approval.</div>
+            <div class="hint">After sign up: 1) account review, 2) upload properties/services, 3) quality and business verification by Workation team.</div>
 
-        @if ($errors->any())
-            <div class="error">{{ $errors->first() }}</div>
-        @endif
+            @if ($errors->any())
+                <div class="error">{{ $errors->first() }}</div>
+            @endif
 
-        @if (session('status'))
-            <div class="ok">{{ session('status') }}</div>
-        @endif
+            @if (session('status'))
+                <div class="ok">{{ session('status') }}</div>
+            @endif
 
-        <form method="POST" action="/portal/vendor/register" enctype="multipart/form-data">
-            @csrf
-            <div class="grid">
-                <div class="field">
-                    <label for="business_name">Business Name</label>
-                    <input id="business_name" name="business_name" type="text" value="{{ old('business_name') }}" required>
+            <form method="POST" action="/portal/vendor/register">
+                @csrf
+                <div class="grid">
+                    <div class="field">
+                        <label for="contact_name">Your Name</label>
+                        <input id="contact_name" name="contact_name" type="text" value="{{ old('contact_name') }}" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="email">Email Address</label>
+                        <input id="email" name="email" type="email" value="{{ old('email') }}" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="phone">Phone Number (Optional)</label>
+                        <input id="phone" name="phone" type="text" value="{{ old('phone') }}">
+                    </div>
+
+                    <div class="field">
+                        <label for="vendor_type">Service Category</label>
+                        <select id="vendor_type" name="vendor_type" required>
+                            <option value="" {{ old('vendor_type') === null || old('vendor_type') === '' ? 'selected' : '' }}>Choose category</option>
+                            <option value="accommodation" {{ old('vendor_type') === 'accommodation' ? 'selected' : '' }}>Accommodation</option>
+                            <option value="transport" {{ old('vendor_type') === 'transport' ? 'selected' : '' }}>Transport</option>
+                            <option value="restaurant" {{ old('vendor_type') === 'restaurant' ? 'selected' : '' }}>Restaurant</option>
+                            <option value="excursions" {{ old('vendor_type') === 'excursions' ? 'selected' : '' }}>Excursions</option>
+                            <option value="vehicle_rental" {{ old('vendor_type') === 'vehicle_rental' ? 'selected' : '' }}>Vehicle Rental</option>
+                            <option value="small_service" {{ old('vendor_type') === 'small_service' ? 'selected' : '' }}>Small Service</option>
+                            <option value="major_vendor" {{ old('vendor_type') === 'major_vendor' ? 'selected' : '' }}>Major Vendor</option>
+                            <option value="other" {{ old('vendor_type') === 'other' ? 'selected' : '' }}>Other</option>
+                        </select>
+                    </div>
+
+                    <div class="field field-full">
+                        <label for="business_name">Business or Service Name (Optional for now)</label>
+                        <input id="business_name" name="business_name" type="text" value="{{ old('business_name') }}">
+                    </div>
+
+                    <div class="field">
+                        <label for="business_registration_number">Business Registration Number (Optional)</label>
+                        <input id="business_registration_number" name="business_registration_number" type="text" value="{{ old('business_registration_number') }}">
+                    </div>
+
+                    <div class="field">
+                        <label for="license_number">License Number (Optional)</label>
+                        <input id="license_number" name="license_number" type="text" value="{{ old('license_number') }}">
+                    </div>
                 </div>
 
-                <div class="field">
-                    <label for="contact_name">Contact Name</label>
-                    <input id="contact_name" name="contact_name" type="text" value="{{ old('contact_name') }}" required>
+                <div class="actions">
+                    <button type="submit">Continue</button>
                 </div>
 
-                <div class="field">
-                    <label for="email">Business Email</label>
-                    <input id="email" name="email" type="email" value="{{ old('email') }}" required>
+                <div class="actions" style="margin-top:10px;justify-content:space-between;">
+                    <a href="/portal/vendor/login">Already joined? Continue with email</a>
+                    <a href="/">Back to Home</a>
                 </div>
-
-                <div class="field">
-                    <label for="phone">Phone (Optional)</label>
-                    <input id="phone" name="phone" type="text" value="{{ old('phone') }}">
-                </div>
-
-                <div class="field field-full">
-                    <label for="vendor_type">Vendor Type</label>
-                    <select id="vendor_type" name="vendor_type" required>
-                        <option value="" {{ old('vendor_type') === null || old('vendor_type') === '' ? 'selected' : '' }}>Select vendor type</option>
-                        <option value="accommodation" {{ old('vendor_type') === 'accommodation' ? 'selected' : '' }}>Accommodation</option>
-                        <option value="transport" {{ old('vendor_type') === 'transport' ? 'selected' : '' }}>Transport</option>
-                        <option value="restaurant" {{ old('vendor_type') === 'restaurant' ? 'selected' : '' }}>Restaurant / Cafe</option>
-                        <option value="excursions" {{ old('vendor_type') === 'excursions' ? 'selected' : '' }}>Excursions / Tours</option>
-                        <option value="major_vendor" {{ old('vendor_type') === 'major_vendor' ? 'selected' : '' }}>Major Vendor (Registered Business)</option>
-                        <option value="vehicle_rental" {{ old('vendor_type') === 'vehicle_rental' ? 'selected' : '' }}>Vehicle / Car Rental</option>
-                        <option value="small_service" {{ old('vendor_type') === 'small_service' ? 'selected' : '' }}>Small Local Service</option>
-                        <option value="other" {{ old('vendor_type') === 'other' ? 'selected' : '' }}>Other</option>
-                    </select>
-                    <div class="field-note">Accommodation, restaurant, and major vendors must provide registration and license details. Small service vendors can submit these if available.</div>
-                </div>
-
-                <div class="field">
-                    <label for="business_registration_number">Business Registration Number</label>
-                    <input id="business_registration_number" name="business_registration_number" type="text" value="{{ old('business_registration_number') }}">
-                    <div class="field-note">Required for accommodation, restaurant, and major vendors.</div>
-                </div>
-
-                <div class="field">
-                    <label for="license_number">License Number</label>
-                    <input id="license_number" name="license_number" type="text" value="{{ old('license_number') }}">
-                    <div class="field-note">Required for accommodation, restaurant, and major vendors.</div>
-                </div>
-
-                <div class="field field-full">
-                    <label for="business_license_document">Business License Document (PDF/JPG/PNG, max 10MB)</label>
-                    <input id="business_license_document" name="business_license_document" type="file" accept=".pdf,.jpg,.jpeg,.png">
-                    <div class="field-note">Required for accommodation, restaurant, and major vendors.</div>
-                </div>
-
-                <div class="field field-full">
-                    <label for="verification_document">Additional Verification Document (Optional, PDF/JPG/PNG, max 10MB)</label>
-                    <input id="verification_document" name="verification_document" type="file" accept=".pdf,.jpg,.jpeg,.png">
-                </div>
+            </form>
             </div>
-
-            <div class="actions">
-                <button type="submit">Submit Registration</button>
-                <a href="/portal/vendor/login">Back to Vendor Login</a>
-                <a href="/">Back to Home</a>
-            </div>
-        </form>
-    </section>
+        </section>
+    </main>
 </body>
 </html>

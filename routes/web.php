@@ -892,29 +892,18 @@ Route::post('/portal/vendor/register', function (Request $request) {
     if (!Schema::hasTable('vendor_registration_requests')) {
         return back()->withErrors([
             'registration' => 'Vendor self-registration is not available yet. Please contact support.',
-        ])->withInput($request->except(['business_license_document', 'verification_document']));
+        ])->withInput();
     }
 
     $validated = $request->validate([
-        'business_name' => ['required', 'string', 'max:160'],
+        'business_name' => ['nullable', 'string', 'max:160'],
         'contact_name' => ['required', 'string', 'max:120'],
         'email' => ['required', 'email', 'max:160'],
         'phone' => ['nullable', 'string', 'max:40'],
         'vendor_type' => ['required', Rule::in(['accommodation', 'transport', 'restaurant', 'major_vendor', 'vehicle_rental', 'excursions', 'small_service', 'other'])],
         'business_registration_number' => ['nullable', 'string', 'max:80'],
         'license_number' => ['nullable', 'string', 'max:80'],
-        'business_license_document' => ['nullable', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png'],
-        'verification_document' => ['nullable', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png'],
     ]);
-
-    $requiresFormalRegistration = in_array((string) $validated['vendor_type'], ['accommodation', 'restaurant', 'major_vendor'], true);
-    if ($requiresFormalRegistration) {
-        $request->validate([
-            'business_registration_number' => ['required', 'string', 'max:80'],
-            'license_number' => ['required', 'string', 'max:80'],
-            'business_license_document' => ['required', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png'],
-        ]);
-    }
 
     $email = strtolower(trim((string) $validated['email']));
     $existingUser = User::query()
@@ -924,7 +913,7 @@ Route::post('/portal/vendor/register', function (Request $request) {
     if ($existingUser instanceof User && normalizePortalRoleValue((string) $existingUser->portal_role) === 'VENDOR') {
         return back()->withErrors([
             'email' => 'A vendor account with this email already exists. Please use vendor login or forgot password.',
-        ])->withInput($request->except(['business_license_document', 'verification_document']));
+        ])->withInput();
     }
 
     $existingPending = DB::table('vendor_registration_requests')
@@ -935,18 +924,18 @@ Route::post('/portal/vendor/register', function (Request $request) {
     if ($existingPending) {
         return back()->withErrors([
             'email' => 'A registration request for this email is already under review.',
-        ])->withInput($request->except(['business_license_document', 'verification_document']));
+        ])->withInput();
     }
 
-    $businessLicensePath = $request->file('business_license_document')
-        ? $request->file('business_license_document')->store('vendor-registration-documents', 'local')
-        : '';
-    $verificationPath = $request->file('verification_document')
-        ? $request->file('verification_document')->store('vendor-registration-documents', 'local')
-        : null;
+    $businessLicensePath = '';
+    $verificationPath = null;
+    $partnerName = trim((string) ($validated['business_name'] ?? ''));
+    if ($partnerName === '') {
+        $partnerName = trim((string) $validated['contact_name']);
+    }
 
     DB::table('vendor_registration_requests')->insert([
-        'business_name' => trim((string) $validated['business_name']),
+        'business_name' => $partnerName,
         'contact_name' => trim((string) $validated['contact_name']),
         'email' => $email,
         'phone' => trim((string) ($validated['phone'] ?? '')) ?: null,
@@ -960,7 +949,7 @@ Route::post('/portal/vendor/register', function (Request $request) {
         'updated_at' => now(),
     ]);
 
-    return back()->with('status', 'Registration submitted successfully. Our admins will review your licenses and verification documents before granting portal access.');
+    return back()->with('status', 'Registration submitted successfully. You can complete business and service verification after login by submitting your listings for review.');
 });
 
 Route::get('/portal/{portal}/forgot-password', function (string $portal) {

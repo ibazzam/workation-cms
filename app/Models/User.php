@@ -25,6 +25,9 @@ class User extends Authenticatable
         'portal_role',
         'portal_enabled',
         'portal_vendor_id',
+        'google_oauth_id',
+        'facebook_oauth_id',
+        'apple_oauth_id',
     ];
 
     /**

@@ -212,9 +212,9 @@
             <h1>Welcome to Workation</h1>
 
             <div class="social-auth">
-                <a class="social-btn" href="/portal/vendor/login" aria-label="Continue with Google">Continue with Google</a>
-                <a class="social-btn" href="/portal/vendor/login" aria-label="Continue with Apple">Continue with Apple</a>
-                <a class="social-btn" href="/portal/vendor/login" aria-label="Continue with Facebook">Continue with Facebook</a>
+                <a class="social-btn" href="/portal/vendor/oauth/google/redirect" aria-label="Continue with Google">Continue with Google</a>
+                <a class="social-btn" href="/portal/vendor/oauth/apple/redirect" aria-label="Continue with Apple">Continue with Apple</a>
+                <a class="social-btn" href="/portal/vendor/oauth/facebook/redirect" aria-label="Continue with Facebook">Continue with Facebook</a>
                 <a class="social-btn" href="/portal/vendor/login" aria-label="Continue with Email">Continue with Email</a>
             </div>
 
@@ -259,20 +259,6 @@
                         </select>
                     </div>
 
-                    <div class="field field-full">
-                        <label for="business_name">Business or Service Name (Optional for now)</label>
-                        <input id="business_name" name="business_name" type="text" value="{{ old('business_name') }}">
-                    </div>
-
-                    <div class="field">
-                        <label for="business_registration_number">Business Registration Number (Optional)</label>
-                        <input id="business_registration_number" name="business_registration_number" type="text" value="{{ old('business_registration_number') }}">
-                    </div>
-
-                    <div class="field">
-                        <label for="license_number">License Number (Optional)</label>
-                        <input id="license_number" name="license_number" type="text" value="{{ old('license_number') }}">
-                    </div>
                 </div>
 
                 <div class="actions">

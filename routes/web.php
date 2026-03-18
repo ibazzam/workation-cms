@@ -733,7 +733,8 @@ Route::delete('/portal/admin/users/{user}/delete', function (User $user) {
     $user->delete();
 
     portalAdminAuditLog('user.deleted', [
-        'target_user_id' => $targetUserId,
+        // The user row is deleted, so keep identifier/role for traceability and clear FK target_user_id.
+        'target_user_id' => null,
         'target_identifier' => $targetIdentifier,
         'target_role' => $targetRoleRaw,
     ]);
@@ -1591,7 +1592,8 @@ Route::post('/portal/admin/action-requests/{requestId}/approve', function (int $
             ]);
 
         portalAdminAuditLog('vendor_delete.approved', [
-            'target_user_id' => $targetUserId > 0 ? $targetUserId : null,
+            // The vendor may have been deleted above; keep identifier/role and avoid stale FK value.
+            'target_user_id' => null,
             'target_identifier' => (string) ($requestRow->target_identifier ?? 'unknown-vendor'),
             'target_role' => 'VENDOR',
             'action_request_id' => $requestId,

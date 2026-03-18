@@ -533,6 +533,94 @@
             cursor: pointer;
         }
 
+        .registration-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .registration-row {
+            border: 1px solid #d7dee6;
+            border-radius: 10px;
+            background: #fff;
+            padding: 12px;
+        }
+
+        .registration-head {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .doc-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+
+        .doc-link {
+            border: 1px solid #c8d3df;
+            border-radius: 8px;
+            padding: 6px 9px;
+            font-size: 0.8rem;
+            background: #f5f9fc;
+            color: #1e405f;
+            font-weight: 700;
+        }
+
+        .registration-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .registration-actions input {
+            width: 100%;
+            border: 1px solid #c8d3df;
+            border-radius: 8px;
+            padding: 8px 9px;
+            font-size: 0.86rem;
+            font-family: "Outfit", "Trebuchet MS", sans-serif;
+            background: #fff;
+            margin-bottom: 7px;
+        }
+
+        .registration-actions textarea {
+            width: 100%;
+            border: 1px solid #c8d3df;
+            border-radius: 8px;
+            padding: 8px 9px;
+            font-size: 0.86rem;
+            font-family: "Outfit", "Trebuchet MS", sans-serif;
+            background: #fff;
+            min-height: 74px;
+            resize: vertical;
+            margin-bottom: 7px;
+        }
+
+        .registration-actions button {
+            border: 0;
+            border-radius: 8px;
+            color: #fff;
+            padding: 8px 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-approve {
+            background: #0f6d47;
+        }
+
+        .btn-reject {
+            background: #8a1f1f;
+        }
+
         .audit-list {
             margin-top: 10px;
             border: 1px solid #d7dee6;
@@ -582,6 +670,10 @@
         @media (max-width: 980px) {
             .manage-form {
                 grid-template-columns: 1fr 1fr;
+            }
+
+            .registration-actions {
+                grid-template-columns: 1fr;
             }
 
             .widget-grid {
@@ -652,6 +744,8 @@
             <a href="#sessionDebug">Session</a>
             <a href="#authApiSection">Auth and API</a>
             <a href="#moderationPanel" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Moderation</a>
+            <a href="#vendorRegistrationsPanel" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Vendor Registrations</a>
+            <a href="#vendorRegistrationHistoryPanel" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Vendor Review History</a>
             <a href="#auditPanel">Audit History</a>
         </nav>
 
@@ -665,6 +759,11 @@
                 <p class="widget-title">Account Status</p>
                 <p class="widget-value">{{ $dashboardStats['active_users'] }}</p>
                 <div class="widget-sub">Active users · Suspended: {{ $dashboardStats['suspended_users'] }}</div>
+            </article>
+            <article class="widget-card">
+                <p class="widget-title">Vendor Requests</p>
+                <p class="widget-value">{{ $dashboardStats['pending_vendor_registrations'] }}</p>
+                <div class="widget-sub">Pending registration reviews</div>
             </article>
             <article class="widget-card">
                 <p class="widget-title">24h Activity</p>
@@ -734,6 +833,10 @@
         portal_admin_user_id: {{ session('portal_admin_user_id') ?? 'null' }}
 
         canManageUsers: {{ var_export($canManageUsers, true) }}
+        canManageVendorUsers: {{ var_export($canManageVendorUsers, true) }}
+        canCreateVendorUsers: {{ var_export($canCreateVendorUsers, true) }}
+        canReviewVendorRegistrations: {{ var_export($canReviewVendorRegistrations, true) }}
+        canRequestVendorDeleteApproval: {{ var_export($canRequestVendorDeleteApproval, true) }}
         </pre>
         </section>
         @if ($errors->any())
@@ -781,44 +884,217 @@
         <button id="toggleModerationBtn" class="btn btn-primary" type="button" style="margin-bottom:18px;">Show Moderation Panel</button>
         <section class="card manage" id="moderationPanel" style="display:none;">
             <p class="label">Portal User Moderation</p>
-            @if (!$canManageUsers)
-                <p class="small">Super Admin role required to modify users, roles, and suspension status.</p>
+            @if (!$canManageUsers && !$canManageVendorUsers && !$canReviewVendorRegistrations)
+                <p class="small">Current role cannot manage users/vendors or review vendor registrations.</p>
             @else
-                <p class="small">Change role permissions and suspend/reactivate accounts directly in the application.</p>
-                <!-- User Creation Form (AJAX, with role/status) -->
-                <form class="manage-form" id="userCreateForm" autocomplete="off" style="margin-bottom:18px;background:#f7f7f7;padding:14px;border-radius:10px;">
-                    @csrf
-                    <div style="margin-bottom:8px;">
-                        <label>Name</label>
-                        <input name="name" required placeholder="Full Name">
+                @if ($canReviewVendorRegistrations)
+                    <p class="small">Review vendor registration documents and approve or reject requests. Finance role is excluded from this workflow.</p>
+
+                    @if ($canApproveVendorRegistrationRequest || $canApproveVendorDeleteRequest)
+                        <p class="group-title">Pending Action Requests</p>
+
+                        @if ($canApproveVendorRegistrationRequest)
+                            <div class="registration-grid" style="margin-bottom:12px;">
+                                @forelse ($pendingVendorRegistrationApprovalRequests as $approvalRequest)
+                                    <div class="registration-row">
+                                        <div class="registration-head">
+                                            <span class="user-name">Vendor Registration Approval Request</span>
+                                            <span class="role-pill">PENDING</span>
+                                            <span class="small">{{ $approvalRequest->business_name ?: 'Unknown Business' }} | {{ $approvalRequest->registration_email ?: $approvalRequest->target_identifier }}</span>
+                                        </div>
+                                        <div class="small">Requested by: {{ $approvalRequest->requested_by_name ?: 'Unknown' }}{{ $approvalRequest->requested_by_role ? ' (' . $approvalRequest->requested_by_role . ')' : '' }}</div>
+                                        @if (!empty($approvalRequest->reason))
+                                            <div class="small">Reason: {{ $approvalRequest->reason }}</div>
+                                        @endif
+                                        <div class="registration-actions">
+                                            <form method="POST" action="/portal/admin/action-requests/{{ $approvalRequest->id }}/approve">
+                                                @csrf
+                                                <button class="btn-approve" type="submit">Approve Request</button>
+                                            </form>
+                                            <form method="POST" action="/portal/admin/action-requests/{{ $approvalRequest->id }}/reject">
+                                                @csrf
+                                                <label class="small" for="reject_registration_request_{{ $approvalRequest->id }}">Rejection reason</label>
+                                                <textarea id="reject_registration_request_{{ $approvalRequest->id }}" name="reason" required placeholder="Explain why this request is rejected"></textarea>
+                                                <button class="btn-reject" type="submit">Reject Request</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="user-row">
+                                        <div class="small">No pending vendor registration approval requests.</div>
+                                    </div>
+                                @endforelse
+                            </div>
+                        @endif
+
+                        @if ($canApproveVendorDeleteRequest)
+                            <div class="registration-grid" style="margin-bottom:12px;">
+                                @forelse ($pendingVendorDeleteRequests as $deleteRequest)
+                                    <div class="registration-row">
+                                        <div class="registration-head">
+                                            <span class="user-name">Vendor Delete Approval Request</span>
+                                            <span class="role-pill">PENDING</span>
+                                            <span class="small">{{ $deleteRequest->target_username ?: 'unknown-user' }} | {{ $deleteRequest->target_email ?: $deleteRequest->target_identifier }}</span>
+                                        </div>
+                                        <div class="small">Requested by: {{ $deleteRequest->requested_by_name ?: 'Unknown' }}{{ $deleteRequest->requested_by_role ? ' (' . $deleteRequest->requested_by_role . ')' : '' }}</div>
+                                        @if (!empty($deleteRequest->target_vendor_id))
+                                            <div class="small">Vendor ID: {{ $deleteRequest->target_vendor_id }}</div>
+                                        @endif
+                                        @if (!empty($deleteRequest->reason))
+                                            <div class="small">Reason: {{ $deleteRequest->reason }}</div>
+                                        @endif
+                                        <div class="registration-actions">
+                                            <form method="POST" action="/portal/admin/action-requests/{{ $deleteRequest->id }}/approve">
+                                                @csrf
+                                                <button class="btn-approve" type="submit">Approve Vendor Delete</button>
+                                            </form>
+                                            <form method="POST" action="/portal/admin/action-requests/{{ $deleteRequest->id }}/reject">
+                                                @csrf
+                                                <label class="small" for="reject_delete_request_{{ $deleteRequest->id }}">Rejection reason</label>
+                                                <textarea id="reject_delete_request_{{ $deleteRequest->id }}" name="reason" required placeholder="Explain why this delete request is rejected"></textarea>
+                                                <button class="btn-reject" type="submit">Reject Request</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="user-row">
+                                        <div class="small">No pending vendor delete requests.</div>
+                                    </div>
+                                @endforelse
+                            </div>
+                        @endif
+                    @endif
+
+                    <p class="group-title" id="vendorRegistrationsPanel">Pending Vendor Registrations ({{ $pendingVendorRegistrations->count() }})</p>
+                    <div class="registration-grid">
+                        @forelse ($pendingVendorRegistrations as $registration)
+                            <div class="registration-row">
+                                <div class="registration-head">
+                                    <span class="user-name">{{ $registration->business_name }}</span>
+                                    <span class="role-pill">PENDING REVIEW</span>
+                                    <span class="small">Contact: {{ $registration->contact_name }} | {{ $registration->email }}</span>
+                                </div>
+                                <div class="small">Business Reg #: {{ $registration->business_registration_number }} | License #: {{ $registration->license_number }}</div>
+                                @if (!empty($registration->phone))
+                                    <div class="small">Phone: {{ $registration->phone }}</div>
+                                @endif
+                                <div class="doc-links">
+                                    <a class="doc-link" href="/portal/admin/vendor-registrations/{{ $registration->id }}/document/business_license" target="_blank" rel="noopener">View License Document</a>
+                                    @if (!empty($registration->verification_document_path))
+                                        <a class="doc-link" href="/portal/admin/vendor-registrations/{{ $registration->id }}/document/verification" target="_blank" rel="noopener">View Verification Document</a>
+                                    @endif
+                                </div>
+                                <div class="registration-actions">
+                                    <form method="POST" action="/portal/admin/vendor-registrations/{{ $registration->id }}/approve">
+                                        @csrf
+                                        <label class="small" for="approve_vendor_id_{{ $registration->id }}">Vendor ID to assign</label>
+                                        <input id="approve_vendor_id_{{ $registration->id }}" name="portal_vendor_id" type="text" required placeholder="e.g. VENDOR-{{ $registration->id }}">
+                                        <label class="small" for="approve_notes_{{ $registration->id }}">Approval notes (optional)</label>
+                                        <textarea id="approve_notes_{{ $registration->id }}" name="approval_notes" placeholder="Internal review notes"></textarea>
+                                        @if ($canApproveVendorRegistrationRequest)
+                                            <button class="btn-approve" type="submit">Approve and Enable Access</button>
+                                        @else
+                                            <button class="btn-approve" type="submit">Submit Approval Request</button>
+                                        @endif
+                                    </form>
+                                    <form method="POST" action="/portal/admin/vendor-registrations/{{ $registration->id }}/reject">
+                                        @csrf
+                                        <label class="small" for="reject_notes_{{ $registration->id }}">Rejection reason (required)</label>
+                                        <textarea id="reject_notes_{{ $registration->id }}" name="review_notes" required placeholder="Explain why this request was rejected"></textarea>
+                                        <button class="btn-reject" type="submit">Reject Registration</button>
+                                    </form>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="user-row">
+                                <div class="small">No pending vendor registration requests.</div>
+                            </div>
+                        @endforelse
                     </div>
-                    <div style="margin-bottom:8px;">
-                        <label>Email</label>
-                        <input name="email" type="email" required placeholder="Email">
+
+                    <p class="group-title" id="vendorRegistrationHistoryPanel">Vendor Registration History (Approved and Rejected)</p>
+                    <div class="registration-grid">
+                        @forelse ($vendorRegistrationHistory as $historyRow)
+                            <div class="registration-row">
+                                <div class="registration-head">
+                                    <span class="user-name">{{ $historyRow->business_name }}</span>
+                                    <span class="role-pill">{{ strtoupper((string) $historyRow->status) }}</span>
+                                    <span class="small">Contact: {{ $historyRow->contact_name }} | {{ $historyRow->email }}</span>
+                                </div>
+                                <div class="small">Business Reg #: {{ $historyRow->business_registration_number }} | License #: {{ $historyRow->license_number }}</div>
+                                <div class="small">Reviewed by: {{ $historyRow->reviewed_by_name ?: 'Unknown' }}{{ $historyRow->reviewed_by_role ? ' (' . $historyRow->reviewed_by_role . ')' : '' }} · {{ $historyRow->reviewed_at ? \Illuminate\Support\Carbon::parse($historyRow->reviewed_at)->format('Y-m-d H:i:s') : 'N/A' }}</div>
+                                @if (!empty($historyRow->approved_username) || !empty($historyRow->approved_vendor_id))
+                                    <div class="small">Approved portal account: {{ $historyRow->approved_username ?: 'n/a' }}{{ $historyRow->approved_vendor_id ? ' · Vendor ID: ' . $historyRow->approved_vendor_id : '' }}</div>
+                                @endif
+                                @if (!empty($historyRow->review_notes))
+                                    <div class="small">Review notes: {{ \Illuminate\Support\Str::limit((string) $historyRow->review_notes, 260) }}</div>
+                                @endif
+                            </div>
+                        @empty
+                            <div class="user-row">
+                                <div class="small">No approved or rejected vendor registrations yet.</div>
+                            </div>
+                        @endforelse
                     </div>
-                    <div style="margin-bottom:8px;">
-                        <label>Role</label>
-                        <select name="portal_role" required>
-                            <option value="ADMIN">ADMIN</option>
-                            <option value="ADMIN_SUPER">ADMIN_SUPER</option>
-                            <option value="ADMIN_CARE">ADMIN_CARE</option>
-                            <option value="ADMIN_FINANCE">ADMIN_FINANCE</option>
-                            <option value="VENDOR">VENDOR</option>
-                        </select>
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <label>Status</label>
-                        <select name="portal_enabled" required>
-                            <option value="1">ACTIVE</option>
-                            <option value="0">SUSPENDED</option>
-                        </select>
-                    </div>
-                    <div>
-                        <button type="submit">Create User</button>
-                    </div>
-                </form>
-                <div id="userCreateNotice" style="display:none;margin-bottom:12px;"></div>
+                @else
+                    <p class="small">Current role cannot review vendor registrations. Any admin role except ADMIN_FINANCE can approve or reject vendor requests.</p>
+                @endif
+
+                @if ($canManageUsers || $canManageVendorUsers)
+                    @if ($canManageUsers)
+                        <p class="small">Change role permissions and suspend/reactivate accounts directly in the application.</p>
+                    @else
+                        @if ($canRequestVendorDeleteApproval)
+                            <p class="small">You can manage VENDOR accounts (enable/suspend, vendor ID). Vendor delete requires ADMIN_SUPER approval.</p>
+                        @else
+                            <p class="small">You can manage VENDOR accounts (enable/suspend, vendor ID). Vendor delete is restricted.</p>
+                        @endif
+                    @endif
+                @if ($canManageUsers || $canCreateVendorUsers)
+                    <!-- User Creation Form (AJAX, with role/status) -->
+                    <form class="manage-form" id="userCreateForm" autocomplete="off" style="margin-bottom:18px;background:#f7f7f7;padding:14px;border-radius:10px;">
+                        @csrf
+                        <div style="margin-bottom:8px;">
+                            <label>Name</label>
+                            <input name="name" required placeholder="Full Name">
+                        </div>
+                        <div style="margin-bottom:8px;">
+                            <label>Email</label>
+                            <input name="email" type="email" required placeholder="Email">
+                        </div>
+                        <div style="margin-bottom:8px;">
+                            <label>Role</label>
+                            <select name="portal_role" required>
+                                @if ($canManageUsers)
+                                    <option value="ADMIN">ADMIN</option>
+                                    <option value="ADMIN_SUPER">ADMIN_SUPER</option>
+                                    <option value="ADMIN_CARE">ADMIN_CARE</option>
+                                    <option value="ADMIN_FINANCE">ADMIN_FINANCE</option>
+                                @endif
+                                <option value="VENDOR">VENDOR</option>
+                            </select>
+                        </div>
+                        <div style="margin-bottom:8px;">
+                            <label>Vendor ID</label>
+                            <input name="portal_vendor_id" placeholder="Required for VENDOR">
+                        </div>
+                        <div style="margin-bottom:8px;">
+                            <label>Status</label>
+                            <select name="portal_enabled" required>
+                                <option value="1">ACTIVE</option>
+                                <option value="0">SUSPENDED</option>
+                            </select>
+                        </div>
+                        <div>
+                            <button type="submit">Create User</button>
+                        </div>
+                    </form>
+                    <div id="userCreateNotice" style="display:none;margin-bottom:12px;"></div>
+                @else
+                    <p class="small">Current role cannot create users.</p>
+                @endif
                 <!-- Existing Users Moderation -->
+                @if ($canManageUsers)
                 <p class="group-title">Admin Users ({{ $adminPortalUsers->count() }})</p>
                 <div class="group-toolbar" data-group="admin">
                     <input class="group-search" type="search" id="adminUserSearch" placeholder="Search admin users by username, name, email, or role" data-target-list="adminUserList">
@@ -847,11 +1123,17 @@
                                 @endif
                                 <span style="flex:1 1 auto;"></span>
                                 <button type="button" class="btn btn-secondary edit-user-btn" data-user-id="{{ $managedUser->id }}" style="margin-left:auto;">Edit</button>
-                                <form method="POST" action="/portal/admin/users/{{ $managedUser->id }}/delete" style="display:inline; margin-left:8px;">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-secondary delete-user-btn" onclick="return confirm('Are you sure you want to delete this user?');">Delete</button>
-                                </form>
+                                @if ($canRequestVendorDeleteApproval)
+                                    <form method="POST" action="/portal/admin/users/{{ $managedUser->id }}/delete" style="display:inline; margin-left:8px;">
+                                        @csrf
+                                        @method('DELETE')
+                                        @if ($canApproveVendorDeleteRequest)
+                                            <button type="submit" class="btn btn-secondary delete-user-btn" onclick="return confirm('Are you sure you want to delete this vendor user?');">Delete</button>
+                                        @else
+                                            <button type="submit" class="btn btn-secondary delete-user-btn" onclick="return confirm('Submit vendor delete request for ADMIN_SUPER approval?');">Request Delete Approval</button>
+                                        @endif
+                                    </form>
+                                @endif
                             </div>
                         </div>
                         <!-- Only one edit-user-form per user, outside user-row, to avoid merge conflicts and ensure flat structure -->
@@ -891,25 +1173,30 @@
                         </div>
                     @endforelse
                 </div>
+                @endif
 
                 <p class="group-title">Vendor Users ({{ $vendorPortalUsers->count() }})</p>
                 <div class="group-toolbar" data-group="vendor">
                     <input class="group-search" type="search" id="vendorUserSearch" placeholder="Search vendor users by username, name, email, or role" data-target-list="vendorUserList">
-                    <label class="group-select-wrap" for="vendorSelectAll">
-                        <input class="group-select-all" type="checkbox" id="vendorSelectAll" data-group="vendor">
-                        Select all visible
-                    </label>
-                    <form method="POST" action="/portal/admin/users/bulk-delete" class="bulk-delete-form" data-group="vendor">
-                        @csrf
-                        <div class="bulk-user-ids" data-group="vendor"></div>
-                        <button class="bulk-delete-btn" type="submit" data-group="vendor" disabled>Delete Selected (0)</button>
-                    </form>
+                    @if ($canRequestVendorDeleteApproval || $canApproveVendorDeleteRequest)
+                        <label class="group-select-wrap" for="vendorSelectAll">
+                            <input class="group-select-all" type="checkbox" id="vendorSelectAll" data-group="vendor">
+                            Select all visible
+                        </label>
+                        <form method="POST" action="/portal/admin/users/bulk-delete" class="bulk-delete-form" data-group="vendor">
+                            @csrf
+                            <div class="bulk-user-ids" data-group="vendor"></div>
+                            <button class="bulk-delete-btn" type="submit" data-group="vendor" disabled>Delete Selected (0)</button>
+                        </form>
+                    @endif
                 </div>
                 <div class="user-list" id="vendorUserList">
                     @forelse ($vendorPortalUsers as $managedUser)
                         <div class="user-row" data-user-id="{{ $managedUser->id }}">
                             <div class="user-head">
-                                <input class="user-select" type="checkbox" data-group="vendor" value="{{ $managedUser->id }}" aria-label="Select user {{ $managedUser->username ?: $managedUser->email }}">
+                                @if ($canRequestVendorDeleteApproval || $canApproveVendorDeleteRequest)
+                                    <input class="user-select" type="checkbox" data-group="vendor" value="{{ $managedUser->id }}" aria-label="Select user {{ $managedUser->username ?: $managedUser->email }}">
+                                @endif
                                 <span class="user-name">{{ $managedUser->username ?: 'no-username' }}</span>
                                 <span class="role-pill">{{ $managedUser->portal_role ?: 'NONE' }}</span>
                                 <span class="small">{{ $managedUser->name }} | {{ $managedUser->email }}</span>
@@ -932,13 +1219,18 @@
                                 @csrf
                                 <div>
                                     <label>Role</label>
-                                    <select name="portal_role">
-                                        <option value="ADMIN" @selected($managedUser->portal_role === 'ADMIN')>ADMIN</option>
-                                        <option value="ADMIN_SUPER" @selected($managedUser->portal_role === 'ADMIN_SUPER')>ADMIN_SUPER</option>
-                                        <option value="ADMIN_CARE" @selected($managedUser->portal_role === 'ADMIN_CARE')>ADMIN_CARE</option>
-                                        <option value="ADMIN_FINANCE" @selected(in_array($managedUser->portal_role, ['ADMIN_FINANCE', 'ADMIN_FINACE'], true))>ADMIN_FINANCE</option>
-                                        <option value="VENDOR" @selected($managedUser->portal_role === 'VENDOR')>VENDOR</option>
-                                    </select>
+                                    @if ($canManageUsers)
+                                        <select name="portal_role">
+                                            <option value="ADMIN" @selected($managedUser->portal_role === 'ADMIN')>ADMIN</option>
+                                            <option value="ADMIN_SUPER" @selected($managedUser->portal_role === 'ADMIN_SUPER')>ADMIN_SUPER</option>
+                                            <option value="ADMIN_CARE" @selected($managedUser->portal_role === 'ADMIN_CARE')>ADMIN_CARE</option>
+                                            <option value="ADMIN_FINANCE" @selected(in_array($managedUser->portal_role, ['ADMIN_FINANCE', 'ADMIN_FINACE'], true))>ADMIN_FINANCE</option>
+                                            <option value="VENDOR" @selected($managedUser->portal_role === 'VENDOR')>VENDOR</option>
+                                        </select>
+                                    @else
+                                        <input type="hidden" name="portal_role" value="VENDOR">
+                                        <input value="VENDOR" readonly>
+                                    @endif
                                 </div>
                                 <div>
                                     <label>Status</label>
@@ -963,6 +1255,9 @@
                         </div>
                     @endforelse
                 </div>
+                @else
+                    <p class="small">User create/edit/delete remains restricted to Super Admin and Admin vendor-management scope.</p>
+                @endif
             @endif
         </section>
 
@@ -1495,3 +1790,4 @@
     </script>
 </body>
 </html>
+

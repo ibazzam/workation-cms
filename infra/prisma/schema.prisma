@@ -845,3 +845,4 @@ model workations {
   createdAt   DateTime @default(now())
   updatedAt   DateTime
 }
+

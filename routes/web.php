@@ -75,6 +75,44 @@ if (!function_exists('bootstrapPasswordMatches')) {
     }
 }
 
+if (!function_exists('portalAdminAuditLog')) {
+    function portalAdminAuditLog(string $action, array $context = []): void
+    {
+        if (!Schema::hasTable('portal_admin_audit_logs')) {
+            return;
+        }
+
+        $actorUserId = session('portal_admin_user_id');
+        $actorRole = session('portal_admin_role');
+        $actorName = session('portal_admin_user');
+
+        $targetUserId = $context['target_user_id'] ?? null;
+        $targetIdentifier = $context['target_identifier'] ?? null;
+        $targetRole = $context['target_role'] ?? null;
+        unset($context['target_user_id'], $context['target_identifier'], $context['target_role']);
+
+        try {
+            DB::table('portal_admin_audit_logs')->insert([
+                'actor_user_id' => is_numeric($actorUserId) ? (int) $actorUserId : null,
+                'actor_name' => is_string($actorName) ? $actorName : null,
+                'actor_role' => is_string($actorRole) ? $actorRole : null,
+                'action' => $action,
+                'target_user_id' => is_numeric($targetUserId) ? (int) $targetUserId : null,
+                'target_identifier' => is_string($targetIdentifier) ? $targetIdentifier : null,
+                'target_role' => is_string($targetRole) ? $targetRole : null,
+                'details' => empty($context) ? null : json_encode($context),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to write portal admin audit log.', [
+                'action' => $action,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+}
+
 Route::get('/', function () {
     $apiBase = workationApiBase();
 
@@ -141,6 +179,23 @@ Route::get('/admin', function () {
         })
         ->values();
 
+    $auditLogs = collect();
+    if (Schema::hasTable('portal_admin_audit_logs')) {
+        $auditLogs = DB::table('portal_admin_audit_logs')
+            ->orderByDesc('created_at')
+            ->limit(40)
+            ->get([
+                'id',
+                'actor_name',
+                'actor_role',
+                'action',
+                'target_identifier',
+                'target_role',
+                'details',
+                'created_at',
+            ]);
+    }
+
     return view('admin-portal', [
         'apiBase' => workationApiBase(),
         'portalUser' => session('portal_admin_user', $config['name']),
@@ -149,6 +204,7 @@ Route::get('/admin', function () {
         'portalUsers' => $portalUsers,
         'adminPortalUsers' => $adminPortalUsers,
         'vendorPortalUsers' => $vendorPortalUsers,
+        'auditLogs' => $auditLogs,
     ]);
 });
 
@@ -213,6 +269,14 @@ Route::get('/admin', function () {
             }
         }
 
+        portalAdminAuditLog('user.created', [
+            'target_user_id' => (int) $user->id,
+            'target_identifier' => (string) ($user->username ?: $user->email),
+            'target_role' => (string) $user->portal_role,
+            'portal_enabled' => (bool) $user->portal_enabled,
+            'reset_email_sent' => $resetEmailSent,
+        ]);
+
         if ($request->expectsJson()) {
             $message = $resetEmailSent
                 ? 'User created and password reset email sent.'
@@ -252,9 +316,26 @@ Route::delete('/portal/admin/users/{user}/delete', function (User $user) {
     }
     // Prevent deleting your own account
     if ((int) session('portal_admin_user_id') === (int) $user->id) {
+        portalAdminAuditLog('user.delete_blocked_self', [
+            'target_user_id' => (int) $user->id,
+            'target_identifier' => (string) ($user->username ?: $user->email),
+            'target_role' => (string) $user->portal_role,
+        ]);
         return back()->withErrors(['delete' => 'You cannot delete your own account.']);
     }
+
+    $targetIdentifier = (string) ($user->username ?: $user->email);
+    $targetRole = (string) $user->portal_role;
+    $targetUserId = (int) $user->id;
+
     $user->delete();
+
+    portalAdminAuditLog('user.deleted', [
+        'target_user_id' => $targetUserId,
+        'target_identifier' => $targetIdentifier,
+        'target_role' => $targetRole,
+    ]);
+
     return back()->with('portal_notice', 'User deleted.');
 });
 
@@ -277,10 +358,34 @@ Route::post('/portal/admin/users/bulk-delete', function (Request $request) {
 
     $currentUserId = (int) session('portal_admin_user_id');
     if ($ids->contains($currentUserId)) {
+        portalAdminAuditLog('user.bulk_delete_blocked_self', [
+            'target_user_id' => $currentUserId,
+            'target_identifier' => (string) session('portal_admin_user', 'current-user'),
+            'ids_count' => $ids->count(),
+        ]);
         return back()->withErrors(['delete' => 'You cannot bulk delete your own account.']);
     }
 
+    $targetUsers = User::query()
+        ->whereIn('id', $ids->all())
+        ->get(['id', 'username', 'email', 'portal_role']);
+
     $deletedCount = User::query()->whereIn('id', $ids->all())->delete();
+
+    portalAdminAuditLog('user.bulk_deleted', [
+        'target_user_id' => null,
+        'target_identifier' => 'bulk',
+        'target_role' => null,
+        'ids_count' => $ids->count(),
+        'deleted_count' => $deletedCount,
+        'targets' => $targetUsers->map(function (User $managedUser) {
+            return [
+                'id' => (int) $managedUser->id,
+                'identifier' => (string) ($managedUser->username ?: $managedUser->email),
+                'role' => (string) $managedUser->portal_role,
+            ];
+        })->values()->all(),
+    ]);
 
     return back()->with('portal_notice', 'Deleted ' . $deletedCount . ' user(s).');
 });
@@ -578,10 +683,28 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
 
     $vendorId = trim((string) ($validated['portal_vendor_id'] ?? ''));
 
+    $before = [
+        'portal_role' => (string) $user->portal_role,
+        'portal_enabled' => (bool) $user->portal_enabled,
+        'portal_vendor_id' => $user->portal_vendor_id,
+    ];
+
     $user->portal_role = $nextRole;
     $user->portal_enabled = $nextEnabled;
     $user->portal_vendor_id = ($nextRole === 'VENDOR' && $vendorId !== '') ? $vendorId : null;
     $user->save();
+
+    portalAdminAuditLog('user.updated', [
+        'target_user_id' => (int) $user->id,
+        'target_identifier' => (string) ($user->username ?: $user->email),
+        'target_role' => (string) $user->portal_role,
+        'before' => $before,
+        'after' => [
+            'portal_role' => (string) $user->portal_role,
+            'portal_enabled' => (bool) $user->portal_enabled,
+            'portal_vendor_id' => $user->portal_vendor_id,
+        ],
+    ]);
 
     return back()->with('portal_notice', 'Portal user updated: ' . ($user->username ?: ('#' . $user->id)));
 });

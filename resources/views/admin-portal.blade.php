@@ -402,9 +402,60 @@
             cursor: pointer;
         }
 
+        .audit-list {
+            margin-top: 10px;
+            border: 1px solid #d7dee6;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .audit-row {
+            display: grid;
+            grid-template-columns: 170px 170px 1fr;
+            gap: 10px;
+            padding: 10px 12px;
+            border-bottom: 1px solid #edf2f8;
+            align-items: start;
+        }
+
+        .audit-row:last-child {
+            border-bottom: 0;
+        }
+
+        .audit-when {
+            font-size: 0.78rem;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        .audit-actor {
+            font-size: 0.8rem;
+            color: #1e293b;
+            font-weight: 700;
+        }
+
+        .audit-details {
+            font-size: 0.82rem;
+            color: #233247;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+
+        .audit-empty {
+            padding: 10px 12px;
+            font-size: 0.82rem;
+            color: var(--muted);
+        }
+
         @media (max-width: 980px) {
             .manage-form {
                 grid-template-columns: 1fr 1fr;
+            }
+
+            .audit-row {
+                grid-template-columns: 1fr;
+                gap: 6px;
             }
         }
 
@@ -688,6 +739,33 @@
                     @endforelse
                 </div>
             @endif
+        </section>
+
+        <section class="card" id="auditPanel" style="margin-top:14px;">
+            <p class="label">Admin Activity History</p>
+            <p class="small">Latest moderation actions performed from this admin portal.</p>
+            <div class="audit-list">
+                @forelse ($auditLogs as $auditLog)
+                    <div class="audit-row">
+                        <div class="audit-when">{{ \Illuminate\Support\Carbon::parse($auditLog->created_at)->format('Y-m-d H:i:s') }}</div>
+                        <div class="audit-actor">{{ $auditLog->actor_name ?: 'Unknown Actor' }}<br><span class="small">{{ $auditLog->actor_role ?: 'UNKNOWN' }}</span></div>
+                        <div class="audit-details">
+                            <strong>{{ strtoupper(str_replace('_', ' ', (string) $auditLog->action)) }}</strong>
+                            @if (!empty($auditLog->target_identifier))
+                                · target: {{ $auditLog->target_identifier }}
+                            @endif
+                            @if (!empty($auditLog->target_role))
+                                ({{ $auditLog->target_role }})
+                            @endif
+                            @if (!empty($auditLog->details))
+                                <div class="small">{{ \Illuminate\Support\Str::limit((string) $auditLog->details, 280) }}</div>
+                            @endif
+                        </div>
+                    </div>
+                @empty
+                    <div class="audit-empty">No audit entries yet. Actions will appear here after user create/update/delete operations.</div>
+                @endforelse
+            </div>
         </section>
     </main>
 

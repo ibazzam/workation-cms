@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 if (!function_exists('workationApiBase')) {
     function workationApiBase(): string
@@ -349,6 +350,7 @@ Route::get('/admin', function () {
                 'vrr.business_name',
                 'vrr.contact_name',
                 'vrr.email',
+                'vrr.vendor_type',
                 'vrr.status',
                 'vrr.review_notes',
                 'vrr.reviewed_at',
@@ -407,6 +409,7 @@ Route::get('/admin', function () {
                 'vrr.business_name',
                 'vrr.contact_name',
                 'vrr.email as registration_email',
+                'vrr.vendor_type',
             ]);
     }
 
@@ -897,11 +900,21 @@ Route::post('/portal/vendor/register', function (Request $request) {
         'contact_name' => ['required', 'string', 'max:120'],
         'email' => ['required', 'email', 'max:160'],
         'phone' => ['nullable', 'string', 'max:40'],
-        'business_registration_number' => ['required', 'string', 'max:80'],
-        'license_number' => ['required', 'string', 'max:80'],
-        'business_license_document' => ['required', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png'],
+        'vendor_type' => ['required', Rule::in(['accommodation', 'transport', 'restaurant', 'major_vendor', 'vehicle_rental', 'excursions', 'small_service', 'other'])],
+        'business_registration_number' => ['nullable', 'string', 'max:80'],
+        'license_number' => ['nullable', 'string', 'max:80'],
+        'business_license_document' => ['nullable', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png'],
         'verification_document' => ['nullable', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png'],
     ]);
+
+    $requiresFormalRegistration = in_array((string) $validated['vendor_type'], ['accommodation', 'restaurant', 'major_vendor'], true);
+    if ($requiresFormalRegistration) {
+        $request->validate([
+            'business_registration_number' => ['required', 'string', 'max:80'],
+            'license_number' => ['required', 'string', 'max:80'],
+            'business_license_document' => ['required', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png'],
+        ]);
+    }
 
     $email = strtolower(trim((string) $validated['email']));
     $existingUser = User::query()
@@ -925,7 +938,9 @@ Route::post('/portal/vendor/register', function (Request $request) {
         ])->withInput($request->except(['business_license_document', 'verification_document']));
     }
 
-    $businessLicensePath = $request->file('business_license_document')->store('vendor-registration-documents', 'local');
+    $businessLicensePath = $request->file('business_license_document')
+        ? $request->file('business_license_document')->store('vendor-registration-documents', 'local')
+        : '';
     $verificationPath = $request->file('verification_document')
         ? $request->file('verification_document')->store('vendor-registration-documents', 'local')
         : null;
@@ -935,8 +950,9 @@ Route::post('/portal/vendor/register', function (Request $request) {
         'contact_name' => trim((string) $validated['contact_name']),
         'email' => $email,
         'phone' => trim((string) ($validated['phone'] ?? '')) ?: null,
-        'business_registration_number' => trim((string) $validated['business_registration_number']),
-        'license_number' => trim((string) $validated['license_number']),
+        'vendor_type' => (string) $validated['vendor_type'],
+        'business_registration_number' => trim((string) ($validated['business_registration_number'] ?? '')),
+        'license_number' => trim((string) ($validated['license_number'] ?? '')),
         'business_license_document_path' => $businessLicensePath,
         'verification_document_path' => $verificationPath,
         'status' => 'pending',

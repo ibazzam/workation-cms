@@ -194,6 +194,15 @@
             cursor: pointer;
         }
 
+        .endpoint button[disabled] {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .endpoint button.is-loading::after {
+            content: " ...";
+        }
+
         .state {
             margin-top: 12px;
             display: inline-block;
@@ -259,6 +268,62 @@
             flex-direction: column;
             gap: 12px;
             margin-top: 18px;
+        }
+
+        .group-title {
+            margin: 14px 0 8px;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            font-size: 0.8rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .group-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .group-search {
+            flex: 1 1 280px;
+            border: 1px solid #c8d3df;
+            border-radius: 8px;
+            padding: 8px 9px;
+            font-size: 0.88rem;
+            font-family: "Outfit", "Trebuchet MS", sans-serif;
+            background: #fff;
+        }
+
+        .group-select-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82rem;
+            color: var(--muted);
+        }
+
+        .bulk-delete-btn {
+            border: 0;
+            border-radius: 8px;
+            background: #8a1f1f;
+            color: #fff;
+            padding: 8px 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .bulk-delete-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .user-select {
+            width: 16px;
+            height: 16px;
+            margin: 0 2px 0 0;
         }
 
         .user-row {
@@ -470,10 +535,24 @@
                 </form>
                 <div id="userCreateNotice" style="display:none;margin-bottom:12px;"></div>
                 <!-- Existing Users Moderation -->
-                <div class="user-list" id="userList">
-                    @foreach ($portalUsers as $managedUser)
+                <p class="group-title">Admin Users ({{ $adminPortalUsers->count() }})</p>
+                <div class="group-toolbar" data-group="admin">
+                    <input class="group-search" type="search" id="adminUserSearch" placeholder="Search admin users by username, name, email, or role" data-target-list="adminUserList">
+                    <label class="group-select-wrap" for="adminSelectAll">
+                        <input class="group-select-all" type="checkbox" id="adminSelectAll" data-group="admin">
+                        Select all visible
+                    </label>
+                    <form method="POST" action="/portal/admin/users/bulk-delete" class="bulk-delete-form" data-group="admin">
+                        @csrf
+                        <div class="bulk-user-ids" data-group="admin"></div>
+                        <button class="bulk-delete-btn" type="submit" data-group="admin" disabled>Delete Selected (0)</button>
+                    </form>
+                </div>
+                <div class="user-list" id="adminUserList">
+                    @forelse ($adminPortalUsers as $managedUser)
                         <div class="user-row" data-user-id="{{ $managedUser->id }}">
                             <div class="user-head">
+                                <input class="user-select" type="checkbox" data-group="admin" value="{{ $managedUser->id }}" aria-label="Select user {{ $managedUser->username ?: $managedUser->email }}">
                                 <span class="user-name">{{ $managedUser->username ?: 'no-username' }}</span>
                                 <span class="role-pill">{{ $managedUser->portal_role ?: 'NONE' }}</span>
                                 <span class="small">{{ $managedUser->name }} | {{ $managedUser->email }}</span>
@@ -522,7 +601,83 @@
                                 </div>
                             </form>
                         </div>
-                    @endforeach
+                    @empty
+                        <div class="user-row">
+                            <div class="small">No admin users found.</div>
+                        </div>
+                    @endforelse
+                </div>
+
+                <p class="group-title">Vendor Users ({{ $vendorPortalUsers->count() }})</p>
+                <div class="group-toolbar" data-group="vendor">
+                    <input class="group-search" type="search" id="vendorUserSearch" placeholder="Search vendor users by username, name, email, or role" data-target-list="vendorUserList">
+                    <label class="group-select-wrap" for="vendorSelectAll">
+                        <input class="group-select-all" type="checkbox" id="vendorSelectAll" data-group="vendor">
+                        Select all visible
+                    </label>
+                    <form method="POST" action="/portal/admin/users/bulk-delete" class="bulk-delete-form" data-group="vendor">
+                        @csrf
+                        <div class="bulk-user-ids" data-group="vendor"></div>
+                        <button class="bulk-delete-btn" type="submit" data-group="vendor" disabled>Delete Selected (0)</button>
+                    </form>
+                </div>
+                <div class="user-list" id="vendorUserList">
+                    @forelse ($vendorPortalUsers as $managedUser)
+                        <div class="user-row" data-user-id="{{ $managedUser->id }}">
+                            <div class="user-head">
+                                <input class="user-select" type="checkbox" data-group="vendor" value="{{ $managedUser->id }}" aria-label="Select user {{ $managedUser->username ?: $managedUser->email }}">
+                                <span class="user-name">{{ $managedUser->username ?: 'no-username' }}</span>
+                                <span class="role-pill">{{ $managedUser->portal_role ?: 'NONE' }}</span>
+                                <span class="small">{{ $managedUser->name }} | {{ $managedUser->email }}</span>
+                                @if (!$managedUser->portal_enabled)
+                                    <span class="state err">SUSPENDED</span>
+                                @else
+                                    <span class="state ok">ACTIVE</span>
+                                @endif
+                                <span style="flex:1 1 auto;"></span>
+                                <button type="button" class="btn btn-secondary edit-user-btn" data-user-id="{{ $managedUser->id }}" style="margin-left:auto;">Edit</button>
+                                <form method="POST" action="/portal/admin/users/{{ $managedUser->id }}/delete" style="display:inline; margin-left:8px;">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-secondary delete-user-btn" onclick="return confirm('Are you sure you want to delete this user?');">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="edit-user-form" id="edit-user-form-{{ $managedUser->id }}" style="display:none;">
+                            <form class="manage-form" method="POST" action="/portal/admin/users/{{ $managedUser->id }}/manage">
+                                @csrf
+                                <div>
+                                    <label>Role</label>
+                                    <select name="portal_role">
+                                        <option value="ADMIN" @selected($managedUser->portal_role === 'ADMIN')>ADMIN</option>
+                                        <option value="ADMIN_SUPER" @selected($managedUser->portal_role === 'ADMIN_SUPER')>ADMIN_SUPER</option>
+                                        <option value="ADMIN_CARE" @selected($managedUser->portal_role === 'ADMIN_CARE')>ADMIN_CARE</option>
+                                        <option value="ADMIN_FINANCE" @selected(in_array($managedUser->portal_role, ['ADMIN_FINANCE', 'ADMIN_FINACE'], true))>ADMIN_FINANCE</option>
+                                        <option value="VENDOR" @selected($managedUser->portal_role === 'VENDOR')>VENDOR</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label>Status</label>
+                                    <select name="portal_enabled">
+                                        <option value="1" @selected($managedUser->portal_enabled)>ACTIVE</option>
+                                        <option value="0" @selected(!$managedUser->portal_enabled)>SUSPENDED</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label>Vendor ID</label>
+                                    <input name="portal_vendor_id" value="{{ $managedUser->portal_vendor_id ?? '' }}" placeholder="Required for VENDOR">
+                                </div>
+                                <div>
+                                    <button type="submit">Save</button>
+                                    <button type="button" class="btn btn-secondary cancel-edit-btn" data-user-id="{{ $managedUser->id }}">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    @empty
+                        <div class="user-row">
+                            <div class="small">No vendor users found.</div>
+                        </div>
+                    @endforelse
                 </div>
             @endif
         </section>
@@ -651,6 +806,111 @@
                         }
                     });
                 });
+
+                // Search + bulk selection/delete controls for grouped user lists.
+                document.addEventListener('DOMContentLoaded', function () {
+                    var groups = ['admin', 'vendor'];
+
+                    function getVisibleCheckboxes(group) {
+                        return Array.from(document.querySelectorAll('.user-select[data-group="' + group + '"]')).filter(function (checkbox) {
+                            var row = checkbox.closest('.user-row');
+                            return row && row.style.display !== 'none';
+                        });
+                    }
+
+                    function updateBulkState(group) {
+                        var selected = getVisibleCheckboxes(group).filter(function (checkbox) {
+                            return checkbox.checked;
+                        });
+                        var button = document.querySelector('.bulk-delete-btn[data-group="' + group + '"]');
+                        var selectAll = document.querySelector('.group-select-all[data-group="' + group + '"]');
+                        var visible = getVisibleCheckboxes(group);
+                        if (button) {
+                            button.disabled = selected.length === 0;
+                            button.textContent = 'Delete Selected (' + selected.length + ')';
+                        }
+                        if (selectAll) {
+                            selectAll.checked = visible.length > 0 && selected.length === visible.length;
+                            selectAll.indeterminate = selected.length > 0 && selected.length < visible.length;
+                        }
+                    }
+
+                    function renderBulkUserIds(group) {
+                        var holder = document.querySelector('.bulk-user-ids[data-group="' + group + '"]');
+                        if (!holder) return;
+                        var selectedIds = getVisibleCheckboxes(group)
+                            .filter(function (checkbox) { return checkbox.checked; })
+                            .map(function (checkbox) { return checkbox.value; });
+                        holder.innerHTML = selectedIds.map(function (id) {
+                            return '<input type="hidden" name="user_ids[]" value="' + id + '">';
+                        }).join('');
+                    }
+
+                    function applyFilter(group, term) {
+                        var q = (term || '').toLowerCase();
+                        var rows = document.querySelectorAll('#' + group + 'UserList .user-row[data-user-id]');
+                        rows.forEach(function (row) {
+                            var text = (row.textContent || '').toLowerCase();
+                            var visible = !q || text.indexOf(q) !== -1;
+                            row.style.display = visible ? '' : 'none';
+                            if (!visible) {
+                                var checkbox = row.querySelector('.user-select[data-group="' + group + '"]');
+                                if (checkbox) checkbox.checked = false;
+                            }
+                        });
+                        renderBulkUserIds(group);
+                        updateBulkState(group);
+                    }
+
+                    groups.forEach(function (group) {
+                        var searchInput = document.querySelector('.group-search[data-target-list="' + group + 'UserList"]');
+                        var selectAll = document.querySelector('.group-select-all[data-group="' + group + '"]');
+                        var form = document.querySelector('.bulk-delete-form[data-group="' + group + '"]');
+
+                        if (searchInput) {
+                            searchInput.addEventListener('input', function () {
+                                applyFilter(group, searchInput.value);
+                            });
+                        }
+
+                        document.querySelectorAll('.user-select[data-group="' + group + '"]').forEach(function (checkbox) {
+                            checkbox.addEventListener('change', function () {
+                                renderBulkUserIds(group);
+                                updateBulkState(group);
+                            });
+                        });
+
+                        if (selectAll) {
+                            selectAll.addEventListener('change', function () {
+                                var shouldCheck = !!selectAll.checked;
+                                getVisibleCheckboxes(group).forEach(function (checkbox) {
+                                    checkbox.checked = shouldCheck;
+                                });
+                                renderBulkUserIds(group);
+                                updateBulkState(group);
+                            });
+                        }
+
+                        if (form) {
+                            form.addEventListener('submit', function (e) {
+                                renderBulkUserIds(group);
+                                var selectedCount = getVisibleCheckboxes(group).filter(function (checkbox) {
+                                    return checkbox.checked;
+                                }).length;
+                                if (selectedCount === 0) {
+                                    e.preventDefault();
+                                    return;
+                                }
+                                if (!window.confirm('Are you sure you want to delete ' + selectedCount + ' selected user(s)?')) {
+                                    e.preventDefault();
+                                }
+                            });
+                        }
+
+                        updateBulkState(group);
+                    });
+                });
+
         (function () {
             const root = document.querySelector(".page");
             const apiBase = root ? root.getAttribute("data-api-base") : "";
@@ -686,12 +946,22 @@
                 setState("warn", "TOKEN CLEARED");
             }
 
-            async function run(path) {
+            async function run(path, triggerButton) {
                 const token = getToken();
                 if (!token) {
                     setState("warn", "TOKEN REQUIRED");
                     output.textContent = "Save an admin token first.";
                     return;
+                }
+
+                const button = triggerButton || null;
+                if (button) {
+                    button.disabled = true;
+                    button.classList.add("is-loading");
+                    if (!button.dataset.label) {
+                        button.dataset.label = button.textContent || "Run";
+                    }
+                    button.textContent = "Running";
                 }
 
                 output.textContent = "Loading " + path + " ...";
@@ -722,6 +992,12 @@
                 } catch (error) {
                     setState("err", "REQUEST FAILED");
                     output.textContent = "Network/CORS error. Ensure API allows origin https://www.workation.mv\n\n" + String(error);
+                } finally {
+                    if (button) {
+                        button.disabled = false;
+                        button.classList.remove("is-loading");
+                        button.textContent = button.dataset.label || "Run";
+                    }
                 }
             }
 
@@ -729,7 +1005,7 @@
             document.getElementById("clearToken").addEventListener("click", clearToken);
             document.querySelectorAll("button[data-path]").forEach((button) => {
                 button.addEventListener("click", function () {
-                    run(button.getAttribute("data-path"));
+                    run(button.getAttribute("data-path"), button);
                 });
             });
 

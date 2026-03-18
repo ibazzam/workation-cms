@@ -197,6 +197,15 @@
             cursor: pointer;
         }
 
+        .endpoint button[disabled] {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .endpoint button.is-loading::after {
+            content: " ...";
+        }
+
         .state {
             margin-top: 12px;
             display: inline-block;
@@ -319,12 +328,22 @@
                 setState("warn", "TOKEN CLEARED");
             }
 
-            async function run(path) {
+            async function run(path, triggerButton) {
                 const token = getToken();
                 if (!token) {
                     setState("warn", "TOKEN REQUIRED");
                     output.textContent = "Save a vendor token first.";
                     return;
+                }
+
+                const button = triggerButton || null;
+                if (button) {
+                    button.disabled = true;
+                    button.classList.add("is-loading");
+                    if (!button.dataset.label) {
+                        button.dataset.label = button.textContent || "Run";
+                    }
+                    button.textContent = "Running";
                 }
 
                 output.textContent = "Loading " + path + " ...";
@@ -355,6 +374,12 @@
                 } catch (error) {
                     setState("err", "REQUEST FAILED");
                     output.textContent = "Network/CORS error. Ensure API allows origin https://www.workation.mv\n\n" + String(error);
+                } finally {
+                    if (button) {
+                        button.disabled = false;
+                        button.classList.remove("is-loading");
+                        button.textContent = button.dataset.label || "Run";
+                    }
                 }
             }
 
@@ -362,7 +387,7 @@
             document.getElementById("clearToken").addEventListener("click", clearToken);
             document.querySelectorAll("button[data-path]").forEach((button) => {
                 button.addEventListener("click", function () {
-                    run(button.getAttribute("data-path"));
+                    run(button.getAttribute("data-path"), button);
                 });
             });
 

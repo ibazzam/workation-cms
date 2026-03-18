@@ -76,6 +76,14 @@ if (!function_exists('bootstrapPasswordMatches')) {
     }
 }
 
+if (!function_exists('normalizePortalRoleValue')) {
+    function normalizePortalRoleValue(string $role): string
+    {
+        $normalized = strtoupper(trim($role));
+        return $normalized === 'ADMIN_FINACE' ? 'ADMIN_FINANCE' : $normalized;
+    }
+}
+
 if (!function_exists('portalAdminAuditLog')) {
     function portalAdminAuditLog(string $action, array $context = []): void
     {
@@ -576,14 +584,25 @@ Route::post('/portal/admin/reset-password', function (Request $request) {
 
     $email = strtolower(trim((string) $validated['email']));
     $adminConfig = portalConfig('admin');
+    $allowedRoles = collect($adminConfig['allowed_roles'])
+        ->map(function ($role) {
+            return normalizePortalRoleValue((string) $role);
+        })
+        ->unique()
+        ->values();
 
     $portalUser = null;
     if (in_array('ADMIN', $adminConfig['allowed_roles'], true) || in_array('VENDOR', $adminConfig['allowed_roles'], true)) {
         $portalUser = \App\Models\User::query()
             ->whereRaw('LOWER(email) = ?', [$email])
-            ->where('portal_enabled', true)
-            ->whereIn('portal_role', $adminConfig['allowed_roles'])
             ->first();
+
+        if ($portalUser instanceof \App\Models\User) {
+            $resolvedRole = normalizePortalRoleValue((string) $portalUser->portal_role);
+            if (!$allowedRoles->contains($resolvedRole)) {
+                $portalUser = null;
+            }
+        }
     } else {
         $portalUser = \App\Models\Customer::query()
             ->whereRaw('LOWER(email) = ?', [$email])
@@ -591,6 +610,10 @@ Route::post('/portal/admin/reset-password', function (Request $request) {
     }
 
     if (!$portalUser) {
+        Log::warning('Portal password reset user resolution failed.', [
+            'email' => $email,
+            'allowed_roles' => $allowedRoles->all(),
+        ]);
         return back()->withErrors([
             'email' => 'Unable to reset password for this account.',
         ])->withInput($request->only('email'));

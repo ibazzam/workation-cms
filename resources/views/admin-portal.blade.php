@@ -184,13 +184,6 @@
             line-height: 1.35;
         }
 
-        .role-help {
-            margin-top: 5px;
-            font-size: 0.76rem;
-            color: #47607a;
-            line-height: 1.3;
-        }
-
         .widget-grid {
             margin-top: 14px;
             display: grid;
@@ -812,7 +805,6 @@
                             <option value="ADMIN_FINANCE">ADMIN_FINANCE</option>
                             <option value="VENDOR">VENDOR</option>
                         </select>
-                        <div class="role-help" data-role-help></div>
                     </div>
                     <div style="margin-bottom:8px;">
                         <label>Status</label>
@@ -875,7 +867,6 @@
                                         <option value="ADMIN_FINANCE" @selected(in_array($managedUser->portal_role, ['ADMIN_FINANCE', 'ADMIN_FINACE'], true))>ADMIN_FINANCE</option>
                                         <option value="VENDOR" @selected($managedUser->portal_role === 'VENDOR')>VENDOR</option>
                                     </select>
-                                    <div class="role-help" data-role-help></div>
                                 </div>
                                 <div>
                                     <label>Status</label>
@@ -948,7 +939,6 @@
                                         <option value="ADMIN_FINANCE" @selected(in_array($managedUser->portal_role, ['ADMIN_FINANCE', 'ADMIN_FINACE'], true))>ADMIN_FINANCE</option>
                                         <option value="VENDOR" @selected($managedUser->portal_role === 'VENDOR')>VENDOR</option>
                                     </select>
-                                    <div class="role-help" data-role-help></div>
                                 </div>
                                 <div>
                                     <label>Status</label>
@@ -1143,54 +1133,6 @@
                                 }
                             }
                         });
-                    });
-                });
-
-                document.addEventListener('DOMContentLoaded', function () {
-                    var roleMap = @json($rolePermissions);
-
-                    function normalizeRole(rawRole) {
-                        var role = String(rawRole || '').toUpperCase();
-                        return role === 'ADMIN_FINACE' ? 'ADMIN_FINANCE' : role;
-                    }
-
-                    function roleHintText(rawRole) {
-                        var role = normalizeRole(rawRole);
-                        var info = roleMap[role];
-                        if (!info) {
-                            return 'No permission summary available for this role.';
-                        }
-
-                        var capabilities = Array.isArray(info.capabilities) ? info.capabilities.slice(0, 2) : [];
-                        if (capabilities.length === 0) {
-                            return info.summary;
-                        }
-
-                        return info.summary + ' Top access: ' + capabilities.join(' | ');
-                    }
-
-                    function bindRoleHelp(container) {
-                        var select = container.querySelector('select[name="portal_role"]');
-                        var help = container.querySelector('[data-role-help]');
-                        if (!select || !help) {
-                            return;
-                        }
-
-                        function refresh() {
-                            help.textContent = roleHintText(select.value);
-                        }
-
-                        select.addEventListener('change', refresh);
-                        refresh();
-                    }
-
-                    var createForm = document.getElementById('userCreateForm');
-                    if (createForm) {
-                        bindRoleHelp(createForm);
-                    }
-
-                    document.querySelectorAll('.edit-user-form').forEach(function (form) {
-                        bindRoleHelp(form);
                     });
                 });
 

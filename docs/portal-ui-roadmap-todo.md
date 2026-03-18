@@ -34,6 +34,7 @@
 - [ ] Improve navigation (breadcrumbs, sidebar, or tabs)
 - [ ] Add dashboard widgets (metrics, alerts, system health)
 - [ ] 
+
 ## Vendor Portal
 - [ ] Add vendor-specific dashboard (bookings, payments, analytics)
 - [x] Improve authentication flow and error handling

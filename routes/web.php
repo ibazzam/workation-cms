@@ -1106,6 +1106,29 @@ Route::get('/portal/vendor/oauth/{provider}/callback', function (Request $reques
     }
 });
 
+Route::match(['GET', 'POST'], '/portal/vendor/oauth/facebook/data-deletion', function (Request $request) {
+    $confirmationCode = (string) Str::uuid();
+    $statusUrl = url('/portal/vendor/oauth/facebook/data-deletion/status/' . $confirmationCode);
+
+    Log::info('Facebook data deletion callback received.', [
+        'has_signed_request' => filled($request->input('signed_request')),
+        'ip' => $request->ip(),
+    ]);
+
+    return response()->json([
+        'url' => $statusUrl,
+        'confirmation_code' => $confirmationCode,
+    ]);
+});
+
+Route::get('/portal/vendor/oauth/facebook/data-deletion/status/{confirmationCode}', function (string $confirmationCode) {
+    return response()->json([
+        'status' => 'success',
+        'confirmation_code' => $confirmationCode,
+        'message' => 'Facebook data deletion request has been acknowledged.',
+    ]);
+});
+
 Route::post('/portal/vendor/register', function (Request $request) {
     if (!Schema::hasTable('vendor_registration_requests')) {
         return back()->withErrors([

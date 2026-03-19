@@ -1,8 +1,10 @@
 <?php
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+namespace Tests\Feature;
+
 use App\Models\Workation;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class WorkationApiTest extends TestCase
 {

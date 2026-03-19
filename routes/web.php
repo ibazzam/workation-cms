@@ -327,6 +327,10 @@ Route::get('/', function () {
     ]);
 });
 
+Route::get('/privacy-policy', function () {
+    return response()->view('privacy-policy');
+});
+
 
 use Illuminate\Support\Facades\Auth;
 
@@ -1127,6 +1131,10 @@ Route::get('/portal/vendor/oauth/facebook/data-deletion/status/{confirmationCode
         'confirmation_code' => $confirmationCode,
         'message' => 'Facebook data deletion request has been acknowledged.',
     ]);
+});
+
+Route::get('/portal/vendor/oauth/facebook/data-deletion-instructions', function () {
+    return response()->view('portal-facebook-data-deletion-instructions');
 });
 
 Route::post('/portal/vendor/register', function (Request $request) {

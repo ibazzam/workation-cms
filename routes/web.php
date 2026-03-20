@@ -930,6 +930,30 @@ Route::get('/portal/vendor/register', function () {
     return view('portal-vendor-register');
 });
 
+Route::get('/portal/vendor/oauth/health', function () {
+    $appUrl = rtrim((string) config('app.url', ''), '/');
+    $appHost = strtolower((string) parse_url($appUrl, PHP_URL_HOST));
+
+    $providers = [];
+    foreach (supportedVendorSocialProviders() as $provider) {
+        $redirect = vendorSocialRedirectUrl($provider);
+        $redirectHost = strtolower((string) parse_url($redirect, PHP_URL_HOST));
+
+        $providers[$provider] = [
+            'configured' => isVendorSocialProviderConfigured($provider),
+            'redirect' => $redirect,
+            'redirect_uses_https' => str_starts_with(strtolower($redirect), 'https://'),
+            'redirect_host_matches_app' => $appHost !== '' && $redirectHost === $appHost,
+        ];
+    }
+
+    return response()->json([
+        'ok' => true,
+        'app_url' => $appUrl,
+        'providers' => $providers,
+    ]);
+});
+
 Route::get('/portal/vendor/oauth/{provider}/redirect', function (Request $request, string $provider) {
     $provider = strtolower(trim($provider));
     if (!in_array($provider, supportedVendorSocialProviders(), true)) {

@@ -1047,7 +1047,7 @@ Route::get('/portal/vendor/oauth/{provider}/redirect', function (Request $reques
 
     if ($provider === 'facebook') {
         return Socialite::driver('facebook')
-            ->scopes(['email', 'public_profile'])
+            ->setScopes(['public_profile'])
             ->stateless()
             ->redirect();
     }
@@ -1164,6 +1164,10 @@ Route::get('/portal/vendor/oauth/{provider}/callback', function (Request $reques
 
         if ($email === '' && $provider === 'apple') {
             $email = 'apple_' . substr(md5($oauthId), 0, 20) . '@relay.workation.local';
+        }
+
+        if ($email === '' && $provider === 'facebook') {
+            $email = 'facebook_' . substr(md5($oauthId), 0, 20) . '@relay.workation.local';
         }
 
         if ($email === '') {

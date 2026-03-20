@@ -140,6 +140,22 @@
             line-height: 1.35;
         }
 
+        .social-health {
+            color: #213547;
+            background: #eef6ff;
+            border: 1px solid #c9def8;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 12px;
+            font-size: 0.84rem;
+            line-height: 1.35;
+        }
+
+        .social-health strong {
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            letter-spacing: 0.01em;
+        }
+
         .social-auth {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -226,6 +242,18 @@
                 <div class="ok">{{ session('status') }}</div>
             @endif
 
+            @if (session('oauth_retry_guidance'))
+                <div class="hint">{{ session('oauth_retry_guidance') }}</div>
+            @endif
+
+            <div id="social-health" class="social-health" role="status" aria-live="polite">
+                Checking social login status...
+            </div>
+
+            <div class="hint">
+                If a social login fails, retry once. If it still fails, continue with Google or email login while provider verification finishes.
+            </div>
+
             <form method="POST" action="/portal/vendor/register">
                 @csrf
                 <div class="grid">
@@ -274,5 +302,45 @@
         </section>
     </main>
 </body>
+<script>
+    (function () {
+        var statusBox = document.getElementById('social-health');
+        if (!statusBox) {
+            return;
+        }
+
+        fetch('/portal/vendor/oauth/health', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('Health endpoint unavailable');
+                }
+                return response.json();
+            })
+            .then(function (payload) {
+                var providers = payload && payload.providers ? payload.providers : {};
+                var ordered = ['google', 'facebook', 'apple'];
+                var parts = [];
+
+                ordered.forEach(function (provider) {
+                    var current = providers[provider] || {};
+                    var configured = current.configured === true;
+                    var secure = current.redirect_uses_https === true;
+                    var hostMatch = current.redirect_host_matches_app === true;
+                    var state = configured && secure && hostMatch ? 'OK' : 'Needs attention';
+                    parts.push(provider.charAt(0).toUpperCase() + provider.slice(1) + ': ' + state);
+                });
+
+                statusBox.innerHTML = '<strong>Social Login Status</strong><br>' + parts.join(' | ');
+            })
+            .catch(function () {
+                statusBox.textContent = 'Social login status is temporarily unavailable. You can still continue with email signup.';
+            });
+    })();
+</script>
 </html>
 

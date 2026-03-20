@@ -1,69 +1,69 @@
 # Portal UI Product Roadmap & To-Do List
 
-## General & Landing Page
-- [ ] Improve responsiveness and accessibility for all portals and landing page
-- [x] Display error and success messages for actions (UI feedback, error box, success box)
-- [x] Enhance visual styling and theme consistency (fonts, colors, spacing)
-- [ ] Add animated transitions for page loads and actions
-- [ ] Optimize welcome page content and CTAs for conversion
+Target: complete launch-critical portal work by March 31, 2026.
 
-## Admin Portal
-- [x] Enhance user moderation UI: vertical list, inline edit, delete, create user, status/role display
-- [x] Add confirmation dialogs for critical actions (delete user confirmation)
-- [x] Client-side validation for moderation form
-- [x] Role and status display for users (role-pill, state badge)
-- [x] Responsive layout for moderation panel and forms
-- [x] Add loading indicators and error states for API actions (run buttons now show loading/disabled state, plus existing success/error feedback)
-- [x] Improve token input UX (validation, feedback, expiry warning)
-- [x] Enhance user moderation UI: add search, filter, and bulk actions
-- [x] Add role management and permission display for users (role shown, but no full management UI)
-- [x] Provide audit logs and activity history for admin actions
-- [x] Improve navigation (breadcrumbs, sidebar, or tabs)
-- [x] Add dashboard widgets (metrics, alerts, system health)
-- [ ] Add role management and permission display for users (role shown, but no full management UI)
-- [x] Provide audit logs and activity history for admin actions
-- [x] Improve navigation (breadcrumbs, sidebar, or tabs)
-- [x] Add dashboard widgets (metrics, alerts, system health)
-- [ ] Add role management and permission display for users (role shown, but no full management UI)
-- [x] Provide audit logs and activity history for admin actions
-- [x] Improve navigation (breadcrumbs, sidebar, or tabs)
-- [ ] Improve token input UX (validation, feedback, expiry warning)
-- [x] Enhance user moderation UI: add search, filter, and bulk actions
-- [ ] Add role management and permission display for users (role shown, but no full management UI)
-- [x] Provide audit logs and activity history for admin actions
-- [ ] Improve navigation (breadcrumbs, sidebar, or tabs)
-- [ ] Add dashboard widgets (metrics, alerts, system health)
-- [ ] 
-
-## Vendor Portal
-- [ ] Add vendor-specific dashboard (bookings, payments, analytics)
-- [x] Improve authentication flow and error handling
-- [ ] Add vendor profile management and settings
-- [ ] Provide notifications and status indicators for backend connectivity
-- [ ] Add support/help links and documentation access
-
-## Customer Portal
-- [ ] Implement customer-facing portal (if not present): booking, profile, support
-- [ ] Add login, registration, and password reset flows with error handling
-- [ ] Improve UI for booking management, payment history, and feedback
-- [ ] Add customer notifications and messaging
-
-## Styling & Components
-- [ ] Refactor inline styles to reusable CSS classes or Tailwind (some custom CSS, but not fully refactored)
-- [ ] Unify button, input, card, and modal components across portals (partially unified, not fully componentized)
-- [ ] Add dark mode support
+## Completed Foundation
+- [x] Display error and success messages for key actions
+- [x] Improve visual styling and theme consistency
 - [x] Improve mobile and tablet layouts
+- [x] Admin moderation UX: create, edit, delete, search, filter, bulk actions
+- [x] Admin audit logs and activity history
+- [x] Admin navigation improvements
+- [x] Admin dashboard widgets and system health blocks
+- [x] Privacy Policy page published
+- [x] Terms of Service page published
+- [x] Vendor social auth baseline (Google, Facebook, Apple) implemented
 
-## Error Handling
-- [ ] Add global error boundary for React/Vue/JS components
-- [ ] Display clear error messages for failed API calls
-- [ ] Log errors for admin review
+## P0 Launch-Critical (Finish First)
+- [ ] Stabilize Facebook login end-to-end in production
+- [x] Add visible "Social login status" diagnostics in vendor register UI
+- [x] Add clear retry guidance for OAuth failures in vendor register UI
+- [ ] Ensure canonical host consistency across all auth entry points (www vs non-www)
+- [ ] Add vendor register page smoke test for each social provider button visibility
+- [ ] Add production runbook section for social auth verification steps
+- [ ] Verify accessibility basics on portal login/register screens (labels, focus states, contrast)
 
-## New Features
-- [ ] Add multi-language support
-- [ ] Implement user activity tracking and analytics
-- [ ] Add portal-specific onboarding guides and tooltips
+## P1 Core Portal UX
 
----
+### Admin Portal
+- [ ] Complete role management and permission display matrix (human-readable permissions)
+- [ ] Add confirmation modal consistency for all destructive actions
+- [ ] Add empty states for audit logs, users list, and request queues
+- [ ] Add pagination controls and row counts for long admin lists
 
-Review, update, and check off tasks as completed. Adjust priorities as needed for your product vision.
+### Vendor Portal
+- [ ] Add vendor dashboard summary cards (bookings, payouts, status)
+- [ ] Add vendor profile management and account settings section
+- [ ] Add backend connectivity status indicator and last sync time
+- [ ] Add support/help links with contact paths and docs links
+
+### Landing Page
+- [ ] Improve CTA hierarchy and conversion-focused content blocks
+- [ ] Add lightweight page transition and section reveal animations
+- [ ] Improve lighthouse/accessibility score for landing page
+
+## P2 Customer Portal Scope
+- [ ] Build customer portal shell (layout, nav, auth guard)
+- [ ] Add customer login/registration/reset flow UI
+- [ ] Add bookings list and booking detail views
+- [ ] Add payment history and downloadable receipt UI
+- [ ] Add customer notifications/messages center
+
+## P2 UI System & Quality
+- [ ] Refactor repeated inline styles into reusable CSS tokens/classes
+- [ ] Unify buttons, inputs, cards, badges, and modal patterns across portals
+- [ ] Add consistent loading, skeleton, and empty states across key pages
+- [ ] Add error state components for API and network failures
+- [ ] Add visual regression checklist for critical pages
+
+## P3 Enhancements
+- [ ] Add multilingual/i18n support framework
+- [ ] Add onboarding coach marks/tooltips for first-time portal users
+- [ ] Add activity analytics dashboard for product insights
+- [ ] Evaluate dark mode after launch stabilization
+
+## Execution Checklist (Weekly)
+- [ ] Review this checklist every Monday and reorder by risk
+- [ ] Demo completed items every Friday with screenshots
+- [ ] Convert completed roadmap items into release notes
+- [ ] Keep only one source of truth in this file (no duplicates)

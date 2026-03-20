@@ -69,4 +69,22 @@ class VendorSocialAuthUxAndPreflightTest extends TestCase
             ->assertSessionHasErrors('registration')
             ->assertSessionHas('oauth_retry_guidance');
     }
+
+    public function test_facebook_redirect_uses_public_profile_scope_only(): void
+    {
+        config([
+            'services.facebook.client_id' => 'facebook-client-id',
+            'services.facebook.client_secret' => 'facebook-client-secret',
+            'services.facebook.redirect' => 'https://www.workation.mv/portal/vendor/oauth/facebook/callback',
+        ]);
+
+        $response = $this->get('/portal/vendor/oauth/facebook/redirect');
+
+        $response->assertStatus(302)->assertRedirectContains('facebook.com');
+
+        $location = urldecode((string) $response->headers->get('Location', ''));
+        $this->assertStringContainsString('scope=public_profile', $location);
+        $this->assertStringNotContainsString('scope=public_profile,email', $location);
+        $this->assertStringNotContainsString('scope=email', $location);
+    }
 }

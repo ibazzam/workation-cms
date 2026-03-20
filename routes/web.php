@@ -1046,10 +1046,15 @@ Route::get('/portal/vendor/oauth/{provider}/redirect', function (Request $reques
     }
 
     if ($provider === 'facebook') {
-        return Socialite::driver('facebook')
+        $facebookRedirect = Socialite::driver('facebook')
             ->setScopes(['public_profile'])
             ->stateless()
             ->redirect();
+
+        $targetUrl = (string) $facebookRedirect->getTargetUrl();
+        $targetUrl = preg_replace('/([?&]scope=)[^&]*/', '$1public_profile', $targetUrl) ?: $targetUrl;
+
+        return redirect()->away($targetUrl);
     }
 
     return Socialite::driver($provider)->stateless()->redirect();

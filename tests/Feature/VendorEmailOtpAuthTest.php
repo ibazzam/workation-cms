@@ -37,6 +37,7 @@ class VendorEmailOtpAuthTest extends TestCase
 
         $sendResponse
             ->assertStatus(302)
+            ->assertRedirect('/portal/vendor/register?mode=otp')
             ->assertSessionHas('otp_email', strtolower($vendor->email))
             ->assertSessionHas('otp_sent', true)
             ->assertSessionHas('otp_test_code');
@@ -71,6 +72,7 @@ class VendorEmailOtpAuthTest extends TestCase
 
         $sendResponse
             ->assertStatus(302)
+            ->assertRedirect('/portal/vendor/register?mode=otp')
             ->assertSessionHas('otp_test_code');
 
         $otpCode = (string) $sendResponse->getSession()->get('otp_test_code');
@@ -80,12 +82,22 @@ class VendorEmailOtpAuthTest extends TestCase
             ->post('/portal/vendor/email-otp/verify', [
                 'email' => $email,
                 'otp' => $otpCode,
+            ]);
+
+        $verifyResponse
+            ->assertStatus(302)
+            ->assertRedirect('/portal/vendor/register?mode=minimal')
+            ->assertSessionHas('vendor_minimal_signup_payload');
+
+        $registerResponse = $this
+            ->withoutMiddleware(VerifyCsrfToken::class)
+            ->post('/portal/vendor/minimal-register', [
                 'legal_name' => 'Worldwide Xpress LLC',
                 'contact_phone' => '+9607000999',
                 'agree_terms' => '1',
             ]);
 
-        $verifyResponse
+        $registerResponse
             ->assertStatus(302)
             ->assertRedirect('/vendor')
             ->assertSessionHas('portal_vendor_authenticated', true);

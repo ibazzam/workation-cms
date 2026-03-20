@@ -1007,7 +1007,24 @@ Route::get('/portal/vendor/register', function (Request $request) {
         return $canonicalRedirect;
     }
 
-    return view('portal-vendor-register');
+    $mode = strtolower(trim((string) $request->query('mode', 'email')));
+    if (!in_array($mode, ['email', 'otp', 'minimal'], true)) {
+        $mode = 'email';
+    }
+
+    if ($mode === 'otp' && trim((string) session('otp_email', '')) === '') {
+        return redirect('/portal/vendor/register?mode=email');
+    }
+
+    $minimalPayload = session('vendor_minimal_signup_payload');
+    if ($mode === 'minimal' && !is_array($minimalPayload)) {
+        return redirect('/portal/vendor/register?mode=email');
+    }
+
+    return view('portal-vendor-register', [
+        'mode' => $mode,
+        'minimalPayload' => is_array($minimalPayload) ? $minimalPayload : [],
+    ]);
 });
 
 Route::get('/portal/vendor/oauth/health', function () {
@@ -1058,7 +1075,7 @@ Route::post('/portal/vendor/email-otp/send', function (Request $request) {
         ])->withInput();
     }
 
-    $response = back()
+    $response = redirect('/portal/vendor/register?mode=otp')
         ->with('status', 'A 6-digit verification code has been sent to your email.')
         ->with('otp_email', $email)
         ->with('otp_sent', true);
@@ -1082,9 +1099,9 @@ Route::post('/portal/vendor/email-otp/verify', function (Request $request) {
     $cachedOtp = cache()->get($cacheKey);
 
     if (!is_array($cachedOtp) || empty($cachedOtp['hash'])) {
-        return back()->withErrors([
+        return redirect('/portal/vendor/register?mode=otp')->withErrors([
             'registration' => 'Verification code expired. Request a new 6-digit code and try again.',
-        ])->withInput();
+        ])->withInput()->with('otp_email', $email);
     }
 
     $attempts = (int) ($cachedOtp['attempts'] ?? 0);
@@ -1093,9 +1110,9 @@ Route::post('/portal/vendor/email-otp/verify', function (Request $request) {
 
         if ($attempts >= 5) {
             cache()->forget($cacheKey);
-            return back()->withErrors([
+            return redirect('/portal/vendor/register?mode=otp')->withErrors([
                 'registration' => 'Too many invalid code attempts. Request a new code and try again.',
-            ])->withInput();
+            ])->withInput()->with('otp_email', $email);
         }
 
         cache()->put($cacheKey, [
@@ -1104,9 +1121,9 @@ Route::post('/portal/vendor/email-otp/verify', function (Request $request) {
             'created_at' => (string) ($cachedOtp['created_at'] ?? now()->toIso8601String()),
         ], now()->addMinutes(10));
 
-        return back()->withErrors([
+        return redirect('/portal/vendor/register?mode=otp')->withErrors([
             'registration' => 'Invalid verification code. Please check the 6-digit OTP and try again.',
-        ])->withInput();
+        ])->withInput()->with('otp_email', $email);
     }
 
     cache()->forget($cacheKey);
@@ -1117,42 +1134,110 @@ Route::post('/portal/vendor/email-otp/verify', function (Request $request) {
 
     if ($portalUser instanceof User) {
         if (normalizePortalRoleValue((string) $portalUser->portal_role) !== 'VENDOR') {
-            return back()->withErrors([
+            return redirect('/portal/vendor/register?mode=otp')->withErrors([
                 'registration' => 'This email belongs to a non-vendor account. Please use the correct portal login.',
-            ])->withInput();
+            ])->withInput()->with('otp_email', $email);
         }
 
         if (!(bool) $portalUser->portal_enabled) {
-            return back()->withErrors([
+            return redirect('/portal/vendor/register?mode=otp')->withErrors([
                 'registration' => 'Your vendor account is currently disabled. Please contact support.',
-            ])->withInput();
+            ])->withInput()->with('otp_email', $email);
         }
-    } else {
-        $registrationData = $request->validate([
-            'legal_name' => ['required', 'string', 'max:120'],
-            'contact_phone' => ['required', 'string', 'max:40'],
-            'agree_terms' => ['accepted'],
+
+        $request->session()->regenerate();
+        session([
+            'portal_vendor_authenticated' => true,
+            'portal_vendor_user' => $portalUser->name,
+            'portal_vendor_user_id' => $portalUser->id,
+            'portal_vendor_role' => $portalUser->portal_role,
         ]);
 
+        Auth::login($portalUser);
+
+        return redirect('/vendor')->with('portal_notice', 'Signed in successfully.');
+    }
+
+    session([
+        'vendor_minimal_signup_payload' => [
+            'email' => $email,
+            'provider' => 'email',
+            'oauth_id' => null,
+            'suggested_name' => '',
+            'email_verified' => true,
+        ],
+    ]);
+
+    return redirect('/portal/vendor/register?mode=minimal')->with('status', 'Email verified. Complete minimal registration to continue.');
+});
+
+Route::post('/portal/vendor/minimal-register', function (Request $request) {
+    $payload = session('vendor_minimal_signup_payload');
+    if (!is_array($payload)) {
+        return redirect('/portal/vendor/register?mode=email')->withErrors([
+            'registration' => 'Start with email or social login to continue registration.',
+        ]);
+    }
+
+    $validated = $request->validate([
+        'legal_name' => ['required', 'string', 'max:120'],
+        'contact_phone' => ['required', 'string', 'max:40'],
+        'agree_terms' => ['accepted'],
+    ]);
+
+    $email = strtolower(trim((string) ($payload['email'] ?? '')));
+    $provider = strtolower(trim((string) ($payload['provider'] ?? 'email')));
+    $oauthId = trim((string) ($payload['oauth_id'] ?? ''));
+
+    if ($email === '') {
+        return redirect('/portal/vendor/register?mode=email')->withErrors([
+            'registration' => 'Registration context expired. Please start again.',
+        ]);
+    }
+
+    $portalUser = User::query()
+        ->whereRaw('LOWER(email) = ?', [$email])
+        ->first();
+
+    if ($portalUser instanceof User && normalizePortalRoleValue((string) $portalUser->portal_role) !== 'VENDOR') {
+        return redirect('/portal/vendor/register?mode=email')->withErrors([
+            'registration' => 'This email is already linked to a non-vendor account.',
+        ]);
+    }
+
+    if (!$portalUser instanceof User) {
         $portalUser = new User();
-        $portalUser->name = trim((string) $registrationData['legal_name']);
         $portalUser->email = $email;
         $portalUser->username = generatePortalUsernameFromEmail($email);
         $portalUser->password = Hash::make(Str::random(40));
-        $portalUser->portal_role = 'VENDOR';
-        $portalUser->portal_enabled = true;
-        $portalUser->portal_vendor_id = 'EML-' . strtoupper(substr(md5($email), 0, 8));
-
-        if (Schema::hasColumn('users', 'phone')) {
-            $portalUser->phone = trim((string) $registrationData['contact_phone']);
-        }
-
-        if (empty($portalUser->email_verified_at)) {
-            $portalUser->email_verified_at = now();
-        }
-
-        $portalUser->save();
     }
+
+    $portalUser->name = trim((string) $validated['legal_name']);
+    $portalUser->portal_role = 'VENDOR';
+    $portalUser->portal_enabled = true;
+    if (trim((string) $portalUser->portal_vendor_id) === '') {
+        $prefix = $provider === 'email' ? 'EML' : strtoupper(substr($provider, 0, 3));
+        $portalUser->portal_vendor_id = $prefix . '-' . strtoupper(substr(md5($email), 0, 8));
+    }
+
+    if (Schema::hasColumn('users', 'phone')) {
+        $portalUser->phone = trim((string) $validated['contact_phone']);
+    }
+
+    if ($oauthId !== '') {
+        $providerColumn = $provider . '_oauth_id';
+        if (Schema::hasColumn('users', $providerColumn)) {
+            $portalUser->{$providerColumn} = $oauthId;
+        }
+    }
+
+    if (empty($portalUser->email_verified_at)) {
+        $portalUser->email_verified_at = now();
+    }
+
+    $portalUser->save();
+
+    session()->forget('vendor_minimal_signup_payload');
 
     $request->session()->regenerate();
     session([
@@ -1164,7 +1249,7 @@ Route::post('/portal/vendor/email-otp/verify', function (Request $request) {
 
     Auth::login($portalUser);
 
-    return redirect('/vendor')->with('portal_notice', 'Signed in successfully.');
+    return redirect('/vendor')->with('portal_notice', 'Registration complete. Welcome to the vendor portal.');
 });
 
 Route::get('/portal/vendor/oauth/{provider}/redirect', function (Request $request, string $provider) {
@@ -1353,11 +1438,6 @@ Route::get('/portal/vendor/oauth/{provider}/callback', function (Request $reques
             if (normalizePortalRoleValue((string) $portalUser->portal_role) !== 'VENDOR') {
                 throw new \RuntimeException('This email is already linked to a non-vendor account.');
             }
-        } else {
-            $portalUser = new User();
-            $portalUser->email = $email;
-            $portalUser->username = generatePortalUsernameFromEmail($email);
-            $portalUser->password = Hash::make(Str::random(40));
         }
 
         if ($name === '') {
@@ -1365,6 +1445,20 @@ Route::get('/portal/vendor/oauth/{provider}/callback', function (Request $reques
         }
         if ($name === '') {
             $name = 'Vendor Partner';
+        }
+
+        if (!$portalUser instanceof User) {
+            session([
+                'vendor_minimal_signup_payload' => [
+                    'email' => $email,
+                    'provider' => $provider,
+                    'oauth_id' => $oauthId,
+                    'suggested_name' => $name,
+                    'email_verified' => true,
+                ],
+            ]);
+
+            return redirect('/portal/vendor/register?mode=minimal')->with('status', ucfirst($provider) . ' verified. Complete minimal registration to continue.');
         }
 
         $portalUser->name = $name;

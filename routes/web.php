@@ -171,6 +171,37 @@ if (!function_exists('vendorSocialHealthSnapshot')) {
     }
 }
 
+if (!function_exists('portalCanonicalHostRedirect')) {
+    function portalCanonicalHostRedirect(Request $request): ?\Illuminate\Http\RedirectResponse
+    {
+        if (strtolower((string) config('app.env', 'production')) !== 'production') {
+            return null;
+        }
+
+        $appUrl = trim((string) config('app.url', ''));
+        $canonicalHost = strtolower((string) parse_url($appUrl, PHP_URL_HOST));
+        if ($canonicalHost === '') {
+            return null;
+        }
+
+        $requestHost = strtolower((string) $request->getHost());
+        if ($requestHost === '' || $requestHost === $canonicalHost) {
+            return null;
+        }
+
+        if (!in_array($request->getMethod(), ['GET', 'HEAD'], true)) {
+            return null;
+        }
+
+        $canonicalScheme = strtolower((string) parse_url($appUrl, PHP_URL_SCHEME));
+        if ($canonicalScheme === '') {
+            $canonicalScheme = $request->getScheme();
+        }
+
+        return redirect()->to($canonicalScheme . '://' . $canonicalHost . $request->getRequestUri(), 302);
+    }
+}
+
 if (!function_exists('canReviewVendorRegistrations')) {
     function canReviewVendorRegistrations(): bool
     {
@@ -937,7 +968,12 @@ Route::get('/vendor', function () {
     ]);
 });
 
-Route::get('/portal/{portal}/login', function (string $portal) {
+Route::get('/portal/{portal}/login', function (Request $request, string $portal) {
+    $canonicalRedirect = portalCanonicalHostRedirect($request);
+    if ($canonicalRedirect) {
+        return $canonicalRedirect;
+    }
+
     if (!in_array($portal, ['admin', 'vendor'], true)) {
         abort(404);
     }
@@ -953,7 +989,12 @@ Route::get('/portal/{portal}/login', function (string $portal) {
     ]);
 });
 
-Route::get('/portal/vendor/register', function () {
+Route::get('/portal/vendor/register', function (Request $request) {
+    $canonicalRedirect = portalCanonicalHostRedirect($request);
+    if ($canonicalRedirect) {
+        return $canonicalRedirect;
+    }
+
     return view('portal-vendor-register');
 });
 
@@ -962,6 +1003,11 @@ Route::get('/portal/vendor/oauth/health', function () {
 });
 
 Route::get('/portal/vendor/oauth/{provider}/redirect', function (Request $request, string $provider) {
+    $canonicalRedirect = portalCanonicalHostRedirect($request);
+    if ($canonicalRedirect) {
+        return $canonicalRedirect;
+    }
+
     $provider = strtolower(trim($provider));
     if (!in_array($provider, supportedVendorSocialProviders(), true)) {
         abort(404);
@@ -976,10 +1022,10 @@ Route::get('/portal/vendor/oauth/{provider}/redirect', function (Request $reques
     $health = vendorSocialHealthSnapshot();
     $providerHealth = $health['providers'][$provider] ?? null;
     if (is_array($providerHealth)) {
-        if (!$providerHealth['redirect_uses_https'] || !$providerHealth['redirect_host_matches_app']) {
+        if (!$providerHealth['redirect_uses_https']) {
             return redirect('/portal/vendor/register')->withErrors([
-                'registration' => ucfirst($provider) . ' sign-in is temporarily unavailable due to redirect configuration mismatch. Please retry in a few minutes or use email signup.',
-            ])->with('oauth_retry_guidance', 'If this persists, verify APP_URL and ' . strtoupper($provider) . '_REDIRECT_URI use the same host and HTTPS.');
+                'registration' => ucfirst($provider) . ' sign-in is temporarily unavailable because redirect URL must use HTTPS. Please use email signup for now.',
+            ])->with('oauth_retry_guidance', 'Set ' . strtoupper($provider) . '_REDIRECT_URI to an HTTPS URL and try again.');
         }
     }
 
@@ -1003,6 +1049,11 @@ Route::get('/portal/vendor/oauth/{provider}/redirect', function (Request $reques
 });
 
 Route::get('/portal/vendor/oauth/{provider}/callback', function (Request $request, string $provider) {
+    $canonicalRedirect = portalCanonicalHostRedirect($request);
+    if ($canonicalRedirect) {
+        return $canonicalRedirect;
+    }
+
     $provider = strtolower(trim($provider));
     if (!in_array($provider, supportedVendorSocialProviders(), true)) {
         abort(404);
@@ -1244,7 +1295,12 @@ Route::post('/portal/vendor/register', function (Request $request) {
     return back()->with('status', 'Registration submitted successfully. You can complete business and service verification after login by submitting your listings for review.');
 });
 
-Route::get('/portal/{portal}/forgot-password', function (string $portal) {
+Route::get('/portal/{portal}/forgot-password', function (Request $request, string $portal) {
+    $canonicalRedirect = portalCanonicalHostRedirect($request);
+    if ($canonicalRedirect) {
+        return $canonicalRedirect;
+    }
+
     if (!in_array($portal, ['admin', 'vendor'], true)) {
         abort(404);
     }
@@ -1306,6 +1362,11 @@ Route::post('/portal/{portal}/forgot-password', function (Request $request, stri
 });
 
 Route::get('/portal/{portal}/reset-password/{token}', function (Request $request, string $portal, string $token) {
+    $canonicalRedirect = portalCanonicalHostRedirect($request);
+    if ($canonicalRedirect) {
+        return $canonicalRedirect;
+    }
+
     if (!in_array($portal, ['admin', 'vendor'], true)) {
         abort(404);
     }

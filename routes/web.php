@@ -1045,6 +1045,13 @@ Route::get('/portal/vendor/oauth/{provider}/redirect', function (Request $reques
         return redirect()->away('https://appleid.apple.com/auth/authorize?' . $query);
     }
 
+    if ($provider === 'facebook') {
+        return Socialite::driver('facebook')
+            ->scopes(['email', 'public_profile'])
+            ->stateless()
+            ->redirect();
+    }
+
     return Socialite::driver($provider)->stateless()->redirect();
 });
 
@@ -1059,20 +1066,36 @@ Route::get('/portal/vendor/oauth/{provider}/callback', function (Request $reques
         abort(404);
     }
 
-    if (!isVendorSocialProviderConfigured($provider)) {
-        return redirect('/portal/vendor/register')->withErrors([
-            'registration' => ucfirst($provider) . ' sign-in is not configured yet. Please use email signup for now.',
-        ]);
-    }
-
-    $providerColumn = $provider . '_oauth_id';
-    if (!Schema::hasColumn('users', $providerColumn)) {
-        return redirect('/portal/vendor/register')->withErrors([
-            'registration' => 'Social sign-in database columns are missing. Please run migrations and try again.',
-        ]);
-    }
-
     try {
+        if ($provider === 'facebook' && trim((string) $request->query('error', '')) !== '') {
+            $errorReason = trim((string) $request->query('error_reason', 'oauth_error'));
+            $errorDescription = trim((string) $request->query('error_description', ''));
+            $callbackHint = trim((string) $request->query('error_message', ''));
+            $errorDetails = $errorDescription !== '' ? $errorDescription : $callbackHint;
+
+            Log::warning('Facebook OAuth callback returned an explicit provider error.', [
+                'reason' => $errorReason,
+                'details' => $errorDetails,
+            ]);
+
+            return redirect('/portal/vendor/register')->withErrors([
+                'registration' => 'Facebook sign-in was denied or not fully configured. Please retry once, then use Google or email while Facebook app setup is finalized.',
+            ])->with('oauth_retry_guidance', 'Verify Facebook Valid OAuth Redirect URIs exactly match FACEBOOK_REDIRECT_URI, including scheme, host, and path.');
+        }
+
+        if (!isVendorSocialProviderConfigured($provider)) {
+            return redirect('/portal/vendor/register')->withErrors([
+                'registration' => ucfirst($provider) . ' sign-in is not configured yet. Please use email signup for now.',
+            ]);
+        }
+
+        $providerColumn = $provider . '_oauth_id';
+        if (!Schema::hasColumn('users', $providerColumn)) {
+            return redirect('/portal/vendor/register')->withErrors([
+                'registration' => 'Social sign-in database columns are missing. Please run migrations and try again.',
+            ]);
+        }
+
         $oauthId = '';
         $email = '';
         $name = '';

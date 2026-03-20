@@ -52,4 +52,21 @@ class VendorSocialAuthUxAndPreflightTest extends TestCase
             ->assertSessionHasErrors('registration')
             ->assertSessionHas('oauth_retry_guidance');
     }
+
+    public function test_facebook_callback_provider_error_redirects_with_guidance(): void
+    {
+        config([
+            'services.facebook.client_id' => 'facebook-client-id',
+            'services.facebook.client_secret' => 'facebook-client-secret',
+            'services.facebook.redirect' => 'https://www.workation.mv/portal/vendor/oauth/facebook/callback',
+        ]);
+
+        $response = $this->get('/portal/vendor/oauth/facebook/callback?error=access_denied&error_reason=user_denied');
+
+        $response
+            ->assertStatus(302)
+            ->assertRedirect('/portal/vendor/register')
+            ->assertSessionHasErrors('registration')
+            ->assertSessionHas('oauth_retry_guidance');
+    }
 }

@@ -313,6 +313,10 @@
 
                 <form class="stack" method="POST" action="/portal/vendor/email-otp/send">
                     @csrf
+
+            <form method="POST" action="/portal/vendor/register">
+                @csrf
+                <div class="grid">
                     <div class="field">
                         <label for="otp_email">Email Address</label>
                         <input id="otp_email" name="email" type="email" value="{{ old('email', session('otp_email')) }}" required>

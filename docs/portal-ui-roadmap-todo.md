@@ -20,6 +20,8 @@ Target: complete launch-critical portal work by March 31, 2026.
 - [x] Add clear retry guidance for OAuth failures in vendor register UI
 - [x] Ensure canonical host consistency across all auth entry points (www vs non-www)
 - [x] Add vendor register page smoke test for each social provider button visibility
+- [ ] Ensure canonical host consistency across all auth entry points (www vs non-www)
+- [ ] Add vendor register page smoke test for each social provider button visibility
 - [ ] Add production runbook section for social auth verification steps
 - [ ] Verify accessibility basics on portal login/register screens (labels, focus states, contrast)
 

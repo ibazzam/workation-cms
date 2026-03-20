@@ -1048,6 +1048,7 @@ Route::get('/portal/vendor/oauth/{provider}/redirect', function (Request $reques
     if ($provider === 'facebook') {
         return Socialite::driver('facebook')
             ->setScopes(['public_profile'])
+            ->scopes(['email', 'public_profile'])
             ->stateless()
             ->redirect();
     }

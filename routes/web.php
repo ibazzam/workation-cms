@@ -1055,6 +1055,11 @@ Route::get('/portal/vendor/oauth/{provider}/redirect', function (Request $reques
         $targetUrl = preg_replace('/([?&]scope=)[^&]*/', '$1public_profile', $targetUrl) ?: $targetUrl;
 
         return redirect()->away($targetUrl);
+        return Socialite::driver('facebook')
+            ->setScopes(['public_profile'])
+            ->scopes(['email', 'public_profile'])
+            ->stateless()
+            ->redirect();
     }
 
     return Socialite::driver($provider)->stateless()->redirect();

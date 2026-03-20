@@ -191,6 +191,54 @@
             margin-top: 12px;
         }
 
+        .stack {
+            display: grid;
+            gap: 10px;
+        }
+
+        .otp-shell {
+            border: 1px solid #d8e1ec;
+            border-radius: 12px;
+            background: #fbfdff;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .otp-title {
+            margin: 0 0 6px;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            font-size: 0.95rem;
+        }
+
+        .subtle {
+            color: var(--muted);
+            font-size: 0.82rem;
+            line-height: 1.35;
+            margin: 0;
+        }
+
+        .switch-row {
+            display: flex;
+            gap: 8px;
+            margin: 10px 0 12px;
+            flex-wrap: wrap;
+        }
+
+        .switch-chip {
+            border: 1px solid #c8d2de;
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #24415f;
+            background: #fff;
+        }
+
+        .switch-chip.active {
+            background: #edf6ff;
+            border-color: #b8d3ef;
+        }
+
         button {
             border: 0;
             background: var(--brand);
@@ -231,7 +279,7 @@
                 <a class="social-btn" href="/portal/vendor/oauth/google/redirect" aria-label="Continue with Google">Continue with Google</a>
                 <a class="social-btn" href="/portal/vendor/oauth/apple/redirect" aria-label="Continue with Apple">Continue with Apple</a>
                 <a class="social-btn" href="/portal/vendor/oauth/facebook/redirect" aria-label="Continue with Facebook">Continue with Facebook</a>
-                <a class="social-btn" href="/portal/vendor/login" aria-label="Continue with Email">Continue with Email</a>
+                <a class="social-btn" href="#email-auth" aria-label="Continue with Email">Continue with Email</a>
             </div>
 
             @if ($errors->any())
@@ -254,50 +302,67 @@
                 If a social login fails, retry once. If it still fails, continue with Google or email login while provider verification finishes.
             </div>
 
-            <form method="POST" action="/portal/vendor/register">
-                @csrf
-                <div class="grid">
-                    <div class="field">
-                        <label for="contact_name">Your Name</label>
-                        <input id="contact_name" name="contact_name" type="text" value="{{ old('contact_name') }}" required>
-                    </div>
+            <section id="email-auth" class="otp-shell" aria-label="Email OTP Login and Signup">
+                <h2 class="otp-title">Continue with Email OTP</h2>
+                <p class="subtle">Use your email to get a 6-digit OTP. Existing vendors will log in. First-time vendors can complete a minimal registration and continue.</p>
 
-                    <div class="field">
-                        <label for="email">Email Address</label>
-                        <input id="email" name="email" type="email" value="{{ old('email') }}" required>
-                    </div>
-
-                    <div class="field">
-                        <label for="phone">Phone Number</label>
-                        <input id="phone" name="phone" type="text" value="{{ old('phone') }}" required>
-                    </div>
-
-                    <div class="field">
-                        <label for="vendor_type">Service Category</label>
-                        <select id="vendor_type" name="vendor_type" required>
-                            <option value="" {{ old('vendor_type') === null || old('vendor_type') === '' ? 'selected' : '' }}>Choose category</option>
-                            <option value="accommodation" {{ old('vendor_type') === 'accommodation' ? 'selected' : '' }}>Accommodation</option>
-                            <option value="transport" {{ old('vendor_type') === 'transport' ? 'selected' : '' }}>Transport</option>
-                            <option value="restaurant" {{ old('vendor_type') === 'restaurant' ? 'selected' : '' }}>Restaurant</option>
-                            <option value="excursions" {{ old('vendor_type') === 'excursions' ? 'selected' : '' }}>Excursions</option>
-                            <option value="vehicle_rental" {{ old('vendor_type') === 'vehicle_rental' ? 'selected' : '' }}>Vehicle Rental</option>
-                            <option value="small_service" {{ old('vendor_type') === 'small_service' ? 'selected' : '' }}>Small Service</option>
-                            <option value="major_vendor" {{ old('vendor_type') === 'major_vendor' ? 'selected' : '' }}>Major Vendor</option>
-                            <option value="other" {{ old('vendor_type') === 'other' ? 'selected' : '' }}>Other</option>
-                        </select>
-                    </div>
-
+                <div class="switch-row" aria-hidden="true">
+                    <span class="switch-chip active">Log in</span>
+                    <span class="switch-chip">Sign up</span>
                 </div>
 
-                <div class="actions">
-                    <button type="submit">Continue</button>
-                </div>
+                <form class="stack" method="POST" action="/portal/vendor/email-otp/send">
+                    @csrf
+                    <div class="field">
+                        <label for="otp_email">Email Address</label>
+                        <input id="otp_email" name="email" type="email" value="{{ old('email', session('otp_email')) }}" required>
+                    </div>
 
-                <div class="actions" style="margin-top:10px;justify-content:space-between;">
-                    <a href="/portal/vendor/login">Already joined? Continue with email</a>
-                    <a href="/">Back to Home</a>
-                </div>
-            </form>
+                    <div class="actions">
+                        <button type="submit">Send 6-digit OTP</button>
+                    </div>
+                </form>
+
+                <form class="stack" method="POST" action="/portal/vendor/email-otp/verify" style="margin-top:12px;">
+                    @csrf
+                    <div class="field">
+                        <label for="verify_email">Email Address</label>
+                        <input id="verify_email" name="email" type="email" value="{{ old('email', session('otp_email')) }}" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="otp_code">OTP Code</label>
+                        <input id="otp_code" name="otp" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="6-digit code" required>
+                        <p class="field-note">Enter the OTP sent to your email. Code expires in 10 minutes.</p>
+                    </div>
+
+                    <div class="field">
+                        <label for="legal_name">Legal Name (required for first-time registration)</label>
+                        <input id="legal_name" name="legal_name" type="text" value="{{ old('legal_name') }}" placeholder="Contact legal name">
+                    </div>
+
+                    <div class="field">
+                        <label for="contact_phone">Contact Number (required for first-time registration)</label>
+                        <input id="contact_phone" name="contact_phone" type="text" value="{{ old('contact_phone') }}" placeholder="+960...">
+                    </div>
+
+                    <div class="field field-full">
+                        <label>
+                            <input type="checkbox" name="agree_terms" value="1" {{ old('agree_terms') ? 'checked' : '' }} style="width:auto;margin-right:6px;">
+                            I agree to the Terms of Service and Privacy Policy (required for first-time registration).
+                        </label>
+                    </div>
+
+                    <div class="actions">
+                        <button type="submit">Verify and Continue</button>
+                    </div>
+                </form>
+            </section>
+
+            <div class="actions" style="margin-top:10px;justify-content:space-between;">
+                <a href="/">Back to Home</a>
+                <a href="/terms-of-service">Terms</a>
+            </div>
             </div>
         </section>
     </main>

@@ -144,6 +144,33 @@ if (!function_exists('isVendorSocialProviderConfigured')) {
     }
 }
 
+if (!function_exists('vendorSocialHealthSnapshot')) {
+    function vendorSocialHealthSnapshot(): array
+    {
+        $appUrl = rtrim((string) config('app.url', ''), '/');
+        $appHost = strtolower((string) parse_url($appUrl, PHP_URL_HOST));
+
+        $providers = [];
+        foreach (supportedVendorSocialProviders() as $provider) {
+            $redirect = vendorSocialRedirectUrl($provider);
+            $redirectHost = strtolower((string) parse_url($redirect, PHP_URL_HOST));
+
+            $providers[$provider] = [
+                'configured' => isVendorSocialProviderConfigured($provider),
+                'redirect' => $redirect,
+                'redirect_uses_https' => str_starts_with(strtolower($redirect), 'https://'),
+                'redirect_host_matches_app' => $appHost !== '' && $redirectHost === $appHost,
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'app_url' => $appUrl,
+            'providers' => $providers,
+        ];
+    }
+}
+
 if (!function_exists('canReviewVendorRegistrations')) {
     function canReviewVendorRegistrations(): bool
     {
@@ -931,27 +958,7 @@ Route::get('/portal/vendor/register', function () {
 });
 
 Route::get('/portal/vendor/oauth/health', function () {
-    $appUrl = rtrim((string) config('app.url', ''), '/');
-    $appHost = strtolower((string) parse_url($appUrl, PHP_URL_HOST));
-
-    $providers = [];
-    foreach (supportedVendorSocialProviders() as $provider) {
-        $redirect = vendorSocialRedirectUrl($provider);
-        $redirectHost = strtolower((string) parse_url($redirect, PHP_URL_HOST));
-
-        $providers[$provider] = [
-            'configured' => isVendorSocialProviderConfigured($provider),
-            'redirect' => $redirect,
-            'redirect_uses_https' => str_starts_with(strtolower($redirect), 'https://'),
-            'redirect_host_matches_app' => $appHost !== '' && $redirectHost === $appHost,
-        ];
-    }
-
-    return response()->json([
-        'ok' => true,
-        'app_url' => $appUrl,
-        'providers' => $providers,
-    ]);
+    return response()->json(vendorSocialHealthSnapshot());
 });
 
 Route::get('/portal/vendor/oauth/{provider}/redirect', function (Request $request, string $provider) {
@@ -964,6 +971,16 @@ Route::get('/portal/vendor/oauth/{provider}/redirect', function (Request $reques
         return redirect('/portal/vendor/register')->withErrors([
             'registration' => ucfirst($provider) . ' sign-in is not configured yet. Please use email signup for now.',
         ]);
+    }
+
+    $health = vendorSocialHealthSnapshot();
+    $providerHealth = $health['providers'][$provider] ?? null;
+    if (is_array($providerHealth)) {
+        if (!$providerHealth['redirect_uses_https'] || !$providerHealth['redirect_host_matches_app']) {
+            return redirect('/portal/vendor/register')->withErrors([
+                'registration' => ucfirst($provider) . ' sign-in is temporarily unavailable due to redirect configuration mismatch. Please retry in a few minutes or use email signup.',
+            ])->with('oauth_retry_guidance', 'If this persists, verify APP_URL and ' . strtoupper($provider) . '_REDIRECT_URI use the same host and HTTPS.');
+        }
     }
 
     if ($provider === 'apple') {
@@ -1131,9 +1148,14 @@ Route::get('/portal/vendor/oauth/{provider}/callback', function (Request $reques
             'error' => $e->getMessage(),
         ]);
 
+        $registrationMessage = 'Unable to sign in with ' . ucfirst($provider) . '. Please use email signup or try again.';
+        if ($provider === 'facebook') {
+            $registrationMessage = 'Unable to sign in with Facebook. Please try again, and if it still fails use Google or email while we complete Facebook app verification.';
+        }
+
         return redirect('/portal/vendor/register')->withErrors([
-            'registration' => 'Unable to sign in with ' . ucfirst($provider) . '. Please use email signup or try again.',
-        ]);
+            'registration' => $registrationMessage,
+        ])->with('oauth_retry_guidance', 'Tip: retry once, then use Google or email signup if the provider window reports URL/redirect issues.');
     }
 });
 

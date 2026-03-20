@@ -331,6 +331,9 @@ Route::get('/privacy-policy', function () {
     return response()->view('privacy-policy');
 });
 
+Route::get('/terms-of-service', function () {
+    return response()->view('terms-of-service');
+});
 
 use Illuminate\Support\Facades\Auth;
 

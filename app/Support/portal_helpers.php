@@ -247,8 +247,51 @@ if (!function_exists('vendorDeliverOtpCode')) {
         $twilioSid = trim((string) env('TWILIO_ACCOUNT_SID', ''));
         $twilioToken = trim((string) env('TWILIO_AUTH_TOKEN', ''));
         $twilioFrom = trim((string) env('TWILIO_FROM_NUMBER', ''));
-        if ($twilioSid === '' || $twilioToken === '' || $twilioFrom === '') {
-            throw new \RuntimeException('Phone OTP is not configured. Missing TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, or TWILIO_FROM_NUMBER.');
+        $twilioWhatsappFrom = trim((string) env('TWILIO_WHATSAPP_FROM', ''));
+        $twilioWhatsappContentSid = trim((string) env('TWILIO_WHATSAPP_CONTENT_SID', ''));
+        $phoneChannel = strtolower(trim((string) env('TWILIO_PHONE_CHANNEL', 'sms')));
+        $useWhatsApp = in_array($phoneChannel, ['whatsapp', 'wa'], true);
+
+        if ($twilioSid === '' || $twilioToken === '') {
+            throw new \RuntimeException('Phone OTP is not configured. Missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN.');
+        }
+
+        if ($useWhatsApp) {
+            if ($twilioWhatsappFrom === '') {
+                throw new \RuntimeException('WhatsApp OTP is enabled but TWILIO_WHATSAPP_FROM is missing.');
+            }
+
+            $whatsAppTo = str_starts_with($destination, 'whatsapp:') ? $destination : 'whatsapp:' . ltrim($destination, '+');
+            if (!str_starts_with($whatsAppTo, 'whatsapp:+')) {
+                $whatsAppTo = 'whatsapp:+' . ltrim(str_replace('whatsapp:', '', $whatsAppTo), '+');
+            }
+
+            $payload = [
+                'From' => $twilioWhatsappFrom,
+                'To' => $whatsAppTo,
+            ];
+
+            if ($twilioWhatsappContentSid !== '') {
+                $payload['ContentSid'] = $twilioWhatsappContentSid;
+                $payload['ContentVariables'] = json_encode(['1' => $otpCode]);
+            } else {
+                // Sandbox/testing fallback if no template SID has been configured.
+                $payload['Body'] = 'Your Workation vendor verification code is ' . $otpCode . '. It expires in 10 minutes.';
+            }
+
+            $waResponse = Http::withBasicAuth($twilioSid, $twilioToken)
+                ->asForm()
+                ->post('https://api.twilio.com/2010-04-01/Accounts/' . $twilioSid . '/Messages.json', $payload);
+
+            if (!$waResponse->successful()) {
+                throw new \RuntimeException('WhatsApp OTP delivery failed with status ' . $waResponse->status() . '.');
+            }
+
+            return;
+        }
+
+        if ($twilioFrom === '') {
+            throw new \RuntimeException('SMS OTP is enabled but TWILIO_FROM_NUMBER is missing.');
         }
 
         $smsResponse = Http::withBasicAuth($twilioSid, $twilioToken)

@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="vendor-auth-build" content="VENDOR_AUTH_FLOW_V3_20260321A">
     <title>Partner Registration | Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
@@ -391,9 +392,11 @@
                 <a href="/">Back to Home</a>
                 <a href="/terms-of-service">Terms</a>
             </div>
+            <p class="subtle" style="margin-top:8px;">Build: VENDOR_AUTH_FLOW_V3_20260321A</p>
             </div>
         </section>
     </main>
+    <!-- VENDOR_AUTH_FLOW_V3_20260321A -->
 </body>
 <script>
     (function () {

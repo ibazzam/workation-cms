@@ -92,7 +92,8 @@ class VendorEmailOtpAuthTest extends TestCase
         $registerResponse = $this
             ->withoutMiddleware(VerifyCsrfToken::class)
             ->post('/portal/vendor/minimal-register', [
-                'legal_name' => 'Worldwide Xpress LLC',
+                'given_name' => 'Worldwide',
+                'family_name' => 'Xpress LLC',
                 'contact_phone' => '+9607000999',
                 'agree_terms' => '1',
             ]);

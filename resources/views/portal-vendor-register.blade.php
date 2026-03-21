@@ -3,7 +3,6 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="vendor-auth-build" content="VENDOR_AUTH_FLOW_V3_20260321A">
     <title>Partner Registration | Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
@@ -179,6 +178,24 @@
             text-decoration: none;
         }
 
+        .social-btn svg {
+            width: 20px;
+            height: 20px;
+            display: block;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
         .social-btn:hover {
             border-color: #a9bbcf;
             background: #f7fbff;
@@ -276,9 +293,14 @@
             @php
                 $currentMode = isset($mode) ? (string) $mode : 'email';
                 $signupPayload = isset($minimalPayload) && is_array($minimalPayload) ? $minimalPayload : [];
-                $prefillEmail = (string) old('email', (string) session('otp_email', (string) ($signupPayload['email'] ?? '')));
-                $prefillName = (string) old('legal_name', (string) ($signupPayload['suggested_name'] ?? ''));
+                $prefillIdentifier = (string) old('identifier', (string) old('email', (string) session('otp_identifier', (string) session('otp_email', (string) ($signupPayload['email'] ?? '')))));
+                $prefillGivenName = (string) old('given_name', (string) ($signupPayload['given_name'] ?? ''));
+                $prefillFamilyName = (string) old('family_name', (string) ($signupPayload['family_name'] ?? ''));
+                $prefillContactPhone = (string) old('contact_phone', (string) ($signupPayload['contact_phone'] ?? ''));
                 $providerLabel = ucfirst((string) ($signupPayload['provider'] ?? 'email'));
+                $verifiedContact = (string) ($signupPayload['provider'] ?? '') === 'phone'
+                    ? (string) ($signupPayload['contact_phone'] ?? '')
+                    : (string) ($signupPayload['email'] ?? '');
             @endphp
             <span class="eyebrow">Partner Onboarding</span>
             <h1>Welcome to Workation</h1>
@@ -297,14 +319,14 @@
 
             @if ($currentMode === 'email')
                 <section id="email-auth" class="otp-shell" aria-label="Email Login and Signup">
-                    <h2 class="otp-title">Continue with Email</h2>
-                    <p class="subtle">Enter your email and we will send a 6-digit OTP. Existing vendors log in after OTP verification.</p>
+                    <h2 class="otp-title">Continue with Email or Phone</h2>
+                    <p class="subtle">Enter your email address or phone number and we will send a 6-digit OTP. Existing vendors log in after OTP verification.</p>
 
                     <form class="stack" method="POST" action="/portal/vendor/email-otp/send">
                         @csrf
                         <div class="field">
-                            <label for="otp_email">Email Address</label>
-                            <input id="otp_email" name="email" type="email" value="{{ $prefillEmail }}" required>
+                            <label for="otp_identifier">Email Address or Phone Number</label>
+                            <input id="otp_identifier" name="identifier" type="text" value="{{ $prefillIdentifier }}" placeholder="name@example.com or +960..." required>
                         </div>
 
                         <div class="actions">
@@ -318,9 +340,24 @@
                 </div>
 
                 <div class="social-auth">
-                    <a class="social-btn" href="/portal/vendor/oauth/google/redirect" aria-label="Continue with Google">Continue with Google</a>
-                    <a class="social-btn" href="/portal/vendor/oauth/apple/redirect" aria-label="Continue with Apple">Continue with Apple</a>
-                    <a class="social-btn" href="/portal/vendor/oauth/facebook/redirect" aria-label="Continue with Facebook">Continue with Facebook</a>
+                    <a class="social-btn" href="/portal/vendor/oauth/google/redirect" aria-label="Continue with Google" title="Continue with Google">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path fill="#EA4335" d="M12 10.2v3.9h5.4c-.2 1.3-1.5 3.9-5.4 3.9-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.9 1.5l2.7-2.6C16.9 3.3 14.6 2.4 12 2.4 6.7 2.4 2.4 6.7 2.4 12S6.7 21.6 12 21.6c6.9 0 9.1-4.8 9.1-7.3 0-.5-.1-.8-.1-1.2H12z"/>
+                        </svg>
+                        <span class="sr-only">Continue with Google</span>
+                    </a>
+                    <a class="social-btn" href="/portal/vendor/oauth/apple/redirect" aria-label="Continue with Apple" title="Continue with Apple">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path fill="#111111" d="M16.8 12.7c0-2.3 1.9-3.3 2-3.4-1.1-1.6-2.8-1.8-3.4-1.8-1.5-.2-2.9.9-3.7.9-.8 0-2-.9-3.2-.9-1.7 0-3.2 1-4.1 2.5-1.8 3.1-.5 7.7 1.3 10.3.9 1.3 1.9 2.7 3.3 2.6 1.3-.1 1.8-.8 3.4-.8s2 .8 3.4.8c1.4 0 2.3-1.3 3.2-2.6 1-1.4 1.4-2.7 1.4-2.8-.1 0-2.7-1-2.7-4.8zM14.4 5.9c.7-.8 1.1-1.9 1-3-.9 0-2.1.6-2.8 1.4-.6.7-1.2 1.9-1 3 1 .1 2.1-.5 2.8-1.4z"/>
+                        </svg>
+                        <span class="sr-only">Continue with Apple</span>
+                    </a>
+                    <a class="social-btn" href="/portal/vendor/oauth/facebook/redirect" aria-label="Continue with Facebook" title="Continue with Facebook">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path fill="#1877F2" d="M24 12a12 12 0 1 0-13.9 11.8v-8.3H7.1V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 1-2 1.9V12h3.4l-.5 3.5h-2.9v8.3A12 12 0 0 0 24 12z"/>
+                        </svg>
+                        <span class="sr-only">Continue with Facebook</span>
+                    </a>
                 </div>
 
                 <div class="hint">
@@ -329,13 +366,13 @@
             @elseif ($currentMode === 'otp')
                 <section class="otp-shell" aria-label="OTP Verification">
                     <h2 class="otp-title">Verify OTP</h2>
-                    <p class="subtle">Enter the 6-digit OTP sent to <strong>{{ $prefillEmail }}</strong>. Code expires in 10 minutes.</p>
+                    <p class="subtle">Enter the 6-digit OTP sent to <strong>{{ $prefillIdentifier }}</strong>. Code expires in 10 minutes.</p>
 
                     <form class="stack" method="POST" action="/portal/vendor/email-otp/verify">
                         @csrf
                         <div class="field">
-                            <label for="verify_email">Email Address</label>
-                            <input id="verify_email" name="email" type="email" value="{{ $prefillEmail }}" required>
+                            <label for="verify_identifier">Email Address or Phone Number</label>
+                            <input id="verify_identifier" name="identifier" type="text" value="{{ $prefillIdentifier }}" required>
                         </div>
 
                         <div class="field">
@@ -349,7 +386,7 @@
                     </form>
 
                     <div class="actions" style="margin-top:10px;">
-                        <a href="/portal/vendor/register?mode=email">Use another email</a>
+                        <a href="/portal/vendor/register?mode=email">Use another email or phone</a>
                     </div>
                 </section>
             @else
@@ -360,18 +397,23 @@
                     <form class="stack" method="POST" action="/portal/vendor/minimal-register">
                         @csrf
                         <div class="field">
-                            <label for="reg_email">Email Address</label>
-                            <input id="reg_email" type="email" value="{{ $prefillEmail }}" disabled>
+                            <label for="reg_contact">Verified Contact</label>
+                            <input id="reg_contact" type="text" value="{{ $verifiedContact }}" disabled>
                         </div>
 
                         <div class="field">
-                            <label for="legal_name">Legal Name</label>
-                            <input id="legal_name" name="legal_name" type="text" value="{{ $prefillName }}" required>
+                            <label for="given_name">Given Name / First Name</label>
+                            <input id="given_name" name="given_name" type="text" value="{{ $prefillGivenName }}" required>
+                        </div>
+
+                        <div class="field">
+                            <label for="family_name">Family Name / Surname</label>
+                            <input id="family_name" name="family_name" type="text" value="{{ $prefillFamilyName }}" required>
                         </div>
 
                         <div class="field">
                             <label for="contact_phone">Contact Number</label>
-                            <input id="contact_phone" name="contact_phone" type="text" value="{{ old('contact_phone') }}" placeholder="+960..." required>
+                            <input id="contact_phone" name="contact_phone" type="text" value="{{ $prefillContactPhone }}" placeholder="+960..." required>
                         </div>
 
                         <div class="field field-full">
@@ -392,11 +434,9 @@
                 <a href="/">Back to Home</a>
                 <a href="/terms-of-service">Terms</a>
             </div>
-            <p class="subtle" style="margin-top:8px;">Build: VENDOR_AUTH_FLOW_V3_20260321A</p>
             </div>
         </section>
     </main>
-    <!-- VENDOR_AUTH_FLOW_V3_20260321A -->
 </body>
 <script>
     (function () {

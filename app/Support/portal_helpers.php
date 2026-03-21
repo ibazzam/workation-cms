@@ -261,30 +261,76 @@ if (!function_exists('vendorDeliverOtpCode')) {
                 throw new \RuntimeException('WhatsApp OTP is enabled but TWILIO_WHATSAPP_FROM is missing.');
             }
 
-            $whatsAppTo = str_starts_with($destination, 'whatsapp:') ? $destination : 'whatsapp:' . ltrim($destination, '+');
-            if (!str_starts_with($whatsAppTo, 'whatsapp:+')) {
-                $whatsAppTo = 'whatsapp:+' . ltrim(str_replace('whatsapp:', '', $whatsAppTo), '+');
+            $normalizeWhatsAppAddress = static function (string $value): string {
+                $candidate = trim($value);
+                $candidate = str_starts_with($candidate, 'whatsapp:')
+                    ? substr($candidate, strlen('whatsapp:'))
+                    : $candidate;
+
+                $digitsOnly = preg_replace('/\D+/', '', $candidate) ?? '';
+                if ($digitsOnly === '') {
+                    return '';
+                }
+
+                return 'whatsapp:+' . $digitsOnly;
+            };
+
+            $whatsAppTo = $normalizeWhatsAppAddress($destination);
+            $whatsAppFrom = $normalizeWhatsAppAddress($twilioWhatsappFrom);
+            if ($whatsAppTo === '' || $whatsAppFrom === '') {
+                throw new \RuntimeException('WhatsApp OTP address format is invalid.');
             }
 
             $payload = [
-                'From' => $twilioWhatsappFrom,
+                'From' => $whatsAppFrom,
                 'To' => $whatsAppTo,
             ];
 
+            $baseEndpoint = 'https://api.twilio.com/2010-04-01/Accounts/' . $twilioSid . '/Messages.json';
+
+            $templatePayload = $payload;
             if ($twilioWhatsappContentSid !== '') {
-                $payload['ContentSid'] = $twilioWhatsappContentSid;
-                $payload['ContentVariables'] = json_encode(['1' => $otpCode]);
+                $templatePayload['ContentSid'] = $twilioWhatsappContentSid;
+                $templatePayload['ContentVariables'] = json_encode(['1' => $otpCode]);
             } else {
-                // Sandbox/testing fallback if no template SID has been configured.
-                $payload['Body'] = 'Your Workation vendor verification code is ' . $otpCode . '. It expires in 10 minutes.';
+                $templatePayload['Body'] = 'Your Workation vendor verification code is ' . $otpCode . '. It expires in 10 minutes.';
             }
 
             $waResponse = Http::withBasicAuth($twilioSid, $twilioToken)
                 ->asForm()
-                ->post('https://api.twilio.com/2010-04-01/Accounts/' . $twilioSid . '/Messages.json', $payload);
+                ->post($baseEndpoint, $templatePayload);
+
+            if (!$waResponse->successful() && $twilioWhatsappContentSid !== '') {
+                // If template-based send fails (e.g., sandbox/template mismatch), try plain body once.
+                $fallbackPayload = $payload;
+                $fallbackPayload['Body'] = 'Your Workation vendor verification code is ' . $otpCode . '. It expires in 10 minutes.';
+                $waFallbackResponse = Http::withBasicAuth($twilioSid, $twilioToken)
+                    ->asForm()
+                    ->post($baseEndpoint, $fallbackPayload);
+
+                if ($waFallbackResponse->successful()) {
+                    return;
+                }
+
+                $fallbackJson = $waFallbackResponse->json();
+                $fallbackMessage = is_array($fallbackJson) ? (string) ($fallbackJson['message'] ?? '') : '';
+                $fallbackCode = is_array($fallbackJson) ? (string) ($fallbackJson['code'] ?? '') : '';
+                throw new \RuntimeException(
+                    'WhatsApp OTP delivery failed with status ' . $waFallbackResponse->status()
+                    . ($fallbackCode !== '' ? ' (code ' . $fallbackCode . ')' : '')
+                    . ($fallbackMessage !== '' ? ': ' . $fallbackMessage : '.')
+                );
+            }
 
             if (!$waResponse->successful()) {
-                throw new \RuntimeException('WhatsApp OTP delivery failed with status ' . $waResponse->status() . '.');
+                $waJson = $waResponse->json();
+                $waMessage = is_array($waJson) ? (string) ($waJson['message'] ?? '') : '';
+                $waCode = is_array($waJson) ? (string) ($waJson['code'] ?? '') : '';
+                throw new \RuntimeException(
+                    'WhatsApp OTP delivery failed with status ' . $waResponse->status()
+                    . ($waCode !== '' ? ' (code ' . $waCode . ')' : '')
+                    . ($waMessage !== '' ? ': ' . $waMessage : '.')
+                );
             }
 
             return;

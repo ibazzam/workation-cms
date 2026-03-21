@@ -292,6 +292,8 @@ if (!function_exists('vendorDeliverOtpCode')) {
 
         if ($twilioFrom === '') {
             throw new \RuntimeException('SMS OTP is enabled but TWILIO_FROM_NUMBER is missing.');
+        if ($twilioSid === '' || $twilioToken === '' || $twilioFrom === '') {
+            throw new \RuntimeException('Phone OTP is not configured. Missing TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, or TWILIO_FROM_NUMBER.');
         }
 
         $smsResponse = Http::withBasicAuth($twilioSid, $twilioToken)

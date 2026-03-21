@@ -394,6 +394,99 @@
                 </section>
             @endif
 
+            @if ($currentMode === 'email')
+                <section id="email-auth" class="otp-shell" aria-label="Email Login and Signup">
+                    <h2 class="otp-title">Continue with Email</h2>
+                    <p class="subtle">Enter your email and we will send a 6-digit OTP. Existing vendors log in after OTP verification.</p>
+
+                    <form class="stack" method="POST" action="/portal/vendor/email-otp/send">
+                        @csrf
+                        <div class="field">
+                            <label for="otp_email">Email Address</label>
+                            <input id="otp_email" name="email" type="email" value="{{ $prefillEmail }}" required>
+                        </div>
+
+                        <div class="actions">
+                            <button type="submit">Continue</button>
+                        </div>
+                    </form>
+                </section>
+
+                <div id="social-health" class="social-health" role="status" aria-live="polite">
+                    Checking social login status...
+                </div>
+
+                <div class="social-auth">
+                    <a class="social-btn" href="/portal/vendor/oauth/google/redirect" aria-label="Continue with Google">Continue with Google</a>
+                    <a class="social-btn" href="/portal/vendor/oauth/apple/redirect" aria-label="Continue with Apple">Continue with Apple</a>
+                    <a class="social-btn" href="/portal/vendor/oauth/facebook/redirect" aria-label="Continue with Facebook">Continue with Facebook</a>
+                </div>
+
+                <div class="hint">
+                    If a social login fails, retry once. If it still fails, continue with Google or email login while provider verification finishes.
+                </div>
+            @elseif ($currentMode === 'otp')
+                <section class="otp-shell" aria-label="OTP Verification">
+                    <h2 class="otp-title">Verify OTP</h2>
+                    <p class="subtle">Enter the 6-digit OTP sent to <strong>{{ $prefillEmail }}</strong>. Code expires in 10 minutes.</p>
+
+                    <form class="stack" method="POST" action="/portal/vendor/email-otp/verify">
+                        @csrf
+                        <div class="field">
+                            <label for="verify_email">Email Address</label>
+                            <input id="verify_email" name="email" type="email" value="{{ $prefillEmail }}" required>
+                        </div>
+
+                        <div class="field">
+                            <label for="otp_code">OTP Code</label>
+                            <input id="otp_code" name="otp" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="6-digit code" required>
+                        </div>
+
+                        <div class="actions">
+                            <button type="submit">Verify and Continue</button>
+                        </div>
+                    </form>
+
+                    <div class="actions" style="margin-top:10px;">
+                        <a href="/portal/vendor/register?mode=email">Use another email</a>
+                    </div>
+                </section>
+            @else
+                <section class="otp-shell" aria-label="Minimal Vendor Registration">
+                    <h2 class="otp-title">Complete Minimal Registration</h2>
+                    <p class="subtle">{{ $providerLabel }} verified. Complete these required details to finish signup.</p>
+
+                    <form class="stack" method="POST" action="/portal/vendor/minimal-register">
+                        @csrf
+                        <div class="field">
+                            <label for="reg_email">Email Address</label>
+                            <input id="reg_email" type="email" value="{{ $prefillEmail }}" disabled>
+                        </div>
+
+                        <div class="field">
+                            <label for="legal_name">Legal Name</label>
+                            <input id="legal_name" name="legal_name" type="text" value="{{ $prefillName }}" required>
+                        </div>
+
+                        <div class="field">
+                            <label for="contact_phone">Contact Number</label>
+                            <input id="contact_phone" name="contact_phone" type="text" value="{{ old('contact_phone') }}" placeholder="+960..." required>
+                        </div>
+
+                        <div class="field field-full">
+                            <label>
+                                <input type="checkbox" name="agree_terms" value="1" {{ old('agree_terms') ? 'checked' : '' }} style="width:auto;margin-right:6px;">
+                                I agree to the Terms of Service and Privacy Policy.
+                            </label>
+                        </div>
+
+                        <div class="actions">
+                            <button type="submit">Agree and Register</button>
+                        </div>
+                    </form>
+                </section>
+            @endif
+
             <div id="social-health" class="social-health" role="status" aria-live="polite">
                 Checking social login status...
             </div>

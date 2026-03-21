@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -97,6 +98,102 @@ if (!function_exists('generatePortalUsernameFromEmail')) {
         }
 
         return $username;
+    }
+}
+
+if (!function_exists('supportedVendorSocialProviders')) {
+    function supportedVendorSocialProviders(): array
+    {
+        return ['google', 'facebook', 'apple'];
+    }
+}
+
+if (!function_exists('vendorSocialRedirectUrl')) {
+    function vendorSocialRedirectUrl(string $provider): string
+    {
+        return (string) config('services.' . $provider . '.redirect', url('/portal/vendor/oauth/' . $provider . '/callback'));
+    }
+}
+
+if (!function_exists('isVendorSocialProviderConfigured')) {
+    function isVendorSocialProviderConfigured(string $provider): bool
+    {
+        return match ($provider) {
+            'google' => trim((string) config('services.google.client_id', '')) !== ''
+                && trim((string) config('services.google.client_secret', '')) !== '',
+            'facebook' => trim((string) config('services.facebook.client_id', '')) !== ''
+                && trim((string) config('services.facebook.client_secret', '')) !== '',
+            'apple' => trim((string) config('services.apple.client_id', '')) !== ''
+                && trim((string) config('services.apple.team_id', '')) !== ''
+                && trim((string) config('services.apple.key_id', '')) !== ''
+                && trim((string) config('services.apple.private_key', '')) !== '',
+            default => false,
+        };
+    }
+}
+
+if (!function_exists('vendorSocialHealthSnapshot')) {
+    function vendorSocialHealthSnapshot(): array
+    {
+        $appUrl = rtrim((string) config('app.url', ''), '/');
+        $appHost = strtolower((string) parse_url($appUrl, PHP_URL_HOST));
+
+        $providers = [];
+        foreach (supportedVendorSocialProviders() as $provider) {
+            $redirect = vendorSocialRedirectUrl($provider);
+            $redirectHost = strtolower((string) parse_url($redirect, PHP_URL_HOST));
+
+            $providers[$provider] = [
+                'configured' => isVendorSocialProviderConfigured($provider),
+                'redirect' => $redirect,
+                'redirect_uses_https' => str_starts_with(strtolower($redirect), 'https://'),
+                'redirect_host_matches_app' => $appHost !== '' && $redirectHost === $appHost,
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'app_url' => $appUrl,
+            'providers' => $providers,
+        ];
+    }
+}
+
+if (!function_exists('vendorEmailOtpCacheKey')) {
+    function vendorEmailOtpCacheKey(string $email): string
+    {
+        return 'vendor_email_otp:' . sha1(strtolower(trim($email)));
+    }
+}
+
+if (!function_exists('portalCanonicalHostRedirect')) {
+    function portalCanonicalHostRedirect(Request $request): ?\Illuminate\Http\RedirectResponse
+    {
+        if (strtolower((string) config('app.env', 'production')) !== 'production') {
+            return null;
+        }
+
+        $appUrl = trim((string) config('app.url', ''));
+        $canonicalHost = strtolower((string) parse_url($appUrl, PHP_URL_HOST));
+        if ($canonicalHost === '') {
+            return null;
+        }
+
+        $requestHost = strtolower((string) $request->getHost());
+        if ($requestHost === '' || $requestHost === $canonicalHost) {
+            return null;
+        }
+
+        if (!in_array($request->getMethod(), ['GET', 'HEAD'], true)) {
+            return null;
+        }
+
+        $canonicalScheme = strtolower((string) parse_url($appUrl, PHP_URL_SCHEME));
+        if ($canonicalScheme === '') {
+            $canonicalScheme = $request->getScheme();
+        }
+
+        return redirect()->to($canonicalScheme . '://' . $canonicalHost . $request->getRequestUri(), 302);
     }
 }
 

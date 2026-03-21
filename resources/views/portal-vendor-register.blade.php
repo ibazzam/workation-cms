@@ -3,7 +3,6 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="vendor-auth-build" content="VENDOR_AUTH_FLOW_V3_20260321A">
     <title>Partner Registration | Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
@@ -276,9 +275,14 @@
             @php
                 $currentMode = isset($mode) ? (string) $mode : 'email';
                 $signupPayload = isset($minimalPayload) && is_array($minimalPayload) ? $minimalPayload : [];
-                $prefillEmail = (string) old('email', (string) session('otp_email', (string) ($signupPayload['email'] ?? '')));
-                $prefillName = (string) old('legal_name', (string) ($signupPayload['suggested_name'] ?? ''));
+                $prefillIdentifier = (string) old('identifier', (string) old('email', (string) session('otp_identifier', (string) session('otp_email', (string) ($signupPayload['email'] ?? '')))));
+                $prefillGivenName = (string) old('given_name', (string) ($signupPayload['given_name'] ?? ''));
+                $prefillFamilyName = (string) old('family_name', (string) ($signupPayload['family_name'] ?? ''));
+                $prefillContactPhone = (string) old('contact_phone', (string) ($signupPayload['contact_phone'] ?? ''));
                 $providerLabel = ucfirst((string) ($signupPayload['provider'] ?? 'email'));
+                $verifiedContact = (string) ($signupPayload['provider'] ?? '') === 'phone'
+                    ? (string) ($signupPayload['contact_phone'] ?? '')
+                    : (string) ($signupPayload['email'] ?? '');
             @endphp
             <span class="eyebrow">Partner Onboarding</span>
             <h1>Welcome to Workation</h1>
@@ -297,14 +301,14 @@
 
             @if ($currentMode === 'email')
                 <section id="email-auth" class="otp-shell" aria-label="Email Login and Signup">
-                    <h2 class="otp-title">Continue with Email</h2>
-                    <p class="subtle">Enter your email and we will send a 6-digit OTP. Existing vendors log in after OTP verification.</p>
+                    <h2 class="otp-title">Continue with Email or Phone</h2>
+                    <p class="subtle">Enter your email address or phone number and we will send a 6-digit OTP. Existing vendors log in after OTP verification.</p>
 
                     <form class="stack" method="POST" action="/portal/vendor/email-otp/send">
                         @csrf
                         <div class="field">
-                            <label for="otp_email">Email Address</label>
-                            <input id="otp_email" name="email" type="email" value="{{ $prefillEmail }}" required>
+                            <label for="otp_identifier">Email Address or Phone Number</label>
+                            <input id="otp_identifier" name="identifier" type="text" value="{{ $prefillIdentifier }}" placeholder="name@example.com or +960..." required>
                         </div>
 
                         <div class="actions">
@@ -329,13 +333,13 @@
             @elseif ($currentMode === 'otp')
                 <section class="otp-shell" aria-label="OTP Verification">
                     <h2 class="otp-title">Verify OTP</h2>
-                    <p class="subtle">Enter the 6-digit OTP sent to <strong>{{ $prefillEmail }}</strong>. Code expires in 10 minutes.</p>
+                    <p class="subtle">Enter the 6-digit OTP sent to <strong>{{ $prefillIdentifier }}</strong>. Code expires in 10 minutes.</p>
 
                     <form class="stack" method="POST" action="/portal/vendor/email-otp/verify">
                         @csrf
                         <div class="field">
-                            <label for="verify_email">Email Address</label>
-                            <input id="verify_email" name="email" type="email" value="{{ $prefillEmail }}" required>
+                            <label for="verify_identifier">Email Address or Phone Number</label>
+                            <input id="verify_identifier" name="identifier" type="text" value="{{ $prefillIdentifier }}" required>
                         </div>
 
                         <div class="field">
@@ -349,7 +353,7 @@
                     </form>
 
                     <div class="actions" style="margin-top:10px;">
-                        <a href="/portal/vendor/register?mode=email">Use another email</a>
+                        <a href="/portal/vendor/register?mode=email">Use another email or phone</a>
                     </div>
                 </section>
             @else
@@ -360,18 +364,23 @@
                     <form class="stack" method="POST" action="/portal/vendor/minimal-register">
                         @csrf
                         <div class="field">
-                            <label for="reg_email">Email Address</label>
-                            <input id="reg_email" type="email" value="{{ $prefillEmail }}" disabled>
+                            <label for="reg_contact">Verified Contact</label>
+                            <input id="reg_contact" type="text" value="{{ $verifiedContact }}" disabled>
                         </div>
 
                         <div class="field">
-                            <label for="legal_name">Legal Name</label>
-                            <input id="legal_name" name="legal_name" type="text" value="{{ $prefillName }}" required>
+                            <label for="given_name">Given Name / First Name</label>
+                            <input id="given_name" name="given_name" type="text" value="{{ $prefillGivenName }}" required>
+                        </div>
+
+                        <div class="field">
+                            <label for="family_name">Family Name / Surname</label>
+                            <input id="family_name" name="family_name" type="text" value="{{ $prefillFamilyName }}" required>
                         </div>
 
                         <div class="field">
                             <label for="contact_phone">Contact Number</label>
-                            <input id="contact_phone" name="contact_phone" type="text" value="{{ old('contact_phone') }}" placeholder="+960..." required>
+                            <input id="contact_phone" name="contact_phone" type="text" value="{{ $prefillContactPhone }}" placeholder="+960..." required>
                         </div>
 
                         <div class="field field-full">
@@ -392,11 +401,9 @@
                 <a href="/">Back to Home</a>
                 <a href="/terms-of-service">Terms</a>
             </div>
-            <p class="subtle" style="margin-top:8px;">Build: VENDOR_AUTH_FLOW_V3_20260321A</p>
             </div>
         </section>
     </main>
-    <!-- VENDOR_AUTH_FLOW_V3_20260321A -->
 </body>
 <script>
     (function () {

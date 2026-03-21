@@ -1033,40 +1033,57 @@ Route::get('/portal/vendor/oauth/health', function () {
 
 Route::post('/portal/vendor/email-otp/send', function (Request $request) {
     $validated = $request->validate([
-        'email' => ['required', 'email', 'max:160'],
+        'identifier' => ['nullable', 'string', 'max:160'],
+        'email' => ['nullable', 'string', 'max:160'],
     ]);
 
-    $email = strtolower(trim((string) $validated['email']));
+    $rawIdentifier = trim((string) ($validated['identifier'] ?? $validated['email'] ?? ''));
+    $resolvedIdentifier = vendorResolveOtpIdentifier($rawIdentifier);
+    $channel = (string) ($resolvedIdentifier['channel'] ?? 'invalid');
+    $normalizedIdentifier = (string) ($resolvedIdentifier['normalized'] ?? '');
 
-    $existingUser = User::query()
-        ->whereRaw('LOWER(email) = ?', [$email])
-        ->first();
+    if ($channel === 'invalid' || $normalizedIdentifier === '') {
+        return back()->withErrors([
+            'registration' => 'Enter a valid email address or phone number to continue.',
+        ])->withInput();
+    }
+
+    $existingUser = null;
+    if ($channel === 'email') {
+        $existingUser = User::query()
+            ->whereRaw('LOWER(email) = ?', [$normalizedIdentifier])
+            ->first();
+    } elseif (Schema::hasColumn('users', 'phone')) {
+        $phoneWithoutPlus = ltrim($normalizedIdentifier, '+');
+        $existingUser = User::query()
+            ->where('phone', $normalizedIdentifier)
+            ->orWhere('phone', $phoneWithoutPlus)
+            ->first();
+    }
 
     if ($existingUser instanceof User && normalizePortalRoleValue((string) $existingUser->portal_role) !== 'VENDOR') {
         return back()->withErrors([
-            'registration' => 'This email is already linked to a non-vendor account. Please use the correct portal login.',
+            'registration' => 'This identifier is already linked to a non-vendor account. Please use the correct portal login.',
         ])->withInput();
     }
 
     $otpCode = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-    $cacheKey = vendorEmailOtpCacheKey($email);
+    $cacheKey = vendorOtpCacheKeyForIdentifier($channel, $normalizedIdentifier);
 
     cache()->put($cacheKey, [
         'hash' => Hash::make($otpCode),
         'attempts' => 0,
+        'channel' => $channel,
+        'destination' => $normalizedIdentifier,
         'created_at' => now()->toIso8601String(),
     ], now()->addMinutes(10));
 
     try {
-        Mail::raw(
-            "Your Workation vendor verification code is {$otpCode}. This code expires in 10 minutes.",
-            function ($message) use ($email): void {
-                $message->to($email)->subject('Your Workation verification code');
-            }
-        );
+        vendorDeliverOtpCode($channel, $normalizedIdentifier, $otpCode);
     } catch (\Throwable $e) {
-        Log::warning('Failed to send vendor OTP email.', [
-            'email' => $email,
+        Log::warning('Failed to send vendor OTP.', [
+            'channel' => $channel,
+            'destination' => $normalizedIdentifier,
             'error' => $e->getMessage(),
         ]);
 
@@ -1076,9 +1093,14 @@ Route::post('/portal/vendor/email-otp/send', function (Request $request) {
     }
 
     $response = redirect('/portal/vendor/register?mode=otp')
-        ->with('status', 'A 6-digit verification code has been sent to your email.')
-        ->with('otp_email', $email)
+        ->with('status', 'A 6-digit verification code has been sent to your ' . ($channel === 'phone' ? 'phone number.' : 'email.'))
+        ->with('otp_identifier', $normalizedIdentifier)
+        ->with('otp_channel', $channel)
         ->with('otp_sent', true);
+
+    if ($channel === 'email') {
+        $response->with('otp_email', $normalizedIdentifier);
+    }
 
     if (app()->environment('testing')) {
         $response->with('otp_test_code', $otpCode);
@@ -1089,19 +1111,29 @@ Route::post('/portal/vendor/email-otp/send', function (Request $request) {
 
 Route::post('/portal/vendor/email-otp/verify', function (Request $request) {
     $validated = $request->validate([
-        'email' => ['required', 'email', 'max:160'],
+        'identifier' => ['nullable', 'string', 'max:160'],
+        'email' => ['nullable', 'string', 'max:160'],
         'otp' => ['required', 'digits:6'],
     ]);
 
-    $email = strtolower(trim((string) $validated['email']));
+    $rawIdentifier = trim((string) ($validated['identifier'] ?? $validated['email'] ?? ''));
+    $resolvedIdentifier = vendorResolveOtpIdentifier($rawIdentifier);
+    $channel = (string) ($resolvedIdentifier['channel'] ?? 'invalid');
+    $normalizedIdentifier = (string) ($resolvedIdentifier['normalized'] ?? '');
+    if ($channel === 'invalid' || $normalizedIdentifier === '') {
+        return redirect('/portal/vendor/register?mode=otp')->withErrors([
+            'registration' => 'Enter the same valid email or phone number used for OTP.',
+        ])->withInput();
+    }
+
     $otp = trim((string) $validated['otp']);
-    $cacheKey = vendorEmailOtpCacheKey($email);
+    $cacheKey = vendorOtpCacheKeyForIdentifier($channel, $normalizedIdentifier);
     $cachedOtp = cache()->get($cacheKey);
 
     if (!is_array($cachedOtp) || empty($cachedOtp['hash'])) {
         return redirect('/portal/vendor/register?mode=otp')->withErrors([
             'registration' => 'Verification code expired. Request a new 6-digit code and try again.',
-        ])->withInput()->with('otp_email', $email);
+        ])->withInput()->with('otp_identifier', $normalizedIdentifier)->with('otp_channel', $channel);
     }
 
     $attempts = (int) ($cachedOtp['attempts'] ?? 0);
@@ -1112,7 +1144,7 @@ Route::post('/portal/vendor/email-otp/verify', function (Request $request) {
             cache()->forget($cacheKey);
             return redirect('/portal/vendor/register?mode=otp')->withErrors([
                 'registration' => 'Too many invalid code attempts. Request a new code and try again.',
-            ])->withInput()->with('otp_email', $email);
+            ])->withInput()->with('otp_identifier', $normalizedIdentifier)->with('otp_channel', $channel);
         }
 
         cache()->put($cacheKey, [
@@ -1123,26 +1155,35 @@ Route::post('/portal/vendor/email-otp/verify', function (Request $request) {
 
         return redirect('/portal/vendor/register?mode=otp')->withErrors([
             'registration' => 'Invalid verification code. Please check the 6-digit OTP and try again.',
-        ])->withInput()->with('otp_email', $email);
+        ])->withInput()->with('otp_identifier', $normalizedIdentifier)->with('otp_channel', $channel);
     }
 
     cache()->forget($cacheKey);
 
-    $portalUser = User::query()
-        ->whereRaw('LOWER(email) = ?', [$email])
-        ->first();
+    $portalUser = null;
+    if ($channel === 'email') {
+        $portalUser = User::query()
+            ->whereRaw('LOWER(email) = ?', [$normalizedIdentifier])
+            ->first();
+    } elseif (Schema::hasColumn('users', 'phone')) {
+        $phoneWithoutPlus = ltrim($normalizedIdentifier, '+');
+        $portalUser = User::query()
+            ->where('phone', $normalizedIdentifier)
+            ->orWhere('phone', $phoneWithoutPlus)
+            ->first();
+    }
 
     if ($portalUser instanceof User) {
         if (normalizePortalRoleValue((string) $portalUser->portal_role) !== 'VENDOR') {
             return redirect('/portal/vendor/register?mode=otp')->withErrors([
                 'registration' => 'This email belongs to a non-vendor account. Please use the correct portal login.',
-            ])->withInput()->with('otp_email', $email);
+            ])->withInput()->with('otp_identifier', $normalizedIdentifier)->with('otp_channel', $channel);
         }
 
         if (!(bool) $portalUser->portal_enabled) {
             return redirect('/portal/vendor/register?mode=otp')->withErrors([
                 'registration' => 'Your vendor account is currently disabled. Please contact support.',
-            ])->withInput()->with('otp_email', $email);
+            ])->withInput()->with('otp_identifier', $normalizedIdentifier)->with('otp_channel', $channel);
         }
 
         $request->session()->regenerate();
@@ -1160,10 +1201,13 @@ Route::post('/portal/vendor/email-otp/verify', function (Request $request) {
 
     session([
         'vendor_minimal_signup_payload' => [
-            'email' => $email,
-            'provider' => 'email',
+            'email' => $channel === 'email'
+                ? $normalizedIdentifier
+                : ('phone_' . substr(md5($normalizedIdentifier), 0, 20) . '@relay.workation.local'),
+            'provider' => $channel,
             'oauth_id' => null,
             'suggested_name' => '',
+            'contact_phone' => $channel === 'phone' ? $normalizedIdentifier : '',
             'email_verified' => true,
         ],
     ]);
@@ -1180,7 +1224,8 @@ Route::post('/portal/vendor/minimal-register', function (Request $request) {
     }
 
     $validated = $request->validate([
-        'legal_name' => ['required', 'string', 'max:120'],
+        'given_name' => ['required', 'string', 'max:80'],
+        'family_name' => ['required', 'string', 'max:80'],
         'contact_phone' => ['required', 'string', 'max:40'],
         'agree_terms' => ['accepted'],
     ]);
@@ -1212,7 +1257,9 @@ Route::post('/portal/vendor/minimal-register', function (Request $request) {
         $portalUser->password = Hash::make(Str::random(40));
     }
 
-    $portalUser->name = trim((string) $validated['legal_name']);
+    $givenName = trim((string) $validated['given_name']);
+    $familyName = trim((string) $validated['family_name']);
+    $portalUser->name = trim($givenName . ' ' . $familyName);
     $portalUser->portal_role = 'VENDOR';
     $portalUser->portal_enabled = true;
     if (trim((string) $portalUser->portal_vendor_id) === '') {
@@ -1221,7 +1268,9 @@ Route::post('/portal/vendor/minimal-register', function (Request $request) {
     }
 
     if (Schema::hasColumn('users', 'phone')) {
-        $portalUser->phone = trim((string) $validated['contact_phone']);
+        $enteredPhone = vendorNormalizePhoneNumber((string) $validated['contact_phone']);
+        $fallbackPhone = vendorNormalizePhoneNumber((string) ($payload['contact_phone'] ?? ''));
+        $portalUser->phone = $enteredPhone !== '' ? $enteredPhone : $fallbackPhone;
     }
 
     if ($oauthId !== '') {

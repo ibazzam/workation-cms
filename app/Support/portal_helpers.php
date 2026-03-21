@@ -4,7 +4,9 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 
 if (!function_exists('workationApiBase')) {
@@ -163,6 +165,103 @@ if (!function_exists('vendorEmailOtpCacheKey')) {
     function vendorEmailOtpCacheKey(string $email): string
     {
         return 'vendor_email_otp:' . sha1(strtolower(trim($email)));
+    }
+}
+
+if (!function_exists('vendorNormalizePhoneNumber')) {
+    function vendorNormalizePhoneNumber(string $raw): string
+    {
+        $value = trim($raw);
+        if ($value === '') {
+            return '';
+        }
+
+        $hasPlusPrefix = str_starts_with($value, '+');
+        $digits = preg_replace('/\D+/', '', $value) ?? '';
+        if ($digits === '') {
+            return '';
+        }
+
+        return $hasPlusPrefix ? '+' . $digits : $digits;
+    }
+}
+
+if (!function_exists('vendorResolveOtpIdentifier')) {
+    function vendorResolveOtpIdentifier(string $identifier): array
+    {
+        $value = trim($identifier);
+        if ($value === '') {
+            return [
+                'channel' => 'invalid',
+                'normalized' => '',
+            ];
+        }
+
+        if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
+            return [
+                'channel' => 'email',
+                'normalized' => strtolower($value),
+            ];
+        }
+
+        $normalizedPhone = vendorNormalizePhoneNumber($value);
+        $phoneDigits = preg_replace('/\D+/', '', $normalizedPhone) ?? '';
+        if (strlen($phoneDigits) >= 7 && strlen($phoneDigits) <= 15) {
+            return [
+                'channel' => 'phone',
+                'normalized' => $normalizedPhone,
+            ];
+        }
+
+        return [
+            'channel' => 'invalid',
+            'normalized' => '',
+        ];
+    }
+}
+
+if (!function_exists('vendorOtpCacheKeyForIdentifier')) {
+    function vendorOtpCacheKeyForIdentifier(string $channel, string $normalized): string
+    {
+        return 'vendor_otp:' . $channel . ':' . sha1($normalized);
+    }
+}
+
+if (!function_exists('vendorDeliverOtpCode')) {
+    function vendorDeliverOtpCode(string $channel, string $destination, string $otpCode): void
+    {
+        if ($channel === 'email') {
+            Mail::raw(
+                "Your Workation vendor verification code is {$otpCode}. This code expires in 10 minutes.",
+                function ($message) use ($destination): void {
+                    $message->to($destination)->subject('Your Workation verification code');
+                }
+            );
+            return;
+        }
+
+        if ($channel !== 'phone') {
+            throw new \RuntimeException('Unsupported OTP delivery channel.');
+        }
+
+        $twilioSid = trim((string) env('TWILIO_ACCOUNT_SID', ''));
+        $twilioToken = trim((string) env('TWILIO_AUTH_TOKEN', ''));
+        $twilioFrom = trim((string) env('TWILIO_FROM_NUMBER', ''));
+        if ($twilioSid === '' || $twilioToken === '' || $twilioFrom === '') {
+            throw new \RuntimeException('Phone OTP is not configured. Missing TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, or TWILIO_FROM_NUMBER.');
+        }
+
+        $smsResponse = Http::withBasicAuth($twilioSid, $twilioToken)
+            ->asForm()
+            ->post('https://api.twilio.com/2010-04-01/Accounts/' . $twilioSid . '/Messages.json', [
+                'From' => $twilioFrom,
+                'To' => $destination,
+                'Body' => 'Your Workation vendor verification code is ' . $otpCode . '. It expires in 10 minutes.',
+            ]);
+
+        if (!$smsResponse->successful()) {
+            throw new \RuntimeException('Phone OTP delivery failed with status ' . $smsResponse->status() . '.');
+        }
     }
 }
 

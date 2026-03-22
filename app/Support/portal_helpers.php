@@ -250,13 +250,128 @@ if (!function_exists('vendorDeliverOtpCode')) {
         $twilioWhatsappFrom = trim((string) env('TWILIO_WHATSAPP_FROM', ''));
         $twilioWhatsappContentSid = trim((string) env('TWILIO_WHATSAPP_CONTENT_SID', ''));
         $phoneChannel = strtolower(trim((string) env('TWILIO_PHONE_CHANNEL', 'sms')));
+
+        $useWhatsApp = in_array($phoneChannel, ['whatsapp', 'wa', 'auto'], true);
+        $normalizePhoneE164 = static function (string $value): string {
+            $candidate = trim($value);
+            $candidate = str_starts_with($candidate, 'whatsapp:')
+                ? substr($candidate, strlen('whatsapp:'))
+                : $candidate;
+
+            $digitsOnly = preg_replace('/\D+/', '', $candidate) ?? '';
+            if ($digitsOnly === '') {
+                return '';
+            }
+
+            return '+' . $digitsOnly;
+        };
+
         $useWhatsApp = in_array($phoneChannel, ['whatsapp', 'wa'], true);
+
 
         if ($twilioSid === '' || $twilioToken === '') {
             throw new \RuntimeException('Phone OTP is not configured. Missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN.');
         }
 
         if ($useWhatsApp) {
+
+            if ($twilioWhatsappFrom === '' && $phoneChannel !== 'auto') {
+                throw new \RuntimeException('WhatsApp OTP is enabled but TWILIO_WHATSAPP_FROM is missing.');
+            }
+
+            $normalizeWhatsAppAddress = static function (string $value): string {
+                $candidate = trim($value);
+                $candidate = str_starts_with($candidate, 'whatsapp:')
+                    ? substr($candidate, strlen('whatsapp:'))
+                    : $candidate;
+
+                $digitsOnly = preg_replace('/\D+/', '', $candidate) ?? '';
+                if ($digitsOnly === '') {
+                    return '';
+                }
+
+                return 'whatsapp:+' . $digitsOnly;
+            };
+
+            $whatsAppTo = $normalizeWhatsAppAddress($destination);
+            $whatsAppFrom = $normalizeWhatsAppAddress($twilioWhatsappFrom);
+            if ($whatsAppTo !== '' && $whatsAppFrom !== '') {
+
+                $payload = [
+                    'From' => $whatsAppFrom,
+                    'To' => $whatsAppTo,
+                ];
+
+                $baseEndpoint = 'https://api.twilio.com/2010-04-01/Accounts/' . $twilioSid . '/Messages.json';
+
+                $templatePayload = $payload;
+                if ($twilioWhatsappContentSid !== '') {
+                    $templatePayload['ContentSid'] = $twilioWhatsappContentSid;
+                    $templatePayload['ContentVariables'] = json_encode(['1' => $otpCode]);
+                } else {
+                    $templatePayload['Body'] = 'Your Workation vendor verification code is ' . $otpCode . '. It expires in 10 minutes.';
+                }
+
+                $waResponse = Http::withBasicAuth($twilioSid, $twilioToken)
+                    ->asForm()
+                    ->post($baseEndpoint, $templatePayload);
+
+                if (!$waResponse->successful() && $twilioWhatsappContentSid !== '') {
+                    // If template-based send fails (e.g., sandbox/template mismatch), try plain body once.
+                    $fallbackPayload = $payload;
+                    $fallbackPayload['Body'] = 'Your Workation vendor verification code is ' . $otpCode . '. It expires in 10 minutes.';
+                    $waFallbackResponse = Http::withBasicAuth($twilioSid, $twilioToken)
+                        ->asForm()
+                        ->post($baseEndpoint, $fallbackPayload);
+
+                    if ($waFallbackResponse->successful()) {
+                        return;
+                    }
+
+                    $fallbackJson = $waFallbackResponse->json();
+                    $fallbackMessage = is_array($fallbackJson) ? (string) ($fallbackJson['message'] ?? '') : '';
+                    $fallbackCode = is_array($fallbackJson) ? (string) ($fallbackJson['code'] ?? '') : '';
+                    throw new \RuntimeException(
+                        'WhatsApp OTP delivery failed with status ' . $waFallbackResponse->status()
+                        . ($fallbackCode !== '' ? ' (code ' . $fallbackCode . ')' : '')
+                        . ($fallbackMessage !== '' ? ': ' . $fallbackMessage : '.')
+                    );
+                }
+
+                if ($waResponse->successful()) {
+                    return;
+                }
+            }
+
+            // If WhatsApp is selected but cannot send (or in auto mode), attempt SMS fallback if configured.
+            if ($twilioFrom !== '') {
+                $smsTo = $normalizePhoneE164($destination);
+                if ($smsTo !== '') {
+                    $smsFallbackResponse = Http::withBasicAuth($twilioSid, $twilioToken)
+                        ->asForm()
+                        ->post('https://api.twilio.com/2010-04-01/Accounts/' . $twilioSid . '/Messages.json', [
+                            'From' => $twilioFrom,
+                            'To' => $smsTo,
+                            'Body' => 'Your Workation vendor verification code is ' . $otpCode . '. It expires in 10 minutes.',
+                        ]);
+
+                    if ($smsFallbackResponse->successful()) {
+                        return;
+                    }
+
+                    $smsFallbackJson = $smsFallbackResponse->json();
+                    $smsFallbackMessage = is_array($smsFallbackJson) ? (string) ($smsFallbackJson['message'] ?? '') : '';
+                    $smsFallbackCode = is_array($smsFallbackJson) ? (string) ($smsFallbackJson['code'] ?? '') : '';
+                    throw new \RuntimeException(
+                        'Phone OTP delivery failed on both WhatsApp and SMS. Last status ' . $smsFallbackResponse->status()
+                        . ($smsFallbackCode !== '' ? ' (code ' . $smsFallbackCode . ')' : '')
+                        . ($smsFallbackMessage !== '' ? ': ' . $smsFallbackMessage : '.')
+                    );
+                }
+            }
+
+            throw new \RuntimeException('WhatsApp OTP delivery failed and SMS fallback is not configured.');
+          
             if ($twilioWhatsappFrom === '') {
                 throw new \RuntimeException('WhatsApp OTP is enabled but TWILIO_WHATSAPP_FROM is missing.');
             }

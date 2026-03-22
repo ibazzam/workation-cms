@@ -265,6 +265,10 @@
         .profile-field label {
             font-size: 0.78rem;
             color: var(--muted);
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
 
         .payout-center {
             margin-top: 12px;
@@ -340,15 +344,177 @@
             font-size: 0.82rem;
             color: var(--muted);
         }
-            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
+
+        .ops-section {
+            margin-top: 12px;
         }
 
+        .ops-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
 
-            .payout-grid {
-                grid-template-columns: 1fr;
-            }
+        .ops-title {
+            margin: 0;
+            font-size: 1rem;
+            color: #1f3346;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .ops-chip {
+            display: inline-block;
+            border-radius: 999px;
+            border: 1px solid #d7e0e6;
+            background: #f7fbff;
+            color: #3a5b78;
+            padding: 4px 9px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .ops-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .ops-form {
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            background: #fff;
+            padding: 10px;
+        }
+
+        .ops-form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .ops-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .ops-field-wide {
+            grid-column: 1 / -1;
+        }
+
+        .ops-field label {
+            font-size: 0.74rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .ops-input,
+        .ops-select,
+        .ops-textarea {
+            width: 100%;
+            border: 1px solid #c8d3df;
+            border-radius: 10px;
+            padding: 9px 11px;
+            font-size: 0.88rem;
+            font-family: "Outfit", "Trebuchet MS", sans-serif;
+            color: #1d3045;
+            background: #fff;
+        }
+
+        .ops-textarea {
+            min-height: 90px;
+            resize: vertical;
+        }
+
+        .ops-table-wrap {
+            margin-top: 10px;
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .ops-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .ops-table th,
+        .ops-table td {
+            text-align: left;
+            border-bottom: 1px solid #edf2f8;
+            padding: 8px 9px;
+            font-size: 0.8rem;
+            color: #233247;
+            vertical-align: top;
+        }
+
+        .ops-table th {
+            background: #f8fbff;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #456077;
+            font-size: 0.7rem;
+        }
+
+        .ops-table tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .ops-empty {
+            padding: 10px;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+
+        .ops-metrics {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .ops-metric {
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            background: #fff;
+            padding: 9px;
+        }
+
+        .ops-metric p {
+            margin: 0;
+        }
+
+        .ops-metric .metric-label {
+            font-size: 0.72rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .ops-metric .metric-value {
+            margin-top: 5px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1f3346;
+        }
+
+        .inline-status-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .inline-status-form .btn {
+            margin-top: 0;
+        }
+
         .profile-input {
             width: 100%;
             border: 1px solid #c8d3df;
@@ -502,6 +668,19 @@
                 grid-template-columns: 1fr 1fr;
             }
 
+            .ops-metrics {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            .ops-grid,
+            .ops-form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .payout-grid {
+                grid-template-columns: 1fr;
+            }
+
             .support-links {
                 grid-template-columns: 1fr;
             }
@@ -519,9 +698,23 @@
                 white-space: nowrap;
             }
         }
+
+        @media (max-width: 640px) {
+            .ops-metrics {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
     </style>
 </head>
 <body>
+    @php
+        $vendorProperties = $vendorProperties ?? collect();
+        $vendorServices = $vendorServices ?? collect();
+        $vendorAvailability = $vendorAvailability ?? collect();
+        $vendorReservations = $vendorReservations ?? collect();
+        $vendorPricingRules = $vendorPricingRules ?? collect();
+        $vendorBilling = $vendorBilling ?? null;
+    @endphp
     <main class="page" data-api-base="{{ $apiBase }}">
         <section class="hero">
             <span class="eyebrow">Partner Access</span>
@@ -545,6 +738,13 @@
             <a href="#vendorSummary">Summary</a>
             <a href="#payoutCenter">Payout Center</a>
             <a href="#vendorProfileCard">Profile</a>
+            <a href="#vendorOperationsOverview">Operations</a>
+            <a href="#vendorPropertiesSection">Properties</a>
+            <a href="#vendorServicesSection">Services</a>
+            <a href="#vendorAvailabilitySection">Availability</a>
+            <a href="#vendorReservationsSection">Reservations</a>
+            <a href="#vendorPricingSection">Pricing</a>
+            <a href="#vendorBillingSection">Billing</a>
             <a href="#vendorAuthApi">Auth and API</a>
             <a href="#vendorAuthCard">Token</a>
             <a href="#vendorApiCard">API Actions</a>
@@ -674,6 +874,477 @@
                 </div>
                 <p class="profile-help">Update your display name and primary phone number used by the vendor team.</p>
                 <button class="btn btn-primary" type="submit">Save Profile Settings</button>
+            </form>
+        </section>
+
+        <section id="vendorOperationsOverview" class="card ops-section" aria-label="Vendor operations overview">
+            <div class="ops-header">
+                <p class="ops-title">Operations Console</p>
+                <span class="ops-chip">Database-backed</span>
+            </div>
+            <div class="ops-metrics">
+                <article class="ops-metric">
+                    <p class="metric-label">Properties</p>
+                    <p class="metric-value">{{ $vendorProperties->count() }}</p>
+                </article>
+                <article class="ops-metric">
+                    <p class="metric-label">Services</p>
+                    <p class="metric-value">{{ $vendorServices->count() }}</p>
+                </article>
+                <article class="ops-metric">
+                    <p class="metric-label">Availability Days</p>
+                    <p class="metric-value">{{ $vendorAvailability->count() }}</p>
+                </article>
+                <article class="ops-metric">
+                    <p class="metric-label">Reservations</p>
+                    <p class="metric-value">{{ $vendorReservations->count() }}</p>
+                </article>
+                <article class="ops-metric">
+                    <p class="metric-label">Pricing Rules</p>
+                    <p class="metric-value">{{ $vendorPricingRules->count() }}</p>
+                </article>
+                <article class="ops-metric">
+                    <p class="metric-label">Billing Profile</p>
+                    <p class="metric-value">{{ $vendorBilling ? 'Ready' : 'Missing' }}</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="vendorPropertiesSection" class="card ops-section" aria-label="Vendor properties">
+            <div class="ops-header">
+                <p class="ops-title">Properties and Listings</p>
+                <span class="ops-chip">{{ $vendorProperties->count() }} total</span>
+            </div>
+            <div class="ops-grid">
+                <form class="ops-form" method="POST" action="/portal/vendor/properties/create">
+                    @csrf
+                    <div class="ops-form-grid">
+                        <div class="ops-field">
+                            <label for="property_name">Name</label>
+                            <input id="property_name" name="name" class="ops-input" type="text" maxlength="160" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="property_type">Type</label>
+                            <select id="property_type" name="property_type" class="ops-select" required>
+                                <option value="property">Property</option>
+                                <option value="service">Service Space</option>
+                            </select>
+                        </div>
+                        <div class="ops-field">
+                            <label for="property_location">Location</label>
+                            <input id="property_location" name="location" class="ops-input" type="text" maxlength="190">
+                        </div>
+                        <div class="ops-field">
+                            <label for="property_base_price">Base Price (MVR)</label>
+                            <input id="property_base_price" name="base_price" class="ops-input" type="number" min="0" step="0.01">
+                        </div>
+                        <div class="ops-field">
+                            <label for="property_max_guests">Max Guests</label>
+                            <input id="property_max_guests" name="max_guests" class="ops-input" type="number" min="1" max="10000">
+                        </div>
+                        <div class="ops-field ops-field-wide">
+                            <label for="property_description">Description</label>
+                            <textarea id="property_description" name="description" class="ops-textarea" maxlength="3000"></textarea>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Add Listing</button>
+                </form>
+
+                <div class="ops-table-wrap">
+                    <table class="ops-table" aria-label="Vendor properties table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Location</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($vendorProperties->take(12) as $property)
+                                <tr>
+                                    <td>{{ $property->name }}</td>
+                                    <td>{{ strtoupper((string) $property->property_type) }}</td>
+                                    <td>{{ $property->location ?: 'N/A' }}</td>
+                                    <td>{{ $property->currency }} {{ number_format((float) $property->base_price, 2) }}</td>
+                                    <td>{{ strtoupper((string) $property->status) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="ops-empty">No properties yet. Add your first listing.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="vendorServicesSection" class="card ops-section" aria-label="Vendor services">
+            <div class="ops-header">
+                <p class="ops-title">Services Catalog</p>
+                <span class="ops-chip">{{ $vendorServices->count() }} total</span>
+            </div>
+            <div class="ops-grid">
+                <form class="ops-form" method="POST" action="/portal/vendor/services/create">
+                    @csrf
+                    <div class="ops-form-grid">
+                        <div class="ops-field">
+                            <label for="service_name">Service Name</label>
+                            <input id="service_name" name="name" class="ops-input" type="text" maxlength="160" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="service_category">Category</label>
+                            <input id="service_category" name="category" class="ops-input" type="text" maxlength="120" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="service_price">Price (MVR)</label>
+                            <input id="service_price" name="price" class="ops-input" type="number" min="0" step="0.01" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="service_duration">Duration (minutes)</label>
+                            <input id="service_duration" name="duration_minutes" class="ops-input" type="number" min="0" max="100000">
+                        </div>
+                        <div class="ops-field">
+                            <label for="service_property_id">Property ID (optional)</label>
+                            <input id="service_property_id" name="property_id" class="ops-input" type="number" min="1">
+                        </div>
+                        <div class="ops-field ops-field-wide">
+                            <label for="service_description">Description</label>
+                            <textarea id="service_description" name="description" class="ops-textarea" maxlength="3000"></textarea>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Add Service</button>
+                </form>
+
+                <div class="ops-table-wrap">
+                    <table class="ops-table" aria-label="Vendor services table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Duration</th>
+                                <th>Price</th>
+                                <th>Active</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($vendorServices->take(12) as $service)
+                                <tr>
+                                    <td>{{ $service->name }}</td>
+                                    <td>{{ $service->category }}</td>
+                                    <td>{{ (int) $service->duration_minutes }} min</td>
+                                    <td>{{ $service->currency }} {{ number_format((float) $service->price, 2) }}</td>
+                                    <td>{{ $service->is_active ? 'YES' : 'NO' }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="ops-empty">No services yet. Add one to start taking reservations.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="vendorAvailabilitySection" class="card ops-section" aria-label="Vendor availability calendar">
+            <div class="ops-header">
+                <p class="ops-title">Availability Calendar</p>
+                <span class="ops-chip">{{ $vendorAvailability->count() }} days tracked</span>
+            </div>
+            <div class="ops-grid">
+                <form class="ops-form" method="POST" action="/portal/vendor/availability/save">
+                    @csrf
+                    <div class="ops-form-grid">
+                        <div class="ops-field">
+                            <label for="availability_date">Date</label>
+                            <input id="availability_date" name="slot_date" class="ops-input" type="date" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="availability_inventory">Inventory</label>
+                            <input id="availability_inventory" name="inventory" class="ops-input" type="number" min="0" max="100000" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="availability_property">Property ID (optional)</label>
+                            <input id="availability_property" name="vendor_property_id" class="ops-input" type="number" min="1">
+                        </div>
+                        <div class="ops-field">
+                            <label for="availability_closed">Closed Day</label>
+                            <select id="availability_closed" name="is_closed" class="ops-select">
+                                <option value="0">Open</option>
+                                <option value="1">Closed</option>
+                            </select>
+                        </div>
+                        <div class="ops-field ops-field-wide">
+                            <label for="availability_notes">Notes</label>
+                            <textarea id="availability_notes" name="notes" class="ops-textarea" maxlength="2000"></textarea>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Save Availability</button>
+                </form>
+
+                <div class="ops-table-wrap">
+                    <table class="ops-table" aria-label="Vendor availability table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Inventory</th>
+                                <th>Reserved</th>
+                                <th>Closed</th>
+                                <th>Property</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($vendorAvailability->take(20) as $slot)
+                                <tr>
+                                    <td>{{ $slot->slot_date }}</td>
+                                    <td>{{ (int) $slot->inventory }}</td>
+                                    <td>{{ (int) $slot->reserved_count }}</td>
+                                    <td>{{ $slot->is_closed ? 'YES' : 'NO' }}</td>
+                                    <td>{{ $slot->vendor_property_id ?: 'N/A' }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="ops-empty">No availability slots yet.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="vendorReservationsSection" class="card ops-section" aria-label="Vendor reservations">
+            <div class="ops-header">
+                <p class="ops-title">Reservations</p>
+                <span class="ops-chip">{{ $vendorReservations->count() }} total</span>
+            </div>
+            <div class="ops-grid">
+                <form class="ops-form" method="POST" action="/portal/vendor/reservations/create">
+                    @csrf
+                    <div class="ops-form-grid">
+                        <div class="ops-field">
+                            <label for="reservation_customer_name">Customer Name</label>
+                            <input id="reservation_customer_name" name="customer_name" class="ops-input" type="text" maxlength="160" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="reservation_customer_email">Customer Email</label>
+                            <input id="reservation_customer_email" name="customer_email" class="ops-input" type="email" maxlength="190" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="reservation_start_at">Start</label>
+                            <input id="reservation_start_at" name="start_at" class="ops-input" type="datetime-local" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="reservation_end_at">End</label>
+                            <input id="reservation_end_at" name="end_at" class="ops-input" type="datetime-local" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="reservation_guests">Guests</label>
+                            <input id="reservation_guests" name="guests" class="ops-input" type="number" min="1" max="10000" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="reservation_total_amount">Total Amount (MVR)</label>
+                            <input id="reservation_total_amount" name="total_amount" class="ops-input" type="number" min="0" step="0.01" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="reservation_property_id">Property ID (optional)</label>
+                            <input id="reservation_property_id" name="vendor_property_id" class="ops-input" type="number" min="1">
+                        </div>
+                        <div class="ops-field">
+                            <label for="reservation_service_id">Service ID (optional)</label>
+                            <input id="reservation_service_id" name="vendor_service_id" class="ops-input" type="number" min="1">
+                        </div>
+                        <div class="ops-field ops-field-wide">
+                            <label for="reservation_notes">Notes</label>
+                            <textarea id="reservation_notes" name="notes" class="ops-textarea" maxlength="2000"></textarea>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Create Reservation</button>
+                </form>
+
+                <div class="ops-table-wrap">
+                    <table class="ops-table" aria-label="Vendor reservations table">
+                        <thead>
+                            <tr>
+                                <th>Customer</th>
+                                <th>Dates</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($vendorReservations->take(12) as $reservation)
+                                <tr>
+                                    <td>
+                                        {{ $reservation->customer_name }}<br>
+                                        {{ $reservation->customer_email }}
+                                    </td>
+                                    <td>{{ $reservation->start_at }}<br>{{ $reservation->end_at }}</td>
+                                    <td>{{ $reservation->currency }} {{ number_format((float) $reservation->total_amount, 2) }}</td>
+                                    <td>
+                                        <form class="inline-status-form" method="POST" action="/portal/vendor/reservations/{{ $reservation->id }}/status">
+                                            @csrf
+                                            <select class="ops-select" name="status" required>
+                                                <option value="pending" @selected($reservation->status === 'pending')>Pending</option>
+                                                <option value="confirmed" @selected($reservation->status === 'confirmed')>Confirmed</option>
+                                                <option value="cancelled" @selected($reservation->status === 'cancelled')>Cancelled</option>
+                                                <option value="completed" @selected($reservation->status === 'completed')>Completed</option>
+                                            </select>
+                                            <select class="ops-select" name="payment_status" required>
+                                                <option value="unpaid" @selected($reservation->payment_status === 'unpaid')>Unpaid</option>
+                                                <option value="partially_paid" @selected($reservation->payment_status === 'partially_paid')>Partially Paid</option>
+                                                <option value="paid" @selected($reservation->payment_status === 'paid')>Paid</option>
+                                                <option value="refunded" @selected($reservation->payment_status === 'refunded')>Refunded</option>
+                                            </select>
+                                            <button class="btn btn-secondary" type="submit">Update</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="ops-empty">No reservations yet.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="vendorPricingSection" class="card ops-section" aria-label="Vendor pricing rules">
+            <div class="ops-header">
+                <p class="ops-title">Pricing Rules</p>
+                <span class="ops-chip">{{ $vendorPricingRules->count() }} active + historical</span>
+            </div>
+            <div class="ops-grid">
+                <form class="ops-form" method="POST" action="/portal/vendor/pricing/create">
+                    @csrf
+                    <div class="ops-form-grid">
+                        <div class="ops-field">
+                            <label for="pricing_name">Rule Name</label>
+                            <input id="pricing_name" name="name" class="ops-input" type="text" maxlength="160" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="pricing_type">Rule Type</label>
+                            <select id="pricing_type" name="rule_type" class="ops-select" required>
+                                <option value="flat">Flat</option>
+                                <option value="percent">Percent</option>
+                                <option value="nightly">Nightly</option>
+                                <option value="weekend_markup">Weekend Markup</option>
+                            </select>
+                        </div>
+                        <div class="ops-field">
+                            <label for="pricing_value">Value</label>
+                            <input id="pricing_value" name="value" class="ops-input" type="number" min="0" step="0.01" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="pricing_starts">Starts On</label>
+                            <input id="pricing_starts" name="starts_on" class="ops-input" type="date">
+                        </div>
+                        <div class="ops-field">
+                            <label for="pricing_ends">Ends On</label>
+                            <input id="pricing_ends" name="ends_on" class="ops-input" type="date">
+                        </div>
+                        <div class="ops-field">
+                            <label for="pricing_property_id">Property ID (optional)</label>
+                            <input id="pricing_property_id" name="vendor_property_id" class="ops-input" type="number" min="1">
+                        </div>
+                        <div class="ops-field">
+                            <label for="pricing_service_id">Service ID (optional)</label>
+                            <input id="pricing_service_id" name="vendor_service_id" class="ops-input" type="number" min="1">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Save Pricing Rule</button>
+                </form>
+
+                <div class="ops-table-wrap">
+                    <table class="ops-table" aria-label="Vendor pricing rules table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Value</th>
+                                <th>Window</th>
+                                <th>Active</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($vendorPricingRules->take(12) as $rule)
+                                <tr>
+                                    <td>{{ $rule->name }}</td>
+                                    <td>{{ strtoupper((string) $rule->rule_type) }}</td>
+                                    <td>{{ number_format((float) $rule->value, 2) }}</td>
+                                    <td>{{ $rule->starts_on ?: '-' }} to {{ $rule->ends_on ?: '-' }}</td>
+                                    <td>{{ $rule->is_active ? 'YES' : 'NO' }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="ops-empty">No pricing rules yet.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="vendorBillingSection" class="card ops-section" aria-label="Vendor billing details">
+            <div class="ops-header">
+                <p class="ops-title">Billing Details</p>
+                <span class="ops-chip">{{ $vendorBilling ? 'Configured' : 'Pending' }}</span>
+            </div>
+            <form class="ops-form" method="POST" action="/portal/vendor/billing/update">
+                @csrf
+                <div class="ops-form-grid">
+                    <div class="ops-field">
+                        <label for="billing_business_name">Business Name</label>
+                        <input id="billing_business_name" name="business_name" class="ops-input" type="text" maxlength="190" value="{{ old('business_name', optional($vendorBilling)->business_name ?? '') }}" required>
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_tax_id">Tax ID</label>
+                        <input id="billing_tax_id" name="tax_id" class="ops-input" type="text" maxlength="120" value="{{ old('tax_id', optional($vendorBilling)->tax_id ?? '') }}">
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_email">Billing Email</label>
+                        <input id="billing_email" name="billing_email" class="ops-input" type="email" maxlength="190" value="{{ old('billing_email', optional($vendorBilling)->billing_email ?? '') }}" required>
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_payout_method">Payout Method</label>
+                        <select id="billing_payout_method" name="payout_method" class="ops-select" required>
+                            <option value="bank_transfer" @selected((optional($vendorBilling)->payout_method ?? '') === 'bank_transfer')>Bank Transfer</option>
+                            <option value="mobile_wallet" @selected((optional($vendorBilling)->payout_method ?? '') === 'mobile_wallet')>Mobile Wallet</option>
+                            <option value="manual" @selected((optional($vendorBilling)->payout_method ?? '') === 'manual')>Manual</option>
+                        </select>
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_payout_reference">Payout Reference</label>
+                        <input id="billing_payout_reference" name="payout_reference" class="ops-input" type="text" maxlength="190" value="{{ old('payout_reference', optional($vendorBilling)->payout_reference ?? '') }}">
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_bank_name">Bank Name</label>
+                        <input id="billing_bank_name" name="bank_name" class="ops-input" type="text" maxlength="190" value="{{ old('bank_name', optional($vendorBilling)->bank_name ?? '') }}">
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_bank_last4">Bank Account Last 4</label>
+                        <input id="billing_bank_last4" name="bank_account_last4" class="ops-input" type="text" maxlength="8" value="{{ old('bank_account_last4', optional($vendorBilling)->bank_account_last4 ?? '') }}">
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_currency">Currency</label>
+                        <input id="billing_currency" name="currency" class="ops-input" type="text" maxlength="8" value="{{ old('currency', optional($vendorBilling)->currency ?? 'MVR') }}">
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_invoice_prefix">Invoice Prefix</label>
+                        <input id="billing_invoice_prefix" name="invoice_prefix" class="ops-input" type="text" maxlength="30" value="{{ old('invoice_prefix', optional($vendorBilling)->invoice_prefix ?? 'INV') }}">
+                    </div>
+                    <div class="ops-field ops-field-wide">
+                        <label for="billing_address">Billing Address</label>
+                        <textarea id="billing_address" name="billing_address" class="ops-textarea" maxlength="2000">{{ old('billing_address', optional($vendorBilling)->billing_address ?? '') }}</textarea>
+                    </div>
+                </div>
+                <button class="btn btn-primary" type="submit">Save Billing Details</button>
             </form>
         </section>
 

@@ -1087,9 +1087,17 @@ Route::post('/portal/vendor/email-otp/send', function (Request $request) {
             'error' => $e->getMessage(),
         ]);
 
+        $deliveryGuidance = 'Check Twilio configuration and try again.';
+        $errorMessage = strtolower($e->getMessage());
+        if (str_contains($errorMessage, 'whatsapp')) {
+            $deliveryGuidance = 'WhatsApp delivery failed. Confirm sandbox join from your phone, TWILIO_WHATSAPP_FROM, and template ContentSid settings.';
+        } elseif (str_contains($errorMessage, 'sms')) {
+            $deliveryGuidance = 'SMS delivery failed. Confirm TWILIO_FROM_NUMBER is active for your account and destination region.';
+        }
+
         return back()->withErrors([
             'registration' => 'Unable to send verification code right now. Please try again in a moment.',
-        ])->withInput();
+        ])->with('otp_delivery_guidance', $deliveryGuidance)->withInput();
     }
 
     $response = redirect('/portal/vendor/register?mode=otp')

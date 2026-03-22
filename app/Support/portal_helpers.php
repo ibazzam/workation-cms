@@ -250,7 +250,6 @@ if (!function_exists('vendorDeliverOtpCode')) {
         $twilioWhatsappFrom = trim((string) env('TWILIO_WHATSAPP_FROM', ''));
         $twilioWhatsappContentSid = trim((string) env('TWILIO_WHATSAPP_CONTENT_SID', ''));
         $phoneChannel = strtolower(trim((string) env('TWILIO_PHONE_CHANNEL', 'sms')));
-
         $useWhatsApp = in_array($phoneChannel, ['whatsapp', 'wa', 'auto'], true);
         $normalizePhoneE164 = static function (string $value): string {
             $candidate = trim($value);
@@ -371,6 +370,7 @@ if (!function_exists('vendorDeliverOtpCode')) {
             }
 
             throw new \RuntimeException('WhatsApp OTP delivery failed and SMS fallback is not configured.');
+
           
             if ($twilioWhatsappFrom === '') {
                 throw new \RuntimeException('WhatsApp OTP is enabled but TWILIO_WHATSAPP_FROM is missing.');
@@ -403,6 +403,7 @@ if (!function_exists('vendorDeliverOtpCode')) {
             }
 
             return;
+
         }
 
         if ($twilioFrom === '') {

@@ -119,3 +119,6 @@ If any provider fails verification after deploy:
 - OTP fallback path check: PASS/FAIL
 - Render log review completed: YES/NO
 - Final sign-off owner:
+
+For a focused Facebook-only sign-off run, use:
+- `docs/vendor-facebook-production-signoff-template.md`

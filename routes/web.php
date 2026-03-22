@@ -1394,6 +1394,7 @@ Route::get('/portal/vendor/oauth/{provider}/redirect', function (Request $reques
 
     if ($provider === 'facebook') {
         $facebookRedirect = Socialite::driver('facebook')
+            ->redirectUrl(vendorSocialRedirectUrl('facebook'))
             ->setScopes(['public_profile'])
             ->stateless()
             ->redirect();
@@ -1504,10 +1505,52 @@ Route::get('/portal/vendor/oauth/{provider}/callback', function (Request $reques
             $email = strtolower(trim((string) ($decodedAppleToken['email'] ?? '')));
             $name = trim((string) ($decodedAppleToken['name'] ?? ''));
         } else {
-            $oauthUser = Socialite::driver($provider)->stateless()->user();
-            $oauthId = trim((string) $oauthUser->getId());
-            $email = strtolower(trim((string) $oauthUser->getEmail()));
-            $name = trim((string) ($oauthUser->getName() ?: ''));
+            try {
+                $oauthUser = Socialite::driver($provider)
+                    ->redirectUrl(vendorSocialRedirectUrl($provider))
+                    ->stateless()
+                    ->user();
+
+                $oauthId = trim((string) $oauthUser->getId());
+                $email = strtolower(trim((string) $oauthUser->getEmail()));
+                $name = trim((string) ($oauthUser->getName() ?: ''));
+            } catch (\Throwable $socialiteError) {
+                if ($provider !== 'facebook') {
+                    throw $socialiteError;
+                }
+
+                $authorizationCode = trim((string) $request->query('code', ''));
+                if ($authorizationCode === '') {
+                    throw $socialiteError;
+                }
+
+                $tokenResponse = Http::get('https://graph.facebook.com/v19.0/oauth/access_token', [
+                    'client_id' => (string) config('services.facebook.client_id'),
+                    'client_secret' => (string) config('services.facebook.client_secret'),
+                    'redirect_uri' => vendorSocialRedirectUrl('facebook'),
+                    'code' => $authorizationCode,
+                ]);
+
+                $accessToken = trim((string) $tokenResponse->json('access_token', ''));
+                if (!$tokenResponse->ok() || $accessToken === '') {
+                    throw $socialiteError;
+                }
+
+                $profileResponse = Http::get('https://graph.facebook.com/me', [
+                    'fields' => 'id,name,email',
+                    'access_token' => $accessToken,
+                ]);
+
+                if (!$profileResponse->ok()) {
+                    throw $socialiteError;
+                }
+
+                $oauthId = trim((string) $profileResponse->json('id', ''));
+                $email = strtolower(trim((string) $profileResponse->json('email', '')));
+                $name = trim((string) $profileResponse->json('name', ''));
+
+                Log::info('Vendor Facebook OAuth fallback exchange used after Socialite user retrieval failure.');
+            }
         }
 
         if ($oauthId === '') {

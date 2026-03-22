@@ -270,6 +270,8 @@
                 surfaces current runtime activity.
             </p>
             <div class="cta">
+                <a class="btn btn-primary" href="/admin">Admin Portal</a>
+                <a class="btn btn-secondary" href="/vendor">Vendor Portal</a>
                 <a class="btn btn-primary" href="{{ $apiBase }}/api/v1/health" target="_blank" rel="noopener">Open API Health</a>
                 <a class="btn btn-secondary" href="https://github.com/ibazzam/workation-cms/actions/runs/22991556615" target="_blank" rel="noopener">Strict Preflight Evidence</a>
             </div>

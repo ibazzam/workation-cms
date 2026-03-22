@@ -1,0 +1,48 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Tests\TestCase;
+
+class VendorPortalProfileUpdateTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_authenticated_vendor_can_update_profile_settings(): void
+    {
+        $vendor = User::factory()->create([
+            'name' => 'Old Vendor Name',
+            'email' => 'vendor.profile@example.com',
+            'portal_role' => 'VENDOR',
+            'portal_enabled' => true,
+            'portal_vendor_id' => 'VENDOR-900',
+        ]);
+
+        $this->withSession([
+            'portal_vendor_authenticated' => true,
+            'portal_vendor_user' => $vendor->name,
+            'portal_vendor_user_id' => $vendor->id,
+            'portal_vendor_role' => 'VENDOR',
+        ]);
+
+        $response = $this
+            ->withoutMiddleware(VerifyCsrfToken::class)
+            ->post('/portal/vendor/profile/update', [
+                'display_name' => 'New Vendor Name',
+                'contact_phone' => '+9607770123',
+            ]);
+
+        $response
+            ->assertStatus(302)
+            ->assertSessionHas('portal_notice', 'Profile settings updated successfully.')
+            ->assertSessionHas('portal_vendor_user', 'New Vendor Name');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $vendor->id,
+            'name' => 'New Vendor Name',
+        ]);
+    }
+}

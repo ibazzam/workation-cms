@@ -40,6 +40,8 @@ This document defines the launch-ready onboarding workflow for new vendors and t
   - listing and detail retrieval
   - quote flows and availability windows
   - booking/payment interactions for applicable domain
+- Confirm social auth production verification runbook is current:
+  - `docs/vendor-social-auth-production-runbook.md`
 - Exit criteria:
   - Integration smoke pass
   - Incident/runbook links shared with vendor operations
@@ -94,6 +96,7 @@ This document defines the launch-ready onboarding workflow for new vendors and t
 - Verified support/escalation contacts
 - Service policy mappings (cancellation, refund, no-show)
 - Integration smoke evidence from staging
+- Latest social auth production verification evidence
 - Go-live approval checklist
 
 ## KPI Tracking for First 30 Days

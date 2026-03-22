@@ -16,6 +16,12 @@ Target: complete launch-critical portal work by March 31, 2026.
 
 ## P0 Launch-Critical (Finish First)
 - [ ] Stabilize Facebook login end-to-end in production
+	- [x] Added callback fallback network resiliency (timeout + retry) for Graph token/profile fetch path (2026-03-22)
+	- [x] Added one-run Facebook production sign-off worksheet (`docs/vendor-facebook-production-signoff-template.md`) (2026-03-22)
+	- [x] Captured production public pre-check evidence (`docs/evidence/facebook-prod-signoff-2026-03-22.md`) (2026-03-22)
+	- [x] Captured production OAuth redirect/callback-path header evidence (`docs/evidence/facebook-prod-signoff-2026-03-22.md`) (2026-03-22)
+	- [x] Prepared final sign-off entry scaffold in evidence doc (`docs/evidence/facebook-prod-signoff-2026-03-22.md`) (2026-03-22)
+	- [ ] Capture production smoke evidence and sign-off (PASS/FAIL + Render log correlation) per runbook
 - [ ] Stabilize WhatsApp OTP delivery for vendor auth (Twilio template/sandbox and production sender rollout)
 - [x] Add visible "Social login status" diagnostics in vendor register UI
 - [x] Add clear retry guidance for OAuth failures in vendor register UI

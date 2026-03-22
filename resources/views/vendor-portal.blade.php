@@ -506,7 +506,7 @@
             <a href="mailto:support@workation.mv">Email Support</a>
             <a href="{{ $apiBase }}/api/v1/ops/runbooks" target="_blank" rel="noopener">Operations Runbooks</a>
         </section>
-
+        
         @if (session('portal_notice'))
             <div class="notice" role="status" aria-live="polite">{{ session('portal_notice') }}</div>
         @endif

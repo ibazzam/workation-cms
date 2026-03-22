@@ -265,11 +265,90 @@
         .profile-field label {
             font-size: 0.78rem;
             color: var(--muted);
+
+        .payout-center {
+            margin-top: 12px;
+        }
+
+        .payout-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .payout-metric {
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            background: #fff;
+            padding: 10px;
+        }
+
+        .payout-metric .metric-label {
+            margin: 0;
+            font-size: 0.74rem;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .payout-metric .metric-value {
+            margin: 5px 0 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1f3346;
+        }
+
+        .payout-table-wrap {
+            margin-top: 10px;
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .payout-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .payout-table th,
+        .payout-table td {
+            text-align: left;
+            border-bottom: 1px solid #edf2f8;
+            padding: 9px 10px;
+            font-size: 0.82rem;
+            color: #233247;
+        }
+
+        .payout-table th {
+            background: #f8fbff;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #456077;
+            font-size: 0.72rem;
+        }
+
+        .payout-table tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .payout-empty {
+            padding: 12px;
+            font-size: 0.82rem;
+            color: var(--muted);
+        }
             font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
             letter-spacing: 0.05em;
             text-transform: uppercase;
         }
 
+
+            .payout-grid {
+                grid-template-columns: 1fr;
+            }
         .profile-input {
             width: 100%;
             border: 1px solid #c8d3df;
@@ -464,6 +543,7 @@
 
         <nav class="portal-nav" aria-label="Vendor navigation">
             <a href="#vendorSummary">Summary</a>
+            <a href="#payoutCenter">Payout Center</a>
             <a href="#vendorProfileCard">Profile</a>
             <a href="#vendorAuthApi">Auth and API</a>
             <a href="#vendorAuthCard">Token</a>
@@ -500,13 +580,40 @@
             <button id="refreshSummary" type="button" class="summary-refresh">Refresh Summary</button>
         </div>
 
-        <section class="support-links" aria-label="Vendor support links">
-            <a href="/terms-of-service">Terms of Service</a>
-            <a href="/privacy-policy">Privacy Policy</a>
-            <a href="mailto:support@workation.mv">Email Support</a>
-            <a href="{{ $apiBase }}/api/v1/ops/runbooks" target="_blank" rel="noopener">Operations Runbooks</a>
+        <section id="payoutCenter" class="card payout-center" aria-label="Vendor payout center">
+            <p class="label">Payout Center</p>
+            <div class="payout-grid">
+                <article class="payout-metric">
+                    <p class="metric-label">Settled Total</p>
+                    <p id="payoutSettledTotal" class="metric-value">MVR 0.00</p>
+                </article>
+                <article class="payout-metric">
+                    <p class="metric-label">Pending Total</p>
+                    <p id="payoutPendingTotal" class="metric-value">MVR 0.00</p>
+                </article>
+                <article class="payout-metric">
+                    <p class="metric-label">Next Payout Estimate</p>
+                    <p id="payoutNextEstimate" class="metric-value">N/A</p>
+                </article>
+            </div>
+            <div class="payout-table-wrap">
+                <table class="payout-table" aria-label="Recent payouts">
+                    <thead>
+                        <tr>
+                            <th>Reference</th>
+                            <th>Status</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payoutRows">
+                        <tr>
+                            <td colspan="4" class="payout-empty">Refresh summary to load payout data.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
-        
         @if (session('portal_notice'))
             <div class="notice" role="status" aria-live="polite">{{ session('portal_notice') }}</div>
         @endif
@@ -627,6 +734,10 @@
             const summaryConnectivity = document.getElementById("summaryConnectivity");
             const summaryLastSync = document.getElementById("summaryLastSync");
             const refreshSummaryBtn = document.getElementById("refreshSummary");
+            const payoutSettledTotal = document.getElementById("payoutSettledTotal");
+            const payoutPendingTotal = document.getElementById("payoutPendingTotal");
+            const payoutNextEstimate = document.getElementById("payoutNextEstimate");
+            const payoutRows = document.getElementById("payoutRows");
 
             const SESSION_KEY = "workation_vendor_token";
 
@@ -793,6 +904,96 @@
                 if (summaryLastSync) {
                     summaryLastSync.textContent = "Last sync: not run yet";
                 }
+
+                if (payoutSettledTotal) payoutSettledTotal.textContent = "MVR 0.00";
+                if (payoutPendingTotal) payoutPendingTotal.textContent = "MVR 0.00";
+                if (payoutNextEstimate) payoutNextEstimate.textContent = "N/A";
+                if (payoutRows) {
+                    payoutRows.innerHTML = '<tr><td colspan="4" class="payout-empty">Refresh summary to load payout data.</td></tr>';
+                }
+            }
+
+            function formatCurrency(value) {
+                const amount = Number(value);
+                if (!Number.isFinite(amount)) {
+                    return "MVR 0.00";
+                }
+                return "MVR " + amount.toFixed(2);
+            }
+
+            function normalizeSettlementRows(payload) {
+                if (Array.isArray(payload)) return payload;
+                if (payload && Array.isArray(payload.data)) return payload.data;
+                if (payload && Array.isArray(payload.items)) return payload.items;
+                return [];
+            }
+
+            function extractAmount(row) {
+                const candidates = [row && row.amount, row && row.net_amount, row && row.total, row && row.value];
+                for (const value of candidates) {
+                    const parsed = Number(value);
+                    if (Number.isFinite(parsed)) {
+                        return parsed;
+                    }
+                }
+                return 0;
+            }
+
+            function toRowStatus(row) {
+                const raw = String((row && (row.status || row.state)) || "").trim();
+                return raw === "" ? "UNKNOWN" : raw.toUpperCase();
+            }
+
+            function toRowReference(row, index) {
+                return String((row && (row.reference || row.settlement_id || row.id || row.code)) || "SETTLEMENT-" + (index + 1));
+            }
+
+            function toRowDate(row) {
+                const raw = String((row && (row.paid_at || row.created_at || row.date)) || "").trim();
+                if (!raw) return "N/A";
+                const date = new Date(raw);
+                if (Number.isNaN(date.getTime())) return raw;
+                return date.toLocaleDateString();
+            }
+
+            function renderPayoutCenter(payload) {
+                const rows = normalizeSettlementRows(payload);
+                let settledTotal = 0;
+                let pendingTotal = 0;
+
+                rows.forEach((row) => {
+                    const amount = extractAmount(row);
+                    const status = toRowStatus(row);
+                    if (status.includes("SETTLED") || status.includes("PAID") || status.includes("COMPLETED")) {
+                        settledTotal += amount;
+                    } else {
+                        pendingTotal += amount;
+                    }
+                });
+
+                if (payoutSettledTotal) payoutSettledTotal.textContent = formatCurrency(settledTotal);
+                if (payoutPendingTotal) payoutPendingTotal.textContent = formatCurrency(pendingTotal);
+
+                const nextEstimateDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+                if (payoutNextEstimate) {
+                    payoutNextEstimate.textContent = rows.length === 0
+                        ? "N/A"
+                        : nextEstimateDate.toLocaleDateString();
+                }
+
+                if (!payoutRows) return;
+                if (rows.length === 0) {
+                    payoutRows.innerHTML = '<tr><td colspan="4" class="payout-empty">No settlements returned for this token yet.</td></tr>';
+                    return;
+                }
+
+                payoutRows.innerHTML = rows.slice(0, 8).map((row, index) => {
+                    const reference = toRowReference(row, index);
+                    const status = toRowStatus(row);
+                    const amount = formatCurrency(extractAmount(row));
+                    const date = toRowDate(row);
+                    return '<tr><td>' + reference + '</td><td>' + status + '</td><td>' + amount + '</td><td>' + date + '</td></tr>';
+                }).join('');
             }
 
             async function fetchJsonWithAuth(path, token) {
@@ -873,6 +1074,8 @@
                     if (summarySettlements) {
                         summarySettlements.textContent = settlementsCount === null ? "N/A" : String(settlementsCount);
                     }
+
+                    renderPayoutCenter(settlementsResult.json);
 
                     const nowText = new Date().toLocaleString();
                     if (bookingsResult.ok || settlementsResult.ok) {

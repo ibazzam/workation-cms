@@ -23,6 +23,10 @@ Target: complete launch-critical portal work by March 31, 2026.
 	- [x] Prepared final sign-off entry scaffold in evidence doc (`docs/evidence/facebook-prod-signoff-2026-03-22.md`) (2026-03-22)
 	- [ ] Capture production smoke evidence and sign-off (PASS/FAIL + Render log correlation) per runbook
 - [ ] Stabilize WhatsApp OTP delivery for vendor auth (Twilio template/sandbox and production sender rollout)
+	- [x] Added channel-mode hardening for `TWILIO_PHONE_CHANNEL=auto` with WhatsApp-first then SMS fallback behavior (2026-03-22)
+	- [x] Added OTP delivery regression coverage for WhatsApp guidance, template fallback, and auto SMS fallback (`tests/Feature/VendorPhoneOtpDeliveryTest.php`) (2026-03-22)
+	- [x] Added production runbook for Twilio WhatsApp OTP rollout (`docs/vendor-whatsapp-otp-production-runbook.md`) (2026-03-22)
+	- [ ] Capture production WhatsApp OTP smoke evidence and sign-off (explicit WhatsApp mode + auto fallback mode)
 - [x] Add visible "Social login status" diagnostics in vendor register UI
 - [x] Add clear retry guidance for OAuth failures in vendor register UI
 - [x] Ensure canonical host consistency across all auth entry points (www vs non-www)

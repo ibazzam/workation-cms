@@ -265,6 +265,81 @@
         .profile-field label {
             font-size: 0.78rem;
             color: var(--muted);
+
+        .payout-center {
+            margin-top: 12px;
+        }
+
+        .payout-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .payout-metric {
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            background: #fff;
+            padding: 10px;
+        }
+
+        .payout-metric .metric-label {
+            margin: 0;
+            font-size: 0.74rem;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .payout-metric .metric-value {
+            margin: 5px 0 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1f3346;
+        }
+
+        .payout-table-wrap {
+            margin-top: 10px;
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .payout-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .payout-table th,
+        .payout-table td {
+            text-align: left;
+            border-bottom: 1px solid #edf2f8;
+            padding: 9px 10px;
+            font-size: 0.82rem;
+            color: #233247;
+        }
+
+        .payout-table th {
+            background: #f8fbff;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #456077;
+            font-size: 0.72rem;
+        }
+
+        .payout-table tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .payout-empty {
+            padding: 12px;
+            font-size: 0.82rem;
+            color: var(--muted);
+        }
             font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
             letter-spacing: 0.05em;
             text-transform: uppercase;
@@ -515,6 +590,10 @@
             margin-top: 0;
         }
 
+            .payout-grid {
+                grid-template-columns: 1fr;
+            }
+            
         .profile-input {
             width: 100%;
             border: 1px solid #c8d3df;

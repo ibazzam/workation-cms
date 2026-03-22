@@ -22,6 +22,7 @@ Target: complete launch-critical portal work by March 31, 2026.
 - [x] Ensure canonical host consistency across all auth entry points (www vs non-www)
 - [x] Add vendor register page smoke test for each social provider button visibility
 - [x] Add production runbook section for social auth verification steps
+- [ ] Add production runbook section for social auth verification steps
 - [ ] Verify accessibility basics on portal login/register screens (labels, focus states, contrast)
 
 ## P1 Core Portal UX
@@ -35,6 +36,7 @@ Target: complete launch-critical portal work by March 31, 2026.
 ### Vendor Portal
 - [x] Add vendor dashboard summary cards (bookings, payouts, status)
 - [x] Add vendor profile management and account settings section
+- [ ] Add vendor profile management and account settings section
 - [x] Add backend connectivity status indicator and last sync time
 - [x] Add support/help links with contact paths and docs links
 

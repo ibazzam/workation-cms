@@ -16,12 +16,11 @@ Target: complete launch-critical portal work by March 31, 2026.
 
 ## P0 Launch-Critical (Finish First)
 - [ ] Stabilize Facebook login end-to-end in production
+- [ ] Stabilize WhatsApp OTP delivery for vendor auth (Twilio template/sandbox and production sender rollout)
 - [x] Add visible "Social login status" diagnostics in vendor register UI
 - [x] Add clear retry guidance for OAuth failures in vendor register UI
 - [x] Ensure canonical host consistency across all auth entry points (www vs non-www)
 - [x] Add vendor register page smoke test for each social provider button visibility
-- [ ] Ensure canonical host consistency across all auth entry points (www vs non-www)
-- [ ] Add vendor register page smoke test for each social provider button visibility
 - [ ] Add production runbook section for social auth verification steps
 - [ ] Verify accessibility basics on portal login/register screens (labels, focus states, contrast)
 
@@ -34,10 +33,10 @@ Target: complete launch-critical portal work by March 31, 2026.
 - [ ] Add pagination controls and row counts for long admin lists
 
 ### Vendor Portal
-- [ ] Add vendor dashboard summary cards (bookings, payouts, status)
+- [x] Add vendor dashboard summary cards (bookings, payouts, status)
 - [ ] Add vendor profile management and account settings section
-- [ ] Add backend connectivity status indicator and last sync time
-- [ ] Add support/help links with contact paths and docs links
+- [x] Add backend connectivity status indicator and last sync time
+- [x] Add support/help links with contact paths and docs links
 
 ### Landing Page
 - [ ] Improve CTA hierarchy and conversion-focused content blocks

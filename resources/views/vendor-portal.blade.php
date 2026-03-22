@@ -218,6 +218,74 @@
             font-size: 0.85rem;
         }
 
+        .notice {
+            margin-top: 12px;
+            border: 1px solid #b8debf;
+            border-radius: 10px;
+            background: #ecf9f0;
+            color: #184b23;
+            font-size: 0.86rem;
+            font-weight: 600;
+            padding: 10px 12px;
+        }
+
+        .error {
+            margin-top: 12px;
+            border: 1px solid #f0c3c0;
+            border-radius: 10px;
+            background: #fff1f0;
+            color: #7f1b1b;
+            font-size: 0.86rem;
+            font-weight: 600;
+            padding: 10px 12px;
+        }
+
+        .profile-card {
+            margin-top: 12px;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .profile-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .profile-field label {
+            font-size: 0.78rem;
+            color: var(--muted);
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .profile-input {
+            width: 100%;
+            border: 1px solid #c8d3df;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 0.92rem;
+            font-family: "Outfit", "Trebuchet MS", sans-serif;
+            color: #1d3045;
+            background: #fff;
+        }
+
+        .profile-input[readonly] {
+            background: #f4f7fa;
+            color: #4b5c70;
+        }
+
+        .profile-help {
+            margin-top: 8px;
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+
         .status-pill {
             display: inline-block;
             border-radius: 999px;
@@ -353,6 +421,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .profile-grid {
+                grid-template-columns: 1fr;
+            }
+
             .layout {
                 grid-template-columns: 1fr;
             }
@@ -386,6 +458,7 @@
 
         <nav class="portal-nav" aria-label="Vendor navigation">
             <a href="#vendorSummary">Summary</a>
+            <a href="#vendorProfileCard">Profile</a>
             <a href="#vendorAuthApi">Auth and API</a>
             <a href="#vendorAuthCard">Token</a>
             <a href="#vendorApiCard">API Actions</a>
@@ -426,6 +499,69 @@
             <a href="/privacy-policy">Privacy Policy</a>
             <a href="mailto:support@workation.mv">Email Support</a>
             <a href="{{ $apiBase }}/api/v1/ops/runbooks" target="_blank" rel="noopener">Operations Runbooks</a>
+        </section>
+
+        @if (session('portal_notice'))
+            <div class="notice" role="status" aria-live="polite">{{ session('portal_notice') }}</div>
+        @endif
+
+        @if ($errors->has('profile'))
+            <div class="error" role="alert">{{ $errors->first('profile') }}</div>
+        @endif
+
+        <section id="vendorProfileCard" class="card profile-card" aria-label="Vendor profile settings">
+            <p class="label">Account Settings</p>
+            <form method="POST" action="/portal/vendor/profile/update">
+                @csrf
+                <div class="profile-grid">
+                    <div class="profile-field">
+                        <label for="display_name">Display Name</label>
+                        <input
+                            id="display_name"
+                            name="display_name"
+                            class="profile-input"
+                            type="text"
+                            value="{{ old('display_name', $vendorProfile['name'] ?? '') }}"
+                            maxlength="120"
+                            required
+                        >
+                    </div>
+                    <div class="profile-field">
+                        <label for="contact_phone">Contact Phone</label>
+                        <input
+                            id="contact_phone"
+                            name="contact_phone"
+                            class="profile-input"
+                            type="text"
+                            value="{{ old('contact_phone', $vendorProfile['phone'] ?? '') }}"
+                            maxlength="40"
+                            placeholder="+960..."
+                        >
+                    </div>
+                    <div class="profile-field">
+                        <label for="account_email">Account Email</label>
+                        <input
+                            id="account_email"
+                            class="profile-input"
+                            type="text"
+                            value="{{ $vendorProfile['email'] ?? '' }}"
+                            readonly
+                        >
+                    </div>
+                    <div class="profile-field">
+                        <label for="vendor_id">Vendor ID</label>
+                        <input
+                            id="vendor_id"
+                            class="profile-input"
+                            type="text"
+                            value="{{ $vendorProfile['vendor_id'] ?? '' }}"
+                            readonly
+                        >
+                    </div>
+                </div>
+                <p class="profile-help">Update your display name and primary phone number used by the vendor team.</p>
+                <button class="btn btn-primary" type="submit">Save Profile Settings</button>
+            </form>
         </section>
 
         <section class="layout" id="vendorAuthApi">

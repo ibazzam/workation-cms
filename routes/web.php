@@ -970,10 +970,50 @@ Route::get('/vendor', function () {
         return redirect('/portal/' . $portal . '/login');
     }
 
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+
     return view('vendor-portal', [
         'apiBase' => workationApiBase(),
         'portalUser' => session('portal_vendor_user', $config['name']),
+        'vendorProfile' => [
+            'name' => $vendorUser instanceof User ? (string) $vendorUser->name : (string) session('portal_vendor_user', $config['name']),
+            'email' => $vendorUser instanceof User ? (string) $vendorUser->email : '',
+            'phone' => ($vendorUser instanceof User && Schema::hasColumn('users', 'phone')) ? (string) ($vendorUser->phone ?? '') : '',
+            'vendor_id' => $vendorUser instanceof User ? (string) ($vendorUser->portal_vendor_id ?? '') : '',
+        ],
     ]);
+});
+
+Route::post('/portal/vendor/profile/update', function (Request $request) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+    if (!$vendorUser instanceof User || normalizePortalRoleValue((string) $vendorUser->portal_role) !== 'VENDOR') {
+        return back()->withErrors([
+            'profile' => 'Unable to resolve your vendor account. Please sign in again.',
+        ]);
+    }
+
+    $validated = $request->validate([
+        'display_name' => ['required', 'string', 'max:120'],
+        'contact_phone' => ['nullable', 'string', 'max:40'],
+    ]);
+
+    $vendorUser->name = trim((string) $validated['display_name']);
+    if (Schema::hasColumn('users', 'phone')) {
+        $vendorUser->phone = vendorNormalizePhoneNumber((string) ($validated['contact_phone'] ?? ''));
+    }
+    $vendorUser->save();
+
+    session([
+        'portal_vendor_user' => $vendorUser->name,
+    ]);
+
+    return back()->with('portal_notice', 'Profile settings updated successfully.');
 });
 
 Route::get('/portal/{portal}/login', function (Request $request, string $portal) {

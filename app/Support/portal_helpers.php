@@ -268,6 +268,7 @@ if (!function_exists('vendorDeliverOtpCode')) {
         $useWhatsApp = in_array($phoneChannel, ['whatsapp', 'wa'], true);
 
 
+
         if ($twilioSid === '' || $twilioToken === '') {
             throw new \RuntimeException('Phone OTP is not configured. Missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN.');
         }

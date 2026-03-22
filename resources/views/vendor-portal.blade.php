@@ -142,6 +142,94 @@
             gap: 12px;
         }
 
+        .summary-grid {
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .summary-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .summary-label {
+            margin: 0;
+            font-size: 0.74rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .summary-value {
+            margin: 6px 0 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1f3346;
+        }
+
+        .summary-meta {
+            margin: 6px 0 0;
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+
+        .summary-actions {
+            margin-top: 10px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .summary-refresh {
+            border: 1px solid #c8d3df;
+            border-radius: 9px;
+            background: #ffffff;
+            color: #20415d;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 7px 10px;
+            cursor: pointer;
+        }
+
+        .summary-refresh[disabled] {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .support-links {
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .support-links a {
+            text-decoration: none;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fff;
+            color: #20415d;
+            padding: 10px 12px;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .status-pill {
+            display: inline-block;
+            border-radius: 999px;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .status-pill.ok { color: var(--ok); background: var(--ok-bg); }
+        .status-pill.warn { color: var(--warn); background: var(--warn-bg); }
+        .status-pill.err { color: var(--err); background: var(--err-bg); }
+
         .card {
             background: var(--card);
             border: 1px solid var(--line);
@@ -257,6 +345,14 @@
         }
 
         @media (max-width: 900px) {
+            .summary-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .support-links {
+                grid-template-columns: 1fr;
+            }
+
             .layout {
                 grid-template-columns: 1fr;
             }
@@ -289,10 +385,48 @@
         </section>
 
         <nav class="portal-nav" aria-label="Vendor navigation">
+            <a href="#vendorSummary">Summary</a>
             <a href="#vendorAuthApi">Auth and API</a>
             <a href="#vendorAuthCard">Token</a>
             <a href="#vendorApiCard">API Actions</a>
         </nav>
+
+        <section id="vendorSummary" class="summary-grid" aria-label="Vendor dashboard summary">
+            <article class="summary-card">
+                <p class="summary-label">Bookings</p>
+                <p id="summaryBookings" class="summary-value">-</p>
+                <p class="summary-meta">Total bookings visible with current token</p>
+            </article>
+
+            <article class="summary-card">
+                <p class="summary-label">Settlements</p>
+                <p id="summarySettlements" class="summary-value">-</p>
+                <p class="summary-meta">Settlement entries returned by payments API</p>
+            </article>
+
+            <article class="summary-card">
+                <p class="summary-label">Token Status</p>
+                <p id="summaryToken" class="summary-value">N/A</p>
+                <p id="summaryTokenMeta" class="summary-meta">Save token to evaluate readiness</p>
+            </article>
+
+            <article class="summary-card">
+                <p class="summary-label">Backend Connectivity</p>
+                <p class="summary-value"><span id="summaryConnectivity" class="status-pill warn">UNKNOWN</span></p>
+                <p id="summaryLastSync" class="summary-meta">Last sync: not run yet</p>
+            </article>
+        </section>
+
+        <div class="summary-actions">
+            <button id="refreshSummary" type="button" class="summary-refresh">Refresh Summary</button>
+        </div>
+
+        <section class="support-links" aria-label="Vendor support links">
+            <a href="/terms-of-service">Terms of Service</a>
+            <a href="/privacy-policy">Privacy Policy</a>
+            <a href="mailto:support@workation.mv">Email Support</a>
+            <a href="{{ $apiBase }}/api/v1/ops/runbooks" target="_blank" rel="noopener">Operations Runbooks</a>
+        </section>
 
         <section class="layout" id="vendorAuthApi">
             <article class="card" id="vendorAuthCard">
@@ -337,6 +471,13 @@
             const tokenState = document.getElementById("tokenState");
             const tokenMeta = document.getElementById("tokenMeta");
             const output = document.getElementById("output");
+            const summaryBookings = document.getElementById("summaryBookings");
+            const summarySettlements = document.getElementById("summarySettlements");
+            const summaryToken = document.getElementById("summaryToken");
+            const summaryTokenMeta = document.getElementById("summaryTokenMeta");
+            const summaryConnectivity = document.getElementById("summaryConnectivity");
+            const summaryLastSync = document.getElementById("summaryLastSync");
+            const refreshSummaryBtn = document.getElementById("refreshSummary");
 
             const SESSION_KEY = "workation_vendor_token";
 
@@ -480,6 +621,7 @@
                 sessionStorage.setItem(SESSION_KEY, value);
                 tokenInput.value = "";
                 applyTokenFeedback(value, "ok", "TOKEN SAVED");
+                refreshSummary();
             }
 
             function clearToken() {
@@ -487,6 +629,117 @@
                 tokenInput.value = "";
                 setState("warn", "TOKEN CLEARED");
                 setMeta("Token removed from this tab session.");
+                setSummaryDefaults();
+            }
+
+            function setSummaryDefaults() {
+                if (summaryBookings) summaryBookings.textContent = "-";
+                if (summarySettlements) summarySettlements.textContent = "-";
+                if (summaryToken) summaryToken.textContent = "N/A";
+                if (summaryTokenMeta) summaryTokenMeta.textContent = "Save token to evaluate readiness";
+                if (summaryConnectivity) {
+                    summaryConnectivity.className = "status-pill warn";
+                    summaryConnectivity.textContent = "UNKNOWN";
+                }
+                if (summaryLastSync) {
+                    summaryLastSync.textContent = "Last sync: not run yet";
+                }
+            }
+
+            async function fetchJsonWithAuth(path, token) {
+                const res = await fetch(apiBase + path, {
+                    method: "GET",
+                    headers: {
+                        "Authorization": "Bearer " + token,
+                        "Accept": "application/json"
+                    },
+                    cache: "no-store"
+                });
+
+                const bodyText = await res.text();
+                let json = null;
+                try {
+                    json = JSON.parse(bodyText);
+                } catch (error) {
+                    json = null;
+                }
+
+                return { ok: res.ok, status: res.status, json: json, text: bodyText };
+            }
+
+            function deriveCount(payload) {
+                if (Array.isArray(payload)) {
+                    return payload.length;
+                }
+                if (payload && Array.isArray(payload.data)) {
+                    return payload.data.length;
+                }
+                if (payload && Array.isArray(payload.items)) {
+                    return payload.items.length;
+                }
+                if (payload && Number.isFinite(Number(payload.total))) {
+                    return Number(payload.total);
+                }
+                return null;
+            }
+
+            function setConnectivity(type, label, lastSyncText) {
+                if (summaryConnectivity) {
+                    summaryConnectivity.className = "status-pill " + type;
+                    summaryConnectivity.textContent = label;
+                }
+                if (summaryLastSync) {
+                    summaryLastSync.textContent = "Last sync: " + lastSyncText;
+                }
+            }
+
+            async function refreshSummary() {
+                const token = getToken();
+                if (!token) {
+                    setSummaryDefaults();
+                    return;
+                }
+
+                if (refreshSummaryBtn) refreshSummaryBtn.disabled = true;
+
+                const verdict = evaluateToken(token);
+                if (summaryToken) {
+                    summaryToken.textContent = verdict.stateText.replace("TOKEN ", "");
+                }
+                if (summaryTokenMeta) {
+                    summaryTokenMeta.textContent = verdict.metaText;
+                }
+
+                try {
+                    const [bookingsResult, settlementsResult] = await Promise.all([
+                        fetchJsonWithAuth("/api/v1/bookings", token),
+                        fetchJsonWithAuth("/api/v1/payments/vendor/me/settlements/report", token),
+                    ]);
+
+                    const bookingsCount = deriveCount(bookingsResult.json);
+                    const settlementsCount = deriveCount(settlementsResult.json);
+                    if (summaryBookings) {
+                        summaryBookings.textContent = bookingsCount === null ? "N/A" : String(bookingsCount);
+                    }
+                    if (summarySettlements) {
+                        summarySettlements.textContent = settlementsCount === null ? "N/A" : String(settlementsCount);
+                    }
+
+                    const nowText = new Date().toLocaleString();
+                    if (bookingsResult.ok || settlementsResult.ok) {
+                        setConnectivity("ok", "ONLINE", nowText);
+                    } else if (bookingsResult.status === 401 || bookingsResult.status === 403 || settlementsResult.status === 401 || settlementsResult.status === 403) {
+                        setConnectivity("warn", "AUTH ISSUE", nowText);
+                    } else {
+                        setConnectivity("err", "OFFLINE", nowText);
+                    }
+                } catch (error) {
+                    setConnectivity("err", "OFFLINE", new Date().toLocaleString());
+                    if (summaryBookings) summaryBookings.textContent = "N/A";
+                    if (summarySettlements) summarySettlements.textContent = "N/A";
+                } finally {
+                    if (refreshSummaryBtn) refreshSummaryBtn.disabled = false;
+                }
             }
 
             async function run(path, triggerButton) {
@@ -557,6 +810,9 @@
 
             document.getElementById("saveToken").addEventListener("click", saveToken);
             document.getElementById("clearToken").addEventListener("click", clearToken);
+            if (refreshSummaryBtn) {
+                refreshSummaryBtn.addEventListener("click", refreshSummary);
+            }
             tokenInput.addEventListener("keydown", function (event) {
                 if (event.key === "Enter") {
                     event.preventDefault();
@@ -578,8 +834,10 @@
 
             if (getToken()) {
                 applyTokenFeedback(getToken());
+                refreshSummary();
             } else {
                 setMeta("Token is stored only in this browser tab session.");
+                setSummaryDefaults();
             }
         })();
     </script>

@@ -19,6 +19,27 @@ class VendorSocialAuthUxAndPreflightTest extends TestCase
             ->assertSee('If a social login fails, retry once.');
     }
 
+    public function test_vendor_register_page_includes_accessibility_basics(): void
+    {
+        $emailMode = $this->get('/portal/vendor/register?mode=email');
+
+        $emailMode
+            ->assertOk()
+            ->assertSee('role="status"', false)
+            ->assertSee('aria-live="polite"', false)
+            ->assertSee('label for="otp_identifier"', false)
+            ->assertSee(':focus-visible', false);
+
+        $otpMode = $this->withSession([
+            'otp_email' => 'vendor@example.com',
+        ])->get('/portal/vendor/register?mode=otp');
+
+        $otpMode
+            ->assertOk()
+            ->assertSee('label for="otp_code"', false)
+            ->assertSee('autocomplete="one-time-code"', false);
+    }
+
     public function test_social_redirect_preflight_allows_mismatched_redirect_host(): void
     {
         config([

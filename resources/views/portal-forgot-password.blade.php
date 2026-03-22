@@ -29,6 +29,9 @@
             padding: 22px;
             box-shadow: 0 22px 44px rgba(20, 38, 58, 0.14);
         }
+        .frame {
+            width: min(640px, 94vw);
+        }
         .eyebrow {
             font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
             font-size: 0.74rem;
@@ -76,9 +79,29 @@
             cursor: pointer;
         }
         a { text-decoration: none; color: #18466e; font-weight: 600; font-size: 0.9rem; }
+
+        .footer-links {
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .footer-links a {
+            text-decoration: none;
+            border: 1px solid #c8d3df;
+            border-radius: 10px;
+            background: #fff;
+            color: #20415d;
+            padding: 9px 10px;
+            font-weight: 700;
+            font-size: 0.82rem;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
+    <main class="frame">
     <section class="card">
         <span class="eyebrow">Secure Access</span>
         <h1>Forgot {{ $portalName ?? 'Portal' }} Password</h1>
@@ -103,5 +126,13 @@
             </div>
         </form>
     </section>
+
+    <footer class="footer-links" aria-label="Global support links">
+        <a href="/terms-of-service">Terms of Service</a>
+        <a href="/privacy-policy">Privacy Policy</a>
+        <a href="mailto:support@workation.mv">Email Support</a>
+        <a href="https://api.workation.mv/api/v1/ops/runbooks" target="_blank" rel="noopener">Operations Runbooks</a>
+    </footer>
+    </main>
 </body>
 </html>

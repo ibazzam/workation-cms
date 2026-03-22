@@ -62,6 +62,25 @@
             box-shadow: 0 6px 30px rgba(15, 23, 42, 0.05);
         }
 
+        .footer-links {
+            margin-top: 14px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .footer-links a {
+            text-decoration: none;
+            border: 1px solid #d0dae4;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #20415d;
+            padding: 9px 10px;
+            font-weight: 700;
+            font-size: 0.82rem;
+            text-align: center;
+        }
+
         a {
             color: #0f766e;
         }
@@ -96,6 +115,13 @@
             <h2>Contact</h2>
             <p>If you have any questions about these Terms, please contact us through the main website at <a href="/">workation.mv</a>.</p>
         </section>
+
+        <footer class="footer-links" aria-label="Global support links">
+            <a href="/terms-of-service">Terms of Service</a>
+            <a href="/privacy-policy">Privacy Policy</a>
+            <a href="mailto:support@workation.mv">Email Support</a>
+            <a href="https://api.workation.mv/api/v1/ops/runbooks" target="_blank" rel="noopener">Operations Runbooks</a>
+        </footer>
     </main>
 </body>
 </html>

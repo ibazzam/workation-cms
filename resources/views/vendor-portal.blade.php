@@ -207,6 +207,12 @@
             gap: 10px;
         }
 
+        .support-footer {
+            margin-top: 16px;
+            padding-top: 8px;
+            border-top: 1px solid #d7e0e6;
+        }
+
         .support-links a {
             text-decoration: none;
             border: 1px solid var(--line);
@@ -494,13 +500,6 @@
             <button id="refreshSummary" type="button" class="summary-refresh">Refresh Summary</button>
         </div>
 
-        <section class="support-links" aria-label="Vendor support links">
-            <a href="/terms-of-service">Terms of Service</a>
-            <a href="/privacy-policy">Privacy Policy</a>
-            <a href="mailto:support@workation.mv">Email Support</a>
-            <a href="{{ $apiBase }}/api/v1/ops/runbooks" target="_blank" rel="noopener">Operations Runbooks</a>
-        </section>
-
         @if (session('portal_notice'))
             <div class="notice" role="status" aria-live="polite">{{ session('portal_notice') }}</div>
         @endif
@@ -597,6 +596,13 @@
                 <pre id="output">Ready. Save token, then run an endpoint.</pre>
             </article>
         </section>
+
+        <footer class="support-links support-footer" aria-label="Global support links">
+            <a href="/terms-of-service">Terms of Service</a>
+            <a href="/privacy-policy">Privacy Policy</a>
+            <a href="mailto:support@workation.mv">Email Support</a>
+            <a href="{{ $apiBase }}/api/v1/ops/runbooks" target="_blank" rel="noopener">Operations Runbooks</a>
+        </footer>
     </main>
 
     <script>

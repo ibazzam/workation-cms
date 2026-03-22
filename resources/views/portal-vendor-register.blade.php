@@ -9,11 +9,12 @@
     <style>
         :root {
             --ink: #222222;
-            --muted: #5a5a5a;
+            --muted: #424242;
             --line: #d9d9d9;
             --brand: #0f6288;
             --brand-dark: #0c4f6d;
             --bg: #f7f7f7;
+            --focus: #0b6aa2;
         }
 
         * { box-sizing: border-box; }
@@ -37,6 +38,25 @@
             border: 1px solid var(--line);
             border-radius: 16px;
             overflow: hidden;
+        }
+
+        .footer-links {
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .footer-links a {
+            text-decoration: none;
+            border: 1px solid #c8d3df;
+            border-radius: 10px;
+            background: #fff;
+            color: #20415d;
+            padding: 9px 10px;
+            font-weight: 700;
+            font-size: 0.82rem;
+            text-align: center;
         }
 
         .shell-head {
@@ -107,6 +127,16 @@
             padding: 10px 12px;
             font-size: 0.95rem;
             background: #fff;
+        }
+
+        input:focus-visible,
+        select:focus-visible,
+        button:focus-visible,
+        a:focus-visible,
+        .social-btn:focus-visible {
+            outline: 3px solid color-mix(in srgb, var(--focus) 28%, transparent);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 2px #ffffff;
         }
 
         .error {
@@ -306,19 +336,19 @@
             <h1>Welcome to Workation</h1>
 
             @if ($errors->any())
-                <div class="error">{{ $errors->first() }}</div>
+                <div class="error" role="alert" aria-live="assertive">{{ $errors->first() }}</div>
             @endif
 
             @if (session('status'))
-                <div class="ok">{{ session('status') }}</div>
+                <div class="ok" role="status" aria-live="polite">{{ session('status') }}</div>
             @endif
 
             @if (session('oauth_retry_guidance'))
-                <div class="hint">{{ session('oauth_retry_guidance') }}</div>
+                <div class="hint" role="status" aria-live="polite">{{ session('oauth_retry_guidance') }}</div>
             @endif
 
             @if (session('otp_delivery_guidance'))
-                <div class="hint">{{ session('otp_delivery_guidance') }}</div>
+                <div class="hint" role="status" aria-live="polite">{{ session('otp_delivery_guidance') }}</div>
             @endif
 
             @if ($currentMode === 'email')
@@ -330,7 +360,7 @@
                         @csrf
                         <div class="field">
                             <label for="otp_identifier">Email Address or Phone Number</label>
-                            <input id="otp_identifier" name="identifier" type="text" value="{{ $prefillIdentifier }}" placeholder="name@example.com or +960..." required>
+                            <input id="otp_identifier" name="identifier" type="text" value="{{ $prefillIdentifier }}" placeholder="name@example.com or +960..." autocomplete="username" required>
                         </div>
 
                         <div class="actions">
@@ -376,12 +406,12 @@
                         @csrf
                         <div class="field">
                             <label for="verify_identifier">Email Address or Phone Number</label>
-                            <input id="verify_identifier" name="identifier" type="text" value="{{ $prefillIdentifier }}" required>
+                            <input id="verify_identifier" name="identifier" type="text" value="{{ $prefillIdentifier }}" autocomplete="username" required>
                         </div>
 
                         <div class="field">
                             <label for="otp_code">OTP Code</label>
-                            <input id="otp_code" name="otp" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="6-digit code" required>
+                            <input id="otp_code" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="6-digit code" required>
                         </div>
 
                         <div class="actions">
@@ -417,12 +447,12 @@
 
                         <div class="field">
                             <label for="contact_phone">Contact Number</label>
-                            <input id="contact_phone" name="contact_phone" type="text" value="{{ $prefillContactPhone }}" placeholder="+960..." required>
+                            <input id="contact_phone" name="contact_phone" type="text" value="{{ $prefillContactPhone }}" placeholder="+960..." autocomplete="tel" required>
                         </div>
 
                         <div class="field field-full">
-                            <label>
-                                <input type="checkbox" name="agree_terms" value="1" {{ old('agree_terms') ? 'checked' : '' }} style="width:auto;margin-right:6px;">
+                            <label for="agree_terms">
+                                <input id="agree_terms" type="checkbox" name="agree_terms" value="1" {{ old('agree_terms') ? 'checked' : '' }} style="width:auto;margin-right:6px;">
                                 I agree to the Terms of Service and Privacy Policy.
                             </label>
                         </div>
@@ -434,12 +464,15 @@
                 </section>
             @endif
 
-            <div class="actions" style="margin-top:10px;justify-content:space-between;">
-                <a href="/">Back to Home</a>
-                <a href="/terms-of-service">Terms</a>
-            </div>
             </div>
         </section>
+
+        <footer class="footer-links" aria-label="Global support links">
+            <a href="/terms-of-service">Terms of Service</a>
+            <a href="/privacy-policy">Privacy Policy</a>
+            <a href="mailto:support@workation.mv">Email Support</a>
+            <a href="https://api.workation.mv/api/v1/ops/runbooks" target="_blank" rel="noopener">Operations Runbooks</a>
+        </footer>
     </main>
 </body>
 <script>

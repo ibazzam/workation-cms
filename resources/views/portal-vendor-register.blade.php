@@ -317,6 +317,10 @@
                 <div class="hint">{{ session('oauth_retry_guidance') }}</div>
             @endif
 
+            @if (session('otp_delivery_guidance'))
+                <div class="hint">{{ session('otp_delivery_guidance') }}</div>
+            @endif
+
             @if ($currentMode === 'email')
                 <section id="email-auth" class="otp-shell" aria-label="Email Login and Signup">
                     <h2 class="otp-title">Continue with Email or Phone</h2>

@@ -236,7 +236,9 @@
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
-            justify-content: flex-end;
+            justify-content: center;
+            border-top: 1px solid #c9d8df;
+            padding-top: 14px;
         }
 
         .footer-link {
@@ -322,10 +324,11 @@
             </article>
         </section>
 
-        <footer class="footer-nav" aria-label="Portal links">
-            <a class="footer-link" href="/admin">Admin Portal</a>
-            <a class="footer-link" href="/vendor">Vendor Portal</a>
-            <a class="footer-link" href="{{ $apiBase }}/api/v1/ops/metrics" target="_blank" rel="noopener">Public Metrics</a>
+        <footer class="footer-nav" aria-label="Global support links">
+            <a class="footer-link" href="/terms-of-service">Terms of Service</a>
+            <a class="footer-link" href="/privacy-policy">Privacy Policy</a>
+            <a class="footer-link" href="mailto:support@workation.mv">Email Support</a>
+            <a class="footer-link" href="{{ $apiBase }}/api/v1/ops/runbooks" target="_blank" rel="noopener">Operations Runbooks</a>
         </footer>
     </div>
 

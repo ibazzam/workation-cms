@@ -22,6 +22,7 @@ Target: complete launch-critical portal work by March 31, 2026.
 - [x] Ensure canonical host consistency across all auth entry points (www vs non-www)
 - [x] Add vendor register page smoke test for each social provider button visibility
 - [x] Add production runbook section for social auth verification steps
+- [x] Verify accessibility basics on portal login/register screens (labels, focus states, contrast)
 - [ ] Add production runbook section for social auth verification steps
 - [ ] Verify accessibility basics on portal login/register screens (labels, focus states, contrast)
 

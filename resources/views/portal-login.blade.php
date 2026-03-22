@@ -9,8 +9,9 @@
     <style>
         :root {
             --ink: #182433;
-            --muted: #5a6677;
+            --muted: #425164;
             --line: #d6dfe7;
+            --focus: #0b6aa2;
         }
 
         * { box-sizing: border-box; }
@@ -35,6 +36,10 @@
             border-radius: 16px;
             padding: 22px;
             box-shadow: 0 22px 44px rgba(20, 38, 58, 0.14);
+        }
+
+        .frame {
+            width: min(640px, 94vw);
         }
 
         .eyebrow {
@@ -70,6 +75,14 @@
             padding: 10px 12px;
             margin-bottom: 12px;
             font-size: 0.95rem;
+        }
+
+        input:focus-visible,
+        button:focus-visible,
+        a:focus-visible {
+            outline: 3px solid color-mix(in srgb, var(--focus) 28%, transparent);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 2px #ffffff;
         }
 
         .error {
@@ -116,9 +129,41 @@
             font-weight: 600;
             font-size: 0.9rem;
         }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .footer-links {
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .footer-links a {
+            text-decoration: none;
+            border: 1px solid #c8d3df;
+            border-radius: 10px;
+            background: #fff;
+            color: #20415d;
+            padding: 9px 10px;
+            font-weight: 700;
+            font-size: 0.82rem;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
+    <main class="frame">
     <section class="card">
         <span class="eyebrow">Secure Access</span>
         <h1>{{ $portalName }} Portal Login</h1>
@@ -131,15 +176,16 @@
         @endif
 
         @if ($errors->any())
-            <div class="error">{{ $errors->first() }}</div>
+            <div class="error" role="alert" aria-live="assertive">{{ $errors->first() }}</div>
         @endif
 
         @if (session('status'))
-            <div class="error" style="color:#0d5a2a;border-color:#a6d8b6;background:#e8f8ee;">{{ session('status') }}</div>
+            <div class="error" role="status" aria-live="polite" style="color:#0d5a2a;border-color:#a6d8b6;background:#e8f8ee;">{{ session('status') }}</div>
         @endif
 
-        <form method="POST" action="/portal/{{ $portal }}/login">
+        <form method="POST" action="/portal/{{ $portal }}/login" aria-describedby="portal-login-hint">
             @csrf
+            <p id="portal-login-hint" class="sr-only">Enter your username and password, then submit to sign in.</p>
             <label for="username">Username</label>
             <input id="username" name="username" type="text" value="{{ old('username') }}" autocomplete="username" required>
 
@@ -156,6 +202,14 @@
             </div>
         </form>
     </section>
+
+    <footer class="footer-links" aria-label="Global support links">
+        <a href="/terms-of-service">Terms of Service</a>
+        <a href="/privacy-policy">Privacy Policy</a>
+        <a href="mailto:support@workation.mv">Email Support</a>
+        <a href="https://api.workation.mv/api/v1/ops/runbooks" target="_blank" rel="noopener">Operations Runbooks</a>
+    </footer>
+    </main>
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {

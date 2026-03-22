@@ -250,6 +250,7 @@ if (!function_exists('vendorDeliverOtpCode')) {
         $twilioWhatsappFrom = trim((string) env('TWILIO_WHATSAPP_FROM', ''));
         $twilioWhatsappContentSid = trim((string) env('TWILIO_WHATSAPP_CONTENT_SID', ''));
         $phoneChannel = strtolower(trim((string) env('TWILIO_PHONE_CHANNEL', 'sms')));
+
         $useWhatsApp = in_array($phoneChannel, ['whatsapp', 'wa', 'auto'], true);
         $normalizePhoneE164 = static function (string $value): string {
             $candidate = trim($value);
@@ -265,11 +266,15 @@ if (!function_exists('vendorDeliverOtpCode')) {
             return '+' . $digitsOnly;
         };
 
+        $useWhatsApp = in_array($phoneChannel, ['whatsapp', 'wa'], true);
+
+
         if ($twilioSid === '' || $twilioToken === '') {
             throw new \RuntimeException('Phone OTP is not configured. Missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN.');
         }
 
         if ($useWhatsApp) {
+
             if ($twilioWhatsappFrom === '' && $phoneChannel !== 'auto') {
                 throw new \RuntimeException('WhatsApp OTP is enabled but TWILIO_WHATSAPP_FROM is missing.');
             }
@@ -366,6 +371,38 @@ if (!function_exists('vendorDeliverOtpCode')) {
             }
 
             throw new \RuntimeException('WhatsApp OTP delivery failed and SMS fallback is not configured.');
+          
+            if ($twilioWhatsappFrom === '') {
+                throw new \RuntimeException('WhatsApp OTP is enabled but TWILIO_WHATSAPP_FROM is missing.');
+            }
+
+            $whatsAppTo = str_starts_with($destination, 'whatsapp:') ? $destination : 'whatsapp:' . ltrim($destination, '+');
+            if (!str_starts_with($whatsAppTo, 'whatsapp:+')) {
+                $whatsAppTo = 'whatsapp:+' . ltrim(str_replace('whatsapp:', '', $whatsAppTo), '+');
+            }
+
+            $payload = [
+                'From' => $twilioWhatsappFrom,
+                'To' => $whatsAppTo,
+            ];
+
+            if ($twilioWhatsappContentSid !== '') {
+                $payload['ContentSid'] = $twilioWhatsappContentSid;
+                $payload['ContentVariables'] = json_encode(['1' => $otpCode]);
+            } else {
+                // Sandbox/testing fallback if no template SID has been configured.
+                $payload['Body'] = 'Your Workation vendor verification code is ' . $otpCode . '. It expires in 10 minutes.';
+            }
+
+            $waResponse = Http::withBasicAuth($twilioSid, $twilioToken)
+                ->asForm()
+                ->post('https://api.twilio.com/2010-04-01/Accounts/' . $twilioSid . '/Messages.json', $payload);
+
+            if (!$waResponse->successful()) {
+                throw new \RuntimeException('WhatsApp OTP delivery failed with status ' . $waResponse->status() . '.');
+            }
+
+            return;
         }
 
         if ($twilioFrom === '') {

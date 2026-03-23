@@ -117,11 +117,17 @@
             background: rgba(11, 49, 75, 0.32);
         }
 
+        .portal-shell {
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: 252px minmax(0, 1fr);
+            gap: 12px;
+            align-items: start;
+        }
+
         .portal-nav {
             position: sticky;
             top: 12px;
-            margin-top: 12px;
-            width: 252px;
             display: flex;
             flex-direction: column;
             gap: 8px;
@@ -129,6 +135,10 @@
             border: 1px solid var(--line);
             border-radius: 14px;
             background: #f7fbff;
+        }
+
+        .portal-content {
+            min-width: 0;
         }
 
         .portal-nav a {
@@ -164,10 +174,8 @@
             background: #f8fbff;
         }
 
-        .portal-nav ~ section,
-        .portal-nav ~ div,
-        .portal-nav ~ footer {
-            margin-left: 268px;
+        .portal-content section {
+            scroll-margin-top: 16px;
         }
 
         .layout {
@@ -897,9 +905,12 @@
                 grid-template-columns: 1fr;
             }
 
+            .portal-shell {
+                grid-template-columns: 1fr;
+            }
+
             .portal-nav {
                 position: static;
-                width: 100%;
                 overflow-x: auto;
                 white-space: nowrap;
                 flex-direction: row;
@@ -911,12 +922,6 @@
             }
 
             .portal-nav a.menu-sub {
-                margin-left: 0;
-            }
-
-            .portal-nav ~ section,
-            .portal-nav ~ div,
-            .portal-nav ~ footer {
                 margin-left: 0;
             }
 
@@ -1020,6 +1025,7 @@
             </div>
         </section>
 
+        <div class="portal-shell">
         <nav class="portal-nav" aria-label="Vendor navigation">
             <span class="menu-title">Overview</span>
             <a href="#vendorSummary">Dashboard Summary</a>
@@ -1049,6 +1055,8 @@
             <a href="#vendorAuthCard" class="menu-sub">Token</a>
             <a href="#vendorApiCard" class="menu-sub">API Actions</a>
         </nav>
+
+        <div class="portal-content">
 
         <section id="vendorSummary" class="summary-grid" aria-label="Vendor dashboard summary">
             <article class="summary-card">
@@ -2095,6 +2103,8 @@
             <a href="mailto:support@workation.mv">Email Support</a>
             <a href="{{ $apiBase }}/api/v1/ops/runbooks" target="_blank" rel="noopener">Operations Runbooks</a>
         </footer>
+        </div>
+        </div>
     </main>
 
     <script>

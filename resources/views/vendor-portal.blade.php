@@ -1197,7 +1197,7 @@
             <a href="#profile" data-panel-key="profile">Profile / Update</a>
             <a href="#listings" data-panel-key="listings">Add Listings</a>
             <a href="#reservations" data-panel-key="reservations">Reservations / Bookings</a>
-            <a href="#profile" data-panel-key="profile">Billing / Daily Collection</a>
+            <a href="#billing" data-panel-key="billing">Billing / Daily Collection</a>
             <a href="#api" data-panel-key="api">API Tools</a>
         </nav>
 
@@ -1309,8 +1309,7 @@
             <div class="panel-links" aria-label="Profile actions">
                 <a href="#vendorProfileCard">Profile Settings</a>
                 <a href="#vendorCategoryWizard">Category Setup</a>
-                <a href="#vendorProfileBillingSettings">Billing Settings</a>
-                <a href="#vendorDailyCollectionSection">Daily Collection</a>
+                <a href="#billing">Billing Settings</a>
             </div>
             <form method="POST" action="/portal/vendor/profile/update">
                 @csrf
@@ -1410,7 +1409,7 @@
             </div>
         </section>
 
-        <section id="vendorProfileBillingSettings" class="card ops-section" aria-label="Vendor billing settings" data-panel-group="profile">
+        <section id="vendorProfileBillingSettings" class="card ops-section" aria-label="Vendor billing settings" data-panel-group="billing">
             <div class="ops-header">
                 <p class="ops-title">Billing Details</p>
                 <span class="ops-chip">{{ $vendorBilling ? 'Configured' : 'Pending' }}</span>
@@ -1510,9 +1509,10 @@
             </div>
             <div class="listing-wizard-controls">
                 <button type="button" class="btn btn-primary" id="startListingWizard">Start Add Listings Wizard</button>
-                <a class="hero-link" href="#vendorPropertiesSection">Step 1: Property Details</a>
-                <a class="hero-link" href="#vendorRoomsSection">Step 2: Room Setup</a>
-                <a class="hero-link" href="#vendorMediaSection">Step 3: Upload Pictures</a>
+                <a class="hero-link" href="#vendorPropertiesSection" data-wizard-step="1">Step 1: Property Details</a>
+                <a class="hero-link" href="#vendorPropertiesSection" data-wizard-step="2">Step 2: Review Property</a>
+                <a class="hero-link" href="#vendorRoomsSection" data-wizard-step="3">Step 3: Room Setup</a>
+                <a class="hero-link" href="#vendorMediaSection" data-wizard-step="4">Step 4: Upload Pictures</a>
             </div>
             <div class="wizard-progress" aria-label="Listings wizard progress">
                 <article class="wizard-progress-step @if($listingWizardStep > 1) is-complete @elseif($listingWizardStep === 1) is-active @endif">
@@ -1563,7 +1563,7 @@
             </div>
         </section>
 
-        <section id="vendorPropertiesSection" class="card ops-section" aria-label="Vendor properties" data-panel-group="listings">
+        <section id="vendorPropertiesSection" class="card ops-section" aria-label="Vendor properties" data-panel-group="listings" data-listing-step="1">
             <div class="ops-header">
                 <p class="ops-title">Properties and Listings</p>
                 <span class="ops-chip">{{ $vendorProperties->count() }} total</span>
@@ -1776,7 +1776,7 @@
         </section>
 
         @if ($supportsAccommodation)
-            <section id="vendorRoomsSection" class="card ops-section" aria-label="Vendor room categories" data-panel-group="listings">
+            <section id="vendorRoomsSection" class="card ops-section" aria-label="Vendor room categories" data-panel-group="listings" data-listing-step="2">
                 <div class="ops-header">
                     <p class="ops-title">Room Categories (Accommodation)</p>
                     <span class="ops-chip">{{ $vendorRoomCategories->count() }} total</span>
@@ -1893,7 +1893,7 @@
             </section>
         @endif
 
-        <section id="vendorMediaSection" class="card ops-section" aria-label="Vendor listing photos" data-panel-group="listings">
+        <section id="vendorMediaSection" class="card ops-section" aria-label="Vendor listing photos" data-panel-group="listings" data-listing-step="3">
             <div class="ops-header">
                 <p class="ops-title">Photos and Media</p>
                 <span class="ops-chip">{{ $vendorMediaAssets->count() }} uploaded</span>
@@ -2013,7 +2013,7 @@
             </div>
         </section>
 
-        <section id="vendorServicesSection" class="card ops-section" aria-label="Vendor services" data-panel-group="listings">
+        <section id="vendorServicesSection" class="card ops-section" aria-label="Vendor services" data-panel-group="listings" data-listing-step="1">
             <div class="ops-header">
                 <p class="ops-title">Services Catalog</p>
                 <span class="ops-chip">{{ $vendorServices->count() }} total</span>
@@ -2393,7 +2393,7 @@
             </div>
         </section>
 
-        <section id="vendorDailyCollectionSection" class="card ops-section" aria-label="Vendor daily collection and settlements" data-panel-group="profile">
+        <section id="vendorDailyCollectionSection" class="card ops-section" aria-label="Vendor daily collection and settlements" data-panel-group="billing">
             <div class="ops-header">
                 <p class="ops-title">Daily Collection and Payout Ledger</p>
                 <span class="ops-chip">Commission {{ (int) ($commissionRate * 100) }}%</span>
@@ -2545,6 +2545,7 @@
             const payoutRows = document.getElementById("payoutRows");
             const navLinks = Array.from(document.querySelectorAll('.portal-nav a[data-panel-key]'));
             const panelGroups = Array.from(document.querySelectorAll('[data-panel-group]'));
+            const listingStepPanels = Array.from(document.querySelectorAll('[data-listing-step]'));
             const validPanelKeys = new Set(navLinks.map((link) => String(link.dataset.panelKey || "")).filter(Boolean));
             const locationCountry = document.getElementById("location_country");
             const locationState = document.getElementById("location_state");
@@ -2556,8 +2557,10 @@
             const billingState = document.getElementById("billing_state");
             const billingCity = document.getElementById("billing_city");
             const startListingWizard = document.getElementById("startListingWizard");
-            const serverPanelKey = "{{ in_array($forcedPanelKey, ['overview', 'profile', 'listings', 'reservations', 'api'], true) ? $forcedPanelKey : '' }}";
+            const serverPanelKey = "{{ in_array($forcedPanelKey, ['overview', 'profile', 'listings', 'billing', 'reservations', 'api'], true) ? $forcedPanelKey : '' }}";
             const listingWizardStep = Number("{{ $listingWizardStep }}") || 1;
+            let listingWizardStarted = serverPanelKey === "listings";
+            let listingWizardPanelStep = 1;
 
             const SESSION_KEY = "workation_vendor_token";
 
@@ -2875,6 +2878,12 @@
                     panel.hidden = (panel.getAttribute("data-panel-group") || "") !== panelKey;
                 });
                 setActiveNavLink(panelKey);
+
+                if (panelKey === "listings") {
+                    applyListingWizardVisibility();
+                } else {
+                    setListingPanelsHidden(true);
+                }
             }
 
             function resolvePanelFromHash(hashValue) {
@@ -2894,6 +2903,41 @@
                 const targetEl = document.getElementById(targetId);
                 if (!targetEl) return;
                 targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+
+            function listingPanelStepFromWizardStep(step) {
+                const safeStep = Math.max(1, Math.min(4, Number(step) || 1));
+                if (safeStep >= 4) return 3;
+                if (safeStep >= 3) return 2;
+                return 1;
+            }
+
+            function setListingPanelsHidden(hidden) {
+                listingStepPanels.forEach((panel) => {
+                    panel.hidden = hidden;
+                });
+            }
+
+            function applyListingWizardVisibility() {
+                if (!listingWizardStarted) {
+                    setListingPanelsHidden(true);
+                    return;
+                }
+
+                const activeStepPanel = Math.max(1, Math.min(3, Number(listingWizardPanelStep) || 1));
+                listingStepPanels.forEach((panel) => {
+                    const panelStep = Number(panel.getAttribute("data-listing-step") || "0");
+                    panel.hidden = panelStep !== activeStepPanel;
+                });
+            }
+
+            function activateListingWizardStep(wizardStep, shouldScroll) {
+                listingWizardStarted = true;
+                listingWizardPanelStep = listingPanelStepFromWizardStep(wizardStep);
+                applyListingWizardVisibility();
+                if (shouldScroll) {
+                    focusListingsWizardStep(wizardStep);
+                }
             }
 
             const LOCATION_TREE = {
@@ -3200,9 +3244,19 @@
                 startListingWizard.addEventListener("click", function () {
                     window.location.hash = "listings";
                     showPanelGroup("listings");
-                    focusListingsWizardStep(1);
+                    activateListingWizardStep(1, true);
                 });
             }
+
+            document.querySelectorAll('[data-wizard-step]').forEach((link) => {
+                link.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    window.location.hash = "listings";
+                    showPanelGroup("listings");
+                    const targetStep = Number(link.getAttribute("data-wizard-step") || "1");
+                    activateListingWizardStep(targetStep, true);
+                });
+            });
 
             if (locationCountry && locationState && locationCity) {
                 refreshLocationSelectors();
@@ -3236,9 +3290,14 @@
 
             const hashPanelKey = resolvePanelFromHash(window.location.hash || "#overview");
             const initialPanelKey = serverPanelKey && validPanelKeys.has(serverPanelKey) ? serverPanelKey : hashPanelKey;
+            listingWizardPanelStep = listingPanelStepFromWizardStep(listingWizardStep);
             showPanelGroup(initialPanelKey);
             if (initialPanelKey === "listings") {
-                focusListingsWizardStep(listingWizardStep);
+                if (serverPanelKey === "listings") {
+                    activateListingWizardStep(listingWizardStep, true);
+                } else {
+                    applyListingWizardVisibility();
+                }
             }
         })();
     </script>

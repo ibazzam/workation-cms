@@ -1079,7 +1079,7 @@
             <a href="#profile" data-panel-key="profile">Profile / Update</a>
             <a href="#listings" data-panel-key="listings">Add Listings</a>
             <a href="#reservations" data-panel-key="reservations">Reservations / Bookings</a>
-            <a href="#billing" data-panel-key="billing">Billing / Daily Collection</a>
+            <a href="#profile" data-panel-key="profile">Billing / Daily Collection</a>
             <a href="#api" data-panel-key="api">API Tools</a>
         </nav>
 
@@ -1191,6 +1191,7 @@
             <div class="panel-links" aria-label="Profile actions">
                 <a href="#vendorProfileCard">Profile Settings</a>
                 <a href="#vendorCategoryWizard">Category Setup</a>
+                <a href="#vendorBillingSection">Billing Settings</a>
             </div>
             <form method="POST" action="/portal/vendor/profile/update">
                 @csrf
@@ -2066,7 +2067,7 @@
             </div>
         </section>
 
-        <section id="vendorBillingSection" class="card ops-section" aria-label="Vendor billing details" data-panel-group="billing">
+        <section id="vendorBillingSection" class="card ops-section" aria-label="Vendor billing details" data-panel-group="profile">
             <div class="ops-header">
                 <p class="ops-title">Billing Details</p>
                 <span class="ops-chip">{{ $vendorBilling ? 'Configured' : 'Pending' }}</span>
@@ -2107,12 +2108,19 @@
                         <input id="billing_bank_name" name="bank_name" class="ops-input" type="text" maxlength="190" value="{{ old('bank_name', optional($vendorBilling)->bank_name ?? '') }}">
                     </div>
                     <div class="ops-field">
+                        <label for="billing_swift_code">SWIFT Code</label>
+                        <input id="billing_swift_code" name="swift_code" class="ops-input" type="text" maxlength="20" value="{{ old('swift_code', optional($vendorBilling)->swift_code ?? '') }}" placeholder="e.g. MALAADMV">
+                    </div>
+                    <div class="ops-field">
                         <label for="billing_bank_last4">Bank Account Last 4</label>
                         <input id="billing_bank_last4" name="bank_account_last4" class="ops-input" type="text" maxlength="8" value="{{ old('bank_account_last4', optional($vendorBilling)->bank_account_last4 ?? '') }}">
                     </div>
                     <div class="ops-field">
                         <label for="billing_currency">Currency</label>
-                        <input id="billing_currency" name="currency" class="ops-input" type="text" maxlength="8" value="{{ old('currency', optional($vendorBilling)->currency ?? 'MVR') }}">
+                        <select id="billing_currency" name="currency" class="ops-select" required>
+                            <option value="MVR" @selected(strtoupper((string) old('currency', optional($vendorBilling)->currency ?? 'MVR')) === 'MVR')>MVR</option>
+                            <option value="USD" @selected(strtoupper((string) old('currency', optional($vendorBilling)->currency ?? 'MVR')) === 'USD')>USD</option>
+                        </select>
                     </div>
                     <div class="ops-field">
                         <label for="billing_invoice_prefix">Invoice Prefix</label>
@@ -2882,4 +2890,3 @@
     </script>
 </body>
 </html>
-

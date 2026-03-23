@@ -738,6 +738,108 @@
             color: #4f6479;
         }
 
+        .listing-wizard-controls {
+            margin: 10px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .wizard-progress {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .wizard-progress-step {
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            background: #fff;
+            padding: 8px;
+            font-size: 0.78rem;
+            color: #4b6075;
+        }
+
+        .wizard-progress-step strong {
+            display: block;
+            color: #1f3346;
+            margin-bottom: 2px;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            font-size: 0.74rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .wizard-progress-step.is-active {
+            border-color: #0f6d5f;
+            background: #e8f5ef;
+        }
+
+        .wizard-progress-step.is-complete {
+            border-color: #77bfa2;
+            background: #f2faf6;
+        }
+
+        .inline-table-form {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 6px;
+            align-items: end;
+        }
+
+        .inline-table-form .ops-input,
+        .inline-table-form .ops-select {
+            padding: 7px 8px;
+            font-size: 0.78rem;
+        }
+
+        .inline-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .btn-danger {
+            background: #a33535;
+            color: #fff;
+        }
+
+        .gallery-grid {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .gallery-card {
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .gallery-card img {
+            width: 100%;
+            height: 130px;
+            object-fit: cover;
+            display: block;
+            background: #edf2f7;
+        }
+
+        .gallery-meta {
+            padding: 8px;
+            font-size: 0.76rem;
+            color: #30485e;
+        }
+
+        .gallery-meta strong {
+            display: block;
+            color: #1f3346;
+            margin-bottom: 2px;
+        }
+
         .standards-note {
             margin-top: 6px;
             font-size: 0.78rem;
@@ -931,6 +1033,12 @@
                 grid-template-columns: 1fr;
             }
 
+            .wizard-progress,
+            .gallery-grid,
+            .inline-table-form {
+                grid-template-columns: 1fr;
+            }
+
             .payout-grid {
                 grid-template-columns: 1fr;
             }
@@ -1003,6 +1111,16 @@
         $categorySet = collect($selectedVendorCategories)->flip();
         $supportsAccommodation = $categorySet->has('accommodation');
         $hasSelectedCategories = count($selectedVendorCategories) > 0;
+        $listingWizardStep = (int) session('listing_wizard_step', 1);
+        $listingWizardStep = max(1, min(4, $listingWizardStep));
+        $forcedPanelKey = (string) session('portal_active_panel', '');
+        $propertyMediaAssets = $vendorMediaAssets->filter(static function ($media): bool {
+            return strtolower((string) ($media->entity_type ?? '')) === 'property';
+        });
+        $roomMediaAssets = $vendorMediaAssets->filter(static function ($media): bool {
+            return strtolower((string) ($media->entity_type ?? '')) === 'room';
+        });
+        $roomLookupById = $vendorRoomCategories->keyBy('id');
         $commissionRate = 0.12;
         $billingLedgerRows = $vendorReservations->take(50)->map(function ($reservation) use ($commissionRate) {
             $gross = (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0);
@@ -1246,99 +1364,6 @@
                 <button class="btn btn-primary" type="submit">Save Profile Settings</button>
             </form>
 
-            <div id="vendorProfileBillingSettings" class="ops-section" aria-label="Vendor billing settings">
-                <div class="ops-header">
-                    <p class="ops-title">Billing Details</p>
-                    <span class="ops-chip">{{ $vendorBilling ? 'Configured' : 'Pending' }}</span>
-                </div>
-                <form class="ops-form" method="POST" action="/portal/vendor/billing/update">
-                    @csrf
-                    <div class="ops-form-grid">
-                        <div class="ops-field">
-                            <label for="billing_business_name">Business Name</label>
-                            <input id="billing_business_name" name="business_name" class="ops-input" type="text" maxlength="190" value="{{ old('business_name', optional($vendorBilling)->business_name ?? '') }}" required>
-                        </div>
-                        <div class="ops-field">
-                            <label for="billing_tax_id">Tax ID</label>
-                            <input id="billing_tax_id" name="tax_id" class="ops-input" type="text" maxlength="120" value="{{ old('tax_id', optional($vendorBilling)->tax_id ?? '') }}">
-                        </div>
-                        <div class="ops-field">
-                            <label for="billing_email">Billing Email</label>
-                            <input id="billing_email" name="billing_email" class="ops-input" type="email" maxlength="190" value="{{ old('billing_email', optional($vendorBilling)->billing_email ?? '') }}" required>
-                        </div>
-                        <div class="ops-field">
-                            <label for="billing_payout_method">Payout Method</label>
-                            <select id="billing_payout_method" name="payout_method" class="ops-select" required>
-                                <option value="bank_transfer" @selected((optional($vendorBilling)->payout_method ?? '') === 'bank_transfer')>Bank Transfer</option>
-                                <option value="mobile_wallet" @selected((optional($vendorBilling)->payout_method ?? '') === 'mobile_wallet')>Mobile Wallet</option>
-                                <option value="manual" @selected((optional($vendorBilling)->payout_method ?? '') === 'manual')>Manual</option>
-                            </select>
-                        </div>
-                        <div class="ops-field">
-                            <label for="billing_beneficiary_name">Beneficiary / Account Name</label>
-                            <input id="billing_beneficiary_name" name="beneficiary_name" class="ops-input" type="text" maxlength="190" value="{{ old('beneficiary_name', optional($vendorBilling)->beneficiary_name ?? '') }}" required>
-                        </div>
-                        <div class="ops-field">
-                            <label for="billing_payout_reference">Payout Reference</label>
-                            <input id="billing_payout_reference" name="payout_reference" class="ops-input" type="text" maxlength="190" value="{{ old('payout_reference', optional($vendorBilling)->payout_reference ?? '') }}">
-                        </div>
-                        <div class="ops-field">
-                            <label for="billing_bank_name">Bank Name</label>
-                            <input id="billing_bank_name" name="bank_name" class="ops-input" type="text" maxlength="190" value="{{ old('bank_name', optional($vendorBilling)->bank_name ?? '') }}">
-                        </div>
-                        <div class="ops-field">
-                            <label for="billing_swift_code">SWIFT Code</label>
-                            <input id="billing_swift_code" name="swift_code" class="ops-input" type="text" maxlength="20" value="{{ old('swift_code', optional($vendorBilling)->swift_code ?? '') }}" placeholder="e.g. MALAADMV">
-                        </div>
-                        <div class="ops-field">
-                            <label for="billing_account_number">Account Number (Full)</label>
-                            <input id="billing_account_number" name="bank_account_number" class="ops-input" type="text" maxlength="60" value="{{ old('bank_account_number', optional($vendorBilling)->bank_account_number ?? '') }}" required>
-                        </div>
-                        <div class="ops-field">
-                            <label for="billing_currency">Currency</label>
-                            <select id="billing_currency" name="currency" class="ops-select" required>
-                                <option value="MVR" @selected(strtoupper((string) old('currency', optional($vendorBilling)->currency ?? 'MVR')) === 'MVR')>MVR</option>
-                                <option value="USD" @selected(strtoupper((string) old('currency', optional($vendorBilling)->currency ?? 'MVR')) === 'USD')>USD</option>
-                            </select>
-                        </div>
-                        <div class="ops-field ops-field-wide">
-                            <label for="billing_street_name">Address: Street Name</label>
-                            <input id="billing_street_name" name="billing_street_name" class="ops-input" type="text" maxlength="255" value="{{ old('billing_street_name', optional($vendorBilling)->billing_street_name ?? '') }}" required>
-                        </div>
-                        <div class="ops-field">
-                            <label for="billing_country">Country</label>
-                            <select id="billing_country" name="billing_country" class="ops-select" required>
-                                <option value="Maldives" @selected(old('billing_country', optional($vendorBilling)->billing_country ?? 'Maldives') === 'Maldives')>Maldives</option>
-                                <option value="Sri Lanka" @selected(old('billing_country', optional($vendorBilling)->billing_country ?? '') === 'Sri Lanka')>Sri Lanka</option>
-                                <option value="India" @selected(old('billing_country', optional($vendorBilling)->billing_country ?? '') === 'India')>India</option>
-                                <option value="Other" @selected(old('billing_country', optional($vendorBilling)->billing_country ?? '') === 'Other')>Other</option>
-                            </select>
-                        </div>
-                        <div class="ops-field">
-                            <label for="billing_state">State / Province / Atoll</label>
-                            <select id="billing_state" name="billing_state" class="ops-select" required>
-                                <option value="">Select state/province</option>
-                            </select>
-                        </div>
-                        <div class="ops-field">
-                            <label for="billing_city">City / Island</label>
-                            <select id="billing_city" name="billing_city" class="ops-select" required>
-                                <option value="">Select city/island</option>
-                            </select>
-                        </div>
-                        <div class="ops-field">
-                            <label for="billing_invoice_prefix">Invoice Prefix</label>
-                            <input id="billing_invoice_prefix" name="invoice_prefix" class="ops-input" type="text" maxlength="30" value="{{ old('invoice_prefix', optional($vendorBilling)->invoice_prefix ?? 'INV') }}">
-                        </div>
-                        <div class="ops-field ops-field-wide">
-                            <label for="billing_address">Additional Address Details (optional)</label>
-                            <textarea id="billing_address" name="billing_address" class="ops-textarea" maxlength="2000">{{ old('billing_address', optional($vendorBilling)->billing_address ?? '') }}</textarea>
-                        </div>
-                    </div>
-                    <button class="btn btn-primary" type="submit">Save Billing Details</button>
-                </form>
-            </div>
-
             <div id="vendorCategoryWizard" class="ops-section" aria-label="Vendor category setup wizard">
             <div class="ops-header">
                 <p class="ops-title">Category-Based Listing Wizard</p>
@@ -1385,10 +1410,127 @@
             </div>
         </section>
 
+        <section id="vendorProfileBillingSettings" class="card ops-section" aria-label="Vendor billing settings" data-panel-group="profile">
+            <div class="ops-header">
+                <p class="ops-title">Billing Details</p>
+                <span class="ops-chip">{{ $vendorBilling ? 'Configured' : 'Pending' }}</span>
+            </div>
+            <form class="ops-form" method="POST" action="/portal/vendor/billing/update">
+                @csrf
+                <div class="ops-form-grid">
+                    <div class="ops-field">
+                        <label for="billing_business_name">Business Name</label>
+                        <input id="billing_business_name" name="business_name" class="ops-input" type="text" maxlength="190" value="{{ old('business_name', optional($vendorBilling)->business_name ?? '') }}" required>
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_tax_id">Tax ID</label>
+                        <input id="billing_tax_id" name="tax_id" class="ops-input" type="text" maxlength="120" value="{{ old('tax_id', optional($vendorBilling)->tax_id ?? '') }}">
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_email">Billing Email</label>
+                        <input id="billing_email" name="billing_email" class="ops-input" type="email" maxlength="190" value="{{ old('billing_email', optional($vendorBilling)->billing_email ?? '') }}" required>
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_payout_method">Payout Method</label>
+                        <select id="billing_payout_method" name="payout_method" class="ops-select" required>
+                            <option value="bank_transfer" @selected((optional($vendorBilling)->payout_method ?? '') === 'bank_transfer')>Bank Transfer</option>
+                            <option value="mobile_wallet" @selected((optional($vendorBilling)->payout_method ?? '') === 'mobile_wallet')>Mobile Wallet</option>
+                            <option value="manual" @selected((optional($vendorBilling)->payout_method ?? '') === 'manual')>Manual</option>
+                        </select>
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_beneficiary_name">Beneficiary / Account Name</label>
+                        <input id="billing_beneficiary_name" name="beneficiary_name" class="ops-input" type="text" maxlength="190" value="{{ old('beneficiary_name', optional($vendorBilling)->beneficiary_name ?? '') }}" required>
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_payout_reference">Payout Reference</label>
+                        <input id="billing_payout_reference" name="payout_reference" class="ops-input" type="text" maxlength="190" value="{{ old('payout_reference', optional($vendorBilling)->payout_reference ?? '') }}">
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_bank_name">Bank Name</label>
+                        <input id="billing_bank_name" name="bank_name" class="ops-input" type="text" maxlength="190" value="{{ old('bank_name', optional($vendorBilling)->bank_name ?? '') }}">
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_swift_code">SWIFT Code</label>
+                        <input id="billing_swift_code" name="swift_code" class="ops-input" type="text" maxlength="20" value="{{ old('swift_code', optional($vendorBilling)->swift_code ?? '') }}" placeholder="e.g. MALAADMV">
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_account_number">Account Number (Full)</label>
+                        <input id="billing_account_number" name="bank_account_number" class="ops-input" type="text" maxlength="60" value="{{ old('bank_account_number', optional($vendorBilling)->bank_account_number ?? '') }}" required>
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_currency">Currency</label>
+                        <select id="billing_currency" name="currency" class="ops-select" required>
+                            <option value="MVR" @selected(strtoupper((string) old('currency', optional($vendorBilling)->currency ?? 'MVR')) === 'MVR')>MVR</option>
+                            <option value="USD" @selected(strtoupper((string) old('currency', optional($vendorBilling)->currency ?? 'MVR')) === 'USD')>USD</option>
+                        </select>
+                    </div>
+                    <div class="ops-field ops-field-wide">
+                        <label for="billing_street_name">Address: Street Name</label>
+                        <input id="billing_street_name" name="billing_street_name" class="ops-input" type="text" maxlength="255" value="{{ old('billing_street_name', optional($vendorBilling)->billing_street_name ?? '') }}" required>
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_country">Country</label>
+                        <select id="billing_country" name="billing_country" class="ops-select" required>
+                            <option value="Maldives" @selected(old('billing_country', optional($vendorBilling)->billing_country ?? 'Maldives') === 'Maldives')>Maldives</option>
+                            <option value="Sri Lanka" @selected(old('billing_country', optional($vendorBilling)->billing_country ?? '') === 'Sri Lanka')>Sri Lanka</option>
+                            <option value="India" @selected(old('billing_country', optional($vendorBilling)->billing_country ?? '') === 'India')>India</option>
+                            <option value="Other" @selected(old('billing_country', optional($vendorBilling)->billing_country ?? '') === 'Other')>Other</option>
+                        </select>
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_state">State / Province / Atoll</label>
+                        <select id="billing_state" name="billing_state" class="ops-select" required>
+                            <option value="">Select state/province</option>
+                        </select>
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_city">City / Island</label>
+                        <select id="billing_city" name="billing_city" class="ops-select" required>
+                            <option value="">Select city/island</option>
+                        </select>
+                    </div>
+                    <div class="ops-field">
+                        <label for="billing_invoice_prefix">Invoice Prefix</label>
+                        <input id="billing_invoice_prefix" name="invoice_prefix" class="ops-input" type="text" maxlength="30" value="{{ old('invoice_prefix', optional($vendorBilling)->invoice_prefix ?? 'INV') }}">
+                    </div>
+                    <div class="ops-field ops-field-wide">
+                        <label for="billing_address">Additional Address Details (optional)</label>
+                        <textarea id="billing_address" name="billing_address" class="ops-textarea" maxlength="2000">{{ old('billing_address', optional($vendorBilling)->billing_address ?? '') }}</textarea>
+                    </div>
+                </div>
+                <button class="btn btn-primary" type="submit">Save Billing Details</button>
+            </form>
+        </section>
+
         <section id="vendorOperationsOverview" class="card ops-section" aria-label="Vendor operations overview" data-panel-group="listings">
             <div class="ops-header">
                 <p class="ops-title">Operations Console</p>
                 <span class="ops-chip">Database-backed</span>
+            </div>
+            <div class="listing-wizard-controls">
+                <button type="button" class="btn btn-primary" id="startListingWizard">Start Add Listings Wizard</button>
+                <a class="hero-link" href="#vendorPropertiesSection">Step 1: Property Details</a>
+                <a class="hero-link" href="#vendorRoomsSection">Step 2: Room Setup</a>
+                <a class="hero-link" href="#vendorMediaSection">Step 3: Upload Pictures</a>
+            </div>
+            <div class="wizard-progress" aria-label="Listings wizard progress">
+                <article class="wizard-progress-step @if($listingWizardStep > 1) is-complete @elseif($listingWizardStep === 1) is-active @endif">
+                    <strong>Step 1</strong>
+                    Add property details
+                </article>
+                <article class="wizard-progress-step @if($listingWizardStep > 2) is-complete @elseif($listingWizardStep === 2) is-active @endif">
+                    <strong>Step 2</strong>
+                    Review property list and update/remove
+                </article>
+                <article class="wizard-progress-step @if($listingWizardStep > 3) is-complete @elseif($listingWizardStep === 3) is-active @endif">
+                    <strong>Step 3</strong>
+                    Add room inventory and toilet features
+                </article>
+                <article class="wizard-progress-step @if($listingWizardStep === 4) is-active @endif">
+                    <strong>Step 4</strong>
+                    Add property and room pictures
+                </article>
             </div>
             @if (!$hasSelectedCategories)
                 <p class="wizard-note">Select at least one category in Category Wizard before creating listings.</p>
@@ -1576,34 +1718,55 @@
                         </div>
                     </div>
                     <p class="standards-note">International listing standard: include measurable area/capacity and safety/accessibility details for trust and compliance.</p>
-                    <button class="btn btn-primary" type="submit">Add Listing</button>
+                    <button class="btn btn-primary" type="submit">Add Property Details</button>
+                    <p class="wizard-note">After saving property details, continue with Step 3 room setup and Step 4 photo upload.</p>
                 </form>
 
                 <div class="ops-table-wrap">
                     <table class="ops-table" aria-label="Vendor properties table">
                         <thead>
                             <tr>
-                                <th>Category</th>
-                                <th>Name</th>
-                                <th>Type</th>
-                                <th>Location</th>
-                                <th>Price</th>
-                                <th>Status</th>
+                                <th>Property</th>
+                                <th>List Details</th>
+                                <th>Edit / Update / Remove</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse ($vendorProperties->take(12) as $property)
                                 <tr>
-                                    <td>{{ strtoupper((string) ($property->listing_category ?? 'N/A')) }}</td>
-                                    <td>{{ $property->name }}</td>
-                                    <td>{{ strtoupper((string) $property->property_type) }}</td>
-                                    <td>{{ $property->location ?: 'N/A' }}</td>
-                                    <td>{{ $property->currency }} {{ number_format((float) $property->base_price, 2) }}</td>
-                                    <td>{{ strtoupper((string) $property->status) }}</td>
+                                    <td>
+                                        <strong>{{ $property->name }}</strong><br>
+                                        ID: {{ (int) $property->id }}<br>
+                                        {{ strtoupper((string) ($property->listing_category ?? 'N/A')) }} / {{ strtoupper((string) $property->property_type) }}
+                                    </td>
+                                    <td>
+                                        {{ $property->location ?: 'N/A' }}<br>
+                                        {{ $property->currency }} {{ number_format((float) $property->base_price, 2) }}<br>
+                                        Guests: {{ (int) ($property->max_guests ?? 0) }} | Status: {{ strtoupper((string) $property->status) }}
+                                    </td>
+                                    <td>
+                                        <form class="inline-table-form" method="POST" action="/portal/vendor/properties/{{ $property->id }}/update">
+                                            @csrf
+                                            <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $property->name }}" required>
+                                            <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) $property->base_price }}">
+                                            <input class="ops-input" name="max_guests" type="number" min="1" max="10000" value="{{ (int) ($property->max_guests ?? 1) }}">
+                                            <select class="ops-select" name="status" required>
+                                                <option value="active" @selected((string) $property->status === 'active')>Active</option>
+                                                <option value="inactive" @selected((string) $property->status === 'inactive')>Inactive</option>
+                                            </select>
+                                            <div class="inline-actions">
+                                                <button class="btn btn-secondary" type="submit">Update</button>
+                                            </div>
+                                        </form>
+                                        <form method="POST" action="/portal/vendor/properties/{{ $property->id }}/delete" onsubmit="return confirm('Remove this property listing?');">
+                                            @csrf
+                                            <button class="btn btn-danger" type="submit">Remove</button>
+                                        </form>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="ops-empty">No properties yet. Add your first listing.</td>
+                                    <td colspan="3" class="ops-empty">No properties yet. Add your first listing.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -1666,35 +1829,61 @@
                                     <label class="feature-item"><input type="checkbox" name="room_features[]" value="private_pool"> Private Pool</label>
                                     <label class="feature-item"><input type="checkbox" name="room_features[]" value="butler_service"> Butler Service</label>
                                     <label class="feature-item"><input type="checkbox" name="room_features[]" value="outdoor_shower"> Outdoor Shower</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="ensuite_toilet"> Ensuite Toilet</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="rain_shower"> Rain Shower</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="bathtub"> Bathtub</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="bidet"> Bidet</label>
                                 </div>
                             </div>
                         </div>
-                        <button class="btn btn-primary" type="submit">Add Room Category</button>
+                        <button class="btn btn-primary" type="submit">Add Room</button>
                     </form>
 
                     <div class="ops-table-wrap">
                         <table class="ops-table" aria-label="Vendor room categories table">
                             <thead>
                                 <tr>
-                                    <th>Name</th>
-                                    <th>Qty</th>
-                                    <th>Occupancy</th>
-                                    <th>Bed</th>
-                                    <th>Price</th>
+                                    <th>Room</th>
+                                    <th>Features</th>
+                                    <th>Edit / Update / Remove</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse ($vendorRoomCategories->take(12) as $room)
                                     <tr>
-                                        <td>{{ $room->name }}</td>
-                                        <td>{{ (int) $room->quantity }}</td>
-                                        <td>{{ (int) $room->max_occupancy }}</td>
-                                        <td>{{ $room->bed_type ?: 'N/A' }}</td>
-                                        <td>{{ $room->currency }} {{ number_format((float) $room->base_price, 2) }}</td>
+                                        <td>
+                                            <strong>{{ $room->name }}</strong><br>
+                                            ID: {{ (int) $room->id }} | Property ID: {{ (int) ($room->vendor_property_id ?? 0) ?: 'N/A' }}<br>
+                                            Qty: {{ (int) $room->quantity }} | Occupancy: {{ (int) $room->max_occupancy }} | Bed: {{ $room->bed_type ?: 'N/A' }}
+                                        </td>
+                                        <td>
+                                            {{ $room->currency }} {{ number_format((float) $room->base_price, 2) }}<br>
+                                            @php
+                                                $roomAmenitiesText = (string) ($room->amenities ?? '');
+                                            @endphp
+                                            {{ $roomAmenitiesText !== '' ? $roomAmenitiesText : 'No features set' }}
+                                        </td>
+                                        <td>
+                                            <form class="inline-table-form" method="POST" action="/portal/vendor/rooms/{{ $room->id }}/update">
+                                                @csrf
+                                                <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $room->name }}" required>
+                                                <input class="ops-input" name="quantity" type="number" min="1" max="10000" value="{{ (int) $room->quantity }}">
+                                                <input class="ops-input" name="max_occupancy" type="number" min="1" max="50" value="{{ (int) $room->max_occupancy }}">
+                                                <input class="ops-input" name="bed_type" type="text" maxlength="80" value="{{ $room->bed_type }}">
+                                                <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) $room->base_price }}">
+                                                <div class="inline-actions">
+                                                    <button class="btn btn-secondary" type="submit">Update</button>
+                                                </div>
+                                            </form>
+                                            <form method="POST" action="/portal/vendor/rooms/{{ $room->id }}/delete" onsubmit="return confirm('Remove this room category?');">
+                                                @csrf
+                                                <button class="btn btn-danger" type="submit">Remove</button>
+                                            </form>
+                                        </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="ops-empty">No room categories yet.</td>
+                                        <td colspan="3" class="ops-empty">No room categories yet.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -1778,6 +1967,49 @@
                         </tbody>
                     </table>
                 </div>
+
+                <article class="ops-form ops-field-wide">
+                    <p class="label">Property Pictures</p>
+                    <p class="wizard-note">Open each property by ID and verify image quality before publishing.</p>
+                    <div class="gallery-grid">
+                        @forelse ($propertyMediaAssets->take(9) as $media)
+                            <div class="gallery-card">
+                                <img src="{{ str_starts_with((string) $media->file_path, 'http') ? (string) $media->file_path : ('/storage/' . ltrim((string) $media->file_path, '/')) }}" alt="{{ $media->alt_text ?: 'Property image' }}" loading="lazy">
+                                <div class="gallery-meta">
+                                    <strong>Property #{{ $media->entity_id ?: 'N/A' }}</strong>
+                                    {{ $media->alt_text ?: 'No alt text' }}
+                                </div>
+                            </div>
+                        @empty
+                            <p class="ops-empty">No property pictures uploaded yet.</p>
+                        @endforelse
+                    </div>
+                </article>
+
+                <article class="ops-form ops-field-wide">
+                    <p class="label">Room Pictures and Toilet Features</p>
+                    <p class="wizard-note">Room media is shown separately so vendors can verify toilet and bathroom feature visuals.</p>
+                    <div class="gallery-grid">
+                        @forelse ($roomMediaAssets->take(9) as $media)
+                            <div class="gallery-card">
+                                <img src="{{ str_starts_with((string) $media->file_path, 'http') ? (string) $media->file_path : ('/storage/' . ltrim((string) $media->file_path, '/')) }}" alt="{{ $media->alt_text ?: 'Room image' }}" loading="lazy">
+                                <div class="gallery-meta">
+                                    <strong>Room #{{ $media->entity_id ?: 'N/A' }}</strong>
+                                    {{ $media->alt_text ?: 'No alt text' }}
+                                    @php
+                                        $linkedRoom = $media->entity_id ? $roomLookupById->get((int) $media->entity_id) : null;
+                                        $linkedFeatures = trim((string) ($linkedRoom->amenities ?? ''));
+                                    @endphp
+                                    @if ($linkedFeatures !== '')
+                                        <br>Features: {{ $linkedFeatures }}
+                                    @endif
+                                </div>
+                            </div>
+                        @empty
+                            <p class="ops-empty">No room pictures uploaded yet.</p>
+                        @endforelse
+                    </div>
+                </article>
             </div>
         </section>
 
@@ -2323,6 +2555,9 @@
             const billingCountry = document.getElementById("billing_country");
             const billingState = document.getElementById("billing_state");
             const billingCity = document.getElementById("billing_city");
+            const startListingWizard = document.getElementById("startListingWizard");
+            const serverPanelKey = "{{ in_array($forcedPanelKey, ['overview', 'profile', 'listings', 'reservations', 'api'], true) ? $forcedPanelKey : '' }}";
+            const listingWizardStep = Number("{{ $listingWizardStep }}") || 1;
 
             const SESSION_KEY = "workation_vendor_token";
 
@@ -2647,6 +2882,20 @@
                 return validPanelKeys.has(panelKey) ? panelKey : "overview";
             }
 
+            function focusListingsWizardStep(step) {
+                const safeStep = Math.max(1, Math.min(4, Number(step) || 1));
+                const stepTargets = {
+                    1: "vendorPropertiesSection",
+                    2: "vendorPropertiesSection",
+                    3: "vendorRoomsSection",
+                    4: "vendorMediaSection"
+                };
+                const targetId = stepTargets[safeStep] || "vendorPropertiesSection";
+                const targetEl = document.getElementById(targetId);
+                if (!targetEl) return;
+                targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+
             const LOCATION_TREE = {
                 "Maldives": {
                     "Kaafu Atoll": ["Male", "Hulhumale", "Maafushi"],
@@ -2947,6 +3196,14 @@
                 showPanelGroup(resolvePanelFromHash(window.location.hash));
             });
 
+            if (startListingWizard) {
+                startListingWizard.addEventListener("click", function () {
+                    window.location.hash = "listings";
+                    showPanelGroup("listings");
+                    focusListingsWizardStep(1);
+                });
+            }
+
             if (locationCountry && locationState && locationCity) {
                 refreshLocationSelectors();
                 locationCountry.addEventListener("change", refreshLocationSelectors);
@@ -2977,7 +3234,12 @@
                 setSummaryDefaults();
             }
 
-            showPanelGroup(resolvePanelFromHash(window.location.hash || "#overview"));
+            const hashPanelKey = resolvePanelFromHash(window.location.hash || "#overview");
+            const initialPanelKey = serverPanelKey && validPanelKeys.has(serverPanelKey) ? serverPanelKey : hashPanelKey;
+            showPanelGroup(initialPanelKey);
+            if (initialPanelKey === "listings") {
+                focusListingsWizardStep(listingWizardStep);
+            }
         })();
     </script>
 </body>

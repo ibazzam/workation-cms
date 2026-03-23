@@ -121,9 +121,31 @@ if (!function_exists('vendorPortalNormalizedNumeric')) {
     }
 }
 
+if (!function_exists('vendorPortalNormalizedStringList')) {
+    function vendorPortalNormalizedStringList(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($value as $item) {
+            $token = trim((string) $item);
+            if ($token !== '') {
+                $normalized[] = $token;
+            }
+        }
+
+        return array_values(array_unique($normalized));
+    }
+}
+
 if (!function_exists('vendorPortalBuildPropertyDetails')) {
     function vendorPortalBuildPropertyDetails(array $validated, string $listingCategory): array
     {
+        $propertyAmenities = vendorPortalNormalizedStringList($validated['property_amenities'] ?? []);
+        $propertyFeatures = vendorPortalNormalizedStringList($validated['property_features'] ?? []);
+
         $details = [
             'measurement_system' => (string) ($validated['measurement_system'] ?? 'metric'),
             'area_value' => vendorPortalNormalizedNumeric($validated['area_value'] ?? null),
@@ -135,6 +157,15 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             'minimum_age' => isset($validated['minimum_age']) ? (int) $validated['minimum_age'] : null,
             'safety_certifications' => trim((string) ($validated['safety_certifications'] ?? '')),
             'accessibility_features' => trim((string) ($validated['accessibility_features'] ?? '')),
+            'property_amenities' => $propertyAmenities,
+            'property_features' => $propertyFeatures,
+            'location_country' => trim((string) ($validated['location_country'] ?? '')),
+            'location_state' => trim((string) ($validated['location_state'] ?? '')),
+            'location_city' => trim((string) ($validated['location_city'] ?? '')),
+            'address_line' => trim((string) ($validated['address_line'] ?? '')),
+            'map_latitude' => vendorPortalNormalizedNumeric($validated['map_latitude'] ?? null),
+            'map_longitude' => vendorPortalNormalizedNumeric($validated['map_longitude'] ?? null),
+            'map_place_id' => trim((string) ($validated['map_place_id'] ?? '')),
             'listing_category' => $listingCategory,
         ];
 
@@ -625,9 +656,16 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         'quantity' => ['nullable', 'integer', 'min:1', 'max:10000'],
         'max_occupancy' => ['nullable', 'integer', 'min:1', 'max:50'],
         'bed_type' => ['nullable', 'string', 'max:80'],
-        'amenities' => ['nullable', 'string', 'max:3000'],
+        'room_amenities' => ['nullable', 'array'],
+        'room_amenities.*' => ['required', 'string', 'max:80'],
+        'room_features' => ['nullable', 'array'],
+        'room_features.*' => ['required', 'string', 'max:80'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
     ]);
+
+    $roomAmenities = vendorPortalNormalizedStringList($validated['room_amenities'] ?? []);
+    $roomFeatures = vendorPortalNormalizedStringList($validated['room_features'] ?? []);
+    $roomAmenityTokens = array_values(array_unique(array_merge($roomAmenities, $roomFeatures)));
 
     DB::table('vendor_property_room_categories')->insert([
         'vendor_user_id' => $vendorUserId,
@@ -636,7 +674,7 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         'quantity' => (int) ($validated['quantity'] ?? 1),
         'max_occupancy' => (int) ($validated['max_occupancy'] ?? 1),
         'bed_type' => trim((string) ($validated['bed_type'] ?? '')),
-        'amenities' => trim((string) ($validated['amenities'] ?? '')),
+        'amenities' => implode(', ', $roomAmenityTokens),
         'base_price' => (float) ($validated['base_price'] ?? 0),
         'currency' => 'MVR',
         'created_at' => now(),
@@ -661,6 +699,13 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'listing_category' => ['required', 'string', 'max:80'],
         'property_type' => ['required', Rule::in(['property', 'service'])],
         'location' => ['nullable', 'string', 'max:190'],
+        'location_country' => ['nullable', 'string', 'max:90'],
+        'location_state' => ['nullable', 'string', 'max:120'],
+        'location_city' => ['nullable', 'string', 'max:120'],
+        'address_line' => ['nullable', 'string', 'max:255'],
+        'map_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+        'map_longitude' => ['nullable', 'numeric', 'between:-180,180'],
+        'map_place_id' => ['nullable', 'string', 'max:190'],
         'description' => ['nullable', 'string', 'max:3000'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
         'max_guests' => ['nullable', 'integer', 'min:1', 'max:10000'],
@@ -674,6 +719,10 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'minimum_age' => ['nullable', 'integer', 'min:0', 'max:120'],
         'safety_certifications' => ['nullable', 'string', 'max:2000'],
         'accessibility_features' => ['nullable', 'string', 'max:2000'],
+        'property_amenities' => ['nullable', 'array'],
+        'property_amenities.*' => ['required', 'string', 'max:80'],
+        'property_features' => ['nullable', 'array'],
+        'property_features.*' => ['required', 'string', 'max:80'],
     ]);
 
     $canonicalListingCategory = vendorPortalCanonicalCategory((string) $validated['listing_category']);
@@ -692,11 +741,27 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         return back()->withErrors(['profile' => implode(' ', $propertyDetailErrors)])->withInput();
     }
 
+    $locationCountry = trim((string) ($validated['location_country'] ?? ''));
+    $locationState = trim((string) ($validated['location_state'] ?? ''));
+    $locationCity = trim((string) ($validated['location_city'] ?? ''));
+    $addressLine = trim((string) ($validated['address_line'] ?? ''));
+    $locationParts = array_values(array_filter([$locationCity, $locationState, $locationCountry], static fn (string $item): bool => $item !== ''));
+    $locationFromStructuredFields = implode(', ', $locationParts);
+    $resolvedLocation = $locationFromStructuredFields !== '' ? $locationFromStructuredFields : trim((string) ($validated['location'] ?? ''));
+
+    if ($addressLine !== '') {
+        $resolvedLocation = $resolvedLocation !== '' ? ($addressLine . ' - ' . $resolvedLocation) : $addressLine;
+    }
+
+    $propertyAmenities = vendorPortalNormalizedStringList($validated['property_amenities'] ?? []);
+    $propertyFeatures = vendorPortalNormalizedStringList($validated['property_features'] ?? []);
+    $selectedAmenityTokens = array_values(array_unique(array_merge($propertyAmenities, $propertyFeatures)));
+
     $payload = [
         'vendor_user_id' => $vendorUserId,
         'name' => trim((string) $validated['name']),
         'property_type' => (string) $validated['property_type'],
-        'location' => trim((string) ($validated['location'] ?? '')),
+        'location' => $resolvedLocation,
         'description' => trim((string) ($validated['description'] ?? '')),
         'status' => 'active',
         'base_price' => (float) ($validated['base_price'] ?? 0),
@@ -711,6 +776,9 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
     }
     if (Schema::hasColumn('vendor_properties', 'listing_details')) {
         $payload['listing_details'] = empty($propertyDetails) ? null : json_encode($propertyDetails);
+    }
+    if (Schema::hasColumn('vendor_properties', 'amenities')) {
+        $payload['amenities'] = implode(', ', $selectedAmenityTokens);
     }
 
     DB::table('vendor_properties')->insert($payload);

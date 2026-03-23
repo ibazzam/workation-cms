@@ -6,6 +6,7 @@
     <title>Vendor Portal | Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <style>
         :root {
             --bg: #f1f5ef;
@@ -272,7 +273,7 @@
             color: var(--muted);
         }
 
-        [data-nav-panel="true"][hidden] {
+        [data-panel-group][hidden] {
             display: none !important;
         }
 
@@ -357,81 +358,6 @@
         .profile-field label {
             font-size: 0.78rem;
             color: var(--muted);
-
-        .payout-center {
-            margin-top: 12px;
-        }
-
-        .payout-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .payout-metric {
-            border: 1px solid #d7e0e6;
-            border-radius: 10px;
-            background: #fff;
-            padding: 10px;
-        }
-
-        .payout-metric .metric-label {
-            margin: 0;
-            font-size: 0.74rem;
-            color: var(--muted);
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
-        }
-
-        .payout-metric .metric-value {
-            margin: 5px 0 0;
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: #1f3346;
-        }
-
-        .payout-table-wrap {
-            margin-top: 10px;
-            border: 1px solid #d7e0e6;
-            border-radius: 10px;
-            background: #fff;
-            overflow: hidden;
-        }
-
-        .payout-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .payout-table th,
-        .payout-table td {
-            text-align: left;
-            border-bottom: 1px solid #edf2f8;
-            padding: 9px 10px;
-            font-size: 0.82rem;
-            color: #233247;
-        }
-
-        .payout-table th {
-            background: #f8fbff;
-            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            color: #456077;
-            font-size: 0.72rem;
-        }
-
-        .payout-table tr:last-child td {
-            border-bottom: 0;
-        }
-
-        .payout-empty {
-            padding: 12px;
-            font-size: 0.82rem;
-            color: var(--muted);
-        }
             font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
             letter-spacing: 0.05em;
             text-transform: uppercase;
@@ -510,6 +436,68 @@
             padding: 12px;
             font-size: 0.82rem;
             color: var(--muted);
+        }
+
+        .panel-links {
+            margin: 0 0 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .panel-links a {
+            text-decoration: none;
+            border: 1px solid #c8d4df;
+            border-radius: 999px;
+            padding: 5px 10px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            color: #21475c;
+            background: #f8fbff;
+        }
+
+        .feature-checklist {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .feature-item {
+            border: 1px solid #d7e0e6;
+            border-radius: 8px;
+            padding: 8px 9px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 0.82rem;
+            color: #223b51;
+        }
+
+        .location-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .map-picker {
+            margin-top: 8px;
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #propertyMap {
+            width: 100%;
+            height: 260px;
+            background: #eef4f9;
+        }
+
+        .map-help {
+            margin-top: 6px;
+            font-size: 0.78rem;
+            color: #4b6075;
         }
 
         .ops-section {
@@ -766,10 +754,6 @@
         .inline-status-form .btn {
             margin-top: 0;
         }
-
-            .payout-grid {
-                grid-template-columns: 1fr;
-            }
             
         .profile-input {
             width: 100%;
@@ -942,6 +926,11 @@
                 grid-template-columns: 1fr;
             }
 
+            .feature-checklist,
+            .location-grid {
+                grid-template-columns: 1fr;
+            }
+
             .payout-grid {
                 grid-template-columns: 1fr;
             }
@@ -1086,38 +1075,17 @@
 
         <div class="portal-shell">
         <nav class="portal-nav" aria-label="Vendor navigation">
-            <span class="menu-title">Overview</span>
-            <a href="#vendorSummary">Dashboard Summary</a>
-            <a href="#payoutCenter" class="menu-sub">Payout Snapshot</a>
-
-            <span class="menu-title">Profile / Update</span>
-            <a href="#vendorProfileCard">Profile Settings</a>
-            <a href="#vendorCategoryWizard" class="menu-sub">Category Setup</a>
-
-            <span class="menu-title">Add Listings</span>
-            <a href="#vendorPropertiesSection">Add/Edit Listings</a>
-            <a href="#vendorServicesSection" class="menu-sub">Add/Edit Services</a>
-            <a href="#vendorRoomsSection" class="menu-sub">Room Inventory</a>
-            <a href="#vendorMediaSection" class="menu-sub">Listing Photos</a>
-
-            <span class="menu-title">Reservations / Bookings</span>
-            <a href="#vendorReservationsSection">Booking Inquiries</a>
-            <a href="#vendorAvailabilitySection" class="menu-sub">Availability Updates</a>
-            <a href="#vendorPricingSection" class="menu-sub">Pricing Rules</a>
-
-            <span class="menu-title">Billing / Daily Collection</span>
-            <a href="#vendorBillingSection">Billing Settings</a>
-            <a href="#vendorDailyCollectionSection" class="menu-sub">Collections & Payouts</a>
-
-            <span class="menu-title">API Tools</span>
-            <a href="#vendorAuthApi">Auth and API</a>
-            <a href="#vendorAuthCard" class="menu-sub">Token</a>
-            <a href="#vendorApiCard" class="menu-sub">API Actions</a>
+            <a href="#overview" data-panel-key="overview">Dashboard Summary</a>
+            <a href="#profile" data-panel-key="profile">Profile / Update</a>
+            <a href="#listings" data-panel-key="listings">Add Listings</a>
+            <a href="#reservations" data-panel-key="reservations">Reservations / Bookings</a>
+            <a href="#billing" data-panel-key="billing">Billing / Daily Collection</a>
+            <a href="#api" data-panel-key="api">API Tools</a>
         </nav>
 
         <div class="portal-content">
 
-        <section id="vendorSummary" class="summary-grid" aria-label="Vendor dashboard summary">
+        <section id="vendorSummary" class="summary-grid" aria-label="Vendor dashboard summary" data-panel-group="overview">
             <article class="summary-card">
                 <p class="summary-label">Bookings</p>
                 <p id="summaryBookings" class="summary-value">-</p>
@@ -1143,11 +1111,11 @@
             </article>
         </section>
 
-        <div id="vendorSummaryActions" class="summary-actions">
+        <div id="vendorSummaryActions" class="summary-actions" data-panel-group="overview">
             <button id="refreshSummary" type="button" class="summary-refresh">Refresh Summary</button>
         </div>
 
-        <section id="vendorProgressSnapshot" class="card progress-snapshot" aria-label="Vendor activity progress snapshot">
+        <section id="vendorProgressSnapshot" class="card progress-snapshot" aria-label="Vendor activity progress snapshot" data-panel-group="overview">
             <div class="ops-header">
                 <p class="ops-title">Vendor Progress Snapshot</p>
                 <span class="ops-chip">Live from your account data</span>
@@ -1176,7 +1144,7 @@
             </div>
         </section>
 
-        <section id="payoutCenter" class="card payout-center" aria-label="Vendor payout center">
+        <section id="payoutCenter" class="card payout-center" aria-label="Vendor payout center" data-panel-group="overview">
             <p class="label">Payout Center</p>
             <div class="payout-grid">
                 <article class="payout-metric">
@@ -1218,8 +1186,12 @@
             <div class="error" role="alert">{{ $errors->first('profile') }}</div>
         @endif
 
-        <section id="vendorProfileCard" class="card profile-card" aria-label="Vendor profile settings" data-nav-panel="true">
+        <section id="vendorProfileCard" class="card profile-card" aria-label="Vendor profile settings" data-panel-group="profile">
             <p class="label">Account Settings</p>
+            <div class="panel-links" aria-label="Profile actions">
+                <a href="#vendorProfileCard">Profile Settings</a>
+                <a href="#vendorCategoryWizard">Category Setup</a>
+            </div>
             <form method="POST" action="/portal/vendor/profile/update">
                 @csrf
                 <div class="profile-grid">
@@ -1271,9 +1243,8 @@
                 <p class="profile-help">Update your display name and primary phone number used by the vendor team.</p>
                 <button class="btn btn-primary" type="submit">Save Profile Settings</button>
             </form>
-        </section>
 
-        <section id="vendorCategoryWizard" class="card ops-section" aria-label="Vendor category setup wizard" data-nav-panel="true">
+            <div id="vendorCategoryWizard" class="ops-section" aria-label="Vendor category setup wizard">
             <div class="ops-header">
                 <p class="ops-title">Category-Based Listing Wizard</p>
                 <span class="ops-chip">Step {{ $vendorOnboardingStep }} of 4</span>
@@ -1316,9 +1287,10 @@
                     <p class="wizard-note">You can update categories later. Existing records remain editable.</p>
                 </article>
             </div>
+            </div>
         </section>
 
-        <section id="vendorOperationsOverview" class="card ops-section" aria-label="Vendor operations overview" data-nav-panel="true">
+        <section id="vendorOperationsOverview" class="card ops-section" aria-label="Vendor operations overview" data-panel-group="listings">
             <div class="ops-header">
                 <p class="ops-title">Operations Console</p>
                 <span class="ops-chip">Database-backed</span>
@@ -1354,10 +1326,16 @@
             </div>
         </section>
 
-        <section id="vendorPropertiesSection" class="card ops-section" aria-label="Vendor properties" data-nav-panel="true">
+        <section id="vendorPropertiesSection" class="card ops-section" aria-label="Vendor properties" data-panel-group="listings">
             <div class="ops-header">
                 <p class="ops-title">Properties and Listings</p>
                 <span class="ops-chip">{{ $vendorProperties->count() }} total</span>
+            </div>
+            <div class="panel-links" aria-label="Listings actions">
+                <a href="#vendorPropertiesSection">Listings</a>
+                <a href="#vendorServicesSection">Services</a>
+                <a href="#vendorRoomsSection">Room Inventory</a>
+                <a href="#vendorMediaSection">Photos</a>
             </div>
             <div class="ops-grid">
                 <form class="ops-form" method="POST" action="/portal/vendor/properties/create">
@@ -1383,8 +1361,41 @@
                             </select>
                         </div>
                         <div class="ops-field">
-                            <label for="property_location">Location</label>
-                            <input id="property_location" name="location" class="ops-input" type="text" maxlength="190">
+                            <label for="location_country">Country</label>
+                            <select id="location_country" name="location_country" class="ops-select" required>
+                                <option value="Maldives">Maldives</option>
+                                <option value="Sri Lanka">Sri Lanka</option>
+                                <option value="India">India</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="ops-field">
+                            <label for="location_state">State / Province / Atoll</label>
+                            <select id="location_state" name="location_state" class="ops-select" required>
+                                <option value="">Select state/province</option>
+                            </select>
+                        </div>
+                        <div class="ops-field">
+                            <label for="location_city">City / Island</label>
+                            <select id="location_city" name="location_city" class="ops-select" required>
+                                <option value="">Select city/island</option>
+                            </select>
+                        </div>
+                        <div class="ops-field ops-field-wide">
+                            <label for="address_line">Exact Address</label>
+                            <input id="address_line" name="address_line" class="ops-input" type="text" maxlength="255" placeholder="Street, house/building name, nearby landmark" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="map_latitude">Map Latitude</label>
+                            <input id="map_latitude" name="map_latitude" class="ops-input" type="number" min="-90" max="90" step="0.000001" placeholder="4.1755">
+                        </div>
+                        <div class="ops-field">
+                            <label for="map_longitude">Map Longitude</label>
+                            <input id="map_longitude" name="map_longitude" class="ops-input" type="number" min="-180" max="180" step="0.000001" placeholder="73.5093">
+                        </div>
+                        <div class="ops-field">
+                            <label for="map_place_id">Map Place ID (optional)</label>
+                            <input id="map_place_id" name="map_place_id" class="ops-input" type="text" maxlength="190" placeholder="Generated from pin-drop">
                         </div>
                         <div class="ops-field">
                             <label for="property_base_price">Base Price (MVR)</label>
@@ -1437,12 +1448,36 @@
                             <input id="property_minimum_age" name="minimum_age" class="ops-input" type="number" min="0" max="120">
                         </div>
                         <div class="ops-field ops-field-wide">
-                            <label for="property_safety_certifications">Safety Certifications</label>
-                            <textarea id="property_safety_certifications" name="safety_certifications" class="ops-textarea" maxlength="2000" placeholder="ISO, local licenses, fire safety, marine certifications"></textarea>
+                            <label>Property Amenities (tick all available)</label>
+                            <div class="feature-checklist">
+                                <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="wifi"> Wi-Fi</label>
+                                <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="parking"> Parking</label>
+                                <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="pool"> Pool</label>
+                                <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="gym"> Gym</label>
+                                <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="air_conditioning"> Air Conditioning</label>
+                                <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="breakfast"> Breakfast</label>
+                                <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="kitchen"> Kitchen</label>
+                                <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="workspace_desk"> Workspace Desk</label>
+                            </div>
                         </div>
                         <div class="ops-field ops-field-wide">
-                            <label for="property_accessibility_features">Accessibility Features</label>
-                            <textarea id="property_accessibility_features" name="accessibility_features" class="ops-textarea" maxlength="2000" placeholder="Wheelchair access, ramps, accessible toilets, visual aids"></textarea>
+                            <label>Property Features (tick all available)</label>
+                            <div class="feature-checklist">
+                                <label class="feature-item"><input type="checkbox" name="property_features[]" value="wheelchair_access"> Wheelchair Access</label>
+                                <label class="feature-item"><input type="checkbox" name="property_features[]" value="elevator"> Elevator</label>
+                                <label class="feature-item"><input type="checkbox" name="property_features[]" value="family_friendly"> Family Friendly</label>
+                                <label class="feature-item"><input type="checkbox" name="property_features[]" value="pet_friendly"> Pet Friendly</label>
+                                <label class="feature-item"><input type="checkbox" name="property_features[]" value="beachfront"> Beachfront</label>
+                                <label class="feature-item"><input type="checkbox" name="property_features[]" value="sea_view"> Sea View</label>
+                                <label class="feature-item"><input type="checkbox" name="property_features[]" value="safety_certified"> Safety Certified</label>
+                                <label class="feature-item"><input type="checkbox" name="property_features[]" value="kids_play_area"> Kids Play Area</label>
+                            </div>
+                        </div>
+                        <div class="ops-field ops-field-wide">
+                            <div class="map-picker">
+                                <div id="propertyMap" aria-label="Map picker"></div>
+                            </div>
+                            <p class="map-help">Click on the map to drop a pin for exact location. Latitude and longitude update automatically.</p>
                         </div>
                     </div>
                     <p class="standards-note">International listing standard: include measurable area/capacity and safety/accessibility details for trust and compliance.</p>
@@ -1483,7 +1518,7 @@
         </section>
 
         @if ($supportsAccommodation)
-            <section id="vendorRoomsSection" class="card ops-section" aria-label="Vendor room categories" data-nav-panel="true">
+            <section id="vendorRoomsSection" class="card ops-section" aria-label="Vendor room categories" data-panel-group="listings">
                 <div class="ops-header">
                     <p class="ops-title">Room Categories (Accommodation)</p>
                     <span class="ops-chip">{{ $vendorRoomCategories->count() }} total</span>
@@ -1517,8 +1552,26 @@
                                 <input id="room_base_price" name="base_price" class="ops-input" type="number" min="0" step="0.01" value="0">
                             </div>
                             <div class="ops-field ops-field-wide">
-                                <label for="room_amenities">Room Amenities</label>
-                                <textarea id="room_amenities" name="amenities" class="ops-textarea" maxlength="3000" placeholder="WiFi, balcony, sea-view, breakfast included"></textarea>
+                                <label>Room Amenities (tick all available)</label>
+                                <div class="feature-checklist">
+                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="wifi"> Wi-Fi</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="balcony"> Balcony</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="sea_view"> Sea View</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="breakfast"> Breakfast Included</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="mini_bar"> Mini Bar</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="tv"> Smart TV</label>
+                                </div>
+                            </div>
+                            <div class="ops-field ops-field-wide">
+                                <label>Room Features (tick all available)</label>
+                                <div class="feature-checklist">
+                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="non_smoking"> Non-Smoking</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="accessible_room"> Accessible Room</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="connecting_room"> Connecting Room</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="private_pool"> Private Pool</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="butler_service"> Butler Service</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="outdoor_shower"> Outdoor Shower</label>
+                                </div>
                             </div>
                         </div>
                         <button class="btn btn-primary" type="submit">Add Room Category</button>
@@ -1556,7 +1609,7 @@
             </section>
         @endif
 
-        <section id="vendorMediaSection" class="card ops-section" aria-label="Vendor listing photos" data-nav-panel="true">
+        <section id="vendorMediaSection" class="card ops-section" aria-label="Vendor listing photos" data-panel-group="listings">
             <div class="ops-header">
                 <p class="ops-title">Photos and Media</p>
                 <span class="ops-chip">{{ $vendorMediaAssets->count() }} uploaded</span>
@@ -1633,7 +1686,7 @@
             </div>
         </section>
 
-        <section id="vendorServicesSection" class="card ops-section" aria-label="Vendor services" data-nav-panel="true">
+        <section id="vendorServicesSection" class="card ops-section" aria-label="Vendor services" data-panel-group="listings">
             <div class="ops-header">
                 <p class="ops-title">Services Catalog</p>
                 <span class="ops-chip">{{ $vendorServices->count() }} total</span>
@@ -1747,7 +1800,7 @@
             </div>
         </section>
 
-        <section id="vendorAvailabilitySection" class="card ops-section" aria-label="Vendor availability calendar" data-nav-panel="true">
+        <section id="vendorAvailabilitySection" class="card ops-section" aria-label="Vendor availability calendar" data-panel-group="reservations">
             <div class="ops-header">
                 <p class="ops-title">Availability Calendar</p>
                 <span class="ops-chip">{{ $vendorAvailability->count() }} days tracked</span>
@@ -1814,10 +1867,15 @@
             </div>
         </section>
 
-        <section id="vendorReservationsSection" class="card ops-section" aria-label="Vendor reservations" data-nav-panel="true">
+        <section id="vendorReservationsSection" class="card ops-section" aria-label="Vendor reservations" data-panel-group="reservations">
             <div class="ops-header">
                 <p class="ops-title">Reservations</p>
                 <span class="ops-chip">{{ $vendorReservations->count() }} total</span>
+            </div>
+            <div class="panel-links" aria-label="Reservation actions">
+                <a href="#vendorReservationsSection">Booking Inquiries</a>
+                <a href="#vendorAvailabilitySection">Availability Updates</a>
+                <a href="#vendorPricingSection">Pricing Rules</a>
             </div>
             <div class="ops-grid">
                 <form class="ops-form" method="POST" action="/portal/vendor/reservations/create">
@@ -1931,7 +1989,7 @@
             </div>
         </section>
 
-        <section id="vendorPricingSection" class="card ops-section" aria-label="Vendor pricing rules" data-nav-panel="true">
+        <section id="vendorPricingSection" class="card ops-section" aria-label="Vendor pricing rules" data-panel-group="reservations">
             <div class="ops-header">
                 <p class="ops-title">Pricing Rules</p>
                 <span class="ops-chip">{{ $vendorPricingRules->count() }} active + historical</span>
@@ -2008,10 +2066,14 @@
             </div>
         </section>
 
-        <section id="vendorBillingSection" class="card ops-section" aria-label="Vendor billing details" data-nav-panel="true">
+        <section id="vendorBillingSection" class="card ops-section" aria-label="Vendor billing details" data-panel-group="billing">
             <div class="ops-header">
                 <p class="ops-title">Billing Details</p>
                 <span class="ops-chip">{{ $vendorBilling ? 'Configured' : 'Pending' }}</span>
+            </div>
+            <div class="panel-links" aria-label="Billing actions">
+                <a href="#vendorBillingSection">Billing Settings</a>
+                <a href="#vendorDailyCollectionSection">Collections & Payouts</a>
             </div>
             <form class="ops-form" method="POST" action="/portal/vendor/billing/update">
                 @csrf
@@ -2151,7 +2213,7 @@
             </div>
         </section>
 
-        <section class="layout" id="vendorAuthApi" data-nav-panel="true">
+        <section class="layout" id="vendorAuthApi" data-panel-group="api">
             <article class="card" id="vendorAuthCard">
                 <p class="label">Auth</p>
                 <input id="tokenInput" class="token-input" type="password" placeholder="Paste vendor JWT bearer token">
@@ -2195,6 +2257,7 @@
         </div>
     </main>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
         (function () {
             const root = document.querySelector(".page");
@@ -2214,15 +2277,15 @@
             const payoutPendingTotal = document.getElementById("payoutPendingTotal");
             const payoutNextEstimate = document.getElementById("payoutNextEstimate");
             const payoutRows = document.getElementById("payoutRows");
-            const navLinks = Array.from(document.querySelectorAll('.portal-nav a[href^="#"]'));
-            const navPanels = Array.from(document.querySelectorAll('[data-nav-panel="true"]'));
-            const dashboardElements = [
-                document.getElementById("vendorSummary"),
-                document.getElementById("vendorSummaryActions"),
-                document.getElementById("vendorProgressSnapshot"),
-                document.getElementById("payoutCenter")
-            ].filter(Boolean);
-            const dashboardSectionIds = new Set(["vendorSummary", "payoutCenter", "vendorProgressSnapshot"]);
+            const navLinks = Array.from(document.querySelectorAll('.portal-nav a[data-panel-key]'));
+            const panelGroups = Array.from(document.querySelectorAll('[data-panel-group]'));
+            const validPanelKeys = new Set(navLinks.map((link) => String(link.dataset.panelKey || "")).filter(Boolean));
+            const locationCountry = document.getElementById("location_country");
+            const locationState = document.getElementById("location_state");
+            const locationCity = document.getElementById("location_city");
+            const mapLatitude = document.getElementById("map_latitude");
+            const mapLongitude = document.getElementById("map_longitude");
+            const mapPlaceId = document.getElementById("map_place_id");
 
             const SESSION_KEY = "workation_vendor_token";
 
@@ -2528,52 +2591,119 @@
                 }
             }
 
-            function setActiveNavLink(targetId) {
+            function setActiveNavLink(panelKey) {
                 navLinks.forEach((link) => {
-                    const href = link.getAttribute("href") || "";
-                    const isActive = href === "#" + targetId;
+                    const isActive = (link.dataset.panelKey || "") === panelKey;
                     link.classList.toggle("is-active", isActive);
                 });
             }
 
-            function showDashboard() {
-                dashboardElements.forEach((el) => {
-                    el.hidden = false;
+            function showPanelGroup(panelKey) {
+                panelGroups.forEach((panel) => {
+                    panel.hidden = (panel.getAttribute("data-panel-group") || "") !== panelKey;
                 });
-                navPanels.forEach((panel) => {
-                    panel.hidden = true;
+                setActiveNavLink(panelKey);
+            }
+
+            function resolvePanelFromHash(hashValue) {
+                const panelKey = String(hashValue || "").replace(/^#/, "").trim().toLowerCase();
+                return validPanelKeys.has(panelKey) ? panelKey : "overview";
+            }
+
+            const LOCATION_TREE = {
+                "Maldives": {
+                    "Kaafu Atoll": ["Male", "Hulhumale", "Maafushi"],
+                    "Alif Alif Atoll": ["Rasdhoo", "Ukulhas", "Thoddoo"],
+                    "Alif Dhaal Atoll": ["Dhigurah", "Dhangethi", "Mahibadhoo"],
+                    "Baa Atoll": ["Eydhafushi", "Dharavandhoo", "Maalhos"]
+                },
+                "Sri Lanka": {
+                    "Western Province": ["Colombo", "Negombo", "Kalutara"],
+                    "Southern Province": ["Galle", "Matara", "Hambantota"],
+                    "Central Province": ["Kandy", "Nuwara Eliya", "Matale"]
+                },
+                "India": {
+                    "Kerala": ["Kochi", "Thiruvananthapuram", "Kozhikode"],
+                    "Karnataka": ["Bengaluru", "Mysuru", "Mangaluru"],
+                    "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai"]
+                },
+                "Other": {
+                    "Other": ["Other"]
+                }
+            };
+
+            function rebuildSelect(selectEl, values, placeholder) {
+                if (!selectEl) return;
+                selectEl.innerHTML = "";
+                const defaultOption = document.createElement("option");
+                defaultOption.value = "";
+                defaultOption.textContent = placeholder;
+                selectEl.appendChild(defaultOption);
+
+                values.forEach((value) => {
+                    const option = document.createElement("option");
+                    option.value = value;
+                    option.textContent = value;
+                    selectEl.appendChild(option);
                 });
             }
 
-            function showPanelForHash(hashValue) {
-                const targetId = String(hashValue || "").replace(/^#/, "");
-                const target = targetId ? document.getElementById(targetId) : null;
+            function refreshLocationSelectors() {
+                if (!locationCountry || !locationState || !locationCity) return;
+                const country = locationCountry.value || "Maldives";
+                const states = Object.keys(LOCATION_TREE[country] || {});
+                rebuildSelect(locationState, states, "Select state/province");
 
-                if (!target || dashboardSectionIds.has(targetId)) {
-                    showDashboard();
-                    setActiveNavLink(targetId || "vendorSummary");
-                    return;
+                const firstState = states[0] || "";
+                locationState.value = firstState;
+                const cities = (LOCATION_TREE[country] || {})[locationState.value] || [];
+                rebuildSelect(locationCity, cities, "Select city/island");
+                if (cities.length > 0) {
+                    locationCity.value = cities[0];
+                }
+            }
+
+            function refreshCitySelector() {
+                if (!locationCountry || !locationState || !locationCity) return;
+                const country = locationCountry.value || "Maldives";
+                const cities = (LOCATION_TREE[country] || {})[locationState.value] || [];
+                rebuildSelect(locationCity, cities, "Select city/island");
+                if (cities.length > 0) {
+                    locationCity.value = cities[0];
+                }
+            }
+
+            function initLocationMap() {
+                if (!window.L) return;
+                const mapEl = document.getElementById("propertyMap");
+                if (!mapEl) return;
+
+                const defaultLat = Number(mapLatitude && mapLatitude.value) || 4.1755;
+                const defaultLng = Number(mapLongitude && mapLongitude.value) || 73.5093;
+                const map = window.L.map(mapEl).setView([defaultLat, defaultLng], 9);
+
+                window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                    maxZoom: 19,
+                    attribution: "&copy; OpenStreetMap contributors"
+                }).addTo(map);
+
+                let marker = window.L.marker([defaultLat, defaultLng]).addTo(map);
+
+                function updateLocationFromMap(latlng) {
+                    const lat = Number(latlng.lat.toFixed(6));
+                    const lng = Number(latlng.lng.toFixed(6));
+
+                    if (mapLatitude) mapLatitude.value = String(lat);
+                    if (mapLongitude) mapLongitude.value = String(lng);
+                    if (mapPlaceId && mapPlaceId.value.trim() === "") {
+                        mapPlaceId.value = "PIN-" + lat + "," + lng;
+                    }
+
+                    marker.setLatLng([lat, lng]);
                 }
 
-                dashboardElements.forEach((el) => {
-                    el.hidden = true;
-                });
-                navPanels.forEach((panel) => {
-                    panel.hidden = true;
-                });
-
-                const panel = target.closest('[data-nav-panel="true"]');
-                if (!panel) {
-                    showDashboard();
-                    setActiveNavLink("vendorSummary");
-                    return;
-                }
-
-                panel.hidden = false;
-                setActiveNavLink(targetId);
-
-                requestAnimationFrame(function () {
-                    target.scrollIntoView({ behavior: "smooth", block: "start" });
+                map.on("click", function (event) {
+                    updateLocationFromMap(event.latlng);
                 });
             }
 
@@ -2713,19 +2843,24 @@
 
             navLinks.forEach((link) => {
                 link.addEventListener("click", function (event) {
-                    const href = link.getAttribute("href") || "";
-                    if (!href.startsWith("#")) {
-                        return;
-                    }
                     event.preventDefault();
-                    window.location.hash = href;
-                    showPanelForHash(href);
+                    const panelKey = String(link.dataset.panelKey || "").trim().toLowerCase();
+                    if (!panelKey) return;
+                    window.location.hash = panelKey;
+                    showPanelGroup(panelKey);
                 });
             });
 
             window.addEventListener("hashchange", function () {
-                showPanelForHash(window.location.hash);
+                showPanelGroup(resolvePanelFromHash(window.location.hash));
             });
+
+            if (locationCountry && locationState && locationCity) {
+                refreshLocationSelectors();
+                locationCountry.addEventListener("change", refreshLocationSelectors);
+                locationState.addEventListener("change", refreshCitySelector);
+            }
+            initLocationMap();
 
             setInterval(function () {
                 const token = getToken();
@@ -2742,7 +2877,7 @@
                 setSummaryDefaults();
             }
 
-            showPanelForHash(window.location.hash || "#vendorSummary");
+            showPanelGroup(resolvePanelFromHash(window.location.hash || "#overview"));
         })();
     </script>
 </body>

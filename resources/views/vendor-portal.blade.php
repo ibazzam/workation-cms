@@ -579,6 +579,61 @@
             color: #1f3346;
         }
 
+        .wizard-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .category-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .category-item {
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            padding: 8px 10px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.84rem;
+            color: #21384c;
+        }
+
+        .step-list {
+            margin: 0;
+            padding-left: 18px;
+            color: #30485e;
+            font-size: 0.84rem;
+            line-height: 1.5;
+        }
+
+        .media-thumb {
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            background: #fff;
+            padding: 8px;
+            font-size: 0.8rem;
+            color: #30485e;
+        }
+
+        .wizard-note {
+            margin-top: 8px;
+            font-size: 0.8rem;
+            color: #4f6479;
+        }
+
+        .standards-note {
+            margin-top: 6px;
+            font-size: 0.78rem;
+            color: #4b6075;
+        }
+
         .inline-status-form {
             display: flex;
             flex-wrap: wrap;
@@ -756,6 +811,11 @@
                 grid-template-columns: 1fr;
             }
 
+            .wizard-grid,
+            .category-grid {
+                grid-template-columns: 1fr;
+            }
+
             .payout-grid {
                 grid-template-columns: 1fr;
             }
@@ -793,6 +853,14 @@
         $vendorReservations = $vendorReservations ?? collect();
         $vendorPricingRules = $vendorPricingRules ?? collect();
         $vendorBilling = $vendorBilling ?? null;
+        $vendorCategoryMap = $vendorCategoryMap ?? [];
+        $selectedVendorCategories = $selectedVendorCategories ?? [];
+        $vendorOnboardingStep = $vendorOnboardingStep ?? 1;
+        $vendorRoomCategories = $vendorRoomCategories ?? collect();
+        $vendorMediaAssets = $vendorMediaAssets ?? collect();
+        $categorySet = collect($selectedVendorCategories)->flip();
+        $supportsAccommodation = $categorySet->has('accommodation');
+        $hasSelectedCategories = count($selectedVendorCategories) > 0;
     @endphp
     <main class="page" data-api-base="{{ $apiBase }}">
         <section class="hero">
@@ -817,8 +885,11 @@
             <a href="#vendorSummary">Summary</a>
             <a href="#payoutCenter">Payout Center</a>
             <a href="#vendorProfileCard">Profile</a>
+            <a href="#vendorCategoryWizard">Category Wizard</a>
             <a href="#vendorOperationsOverview">Operations</a>
             <a href="#vendorPropertiesSection">Properties</a>
+            <a href="#vendorRoomsSection">Room Categories</a>
+            <a href="#vendorMediaSection">Photos</a>
             <a href="#vendorServicesSection">Services</a>
             <a href="#vendorAvailabilitySection">Availability</a>
             <a href="#vendorReservationsSection">Reservations</a>
@@ -956,11 +1027,59 @@
             </form>
         </section>
 
+        <section id="vendorCategoryWizard" class="card ops-section" aria-label="Vendor category setup wizard">
+            <div class="ops-header">
+                <p class="ops-title">Category-Based Listing Wizard</p>
+                <span class="ops-chip">Step {{ $vendorOnboardingStep }} of 4</span>
+            </div>
+            <div class="wizard-grid">
+                <form class="ops-form" method="POST" action="/portal/vendor/categories/update">
+                    @csrf
+                    <div class="ops-field">
+                        <label>Select your service categories</label>
+                        <div class="category-grid">
+                            @foreach ($vendorCategoryMap as $categoryKey => $categoryLabel)
+                                <label class="category-item" for="category_{{ $categoryKey }}">
+                                    <input id="category_{{ $categoryKey }}" type="checkbox" name="categories[]" value="{{ $categoryKey }}" @checked(in_array($categoryKey, $selectedVendorCategories, true))>
+                                    <span>{{ $categoryLabel }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                    <div class="ops-field" style="margin-top:10px;">
+                        <label for="onboarding_step">Current onboarding step</label>
+                        <select id="onboarding_step" name="onboarding_step" class="ops-select" required>
+                            <option value="1" @selected((int) $vendorOnboardingStep === 1)>Step 1: Choose Categories</option>
+                            <option value="2" @selected((int) $vendorOnboardingStep === 2)>Step 2: Add Profile + Billing</option>
+                            <option value="3" @selected((int) $vendorOnboardingStep === 3)>Step 3: Create Listings + Availability</option>
+                            <option value="4" @selected((int) $vendorOnboardingStep === 4)>Step 4: Add Photos + Publish</option>
+                        </select>
+                    </div>
+                    <p class="wizard-note">Only selected categories can be used when creating properties/services.</p>
+                    <button class="btn btn-primary" type="submit">Save Category Setup</button>
+                </form>
+
+                <article class="ops-form">
+                    <p class="label">Step-by-step checklist</p>
+                    <ol class="step-list">
+                        <li>Select categories from schema domains: accommodation, transport, excursion, remote workspace, resort day visit, restaurant, vehicle rental.</li>
+                        <li>Complete account profile and billing details.</li>
+                        <li>Create listings, room categories (accommodation), availability, and pricing.</li>
+                        <li>Upload photos and finalize publish-ready inventory.</li>
+                    </ol>
+                    <p class="wizard-note">You can update categories later. Existing records remain editable.</p>
+                </article>
+            </div>
+        </section>
+
         <section id="vendorOperationsOverview" class="card ops-section" aria-label="Vendor operations overview">
             <div class="ops-header">
                 <p class="ops-title">Operations Console</p>
                 <span class="ops-chip">Database-backed</span>
             </div>
+            @if (!$hasSelectedCategories)
+                <p class="wizard-note">Select at least one category in Category Wizard before creating listings.</p>
+            @endif
             <div class="ops-metrics">
                 <article class="ops-metric">
                     <p class="metric-label">Properties</p>
@@ -999,6 +1118,14 @@
                     @csrf
                     <div class="ops-form-grid">
                         <div class="ops-field">
+                            <label for="property_listing_category">Listing Category</label>
+                            <select id="property_listing_category" name="listing_category" class="ops-select" required>
+                                @foreach ($vendorCategoryMap as $categoryKey => $categoryLabel)
+                                    <option value="{{ $categoryKey }}" @disabled(!in_array($categoryKey, $selectedVendorCategories, true))>{{ $categoryLabel }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="ops-field">
                             <label for="property_name">Name</label>
                             <input id="property_name" name="name" class="ops-input" type="text" maxlength="160" required>
                         </div>
@@ -1025,7 +1152,54 @@
                             <label for="property_description">Description</label>
                             <textarea id="property_description" name="description" class="ops-textarea" maxlength="3000"></textarea>
                         </div>
+                        <div class="ops-field">
+                            <label for="property_measurement_system">Measurement System</label>
+                            <select id="property_measurement_system" name="measurement_system" class="ops-select">
+                                <option value="metric">Metric</option>
+                                <option value="imperial">Imperial</option>
+                            </select>
+                        </div>
+                        <div class="ops-field">
+                            <label for="property_area_value">Area Value</label>
+                            <input id="property_area_value" name="area_value" class="ops-input" type="number" min="1" max="100000" step="0.01" placeholder="e.g. 120">
+                        </div>
+                        <div class="ops-field">
+                            <label for="property_area_unit">Area Unit</label>
+                            <select id="property_area_unit" name="area_unit" class="ops-select">
+                                <option value="sqm">sqm</option>
+                                <option value="sqft">sqft</option>
+                            </select>
+                        </div>
+                        <div class="ops-field">
+                            <label for="property_bedroom_count">Bedrooms</label>
+                            <input id="property_bedroom_count" name="bedroom_count" class="ops-input" type="number" min="0" max="1000">
+                        </div>
+                        <div class="ops-field">
+                            <label for="property_bathroom_count">Bathrooms</label>
+                            <input id="property_bathroom_count" name="bathroom_count" class="ops-input" type="number" min="0" max="1000" step="0.5">
+                        </div>
+                        <div class="ops-field">
+                            <label for="property_capacity_value">Capacity</label>
+                            <input id="property_capacity_value" name="capacity_value" class="ops-input" type="number" min="1" max="20000" placeholder="seats, guests, units">
+                        </div>
+                        <div class="ops-field">
+                            <label for="property_service_radius_km">Service Radius (km)</label>
+                            <input id="property_service_radius_km" name="service_radius_km" class="ops-input" type="number" min="0" max="5000" step="0.1">
+                        </div>
+                        <div class="ops-field">
+                            <label for="property_minimum_age">Minimum Age</label>
+                            <input id="property_minimum_age" name="minimum_age" class="ops-input" type="number" min="0" max="120">
+                        </div>
+                        <div class="ops-field ops-field-wide">
+                            <label for="property_safety_certifications">Safety Certifications</label>
+                            <textarea id="property_safety_certifications" name="safety_certifications" class="ops-textarea" maxlength="2000" placeholder="ISO, local licenses, fire safety, marine certifications"></textarea>
+                        </div>
+                        <div class="ops-field ops-field-wide">
+                            <label for="property_accessibility_features">Accessibility Features</label>
+                            <textarea id="property_accessibility_features" name="accessibility_features" class="ops-textarea" maxlength="2000" placeholder="Wheelchair access, ramps, accessible toilets, visual aids"></textarea>
+                        </div>
                     </div>
+                    <p class="standards-note">International listing standard: include measurable area/capacity and safety/accessibility details for trust and compliance.</p>
                     <button class="btn btn-primary" type="submit">Add Listing</button>
                 </form>
 
@@ -1033,6 +1207,7 @@
                     <table class="ops-table" aria-label="Vendor properties table">
                         <thead>
                             <tr>
+                                <th>Category</th>
                                 <th>Name</th>
                                 <th>Type</th>
                                 <th>Location</th>
@@ -1043,6 +1218,7 @@
                         <tbody>
                             @forelse ($vendorProperties->take(12) as $property)
                                 <tr>
+                                    <td>{{ strtoupper((string) ($property->listing_category ?? 'N/A')) }}</td>
                                     <td>{{ $property->name }}</td>
                                     <td>{{ strtoupper((string) $property->property_type) }}</td>
                                     <td>{{ $property->location ?: 'N/A' }}</td>
@@ -1051,7 +1227,158 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="ops-empty">No properties yet. Add your first listing.</td>
+                                    <td colspan="6" class="ops-empty">No properties yet. Add your first listing.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        @if ($supportsAccommodation)
+            <section id="vendorRoomsSection" class="card ops-section" aria-label="Vendor room categories">
+                <div class="ops-header">
+                    <p class="ops-title">Room Categories (Accommodation)</p>
+                    <span class="ops-chip">{{ $vendorRoomCategories->count() }} total</span>
+                </div>
+                <div class="ops-grid">
+                    <form class="ops-form" method="POST" action="/portal/vendor/rooms/create">
+                        @csrf
+                        <div class="ops-form-grid">
+                            <div class="ops-field">
+                                <label for="room_property_id">Property ID (optional)</label>
+                                <input id="room_property_id" name="vendor_property_id" class="ops-input" type="number" min="1">
+                            </div>
+                            <div class="ops-field">
+                                <label for="room_name">Room Category Name</label>
+                                <input id="room_name" name="name" class="ops-input" type="text" maxlength="160" required>
+                            </div>
+                            <div class="ops-field">
+                                <label for="room_quantity">Quantity</label>
+                                <input id="room_quantity" name="quantity" class="ops-input" type="number" min="1" max="10000" value="1">
+                            </div>
+                            <div class="ops-field">
+                                <label for="room_occupancy">Max Occupancy</label>
+                                <input id="room_occupancy" name="max_occupancy" class="ops-input" type="number" min="1" max="50" value="2">
+                            </div>
+                            <div class="ops-field">
+                                <label for="room_bed_type">Bed Type</label>
+                                <input id="room_bed_type" name="bed_type" class="ops-input" type="text" maxlength="80" placeholder="King, Twin, etc.">
+                            </div>
+                            <div class="ops-field">
+                                <label for="room_base_price">Base Price (MVR)</label>
+                                <input id="room_base_price" name="base_price" class="ops-input" type="number" min="0" step="0.01" value="0">
+                            </div>
+                            <div class="ops-field ops-field-wide">
+                                <label for="room_amenities">Room Amenities</label>
+                                <textarea id="room_amenities" name="amenities" class="ops-textarea" maxlength="3000" placeholder="WiFi, balcony, sea-view, breakfast included"></textarea>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" type="submit">Add Room Category</button>
+                    </form>
+
+                    <div class="ops-table-wrap">
+                        <table class="ops-table" aria-label="Vendor room categories table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Qty</th>
+                                    <th>Occupancy</th>
+                                    <th>Bed</th>
+                                    <th>Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($vendorRoomCategories->take(12) as $room)
+                                    <tr>
+                                        <td>{{ $room->name }}</td>
+                                        <td>{{ (int) $room->quantity }}</td>
+                                        <td>{{ (int) $room->max_occupancy }}</td>
+                                        <td>{{ $room->bed_type ?: 'N/A' }}</td>
+                                        <td>{{ $room->currency }} {{ number_format((float) $room->base_price, 2) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="ops-empty">No room categories yet.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        @endif
+
+        <section id="vendorMediaSection" class="card ops-section" aria-label="Vendor listing photos">
+            <div class="ops-header">
+                <p class="ops-title">Photos and Media</p>
+                <span class="ops-chip">{{ $vendorMediaAssets->count() }} uploaded</span>
+            </div>
+            <div class="ops-grid">
+                <form class="ops-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
+                    @csrf
+                    <div class="ops-form-grid">
+                        <div class="ops-field">
+                            <label for="media_entity_type">Entity Type</label>
+                            <select id="media_entity_type" name="entity_type" class="ops-select" required>
+                                <option value="property">Property</option>
+                                <option value="service">Service</option>
+                                <option value="room">Room</option>
+                                <option value="menu">Menu</option>
+                                <option value="vehicle">Vehicle</option>
+                                <option value="profile">Profile</option>
+                            </select>
+                        </div>
+                        <div class="ops-field">
+                            <label for="media_entity_id">Entity ID (optional)</label>
+                            <input id="media_entity_id" name="entity_id" class="ops-input" type="number" min="1">
+                        </div>
+                        <div class="ops-field ops-field-wide">
+                            <label for="media_photo">Photo</label>
+                            <input id="media_photo" name="photo" class="ops-input" type="file" accept="image/*" required>
+                        </div>
+                        <div class="ops-field ops-field-wide">
+                            <label for="media_alt_text">Alt Text</label>
+                            <input id="media_alt_text" name="alt_text" class="ops-input" type="text" maxlength="190" placeholder="Describe this photo" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="media_is_primary">Primary Photo</label>
+                            <select id="media_is_primary" name="is_primary" class="ops-select">
+                                <option value="0">No</option>
+                                <option value="1">Yes</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p class="standards-note">Image standard: JPG/PNG/WebP, minimum 1200x800px, descriptive alt text required.</p>
+                    <button class="btn btn-primary" type="submit">Upload Photo</button>
+                </form>
+
+                <div class="ops-table-wrap">
+                    <table class="ops-table" aria-label="Vendor media table">
+                        <thead>
+                            <tr>
+                                <th>Entity</th>
+                                <th>Path</th>
+                                <th>Dimensions</th>
+                                <th>Quality</th>
+                                <th>Alt Text</th>
+                                <th>Uploaded</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($vendorMediaAssets->take(15) as $media)
+                                <tr>
+                                    <td>{{ strtoupper((string) $media->entity_type) }} #{{ $media->entity_id ?: 'N/A' }}</td>
+                                    <td class="media-thumb">{{ $media->file_path }}</td>
+                                    <td>{{ ($media->width_px ?? '-') }} x {{ ($media->height_px ?? '-') }}</td>
+                                    <td>{{ $media->quality_grade ?? 'N/A' }}</td>
+                                    <td>{{ $media->alt_text ?: 'N/A' }}</td>
+                                    <td>{{ $media->created_at }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="ops-empty">No media uploads yet.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -1069,6 +1396,14 @@
                 <form class="ops-form" method="POST" action="/portal/vendor/services/create">
                     @csrf
                     <div class="ops-form-grid">
+                        <div class="ops-field">
+                            <label for="service_listing_category">Listing Category</label>
+                            <select id="service_listing_category" name="listing_category" class="ops-select" required>
+                                @foreach ($vendorCategoryMap as $categoryKey => $categoryLabel)
+                                    <option value="{{ $categoryKey }}" @disabled(!in_array($categoryKey, $selectedVendorCategories, true))>{{ $categoryLabel }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                         <div class="ops-field">
                             <label for="service_name">Service Name</label>
                             <input id="service_name" name="name" class="ops-input" type="text" maxlength="160" required>
@@ -1093,7 +1428,43 @@
                             <label for="service_description">Description</label>
                             <textarea id="service_description" name="description" class="ops-textarea" maxlength="3000"></textarea>
                         </div>
+                        <div class="ops-field">
+                            <label for="service_measurement_system">Measurement System</label>
+                            <select id="service_measurement_system" name="measurement_system" class="ops-select">
+                                <option value="metric">Metric</option>
+                                <option value="imperial">Imperial</option>
+                            </select>
+                        </div>
+                        <div class="ops-field">
+                            <label for="service_lead_time">Lead Time (minutes)</label>
+                            <input id="service_lead_time" name="lead_time_minutes" class="ops-input" type="number" min="0" max="43200" placeholder="e.g. 120">
+                        </div>
+                        <div class="ops-field">
+                            <label for="service_min_booking">Min Booking Size</label>
+                            <input id="service_min_booking" name="min_booking_size" class="ops-input" type="number" min="1" max="10000">
+                        </div>
+                        <div class="ops-field">
+                            <label for="service_max_booking">Max Booking Size</label>
+                            <input id="service_max_booking" name="max_booking_size" class="ops-input" type="number" min="1" max="10000">
+                        </div>
+                        <div class="ops-field">
+                            <label for="service_quantity_unit">Quantity Unit</label>
+                            <select id="service_quantity_unit" name="quantity_unit" class="ops-select">
+                                <option value="seat">Seat</option>
+                                <option value="room">Room</option>
+                                <option value="desk">Desk</option>
+                                <option value="vehicle">Vehicle</option>
+                                <option value="ticket">Ticket</option>
+                                <option value="table">Table</option>
+                                <option value="pass">Pass</option>
+                            </select>
+                        </div>
+                        <div class="ops-field ops-field-wide">
+                            <label for="service_compliance_notes">Compliance Notes</label>
+                            <textarea id="service_compliance_notes" name="compliance_notes" class="ops-textarea" maxlength="2000" placeholder="Operational and safety constraints, policy references, legal requirements"></textarea>
+                        </div>
                     </div>
+                    <p class="standards-note">International listing standard: include lead times and capacity boundaries to reduce booking failures.</p>
                     <button class="btn btn-primary" type="submit">Add Service</button>
                 </form>
 
@@ -1101,6 +1472,7 @@
                     <table class="ops-table" aria-label="Vendor services table">
                         <thead>
                             <tr>
+                                <th>Listing</th>
                                 <th>Name</th>
                                 <th>Category</th>
                                 <th>Duration</th>
@@ -1111,6 +1483,7 @@
                         <tbody>
                             @forelse ($vendorServices->take(12) as $service)
                                 <tr>
+                                    <td>{{ strtoupper((string) ($service->listing_category ?? 'N/A')) }}</td>
                                     <td>{{ $service->name }}</td>
                                     <td>{{ $service->category }}</td>
                                     <td>{{ (int) $service->duration_minutes }} min</td>
@@ -1119,7 +1492,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="ops-empty">No services yet. Add one to start taking reservations.</td>
+                                    <td colspan="6" class="ops-empty">No services yet. Add one to start taking reservations.</td>
                                 </tr>
                             @endforelse
                         </tbody>

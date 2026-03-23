@@ -1060,29 +1060,65 @@ Route::post('/portal/vendor/billing/update', function (Request $request) {
         'tax_id' => ['nullable', 'string', 'max:120'],
         'billing_email' => ['required', 'email', 'max:190'],
         'payout_method' => ['required', Rule::in(['bank_transfer', 'mobile_wallet', 'manual'])],
+        'beneficiary_name' => ['required', 'string', 'max:190'],
         'payout_reference' => ['nullable', 'string', 'max:190'],
         'bank_name' => ['nullable', 'string', 'max:190'],
         'swift_code' => ['nullable', 'string', 'max:20'],
+        'bank_account_number' => ['required', 'string', 'max:60'],
         'bank_account_last4' => ['nullable', 'string', 'max:8'],
+        'billing_street_name' => ['required', 'string', 'max:255'],
+        'billing_country' => ['required', 'string', 'max:90'],
+        'billing_state' => ['required', 'string', 'max:120'],
+        'billing_city' => ['required', 'string', 'max:120'],
         'billing_address' => ['nullable', 'string', 'max:2000'],
         'currency' => ['required', Rule::in(['MVR', 'USD'])],
         'invoice_prefix' => ['nullable', 'string', 'max:30'],
     ]);
+
+    $streetName = trim((string) ($validated['billing_street_name'] ?? ''));
+    $billingCity = trim((string) ($validated['billing_city'] ?? ''));
+    $billingState = trim((string) ($validated['billing_state'] ?? ''));
+    $billingCountry = trim((string) ($validated['billing_country'] ?? ''));
+    $locationSuffix = implode(', ', array_values(array_filter([$billingCity, $billingState, $billingCountry], static fn (string $value): bool => $value !== '')));
+    $composedAddress = trim($streetName . ($locationSuffix !== '' ? ', ' . $locationSuffix : ''));
+    $manualAddress = trim((string) ($validated['billing_address'] ?? ''));
+    $resolvedBillingAddress = $manualAddress !== '' ? $manualAddress : $composedAddress;
+    $bankAccountNumber = trim((string) ($validated['bank_account_number'] ?? ''));
 
     $payload = [
         'business_name' => trim((string) $validated['business_name']),
         'tax_id' => trim((string) ($validated['tax_id'] ?? '')),
         'billing_email' => strtolower(trim((string) $validated['billing_email'])),
         'payout_method' => (string) $validated['payout_method'],
+        'beneficiary_name' => trim((string) ($validated['beneficiary_name'] ?? '')),
         'payout_reference' => trim((string) ($validated['payout_reference'] ?? '')),
         'bank_name' => trim((string) ($validated['bank_name'] ?? '')),
+        'bank_account_number' => $bankAccountNumber,
         'bank_account_last4' => trim((string) ($validated['bank_account_last4'] ?? '')),
-        'billing_address' => trim((string) ($validated['billing_address'] ?? '')),
+        'billing_street_name' => $streetName,
+        'billing_country' => $billingCountry,
+        'billing_state' => $billingState,
+        'billing_city' => $billingCity,
+        'billing_address' => $resolvedBillingAddress,
         'currency' => strtoupper(trim((string) ($validated['currency'] ?? 'MVR'))),
         'invoice_prefix' => strtoupper(trim((string) ($validated['invoice_prefix'] ?? 'INV'))),
         'updated_at' => now(),
         'created_at' => now(),
     ];
+
+    if ($payload['bank_account_last4'] === '' && $bankAccountNumber !== '') {
+        $payload['bank_account_last4'] = substr($bankAccountNumber, -4);
+    }
+
+    foreach (['beneficiary_name', 'bank_account_number', 'billing_street_name', 'billing_country', 'billing_state', 'billing_city'] as $column) {
+        if (!Schema::hasColumn('vendor_billing_details', $column)) {
+            unset($payload[$column]);
+        }
+    }
+
+    if (!Schema::hasColumn('vendor_billing_details', 'bank_account_last4')) {
+        unset($payload['bank_account_last4']);
+    }
 
     if (Schema::hasColumn('vendor_billing_details', 'swift_code')) {
         $payload['swift_code'] = strtoupper(trim((string) ($validated['swift_code'] ?? '')));

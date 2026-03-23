@@ -1191,7 +1191,8 @@
             <div class="panel-links" aria-label="Profile actions">
                 <a href="#vendorProfileCard">Profile Settings</a>
                 <a href="#vendorCategoryWizard">Category Setup</a>
-                <a href="#vendorBillingSection">Billing Settings</a>
+                <a href="#vendorProfileBillingSettings">Billing Settings</a>
+                <a href="#vendorDailyCollectionSection">Daily Collection</a>
             </div>
             <form method="POST" action="/portal/vendor/profile/update">
                 @csrf
@@ -1244,6 +1245,99 @@
                 <p class="profile-help">Update your display name and primary phone number used by the vendor team.</p>
                 <button class="btn btn-primary" type="submit">Save Profile Settings</button>
             </form>
+
+            <div id="vendorProfileBillingSettings" class="ops-section" aria-label="Vendor billing settings">
+                <div class="ops-header">
+                    <p class="ops-title">Billing Details</p>
+                    <span class="ops-chip">{{ $vendorBilling ? 'Configured' : 'Pending' }}</span>
+                </div>
+                <form class="ops-form" method="POST" action="/portal/vendor/billing/update">
+                    @csrf
+                    <div class="ops-form-grid">
+                        <div class="ops-field">
+                            <label for="billing_business_name">Business Name</label>
+                            <input id="billing_business_name" name="business_name" class="ops-input" type="text" maxlength="190" value="{{ old('business_name', optional($vendorBilling)->business_name ?? '') }}" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="billing_tax_id">Tax ID</label>
+                            <input id="billing_tax_id" name="tax_id" class="ops-input" type="text" maxlength="120" value="{{ old('tax_id', optional($vendorBilling)->tax_id ?? '') }}">
+                        </div>
+                        <div class="ops-field">
+                            <label for="billing_email">Billing Email</label>
+                            <input id="billing_email" name="billing_email" class="ops-input" type="email" maxlength="190" value="{{ old('billing_email', optional($vendorBilling)->billing_email ?? '') }}" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="billing_payout_method">Payout Method</label>
+                            <select id="billing_payout_method" name="payout_method" class="ops-select" required>
+                                <option value="bank_transfer" @selected((optional($vendorBilling)->payout_method ?? '') === 'bank_transfer')>Bank Transfer</option>
+                                <option value="mobile_wallet" @selected((optional($vendorBilling)->payout_method ?? '') === 'mobile_wallet')>Mobile Wallet</option>
+                                <option value="manual" @selected((optional($vendorBilling)->payout_method ?? '') === 'manual')>Manual</option>
+                            </select>
+                        </div>
+                        <div class="ops-field">
+                            <label for="billing_beneficiary_name">Beneficiary / Account Name</label>
+                            <input id="billing_beneficiary_name" name="beneficiary_name" class="ops-input" type="text" maxlength="190" value="{{ old('beneficiary_name', optional($vendorBilling)->beneficiary_name ?? '') }}" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="billing_payout_reference">Payout Reference</label>
+                            <input id="billing_payout_reference" name="payout_reference" class="ops-input" type="text" maxlength="190" value="{{ old('payout_reference', optional($vendorBilling)->payout_reference ?? '') }}">
+                        </div>
+                        <div class="ops-field">
+                            <label for="billing_bank_name">Bank Name</label>
+                            <input id="billing_bank_name" name="bank_name" class="ops-input" type="text" maxlength="190" value="{{ old('bank_name', optional($vendorBilling)->bank_name ?? '') }}">
+                        </div>
+                        <div class="ops-field">
+                            <label for="billing_swift_code">SWIFT Code</label>
+                            <input id="billing_swift_code" name="swift_code" class="ops-input" type="text" maxlength="20" value="{{ old('swift_code', optional($vendorBilling)->swift_code ?? '') }}" placeholder="e.g. MALAADMV">
+                        </div>
+                        <div class="ops-field">
+                            <label for="billing_account_number">Account Number (Full)</label>
+                            <input id="billing_account_number" name="bank_account_number" class="ops-input" type="text" maxlength="60" value="{{ old('bank_account_number', optional($vendorBilling)->bank_account_number ?? '') }}" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="billing_currency">Currency</label>
+                            <select id="billing_currency" name="currency" class="ops-select" required>
+                                <option value="MVR" @selected(strtoupper((string) old('currency', optional($vendorBilling)->currency ?? 'MVR')) === 'MVR')>MVR</option>
+                                <option value="USD" @selected(strtoupper((string) old('currency', optional($vendorBilling)->currency ?? 'MVR')) === 'USD')>USD</option>
+                            </select>
+                        </div>
+                        <div class="ops-field ops-field-wide">
+                            <label for="billing_street_name">Address: Street Name</label>
+                            <input id="billing_street_name" name="billing_street_name" class="ops-input" type="text" maxlength="255" value="{{ old('billing_street_name', optional($vendorBilling)->billing_street_name ?? '') }}" required>
+                        </div>
+                        <div class="ops-field">
+                            <label for="billing_country">Country</label>
+                            <select id="billing_country" name="billing_country" class="ops-select" required>
+                                <option value="Maldives" @selected(old('billing_country', optional($vendorBilling)->billing_country ?? 'Maldives') === 'Maldives')>Maldives</option>
+                                <option value="Sri Lanka" @selected(old('billing_country', optional($vendorBilling)->billing_country ?? '') === 'Sri Lanka')>Sri Lanka</option>
+                                <option value="India" @selected(old('billing_country', optional($vendorBilling)->billing_country ?? '') === 'India')>India</option>
+                                <option value="Other" @selected(old('billing_country', optional($vendorBilling)->billing_country ?? '') === 'Other')>Other</option>
+                            </select>
+                        </div>
+                        <div class="ops-field">
+                            <label for="billing_state">State / Province / Atoll</label>
+                            <select id="billing_state" name="billing_state" class="ops-select" required>
+                                <option value="">Select state/province</option>
+                            </select>
+                        </div>
+                        <div class="ops-field">
+                            <label for="billing_city">City / Island</label>
+                            <select id="billing_city" name="billing_city" class="ops-select" required>
+                                <option value="">Select city/island</option>
+                            </select>
+                        </div>
+                        <div class="ops-field">
+                            <label for="billing_invoice_prefix">Invoice Prefix</label>
+                            <input id="billing_invoice_prefix" name="invoice_prefix" class="ops-input" type="text" maxlength="30" value="{{ old('invoice_prefix', optional($vendorBilling)->invoice_prefix ?? 'INV') }}">
+                        </div>
+                        <div class="ops-field ops-field-wide">
+                            <label for="billing_address">Additional Address Details (optional)</label>
+                            <textarea id="billing_address" name="billing_address" class="ops-textarea" maxlength="2000">{{ old('billing_address', optional($vendorBilling)->billing_address ?? '') }}</textarea>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Save Billing Details</button>
+                </form>
+            </div>
 
             <div id="vendorCategoryWizard" class="ops-section" aria-label="Vendor category setup wizard">
             <div class="ops-header">
@@ -2067,78 +2161,11 @@
             </div>
         </section>
 
-        <section id="vendorBillingSection" class="card ops-section" aria-label="Vendor billing details" data-panel-group="profile">
+        <section id="vendorDailyCollectionSection" class="card ops-section" aria-label="Vendor daily collection and settlements" data-panel-group="profile">
             <div class="ops-header">
-                <p class="ops-title">Billing Details</p>
-                <span class="ops-chip">{{ $vendorBilling ? 'Configured' : 'Pending' }}</span>
+                <p class="ops-title">Daily Collection and Payout Ledger</p>
+                <span class="ops-chip">Commission {{ (int) ($commissionRate * 100) }}%</span>
             </div>
-            <div class="panel-links" aria-label="Billing actions">
-                <a href="#vendorBillingSection">Billing Settings</a>
-                <a href="#vendorDailyCollectionSection">Collections & Payouts</a>
-            </div>
-            <form class="ops-form" method="POST" action="/portal/vendor/billing/update">
-                @csrf
-                <div class="ops-form-grid">
-                    <div class="ops-field">
-                        <label for="billing_business_name">Business Name</label>
-                        <input id="billing_business_name" name="business_name" class="ops-input" type="text" maxlength="190" value="{{ old('business_name', optional($vendorBilling)->business_name ?? '') }}" required>
-                    </div>
-                    <div class="ops-field">
-                        <label for="billing_tax_id">Tax ID</label>
-                        <input id="billing_tax_id" name="tax_id" class="ops-input" type="text" maxlength="120" value="{{ old('tax_id', optional($vendorBilling)->tax_id ?? '') }}">
-                    </div>
-                    <div class="ops-field">
-                        <label for="billing_email">Billing Email</label>
-                        <input id="billing_email" name="billing_email" class="ops-input" type="email" maxlength="190" value="{{ old('billing_email', optional($vendorBilling)->billing_email ?? '') }}" required>
-                    </div>
-                    <div class="ops-field">
-                        <label for="billing_payout_method">Payout Method</label>
-                        <select id="billing_payout_method" name="payout_method" class="ops-select" required>
-                            <option value="bank_transfer" @selected((optional($vendorBilling)->payout_method ?? '') === 'bank_transfer')>Bank Transfer</option>
-                            <option value="mobile_wallet" @selected((optional($vendorBilling)->payout_method ?? '') === 'mobile_wallet')>Mobile Wallet</option>
-                            <option value="manual" @selected((optional($vendorBilling)->payout_method ?? '') === 'manual')>Manual</option>
-                        </select>
-                    </div>
-                    <div class="ops-field">
-                        <label for="billing_payout_reference">Payout Reference</label>
-                        <input id="billing_payout_reference" name="payout_reference" class="ops-input" type="text" maxlength="190" value="{{ old('payout_reference', optional($vendorBilling)->payout_reference ?? '') }}">
-                    </div>
-                    <div class="ops-field">
-                        <label for="billing_bank_name">Bank Name</label>
-                        <input id="billing_bank_name" name="bank_name" class="ops-input" type="text" maxlength="190" value="{{ old('bank_name', optional($vendorBilling)->bank_name ?? '') }}">
-                    </div>
-                    <div class="ops-field">
-                        <label for="billing_swift_code">SWIFT Code</label>
-                        <input id="billing_swift_code" name="swift_code" class="ops-input" type="text" maxlength="20" value="{{ old('swift_code', optional($vendorBilling)->swift_code ?? '') }}" placeholder="e.g. MALAADMV">
-                    </div>
-                    <div class="ops-field">
-                        <label for="billing_bank_last4">Bank Account Last 4</label>
-                        <input id="billing_bank_last4" name="bank_account_last4" class="ops-input" type="text" maxlength="8" value="{{ old('bank_account_last4', optional($vendorBilling)->bank_account_last4 ?? '') }}">
-                    </div>
-                    <div class="ops-field">
-                        <label for="billing_currency">Currency</label>
-                        <select id="billing_currency" name="currency" class="ops-select" required>
-                            <option value="MVR" @selected(strtoupper((string) old('currency', optional($vendorBilling)->currency ?? 'MVR')) === 'MVR')>MVR</option>
-                            <option value="USD" @selected(strtoupper((string) old('currency', optional($vendorBilling)->currency ?? 'MVR')) === 'USD')>USD</option>
-                        </select>
-                    </div>
-                    <div class="ops-field">
-                        <label for="billing_invoice_prefix">Invoice Prefix</label>
-                        <input id="billing_invoice_prefix" name="invoice_prefix" class="ops-input" type="text" maxlength="30" value="{{ old('invoice_prefix', optional($vendorBilling)->invoice_prefix ?? 'INV') }}">
-                    </div>
-                    <div class="ops-field ops-field-wide">
-                        <label for="billing_address">Billing Address</label>
-                        <textarea id="billing_address" name="billing_address" class="ops-textarea" maxlength="2000">{{ old('billing_address', optional($vendorBilling)->billing_address ?? '') }}</textarea>
-                    </div>
-                </div>
-                <button class="btn btn-primary" type="submit">Save Billing Details</button>
-            </form>
-
-            <div id="vendorDailyCollectionSection" class="ops-section" aria-label="Vendor daily collection and settlements">
-                <div class="ops-header">
-                    <p class="ops-title">Daily Collection and Payout Ledger</p>
-                    <span class="ops-chip">Commission {{ (int) ($commissionRate * 100) }}%</span>
-                </div>
 
                 <div class="billing-ledger-grid">
                     <article class="billing-ledger-card">
@@ -2188,36 +2215,35 @@
                     </table>
                 </div>
 
-                <div class="ops-table-wrap">
-                    <table class="ops-table" aria-label="Vendor invoice settlement ledger">
-                        <thead>
+            <div class="ops-table-wrap">
+                <table class="ops-table" aria-label="Vendor invoice settlement ledger">
+                    <thead>
+                        <tr>
+                            <th>Invoice</th>
+                            <th>Collected From</th>
+                            <th>Status</th>
+                            <th>Gross</th>
+                            <th>Commission</th>
+                            <th>Payout</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($billingLedgerRows->take(20) as $entry)
                             <tr>
-                                <th>Invoice</th>
-                                <th>Collected From</th>
-                                <th>Status</th>
-                                <th>Gross</th>
-                                <th>Commission</th>
-                                <th>Payout</th>
+                                <td>{{ $entry['invoice_ref'] }}<br>{{ $entry['collection_day'] }}</td>
+                                <td>{{ $entry['customer_name'] }}<br>{{ $entry['customer_email'] ?: 'N/A' }}</td>
+                                <td>{{ strtoupper($entry['booking_status']) }} / {{ strtoupper($entry['payment_status']) }}<br>{{ $entry['is_settled'] ? 'SETTLED' : 'PENDING' }}</td>
+                                <td>{{ $entry['currency'] }} {{ number_format((float) $entry['gross'], 2) }}</td>
+                                <td>{{ $entry['currency'] }} {{ number_format((float) $entry['commission'], 2) }}</td>
+                                <td>{{ $entry['currency'] }} {{ number_format((float) $entry['payout'], 2) }}</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($billingLedgerRows->take(20) as $entry)
-                                <tr>
-                                    <td>{{ $entry['invoice_ref'] }}<br>{{ $entry['collection_day'] }}</td>
-                                    <td>{{ $entry['customer_name'] }}<br>{{ $entry['customer_email'] ?: 'N/A' }}</td>
-                                    <td>{{ strtoupper($entry['booking_status']) }} / {{ strtoupper($entry['payment_status']) }}<br>{{ $entry['is_settled'] ? 'SETTLED' : 'PENDING' }}</td>
-                                    <td>{{ $entry['currency'] }} {{ number_format((float) $entry['gross'], 2) }}</td>
-                                    <td>{{ $entry['currency'] }} {{ number_format((float) $entry['commission'], 2) }}</td>
-                                    <td>{{ $entry['currency'] }} {{ number_format((float) $entry['payout'], 2) }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="ops-empty">No invoice ledger data yet.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="ops-empty">No invoice ledger data yet.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </section>
 
@@ -2294,6 +2320,9 @@
             const mapLatitude = document.getElementById("map_latitude");
             const mapLongitude = document.getElementById("map_longitude");
             const mapPlaceId = document.getElementById("map_place_id");
+            const billingCountry = document.getElementById("billing_country");
+            const billingState = document.getElementById("billing_state");
+            const billingCity = document.getElementById("billing_city");
 
             const SESSION_KEY = "workation_vendor_token";
 
@@ -2656,6 +2685,16 @@
                 });
             }
 
+            function ensureSelectHasOption(selectEl, value) {
+                if (!selectEl || !value) return;
+                const exists = Array.from(selectEl.options).some((option) => option.value === value);
+                if (exists) return;
+                const option = document.createElement("option");
+                option.value = value;
+                option.textContent = value;
+                selectEl.appendChild(option);
+            }
+
             function refreshLocationSelectors() {
                 if (!locationCountry || !locationState || !locationCity) return;
                 const country = locationCountry.value || "Maldives";
@@ -2679,6 +2718,51 @@
                 if (cities.length > 0) {
                     locationCity.value = cities[0];
                 }
+            }
+
+            function refreshBillingLocationSelectors() {
+                if (!billingCountry || !billingState || !billingCity) return;
+                const country = billingCountry.value || "Maldives";
+                const states = Object.keys(LOCATION_TREE[country] || {});
+                const previousState = billingState.dataset.selectedValue || billingState.value;
+                const previousCity = billingCity.dataset.selectedValue || billingCity.value;
+
+                rebuildSelect(billingState, states, "Select state/province");
+                ensureSelectHasOption(billingState, previousState);
+
+                if (previousState && Array.from(billingState.options).some((option) => option.value === previousState)) {
+                    billingState.value = previousState;
+                } else if (states.length > 0) {
+                    billingState.value = states[0];
+                }
+
+                const cities = (LOCATION_TREE[country] || {})[billingState.value] || [];
+                rebuildSelect(billingCity, cities, "Select city/island");
+                ensureSelectHasOption(billingCity, previousCity);
+
+                if (previousCity && Array.from(billingCity.options).some((option) => option.value === previousCity)) {
+                    billingCity.value = previousCity;
+                } else if (cities.length > 0) {
+                    billingCity.value = cities[0];
+                }
+
+                billingState.dataset.selectedValue = "";
+                billingCity.dataset.selectedValue = "";
+            }
+
+            function refreshBillingCitySelector() {
+                if (!billingCountry || !billingState || !billingCity) return;
+                const country = billingCountry.value || "Maldives";
+                const cities = (LOCATION_TREE[country] || {})[billingState.value] || [];
+                const previousCity = billingCity.dataset.selectedValue || billingCity.value;
+                rebuildSelect(billingCity, cities, "Select city/island");
+                ensureSelectHasOption(billingCity, previousCity);
+                if (previousCity && Array.from(billingCity.options).some((option) => option.value === previousCity)) {
+                    billingCity.value = previousCity;
+                } else if (cities.length > 0) {
+                    billingCity.value = cities[0];
+                }
+                billingCity.dataset.selectedValue = "";
             }
 
             function initLocationMap() {
@@ -2867,6 +2951,14 @@
                 refreshLocationSelectors();
                 locationCountry.addEventListener("change", refreshLocationSelectors);
                 locationState.addEventListener("change", refreshCitySelector);
+            }
+
+            if (billingCountry && billingState && billingCity) {
+                billingState.dataset.selectedValue = "{{ old('billing_state', optional($vendorBilling)->billing_state ?? '') }}";
+                billingCity.dataset.selectedValue = "{{ old('billing_city', optional($vendorBilling)->billing_city ?? '') }}";
+                refreshBillingLocationSelectors();
+                billingCountry.addEventListener("change", refreshBillingLocationSelectors);
+                billingState.addEventListener("change", refreshBillingCitySelector);
             }
             initLocationMap();
 

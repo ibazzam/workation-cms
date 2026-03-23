@@ -12,13 +12,66 @@ if (!function_exists('vendorPortalCategoryMap')) {
     {
         return [
             'accommodation' => 'Accommodation',
-            'transport' => 'Transport',
+            'transport' => 'Transports',
             'excursion' => 'Excursions',
-            'remote_workspace' => 'Remote Workspace',
-            'resort_day_visit' => 'Resort Day Visit',
+            'remote_workspace' => 'Remote Workspaces',
+            'resort_day_visit' => 'Resort Day Visits',
             'restaurant' => 'Restaurants',
             'vehicle_rental' => 'Vehicle Rentals',
         ];
+    }
+}
+
+if (!function_exists('vendorPortalCategoryAliases')) {
+    function vendorPortalCategoryAliases(): array
+    {
+        return [
+            'accommodation' => 'accommodation',
+            'accommodations' => 'accommodation',
+            'transport' => 'transport',
+            'transports' => 'transport',
+            'excursion' => 'excursion',
+            'excursions' => 'excursion',
+            'remote_workspace' => 'remote_workspace',
+            'remote_workspaces' => 'remote_workspace',
+            'remoteworkspace' => 'remote_workspace',
+            'remoteworkspaces' => 'remote_workspace',
+            'resort_day_visit' => 'resort_day_visit',
+            'resort_day_visits' => 'resort_day_visit',
+            'resortdayvisit' => 'resort_day_visit',
+            'resortdayvisits' => 'resort_day_visit',
+            'restaurant' => 'restaurant',
+            'restaurants' => 'restaurant',
+            'vehicle_rental' => 'vehicle_rental',
+            'vehicle_rentals' => 'vehicle_rental',
+            'vehiclerental' => 'vehicle_rental',
+            'vehiclerentals' => 'vehicle_rental',
+        ];
+    }
+}
+
+if (!function_exists('vendorPortalNormalizeCategoryToken')) {
+    function vendorPortalNormalizeCategoryToken(string $value): string
+    {
+        $value = trim($value);
+        $value = preg_replace('/(?<!^)[A-Z]/', '_$0', $value) ?? $value;
+        $value = strtolower($value);
+        $value = preg_replace('/[^a-z0-9]+/', '_', $value) ?? $value;
+        $value = preg_replace('/_+/', '_', $value) ?? $value;
+        return trim($value, '_');
+    }
+}
+
+if (!function_exists('vendorPortalCanonicalCategory')) {
+    function vendorPortalCanonicalCategory(string $value): ?string
+    {
+        $normalized = vendorPortalNormalizeCategoryToken($value);
+        if ($normalized === '') {
+            return null;
+        }
+
+        $aliases = vendorPortalCategoryAliases();
+        return $aliases[$normalized] ?? null;
     }
 }
 
@@ -38,7 +91,15 @@ if (!function_exists('vendorPortalSelectedCategories')) {
         }
 
         $allowed = array_keys(vendorPortalCategoryMap());
-        return array_values(array_intersect($allowed, array_map('strval', $candidate)));
+        $normalized = [];
+        foreach ($candidate as $item) {
+            $canonical = vendorPortalCanonicalCategory((string) $item);
+            if ($canonical !== null && in_array($canonical, $allowed, true)) {
+                $normalized[] = $canonical;
+            }
+        }
+
+        return array_values(array_unique($normalized));
     }
 }
 
@@ -270,14 +331,25 @@ Route::post('/portal/vendor/categories/update', function (Request $request) {
         ]);
     }
 
-    $categoryKeys = array_keys(vendorPortalCategoryMap());
     $validated = $request->validate([
         'categories' => ['required', 'array', 'min:1'],
-        'categories.*' => ['required', 'string', Rule::in($categoryKeys)],
+        'categories.*' => ['required', 'string', 'max:80'],
         'onboarding_step' => ['nullable', 'integer', 'min:1', 'max:4'],
     ]);
 
-    $normalizedCategories = array_values(array_unique(array_map('strval', $validated['categories'])));
+    $allowedCategoryKeys = array_keys(vendorPortalCategoryMap());
+    $normalizedCategories = [];
+    foreach ($validated['categories'] as $inputCategory) {
+        $canonicalCategory = vendorPortalCanonicalCategory((string) $inputCategory);
+        if ($canonicalCategory === null || !in_array($canonicalCategory, $allowedCategoryKeys, true)) {
+            return back()->withErrors([
+                'profile' => 'Unsupported vendor category provided. Please select from the listed categories.',
+            ])->withInput();
+        }
+
+        $normalizedCategories[] = $canonicalCategory;
+    }
+    $normalizedCategories = array_values(array_unique($normalizedCategories));
 
     if (Schema::hasColumn('users', 'portal_service_categories')) {
         $vendorUser->portal_service_categories = json_encode($normalizedCategories);
@@ -452,11 +524,9 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
 
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
     $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
-    $categoryKeys = array_keys(vendorPortalCategoryMap());
-
     $validated = $request->validate([
         'name' => ['required', 'string', 'max:160'],
-        'listing_category' => ['required', Rule::in($categoryKeys)],
+        'listing_category' => ['required', 'string', 'max:80'],
         'property_type' => ['required', Rule::in(['property', 'service'])],
         'location' => ['nullable', 'string', 'max:190'],
         'description' => ['nullable', 'string', 'max:3000'],
@@ -474,13 +544,18 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'accessibility_features' => ['nullable', 'string', 'max:2000'],
     ]);
 
+    $canonicalListingCategory = vendorPortalCanonicalCategory((string) $validated['listing_category']);
+    if ($canonicalListingCategory === null) {
+        return back()->withErrors(['profile' => 'Invalid listing category selected.'])->withInput();
+    }
+
     $allowedForUser = vendorPortalSelectedCategories($vendorUser);
-    if (!in_array((string) $validated['listing_category'], $allowedForUser, true)) {
+    if (!in_array($canonicalListingCategory, $allowedForUser, true)) {
         return back()->withErrors(['profile' => 'Select category in onboarding before creating this listing.']);
     }
 
-    $propertyDetails = vendorPortalBuildPropertyDetails($validated, (string) $validated['listing_category']);
-    $propertyDetailErrors = vendorPortalValidatePropertyDetails((string) $validated['listing_category'], $propertyDetails);
+    $propertyDetails = vendorPortalBuildPropertyDetails($validated, $canonicalListingCategory);
+    $propertyDetailErrors = vendorPortalValidatePropertyDetails($canonicalListingCategory, $propertyDetails);
     if (!empty($propertyDetailErrors)) {
         return back()->withErrors(['profile' => implode(' ', $propertyDetailErrors)])->withInput();
     }
@@ -500,7 +575,7 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
     ];
 
     if (Schema::hasColumn('vendor_properties', 'listing_category')) {
-        $payload['listing_category'] = (string) $validated['listing_category'];
+        $payload['listing_category'] = $canonicalListingCategory;
     }
     if (Schema::hasColumn('vendor_properties', 'listing_details')) {
         $payload['listing_details'] = empty($propertyDetails) ? null : json_encode($propertyDetails);
@@ -521,11 +596,9 @@ Route::post('/portal/vendor/services/create', function (Request $request) {
 
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
     $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
-    $categoryKeys = array_keys(vendorPortalCategoryMap());
-
     $validated = $request->validate([
         'name' => ['required', 'string', 'max:160'],
-        'listing_category' => ['required', Rule::in($categoryKeys)],
+        'listing_category' => ['required', 'string', 'max:80'],
         'category' => ['required', 'string', 'max:120'],
         'description' => ['nullable', 'string', 'max:3000'],
         'price' => ['required', 'numeric', 'min:0'],
@@ -539,12 +612,17 @@ Route::post('/portal/vendor/services/create', function (Request $request) {
         'compliance_notes' => ['nullable', 'string', 'max:2000'],
     ]);
 
+    $canonicalListingCategory = vendorPortalCanonicalCategory((string) $validated['listing_category']);
+    if ($canonicalListingCategory === null) {
+        return back()->withErrors(['profile' => 'Invalid service listing category selected.'])->withInput();
+    }
+
     $allowedForUser = vendorPortalSelectedCategories($vendorUser);
-    if (!in_array((string) $validated['listing_category'], $allowedForUser, true)) {
+    if (!in_array($canonicalListingCategory, $allowedForUser, true)) {
         return back()->withErrors(['profile' => 'Select category in onboarding before creating this service.']);
     }
 
-    $serviceDetails = vendorPortalBuildServiceDetails($validated, (string) $validated['listing_category']);
+    $serviceDetails = vendorPortalBuildServiceDetails($validated, $canonicalListingCategory);
     $serviceDetailErrors = vendorPortalValidateServiceDetails($serviceDetails);
     if (!empty($serviceDetailErrors)) {
         return back()->withErrors(['profile' => implode(' ', $serviceDetailErrors)])->withInput();
@@ -565,7 +643,7 @@ Route::post('/portal/vendor/services/create', function (Request $request) {
     ];
 
     if (Schema::hasColumn('vendor_services', 'listing_category')) {
-        $payload['listing_category'] = (string) $validated['listing_category'];
+        $payload['listing_category'] = $canonicalListingCategory;
     }
     if (Schema::hasColumn('vendor_services', 'service_details')) {
         $payload['service_details'] = empty($serviceDetails) ? null : json_encode($serviceDetails);

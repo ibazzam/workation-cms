@@ -533,6 +533,134 @@
             cursor: pointer;
         }
 
+        .finance-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .finance-card {
+            border: 1px solid #d7dee6;
+            border-radius: 10px;
+            background: #fff;
+            padding: 10px;
+        }
+
+        .finance-card .metric-label {
+            margin: 0;
+            font-size: 0.74rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .finance-card .metric-value {
+            margin: 5px 0 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #173754;
+        }
+
+        .finance-layout {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .finance-form {
+            border: 1px solid #d7dee6;
+            border-radius: 10px;
+            background: #fff;
+            padding: 10px;
+        }
+
+        .finance-form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .finance-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .finance-field-wide {
+            grid-column: 1 / -1;
+        }
+
+        .finance-field label {
+            font-size: 0.74rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .finance-field input,
+        .finance-field select,
+        .finance-field textarea {
+            width: 100%;
+            border: 1px solid #c8d3df;
+            border-radius: 8px;
+            padding: 8px 9px;
+            font-size: 0.88rem;
+            font-family: "Outfit", "Trebuchet MS", sans-serif;
+            background: #fff;
+            color: #1d3045;
+        }
+
+        .finance-field textarea {
+            min-height: 86px;
+            resize: vertical;
+        }
+
+        .finance-table-wrap {
+            margin-top: 10px;
+            border: 1px solid #d7dee6;
+            border-radius: 10px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .finance-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .finance-table th,
+        .finance-table td {
+            text-align: left;
+            border-bottom: 1px solid #edf2f8;
+            padding: 8px 9px;
+            font-size: 0.8rem;
+            color: #233247;
+            vertical-align: top;
+        }
+
+        .finance-table th {
+            background: #f8fbff;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #456077;
+            font-size: 0.7rem;
+        }
+
+        .finance-table tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .finance-empty {
+            padding: 10px;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+
         .registration-grid {
             display: flex;
             flex-direction: column;
@@ -715,6 +843,15 @@
                 grid-template-columns: 1fr;
             }
 
+            .finance-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .finance-layout,
+            .finance-form-grid {
+                grid-template-columns: 1fr;
+            }
+
             .permissions-grid {
                 grid-template-columns: 1fr;
             }
@@ -765,6 +902,7 @@
         <nav class="portal-nav" aria-label="Admin navigation">
             <a href="#dashboardWidgets">Dashboard</a>
             <a href="#rolePermissionsPanel">Role Permissions</a>
+            <a href="#financeModerationPanel">Finance Moderation</a>
             <a href="#sessionDebug">Session</a>
             <a href="#authApiSection">Auth and API</a>
             <a href="#moderationPanel" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Moderation</a>
@@ -843,6 +981,170 @@
                         </ul>
                     </article>
                 @endforeach
+            </div>
+        </section>
+
+        <section class="card manage" id="financeModerationPanel">
+            <p class="label">Finance Moderation</p>
+            <p class="small">Only ADMIN_SUPER and ADMIN_FINANCE can adjust commission rates and apply billing-level moderation for daily collections and vendor payouts.</p>
+
+            <div class="finance-grid">
+                <article class="finance-card">
+                    <p class="metric-label">Gross Total</p>
+                    <p class="metric-value">{{ strtoupper((string) $financeCurrency) }} {{ number_format((float) ($financeSummary['gross_total'] ?? 0), 2) }}</p>
+                </article>
+                <article class="finance-card">
+                    <p class="metric-label">Collected Total</p>
+                    <p class="metric-value">{{ strtoupper((string) $financeCurrency) }} {{ number_format((float) ($financeSummary['collected_total'] ?? 0), 2) }}</p>
+                </article>
+                <article class="finance-card">
+                    <p class="metric-label">Commission Total</p>
+                    <p class="metric-value">{{ strtoupper((string) $financeCurrency) }} {{ number_format((float) ($financeSummary['commission_total'] ?? 0), 2) }}</p>
+                </article>
+                <article class="finance-card">
+                    <p class="metric-label">Net Vendor Payout</p>
+                    <p class="metric-value">{{ strtoupper((string) $financeCurrency) }} {{ number_format((float) ($financeSummary['net_payout_total'] ?? 0), 2) }}</p>
+                </article>
+            </div>
+
+            @if (!$canModerateFinance)
+                <div class="error-box" style="margin-top:10px;">Finance moderation is read-only for this role. Ask ADMIN_SUPER or ADMIN_FINANCE to apply adjustments.</div>
+            @else
+                <div class="finance-layout">
+                    <form class="finance-form" method="POST" action="/portal/admin/finance/commission/update">
+                        @csrf
+                        <p class="label">Commission Settings</p>
+                        <div class="finance-form-grid">
+                            <div class="finance-field">
+                                <label for="commission_rate_percent">Commission Rate (%)</label>
+                                <input id="commission_rate_percent" name="commission_rate_percent" type="number" step="0.01" min="0" max="100" value="{{ old('commission_rate_percent', $financeCommissionRate) }}" required>
+                            </div>
+                            <div class="finance-field">
+                                <label for="default_currency">Default Currency</label>
+                                <input id="default_currency" name="default_currency" type="text" maxlength="8" value="{{ old('default_currency', $financeCurrency) }}" required>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" type="submit">Update Commission Settings</button>
+                    </form>
+
+                    <form class="finance-form" method="POST" action="/portal/admin/finance/adjustments/create">
+                        @csrf
+                        <p class="label">Create Finance Adjustment</p>
+                        <div class="finance-form-grid">
+                            <div class="finance-field">
+                                <label for="finance_vendor_user_id">Vendor</label>
+                                <select id="finance_vendor_user_id" name="vendor_user_id" required>
+                                    <option value="">Select vendor</option>
+                                    @foreach ($vendorPortalUsers as $vendorUser)
+                                        <option value="{{ $vendorUser->id }}">{{ $vendorUser->name ?: 'Vendor #' . $vendorUser->id }} ({{ $vendorUser->email }})</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="finance-field">
+                                <label for="finance_applies_on">Applies On</label>
+                                <input id="finance_applies_on" name="applies_on" type="date" value="{{ old('applies_on', now()->toDateString()) }}" required>
+                            </div>
+                            <div class="finance-field">
+                                <label for="finance_adjustment_type">Adjustment Type</label>
+                                <select id="finance_adjustment_type" name="adjustment_type" required>
+                                    <option value="manual_bonus">Manual Bonus</option>
+                                    <option value="manual_penalty">Manual Penalty</option>
+                                    <option value="commission_credit">Commission Credit</option>
+                                    <option value="commission_debit">Commission Debit</option>
+                                    <option value="payout_hold">Payout Hold</option>
+                                    <option value="payout_release">Payout Release</option>
+                                </select>
+                            </div>
+                            <div class="finance-field">
+                                <label for="finance_amount">Amount (+/-)</label>
+                                <input id="finance_amount" name="amount" type="number" step="0.01" min="-10000000" max="10000000" required>
+                            </div>
+                            <div class="finance-field">
+                                <label for="finance_currency">Currency</label>
+                                <input id="finance_currency" name="currency" type="text" maxlength="8" value="{{ old('currency', $financeCurrency) }}">
+                            </div>
+                            <div class="finance-field">
+                                <label for="finance_invoice_reference">Invoice Reference (optional)</label>
+                                <input id="finance_invoice_reference" name="invoice_reference" type="text" maxlength="64" value="{{ old('invoice_reference') }}">
+                            </div>
+                            <div class="finance-field finance-field-wide">
+                                <label for="finance_reason">Moderation Reason</label>
+                                <textarea id="finance_reason" name="reason" maxlength="2000" required>{{ old('reason') }}</textarea>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" type="submit">Apply Finance Adjustment</button>
+                    </form>
+                </div>
+            @endif
+
+            <div class="finance-table-wrap">
+                <table class="finance-table" aria-label="Daily payout moderation ledger">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Vendor</th>
+                            <th>Transactions</th>
+                            <th>Gross</th>
+                            <th>Collected</th>
+                            <th>Commission</th>
+                            <th>Adjustments</th>
+                            <th>Net Payout</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($financeDailyRows->take(80) as $financeRow)
+                            <tr>
+                                <td>{{ $financeRow['collection_day'] }}</td>
+                                <td>{{ $financeRow['vendor_name'] }}<br>{{ $financeRow['vendor_email'] }}</td>
+                                <td>{{ $financeRow['transactions_count'] }}</td>
+                                <td>{{ strtoupper((string) $financeCurrency) }} {{ number_format((float) $financeRow['gross_total'], 2) }}</td>
+                                <td>{{ strtoupper((string) $financeCurrency) }} {{ number_format((float) $financeRow['collected_total'], 2) }}</td>
+                                <td>{{ strtoupper((string) $financeCurrency) }} {{ number_format((float) $financeRow['commission_amount'], 2) }}</td>
+                                <td>{{ strtoupper((string) $financeCurrency) }} {{ number_format((float) $financeRow['adjustment_amount'], 2) }}</td>
+                                <td>{{ strtoupper((string) $financeCurrency) }} {{ number_format((float) $financeRow['net_payout'], 2) }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="finance-empty">No finance ledger rows yet.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="finance-table-wrap">
+                <table class="finance-table" aria-label="Finance adjustment history">
+                    <thead>
+                        <tr>
+                            <th>When</th>
+                            <th>Vendor</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Invoice Ref</th>
+                            <th>Status</th>
+                            <th>Moderator</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($financeAdjustments->take(80) as $adjustment)
+                            <tr>
+                                <td>{{ $adjustment->applies_on }}<br>{{ $adjustment->created_at }}</td>
+                                <td>{{ $adjustment->vendor_name ?: 'Vendor #' . $adjustment->vendor_user_id }}<br>{{ $adjustment->vendor_email }}</td>
+                                <td>{{ strtoupper((string) $adjustment->adjustment_type) }}</td>
+                                <td>{{ strtoupper((string) $adjustment->currency) }} {{ number_format((float) $adjustment->amount, 2) }}</td>
+                                <td>{{ $adjustment->invoice_reference ?: 'N/A' }}</td>
+                                <td>{{ strtoupper((string) $adjustment->status) }}</td>
+                                <td>{{ $adjustment->moderated_by_name ?: 'System' }}<br>{{ $adjustment->moderated_by_role ?: '' }}</td>
+                                <td>{{ $adjustment->reason }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="finance-empty">No finance adjustments recorded.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </section>
 

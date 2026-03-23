@@ -287,6 +287,17 @@ if (!function_exists('canRequestVendorDeleteApproval')) {
     }
 }
 
+if (!function_exists('canModeratePortalFinance')) {
+    function canModeratePortalFinance(): bool
+    {
+        if (!session('portal_admin_authenticated', false)) {
+            return false;
+        }
+
+        return in_array(currentPortalAdminRole(), ['ADMIN_SUPER', 'ADMIN_FINANCE'], true);
+    }
+}
+
 if (!function_exists('portalActionRequestsEnabled')) {
     function portalActionRequestsEnabled(): bool
     {
@@ -401,6 +412,90 @@ Route::get('/terms-of-service', function () {
     return response()->view('terms-of-service');
 });
 
+Route::get('/customer', function () {
+    return view('customer-portal', [
+        'summary' => [
+            'upcoming_bookings' => 0,
+            'completed_bookings' => 0,
+            'receipts_available' => 0,
+            'notification_state' => 'ACTIVE',
+        ],
+    ]);
+});
+
+Route::get('/users', function (Request $request) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    $query = strtolower(trim((string) $request->query('q', '')));
+    $portalUsers = User::query()
+        ->whereIn('portal_role', ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE', 'ADMIN_FINACE', 'VENDOR'])
+        ->orderBy('portal_role')
+        ->orderBy('username')
+        ->get(['id', 'name', 'username', 'email', 'portal_role', 'portal_enabled', 'portal_vendor_id']);
+
+    if ($query !== '') {
+        $portalUsers = $portalUsers->filter(function (User $managedUser) use ($query) {
+            $haystack = strtolower(implode(' ', [
+                (string) ($managedUser->username ?? ''),
+                (string) ($managedUser->name ?? ''),
+                (string) ($managedUser->email ?? ''),
+                (string) ($managedUser->portal_role ?? ''),
+                (string) ($managedUser->portal_vendor_id ?? ''),
+            ]));
+
+            return str_contains($haystack, $query);
+        })->values();
+    }
+
+    $adminUsers = $portalUsers->filter(function (User $managedUser) {
+        return normalizePortalRoleValue((string) $managedUser->portal_role) !== 'VENDOR';
+    })->values();
+
+    $vendorUsers = $portalUsers->filter(function (User $managedUser) {
+        return normalizePortalRoleValue((string) $managedUser->portal_role) === 'VENDOR';
+    })->values();
+
+    $customers = collect();
+    try {
+        $customerRows = \App\Models\Customer::query()
+            ->orderByDesc('createdAt')
+            ->limit(250)
+            ->get();
+
+        if ($query !== '') {
+            $customerRows = $customerRows->filter(function ($customer) use ($query) {
+                $haystack = strtolower(implode(' ', [
+                    (string) ($customer->name ?? ''),
+                    (string) ($customer->email ?? ''),
+                ]));
+
+                return str_contains($haystack, $query);
+            })->values();
+        }
+
+        $customers = $customerRows;
+    } catch (\Throwable $e) {
+        Log::warning('Unable to load customer records for users console.', [
+            'error' => $e->getMessage(),
+        ]);
+    }
+
+    return view('users-customers-portal', [
+        'query' => $query,
+        'adminUsers' => $adminUsers,
+        'vendorUsers' => $vendorUsers,
+        'customers' => $customers,
+        'summary' => [
+            'admin_users' => $adminUsers->count(),
+            'vendor_users' => $vendorUsers->count(),
+            'customers' => $customers->count(),
+            'suspended_users' => $portalUsers->where('portal_enabled', false)->count(),
+        ],
+    ]);
+});
+
 use Illuminate\Support\Facades\Auth;
 
 Route::get('/admin', function () {
@@ -418,6 +513,7 @@ Route::get('/admin', function () {
     $canApproveVendorRegistrationRequest = canApproveVendorRegistrationRequest();
     $canApproveVendorDeleteRequest = canApproveVendorDeleteRequest();
     $canRequestVendorDeleteApproval = canRequestVendorDeleteApproval();
+    $canModerateFinance = canModeratePortalFinance();
     $portalUsers = User::query()
         ->whereIn('portal_role', ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE', 'ADMIN_FINACE', 'VENDOR'])
         ->orderBy('portal_role')
@@ -584,6 +680,118 @@ Route::get('/admin', function () {
         'pending_vendor_registrations' => $pendingVendorRegistrations->count(),
     ];
 
+    $financeCommissionRate = 12.0;
+    $financeCurrency = 'MVR';
+    $financeDailyRows = collect();
+    $financeAdjustments = collect();
+
+    if (Schema::hasTable('portal_finance_settings')) {
+        $commissionRateSetting = DB::table('portal_finance_settings')
+            ->where('setting_key', 'commission_rate_percent')
+            ->value('value_decimal');
+        if ($commissionRateSetting !== null) {
+            $financeCommissionRate = max(0, min(100, (float) $commissionRateSetting));
+        }
+
+        $currencySetting = DB::table('portal_finance_settings')
+            ->where('setting_key', 'default_currency')
+            ->value('value_string');
+        if (is_string($currencySetting) && trim($currencySetting) !== '') {
+            $financeCurrency = strtoupper(substr(trim($currencySetting), 0, 8));
+        }
+    }
+
+    if (Schema::hasTable('vendor_reservations')) {
+        $financeDailyRows = DB::table('vendor_reservations as vr')
+            ->leftJoin('users as vendor_users', 'vendor_users.id', '=', 'vr.vendor_user_id')
+            ->selectRaw('DATE(vr.start_at) as collection_day')
+            ->addSelect([
+                'vr.vendor_user_id',
+                'vendor_users.name as vendor_name',
+                'vendor_users.email as vendor_email',
+            ])
+            ->selectRaw('COUNT(*) as transactions_count')
+            ->selectRaw('SUM(vr.total_amount) as gross_total')
+            ->selectRaw("SUM(CASE WHEN vr.payment_status = 'paid' THEN vr.total_amount ELSE 0 END) as collected_total")
+            ->selectRaw("SUM(CASE WHEN vr.payment_status = 'paid' AND vr.status IN ('confirmed', 'completed') THEN vr.total_amount ELSE 0 END) as eligible_total")
+            ->groupByRaw('DATE(vr.start_at), vr.vendor_user_id, vendor_users.name, vendor_users.email')
+            ->orderByDesc('collection_day')
+            ->limit(240)
+            ->get();
+    }
+
+    if (Schema::hasTable('portal_finance_adjustments')) {
+        $financeAdjustments = DB::table('portal_finance_adjustments as pfa')
+            ->leftJoin('users as vendors', 'vendors.id', '=', 'pfa.vendor_user_id')
+            ->leftJoin('users as moderators', 'moderators.id', '=', 'pfa.moderated_by_user_id')
+            ->orderByDesc('pfa.applies_on')
+            ->orderByDesc('pfa.created_at')
+            ->limit(200)
+            ->get([
+                'pfa.id',
+                'pfa.vendor_user_id',
+                'pfa.applies_on',
+                'pfa.adjustment_type',
+                'pfa.amount',
+                'pfa.currency',
+                'pfa.invoice_reference',
+                'pfa.reason',
+                'pfa.status',
+                'pfa.moderated_by_role',
+                'pfa.created_at',
+                'vendors.name as vendor_name',
+                'vendors.email as vendor_email',
+                'moderators.name as moderated_by_name',
+            ]);
+    }
+
+    $adjustmentTotalsByVendorDay = collect();
+    if (Schema::hasTable('portal_finance_adjustments')) {
+        $adjustmentTotalsByVendorDay = DB::table('portal_finance_adjustments')
+            ->selectRaw('vendor_user_id, applies_on, SUM(amount) as adjustment_total')
+            ->where('status', 'approved')
+            ->groupBy('vendor_user_id', 'applies_on')
+            ->get()
+            ->keyBy(function ($row): string {
+                return (string) $row->vendor_user_id . '|' . (string) $row->applies_on;
+            });
+    }
+
+    $commissionFactor = $financeCommissionRate / 100;
+    $financeDailyRows = $financeDailyRows->map(function ($row) use ($adjustmentTotalsByVendorDay, $commissionFactor): array {
+        $eligibleTotal = (float) ($row->eligible_total ?? 0);
+        $grossTotal = (float) ($row->gross_total ?? 0);
+        $collectedTotal = (float) ($row->collected_total ?? 0);
+        $commissionAmount = round($eligibleTotal * $commissionFactor, 2);
+
+        $lookupKey = (string) $row->vendor_user_id . '|' . (string) $row->collection_day;
+        $adjustmentAmount = (float) optional($adjustmentTotalsByVendorDay->get($lookupKey))->adjustment_total;
+        $netPayout = round($eligibleTotal - $commissionAmount + $adjustmentAmount, 2);
+
+        return [
+            'collection_day' => (string) ($row->collection_day ?? ''),
+            'vendor_user_id' => (int) ($row->vendor_user_id ?? 0),
+            'vendor_name' => (string) ($row->vendor_name ?? 'Unknown Vendor'),
+            'vendor_email' => (string) ($row->vendor_email ?? ''),
+            'transactions_count' => (int) ($row->transactions_count ?? 0),
+            'gross_total' => $grossTotal,
+            'collected_total' => $collectedTotal,
+            'eligible_total' => $eligibleTotal,
+            'commission_amount' => $commissionAmount,
+            'adjustment_amount' => $adjustmentAmount,
+            'net_payout' => $netPayout,
+        ];
+    });
+
+    $financeSummary = [
+        'gross_total' => (float) $financeDailyRows->sum('gross_total'),
+        'collected_total' => (float) $financeDailyRows->sum('collected_total'),
+        'commission_total' => (float) $financeDailyRows->sum('commission_amount'),
+        'adjustment_total' => (float) $financeDailyRows->sum('adjustment_amount'),
+        'net_payout_total' => (float) $financeDailyRows->sum('net_payout'),
+        'settled_rows' => (int) $financeDailyRows->where('eligible_total', '>', 0)->count(),
+    ];
+
     $systemHealth = [
         'db_connected' => false,
         'audit_table_ready' => Schema::hasTable('portal_admin_audit_logs'),
@@ -594,6 +802,9 @@ Route::get('/admin', function () {
         'vendor_registration_approval_permission' => $canApproveVendorRegistrationRequest,
         'vendor_delete_approval_permission' => $canApproveVendorDeleteRequest,
         'vendor_delete_request_permission' => $canRequestVendorDeleteApproval,
+        'finance_moderation_permission' => $canModerateFinance,
+        'finance_settings_table_ready' => Schema::hasTable('portal_finance_settings'),
+        'finance_adjustments_table_ready' => Schema::hasTable('portal_finance_adjustments'),
     ];
 
     try {
@@ -646,6 +857,9 @@ Route::get('/admin', function () {
     if ($dashboardStats['pending_vendor_registrations'] > 0) {
         $alerts->push('Pending vendor registrations waiting for review: ' . $dashboardStats['pending_vendor_registrations']);
     }
+    if (!$systemHealth['finance_settings_table_ready'] || !$systemHealth['finance_adjustments_table_ready']) {
+        $alerts->push('Finance moderation tables are missing. Run migrations to enable frontend commission controls.');
+    }
 
     return view('admin-portal', [
         'apiBase' => workationApiBase(),
@@ -658,6 +872,7 @@ Route::get('/admin', function () {
         'canApproveVendorRegistrationRequest' => $canApproveVendorRegistrationRequest,
         'canApproveVendorDeleteRequest' => $canApproveVendorDeleteRequest,
         'canRequestVendorDeleteApproval' => $canRequestVendorDeleteApproval,
+        'canModerateFinance' => $canModerateFinance,
         'portalUsers' => $portalUsers,
         'adminPortalUsers' => $adminPortalUsers,
         'vendorPortalUsers' => $vendorPortalUsers,
@@ -672,7 +887,123 @@ Route::get('/admin', function () {
         'recentAuditCount' => $recentAuditCount,
         'alerts' => $alerts,
         'auditLogs' => $auditLogs,
+        'financeCommissionRate' => $financeCommissionRate,
+        'financeCurrency' => $financeCurrency,
+        'financeSummary' => $financeSummary,
+        'financeDailyRows' => $financeDailyRows,
+        'financeAdjustments' => $financeAdjustments,
     ]);
+});
+
+Route::post('/portal/admin/finance/commission/update', function (Request $request) {
+    if (!canModeratePortalFinance()) {
+        return back()->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_FINANCE can update commission settings.']);
+    }
+
+    if (!Schema::hasTable('portal_finance_settings')) {
+        return back()->withErrors(['auth' => 'Finance settings table is not ready. Run migrations first.']);
+    }
+
+    $validated = $request->validate([
+        'commission_rate_percent' => ['required', 'numeric', 'min:0', 'max:100'],
+        'default_currency' => ['nullable', 'string', 'min:3', 'max:8'],
+    ]);
+
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+
+    DB::table('portal_finance_settings')->updateOrInsert(
+        ['setting_key' => 'commission_rate_percent'],
+        [
+            'value_decimal' => round((float) $validated['commission_rate_percent'], 4),
+            'value_string' => null,
+            'value_json' => null,
+            'updated_by_user_id' => $actorUserId,
+            'updated_at' => now(),
+            'created_at' => now(),
+        ]
+    );
+
+    $currency = strtoupper(trim((string) ($validated['default_currency'] ?? 'MVR')));
+    if ($currency === '') {
+        $currency = 'MVR';
+    }
+
+    DB::table('portal_finance_settings')->updateOrInsert(
+        ['setting_key' => 'default_currency'],
+        [
+            'value_decimal' => null,
+            'value_string' => substr($currency, 0, 8),
+            'value_json' => null,
+            'updated_by_user_id' => $actorUserId,
+            'updated_at' => now(),
+            'created_at' => now(),
+        ]
+    );
+
+    portalAdminAuditLog('finance_commission_updated', [
+        'target_role' => 'ADMIN_FINANCE',
+        'commission_rate_percent' => round((float) $validated['commission_rate_percent'], 4),
+        'default_currency' => substr($currency, 0, 8),
+    ]);
+
+    return back()->with('portal_notice', 'Finance commission settings updated.');
+});
+
+Route::post('/portal/admin/finance/adjustments/create', function (Request $request) {
+    if (!canModeratePortalFinance()) {
+        return back()->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_FINANCE can create finance adjustments.']);
+    }
+
+    if (!Schema::hasTable('portal_finance_adjustments')) {
+        return back()->withErrors(['auth' => 'Finance adjustments table is not ready. Run migrations first.']);
+    }
+
+    $validated = $request->validate([
+        'vendor_user_id' => ['required', 'integer', 'exists:users,id'],
+        'applies_on' => ['required', 'date'],
+        'adjustment_type' => ['required', Rule::in(['manual_bonus', 'manual_penalty', 'commission_credit', 'commission_debit', 'payout_hold', 'payout_release'])],
+        'amount' => ['required', 'numeric', 'min:-10000000', 'max:10000000'],
+        'currency' => ['nullable', 'string', 'min:3', 'max:8'],
+        'invoice_reference' => ['nullable', 'string', 'max:64'],
+        'reason' => ['required', 'string', 'max:2000'],
+    ]);
+
+    $currency = strtoupper(trim((string) ($validated['currency'] ?? 'MVR')));
+    if ($currency === '') {
+        $currency = 'MVR';
+    }
+
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+    $actorRole = currentPortalAdminRole();
+
+    $newAdjustmentId = DB::table('portal_finance_adjustments')->insertGetId([
+        'vendor_user_id' => (int) $validated['vendor_user_id'],
+        'applies_on' => (string) $validated['applies_on'],
+        'adjustment_type' => (string) $validated['adjustment_type'],
+        'amount' => round((float) $validated['amount'], 2),
+        'currency' => substr($currency, 0, 8),
+        'invoice_reference' => trim((string) ($validated['invoice_reference'] ?? '')) ?: null,
+        'reason' => trim((string) $validated['reason']),
+        'status' => 'approved',
+        'moderated_by_user_id' => $actorUserId,
+        'moderated_by_role' => $actorRole,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $targetVendor = User::query()->find((int) $validated['vendor_user_id']);
+    portalAdminAuditLog('finance_adjustment_created', [
+        'target_user_id' => (int) $validated['vendor_user_id'],
+        'target_identifier' => $targetVendor instanceof User ? (string) $targetVendor->email : null,
+        'target_role' => $targetVendor instanceof User ? normalizePortalRoleValue((string) $targetVendor->portal_role) : 'VENDOR',
+        'adjustment_id' => (int) $newAdjustmentId,
+        'adjustment_type' => (string) $validated['adjustment_type'],
+        'amount' => round((float) $validated['amount'], 2),
+        'currency' => substr($currency, 0, 8),
+        'applies_on' => (string) $validated['applies_on'],
+    ]);
+
+    return back()->with('portal_notice', 'Finance adjustment applied successfully.');
 });
 
     Route::post('/portal/admin/users/create', function (\Illuminate\Http\Request $request) {
@@ -961,59 +1292,6 @@ Route::post('/portal/admin/users/bulk-delete', function (Request $request) {
     ]);
 
     return back()->with('portal_notice', 'Deleted ' . $deletedCount . ' user(s).');
-});
-
-Route::get('/vendor', function () {
-    $portal = 'vendor';
-    $config = portalConfig($portal);
-    if (!session()->get($config['session_key'], false)) {
-        return redirect('/portal/' . $portal . '/login');
-    }
-
-    $vendorUserId = (int) session('portal_vendor_user_id', 0);
-    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
-
-    return view('vendor-portal', [
-        'apiBase' => workationApiBase(),
-        'portalUser' => session('portal_vendor_user', $config['name']),
-        'vendorProfile' => [
-            'name' => $vendorUser instanceof User ? (string) $vendorUser->name : (string) session('portal_vendor_user', $config['name']),
-            'email' => $vendorUser instanceof User ? (string) $vendorUser->email : '',
-            'phone' => ($vendorUser instanceof User && Schema::hasColumn('users', 'phone')) ? (string) ($vendorUser->phone ?? '') : '',
-            'vendor_id' => $vendorUser instanceof User ? (string) ($vendorUser->portal_vendor_id ?? '') : '',
-        ],
-    ]);
-});
-
-Route::post('/portal/vendor/profile/update', function (Request $request) {
-    if (!session('portal_vendor_authenticated', false)) {
-        return redirect('/portal/vendor/login');
-    }
-
-    $vendorUserId = (int) session('portal_vendor_user_id', 0);
-    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
-    if (!$vendorUser instanceof User || normalizePortalRoleValue((string) $vendorUser->portal_role) !== 'VENDOR') {
-        return back()->withErrors([
-            'profile' => 'Unable to resolve your vendor account. Please sign in again.',
-        ]);
-    }
-
-    $validated = $request->validate([
-        'display_name' => ['required', 'string', 'max:120'],
-        'contact_phone' => ['nullable', 'string', 'max:40'],
-    ]);
-
-    $vendorUser->name = trim((string) $validated['display_name']);
-    if (Schema::hasColumn('users', 'phone')) {
-        $vendorUser->phone = vendorNormalizePhoneNumber((string) ($validated['contact_phone'] ?? ''));
-    }
-    $vendorUser->save();
-
-    session([
-        'portal_vendor_user' => $vendorUser->name,
-    ]);
-
-    return back()->with('portal_notice', 'Profile settings updated successfully.');
 });
 
 Route::get('/portal/{portal}/login', function (Request $request, string $portal) {
@@ -1524,7 +1802,7 @@ Route::get('/portal/vendor/oauth/{provider}/callback', function (Request $reques
                     throw $socialiteError;
                 }
 
-                $tokenResponse = Http::get('https://graph.facebook.com/v19.0/oauth/access_token', [
+                $tokenResponse = Http::retry(2, 200)->timeout(10)->get('https://graph.facebook.com/v19.0/oauth/access_token', [
                     'client_id' => (string) config('services.facebook.client_id'),
                     'client_secret' => (string) config('services.facebook.client_secret'),
                     'redirect_uri' => vendorSocialRedirectUrl('facebook'),
@@ -1536,7 +1814,7 @@ Route::get('/portal/vendor/oauth/{provider}/callback', function (Request $reques
                     throw $socialiteError;
                 }
 
-                $profileResponse = Http::get('https://graph.facebook.com/me', [
+                $profileResponse = Http::retry(2, 200)->timeout(10)->get('https://graph.facebook.com/me', [
                     'fields' => 'id,name,email',
                     'access_token' => $accessToken,
                 ]);
@@ -2607,3 +2885,4 @@ if (app()->environment('testing')) {
         Route::post('transport/holds/{hold}/release', [\App\Http\Controllers\TransportHoldController::class, 'release']);
     });
 }
+

@@ -118,21 +118,56 @@
         }
 
         .portal-nav {
+            position: sticky;
+            top: 12px;
             margin-top: 12px;
+            width: 252px;
             display: flex;
-            flex-wrap: wrap;
+            flex-direction: column;
             gap: 8px;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: #f7fbff;
         }
 
         .portal-nav a {
             text-decoration: none;
             border: 1px solid #c8d4df;
-            border-radius: 999px;
-            padding: 7px 11px;
-            font-size: 0.8rem;
+            border-radius: 10px;
+            padding: 8px 10px;
+            font-size: 0.82rem;
             font-weight: 700;
             color: #1f4a53;
-            background: #f4faf8;
+            background: #ffffff;
+        }
+
+        .menu-title {
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #5b6778;
+            margin-top: 4px;
+        }
+
+        .menu-title:first-child {
+            margin-top: 0;
+        }
+
+        .portal-nav a.menu-sub {
+            margin-left: 10px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #33566f;
+            background: #f8fbff;
+        }
+
+        .portal-nav ~ section,
+        .portal-nav ~ div,
+        .portal-nav ~ footer {
+            margin-left: 268px;
         }
 
         .layout {
@@ -553,6 +588,36 @@
             gap: 8px;
         }
 
+        .billing-ledger-grid {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .billing-ledger-card {
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            background: #fff;
+            padding: 9px;
+        }
+
+        .billing-ledger-card .metric-label {
+            margin: 0;
+            font-size: 0.72rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .billing-ledger-card .metric-value {
+            margin: 6px 0 0;
+            font-size: 1.03rem;
+            font-weight: 700;
+            color: #1f3346;
+        }
+
         .ops-metric {
             border: 1px solid #d7e0e6;
             border-radius: 10px;
@@ -833,14 +898,40 @@
             }
 
             .portal-nav {
+                position: static;
+                width: 100%;
                 overflow-x: auto;
                 white-space: nowrap;
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .portal-nav .menu-title {
+                width: 100%;
+            }
+
+            .portal-nav a.menu-sub {
+                margin-left: 0;
+            }
+
+            .portal-nav ~ section,
+            .portal-nav ~ div,
+            .portal-nav ~ footer {
+                margin-left: 0;
+            }
+
+            .billing-ledger-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
 
         @media (max-width: 640px) {
             .ops-metrics {
                 grid-template-columns: 1fr 1fr;
+            }
+
+            .billing-ledger-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -861,6 +952,44 @@
         $categorySet = collect($selectedVendorCategories)->flip();
         $supportsAccommodation = $categorySet->has('accommodation');
         $hasSelectedCategories = count($selectedVendorCategories) > 0;
+        $commissionRate = 0.12;
+        $billingLedgerRows = $vendorReservations->take(50)->map(function ($reservation) use ($commissionRate) {
+            $gross = (float) ($reservation->total_amount ?? 0);
+            $paymentStatus = (string) ($reservation->payment_status ?? 'unpaid');
+            $bookingStatus = (string) ($reservation->status ?? 'pending');
+            $isSettled = $paymentStatus === 'paid' && in_array($bookingStatus, ['confirmed', 'completed'], true);
+            $commission = $isSettled ? round($gross * $commissionRate, 2) : 0.0;
+            $payout = max(0, round($gross - $commission, 2));
+            $invoiceRef = 'INV-' . str_pad((string) ($reservation->id ?? '0'), 6, '0', STR_PAD_LEFT);
+            $collectionDate = (string) ($reservation->start_at ?? $reservation->created_at ?? '');
+            $collectionDay = strlen($collectionDate) >= 10 ? substr($collectionDate, 0, 10) : 'N/A';
+
+            return [
+                'invoice_ref' => $invoiceRef,
+                'customer_name' => (string) ($reservation->customer_name ?? 'N/A'),
+                'customer_email' => (string) ($reservation->customer_email ?? ''),
+                'collection_day' => $collectionDay,
+                'gross' => $gross,
+                'commission' => $commission,
+                'payout' => $payout,
+                'currency' => (string) ($reservation->currency ?? 'MVR'),
+                'payment_status' => $paymentStatus,
+                'booking_status' => $bookingStatus,
+                'is_settled' => $isSettled,
+            ];
+        });
+        $dailyCollection = $billingLedgerRows->groupBy('collection_day')->map(function ($rows) {
+            return [
+                'gross' => (float) $rows->sum('gross'),
+                'commission' => (float) $rows->sum('commission'),
+                'payout' => (float) $rows->sum('payout'),
+                'count' => (int) $rows->count(),
+            ];
+        })->sortKeysDesc();
+        $settledInvoicesCount = (int) $billingLedgerRows->where('is_settled', true)->count();
+        $grossCollectionsTotal = (float) $billingLedgerRows->sum('gross');
+        $commissionTotal = (float) $billingLedgerRows->sum('commission');
+        $payoutTotal = (float) $billingLedgerRows->sum('payout');
     @endphp
     <main class="page" data-api-base="{{ $apiBase }}">
         <section class="hero">
@@ -882,22 +1011,33 @@
         </section>
 
         <nav class="portal-nav" aria-label="Vendor navigation">
-            <a href="#vendorSummary">Summary</a>
-            <a href="#payoutCenter">Payout Center</a>
-            <a href="#vendorProfileCard">Profile</a>
-            <a href="#vendorCategoryWizard">Category Wizard</a>
-            <a href="#vendorOperationsOverview">Operations</a>
-            <a href="#vendorPropertiesSection">Properties</a>
-            <a href="#vendorRoomsSection">Room Categories</a>
-            <a href="#vendorMediaSection">Photos</a>
-            <a href="#vendorServicesSection">Services</a>
-            <a href="#vendorAvailabilitySection">Availability</a>
-            <a href="#vendorReservationsSection">Reservations</a>
-            <a href="#vendorPricingSection">Pricing</a>
-            <a href="#vendorBillingSection">Billing</a>
+            <span class="menu-title">Overview</span>
+            <a href="#vendorSummary">Dashboard Summary</a>
+            <a href="#payoutCenter" class="menu-sub">Payout Snapshot</a>
+
+            <span class="menu-title">Profile / Update</span>
+            <a href="#vendorProfileCard">Profile Settings</a>
+            <a href="#vendorCategoryWizard" class="menu-sub">Category Setup</a>
+
+            <span class="menu-title">Add Listings</span>
+            <a href="#vendorPropertiesSection">Add/Edit Listings</a>
+            <a href="#vendorServicesSection" class="menu-sub">Add/Edit Services</a>
+            <a href="#vendorRoomsSection" class="menu-sub">Room Inventory</a>
+            <a href="#vendorMediaSection" class="menu-sub">Listing Photos</a>
+
+            <span class="menu-title">Reservations / Bookings</span>
+            <a href="#vendorReservationsSection">Booking Inquiries</a>
+            <a href="#vendorAvailabilitySection" class="menu-sub">Availability Updates</a>
+            <a href="#vendorPricingSection" class="menu-sub">Pricing Rules</a>
+
+            <span class="menu-title">Billing / Daily Collection</span>
+            <a href="#vendorBillingSection">Billing Settings</a>
+            <a href="#vendorDailyCollectionSection" class="menu-sub">Collections & Payouts</a>
+
+            <span class="menu-title">API Tools</span>
             <a href="#vendorAuthApi">Auth and API</a>
-            <a href="#vendorAuthCard">Token</a>
-            <a href="#vendorApiCard">API Actions</a>
+            <a href="#vendorAuthCard" class="menu-sub">Token</a>
+            <a href="#vendorApiCard" class="menu-sub">API Actions</a>
         </nav>
 
         <section id="vendorSummary" class="summary-grid" aria-label="Vendor dashboard summary">
@@ -1062,7 +1202,7 @@
                 <article class="ops-form">
                     <p class="label">Step-by-step checklist</p>
                     <ol class="step-list">
-                        <li>Select categories from schema domains: accommodation, transport, excursion, remote workspace, resort day visit, restaurant, vehicle rental.</li>
+                        <li>Select categories from schema domains: Accommodation, excursions, remoteWorkSpaces, resortDayVisits, restaurants, transports, vehicleRentals.</li>
                         <li>Complete account profile and billing details.</li>
                         <li>Create listings, room categories (accommodation), availability, and pricing.</li>
                         <li>Upload photos and finalize publish-ready inventory.</li>
@@ -1798,6 +1938,92 @@
                 </div>
                 <button class="btn btn-primary" type="submit">Save Billing Details</button>
             </form>
+
+            <div id="vendorDailyCollectionSection" class="ops-section" aria-label="Vendor daily collection and settlements">
+                <div class="ops-header">
+                    <p class="ops-title">Daily Collection and Payout Ledger</p>
+                    <span class="ops-chip">Commission {{ (int) ($commissionRate * 100) }}%</span>
+                </div>
+
+                <div class="billing-ledger-grid">
+                    <article class="billing-ledger-card">
+                        <p class="metric-label">Gross Collection</p>
+                        <p class="metric-value">MVR {{ number_format($grossCollectionsTotal, 2) }}</p>
+                    </article>
+                    <article class="billing-ledger-card">
+                        <p class="metric-label">Workation Commission</p>
+                        <p class="metric-value">MVR {{ number_format($commissionTotal, 2) }}</p>
+                    </article>
+                    <article class="billing-ledger-card">
+                        <p class="metric-label">Net Payout</p>
+                        <p class="metric-value">MVR {{ number_format($payoutTotal, 2) }}</p>
+                    </article>
+                    <article class="billing-ledger-card">
+                        <p class="metric-label">Settled Invoices</p>
+                        <p class="metric-value">{{ $settledInvoicesCount }}</p>
+                    </article>
+                </div>
+
+                <div class="ops-table-wrap">
+                    <table class="ops-table" aria-label="Vendor daily collection table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Transactions</th>
+                                <th>Gross</th>
+                                <th>Commission</th>
+                                <th>Payout</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($dailyCollection as $day => $daily)
+                                <tr>
+                                    <td>{{ $day }}</td>
+                                    <td>{{ $daily['count'] }}</td>
+                                    <td>MVR {{ number_format((float) $daily['gross'], 2) }}</td>
+                                    <td>MVR {{ number_format((float) $daily['commission'], 2) }}</td>
+                                    <td>MVR {{ number_format((float) $daily['payout'], 2) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="ops-empty">No collection data yet. Add reservations to populate this section.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="ops-table-wrap">
+                    <table class="ops-table" aria-label="Vendor invoice settlement ledger">
+                        <thead>
+                            <tr>
+                                <th>Invoice</th>
+                                <th>Collected From</th>
+                                <th>Status</th>
+                                <th>Gross</th>
+                                <th>Commission</th>
+                                <th>Payout</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($billingLedgerRows->take(20) as $entry)
+                                <tr>
+                                    <td>{{ $entry['invoice_ref'] }}<br>{{ $entry['collection_day'] }}</td>
+                                    <td>{{ $entry['customer_name'] }}<br>{{ $entry['customer_email'] ?: 'N/A' }}</td>
+                                    <td>{{ strtoupper($entry['booking_status']) }} / {{ strtoupper($entry['payment_status']) }}<br>{{ $entry['is_settled'] ? 'SETTLED' : 'PENDING' }}</td>
+                                    <td>{{ $entry['currency'] }} {{ number_format((float) $entry['gross'], 2) }}</td>
+                                    <td>{{ $entry['currency'] }} {{ number_format((float) $entry['commission'], 2) }}</td>
+                                    <td>{{ $entry['currency'] }} {{ number_format((float) $entry['payout'], 2) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="ops-empty">No invoice ledger data yet.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </section>
 
         <section class="layout" id="vendorAuthApi">

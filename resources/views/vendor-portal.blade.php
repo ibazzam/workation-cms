@@ -954,7 +954,10 @@
         $hasSelectedCategories = count($selectedVendorCategories) > 0;
         $commissionRate = 0.12;
         $billingLedgerRows = $vendorReservations->take(50)->map(function ($reservation) use ($commissionRate) {
-            $gross = (float) ($reservation->total_amount ?? 0);
+            $gross = (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0);
+            $subtotal = (float) ($reservation->subtotal_amount ?? $reservation->total_amount ?? 0);
+            $taxTotal = (float) ($reservation->total_tax_amount ?? 0);
+            $serviceChargeTotal = (float) ($reservation->service_charge_total ?? 0);
             $paymentStatus = (string) ($reservation->payment_status ?? 'unpaid');
             $bookingStatus = (string) ($reservation->status ?? 'pending');
             $isSettled = $paymentStatus === 'paid' && in_array($bookingStatus, ['confirmed', 'completed'], true);
@@ -969,6 +972,13 @@
                 'customer_name' => (string) ($reservation->customer_name ?? 'N/A'),
                 'customer_email' => (string) ($reservation->customer_email ?? ''),
                 'collection_day' => $collectionDay,
+                'subtotal' => $subtotal,
+                'tax_total' => $taxTotal,
+                'service_charge_total' => $serviceChargeTotal,
+                'green_tax_total' => (float) ($reservation->green_tax_total ?? 0),
+                'tgst_total' => (float) ($reservation->tgst_total ?? 0),
+                'cgst_total' => (float) ($reservation->cgst_total ?? 0),
+                'guest_is_foreigner' => (bool) ($reservation->guest_is_foreigner ?? true),
                 'gross' => $gross,
                 'commission' => $commission,
                 'payout' => $payout,
@@ -1738,6 +1748,13 @@
                             <input id="reservation_guests" name="guests" class="ops-input" type="number" min="1" max="10000" required>
                         </div>
                         <div class="ops-field">
+                            <label for="reservation_guest_origin">Guest Type</label>
+                            <select id="reservation_guest_origin" name="guest_is_foreigner" class="ops-select" required>
+                                <option value="1">Foreigner</option>
+                                <option value="0">Local</option>
+                            </select>
+                        </div>
+                        <div class="ops-field">
                             <label for="reservation_total_amount">Total Amount (MVR)</label>
                             <input id="reservation_total_amount" name="total_amount" class="ops-input" type="number" min="0" step="0.01" required>
                         </div>
@@ -1754,6 +1771,7 @@
                             <textarea id="reservation_notes" name="notes" class="ops-textarea" maxlength="2000"></textarea>
                         </div>
                     </div>
+                    <p class="standards-note">Accommodation invoice charges: Service Charge 10% + Foreigner taxes (Green Tax $12/person for 50+ rooms, else $6/person and TGST 17%) or Local tax (CGST 8%).</p>
                     <button class="btn btn-primary" type="submit">Create Reservation</button>
                 </form>
 
@@ -1775,7 +1793,18 @@
                                         {{ $reservation->customer_email }}
                                     </td>
                                     <td>{{ $reservation->start_at }}<br>{{ $reservation->end_at }}</td>
-                                    <td>{{ $reservation->currency }} {{ number_format((float) $reservation->total_amount, 2) }}</td>
+                                    <td>
+                                        Base: {{ $reservation->currency }} {{ number_format((float) ($reservation->subtotal_amount ?? $reservation->total_amount), 2) }}<br>
+                                        Service Charge: {{ $reservation->currency }} {{ number_format((float) ($reservation->service_charge_total ?? 0), 2) }}<br>
+                                        Taxes: {{ $reservation->currency }} {{ number_format((float) ($reservation->total_tax_amount ?? 0), 2) }}<br>
+                                        Total: {{ $reservation->currency }} {{ number_format((float) ($reservation->invoice_total_amount ?? $reservation->total_amount), 2) }}<br>
+                                        <span class="small">
+                                            Service {{ number_format((float) ($reservation->service_charge_total ?? 0), 2) }} |
+                                            Green {{ number_format((float) ($reservation->green_tax_total ?? 0), 2) }} |
+                                            TGST {{ number_format((float) ($reservation->tgst_total ?? 0), 2) }} |
+                                            CGST {{ number_format((float) ($reservation->cgst_total ?? 0), 2) }}
+                                        </span>
+                                    </td>
                                     <td>
                                         <form class="inline-status-form" method="POST" action="/portal/vendor/reservations/{{ $reservation->id }}/status">
                                             @csrf

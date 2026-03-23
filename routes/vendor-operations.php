@@ -208,6 +208,138 @@ if (!function_exists('vendorPortalValidateServiceDetails')) {
     }
 }
 
+if (!function_exists('vendorPortalAccommodationRoomCount')) {
+    function vendorPortalAccommodationRoomCount(int $vendorUserId, int $propertyId): int
+    {
+        if ($vendorUserId <= 0 || $propertyId <= 0) {
+            return 0;
+        }
+
+        if (Schema::hasTable('vendor_property_room_categories')) {
+            $roomCount = (int) DB::table('vendor_property_room_categories')
+                ->where('vendor_user_id', $vendorUserId)
+                ->where('vendor_property_id', $propertyId)
+                ->sum('quantity');
+            if ($roomCount > 0) {
+                return $roomCount;
+            }
+        }
+
+        if (!Schema::hasTable('vendor_properties') || !Schema::hasColumn('vendor_properties', 'listing_details')) {
+            return 0;
+        }
+
+        $property = DB::table('vendor_properties')
+            ->where('id', $propertyId)
+            ->where('vendor_user_id', $vendorUserId)
+            ->first(['listing_details']);
+
+        if (!$property || !is_string($property->listing_details) || trim($property->listing_details) === '') {
+            return 0;
+        }
+
+        $details = json_decode($property->listing_details, true);
+        if (!is_array($details)) {
+            return 0;
+        }
+
+        foreach (['room_count', 'rooms_total', 'bedroom_count'] as $candidateKey) {
+            if (isset($details[$candidateKey]) && is_numeric($details[$candidateKey])) {
+                return max(0, (int) $details[$candidateKey]);
+            }
+        }
+
+        return 0;
+    }
+}
+
+if (!function_exists('vendorPortalReservationInvoiceTaxes')) {
+    function vendorPortalReservationInvoiceTaxes(
+        int $vendorUserId,
+        ?int $propertyId,
+        int $guests,
+        float $baseAmount,
+        bool $isForeigner
+    ): array {
+        $subtotalAmount = round(max(0, $baseAmount), 2);
+        $guestCount = max(1, $guests);
+
+        $breakdown = [
+            'applied' => false,
+            'listing_category' => null,
+            'guest_is_foreigner' => $isForeigner,
+            'rooms_count' => 0,
+            'service_charge_rate_percent' => 0.0,
+            'service_charge_total' => 0.0,
+            'green_tax_rate_per_person' => 0.0,
+            'green_tax_total' => 0.0,
+            'tgst_rate_percent' => 0.0,
+            'tgst_total' => 0.0,
+            'cgst_rate_percent' => 0.0,
+            'cgst_total' => 0.0,
+            'subtotal_amount' => $subtotalAmount,
+            'total_tax_amount' => 0.0,
+            'invoice_total_amount' => $subtotalAmount,
+        ];
+
+        if ($propertyId === null || $propertyId <= 0 || !Schema::hasTable('vendor_properties')) {
+            return $breakdown;
+        }
+
+        $property = DB::table('vendor_properties')
+            ->where('id', $propertyId)
+            ->where('vendor_user_id', $vendorUserId)
+            ->first(['listing_category']);
+
+        if (!$property) {
+            return $breakdown;
+        }
+
+        $listingCategory = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
+        $breakdown['listing_category'] = $listingCategory;
+        if ($listingCategory !== 'accommodation') {
+            return $breakdown;
+        }
+
+        $breakdown['applied'] = true;
+        $serviceChargeRatePercent = 10.0;
+        $serviceChargeTotal = round($subtotalAmount * ($serviceChargeRatePercent / 100), 2);
+        $breakdown['service_charge_rate_percent'] = $serviceChargeRatePercent;
+        $breakdown['service_charge_total'] = $serviceChargeTotal;
+
+        $roomsCount = vendorPortalAccommodationRoomCount($vendorUserId, $propertyId);
+        $breakdown['rooms_count'] = $roomsCount;
+
+        if ($isForeigner) {
+            $greenTaxRatePerPerson = $roomsCount >= 50 ? 12.0 : 6.0;
+            $greenTaxTotal = round($greenTaxRatePerPerson * $guestCount, 2);
+            $tgstRatePercent = 17.0;
+            $tgstTotal = round($subtotalAmount * ($tgstRatePercent / 100), 2);
+
+            $breakdown['green_tax_rate_per_person'] = $greenTaxRatePerPerson;
+            $breakdown['green_tax_total'] = $greenTaxTotal;
+            $breakdown['tgst_rate_percent'] = $tgstRatePercent;
+            $breakdown['tgst_total'] = $tgstTotal;
+        } else {
+            $cgstRatePercent = 8.0;
+            $cgstTotal = round($subtotalAmount * ($cgstRatePercent / 100), 2);
+
+            $breakdown['cgst_rate_percent'] = $cgstRatePercent;
+            $breakdown['cgst_total'] = $cgstTotal;
+        }
+
+        $totalTaxAmount = round(
+            $breakdown['green_tax_total'] + $breakdown['tgst_total'] + $breakdown['cgst_total'],
+            2
+        );
+
+        $breakdown['total_tax_amount'] = $totalTaxAmount;
+        $breakdown['invoice_total_amount'] = round($subtotalAmount + $breakdown['service_charge_total'] + $totalTaxAmount, 2);
+
+        return $breakdown;
+    }
+}
+
 Route::get('/vendor', function () {
     if (!session()->get('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');
@@ -704,15 +836,26 @@ Route::post('/portal/vendor/reservations/create', function (Request $request) {
         'start_at' => ['required', 'date'],
         'end_at' => ['required', 'date', 'after_or_equal:start_at'],
         'guests' => ['required', 'integer', 'min:1', 'max:10000'],
+        'guest_is_foreigner' => ['required', 'boolean'],
         'total_amount' => ['required', 'numeric', 'min:0'],
         'vendor_property_id' => ['nullable', 'integer'],
         'vendor_service_id' => ['nullable', 'integer'],
         'notes' => ['nullable', 'string', 'max:2000'],
     ]);
 
-    DB::table('vendor_reservations')->insert([
+    $vendorPropertyId = filled($validated['vendor_property_id'] ?? null) ? (int) $validated['vendor_property_id'] : null;
+    $guestIsForeigner = (bool) $validated['guest_is_foreigner'];
+    $taxes = vendorPortalReservationInvoiceTaxes(
+        $vendorUserId,
+        $vendorPropertyId,
+        (int) $validated['guests'],
+        (float) $validated['total_amount'],
+        $guestIsForeigner
+    );
+
+    $payload = [
         'vendor_user_id' => $vendorUserId,
-        'vendor_property_id' => filled($validated['vendor_property_id'] ?? null) ? (int) $validated['vendor_property_id'] : null,
+        'vendor_property_id' => $vendorPropertyId,
         'vendor_service_id' => filled($validated['vendor_service_id'] ?? null) ? (int) $validated['vendor_service_id'] : null,
         'customer_name' => trim((string) $validated['customer_name']),
         'customer_email' => strtolower(trim((string) $validated['customer_email'])),
@@ -726,7 +869,49 @@ Route::post('/portal/vendor/reservations/create', function (Request $request) {
         'notes' => trim((string) ($validated['notes'] ?? '')),
         'created_at' => now(),
         'updated_at' => now(),
-    ]);
+    ];
+
+    if (Schema::hasColumn('vendor_reservations', 'guest_is_foreigner')) {
+        $payload['guest_is_foreigner'] = $guestIsForeigner;
+    }
+    if (Schema::hasColumn('vendor_reservations', 'green_tax_rate_per_person')) {
+        $payload['green_tax_rate_per_person'] = $taxes['green_tax_rate_per_person'];
+    }
+    if (Schema::hasColumn('vendor_reservations', 'service_charge_rate_percent')) {
+        $payload['service_charge_rate_percent'] = $taxes['service_charge_rate_percent'];
+    }
+    if (Schema::hasColumn('vendor_reservations', 'service_charge_total')) {
+        $payload['service_charge_total'] = $taxes['service_charge_total'];
+    }
+    if (Schema::hasColumn('vendor_reservations', 'green_tax_total')) {
+        $payload['green_tax_total'] = $taxes['green_tax_total'];
+    }
+    if (Schema::hasColumn('vendor_reservations', 'tgst_rate_percent')) {
+        $payload['tgst_rate_percent'] = $taxes['tgst_rate_percent'];
+    }
+    if (Schema::hasColumn('vendor_reservations', 'tgst_total')) {
+        $payload['tgst_total'] = $taxes['tgst_total'];
+    }
+    if (Schema::hasColumn('vendor_reservations', 'cgst_rate_percent')) {
+        $payload['cgst_rate_percent'] = $taxes['cgst_rate_percent'];
+    }
+    if (Schema::hasColumn('vendor_reservations', 'cgst_total')) {
+        $payload['cgst_total'] = $taxes['cgst_total'];
+    }
+    if (Schema::hasColumn('vendor_reservations', 'subtotal_amount')) {
+        $payload['subtotal_amount'] = $taxes['subtotal_amount'];
+    }
+    if (Schema::hasColumn('vendor_reservations', 'total_tax_amount')) {
+        $payload['total_tax_amount'] = $taxes['total_tax_amount'];
+    }
+    if (Schema::hasColumn('vendor_reservations', 'invoice_total_amount')) {
+        $payload['invoice_total_amount'] = $taxes['invoice_total_amount'];
+    }
+    if (Schema::hasColumn('vendor_reservations', 'tax_breakdown_json')) {
+        $payload['tax_breakdown_json'] = json_encode($taxes);
+    }
+
+    DB::table('vendor_reservations')->insert($payload);
 
     return back()->with('portal_notice', 'Reservation added.');
 });

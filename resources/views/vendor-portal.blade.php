@@ -152,6 +152,12 @@
             background: #ffffff;
         }
 
+        .portal-nav a.is-active {
+            border-color: #0f6b74;
+            background: #e8f7f8;
+            color: #0d4f56;
+        }
+
         .menu-title {
             font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
             font-size: 0.72rem;
@@ -225,6 +231,49 @@
             margin-top: 10px;
             display: flex;
             justify-content: flex-end;
+        }
+
+        .progress-snapshot {
+            margin-top: 12px;
+        }
+
+        .progress-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .progress-card {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #ffffff;
+            padding: 12px;
+        }
+
+        .progress-label {
+            margin: 0;
+            font-size: 0.74rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .progress-value {
+            margin: 6px 0 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1f3346;
+        }
+
+        .progress-meta {
+            margin: 6px 0 0;
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+
+        [data-nav-panel="true"][hidden] {
+            display: none !important;
         }
 
         .summary-refresh {
@@ -875,6 +924,10 @@
                 grid-template-columns: 1fr 1fr;
             }
 
+            .progress-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
             .ops-metrics {
                 grid-template-columns: repeat(3, minmax(0, 1fr));
             }
@@ -933,6 +986,10 @@
         @media (max-width: 640px) {
             .ops-metrics {
                 grid-template-columns: 1fr 1fr;
+            }
+
+            .progress-grid {
+                grid-template-columns: 1fr;
             }
 
             .billing-ledger-grid {
@@ -1005,6 +1062,8 @@
         $grossCollectionsTotal = (float) $billingLedgerRows->sum('gross');
         $commissionTotal = (float) $billingLedgerRows->sum('commission');
         $payoutTotal = (float) $billingLedgerRows->sum('payout');
+        $expectedPayoutTotal = (float) $billingLedgerRows->where('is_settled', false)->sum('payout');
+        $settledPayoutTotal = (float) $billingLedgerRows->where('is_settled', true)->sum('payout');
     @endphp
     <main class="page" data-api-base="{{ $apiBase }}">
         <section class="hero">
@@ -1084,9 +1143,38 @@
             </article>
         </section>
 
-        <div class="summary-actions">
+        <div id="vendorSummaryActions" class="summary-actions">
             <button id="refreshSummary" type="button" class="summary-refresh">Refresh Summary</button>
         </div>
+
+        <section id="vendorProgressSnapshot" class="card progress-snapshot" aria-label="Vendor activity progress snapshot">
+            <div class="ops-header">
+                <p class="ops-title">Vendor Progress Snapshot</p>
+                <span class="ops-chip">Live from your account data</span>
+            </div>
+            <div class="progress-grid">
+                <article class="progress-card">
+                    <p class="progress-label">Total Bookings</p>
+                    <p class="progress-value">{{ $vendorReservations->count() }}</p>
+                    <p class="progress-meta">Reservation entries in this vendor account</p>
+                </article>
+                <article class="progress-card">
+                    <p class="progress-label">Revenue Collected</p>
+                    <p class="progress-value">MVR {{ number_format($grossCollectionsTotal, 2) }}</p>
+                    <p class="progress-meta">Gross collections before commission deductions</p>
+                </article>
+                <article class="progress-card">
+                    <p class="progress-label">Expected Payout</p>
+                    <p class="progress-value">MVR {{ number_format($expectedPayoutTotal, 2) }}</p>
+                    <p class="progress-meta">Pending payout expected from Workation</p>
+                </article>
+                <article class="progress-card">
+                    <p class="progress-label">Settled Amount</p>
+                    <p class="progress-value">MVR {{ number_format($settledPayoutTotal, 2) }}</p>
+                    <p class="progress-meta">Net payouts already marked as settled</p>
+                </article>
+            </div>
+        </section>
 
         <section id="payoutCenter" class="card payout-center" aria-label="Vendor payout center">
             <p class="label">Payout Center</p>
@@ -1130,7 +1218,7 @@
             <div class="error" role="alert">{{ $errors->first('profile') }}</div>
         @endif
 
-        <section id="vendorProfileCard" class="card profile-card" aria-label="Vendor profile settings">
+        <section id="vendorProfileCard" class="card profile-card" aria-label="Vendor profile settings" data-nav-panel="true">
             <p class="label">Account Settings</p>
             <form method="POST" action="/portal/vendor/profile/update">
                 @csrf
@@ -1185,7 +1273,7 @@
             </form>
         </section>
 
-        <section id="vendorCategoryWizard" class="card ops-section" aria-label="Vendor category setup wizard">
+        <section id="vendorCategoryWizard" class="card ops-section" aria-label="Vendor category setup wizard" data-nav-panel="true">
             <div class="ops-header">
                 <p class="ops-title">Category-Based Listing Wizard</p>
                 <span class="ops-chip">Step {{ $vendorOnboardingStep }} of 4</span>
@@ -1230,7 +1318,7 @@
             </div>
         </section>
 
-        <section id="vendorOperationsOverview" class="card ops-section" aria-label="Vendor operations overview">
+        <section id="vendorOperationsOverview" class="card ops-section" aria-label="Vendor operations overview" data-nav-panel="true">
             <div class="ops-header">
                 <p class="ops-title">Operations Console</p>
                 <span class="ops-chip">Database-backed</span>
@@ -1266,7 +1354,7 @@
             </div>
         </section>
 
-        <section id="vendorPropertiesSection" class="card ops-section" aria-label="Vendor properties">
+        <section id="vendorPropertiesSection" class="card ops-section" aria-label="Vendor properties" data-nav-panel="true">
             <div class="ops-header">
                 <p class="ops-title">Properties and Listings</p>
                 <span class="ops-chip">{{ $vendorProperties->count() }} total</span>
@@ -1395,7 +1483,7 @@
         </section>
 
         @if ($supportsAccommodation)
-            <section id="vendorRoomsSection" class="card ops-section" aria-label="Vendor room categories">
+            <section id="vendorRoomsSection" class="card ops-section" aria-label="Vendor room categories" data-nav-panel="true">
                 <div class="ops-header">
                     <p class="ops-title">Room Categories (Accommodation)</p>
                     <span class="ops-chip">{{ $vendorRoomCategories->count() }} total</span>
@@ -1468,7 +1556,7 @@
             </section>
         @endif
 
-        <section id="vendorMediaSection" class="card ops-section" aria-label="Vendor listing photos">
+        <section id="vendorMediaSection" class="card ops-section" aria-label="Vendor listing photos" data-nav-panel="true">
             <div class="ops-header">
                 <p class="ops-title">Photos and Media</p>
                 <span class="ops-chip">{{ $vendorMediaAssets->count() }} uploaded</span>
@@ -1545,7 +1633,7 @@
             </div>
         </section>
 
-        <section id="vendorServicesSection" class="card ops-section" aria-label="Vendor services">
+        <section id="vendorServicesSection" class="card ops-section" aria-label="Vendor services" data-nav-panel="true">
             <div class="ops-header">
                 <p class="ops-title">Services Catalog</p>
                 <span class="ops-chip">{{ $vendorServices->count() }} total</span>
@@ -1659,7 +1747,7 @@
             </div>
         </section>
 
-        <section id="vendorAvailabilitySection" class="card ops-section" aria-label="Vendor availability calendar">
+        <section id="vendorAvailabilitySection" class="card ops-section" aria-label="Vendor availability calendar" data-nav-panel="true">
             <div class="ops-header">
                 <p class="ops-title">Availability Calendar</p>
                 <span class="ops-chip">{{ $vendorAvailability->count() }} days tracked</span>
@@ -1726,7 +1814,7 @@
             </div>
         </section>
 
-        <section id="vendorReservationsSection" class="card ops-section" aria-label="Vendor reservations">
+        <section id="vendorReservationsSection" class="card ops-section" aria-label="Vendor reservations" data-nav-panel="true">
             <div class="ops-header">
                 <p class="ops-title">Reservations</p>
                 <span class="ops-chip">{{ $vendorReservations->count() }} total</span>
@@ -1843,7 +1931,7 @@
             </div>
         </section>
 
-        <section id="vendorPricingSection" class="card ops-section" aria-label="Vendor pricing rules">
+        <section id="vendorPricingSection" class="card ops-section" aria-label="Vendor pricing rules" data-nav-panel="true">
             <div class="ops-header">
                 <p class="ops-title">Pricing Rules</p>
                 <span class="ops-chip">{{ $vendorPricingRules->count() }} active + historical</span>
@@ -1920,7 +2008,7 @@
             </div>
         </section>
 
-        <section id="vendorBillingSection" class="card ops-section" aria-label="Vendor billing details">
+        <section id="vendorBillingSection" class="card ops-section" aria-label="Vendor billing details" data-nav-panel="true">
             <div class="ops-header">
                 <p class="ops-title">Billing Details</p>
                 <span class="ops-chip">{{ $vendorBilling ? 'Configured' : 'Pending' }}</span>
@@ -2063,7 +2151,7 @@
             </div>
         </section>
 
-        <section class="layout" id="vendorAuthApi">
+        <section class="layout" id="vendorAuthApi" data-nav-panel="true">
             <article class="card" id="vendorAuthCard">
                 <p class="label">Auth</p>
                 <input id="tokenInput" class="token-input" type="password" placeholder="Paste vendor JWT bearer token">
@@ -2126,6 +2214,15 @@
             const payoutPendingTotal = document.getElementById("payoutPendingTotal");
             const payoutNextEstimate = document.getElementById("payoutNextEstimate");
             const payoutRows = document.getElementById("payoutRows");
+            const navLinks = Array.from(document.querySelectorAll('.portal-nav a[href^="#"]'));
+            const navPanels = Array.from(document.querySelectorAll('[data-nav-panel="true"]'));
+            const dashboardElements = [
+                document.getElementById("vendorSummary"),
+                document.getElementById("vendorSummaryActions"),
+                document.getElementById("vendorProgressSnapshot"),
+                document.getElementById("payoutCenter")
+            ].filter(Boolean);
+            const dashboardSectionIds = new Set(["vendorSummary", "payoutCenter", "vendorProgressSnapshot"]);
 
             const SESSION_KEY = "workation_vendor_token";
 
@@ -2431,6 +2528,55 @@
                 }
             }
 
+            function setActiveNavLink(targetId) {
+                navLinks.forEach((link) => {
+                    const href = link.getAttribute("href") || "";
+                    const isActive = href === "#" + targetId;
+                    link.classList.toggle("is-active", isActive);
+                });
+            }
+
+            function showDashboard() {
+                dashboardElements.forEach((el) => {
+                    el.hidden = false;
+                });
+                navPanels.forEach((panel) => {
+                    panel.hidden = true;
+                });
+            }
+
+            function showPanelForHash(hashValue) {
+                const targetId = String(hashValue || "").replace(/^#/, "");
+                const target = targetId ? document.getElementById(targetId) : null;
+
+                if (!target || dashboardSectionIds.has(targetId)) {
+                    showDashboard();
+                    setActiveNavLink(targetId || "vendorSummary");
+                    return;
+                }
+
+                dashboardElements.forEach((el) => {
+                    el.hidden = true;
+                });
+                navPanels.forEach((panel) => {
+                    panel.hidden = true;
+                });
+
+                const panel = target.closest('[data-nav-panel="true"]');
+                if (!panel) {
+                    showDashboard();
+                    setActiveNavLink("vendorSummary");
+                    return;
+                }
+
+                panel.hidden = false;
+                setActiveNavLink(targetId);
+
+                requestAnimationFrame(function () {
+                    target.scrollIntoView({ behavior: "smooth", block: "start" });
+                });
+            }
+
             async function refreshSummary() {
                 const token = getToken();
                 if (!token) {
@@ -2565,6 +2711,22 @@
                 });
             });
 
+            navLinks.forEach((link) => {
+                link.addEventListener("click", function (event) {
+                    const href = link.getAttribute("href") || "";
+                    if (!href.startsWith("#")) {
+                        return;
+                    }
+                    event.preventDefault();
+                    window.location.hash = href;
+                    showPanelForHash(href);
+                });
+            });
+
+            window.addEventListener("hashchange", function () {
+                showPanelForHash(window.location.hash);
+            });
+
             setInterval(function () {
                 const token = getToken();
                 if (token) {
@@ -2579,6 +2741,8 @@
                 setMeta("Token is stored only in this browser tab session.");
                 setSummaryDefaults();
             }
+
+            showPanelForHash(window.location.hash || "#vendorSummary");
         })();
     </script>
 </body>

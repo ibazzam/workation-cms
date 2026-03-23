@@ -140,6 +140,18 @@ if (!function_exists('vendorPortalNormalizedStringList')) {
     }
 }
 
+if (!function_exists('vendorPortalListingsBackResponse')) {
+    function vendorPortalListingsBackResponse(string $message, int $wizardStep = 1)
+    {
+        $normalizedStep = max(1, min(4, $wizardStep));
+
+        return back()
+            ->with('portal_notice', $message)
+            ->with('portal_active_panel', 'listings')
+            ->with('listing_wizard_step', $normalizedStep);
+    }
+}
+
 if (!function_exists('vendorPortalBuildPropertyDetails')) {
     function vendorPortalBuildPropertyDetails(array $validated, string $listingCategory): array
     {
@@ -631,7 +643,7 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
 
     DB::table('vendor_listing_media')->insert($mediaPayload);
 
-    return back()->with('portal_notice', 'Photo uploaded successfully.');
+    return vendorPortalListingsBackResponse('Photo uploaded successfully.', 4);
 });
 
 Route::post('/portal/vendor/rooms/create', function (Request $request) {
@@ -681,7 +693,68 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         'updated_at' => now(),
     ]);
 
-    return back()->with('portal_notice', 'Room category added.');
+    return vendorPortalListingsBackResponse('Room category added.', 3);
+});
+
+Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, int $room) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    if (!Schema::hasTable('vendor_property_room_categories')) {
+        return back()->withErrors(['profile' => 'Room categories table is not ready. Run migrations first.']);
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $roomRecord = DB::table('vendor_property_room_categories')
+        ->where('id', $room)
+        ->where('vendor_user_id', $vendorUserId)
+        ->first();
+
+    if (!$roomRecord) {
+        return back()->withErrors(['profile' => 'Room category not found for this vendor account.']);
+    }
+
+    $validated = $request->validate([
+        'name' => ['required', 'string', 'max:160'],
+        'quantity' => ['nullable', 'integer', 'min:1', 'max:10000'],
+        'max_occupancy' => ['nullable', 'integer', 'min:1', 'max:50'],
+        'bed_type' => ['nullable', 'string', 'max:80'],
+        'base_price' => ['nullable', 'numeric', 'min:0'],
+    ]);
+
+    DB::table('vendor_property_room_categories')
+        ->where('id', $room)
+        ->where('vendor_user_id', $vendorUserId)
+        ->update([
+            'name' => trim((string) $validated['name']),
+            'quantity' => (int) ($validated['quantity'] ?? 1),
+            'max_occupancy' => (int) ($validated['max_occupancy'] ?? 1),
+            'bed_type' => trim((string) ($validated['bed_type'] ?? '')),
+            'base_price' => (float) ($validated['base_price'] ?? 0),
+            'updated_at' => now(),
+        ]);
+
+    return vendorPortalListingsBackResponse('Room category updated.', 3);
+});
+
+Route::post('/portal/vendor/rooms/{room}/delete', function (int $room) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    if (!Schema::hasTable('vendor_property_room_categories')) {
+        return back()->withErrors(['profile' => 'Room categories table is not ready. Run migrations first.']);
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+
+    DB::table('vendor_property_room_categories')
+        ->where('id', $room)
+        ->where('vendor_user_id', $vendorUserId)
+        ->delete();
+
+    return vendorPortalListingsBackResponse('Room category removed.', 3);
 });
 
 Route::post('/portal/vendor/properties/create', function (Request $request) {
@@ -783,7 +856,64 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
 
     DB::table('vendor_properties')->insert($payload);
 
-    return back()->with('portal_notice', 'Property/service listing added.');
+    return vendorPortalListingsBackResponse('Property/service listing added.', 2);
+});
+
+Route::post('/portal/vendor/properties/{property}/update', function (Request $request, int $property) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+    if (!Schema::hasTable('vendor_properties')) {
+        return back()->withErrors(['profile' => 'Vendor properties table is not ready. Run migrations first.']);
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $propertyRecord = DB::table('vendor_properties')
+        ->where('id', $property)
+        ->where('vendor_user_id', $vendorUserId)
+        ->first();
+
+    if (!$propertyRecord) {
+        return back()->withErrors(['profile' => 'Property not found for this vendor account.']);
+    }
+
+    $validated = $request->validate([
+        'name' => ['required', 'string', 'max:160'],
+        'base_price' => ['nullable', 'numeric', 'min:0'],
+        'max_guests' => ['nullable', 'integer', 'min:1', 'max:10000'],
+        'status' => ['required', Rule::in(['active', 'inactive'])],
+    ]);
+
+    DB::table('vendor_properties')
+        ->where('id', $property)
+        ->where('vendor_user_id', $vendorUserId)
+        ->update([
+            'name' => trim((string) $validated['name']),
+            'base_price' => (float) ($validated['base_price'] ?? 0),
+            'max_guests' => (int) ($validated['max_guests'] ?? 1),
+            'status' => (string) $validated['status'],
+            'updated_at' => now(),
+        ]);
+
+    return vendorPortalListingsBackResponse('Property listing updated.', 2);
+});
+
+Route::post('/portal/vendor/properties/{property}/delete', function (int $property) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+    if (!Schema::hasTable('vendor_properties')) {
+        return back()->withErrors(['profile' => 'Vendor properties table is not ready. Run migrations first.']);
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+
+    DB::table('vendor_properties')
+        ->where('id', $property)
+        ->where('vendor_user_id', $vendorUserId)
+        ->delete();
+
+    return vendorPortalListingsBackResponse('Property listing removed.', 1);
 });
 
 Route::post('/portal/vendor/services/create', function (Request $request) {

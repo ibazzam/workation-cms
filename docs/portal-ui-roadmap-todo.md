@@ -48,6 +48,11 @@ Target: complete launch-critical portal work by March 31, 2026.
 - [x] Add backend connectivity status indicator and last sync time
 - [x] Add support/help links with contact paths and docs links
 - [x] Add database-backed operations management sections (properties, services, availability, reservations, pricing, billing)
+- [x] Add category-based onboarding wizard for vendor vertical selection (transport/accommodation/excursions/remote workspace/resort day visit/restaurants/vehicle rentals)
+- [x] Add room category setup flow for accommodation vendors (quantity, occupancy, amenities, price)
+- [x] Add vendor listing photo upload workflow (entity-based image uploads + media list)
+- [ ] Add category-specific advanced listing forms (transport schedule fields, restaurant table windows, excursion slot constraints, rental license rules)
+- [ ] Add per-category publish readiness checks and mandatory image/field validation before listing publish
 
 ### Landing Page
 - [ ] Improve CTA hierarchy and conversion-focused content blocks

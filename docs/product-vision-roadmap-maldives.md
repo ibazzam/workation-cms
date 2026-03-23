@@ -71,6 +71,9 @@ Core customer outcomes:
 - [x] Restaurant reservation domain (tables, seating windows, deposit policies).
 - [x] Resort day visit domain (quota windows, transfer bundles, pass restrictions).
 - [x] Remote work spaces/digital nomad services domain (desk inventory, passes, connectivity quality).
+- [x] Vendor portal category setup now maps to schema verticals: transport, accommodation, excursion, remote workspace, resort day visit, restaurant, vehicle rental.
+- [x] Vendor onboarding flow now supports step-by-step listing progression with category selection, profile/billing, listings, and media upload stages.
+- [x] Accommodation vendors now have room category management workflow in vendor portal (inventory/occupancy/amenities/pricing baseline).
 - [x] Baseline customer reviews APIs for accommodations/transports (create + public listing + rating summary + verified-stay flag).
 - [x] Baseline social media links APIs for accommodations/transports (public listing + admin/vendor CRUD with scope rules).
 - [x] Moderation baseline for customer reviews (flagging + admin queue + hide/publish for accommodation/transport reviews).

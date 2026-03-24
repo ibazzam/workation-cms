@@ -912,9 +912,34 @@
 
         .inline-table-form {
             display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             gap: 6px;
             align-items: end;
+        }
+
+        .ops-table td {
+            vertical-align: top;
+        }
+
+        .listing-cell-actions {
+            display: grid;
+            gap: 8px;
+        }
+
+        .update-row-form,
+        .media-upload-row {
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            background: #fafcff;
+            padding: 8px;
+        }
+
+        .update-row-form .btn,
+        .media-upload-row .btn,
+        .inline-table-form .btn {
+            margin-top: 0;
+            width: 100%;
+            margin-left: 0;
         }
 
         .inline-table-form .ops-input,
@@ -1669,11 +1694,10 @@
                 <div class="guided-wizard-head">
                     <div>
                         <p class="guided-wizard-title">Guided Enlisting Wizard</p>
-                        <p class="guided-wizard-subtitle">Follow simple steps to onboard property or service listings with less friction.</p>
+                        <p class="guided-wizard-subtitle">Follow simple steps to onboard property listings with less friction.</p>
                     </div>
                     <div class="guided-track-toggle" role="group" aria-label="Wizard track switcher">
                         <button type="button" class="btn btn-secondary" id="guidedTrackProperty">Property Track</button>
-                        <button type="button" class="btn btn-secondary" id="guidedTrackService">Service Track</button>
                     </div>
                 </div>
                 <div class="guided-progress-wrap" aria-live="polite">
@@ -1747,7 +1771,6 @@
                 <a href="#vendorPropertiesSection">Listings</a>
                 <a href="#vendorRoomsSection">Room Inventory</a>
                 <a href="#vendorMediaSection">Photos</a>
-                <a href="#vendorServicesSection">Services</a>
             </div>
             <div class="ops-grid">
                 @php
@@ -1932,37 +1955,35 @@
                                         Guests: {{ (int) ($property->max_guests ?? 0) }} | Status: {{ strtoupper((string) $property->status) }}
                                     </td>
                                     <td>
-                                        <form class="inline-table-form" method="POST" action="/portal/vendor/properties/{{ $property->id }}/update">
-                                            @csrf
-                                            <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $property->name }}" required>
-                                            <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) $property->base_price }}">
-                                            <input class="ops-input" name="max_guests" type="number" min="0" max="10000" value="{{ (int) ($property->max_guests ?? 1) }}">
-                                            <select class="ops-select" name="status" required>
-                                                <option value="active" @selected((string) $property->status === 'active')>Active</option>
-                                                <option value="inactive" @selected((string) $property->status === 'inactive')>Inactive</option>
-                                            </select>
-                                            <div class="inline-actions">
-                                                <button class="btn btn-secondary" type="submit">Update</button>
-                                            </div>
-                                        </form>
-                                        <div class="inline-actions">
-                                            <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ (int) $property->id }}">Add Room</button>
-                                            <form method="POST" action="/portal/vendor/properties/{{ $property->id }}/delete" onsubmit="return confirm('Remove this property listing?');">
+                                        <div class="listing-cell-actions">
+                                            <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/properties/{{ $property->id }}/update">
                                                 @csrf
-                                                <button class="btn btn-danger" type="submit">Remove</button>
+                                                <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $property->name }}" required>
+                                                <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) $property->base_price }}">
+                                                <input class="ops-input" name="max_guests" type="number" min="0" max="10000" value="{{ (int) ($property->max_guests ?? 1) }}">
+                                                <select class="ops-select" name="status" required>
+                                                    <option value="active" @selected((string) $property->status === 'active')>Active</option>
+                                                    <option value="inactive" @selected((string) $property->status === 'inactive')>Inactive</option>
+                                                </select>
+                                                <button class="btn btn-secondary js-row-update" type="submit">Update Property</button>
+                                            </form>
+                                            <div class="inline-actions">
+                                                <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ (int) $property->id }}">Add Room</button>
+                                                <form method="POST" action="/portal/vendor/properties/{{ $property->id }}/delete" onsubmit="return confirm('Remove this property listing?');">
+                                                    @csrf
+                                                    <button class="btn btn-danger" type="submit">Remove</button>
+                                                </form>
+                                            </div>
+                                            <form class="inline-table-form media-upload-row" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
+                                                @csrf
+                                                <input type="hidden" name="entity_type" value="property">
+                                                <input type="hidden" name="entity_id" value="{{ (int) $property->id }}">
+                                                <input class="ops-input" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
+                                                <input class="ops-input" name="alt_text" type="text" maxlength="190" placeholder="Property photo alt text" required>
+                                                <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Set as primary</label>
+                                                <button class="btn btn-secondary" type="submit">Upload Property Photo</button>
                                             </form>
                                         </div>
-                                        <form class="inline-table-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
-                                            @csrf
-                                            <input type="hidden" name="entity_type" value="property">
-                                            <input type="hidden" name="entity_id" value="{{ (int) $property->id }}">
-                                            <input class="ops-input" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
-                                            <input class="ops-input" name="alt_text" type="text" maxlength="190" placeholder="Property photo alt text" required>
-                                            <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Set as primary</label>
-                                            <div class="inline-actions">
-                                                <button class="btn btn-secondary" type="submit">Upload Property Photo</button>
-                                            </div>
-                                        </form>
                                     </td>
                                 </tr>
                             @empty
@@ -2085,31 +2106,29 @@
                                         {{ $room->currency ?? 'MVR' }} {{ number_format((float) ($room->base_price ?? 0), 2) }}
                                     </td>
                                     <td>
-                                        <form class="inline-table-form" method="POST" action="/portal/vendor/rooms/{{ $room->id }}/update">
-                                            @csrf
-                                            <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $room->name }}" required>
-                                            <input class="ops-input" name="quantity" type="number" min="1" max="10000" value="{{ (int) ($room->quantity ?? 1) }}">
-                                            <input class="ops-input" name="max_occupancy" type="number" min="1" max="50" value="{{ (int) ($room->max_occupancy ?? 1) }}">
-                                            <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($room->base_price ?? 0) }}">
-                                            <div class="inline-actions">
-                                                <button class="btn btn-secondary" type="submit">Update</button>
-                                            </div>
-                                        </form>
-                                        <form method="POST" action="/portal/vendor/rooms/{{ $room->id }}/delete" onsubmit="return confirm('Remove this room category?');">
-                                            @csrf
-                                            <button class="btn btn-danger" type="submit">Remove</button>
-                                        </form>
-                                        <form class="inline-table-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
-                                            @csrf
-                                            <input type="hidden" name="entity_type" value="room">
-                                            <input type="hidden" name="entity_id" value="{{ (int) $room->id }}">
-                                            <input class="ops-input" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
-                                            <input class="ops-input" name="alt_text" type="text" maxlength="190" placeholder="Room photo alt text" required>
-                                            <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Set as primary</label>
-                                            <div class="inline-actions">
+                                        <div class="listing-cell-actions">
+                                            <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/rooms/{{ $room->id }}/update">
+                                                @csrf
+                                                <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $room->name }}" required>
+                                                <input class="ops-input" name="quantity" type="number" min="1" max="10000" value="{{ (int) ($room->quantity ?? 1) }}">
+                                                <input class="ops-input" name="max_occupancy" type="number" min="1" max="50" value="{{ (int) ($room->max_occupancy ?? 1) }}">
+                                                <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($room->base_price ?? 0) }}">
+                                                <button class="btn btn-secondary js-row-update" type="submit">Update Room</button>
+                                            </form>
+                                            <form method="POST" action="/portal/vendor/rooms/{{ $room->id }}/delete" onsubmit="return confirm('Remove this room category?');">
+                                                @csrf
+                                                <button class="btn btn-danger" type="submit">Remove</button>
+                                            </form>
+                                            <form class="inline-table-form media-upload-row" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
+                                                @csrf
+                                                <input type="hidden" name="entity_type" value="room">
+                                                <input type="hidden" name="entity_id" value="{{ (int) $room->id }}">
+                                                <input class="ops-input" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
+                                                <input class="ops-input" name="alt_text" type="text" maxlength="190" placeholder="Room photo alt text" required>
+                                                <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Set as primary</label>
                                                 <button class="btn btn-secondary" type="submit">Upload Room Photo</button>
-                                            </div>
-                                        </form>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             @empty
@@ -2205,7 +2224,7 @@
             </div>
         </section>
 
-        <section id="vendorServicesSection" class="card ops-section" aria-label="Vendor services" data-panel-group="listings" data-listing-step="1">
+        <section id="vendorServicesSection" class="card ops-section" aria-label="Vendor services" data-panel-group="listings" data-listing-step="1" hidden>
             <div class="ops-header">
                 <p class="ops-title">Services Catalog</p>
                 <span class="ops-chip">{{ $vendorServices->count() }} total</span>
@@ -2760,7 +2779,6 @@
             const roomPropertySelect = document.getElementById("room_vendor_property_id");
             const roomQuickOpenButtons = Array.from(document.querySelectorAll("[data-open-room-form]"));
             const guidedTrackProperty = document.getElementById("guidedTrackProperty");
-            const guidedTrackService = document.getElementById("guidedTrackService");
             const guidedWizardSteps = document.getElementById("guidedWizardSteps");
             const guidedWizardStepText = document.getElementById("guidedWizardStepText");
             const guidedWizardProgressFill = document.getElementById("guidedWizardProgressFill");
@@ -2775,8 +2793,6 @@
             let guidedWizardIndex = 0;
             const vendorPropertiesCount = Number("{{ $vendorProperties->count() }}") || 0;
             const vendorRoomsCount = Number("{{ $vendorRooms->count() }}") || 0;
-            const vendorServicesCount = Number("{{ $vendorServices->count() }}") || 0;
-            const vendorMediaCount = Number("{{ $vendorMediaAssets->count() }}") || 0;
             const vendorBillingReady = "{{ $vendorBilling ? '1' : '0' }}" === "1";
             const GUIDED_WIZARD_STORAGE_KEY = "workation_vendor_guided_wizard";
 
@@ -2817,40 +2833,6 @@
                         hint: "Check pricing, availability, and billing before go-live.",
                         panel: "reservations",
                         targetId: "vendorPricingSection",
-                    },
-                ],
-                service: [
-                    {
-                        title: "Service profile",
-                        hint: "Create your service with category and pricing details.",
-                        panel: "listings",
-                        targetId: "vendorServicesSection",
-                        wizardStep: 1,
-                    },
-                    {
-                        title: "Availability slots",
-                        hint: "Set service availability and inventory.",
-                        panel: "reservations",
-                        targetId: "vendorAvailabilitySection",
-                    },
-                    {
-                        title: "Pricing rules",
-                        hint: "Add weekdays, weekends, and discount rules.",
-                        panel: "reservations",
-                        targetId: "vendorPricingSection",
-                    },
-                    {
-                        title: "Media assets",
-                        hint: "Upload service visuals to improve conversion.",
-                        panel: "listings",
-                        targetId: "vendorMediaSection",
-                        wizardStep: 4,
-                    },
-                    {
-                        title: "Billing and payout",
-                        hint: "Finalize billing profile to receive payouts.",
-                        panel: "billing",
-                        targetId: "vendorProfileBillingSettings",
                     },
                 ],
             };
@@ -3263,22 +3245,6 @@
                     }
                 }
 
-                if (guidedWizardTrack === "service") {
-                    if (safeTargetIndex >= 1 && vendorServicesCount <= 0) {
-                        return {
-                            ok: false,
-                            message: "Create at least one service before moving to availability and pricing.",
-                        };
-                    }
-
-                    if (safeTargetIndex >= 4 && vendorMediaCount <= 0) {
-                        return {
-                            ok: false,
-                            message: "Upload at least one media asset before finishing service publish readiness.",
-                        };
-                    }
-                }
-
                 return { ok: true, message: "" };
             }
 
@@ -3362,9 +3328,6 @@
 
                 if (guidedTrackProperty) {
                     guidedTrackProperty.classList.toggle("is-active", guidedWizardTrack === "property");
-                }
-                if (guidedTrackService) {
-                    guidedTrackService.classList.toggle("is-active", guidedWizardTrack === "service");
                 }
 
                 guidedWizardSteps.innerHTML = "";
@@ -3794,16 +3757,6 @@
                 });
             }
 
-            if (guidedTrackService) {
-                guidedTrackService.addEventListener("click", function () {
-                    guidedWizardTrack = "service";
-                    guidedWizardIndex = 0;
-                    window.location.hash = "listings";
-                    renderGuidedWizard();
-                    applyGuidedWizardStep(true);
-                });
-            }
-
             if (guidedWizardPrev) {
                 guidedWizardPrev.addEventListener("click", function () {
                     const flow = guidedWizardCurrentFlow();
@@ -3887,6 +3840,24 @@
                         roomPropertySelect.value = propertyId;
                         roomPropertySelect.dispatchEvent(new Event("change"));
                         roomPropertySelect.focus();
+                    }
+                });
+            });
+
+            document.querySelectorAll('.js-row-update').forEach((button) => {
+                button.addEventListener('click', function (event) {
+                    const form = button.closest('form');
+                    if (!form) {
+                        return;
+                    }
+                    event.preventDefault();
+                    if (typeof form.reportValidity === 'function' && !form.reportValidity()) {
+                        return;
+                    }
+                    if (typeof form.requestSubmit === 'function') {
+                        form.requestSubmit();
+                    } else {
+                        form.submit();
                     }
                 });
             });

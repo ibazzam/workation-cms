@@ -1135,6 +1135,7 @@
         $roomMediaAssets = $vendorMediaAssets->filter(static function ($media): bool {
             return strtolower((string) ($media->entity_type ?? '')) === 'room';
         });
+
         $propertyLookupById = $vendorProperties->keyBy('id');
         $roomLookupById = $vendorRoomCategories->keyBy('id');
         $showCreatePropertyForm = old('property_form_intent') === '1';

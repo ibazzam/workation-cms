@@ -1121,6 +1121,7 @@
         $selectedVendorCategories = $selectedVendorCategories ?? [];
         $vendorOnboardingStep = $vendorOnboardingStep ?? 1;
         $vendorRoomCategories = $vendorRoomCategories ?? collect();
+        $vendorRooms = $vendorRooms ?? $vendorRoomCategories;
         $vendorMediaAssets = $vendorMediaAssets ?? collect();
         $categorySet = collect($selectedVendorCategories)->flip();
         $supportsAccommodation = $categorySet->has('accommodation');
@@ -1134,6 +1135,7 @@
         $roomMediaAssets = $vendorMediaAssets->filter(static function ($media): bool {
             return strtolower((string) ($media->entity_type ?? '')) === 'room';
         });
+        $propertyLookupById = $vendorProperties->keyBy('id');
         $roomLookupById = $vendorRoomCategories->keyBy('id');
         $showCreatePropertyForm = old('property_form_intent') === '1';
         $showCreateRoomForm = old('room_form_intent') === '1';

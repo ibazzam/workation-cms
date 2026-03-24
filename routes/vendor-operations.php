@@ -489,6 +489,7 @@ Route::get('/vendor', function () {
         'vendorPricingRules' => $vendorPricingRules,
         'vendorBilling' => $vendorBilling,
         'vendorRoomCategories' => $vendorRoomCategories,
+        'vendorRooms' => $vendorRoomCategories,
         'vendorMediaAssets' => $vendorMediaAssets,
     ]);
 });

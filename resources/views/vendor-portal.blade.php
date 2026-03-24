@@ -746,6 +746,34 @@
             align-items: center;
         }
 
+        .listing-category-shortcuts {
+            margin: 8px 0 10px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .listing-category-shortcuts-head {
+            font-size: 0.8rem;
+            color: #38526a;
+            font-weight: 700;
+        }
+
+        .listing-category-shortcuts-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .listing-category-shortcuts .btn {
+            margin-top: 0;
+        }
+
+        .listing-category-shortcuts .btn.is-active {
+            border-color: #0f6b74;
+            background: #e8f7f8;
+            color: #0d4f56;
+        }
+
         .category-scope-note {
             margin: 6px 0 0;
             font-size: 0.78rem;
@@ -908,6 +936,10 @@
             justify-content: space-between;
             gap: 8px;
             flex-wrap: wrap;
+        }
+
+        .properties-grid {
+            grid-template-columns: 1fr;
         }
 
         .inline-table-form {
@@ -1196,6 +1228,10 @@
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
+            .listing-category-shortcuts-row {
+                flex-direction: column;
+            }
+
             .payout-grid {
                 grid-template-columns: 1fr;
             }
@@ -1252,6 +1288,10 @@
 
             .guided-steps {
                 grid-template-columns: 1fr;
+            }
+
+            .listing-category-shortcuts .btn {
+                width: 100%;
             }
         }
     </style>
@@ -1690,6 +1730,28 @@
                 <a class="hero-link" href="#vendorRoomsSection" data-wizard-step="3">Step 3: Room Setup</a>
                 <a class="hero-link" href="#vendorMediaSection" data-wizard-step="4">Step 4: Upload Pictures</a>
             </div>
+            @php
+                $listingShortcutOrder = ['accommodation', 'transport', 'excursion', 'remote_workspace', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
+            @endphp
+            <div class="listing-category-shortcuts" aria-label="Listing category actions">
+                <div class="listing-category-shortcuts-head">Quick Add By Category</div>
+                <div class="listing-category-shortcuts-row">
+                    @foreach ($listingShortcutOrder as $categoryKey)
+                        @if (isset($vendorCategoryMap[$categoryKey]))
+                            <button type="button" class="btn btn-secondary" data-listing-category-shortcut="{{ $categoryKey }}">Add {{ $vendorCategoryMap[$categoryKey] }}</button>
+                        @endif
+                    @endforeach
+                </div>
+                <div class="listing-category-shortcuts-head">Quick List Filter</div>
+                <div class="listing-category-shortcuts-row">
+                    <button type="button" class="btn btn-secondary is-active" data-listing-category-filter="all">Show All Listings</button>
+                    @foreach ($listingShortcutOrder as $categoryKey)
+                        @if (isset($vendorCategoryMap[$categoryKey]))
+                            <button type="button" class="btn btn-secondary" data-listing-category-filter="{{ $categoryKey }}">{{ $vendorCategoryMap[$categoryKey] }}</button>
+                        @endif
+                    @endforeach
+                </div>
+            </div>
             <article class="guided-wizard" aria-label="Guided listing wizard">
                 <div class="guided-wizard-head">
                     <div>
@@ -1772,7 +1834,7 @@
                 <a href="#vendorRoomsSection">Room Inventory</a>
                 <a href="#vendorMediaSection">Photos</a>
             </div>
-            <div class="ops-grid">
+            <div class="ops-grid properties-grid">
                 @php
                     $oldPropertyAmenities = collect(old('property_amenities', []))->map(fn ($item) => (string) $item)->all();
                     $oldPropertyFeatures = collect(old('property_features', []))->map(fn ($item) => (string) $item)->all();
@@ -1943,7 +2005,7 @@
                         </thead>
                         <tbody>
                             @forelse ($vendorProperties->take(12) as $property)
-                                <tr>
+                                <tr data-property-row data-listing-category="{{ strtolower((string) ($property->listing_category ?? '')) }}">
                                     <td>
                                         <strong>{{ $property->name }}</strong><br>
                                         ID: {{ (int) $property->id }}<br>
@@ -2221,120 +2283,6 @@
                         @endforelse
                     </div>
                 </article>
-            </div>
-        </section>
-
-        <section id="vendorServicesSection" class="card ops-section" aria-label="Vendor services" data-panel-group="listings" data-listing-step="1" hidden>
-            <div class="ops-header">
-                <p class="ops-title">Services Catalog</p>
-                <span class="ops-chip">{{ $vendorServices->count() }} total</span>
-            </div>
-            <div class="ops-grid">
-                <form class="ops-form" method="POST" action="/portal/vendor/services/create">
-                    @csrf
-                    <div class="ops-form-grid">
-                        <div class="ops-field">
-                            <label for="service_listing_category">Listing Category</label>
-                            <select id="service_listing_category" name="listing_category" class="ops-select" required>
-                                @foreach ($vendorCategoryMap as $categoryKey => $categoryLabel)
-                                    <option value="{{ $categoryKey }}" @disabled(!in_array($categoryKey, $selectedVendorCategories, true))>{{ $categoryLabel }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="ops-field">
-                            <label for="service_name">Service Name</label>
-                            <input id="service_name" name="name" class="ops-input" type="text" maxlength="160" required>
-                        </div>
-                        <div class="ops-field">
-                            <label for="service_category">Category</label>
-                            <input id="service_category" name="category" class="ops-input" type="text" maxlength="120" required>
-                        </div>
-                        <div class="ops-field">
-                            <label for="service_price">Price (MVR)</label>
-                            <input id="service_price" name="price" class="ops-input" type="number" min="0" step="0.01" required>
-                        </div>
-                        <div class="ops-field">
-                            <label for="service_duration">Duration (minutes)</label>
-                            <input id="service_duration" name="duration_minutes" class="ops-input" type="number" min="0" max="100000">
-                        </div>
-                        <div class="ops-field">
-                            <label for="service_property_id">Property ID (optional)</label>
-                            <input id="service_property_id" name="property_id" class="ops-input" type="number" min="1">
-                        </div>
-                        <div class="ops-field ops-field-wide">
-                            <label for="service_description">Description</label>
-                            <textarea id="service_description" name="description" class="ops-textarea" maxlength="3000"></textarea>
-                        </div>
-                        <div class="ops-field">
-                            <label for="service_measurement_system">Measurement System</label>
-                            <select id="service_measurement_system" name="measurement_system" class="ops-select">
-                                <option value="metric">Metric</option>
-                                <option value="imperial">Imperial</option>
-                            </select>
-                        </div>
-                        <div class="ops-field">
-                            <label for="service_lead_time">Lead Time (minutes)</label>
-                            <input id="service_lead_time" name="lead_time_minutes" class="ops-input" type="number" min="0" max="43200" placeholder="e.g. 120">
-                        </div>
-                        <div class="ops-field">
-                            <label for="service_min_booking">Min Booking Size</label>
-                            <input id="service_min_booking" name="min_booking_size" class="ops-input" type="number" min="1" max="10000">
-                        </div>
-                        <div class="ops-field">
-                            <label for="service_max_booking">Max Booking Size</label>
-                            <input id="service_max_booking" name="max_booking_size" class="ops-input" type="number" min="1" max="10000">
-                        </div>
-                        <div class="ops-field">
-                            <label for="service_quantity_unit">Quantity Unit</label>
-                            <select id="service_quantity_unit" name="quantity_unit" class="ops-select">
-                                <option value="seat">Seat</option>
-                                <option value="room">Room</option>
-                                <option value="desk">Desk</option>
-                                <option value="vehicle">Vehicle</option>
-                                <option value="ticket">Ticket</option>
-                                <option value="table">Table</option>
-                                <option value="pass">Pass</option>
-                            </select>
-                        </div>
-                        <div class="ops-field ops-field-wide">
-                            <label for="service_compliance_notes">Compliance Notes</label>
-                            <textarea id="service_compliance_notes" name="compliance_notes" class="ops-textarea" maxlength="2000" placeholder="Operational and safety constraints, policy references, legal requirements"></textarea>
-                        </div>
-                    </div>
-                    <p class="standards-note">International listing standard: include lead times and capacity boundaries to reduce booking failures.</p>
-                    <button class="btn btn-primary" type="submit">Add Service</button>
-                </form>
-
-                <div class="ops-table-wrap">
-                    <table class="ops-table" aria-label="Vendor services table">
-                        <thead>
-                            <tr>
-                                <th>Listing</th>
-                                <th>Name</th>
-                                <th>Category</th>
-                                <th>Duration</th>
-                                <th>Price</th>
-                                <th>Active</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($vendorServices->take(12) as $service)
-                                <tr>
-                                    <td>{{ strtoupper((string) ($service->listing_category ?? 'N/A')) }}</td>
-                                    <td>{{ $service->name }}</td>
-                                    <td>{{ $service->category }}</td>
-                                    <td>{{ (int) $service->duration_minutes }} min</td>
-                                    <td>{{ $service->currency }} {{ number_format((float) $service->price, 2) }}</td>
-                                    <td>{{ $service->is_active ? 'YES' : 'NO' }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="ops-empty">No services yet. Add one to start taking reservations.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
             </div>
         </section>
 
@@ -2778,6 +2726,9 @@
             const roomCreateForm = document.getElementById("roomCreateForm");
             const roomPropertySelect = document.getElementById("room_vendor_property_id");
             const roomQuickOpenButtons = Array.from(document.querySelectorAll("[data-open-room-form]"));
+            const listingCategoryShortcutButtons = Array.from(document.querySelectorAll('[data-listing-category-shortcut]'));
+            const listingCategoryFilterButtons = Array.from(document.querySelectorAll('[data-listing-category-filter]'));
+            const propertyListingRows = Array.from(document.querySelectorAll('[data-property-row]'));
             const guidedTrackProperty = document.getElementById("guidedTrackProperty");
             const guidedWizardSteps = document.getElementById("guidedWizardSteps");
             const guidedWizardStepText = document.getElementById("guidedWizardStepText");
@@ -3510,6 +3461,44 @@
                 });
             }
 
+            function applyPropertyCategoryFilter(categoryKey) {
+                const normalizedCategory = String(categoryKey || 'all').trim().toLowerCase();
+                propertyListingRows.forEach((row) => {
+                    const rowCategory = String(row.getAttribute('data-listing-category') || '').trim().toLowerCase();
+                    const shouldShow = normalizedCategory === 'all' || rowCategory === normalizedCategory;
+                    row.hidden = !shouldShow;
+                });
+
+                listingCategoryFilterButtons.forEach((button) => {
+                    const buttonCategory = String(button.getAttribute('data-listing-category-filter') || '');
+                    button.classList.toggle('is-active', buttonCategory === normalizedCategory);
+                });
+            }
+
+            function openPropertyFlowWithCategory(categoryKey) {
+                const normalizedCategory = String(categoryKey || '').trim().toLowerCase();
+                window.location.hash = 'listings';
+                showPanelGroup('listings');
+                activateListingWizardStep(1, true);
+
+                if (propertyCreateForm) {
+                    propertyCreateForm.hidden = false;
+                }
+                if (closePropertyCreateForm) {
+                    closePropertyCreateForm.hidden = false;
+                }
+                if (propertyCategorySelect && normalizedCategory !== '') {
+                    ensureSelectHasOption(propertyCategorySelect, normalizedCategory);
+                    propertyCategorySelect.value = normalizedCategory;
+                    propertyCategorySelect.dispatchEvent(new Event('change'));
+                }
+                if (document.getElementById('property_name')) {
+                    document.getElementById('property_name').focus();
+                }
+
+                applyPropertyCategoryFilter(normalizedCategory || 'all');
+            }
+
             function refreshBillingLocationSelectors() {
                 if (!billingCountry || !billingState || !billingCity) return;
                 const country = billingCountry.value || "Maldives";
@@ -3844,6 +3833,20 @@
                 });
             });
 
+            listingCategoryShortcutButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const categoryKey = String(button.getAttribute('data-listing-category-shortcut') || '');
+                    openPropertyFlowWithCategory(categoryKey);
+                });
+            });
+
+            listingCategoryFilterButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const categoryKey = String(button.getAttribute('data-listing-category-filter') || 'all');
+                    applyPropertyCategoryFilter(categoryKey);
+                });
+            });
+
             document.querySelectorAll('.js-row-update').forEach((button) => {
                 button.addEventListener('click', function (event) {
                     const form = button.closest('form');
@@ -3906,6 +3909,7 @@
             showPanelGroup(initialPanelKey);
             restoreGuidedWizardState();
             renderGuidedWizard();
+            applyPropertyCategoryFilter('all');
             if (initialPanelKey === "listings") {
                 if (serverPanelKey === "listings") {
                     activateListingWizardStep(listingWizardStep, true);

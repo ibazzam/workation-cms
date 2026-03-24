@@ -1233,6 +1233,13 @@
 </head>
 <body>
     @php
+        // Defensive fallback: prevents runtime failures if any legacy summary bindings remain.
+        $summary = $summary ?? [
+            'upcoming_bookings' => 0,
+            'completed_bookings' => 0,
+            'receipts_available' => 0,
+            'notification_state' => 'ACTIVE',
+        ];
         $vendorProperties = $vendorProperties ?? collect();
         $vendorServices = $vendorServices ?? collect();
         $vendorAvailability = $vendorAvailability ?? collect();
@@ -1678,6 +1685,7 @@
                 <ol class="guided-steps" id="guidedWizardSteps"></ol>
                 <div class="guided-actions">
                     <button type="button" class="btn btn-secondary" id="guidedWizardPrev">Back</button>
+                    <button type="button" class="btn btn-secondary" id="guidedWizardResume">Resume Last Step</button>
                     <button type="button" class="btn btn-primary" id="guidedWizardNext">Next Step</button>
                 </div>
             </article>
@@ -2757,6 +2765,7 @@
             const guidedWizardStepText = document.getElementById("guidedWizardStepText");
             const guidedWizardProgressFill = document.getElementById("guidedWizardProgressFill");
             const guidedWizardPrev = document.getElementById("guidedWizardPrev");
+            const guidedWizardResume = document.getElementById("guidedWizardResume");
             const guidedWizardNext = document.getElementById("guidedWizardNext");
             const serverPanelKey = "{{ in_array($forcedPanelKey, ['overview', 'profile', 'listings', 'billing', 'reservations', 'api'], true) ? $forcedPanelKey : '' }}";
             const listingWizardStep = Number("{{ $listingWizardStep }}") || 1;
@@ -2764,6 +2773,12 @@
             let listingWizardPanelStep = 1;
             let guidedWizardTrack = "property";
             let guidedWizardIndex = 0;
+            const vendorPropertiesCount = Number("{{ $vendorProperties->count() }}") || 0;
+            const vendorRoomsCount = Number("{{ $vendorRooms->count() }}") || 0;
+            const vendorServicesCount = Number("{{ $vendorServices->count() }}") || 0;
+            const vendorMediaCount = Number("{{ $vendorMediaAssets->count() }}") || 0;
+            const vendorBillingReady = "{{ $vendorBilling ? '1' : '0' }}" === "1";
+            const GUIDED_WIZARD_STORAGE_KEY = "workation_vendor_guided_wizard";
 
             const guidedWizardFlows = {
                 property: [
@@ -3222,6 +3237,88 @@
                 return Array.isArray(flow) ? flow : guidedWizardFlows.property;
             }
 
+            function guidedWizardCanMoveToIndex(targetIndex) {
+                const safeTargetIndex = Math.max(0, Number(targetIndex) || 0);
+
+                if (guidedWizardTrack === "property") {
+                    if (safeTargetIndex >= 1 && vendorPropertiesCount <= 0) {
+                        return {
+                            ok: false,
+                            message: "Create at least one property to continue to review, room setup, and media steps.",
+                        };
+                    }
+
+                    if (safeTargetIndex >= 3 && vendorRoomsCount <= 0) {
+                        return {
+                            ok: false,
+                            message: "Add at least one room before progressing to media-focused property flow.",
+                        };
+                    }
+
+                    if (safeTargetIndex >= 4 && !vendorBillingReady) {
+                        return {
+                            ok: false,
+                            message: "Complete billing profile before final publish readiness.",
+                        };
+                    }
+                }
+
+                if (guidedWizardTrack === "service") {
+                    if (safeTargetIndex >= 1 && vendorServicesCount <= 0) {
+                        return {
+                            ok: false,
+                            message: "Create at least one service before moving to availability and pricing.",
+                        };
+                    }
+
+                    if (safeTargetIndex >= 4 && vendorMediaCount <= 0) {
+                        return {
+                            ok: false,
+                            message: "Upload at least one media asset before finishing service publish readiness.",
+                        };
+                    }
+                }
+
+                return { ok: true, message: "" };
+            }
+
+            function persistGuidedWizardState() {
+                const payload = {
+                    track: guidedWizardTrack,
+                    index: guidedWizardIndex,
+                    savedAt: Date.now(),
+                };
+                try {
+                    sessionStorage.setItem(GUIDED_WIZARD_STORAGE_KEY, JSON.stringify(payload));
+                } catch (error) {
+                    // Ignore storage errors in private/incognito contexts.
+                }
+            }
+
+            function restoreGuidedWizardState() {
+                try {
+                    const raw = sessionStorage.getItem(GUIDED_WIZARD_STORAGE_KEY);
+                    if (!raw) {
+                        return false;
+                    }
+                    const parsed = JSON.parse(raw);
+                    const track = String(parsed.track || "").toLowerCase();
+                    const index = Number(parsed.index);
+                    if (!(track in guidedWizardFlows)) {
+                        return false;
+                    }
+                    const flow = guidedWizardFlows[track];
+                    if (!Array.isArray(flow) || flow.length === 0) {
+                        return false;
+                    }
+                    guidedWizardTrack = track;
+                    guidedWizardIndex = Math.max(0, Math.min(flow.length - 1, Number.isFinite(index) ? index : 0));
+                    return true;
+                } catch (error) {
+                    return false;
+                }
+            }
+
             function applyGuidedWizardStep(shouldScroll) {
                 const flow = guidedWizardCurrentFlow();
                 const safeIndex = Math.max(0, Math.min(flow.length - 1, Number(guidedWizardIndex) || 0));
@@ -3303,7 +3400,19 @@
                 if (guidedWizardNext) {
                     const isLastStep = guidedWizardIndex >= flow.length - 1;
                     guidedWizardNext.textContent = isLastStep ? "Go To Final Step" : "Next Step";
+
+                    const targetIndex = Math.min(flow.length - 1, guidedWizardIndex + 1);
+                    const gateCheck = guidedWizardCanMoveToIndex(targetIndex);
+                    guidedWizardNext.disabled = !gateCheck.ok;
+                    if (!gateCheck.ok) {
+                        guidedWizardNext.title = gateCheck.message;
+                        guidedWizardStepText.textContent = guidedWizardStepText.textContent + " | " + gateCheck.message;
+                    } else {
+                        guidedWizardNext.title = "";
+                    }
                 }
+
+                persistGuidedWizardState();
             }
 
             const LOCATION_TREE = {
@@ -3704,6 +3813,16 @@
                 });
             }
 
+            if (guidedWizardResume) {
+                guidedWizardResume.addEventListener("click", function () {
+                    if (restoreGuidedWizardState()) {
+                        window.location.hash = "listings";
+                        renderGuidedWizard();
+                        applyGuidedWizardStep(true);
+                    }
+                });
+            }
+
             if (guidedWizardNext) {
                 guidedWizardNext.addEventListener("click", function () {
                     const flow = guidedWizardCurrentFlow();
@@ -3814,6 +3933,7 @@
             const initialPanelKey = serverPanelKey && validPanelKeys.has(serverPanelKey) ? serverPanelKey : hashPanelKey;
             listingWizardPanelStep = listingPanelStepFromWizardStep(listingWizardStep);
             showPanelGroup(initialPanelKey);
+            restoreGuidedWizardState();
             renderGuidedWizard();
             if (initialPanelKey === "listings") {
                 if (serverPanelKey === "listings") {

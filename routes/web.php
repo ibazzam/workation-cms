@@ -413,6 +413,74 @@ Route::get('/terms-of-service', function () {
 });
 
 Route::get('/customer', function () {
+    $customerProperties = collect();
+    $customerRoomsByProperty = collect();
+    $propertyMediaByProperty = collect();
+    $roomMediaByRoom = collect();
+
+    if (Schema::hasTable('vendor_properties')) {
+        $customerProperties = DB::table('vendor_properties')
+            ->where('status', 'active')
+            ->orderByDesc('updated_at')
+            ->limit(24)
+            ->get();
+    }
+
+    $propertyIds = $customerProperties->pluck('id')->map(static fn ($id) => (int) $id)->filter(static fn (int $id) => $id > 0)->values();
+
+    if ($propertyIds->isNotEmpty() && Schema::hasTable('vendor_property_room_categories')) {
+        $rooms = DB::table('vendor_property_room_categories')
+            ->whereIn('vendor_property_id', $propertyIds->all())
+            ->orderByDesc('updated_at')
+            ->limit(400)
+            ->get();
+
+        $customerRoomsByProperty = $rooms->groupBy(static fn ($room) => (int) ($room->vendor_property_id ?? 0));
+    }
+
+    $roomIds = $customerRoomsByProperty
+        ->flatten(1)
+        ->pluck('id')
+        ->map(static fn ($id) => (int) $id)
+        ->filter(static fn (int $id) => $id > 0)
+        ->values();
+
+    if (Schema::hasTable('vendor_listing_media') && ($propertyIds->isNotEmpty() || $roomIds->isNotEmpty())) {
+        $mediaQuery = DB::table('vendor_listing_media');
+
+        $mediaQuery->where(function ($query) use ($propertyIds, $roomIds) {
+            if ($propertyIds->isNotEmpty()) {
+                $query->orWhere(function ($propertyQuery) use ($propertyIds) {
+                    $propertyQuery
+                        ->where('entity_type', 'property')
+                        ->whereIn('entity_id', $propertyIds->all());
+                });
+            }
+
+            if ($roomIds->isNotEmpty()) {
+                $query->orWhere(function ($roomQuery) use ($roomIds) {
+                    $roomQuery
+                        ->where('entity_type', 'room')
+                        ->whereIn('entity_id', $roomIds->all());
+                });
+            }
+        });
+
+        $mediaRows = $mediaQuery
+            ->orderByDesc('is_primary')
+            ->orderByDesc('created_at')
+            ->limit(1000)
+            ->get();
+
+        $propertyMediaByProperty = $mediaRows
+            ->filter(static fn ($media) => strtolower((string) ($media->entity_type ?? '')) === 'property')
+            ->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
+
+        $roomMediaByRoom = $mediaRows
+            ->filter(static fn ($media) => strtolower((string) ($media->entity_type ?? '')) === 'room')
+            ->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
+    }
+
     return view('customer-portal', [
         'summary' => [
             'upcoming_bookings' => 0,
@@ -420,6 +488,10 @@ Route::get('/customer', function () {
             'receipts_available' => 0,
             'notification_state' => 'ACTIVE',
         ],
+        'customerProperties' => $customerProperties,
+        'customerRoomsByProperty' => $customerRoomsByProperty,
+        'propertyMediaByProperty' => $propertyMediaByProperty,
+        'roomMediaByRoom' => $roomMediaByRoom,
     ]);
 });
 

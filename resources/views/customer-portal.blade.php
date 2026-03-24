@@ -145,6 +145,84 @@
             gap: 12px;
         }
 
+        .listing-feed {
+            margin-top: 14px;
+        }
+
+        .listing-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .listing-card {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #ffffff;
+            overflow: hidden;
+        }
+
+        .listing-property-media {
+            width: 100%;
+            height: 190px;
+            display: block;
+            object-fit: cover;
+            background: #e8eef4;
+        }
+
+        .listing-content {
+            padding: 12px;
+        }
+
+        .listing-title {
+            margin: 0;
+            font-size: 1rem;
+            color: #1f3346;
+        }
+
+        .listing-meta {
+            margin: 6px 0 0;
+            font-size: 0.84rem;
+            color: #48627b;
+        }
+
+        .room-list {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+
+        .room-item {
+            border: 1px solid #dbe5ee;
+            border-radius: 10px;
+            background: #f9fcff;
+            padding: 8px;
+            display: grid;
+            grid-template-columns: 70px 1fr;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .room-item img {
+            width: 70px;
+            height: 56px;
+            object-fit: cover;
+            border-radius: 8px;
+            background: #e8eef4;
+        }
+
+        .room-item strong {
+            display: block;
+            font-size: 0.84rem;
+            color: #1f3346;
+        }
+
+        .room-item span {
+            font-size: 0.78rem;
+            color: #48627b;
+        }
+
         .card {
             background: var(--card);
             border: 1px solid var(--line);
@@ -191,11 +269,18 @@
 
         @media (max-width: 900px) {
             .summary-grid { grid-template-columns: 1fr 1fr; }
+            .listing-grid { grid-template-columns: 1fr; }
             .layout { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
+    @php
+        $customerProperties = $customerProperties ?? collect();
+        $customerRoomsByProperty = $customerRoomsByProperty ?? collect();
+        $propertyMediaByProperty = $propertyMediaByProperty ?? collect();
+        $roomMediaByRoom = $roomMediaByRoom ?? collect();
+    @endphp
     <main class="page">
         <section class="hero">
             <span class="eyebrow">Customer Experience</span>
@@ -210,6 +295,7 @@
 
         <nav class="portal-nav" aria-label="Customer navigation">
             <a href="#customerSummary">Summary</a>
+            <a href="#discoverListings">Listings</a>
             <a href="#bookingsCard">Bookings</a>
             <a href="#paymentsCard">Payments</a>
             <a href="#notificationsCard">Notifications</a>
@@ -236,6 +322,66 @@
                 <p class="summary-value"><span class="status-pill {{ $summary['notification_state'] === 'ACTIVE' ? 'ok' : 'warn' }}">{{ $summary['notification_state'] }}</span></p>
                 <p class="summary-meta">Messages and booking updates</p>
             </article>
+        </section>
+
+        <section id="discoverListings" class="card listing-feed" aria-label="Customer listing feed">
+            <p class="label">Discover Properties and Rooms</p>
+            @if ($customerProperties->isEmpty())
+                <div class="empty">No active listings are available right now. Please check again shortly.</div>
+            @else
+                <div class="listing-grid">
+                    @foreach ($customerProperties as $property)
+                        @php
+                            $propertyId = (int) ($property->id ?? 0);
+                            $propertyMedia = collect($propertyMediaByProperty->get($propertyId, collect()));
+                            $primaryPropertyMedia = $propertyMedia->first();
+                            $propertyImageUrl = $primaryPropertyMedia
+                                ? (str_starts_with((string) ($primaryPropertyMedia->file_path ?? ''), 'http')
+                                    ? (string) $primaryPropertyMedia->file_path
+                                    : ('/storage/' . ltrim((string) ($primaryPropertyMedia->file_path ?? ''), '/')))
+                                : null;
+                            $roomsForProperty = collect($customerRoomsByProperty->get($propertyId, collect()))->take(4);
+                        @endphp
+                        <article class="listing-card">
+                            @if ($propertyImageUrl)
+                                <img class="listing-property-media" src="{{ $propertyImageUrl }}" alt="{{ $primaryPropertyMedia->alt_text ?? ($property->name . ' photo') }}" loading="lazy">
+                            @endif
+                            <div class="listing-content">
+                                <h2 class="listing-title">{{ $property->name }}</h2>
+                                <p class="listing-meta">{{ $property->location ?: 'Location details coming soon' }}</p>
+                                <p class="listing-meta">{{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format((float) ($property->base_price ?? 0), 2) }} | Guests: {{ (int) ($property->max_guests ?? 0) }}</p>
+                                <div class="room-list" aria-label="Room-level entries for {{ $property->name }}">
+                                    @forelse ($roomsForProperty as $room)
+                                        @php
+                                            $roomId = (int) ($room->id ?? 0);
+                                            $roomMediaItems = collect($roomMediaByRoom->get($roomId, collect()));
+                                            $primaryRoomMedia = $roomMediaItems->first();
+                                            $roomImageUrl = $primaryRoomMedia
+                                                ? (str_starts_with((string) ($primaryRoomMedia->file_path ?? ''), 'http')
+                                                    ? (string) $primaryRoomMedia->file_path
+                                                    : ('/storage/' . ltrim((string) ($primaryRoomMedia->file_path ?? ''), '/')))
+                                                : null;
+                                        @endphp
+                                        <article class="room-item">
+                                            @if ($roomImageUrl)
+                                                <img src="{{ $roomImageUrl }}" alt="{{ $primaryRoomMedia->alt_text ?? ($room->name . ' photo') }}" loading="lazy">
+                                            @else
+                                                <div class="empty" style="margin:0; padding:6px; font-size:0.74rem;">No photo</div>
+                                            @endif
+                                            <div>
+                                                <strong>{{ $room->name }}</strong>
+                                                <span>Qty {{ (int) ($room->quantity ?? 0) }} | Max {{ (int) ($room->max_occupancy ?? 0) }} | {{ strtoupper((string) ($room->currency ?? 'MVR')) }} {{ number_format((float) ($room->base_price ?? 0), 2) }}</span>
+                                            </div>
+                                        </article>
+                                    @empty
+                                        <div class="empty">Room inventory will appear here once published by the vendor.</div>
+                                    @endforelse
+                                </div>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            @endif
         </section>
 
         <section class="layout">

@@ -589,6 +589,43 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
         'is_primary' => ['nullable', 'boolean'],
     ]);
 
+    $entityType = (string) $validated['entity_type'];
+    $entityId = filled($validated['entity_id'] ?? null) ? (int) $validated['entity_id'] : null;
+
+    if (in_array($entityType, ['property', 'room'], true) && ($entityId === null || $entityId <= 0)) {
+        return back()->withErrors(['profile' => 'Choose a valid property or room before uploading photos.'])->withInput();
+    }
+
+    if ($entityType === 'property') {
+        if (!Schema::hasTable('vendor_properties')) {
+            return back()->withErrors(['profile' => 'Properties table is not ready. Run migrations first.']);
+        }
+
+        $propertyExists = DB::table('vendor_properties')
+            ->where('id', (int) $entityId)
+            ->where('vendor_user_id', $vendorUserId)
+            ->exists();
+
+        if (!$propertyExists) {
+            return back()->withErrors(['profile' => 'Property not found for this vendor account.'])->withInput();
+        }
+    }
+
+    if ($entityType === 'room') {
+        if (!Schema::hasTable('vendor_property_room_categories')) {
+            return back()->withErrors(['profile' => 'Room categories table is not ready. Run migrations first.']);
+        }
+
+        $roomExists = DB::table('vendor_property_room_categories')
+            ->where('id', (int) $entityId)
+            ->where('vendor_user_id', $vendorUserId)
+            ->exists();
+
+        if (!$roomExists) {
+            return back()->withErrors(['profile' => 'Room not found for this vendor account.'])->withInput();
+        }
+    }
+
     $file = $request->file('photo');
     $imageSize = @getimagesize($file->getPathname());
     if (!is_array($imageSize) || count($imageSize) < 2) {
@@ -612,15 +649,15 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
     if ((bool) ($validated['is_primary'] ?? false)) {
         DB::table('vendor_listing_media')
             ->where('vendor_user_id', $vendorUserId)
-            ->where('entity_type', (string) $validated['entity_type'])
-            ->where('entity_id', filled($validated['entity_id'] ?? null) ? (int) $validated['entity_id'] : null)
+            ->where('entity_type', $entityType)
+            ->where('entity_id', $entityId)
             ->update(['is_primary' => false, 'updated_at' => now()]);
     }
 
     $mediaPayload = [
         'vendor_user_id' => $vendorUserId,
-        'entity_type' => (string) $validated['entity_type'],
-        'entity_id' => filled($validated['entity_id'] ?? null) ? (int) $validated['entity_id'] : null,
+        'entity_type' => $entityType,
+        'entity_id' => $entityId,
         'file_path' => (string) $filePath,
         'mime_type' => $file->getMimeType(),
         'alt_text' => trim((string) ($validated['alt_text'] ?? '')),

@@ -1322,6 +1322,10 @@
             <div class="error" role="alert">{{ $errors->first('profile') }}</div>
         @endif
 
+        @if ($errors->any() && !$errors->has('profile'))
+            <div class="error" role="alert">{{ $errors->first() }}</div>
+        @endif
+
         <section id="vendorProfileCard" class="card profile-card" aria-label="Vendor profile settings" data-panel-group="profile">
             <p class="label">Account Settings</p>
             <div class="panel-links" aria-label="Profile actions">
@@ -1669,7 +1673,7 @@
                             </div>
                             <div class="ops-field">
                                 <label for="property_max_guests">Max Guests</label>
-                                <input id="property_max_guests" name="max_guests" class="ops-input" type="number" min="1" max="10000" value="{{ old('max_guests') }}">
+                                <input id="property_max_guests" name="max_guests" class="ops-input" type="number" min="0" max="10000" value="{{ old('max_guests') }}">
                             </div>
                             <div class="ops-field ops-field-wide">
                                 <label for="property_description">Description</label>
@@ -1779,7 +1783,7 @@
                                             @csrf
                                             <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $property->name }}" required>
                                             <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) $property->base_price }}">
-                                            <input class="ops-input" name="max_guests" type="number" min="1" max="10000" value="{{ (int) ($property->max_guests ?? 1) }}">
+                                            <input class="ops-input" name="max_guests" type="number" min="0" max="10000" value="{{ (int) ($property->max_guests ?? 1) }}">
                                             <select class="ops-select" name="status" required>
                                                 <option value="active" @selected((string) $property->status === 'active')>Active</option>
                                                 <option value="inactive" @selected((string) $property->status === 'inactive')>Inactive</option>
@@ -1795,6 +1799,17 @@
                                                 <button class="btn btn-danger" type="submit">Remove</button>
                                             </form>
                                         </div>
+                                        <form class="inline-table-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
+                                            @csrf
+                                            <input type="hidden" name="entity_type" value="property">
+                                            <input type="hidden" name="entity_id" value="{{ (int) $property->id }}">
+                                            <input class="ops-input" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
+                                            <input class="ops-input" name="alt_text" type="text" maxlength="190" placeholder="Property photo alt text" required>
+                                            <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Set as primary</label>
+                                            <div class="inline-actions">
+                                                <button class="btn btn-secondary" type="submit">Upload Property Photo</button>
+                                            </div>
+                                        </form>
                                     </td>
                                 </tr>
                             @empty
@@ -1930,6 +1945,17 @@
                                         <form method="POST" action="/portal/vendor/rooms/{{ $room->id }}/delete" onsubmit="return confirm('Remove this room category?');">
                                             @csrf
                                             <button class="btn btn-danger" type="submit">Remove</button>
+                                        </form>
+                                        <form class="inline-table-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
+                                            @csrf
+                                            <input type="hidden" name="entity_type" value="room">
+                                            <input type="hidden" name="entity_id" value="{{ (int) $room->id }}">
+                                            <input class="ops-input" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
+                                            <input class="ops-input" name="alt_text" type="text" maxlength="190" placeholder="Room photo alt text" required>
+                                            <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Set as primary</label>
+                                            <div class="inline-actions">
+                                                <button class="btn btn-secondary" type="submit">Upload Room Photo</button>
+                                            </div>
                                         </form>
                                     </td>
                                 </tr>
@@ -2903,6 +2929,10 @@
                 setActiveNavLink(panelKey);
 
                 if (panelKey === "listings") {
+                    if (!listingWizardStarted) {
+                        listingWizardStarted = true;
+                        listingWizardPanelStep = 1;
+                    }
                     applyListingWizardVisibility();
                 } else {
                     setListingPanelsHidden(true);
@@ -2942,11 +2972,6 @@
             }
 
             function applyListingWizardVisibility() {
-                if (!listingWizardStarted) {
-                    setListingPanelsHidden(true);
-                    return;
-                }
-
                 const activeStepPanel = Math.max(1, Math.min(3, Number(listingWizardPanelStep) || 1));
                 listingStepPanels.forEach((panel) => {
                     const panelStep = Number(panel.getAttribute("data-listing-step") || "0");
@@ -3327,6 +3352,12 @@
                     window.location.hash = "listings";
                     showPanelGroup("listings");
                     activateListingWizardStep(1, true);
+                    if (propertyCreateForm) {
+                        propertyCreateForm.hidden = false;
+                    }
+                    if (closePropertyCreateForm) {
+                        closePropertyCreateForm.hidden = false;
+                    }
                 });
             }
 

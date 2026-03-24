@@ -746,6 +746,20 @@
             align-items: center;
         }
 
+        .category-scope-note {
+            margin: 6px 0 0;
+            font-size: 0.78rem;
+            color: #446079;
+        }
+
+        .form-toggle-row {
+            margin: 10px 0;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
         .wizard-progress {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1121,6 +1135,8 @@
             return strtolower((string) ($media->entity_type ?? '')) === 'room';
         });
         $roomLookupById = $vendorRoomCategories->keyBy('id');
+        $showCreatePropertyForm = old('property_form_intent') === '1';
+        $showCreateRoomForm = old('room_form_intent') === '1';
         $commissionRate = 0.12;
         $billingLedgerRows = $vendorReservations->take(50)->map(function ($reservation) use ($commissionRate) {
             $gross = (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0);
@@ -1570,157 +1586,169 @@
             </div>
             <div class="panel-links" aria-label="Listings actions">
                 <a href="#vendorPropertiesSection">Listings</a>
-                <a href="#vendorServicesSection">Services</a>
                 <a href="#vendorRoomsSection">Room Inventory</a>
                 <a href="#vendorMediaSection">Photos</a>
+                <a href="#vendorServicesSection">Services</a>
             </div>
             <div class="ops-grid">
-                <form class="ops-form" method="POST" action="/portal/vendor/properties/create">
-                    @csrf
-                    <div class="ops-form-grid">
-                        <div class="ops-field">
-                            <label for="property_listing_category">Listing Category</label>
-                            <select id="property_listing_category" name="listing_category" class="ops-select" required>
-                                @foreach ($vendorCategoryMap as $categoryKey => $categoryLabel)
-                                    <option value="{{ $categoryKey }}" @disabled(!in_array($categoryKey, $selectedVendorCategories, true))>{{ $categoryLabel }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="ops-field">
-                            <label for="property_name">Name</label>
-                            <input id="property_name" name="name" class="ops-input" type="text" maxlength="160" required>
-                        </div>
-                        <div class="ops-field">
-                            <label for="property_type">Type</label>
-                            <select id="property_type" name="property_type" class="ops-select" required>
-                                <option value="property">Property</option>
-                                <option value="service">Service Space</option>
-                            </select>
-                        </div>
-                        <div class="ops-field">
-                            <label for="location_country">Country</label>
-                            <select id="location_country" name="location_country" class="ops-select" required>
-                                <option value="Maldives">Maldives</option>
-                                <option value="Sri Lanka">Sri Lanka</option>
-                                <option value="India">India</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        <div class="ops-field">
-                            <label for="location_state">State / Province / Atoll</label>
-                            <select id="location_state" name="location_state" class="ops-select" required>
-                                <option value="">Select state/province</option>
-                            </select>
-                        </div>
-                        <div class="ops-field">
-                            <label for="location_city">City / Island</label>
-                            <select id="location_city" name="location_city" class="ops-select" required>
-                                <option value="">Select city/island</option>
-                            </select>
-                        </div>
-                        <div class="ops-field ops-field-wide">
-                            <label for="address_line">Exact Address</label>
-                            <input id="address_line" name="address_line" class="ops-input" type="text" maxlength="255" placeholder="Street, house/building name, nearby landmark" required>
-                        </div>
-                        <div class="ops-field">
-                            <label for="map_latitude">Map Latitude</label>
-                            <input id="map_latitude" name="map_latitude" class="ops-input" type="number" min="-90" max="90" step="0.000001" placeholder="4.1755">
-                        </div>
-                        <div class="ops-field">
-                            <label for="map_longitude">Map Longitude</label>
-                            <input id="map_longitude" name="map_longitude" class="ops-input" type="number" min="-180" max="180" step="0.000001" placeholder="73.5093">
-                        </div>
-                        <div class="ops-field">
-                            <label for="map_place_id">Map Place ID (optional)</label>
-                            <input id="map_place_id" name="map_place_id" class="ops-input" type="text" maxlength="190" placeholder="Generated from pin-drop">
-                        </div>
-                        <div class="ops-field">
-                            <label for="property_base_price">Base Price (MVR)</label>
-                            <input id="property_base_price" name="base_price" class="ops-input" type="number" min="0" step="0.01">
-                        </div>
-                        <div class="ops-field">
-                            <label for="property_max_guests">Max Guests</label>
-                            <input id="property_max_guests" name="max_guests" class="ops-input" type="number" min="1" max="10000">
-                        </div>
-                        <div class="ops-field ops-field-wide">
-                            <label for="property_description">Description</label>
-                            <textarea id="property_description" name="description" class="ops-textarea" maxlength="3000"></textarea>
-                        </div>
-                        <div class="ops-field">
-                            <label for="property_measurement_system">Measurement System</label>
-                            <select id="property_measurement_system" name="measurement_system" class="ops-select">
-                                <option value="metric">Metric</option>
-                                <option value="imperial">Imperial</option>
-                            </select>
-                        </div>
-                        <div class="ops-field">
-                            <label for="property_area_value">Area Value</label>
-                            <input id="property_area_value" name="area_value" class="ops-input" type="number" min="1" max="100000" step="0.01" placeholder="e.g. 120">
-                        </div>
-                        <div class="ops-field">
-                            <label for="property_area_unit">Area Unit</label>
-                            <select id="property_area_unit" name="area_unit" class="ops-select">
-                                <option value="sqm">sqm</option>
-                                <option value="sqft">sqft</option>
-                            </select>
-                        </div>
-                        <div class="ops-field">
-                            <label for="property_bedroom_count">Bedrooms</label>
-                            <input id="property_bedroom_count" name="bedroom_count" class="ops-input" type="number" min="0" max="1000">
-                        </div>
-                        <div class="ops-field">
-                            <label for="property_bathroom_count">Bathrooms</label>
-                            <input id="property_bathroom_count" name="bathroom_count" class="ops-input" type="number" min="0" max="1000" step="0.5">
-                        </div>
-                        <div class="ops-field">
-                            <label for="property_capacity_value">Capacity</label>
-                            <input id="property_capacity_value" name="capacity_value" class="ops-input" type="number" min="1" max="20000" placeholder="seats, guests, units">
-                        </div>
-                        <div class="ops-field">
-                            <label for="property_service_radius_km">Service Radius (km)</label>
-                            <input id="property_service_radius_km" name="service_radius_km" class="ops-input" type="number" min="0" max="5000" step="0.1">
-                        </div>
-                        <div class="ops-field">
-                            <label for="property_minimum_age">Minimum Age</label>
-                            <input id="property_minimum_age" name="minimum_age" class="ops-input" type="number" min="0" max="120">
-                        </div>
-                        <div class="ops-field ops-field-wide">
-                            <label>Property Amenities (tick all available)</label>
-                            <div class="feature-checklist">
-                                <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="wifi"> Wi-Fi</label>
-                                <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="parking"> Parking</label>
-                                <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="pool"> Pool</label>
-                                <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="gym"> Gym</label>
-                                <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="air_conditioning"> Air Conditioning</label>
-                                <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="breakfast"> Breakfast</label>
-                                <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="kitchen"> Kitchen</label>
-                                <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="workspace_desk"> Workspace Desk</label>
-                            </div>
-                        </div>
-                        <div class="ops-field ops-field-wide">
-                            <label>Property Features (tick all available)</label>
-                            <div class="feature-checklist">
-                                <label class="feature-item"><input type="checkbox" name="property_features[]" value="wheelchair_access"> Wheelchair Access</label>
-                                <label class="feature-item"><input type="checkbox" name="property_features[]" value="elevator"> Elevator</label>
-                                <label class="feature-item"><input type="checkbox" name="property_features[]" value="family_friendly"> Family Friendly</label>
-                                <label class="feature-item"><input type="checkbox" name="property_features[]" value="pet_friendly"> Pet Friendly</label>
-                                <label class="feature-item"><input type="checkbox" name="property_features[]" value="beachfront"> Beachfront</label>
-                                <label class="feature-item"><input type="checkbox" name="property_features[]" value="sea_view"> Sea View</label>
-                                <label class="feature-item"><input type="checkbox" name="property_features[]" value="safety_certified"> Safety Certified</label>
-                                <label class="feature-item"><input type="checkbox" name="property_features[]" value="kids_play_area"> Kids Play Area</label>
-                            </div>
-                        </div>
-                        <div class="ops-field ops-field-wide">
-                            <div class="map-picker">
-                                <div id="propertyMap" aria-label="Map picker"></div>
-                            </div>
-                            <p class="map-help">Click on the map to drop a pin for exact location. Latitude and longitude update automatically.</p>
-                        </div>
+                @php
+                    $oldPropertyAmenities = collect(old('property_amenities', []))->map(fn ($item) => (string) $item)->all();
+                    $oldPropertyFeatures = collect(old('property_features', []))->map(fn ($item) => (string) $item)->all();
+                @endphp
+                <article class="ops-form ops-field-wide">
+                    <div class="form-toggle-row">
+                        <button class="btn btn-primary" type="button" id="openPropertyCreateForm">Create New Property</button>
+                        <button class="btn btn-secondary" type="button" id="closePropertyCreateForm" @if (!$showCreatePropertyForm) hidden @endif>Cancel</button>
                     </div>
-                    <p class="standards-note">International listing standard: include measurable area/capacity and safety/accessibility details for trust and compliance.</p>
-                    <button class="btn btn-primary" type="submit">Add Property Details</button>
-                    <p class="wizard-note">After saving property details, continue with Step 3 room setup and Step 4 photo upload.</p>
-                </form>
+                    <form id="propertyCreateForm" class="ops-form" method="POST" action="/portal/vendor/properties/create" @if (!$showCreatePropertyForm) hidden @endif>
+                        @csrf
+                        <input type="hidden" name="property_form_intent" value="1">
+                        <div class="ops-form-grid">
+                            <div class="ops-field">
+                                <label for="property_listing_category">Listing Category</label>
+                                <select id="property_listing_category" name="listing_category" class="ops-select" required>
+                                    @foreach ($vendorCategoryMap as $categoryKey => $categoryLabel)
+                                        <option value="{{ $categoryKey }}" @selected(old('listing_category') === $categoryKey) @disabled(!in_array($categoryKey, $selectedVendorCategories, true))>{{ $categoryLabel }}</option>
+                                    @endforeach
+                                </select>
+                                <p id="propertyCategoryScopeNote" class="category-scope-note">Category-specific fields will change based on your selection.</p>
+                            </div>
+                            <div class="ops-field">
+                                <label for="property_name">Name</label>
+                                <input id="property_name" name="name" class="ops-input" type="text" maxlength="160" value="{{ old('name') }}" required>
+                            </div>
+                            <div class="ops-field">
+                                <label for="property_type">Type</label>
+                                <select id="property_type" name="property_type" class="ops-select" required>
+                                    <option value="property" @selected(old('property_type', 'property') === 'property')>Property</option>
+                                    <option value="service" @selected(old('property_type') === 'service')>Service Space</option>
+                                </select>
+                            </div>
+                            <div class="ops-field">
+                                <label for="location_country">Country</label>
+                                <select id="location_country" name="location_country" class="ops-select" data-selected-value="{{ old('location_country', 'Maldives') }}" required>
+                                    <option value="Maldives" @selected(old('location_country', 'Maldives') === 'Maldives')>Maldives</option>
+                                    <option value="Sri Lanka" @selected(old('location_country') === 'Sri Lanka')>Sri Lanka</option>
+                                    <option value="India" @selected(old('location_country') === 'India')>India</option>
+                                    <option value="Other" @selected(old('location_country') === 'Other')>Other</option>
+                                </select>
+                            </div>
+                            <div class="ops-field">
+                                <label for="location_state">State / Province / Atoll</label>
+                                <select id="location_state" name="location_state" class="ops-select" data-selected-value="{{ old('location_state') }}" required>
+                                    <option value="">Select state/province</option>
+                                </select>
+                            </div>
+                            <div class="ops-field">
+                                <label for="location_city">City / Island</label>
+                                <select id="location_city" name="location_city" class="ops-select" data-selected-value="{{ old('location_city') }}" required>
+                                    <option value="">Select city/island</option>
+                                </select>
+                            </div>
+                            <div class="ops-field ops-field-wide">
+                                <label for="address_line">Exact Address</label>
+                                <input id="address_line" name="address_line" class="ops-input" type="text" maxlength="255" value="{{ old('address_line') }}" placeholder="Street, house/building name, nearby landmark" required>
+                            </div>
+                            <div class="ops-field">
+                                <label for="map_latitude">Map Latitude</label>
+                                <input id="map_latitude" name="map_latitude" class="ops-input" type="number" min="-90" max="90" step="0.000001" value="{{ old('map_latitude') }}" placeholder="4.1755">
+                            </div>
+                            <div class="ops-field">
+                                <label for="map_longitude">Map Longitude</label>
+                                <input id="map_longitude" name="map_longitude" class="ops-input" type="number" min="-180" max="180" step="0.000001" value="{{ old('map_longitude') }}" placeholder="73.5093">
+                            </div>
+                            <div class="ops-field">
+                                <label for="map_place_id">Map Place ID (optional)</label>
+                                <input id="map_place_id" name="map_place_id" class="ops-input" type="text" maxlength="190" value="{{ old('map_place_id') }}" placeholder="Generated from pin-drop">
+                            </div>
+                            <div class="ops-field">
+                                <label for="property_base_price">Base Price (MVR)</label>
+                                <input id="property_base_price" name="base_price" class="ops-input" type="number" min="0" step="0.01" value="{{ old('base_price') }}">
+                            </div>
+                            <div class="ops-field">
+                                <label for="property_max_guests">Max Guests</label>
+                                <input id="property_max_guests" name="max_guests" class="ops-input" type="number" min="1" max="10000" value="{{ old('max_guests') }}">
+                            </div>
+                            <div class="ops-field ops-field-wide">
+                                <label for="property_description">Description</label>
+                                <textarea id="property_description" name="description" class="ops-textarea" maxlength="3000">{{ old('description') }}</textarea>
+                            </div>
+
+                            <div class="ops-field" data-category-scope="stay">
+                                <label for="property_measurement_system">Measurement System</label>
+                                <select id="property_measurement_system" name="measurement_system" class="ops-select">
+                                    <option value="metric" @selected(old('measurement_system', 'metric') === 'metric')>Metric</option>
+                                    <option value="imperial" @selected(old('measurement_system') === 'imperial')>Imperial</option>
+                                </select>
+                            </div>
+                            <div class="ops-field" data-category-scope="stay">
+                                <label for="property_area_value">Area Value</label>
+                                <input id="property_area_value" name="area_value" class="ops-input" type="number" min="1" max="100000" step="0.01" value="{{ old('area_value') }}" placeholder="e.g. 120">
+                            </div>
+                            <div class="ops-field" data-category-scope="stay">
+                                <label for="property_area_unit">Area Unit</label>
+                                <select id="property_area_unit" name="area_unit" class="ops-select">
+                                    <option value="sqm" @selected(old('area_unit', 'sqm') === 'sqm')>sqm</option>
+                                    <option value="sqft" @selected(old('area_unit') === 'sqft')>sqft</option>
+                                </select>
+                            </div>
+                            <div class="ops-field" data-category-scope="stay">
+                                <label for="property_bedroom_count">Bedrooms</label>
+                                <input id="property_bedroom_count" name="bedroom_count" class="ops-input" type="number" min="0" max="1000" value="{{ old('bedroom_count') }}">
+                            </div>
+                            <div class="ops-field" data-category-scope="stay">
+                                <label for="property_bathroom_count">Bathrooms</label>
+                                <input id="property_bathroom_count" name="bathroom_count" class="ops-input" type="number" min="0" max="1000" step="0.5" value="{{ old('bathroom_count') }}">
+                            </div>
+                            <div class="ops-field" data-category-scope="capacity">
+                                <label for="property_capacity_value">Capacity</label>
+                                <input id="property_capacity_value" name="capacity_value" class="ops-input" type="number" min="1" max="20000" value="{{ old('capacity_value') }}" placeholder="seats, guests, units">
+                            </div>
+                            <div class="ops-field" data-category-scope="service">
+                                <label for="property_service_radius_km">Service Radius (km)</label>
+                                <input id="property_service_radius_km" name="service_radius_km" class="ops-input" type="number" min="0" max="5000" step="0.1" value="{{ old('service_radius_km') }}">
+                            </div>
+                            <div class="ops-field" data-category-scope="vehicle">
+                                <label for="property_minimum_age">Minimum Age</label>
+                                <input id="property_minimum_age" name="minimum_age" class="ops-input" type="number" min="0" max="120" value="{{ old('minimum_age') }}">
+                            </div>
+                            <div class="ops-field ops-field-wide" data-category-scope="stay,experience">
+                                <label>Property Amenities (tick all available)</label>
+                                <div class="feature-checklist">
+                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="wifi" @checked(in_array('wifi', $oldPropertyAmenities, true))> Wi-Fi</label>
+                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="parking" @checked(in_array('parking', $oldPropertyAmenities, true))> Parking</label>
+                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="pool" @checked(in_array('pool', $oldPropertyAmenities, true))> Pool</label>
+                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="gym" @checked(in_array('gym', $oldPropertyAmenities, true))> Gym</label>
+                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="air_conditioning" @checked(in_array('air_conditioning', $oldPropertyAmenities, true))> Air Conditioning</label>
+                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="breakfast" @checked(in_array('breakfast', $oldPropertyAmenities, true))> Breakfast</label>
+                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="kitchen" @checked(in_array('kitchen', $oldPropertyAmenities, true))> Kitchen</label>
+                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="workspace_desk" @checked(in_array('workspace_desk', $oldPropertyAmenities, true))> Workspace Desk</label>
+                                </div>
+                            </div>
+                            <div class="ops-field ops-field-wide" data-category-scope="stay,experience">
+                                <label>Property Features (tick all available)</label>
+                                <div class="feature-checklist">
+                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="wheelchair_access" @checked(in_array('wheelchair_access', $oldPropertyFeatures, true))> Wheelchair Access</label>
+                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="elevator" @checked(in_array('elevator', $oldPropertyFeatures, true))> Elevator</label>
+                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="family_friendly" @checked(in_array('family_friendly', $oldPropertyFeatures, true))> Family Friendly</label>
+                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="pet_friendly" @checked(in_array('pet_friendly', $oldPropertyFeatures, true))> Pet Friendly</label>
+                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="beachfront" @checked(in_array('beachfront', $oldPropertyFeatures, true))> Beachfront</label>
+                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="sea_view" @checked(in_array('sea_view', $oldPropertyFeatures, true))> Sea View</label>
+                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="safety_certified" @checked(in_array('safety_certified', $oldPropertyFeatures, true))> Safety Certified</label>
+                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="kids_play_area" @checked(in_array('kids_play_area', $oldPropertyFeatures, true))> Kids Play Area</label>
+                                </div>
+                            </div>
+                            <div class="ops-field ops-field-wide">
+                                <div class="map-picker">
+                                    <div id="propertyMap" aria-label="Map picker"></div>
+                                </div>
+                                <p class="map-help">Click on the map to drop a pin for exact location. Latitude and longitude update automatically.</p>
+                            </div>
+                        </div>
+                        <p class="standards-note">International listing standard: fields adapt to selected category. Create one property at a time, then add rooms under that property.</p>
+                        <button class="btn btn-primary" type="submit">Save Property</button>
+                    </form>
+                </article>
 
                 <div class="ops-table-wrap">
                     <table class="ops-table" aria-label="Vendor properties table">
@@ -1758,15 +1786,20 @@
                                                 <button class="btn btn-secondary" type="submit">Update</button>
                                             </div>
                                         </form>
-                                        <form method="POST" action="/portal/vendor/properties/{{ $property->id }}/delete" onsubmit="return confirm('Remove this property listing?');">
-                                            @csrf
-                                            <button class="btn btn-danger" type="submit">Remove</button>
-                                        </form>
+                                        <div class="inline-actions">
+                                            @if ($supportsAccommodation)
+                                                <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ (int) $property->id }}">Add Room</button>
+                                            @endif
+                                            <form method="POST" action="/portal/vendor/properties/{{ $property->id }}/delete" onsubmit="return confirm('Remove this property listing?');">
+                                                @csrf
+                                                <button class="btn btn-danger" type="submit">Remove</button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="3" class="ops-empty">No properties yet. Add your first listing.</td>
+                                    <td colspan="3" class="ops-empty">No properties yet. Use Create New Property to add your first listing.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -1775,175 +1808,155 @@
             </div>
         </section>
 
-        @if ($supportsAccommodation)
-            <section id="vendorRoomsSection" class="card ops-section" aria-label="Vendor room categories" data-panel-group="listings" data-listing-step="2">
-                <div class="ops-header">
-                    <p class="ops-title">Room Categories (Accommodation)</p>
-                    <span class="ops-chip">{{ $vendorRoomCategories->count() }} total</span>
-                </div>
-                <div class="ops-grid">
-                    <form class="ops-form" method="POST" action="/portal/vendor/rooms/create">
+        <section id="vendorRoomsSection" class="card ops-section" aria-label="Vendor room inventory" data-panel-group="listings" data-listing-step="2">
+            <div class="ops-header">
+                <p class="ops-title">Room Inventory</p>
+                <span class="ops-chip">{{ $vendorRooms->count() }} total</span>
+            </div>
+            <div class="ops-grid">
+                @php
+                    $oldRoomAmenities = collect(old('room_amenities', []))->map(fn ($item) => (string) $item)->all();
+                    $oldRoomFeatures = collect(old('room_features', []))->map(fn ($item) => (string) $item)->all();
+                @endphp
+                <article class="ops-form ops-field-wide">
+                    <div class="form-toggle-row">
+                        <button class="btn btn-primary" type="button" id="openRoomCreateForm" @if(!$supportsAccommodation || $vendorProperties->isEmpty()) disabled @endif>Add Room Under Property</button>
+                        <button class="btn btn-secondary" type="button" id="closeRoomCreateForm" @if (!$showCreateRoomForm) hidden @endif>Cancel</button>
+                    </div>
+                    @if($supportsAccommodation && $vendorProperties->isEmpty())
+                        <p class="wizard-note">Create at least one property first, then add rooms under that property.</p>
+                    @endif
+                    <form id="roomCreateForm" class="ops-form" method="POST" action="/portal/vendor/rooms/create" @if (!$showCreateRoomForm) hidden @endif>
                         @csrf
+                        <input type="hidden" name="room_form_intent" value="1">
                         <div class="ops-form-grid">
                             <div class="ops-field">
-                                <label for="room_property_id">Property ID (optional)</label>
-                                <input id="room_property_id" name="vendor_property_id" class="ops-input" type="number" min="1">
+                                <label for="room_vendor_property_id">Property</label>
+                                <select id="room_vendor_property_id" name="vendor_property_id" class="ops-select" required>
+                                    <option value="">Select property</option>
+                                    @foreach ($vendorProperties as $property)
+                                        <option value="{{ (int) $property->id }}" @selected((string) old('vendor_property_id') === (string) $property->id)>{{ $property->name }} (#{{ (int) $property->id }})</option>
+                                    @endforeach
+                                </select>
                             </div>
                             <div class="ops-field">
-                                <label for="room_name">Room Category Name</label>
-                                <input id="room_name" name="name" class="ops-input" type="text" maxlength="160" required>
+                                <label for="room_name">Room Name</label>
+                                <input id="room_name" name="name" class="ops-input" type="text" maxlength="160" value="{{ old('name') }}" required>
                             </div>
                             <div class="ops-field">
                                 <label for="room_quantity">Quantity</label>
-                                <input id="room_quantity" name="quantity" class="ops-input" type="number" min="1" max="10000" value="1">
+                                <input id="room_quantity" name="quantity" class="ops-input" type="number" min="1" max="10000" value="{{ old('quantity', 1) }}">
                             </div>
                             <div class="ops-field">
-                                <label for="room_occupancy">Max Occupancy</label>
-                                <input id="room_occupancy" name="max_occupancy" class="ops-input" type="number" min="1" max="50" value="2">
+                                <label for="room_max_occupancy">Max Occupancy</label>
+                                <input id="room_max_occupancy" name="max_occupancy" class="ops-input" type="number" min="1" max="50" value="{{ old('max_occupancy', 1) }}">
                             </div>
                             <div class="ops-field">
                                 <label for="room_bed_type">Bed Type</label>
-                                <input id="room_bed_type" name="bed_type" class="ops-input" type="text" maxlength="80" placeholder="King, Twin, etc.">
+                                <input id="room_bed_type" name="bed_type" class="ops-input" type="text" maxlength="80" value="{{ old('bed_type') }}" placeholder="King, Twin, Bunk, etc.">
                             </div>
                             <div class="ops-field">
                                 <label for="room_base_price">Base Price (MVR)</label>
-                                <input id="room_base_price" name="base_price" class="ops-input" type="number" min="0" step="0.01" value="0">
+                                <input id="room_base_price" name="base_price" class="ops-input" type="number" min="0" step="0.01" value="{{ old('base_price') }}">
                             </div>
                             <div class="ops-field ops-field-wide">
-                                <label>Room Amenities (tick all available)</label>
+                                <label>Room Amenities</label>
                                 <div class="feature-checklist">
-                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="wifi"> Wi-Fi</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="balcony"> Balcony</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="sea_view"> Sea View</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="breakfast"> Breakfast Included</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="mini_bar"> Mini Bar</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="tv"> Smart TV</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="wifi" @checked(in_array('wifi', $oldRoomAmenities, true))> Wi-Fi</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="ac" @checked(in_array('ac', $oldRoomAmenities, true))> Air Conditioning</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="mini_bar" @checked(in_array('mini_bar', $oldRoomAmenities, true))> Mini Bar</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="safe" @checked(in_array('safe', $oldRoomAmenities, true))> In-room Safe</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="balcony" @checked(in_array('balcony', $oldRoomAmenities, true))> Balcony</label>
                                 </div>
                             </div>
                             <div class="ops-field ops-field-wide">
-                                <label>Room Features (tick all available)</label>
+                                <label>Toilet and Bathroom Features</label>
                                 <div class="feature-checklist">
-                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="non_smoking"> Non-Smoking</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="accessible_room"> Accessible Room</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="connecting_room"> Connecting Room</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="private_pool"> Private Pool</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="butler_service"> Butler Service</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="outdoor_shower"> Outdoor Shower</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="ensuite_toilet"> Ensuite Toilet</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="rain_shower"> Rain Shower</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="bathtub"> Bathtub</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="bidet"> Bidet</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="private_bathroom" @checked(in_array('private_bathroom', $oldRoomFeatures, true))> Private Bathroom</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="hot_water" @checked(in_array('hot_water', $oldRoomFeatures, true))> Hot Water</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="shower" @checked(in_array('shower', $oldRoomFeatures, true))> Shower</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="bathtub" @checked(in_array('bathtub', $oldRoomFeatures, true))> Bathtub</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="bidet" @checked(in_array('bidet', $oldRoomFeatures, true))> Bidet</label>
+                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="accessible_toilet" @checked(in_array('accessible_toilet', $oldRoomFeatures, true))> Accessible Toilet</label>
                                 </div>
                             </div>
                         </div>
-                        <button class="btn btn-primary" type="submit">Add Room</button>
+                        <button class="btn btn-primary" type="submit">Save Room</button>
                     </form>
+                </article>
 
-                    <div class="ops-table-wrap">
-                        <table class="ops-table" aria-label="Vendor room categories table">
-                            <thead>
+                <div class="ops-table-wrap">
+                    <table class="ops-table" aria-label="Vendor room inventory table">
+                        <thead>
+                            <tr>
+                                <th>Room</th>
+                                <th>Property</th>
+                                <th>Details</th>
+                                <th>Edit / Remove</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($vendorRooms->take(20) as $room)
                                 <tr>
-                                    <th>Room</th>
-                                    <th>Features</th>
-                                    <th>Edit / Update / Remove</th>
+                                    <td>
+                                        <strong>{{ $room->name }}</strong><br>
+                                        ID: {{ (int) $room->id }}
+                                    </td>
+                                    <td>
+                                        @php
+                                            $linkedProperty = $room->vendor_property_id ? $propertyLookupById->get((int) $room->vendor_property_id) : null;
+                                        @endphp
+                                        {{ $linkedProperty?->name ?? 'N/A' }}
+                                        @if ($room->vendor_property_id)
+                                            <br>#{{ (int) $room->vendor_property_id }}
+                                        @endif
+                                    </td>
+                                    <td>
+                                        Qty: {{ (int) ($room->quantity ?? 0) }}<br>
+                                        Max: {{ (int) ($room->max_occupancy ?? 0) }}<br>
+                                        {{ $room->currency ?? 'MVR' }} {{ number_format((float) ($room->base_price ?? 0), 2) }}
+                                    </td>
+                                    <td>
+                                        <form class="inline-table-form" method="POST" action="/portal/vendor/rooms/{{ $room->id }}/update">
+                                            @csrf
+                                            <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $room->name }}" required>
+                                            <input class="ops-input" name="quantity" type="number" min="1" max="10000" value="{{ (int) ($room->quantity ?? 1) }}">
+                                            <input class="ops-input" name="max_occupancy" type="number" min="1" max="50" value="{{ (int) ($room->max_occupancy ?? 1) }}">
+                                            <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($room->base_price ?? 0) }}">
+                                            <div class="inline-actions">
+                                                <button class="btn btn-secondary" type="submit">Update</button>
+                                            </div>
+                                        </form>
+                                        <form method="POST" action="/portal/vendor/rooms/{{ $room->id }}/delete" onsubmit="return confirm('Remove this room category?');">
+                                            @csrf
+                                            <button class="btn btn-danger" type="submit">Remove</button>
+                                        </form>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($vendorRoomCategories->take(12) as $room)
-                                    <tr>
-                                        <td>
-                                            <strong>{{ $room->name }}</strong><br>
-                                            ID: {{ (int) $room->id }} | Property ID: {{ (int) ($room->vendor_property_id ?? 0) ?: 'N/A' }}<br>
-                                            Qty: {{ (int) $room->quantity }} | Occupancy: {{ (int) $room->max_occupancy }} | Bed: {{ $room->bed_type ?: 'N/A' }}
-                                        </td>
-                                        <td>
-                                            {{ $room->currency }} {{ number_format((float) $room->base_price, 2) }}<br>
-                                            @php
-                                                $roomAmenitiesText = (string) ($room->amenities ?? '');
-                                            @endphp
-                                            {{ $roomAmenitiesText !== '' ? $roomAmenitiesText : 'No features set' }}
-                                        </td>
-                                        <td>
-                                            <form class="inline-table-form" method="POST" action="/portal/vendor/rooms/{{ $room->id }}/update">
-                                                @csrf
-                                                <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $room->name }}" required>
-                                                <input class="ops-input" name="quantity" type="number" min="1" max="10000" value="{{ (int) $room->quantity }}">
-                                                <input class="ops-input" name="max_occupancy" type="number" min="1" max="50" value="{{ (int) $room->max_occupancy }}">
-                                                <input class="ops-input" name="bed_type" type="text" maxlength="80" value="{{ $room->bed_type }}">
-                                                <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) $room->base_price }}">
-                                                <div class="inline-actions">
-                                                    <button class="btn btn-secondary" type="submit">Update</button>
-                                                </div>
-                                            </form>
-                                            <form method="POST" action="/portal/vendor/rooms/{{ $room->id }}/delete" onsubmit="return confirm('Remove this room category?');">
-                                                @csrf
-                                                <button class="btn btn-danger" type="submit">Remove</button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="3" class="ops-empty">No room categories yet.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="ops-empty">No rooms added yet.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
-            </section>
-        @endif
+            </div>
+        </section>
 
-        <section id="vendorMediaSection" class="card ops-section" aria-label="Vendor listing photos" data-panel-group="listings" data-listing-step="3">
+        <section id="vendorMediaSection" class="card ops-section" aria-label="Vendor media" data-panel-group="listings" data-listing-step="3">
             <div class="ops-header">
-                <p class="ops-title">Photos and Media</p>
-                <span class="ops-chip">{{ $vendorMediaAssets->count() }} uploaded</span>
+                <p class="ops-title">Media Library</p>
+                <span class="ops-chip">{{ $vendorMediaAssets->count() }} files</span>
             </div>
             <div class="ops-grid">
-                <form class="ops-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
-                    @csrf
-                    <div class="ops-form-grid">
-                        <div class="ops-field">
-                            <label for="media_entity_type">Entity Type</label>
-                            <select id="media_entity_type" name="entity_type" class="ops-select" required>
-                                <option value="property">Property</option>
-                                <option value="service">Service</option>
-                                <option value="room">Room</option>
-                                <option value="menu">Menu</option>
-                                <option value="vehicle">Vehicle</option>
-                                <option value="profile">Profile</option>
-                            </select>
-                        </div>
-                        <div class="ops-field">
-                            <label for="media_entity_id">Entity ID (optional)</label>
-                            <input id="media_entity_id" name="entity_id" class="ops-input" type="number" min="1">
-                        </div>
-                        <div class="ops-field ops-field-wide">
-                            <label for="media_photo">Photo</label>
-                            <input id="media_photo" name="photo" class="ops-input" type="file" accept="image/*" required>
-                        </div>
-                        <div class="ops-field ops-field-wide">
-                            <label for="media_alt_text">Alt Text</label>
-                            <input id="media_alt_text" name="alt_text" class="ops-input" type="text" maxlength="190" placeholder="Describe this photo" required>
-                        </div>
-                        <div class="ops-field">
-                            <label for="media_is_primary">Primary Photo</label>
-                            <select id="media_is_primary" name="is_primary" class="ops-select">
-                                <option value="0">No</option>
-                                <option value="1">Yes</option>
-                            </select>
-                        </div>
-                    </div>
-                    <p class="standards-note">Image standard: JPG/PNG/WebP, minimum 1200x800px, descriptive alt text required.</p>
-                    <button class="btn btn-primary" type="submit">Upload Photo</button>
-                </form>
-
                 <div class="ops-table-wrap">
                     <table class="ops-table" aria-label="Vendor media table">
                         <thead>
                             <tr>
                                 <th>Entity</th>
                                 <th>Path</th>
-                                <th>Dimensions</th>
+                                <th>Size</th>
                                 <th>Quality</th>
                                 <th>Alt Text</th>
                                 <th>Uploaded</th>
@@ -2557,6 +2570,16 @@
             const billingState = document.getElementById("billing_state");
             const billingCity = document.getElementById("billing_city");
             const startListingWizard = document.getElementById("startListingWizard");
+            const openPropertyCreateForm = document.getElementById("openPropertyCreateForm");
+            const closePropertyCreateForm = document.getElementById("closePropertyCreateForm");
+            const propertyCreateForm = document.getElementById("propertyCreateForm");
+            const propertyCategorySelect = document.getElementById("property_listing_category");
+            const categoryScopedFields = Array.from(document.querySelectorAll("[data-category-scope]"));
+            const openRoomCreateForm = document.getElementById("openRoomCreateForm");
+            const closeRoomCreateForm = document.getElementById("closeRoomCreateForm");
+            const roomCreateForm = document.getElementById("roomCreateForm");
+            const roomPropertySelect = document.getElementById("room_vendor_property_id");
+            const roomQuickOpenButtons = Array.from(document.querySelectorAll("[data-open-room-form]"));
             const serverPanelKey = "{{ in_array($forcedPanelKey, ['overview', 'profile', 'listings', 'billing', 'reservations', 'api'], true) ? $forcedPanelKey : '' }}";
             const listingWizardStep = Number("{{ $listingWizardStep }}") || 1;
             let listingWizardStarted = serverPanelKey === "listings";
@@ -2990,27 +3013,86 @@
 
             function refreshLocationSelectors() {
                 if (!locationCountry || !locationState || !locationCity) return;
+                const selectedCountry = locationCountry.dataset.selectedValue || locationCountry.value || "Maldives";
+                ensureSelectHasOption(locationCountry, selectedCountry);
+                locationCountry.value = selectedCountry;
                 const country = locationCountry.value || "Maldives";
                 const states = Object.keys(LOCATION_TREE[country] || {});
                 rebuildSelect(locationState, states, "Select state/province");
-
-                const firstState = states[0] || "";
-                locationState.value = firstState;
+                const selectedState = locationState.dataset.selectedValue || "";
+                ensureSelectHasOption(locationState, selectedState);
+                if (selectedState && Array.from(locationState.options).some((option) => option.value === selectedState)) {
+                    locationState.value = selectedState;
+                } else {
+                    locationState.value = states[0] || "";
+                }
                 const cities = (LOCATION_TREE[country] || {})[locationState.value] || [];
                 rebuildSelect(locationCity, cities, "Select city/island");
-                if (cities.length > 0) {
+                const selectedCity = locationCity.dataset.selectedValue || "";
+                ensureSelectHasOption(locationCity, selectedCity);
+                if (selectedCity && Array.from(locationCity.options).some((option) => option.value === selectedCity)) {
+                    locationCity.value = selectedCity;
+                } else if (cities.length > 0) {
                     locationCity.value = cities[0];
                 }
+
+                locationCountry.dataset.selectedValue = "";
+                locationState.dataset.selectedValue = "";
+                locationCity.dataset.selectedValue = "";
             }
 
             function refreshCitySelector() {
                 if (!locationCountry || !locationState || !locationCity) return;
                 const country = locationCountry.value || "Maldives";
                 const cities = (LOCATION_TREE[country] || {})[locationState.value] || [];
+                const selectedCity = locationCity.dataset.selectedValue || "";
                 rebuildSelect(locationCity, cities, "Select city/island");
-                if (cities.length > 0) {
+                ensureSelectHasOption(locationCity, selectedCity);
+                if (selectedCity && Array.from(locationCity.options).some((option) => option.value === selectedCity)) {
+                    locationCity.value = selectedCity;
+                } else if (cities.length > 0) {
                     locationCity.value = cities[0];
                 }
+                locationCity.dataset.selectedValue = "";
+            }
+
+            function categoryScopesFor(category) {
+                const raw = String(category || "").trim().toLowerCase();
+                const normalized = raw.replace(/[^a-z0-9]/g, "");
+
+                if (normalized === "accommodation") {
+                    return ["stay", "capacity", "experience"];
+                }
+
+                if (normalized === "excursions" || normalized === "resortdayvisits") {
+                    return ["capacity", "experience", "service"];
+                }
+
+                if (normalized === "remoteworkspaces" || normalized === "restaurants") {
+                    return ["capacity", "service"];
+                }
+
+                if (normalized === "transports" || normalized === "vehiclerentals") {
+                    return ["vehicle", "capacity", "service"];
+                }
+
+                return ["stay", "capacity", "service", "vehicle", "experience"];
+            }
+
+            function refreshPropertyCategoryFields() {
+                if (!propertyCategorySelect || categoryScopedFields.length === 0) return;
+                const activeScopes = categoryScopesFor(propertyCategorySelect.value);
+                categoryScopedFields.forEach((field) => {
+                    const scopes = String(field.getAttribute("data-category-scope") || "")
+                        .split(",")
+                        .map((value) => value.trim().toLowerCase())
+                        .filter(Boolean);
+                    if (scopes.length === 0) {
+                        field.hidden = false;
+                        return;
+                    }
+                    field.hidden = !scopes.some((scope) => activeScopes.includes(scope));
+                });
             }
 
             function refreshBillingLocationSelectors() {
@@ -3258,10 +3340,67 @@
                 });
             });
 
+            if (openPropertyCreateForm && propertyCreateForm) {
+                openPropertyCreateForm.addEventListener("click", function () {
+                    propertyCreateForm.hidden = false;
+                    if (closePropertyCreateForm) closePropertyCreateForm.hidden = false;
+                    if (propertyCategorySelect) propertyCategorySelect.focus();
+                });
+            }
+
+            if (closePropertyCreateForm && propertyCreateForm) {
+                closePropertyCreateForm.addEventListener("click", function () {
+                    propertyCreateForm.hidden = true;
+                    closePropertyCreateForm.hidden = true;
+                });
+            }
+
+            if (openRoomCreateForm && roomCreateForm) {
+                openRoomCreateForm.addEventListener("click", function () {
+                    roomCreateForm.hidden = false;
+                    if (closeRoomCreateForm) closeRoomCreateForm.hidden = false;
+                    if (roomPropertySelect) roomPropertySelect.focus();
+                });
+            }
+
+            if (closeRoomCreateForm && roomCreateForm) {
+                closeRoomCreateForm.addEventListener("click", function () {
+                    roomCreateForm.hidden = true;
+                    closeRoomCreateForm.hidden = true;
+                });
+            }
+
+            roomQuickOpenButtons.forEach((button) => {
+                button.addEventListener("click", function () {
+                    const propertyId = String(button.getAttribute("data-property-id") || "").trim();
+                    window.location.hash = "listings";
+                    showPanelGroup("listings");
+                    activateListingWizardStep(3, true);
+
+                    if (roomCreateForm) roomCreateForm.hidden = false;
+                    if (closeRoomCreateForm) closeRoomCreateForm.hidden = false;
+
+                    if (roomPropertySelect && propertyId) {
+                        ensureSelectHasOption(roomPropertySelect, propertyId);
+                        roomPropertySelect.value = propertyId;
+                        roomPropertySelect.dispatchEvent(new Event("change"));
+                        roomPropertySelect.focus();
+                    }
+                });
+            });
+
             if (locationCountry && locationState && locationCity) {
+                locationCountry.dataset.selectedValue = "{{ old('location_country', 'Maldives') }}";
+                locationState.dataset.selectedValue = "{{ old('location_state', '') }}";
+                locationCity.dataset.selectedValue = "{{ old('location_city', '') }}";
                 refreshLocationSelectors();
                 locationCountry.addEventListener("change", refreshLocationSelectors);
                 locationState.addEventListener("change", refreshCitySelector);
+            }
+
+            if (propertyCategorySelect) {
+                refreshPropertyCategoryFields();
+                propertyCategorySelect.addEventListener("change", refreshPropertyCategoryFields);
             }
 
             if (billingCountry && billingState && billingCity) {
@@ -3303,3 +3442,4 @@
     </script>
 </body>
 </html>
+

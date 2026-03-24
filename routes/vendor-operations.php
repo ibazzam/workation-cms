@@ -655,6 +655,10 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         return back()->withErrors(['profile' => 'Room categories table is not ready. Run migrations first.']);
     }
 
+    if (!Schema::hasTable('vendor_properties')) {
+        return back()->withErrors(['profile' => 'Properties table is not ready. Run migrations first.']);
+    }
+
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
     $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
     $selectedCategories = vendorPortalSelectedCategories($vendorUser);
@@ -663,7 +667,7 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
     }
 
     $validated = $request->validate([
-        'vendor_property_id' => ['nullable', 'integer', 'min:1'],
+        'vendor_property_id' => ['required', 'integer', 'min:1'],
         'name' => ['required', 'string', 'max:160'],
         'quantity' => ['nullable', 'integer', 'min:1', 'max:10000'],
         'max_occupancy' => ['nullable', 'integer', 'min:1', 'max:50'],
@@ -678,10 +682,20 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
     $roomAmenities = vendorPortalNormalizedStringList($validated['room_amenities'] ?? []);
     $roomFeatures = vendorPortalNormalizedStringList($validated['room_features'] ?? []);
     $roomAmenityTokens = array_values(array_unique(array_merge($roomAmenities, $roomFeatures)));
+    $vendorPropertyId = (int) ($validated['vendor_property_id'] ?? 0);
+
+    $ownsProperty = DB::table('vendor_properties')
+        ->where('id', $vendorPropertyId)
+        ->where('vendor_user_id', $vendorUserId)
+        ->exists();
+
+    if (!$ownsProperty) {
+        return back()->withErrors(['profile' => 'Select a valid property owned by your vendor account.'])->withInput();
+    }
 
     DB::table('vendor_property_room_categories')->insert([
         'vendor_user_id' => $vendorUserId,
-        'vendor_property_id' => filled($validated['vendor_property_id'] ?? null) ? (int) $validated['vendor_property_id'] : null,
+        'vendor_property_id' => $vendorPropertyId,
         'name' => trim((string) $validated['name']),
         'quantity' => (int) ($validated['quantity'] ?? 1),
         'max_occupancy' => (int) ($validated['max_occupancy'] ?? 1),

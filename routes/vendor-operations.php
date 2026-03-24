@@ -829,6 +829,7 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'description' => ['nullable', 'string', 'max:3000'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
         'max_guests' => ['nullable', 'integer', 'min:0', 'max:10000'],
+        'max_guests' => ['nullable', 'integer', 'min:1', 'max:10000'],
         'measurement_system' => ['nullable', Rule::in(['metric', 'imperial'])],
         'area_value' => ['nullable', 'numeric', 'min:1', 'max:100000'],
         'area_unit' => ['nullable', Rule::in(['sqm', 'sqft'])],

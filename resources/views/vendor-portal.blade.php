@@ -796,6 +796,120 @@
             background: #f2faf6;
         }
 
+        .guided-wizard {
+            margin-top: 12px;
+            border: 1px solid #d7e0e6;
+            border-radius: 14px;
+            background: linear-gradient(180deg, #f9fcff 0%, #ffffff 100%);
+            padding: 14px;
+        }
+
+        .guided-wizard-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .guided-wizard-title {
+            margin: 0;
+            font-size: 1rem;
+            color: #1f3346;
+            font-weight: 700;
+        }
+
+        .guided-wizard-subtitle {
+            margin: 4px 0 0;
+            font-size: 0.82rem;
+            color: #5b6778;
+        }
+
+        .guided-track-toggle {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .guided-track-toggle .btn {
+            white-space: nowrap;
+        }
+
+        .guided-track-toggle .btn.is-active {
+            border-color: #0f6b74;
+            background: #e8f7f8;
+            color: #0d4f56;
+        }
+
+        .guided-progress-wrap {
+            margin-top: 12px;
+        }
+
+        .guided-progress-rail {
+            width: 100%;
+            height: 8px;
+            border-radius: 999px;
+            background: #e6edf3;
+            overflow: hidden;
+        }
+
+        .guided-progress-fill {
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, #0f6b74 0%, #34a272 100%);
+            transition: width 220ms ease;
+        }
+
+        .guided-step-text {
+            margin-top: 8px;
+            font-size: 0.84rem;
+            color: #38526a;
+            font-weight: 600;
+        }
+
+        .guided-steps {
+            margin: 10px 0 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .guided-step {
+            border: 1px solid #d4dce5;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #35536e;
+            font-size: 0.76rem;
+            font-weight: 600;
+            line-height: 1.35;
+            padding: 9px;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .guided-step.is-active {
+            border-color: #0f6b74;
+            box-shadow: 0 0 0 1px #0f6b74 inset;
+            background: #eff9fa;
+            color: #0d4f56;
+        }
+
+        .guided-step.is-complete {
+            border-color: #6fb78e;
+            background: #eef8f1;
+            color: #215336;
+        }
+
+        .guided-actions {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
         .inline-table-form {
             display: grid;
             grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1053,6 +1167,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .guided-steps {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
             .payout-grid {
                 grid-template-columns: 1fr;
             }
@@ -1104,6 +1222,10 @@
             }
 
             .billing-ledger-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .guided-steps {
                 grid-template-columns: 1fr;
             }
         }
@@ -1536,6 +1658,29 @@
                 <a class="hero-link" href="#vendorRoomsSection" data-wizard-step="3">Step 3: Room Setup</a>
                 <a class="hero-link" href="#vendorMediaSection" data-wizard-step="4">Step 4: Upload Pictures</a>
             </div>
+            <article class="guided-wizard" aria-label="Guided listing wizard">
+                <div class="guided-wizard-head">
+                    <div>
+                        <p class="guided-wizard-title">Guided Enlisting Wizard</p>
+                        <p class="guided-wizard-subtitle">Follow simple steps to onboard property or service listings with less friction.</p>
+                    </div>
+                    <div class="guided-track-toggle" role="group" aria-label="Wizard track switcher">
+                        <button type="button" class="btn btn-secondary" id="guidedTrackProperty">Property Track</button>
+                        <button type="button" class="btn btn-secondary" id="guidedTrackService">Service Track</button>
+                    </div>
+                </div>
+                <div class="guided-progress-wrap" aria-live="polite">
+                    <div class="guided-progress-rail">
+                        <div class="guided-progress-fill" id="guidedWizardProgressFill"></div>
+                    </div>
+                    <div class="guided-step-text" id="guidedWizardStepText">Step 1 of 5</div>
+                </div>
+                <ol class="guided-steps" id="guidedWizardSteps"></ol>
+                <div class="guided-actions">
+                    <button type="button" class="btn btn-secondary" id="guidedWizardPrev">Back</button>
+                    <button type="button" class="btn btn-primary" id="guidedWizardNext">Next Step</button>
+                </div>
+            </article>
             <div class="wizard-progress" aria-label="Listings wizard progress">
                 <article class="wizard-progress-step @if($listingWizardStep > 1) is-complete @elseif($listingWizardStep === 1) is-active @endif">
                     <strong>Step 1</strong>
@@ -2606,10 +2751,94 @@
             const roomCreateForm = document.getElementById("roomCreateForm");
             const roomPropertySelect = document.getElementById("room_vendor_property_id");
             const roomQuickOpenButtons = Array.from(document.querySelectorAll("[data-open-room-form]"));
+            const guidedTrackProperty = document.getElementById("guidedTrackProperty");
+            const guidedTrackService = document.getElementById("guidedTrackService");
+            const guidedWizardSteps = document.getElementById("guidedWizardSteps");
+            const guidedWizardStepText = document.getElementById("guidedWizardStepText");
+            const guidedWizardProgressFill = document.getElementById("guidedWizardProgressFill");
+            const guidedWizardPrev = document.getElementById("guidedWizardPrev");
+            const guidedWizardNext = document.getElementById("guidedWizardNext");
             const serverPanelKey = "{{ in_array($forcedPanelKey, ['overview', 'profile', 'listings', 'billing', 'reservations', 'api'], true) ? $forcedPanelKey : '' }}";
             const listingWizardStep = Number("{{ $listingWizardStep }}") || 1;
             let listingWizardStarted = serverPanelKey === "listings";
             let listingWizardPanelStep = 1;
+            let guidedWizardTrack = "property";
+            let guidedWizardIndex = 0;
+
+            const guidedWizardFlows = {
+                property: [
+                    {
+                        title: "Property setup",
+                        hint: "Choose category and set listing basics.",
+                        panel: "listings",
+                        targetId: "vendorPropertiesSection",
+                        wizardStep: 1,
+                        openPropertyForm: true,
+                    },
+                    {
+                        title: "Review and refine",
+                        hint: "Confirm created property and update details.",
+                        panel: "listings",
+                        targetId: "vendorPropertiesSection",
+                        wizardStep: 2,
+                    },
+                    {
+                        title: "Room inventory",
+                        hint: "Add room types and occupancy for each property.",
+                        panel: "listings",
+                        targetId: "vendorRoomsSection",
+                        wizardStep: 3,
+                        openRoomForm: true,
+                    },
+                    {
+                        title: "Photos and media",
+                        hint: "Upload property and room photos.",
+                        panel: "listings",
+                        targetId: "vendorMediaSection",
+                        wizardStep: 4,
+                    },
+                    {
+                        title: "Publish readiness",
+                        hint: "Check pricing, availability, and billing before go-live.",
+                        panel: "reservations",
+                        targetId: "vendorPricingSection",
+                    },
+                ],
+                service: [
+                    {
+                        title: "Service profile",
+                        hint: "Create your service with category and pricing details.",
+                        panel: "listings",
+                        targetId: "vendorServicesSection",
+                        wizardStep: 1,
+                    },
+                    {
+                        title: "Availability slots",
+                        hint: "Set service availability and inventory.",
+                        panel: "reservations",
+                        targetId: "vendorAvailabilitySection",
+                    },
+                    {
+                        title: "Pricing rules",
+                        hint: "Add weekdays, weekends, and discount rules.",
+                        panel: "reservations",
+                        targetId: "vendorPricingSection",
+                    },
+                    {
+                        title: "Media assets",
+                        hint: "Upload service visuals to improve conversion.",
+                        panel: "listings",
+                        targetId: "vendorMediaSection",
+                        wizardStep: 4,
+                    },
+                    {
+                        title: "Billing and payout",
+                        hint: "Finalize billing profile to receive payouts.",
+                        panel: "billing",
+                        targetId: "vendorProfileBillingSettings",
+                    },
+                ],
+            };
 
             const SESSION_KEY = "workation_vendor_token";
 
@@ -2988,6 +3217,95 @@
                 }
             }
 
+            function guidedWizardCurrentFlow() {
+                const flow = guidedWizardFlows[guidedWizardTrack];
+                return Array.isArray(flow) ? flow : guidedWizardFlows.property;
+            }
+
+            function applyGuidedWizardStep(shouldScroll) {
+                const flow = guidedWizardCurrentFlow();
+                const safeIndex = Math.max(0, Math.min(flow.length - 1, Number(guidedWizardIndex) || 0));
+                guidedWizardIndex = safeIndex;
+                const currentStep = flow[safeIndex];
+                if (!currentStep) {
+                    return;
+                }
+
+                showPanelGroup(String(currentStep.panel || "listings"));
+
+                if (typeof currentStep.wizardStep === "number") {
+                    activateListingWizardStep(currentStep.wizardStep, Boolean(shouldScroll));
+                } else if (shouldScroll && currentStep.targetId) {
+                    const target = document.getElementById(currentStep.targetId);
+                    if (target) {
+                        target.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
+                }
+
+                if (currentStep.openPropertyForm && propertyCreateForm) {
+                    propertyCreateForm.hidden = false;
+                    if (closePropertyCreateForm) {
+                        closePropertyCreateForm.hidden = false;
+                    }
+                }
+
+                if (currentStep.openRoomForm && roomCreateForm) {
+                    roomCreateForm.hidden = false;
+                    if (closeRoomCreateForm) {
+                        closeRoomCreateForm.hidden = false;
+                    }
+                }
+            }
+
+            function renderGuidedWizard() {
+                const flow = guidedWizardCurrentFlow();
+                if (!guidedWizardSteps || !guidedWizardStepText || !guidedWizardProgressFill) {
+                    return;
+                }
+
+                if (guidedTrackProperty) {
+                    guidedTrackProperty.classList.toggle("is-active", guidedWizardTrack === "property");
+                }
+                if (guidedTrackService) {
+                    guidedTrackService.classList.toggle("is-active", guidedWizardTrack === "service");
+                }
+
+                guidedWizardSteps.innerHTML = "";
+                flow.forEach((step, index) => {
+                    const item = document.createElement("li");
+                    item.className = "guided-step";
+                    if (index < guidedWizardIndex) {
+                        item.classList.add("is-complete");
+                    }
+                    if (index === guidedWizardIndex) {
+                        item.classList.add("is-active");
+                    }
+                    item.textContent = "Step " + (index + 1) + ": " + step.title;
+                    item.addEventListener("click", function () {
+                        guidedWizardIndex = index;
+                        renderGuidedWizard();
+                        applyGuidedWizardStep(true);
+                    });
+                    guidedWizardSteps.appendChild(item);
+                });
+
+                const progressPercent = flow.length > 1
+                    ? Math.round((guidedWizardIndex / (flow.length - 1)) * 100)
+                    : 100;
+                guidedWizardProgressFill.style.width = String(progressPercent) + "%";
+
+                const activeStep = flow[guidedWizardIndex];
+                guidedWizardStepText.textContent = "Step " + (guidedWizardIndex + 1) + " of " + flow.length + " - " + activeStep.hint;
+
+                if (guidedWizardPrev) {
+                    guidedWizardPrev.disabled = guidedWizardIndex <= 0;
+                }
+                if (guidedWizardNext) {
+                    const isLastStep = guidedWizardIndex >= flow.length - 1;
+                    guidedWizardNext.textContent = isLastStep ? "Go To Final Step" : "Next Step";
+                }
+            }
+
             const LOCATION_TREE = {
                 "Maldives": {
                     "Kaafu Atoll": ["Male", "Hulhumale", "Maafushi"],
@@ -3349,15 +3667,49 @@
 
             if (startListingWizard) {
                 startListingWizard.addEventListener("click", function () {
+                    guidedWizardTrack = "property";
+                    guidedWizardIndex = 0;
                     window.location.hash = "listings";
-                    showPanelGroup("listings");
-                    activateListingWizardStep(1, true);
-                    if (propertyCreateForm) {
-                        propertyCreateForm.hidden = false;
-                    }
-                    if (closePropertyCreateForm) {
-                        closePropertyCreateForm.hidden = false;
-                    }
+                    renderGuidedWizard();
+                    applyGuidedWizardStep(true);
+                });
+            }
+
+            if (guidedTrackProperty) {
+                guidedTrackProperty.addEventListener("click", function () {
+                    guidedWizardTrack = "property";
+                    guidedWizardIndex = 0;
+                    window.location.hash = "listings";
+                    renderGuidedWizard();
+                    applyGuidedWizardStep(true);
+                });
+            }
+
+            if (guidedTrackService) {
+                guidedTrackService.addEventListener("click", function () {
+                    guidedWizardTrack = "service";
+                    guidedWizardIndex = 0;
+                    window.location.hash = "listings";
+                    renderGuidedWizard();
+                    applyGuidedWizardStep(true);
+                });
+            }
+
+            if (guidedWizardPrev) {
+                guidedWizardPrev.addEventListener("click", function () {
+                    const flow = guidedWizardCurrentFlow();
+                    guidedWizardIndex = Math.max(0, Math.min(flow.length - 1, guidedWizardIndex - 1));
+                    renderGuidedWizard();
+                    applyGuidedWizardStep(true);
+                });
+            }
+
+            if (guidedWizardNext) {
+                guidedWizardNext.addEventListener("click", function () {
+                    const flow = guidedWizardCurrentFlow();
+                    guidedWizardIndex = Math.max(0, Math.min(flow.length - 1, guidedWizardIndex + 1));
+                    renderGuidedWizard();
+                    applyGuidedWizardStep(true);
                 });
             }
 
@@ -3462,6 +3814,7 @@
             const initialPanelKey = serverPanelKey && validPanelKeys.has(serverPanelKey) ? serverPanelKey : hashPanelKey;
             listingWizardPanelStep = listingPanelStepFromWizardStep(listingWizardStep);
             showPanelGroup(initialPanelKey);
+            renderGuidedWizard();
             if (initialPanelKey === "listings") {
                 if (serverPanelKey === "listings") {
                     activateListingWizardStep(listingWizardStep, true);

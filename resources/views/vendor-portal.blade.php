@@ -1135,7 +1135,6 @@
         $roomMediaAssets = $vendorMediaAssets->filter(static function ($media): bool {
             return strtolower((string) ($media->entity_type ?? '')) === 'room';
         });
-
         $propertyLookupById = $vendorProperties->keyBy('id');
         $roomLookupById = $vendorRoomCategories->keyBy('id');
         $showCreatePropertyForm = old('property_form_intent') === '1';
@@ -1790,9 +1789,7 @@
                                             </div>
                                         </form>
                                         <div class="inline-actions">
-                                            @if ($supportsAccommodation)
-                                                <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ (int) $property->id }}">Add Room</button>
-                                            @endif
+                                            <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ (int) $property->id }}">Add Room</button>
                                             <form method="POST" action="/portal/vendor/properties/{{ $property->id }}/delete" onsubmit="return confirm('Remove this property listing?');">
                                                 @csrf
                                                 <button class="btn btn-danger" type="submit">Remove</button>
@@ -1823,10 +1820,10 @@
                 @endphp
                 <article class="ops-form ops-field-wide">
                     <div class="form-toggle-row">
-                        <button class="btn btn-primary" type="button" id="openRoomCreateForm" @if(!$supportsAccommodation || $vendorProperties->isEmpty()) disabled @endif>Add Room Under Property</button>
+                        <button class="btn btn-primary" type="button" id="openRoomCreateForm" @if($vendorProperties->isEmpty()) disabled @endif>Add Room Under Property</button>
                         <button class="btn btn-secondary" type="button" id="closeRoomCreateForm" @if (!$showCreateRoomForm) hidden @endif>Cancel</button>
                     </div>
-                    @if($supportsAccommodation && $vendorProperties->isEmpty())
+                    @if($vendorProperties->isEmpty())
                         <p class="wizard-note">Create at least one property first, then add rooms under that property.</p>
                     @endif
                     <form id="roomCreateForm" class="ops-form" method="POST" action="/portal/vendor/rooms/create" @if (!$showCreateRoomForm) hidden @endif>

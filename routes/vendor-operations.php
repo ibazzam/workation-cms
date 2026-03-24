@@ -661,11 +661,6 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
     }
 
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
-    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
-    $selectedCategories = vendorPortalSelectedCategories($vendorUser);
-    if (!vendorPortalRequiresAccommodation($selectedCategories)) {
-        return back()->withErrors(['profile' => 'Room categories are available for accommodation vendors only.']);
-    }
 
     $validated = $request->validate([
         'vendor_property_id' => ['required', 'integer', 'min:1'],
@@ -895,7 +890,7 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
     $validated = $request->validate([
         'name' => ['required', 'string', 'max:160'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
-        'max_guests' => ['nullable', 'integer', 'min:1', 'max:10000'],
+        'max_guests' => ['nullable', 'integer', 'min:0', 'max:10000'],
         'status' => ['required', Rule::in(['active', 'inactive'])],
     ]);
 

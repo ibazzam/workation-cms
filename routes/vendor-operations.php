@@ -159,18 +159,6 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
         $propertyFeatures = vendorPortalNormalizedStringList($validated['property_features'] ?? []);
 
         $details = [
-            'measurement_system' => (string) ($validated['measurement_system'] ?? 'metric'),
-            'area_value' => vendorPortalNormalizedNumeric($validated['area_value'] ?? null),
-            'area_unit' => (string) ($validated['area_unit'] ?? ''),
-            'bedroom_count' => isset($validated['bedroom_count']) ? (int) $validated['bedroom_count'] : null,
-            'bathroom_count' => vendorPortalNormalizedNumeric($validated['bathroom_count'] ?? null),
-            'capacity_value' => isset($validated['capacity_value']) ? (int) $validated['capacity_value'] : null,
-            'service_radius_km' => vendorPortalNormalizedNumeric($validated['service_radius_km'] ?? null),
-            'minimum_age' => isset($validated['minimum_age']) ? (int) $validated['minimum_age'] : null,
-            'safety_certifications' => trim((string) ($validated['safety_certifications'] ?? '')),
-            'accessibility_features' => trim((string) ($validated['accessibility_features'] ?? '')),
-            'property_amenities' => $propertyAmenities,
-            'property_features' => $propertyFeatures,
             'location_country' => trim((string) ($validated['location_country'] ?? '')),
             'location_state' => trim((string) ($validated['location_state'] ?? '')),
             'location_city' => trim((string) ($validated['location_city'] ?? '')),
@@ -180,6 +168,61 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             'map_place_id' => trim((string) ($validated['map_place_id'] ?? '')),
             'listing_category' => $listingCategory,
         ];
+
+        if ($listingCategory === 'accommodation') {
+            $details['measurement_system'] = (string) ($validated['measurement_system'] ?? 'metric');
+            $details['area_value'] = vendorPortalNormalizedNumeric($validated['area_value'] ?? null);
+            $details['area_unit'] = (string) ($validated['area_unit'] ?? '');
+            $details['bedroom_count'] = isset($validated['bedroom_count']) ? (int) $validated['bedroom_count'] : null;
+            $details['bathroom_count'] = vendorPortalNormalizedNumeric($validated['bathroom_count'] ?? null);
+            $details['property_amenities'] = $propertyAmenities;
+            $details['property_features'] = $propertyFeatures;
+        }
+
+        if (in_array($listingCategory, ['transport', 'excursion', 'remote_workspace', 'resort_day_visit', 'restaurant', 'vehicle_rental'], true)) {
+            $details['capacity_value'] = isset($validated['capacity_value']) ? (int) $validated['capacity_value'] : null;
+        }
+
+        if (in_array($listingCategory, ['transport', 'excursion'], true)) {
+            $details['service_radius_km'] = vendorPortalNormalizedNumeric($validated['service_radius_km'] ?? null);
+        }
+
+        if ($listingCategory === 'transport') {
+            $details['transport_mode'] = trim((string) ($validated['transport_mode'] ?? ''));
+            $details['pickup_location'] = trim((string) ($validated['pickup_location'] ?? ''));
+            $details['dropoff_location'] = trim((string) ($validated['dropoff_location'] ?? ''));
+        }
+
+        if ($listingCategory === 'excursion') {
+            $details['excursion_duration_minutes'] = isset($validated['excursion_duration_minutes']) ? (int) $validated['excursion_duration_minutes'] : null;
+            $details['excursion_difficulty'] = trim((string) ($validated['excursion_difficulty'] ?? ''));
+        }
+
+        if ($listingCategory === 'remote_workspace') {
+            $details['measurement_system'] = (string) ($validated['measurement_system'] ?? 'metric');
+            $details['area_value'] = vendorPortalNormalizedNumeric($validated['area_value'] ?? null);
+            $details['area_unit'] = (string) ($validated['area_unit'] ?? '');
+            $details['workspace_type'] = trim((string) ($validated['workspace_type'] ?? ''));
+            $details['internet_speed_mbps'] = vendorPortalNormalizedNumeric($validated['internet_speed_mbps'] ?? null);
+        }
+
+        if ($listingCategory === 'resort_day_visit') {
+            $details['day_visit_start_time'] = trim((string) ($validated['day_visit_start_time'] ?? ''));
+            $details['day_visit_end_time'] = trim((string) ($validated['day_visit_end_time'] ?? ''));
+            $details['included_access'] = trim((string) ($validated['included_access'] ?? ''));
+        }
+
+        if ($listingCategory === 'restaurant') {
+            $details['cuisine_type'] = trim((string) ($validated['cuisine_type'] ?? ''));
+            $details['meal_service'] = trim((string) ($validated['meal_service'] ?? ''));
+        }
+
+        if ($listingCategory === 'vehicle_rental') {
+            $details['minimum_age'] = isset($validated['minimum_age']) ? (int) $validated['minimum_age'] : null;
+            $details['vehicle_type'] = trim((string) ($validated['vehicle_type'] ?? ''));
+            $details['transmission_type'] = trim((string) ($validated['transmission_type'] ?? ''));
+            $details['fuel_type'] = trim((string) ($validated['fuel_type'] ?? ''));
+        }
 
         return array_filter($details, static fn (mixed $value): bool => !($value === null || $value === ''));
     }
@@ -209,6 +252,45 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
             if (!isset($details['minimum_age']) || $details['minimum_age'] < 16 || $details['minimum_age'] > 99) {
                 $errors[] = 'Vehicle rental minimum age must be between 16 and 99.';
             }
+        }
+
+        if ($listingCategory === 'transport' && empty($details['transport_mode'])) {
+            $errors[] = 'Transport mode is required for transport listings.';
+        }
+
+        if ($listingCategory === 'excursion') {
+            if (!isset($details['excursion_duration_minutes']) || $details['excursion_duration_minutes'] < 30 || $details['excursion_duration_minutes'] > 1440) {
+                $errors[] = 'Excursion duration must be between 30 and 1440 minutes.';
+            }
+            if (!in_array(($details['excursion_difficulty'] ?? ''), ['easy', 'moderate', 'hard'], true)) {
+                $errors[] = 'Excursion difficulty must be easy, moderate, or hard.';
+            }
+        }
+
+        if ($listingCategory === 'remote_workspace') {
+            if (!in_array(($details['workspace_type'] ?? ''), ['shared', 'private', 'cabin'], true)) {
+                $errors[] = 'Workspace type must be shared, private, or cabin.';
+            }
+        }
+
+        if ($listingCategory === 'resort_day_visit') {
+            if (empty($details['day_visit_start_time']) || empty($details['day_visit_end_time'])) {
+                $errors[] = 'Day visit start and end times are required.';
+            } else {
+                $start = strtotime((string) $details['day_visit_start_time']);
+                $end = strtotime((string) $details['day_visit_end_time']);
+                if ($start !== false && $end !== false && $start >= $end) {
+                    $errors[] = 'Day visit end time must be after start time.';
+                }
+            }
+        }
+
+        if ($listingCategory === 'restaurant' && empty($details['cuisine_type'])) {
+            $errors[] = 'Cuisine type is required for restaurant listings.';
+        }
+
+        if ($listingCategory === 'vehicle_rental' && empty($details['vehicle_type'])) {
+            $errors[] = 'Vehicle type is required for vehicle rental listings.';
         }
 
         return $errors;
@@ -828,7 +910,6 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'map_place_id' => ['nullable', 'string', 'max:190'],
         'description' => ['nullable', 'string', 'max:3000'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
-        'max_guests' => ['nullable', 'integer', 'min:0', 'max:10000'],
         'max_guests' => ['nullable', 'integer', 'min:1', 'max:10000'],
         'measurement_system' => ['nullable', Rule::in(['metric', 'imperial'])],
         'area_value' => ['nullable', 'numeric', 'min:1', 'max:100000'],
@@ -838,6 +919,21 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'capacity_value' => ['nullable', 'integer', 'min:1', 'max:20000'],
         'service_radius_km' => ['nullable', 'numeric', 'min:0', 'max:5000'],
         'minimum_age' => ['nullable', 'integer', 'min:0', 'max:120'],
+        'transport_mode' => ['nullable', 'string', 'max:80'],
+        'pickup_location' => ['nullable', 'string', 'max:190'],
+        'dropoff_location' => ['nullable', 'string', 'max:190'],
+        'excursion_duration_minutes' => ['nullable', 'integer', 'min:30', 'max:1440'],
+        'excursion_difficulty' => ['nullable', Rule::in(['easy', 'moderate', 'hard'])],
+        'workspace_type' => ['nullable', Rule::in(['shared', 'private', 'cabin'])],
+        'internet_speed_mbps' => ['nullable', 'numeric', 'min:1', 'max:10000'],
+        'day_visit_start_time' => ['nullable', 'date_format:H:i'],
+        'day_visit_end_time' => ['nullable', 'date_format:H:i'],
+        'included_access' => ['nullable', 'string', 'max:2000'],
+        'cuisine_type' => ['nullable', 'string', 'max:120'],
+        'meal_service' => ['nullable', Rule::in(['breakfast', 'lunch', 'dinner', 'all_day'])],
+        'vehicle_type' => ['nullable', 'string', 'max:120'],
+        'transmission_type' => ['nullable', Rule::in(['automatic', 'manual'])],
+        'fuel_type' => ['nullable', Rule::in(['petrol', 'diesel', 'electric', 'hybrid'])],
         'safety_certifications' => ['nullable', 'string', 'max:2000'],
         'accessibility_features' => ['nullable', 'string', 'max:2000'],
         'property_amenities' => ['nullable', 'array'],

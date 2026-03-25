@@ -3193,6 +3193,28 @@
                 }).join('');
             }
 
+            let panelStateInitialized = false;
+
+            function initializePanelStateSafe() {
+                if (panelStateInitialized) {
+                    return;
+                }
+                panelStateInitialized = true;
+
+                const hashPanelKey = resolvePanelFromHash(window.location.hash || "#overview");
+                const initialPanelKey = serverPanelKey && validPanelKeys.has(serverPanelKey) ? serverPanelKey : hashPanelKey;
+                listingWizardPanelStep = listingPanelStepFromWizardStep(listingWizardStep);
+                showPanelGroup(initialPanelKey);
+
+                if (initialPanelKey === "listings") {
+                    if (serverPanelKey === "listings") {
+                        activateListingWizardStep(listingWizardStep, true);
+                    } else {
+                        applyListingWizardVisibility();
+                    }
+                }
+            }
+
             async function fetchJsonWithAuth(path, token) {
                 const res = await fetch(apiBase + path, {
                     method: "GET",
@@ -4068,17 +4090,28 @@
                 }
             }
 
-            document.getElementById("saveToken").addEventListener("click", saveToken);
-            document.getElementById("clearToken").addEventListener("click", clearToken);
+            initializePanelStateSafe();
+
+            const saveTokenButton = document.getElementById("saveToken");
+            const clearTokenButton = document.getElementById("clearToken");
+
+            if (saveTokenButton) {
+                saveTokenButton.addEventListener("click", saveToken);
+            }
+            if (clearTokenButton) {
+                clearTokenButton.addEventListener("click", clearToken);
+            }
             if (refreshSummaryBtn) {
                 refreshSummaryBtn.addEventListener("click", refreshSummary);
             }
-            tokenInput.addEventListener("keydown", function (event) {
-                if (event.key === "Enter") {
-                    event.preventDefault();
-                    saveToken();
-                }
-            });
+            if (tokenInput) {
+                tokenInput.addEventListener("keydown", function (event) {
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                        saveToken();
+                    }
+                });
+            }
             document.querySelectorAll("button[data-path]").forEach((button) => {
                 button.addEventListener("click", function () {
                     run(button.getAttribute("data-path"), button);
@@ -4332,20 +4365,10 @@
                 setSummaryDefaults();
             }
 
-            const hashPanelKey = resolvePanelFromHash(window.location.hash || "#overview");
-            const initialPanelKey = serverPanelKey && validPanelKeys.has(serverPanelKey) ? serverPanelKey : hashPanelKey;
-            listingWizardPanelStep = listingPanelStepFromWizardStep(listingWizardStep);
-            showPanelGroup(initialPanelKey);
+            initializePanelStateSafe();
             restoreGuidedWizardState();
             renderGuidedWizard();
             applyPropertyCategoryFilter('all');
-            if (initialPanelKey === "listings") {
-                if (serverPanelKey === "listings") {
-                    activateListingWizardStep(listingWizardStep, true);
-                } else {
-                    applyListingWizardVisibility();
-                }
-            }
         })();
     </script>
 </body>

@@ -4261,6 +4261,31 @@
 
             roomEditCancelButtons.forEach((button) => {
                 button.addEventListener('click', function () {
+                });
+            });
+
+            propertyEditCancelButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const editId = String(button.getAttribute('data-property-edit-id') || '').trim();
+                    if (!editId) {
+                        return;
+                    }
+                    closeEditForm('[data-property-edit-form="' + editId + '"]');
+                });
+            });
+
+            roomEditButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const editId = String(button.getAttribute('data-room-edit-id') || '').trim();
+                    if (!editId) {
+                        return;
+                    }
+                    openEditForm('[data-room-edit-form="' + editId + '"]');
+                });
+            });
+
+            roomEditCancelButtons.forEach((button) => {
+                button.addEventListener('click', function () {
                     const editId = String(button.getAttribute('data-room-edit-id') || '').trim();
                     if (!editId) {
                         return;

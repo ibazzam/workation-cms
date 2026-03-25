@@ -1043,16 +1043,52 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'status' => ['required', Rule::in(['active', 'inactive'])],
     ]);
 
+    $canonicalListingCategory = vendorPortalCanonicalCategory((string) ($propertyRecord->listing_category ?? ''));
+    $existingDetails = [];
+    if (isset($propertyRecord->listing_details) && is_string($propertyRecord->listing_details) && trim($propertyRecord->listing_details) !== '') {
+        $decodedDetails = json_decode((string) $propertyRecord->listing_details, true);
+        if (is_array($decodedDetails)) {
+            $existingDetails = $decodedDetails;
+        }
+    }
+
+    if ($canonicalListingCategory === null && isset($existingDetails['listing_category'])) {
+        $canonicalListingCategory = vendorPortalCanonicalCategory((string) $existingDetails['listing_category']);
+    }
+
+    $categoryCapacity = isset($existingDetails['capacity_value']) && is_numeric($existingDetails['capacity_value'])
+        ? (int) $existingDetails['capacity_value']
+        : null;
+
+    $normalizedMaxGuests = $canonicalListingCategory === 'accommodation'
+        ? max(1, (int) ($validated['max_guests'] ?? ($propertyRecord->max_guests ?? 1)))
+        : max(0, (int) ($categoryCapacity ?? ($validated['max_guests'] ?? ($propertyRecord->max_guests ?? 0))));
+
+    $updatePayload = [
+        'name' => trim((string) $validated['name']),
+        'base_price' => (float) ($validated['base_price'] ?? 0),
+        'max_guests' => $normalizedMaxGuests,
+        'status' => (string) $validated['status'],
+        'updated_at' => now(),
+    ];
+
+    if ($canonicalListingCategory !== null) {
+        if (Schema::hasColumn('vendor_properties', 'property_type')) {
+            $updatePayload['property_type'] = vendorPortalPropertyTypeForCategory($canonicalListingCategory);
+        }
+        if (Schema::hasColumn('vendor_properties', 'listing_category')) {
+            $updatePayload['listing_category'] = $canonicalListingCategory;
+        }
+        if (!empty($existingDetails) && Schema::hasColumn('vendor_properties', 'listing_details')) {
+            $existingDetails['listing_category'] = $canonicalListingCategory;
+            $updatePayload['listing_details'] = json_encode($existingDetails);
+        }
+    }
+
     DB::table('vendor_properties')
         ->where('id', $property)
         ->where('vendor_user_id', $vendorUserId)
-        ->update([
-            'name' => trim((string) $validated['name']),
-            'base_price' => (float) ($validated['base_price'] ?? 0),
-            'max_guests' => (int) ($validated['max_guests'] ?? 1),
-            'status' => (string) $validated['status'],
-            'updated_at' => now(),
-        ]);
+        ->update($updatePayload);
 
     return vendorPortalListingsBackResponse('Property listing updated.', 2);
 });

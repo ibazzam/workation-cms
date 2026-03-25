@@ -4429,9 +4429,73 @@
                 const closePropertyCreateForm = document.getElementById('closePropertyCreateForm');
                 const propertyCreateForm = document.getElementById('propertyCreateForm');
                 const propertyCategorySelect = document.getElementById('property_listing_category');
+                const propertyCategoryScopeNote = document.getElementById('propertyCategoryScopeNote');
+                const propertyCreateFormTitle = document.getElementById('propertyCreateFormTitle');
+                const propertyCreateFormSubtitle = document.getElementById('propertyCreateFormSubtitle');
+                const propertyCreateSubmitButton = document.getElementById('propertyCreateSubmitButton');
+                const propertyTypeSelect = document.getElementById('property_type');
+                const categoryScopedFields = Array.from(document.querySelectorAll('[data-category-scope]'));
+                const categoryViewPanels = Array.from(document.querySelectorAll('[data-category-view]'));
                 const roomCreateForm = document.getElementById('roomCreateForm');
                 const closeRoomCreateForm = document.getElementById('closeRoomCreateForm');
                 const roomPropertySelect = document.getElementById('room_vendor_property_id');
+
+                function categoryScopesFor(category) {
+                    const normalized = normalizeCategoryKey(category);
+                    if (normalized === 'accommodation') return ['stay', 'capacity'];
+                    if (normalized === 'transport') return ['capacity', 'service', 'transport'];
+                    if (normalized === 'excursion') return ['capacity', 'service', 'excursion'];
+                    if (normalized === 'remote_workspace') return ['capacity', 'workspace', 'stay'];
+                    if (normalized === 'resort_day_visit') return ['capacity', 'day_visit'];
+                    if (normalized === 'restaurant') return ['capacity', 'restaurant'];
+                    if (normalized === 'vehicle_rental') return ['vehicle', 'capacity', 'rental'];
+                    return ['stay', 'capacity', 'service', 'vehicle', 'transport', 'excursion', 'workspace', 'day_visit', 'restaurant', 'rental'];
+                }
+
+                function categoryMetaFor(category) {
+                    const normalized = normalizeCategoryKey(category);
+                    const metaMap = {
+                        accommodation: ['Accommodation Enlist Form', 'Add stay-focused listing details, space setup, and guest capacity.', 'Save Accommodation Listing', 'Accommodation fields are active for this category.', 'property'],
+                        transport: ['Transport Enlist Form', 'Add transfer and transport service listing details.', 'Save Transport Listing', 'Transport-focused fields are active for this category.', 'service'],
+                        excursion: ['Excursion Enlist Form', 'Add activity and guided experience listing details.', 'Save Excursion Listing', 'Excursion-focused fields are active for this category.', 'service'],
+                        remote_workspace: ['Remote Workspace Enlist Form', 'Add workspace listing details for remote workers and teams.', 'Save Remote Workspace Listing', 'Remote workspace fields are active for this category.', 'service'],
+                        resort_day_visit: ['Resort Day Visit Enlist Form', 'Add day-visit package listing details for resort access.', 'Save Resort Day Visit Listing', 'Resort day visit fields are active for this category.', 'service'],
+                        restaurant: ['Restaurant Enlist Form', 'Add restaurant listing details with seating and service scope.', 'Save Restaurant Listing', 'Restaurant-focused fields are active for this category.', 'service'],
+                        vehicle_rental: ['Vehicle Rental Enlist Form', 'Add rental fleet listing details with vehicle constraints.', 'Save Vehicle Rental Listing', 'Vehicle-rental-focused fields are active for this category.', 'service']
+                    };
+                    return metaMap[normalized] || ['Create New Listing', 'Choose a category-specific add button to load the right enlist form view.', 'Save Listing', 'Category-specific fields will change based on your selection.', 'service'];
+                }
+
+                function applyCategoryMode(category) {
+                    const normalized = normalizeCategoryKey(category);
+                    const activeScopes = categoryScopesFor(normalized);
+                    const meta = categoryMetaFor(normalized);
+
+                    categoryScopedFields.forEach((field) => {
+                        const scopes = String(field.getAttribute('data-category-scope') || '')
+                            .split(',')
+                            .map((item) => item.trim().toLowerCase())
+                            .filter(Boolean);
+                        const shouldShow = scopes.length === 0 || scopes.some((scope) => activeScopes.includes(scope));
+                        field.hidden = !shouldShow;
+                        field.querySelectorAll('input, select, textarea').forEach((input) => {
+                            if (!input.hasAttribute('data-preserve-enabled')) {
+                                input.setAttribute('data-preserve-enabled', input.disabled ? '1' : '0');
+                            }
+                            input.disabled = !shouldShow;
+                        });
+                    });
+
+                    categoryViewPanels.forEach((panel) => {
+                        panel.hidden = normalizeCategoryKey(panel.getAttribute('data-category-view') || '') !== normalized;
+                    });
+
+                    if (propertyCreateFormTitle) propertyCreateFormTitle.textContent = meta[0];
+                    if (propertyCreateFormSubtitle) propertyCreateFormSubtitle.textContent = meta[1];
+                    if (propertyCreateSubmitButton) propertyCreateSubmitButton.textContent = meta[2];
+                    if (propertyCategoryScopeNote) propertyCategoryScopeNote.textContent = meta[3];
+                    if (propertyTypeSelect) propertyTypeSelect.value = meta[4];
+                }
 
                 if (openPropertyCreateForm && propertyCreateForm) {
                     openPropertyCreateForm.addEventListener('click', function () {
@@ -4468,7 +4532,7 @@
                                 propertyCategorySelect.appendChild(option);
                             }
                             propertyCategorySelect.value = option.value;
-                            propertyCategorySelect.dispatchEvent(new Event('change'));
+                            applyCategoryMode(option.value);
                         }
 
                         window.location.hash = 'listings';
@@ -4503,7 +4567,17 @@
                         const editId = String(button.getAttribute('data-property-edit-id') || '').trim();
                         if (!editId) return;
                         const form = document.querySelector('[data-property-edit-form="' + editId + '"]');
-                        if (form) form.hidden = false;
+                        if (form) {
+                            const category = normalizeCategoryKey(form.getAttribute('data-property-edit-category') || button.getAttribute('data-property-edit-category') || '');
+                            const activeScopes = categoryScopesFor(category);
+                            form.querySelectorAll('[data-property-edit-scope]').forEach((field) => {
+                                const scope = normalizeCategoryKey(field.getAttribute('data-property-edit-scope') || '');
+                                const shouldShow = activeScopes.includes(scope);
+                                field.hidden = !shouldShow;
+                                field.disabled = !shouldShow;
+                            });
+                            form.hidden = false;
+                        }
                     });
                 });
 
@@ -4515,6 +4589,13 @@
                         if (form) form.hidden = true;
                     });
                 });
+
+                if (propertyCategorySelect) {
+                    propertyCategorySelect.addEventListener('change', function () {
+                        applyCategoryMode(propertyCategorySelect.value);
+                    });
+                    applyCategoryMode(propertyCategorySelect.value);
+                }
             }
 
             if (document.readyState === 'loading') {

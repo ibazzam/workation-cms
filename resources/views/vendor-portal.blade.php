@@ -1942,11 +1942,97 @@
                                 <label for="property_service_radius_km">Service Radius (km)</label>
                                 <input id="property_service_radius_km" name="service_radius_km" class="ops-input" type="number" min="0" max="5000" step="0.1" value="{{ old('service_radius_km') }}">
                             </div>
+                            <div class="ops-field" data-category-scope="transport">
+                                <label for="property_transport_mode">Transport Mode</label>
+                                <input id="property_transport_mode" name="transport_mode" class="ops-input" type="text" maxlength="80" value="{{ old('transport_mode') }}" placeholder="Boat, Van, Ferry, Speedboat">
+                            </div>
+                            <div class="ops-field" data-category-scope="transport">
+                                <label for="property_pickup_location">Pickup Location</label>
+                                <input id="property_pickup_location" name="pickup_location" class="ops-input" type="text" maxlength="190" value="{{ old('pickup_location') }}" placeholder="Airport, Jetty, Hotel">
+                            </div>
+                            <div class="ops-field" data-category-scope="transport">
+                                <label for="property_dropoff_location">Dropoff Location</label>
+                                <input id="property_dropoff_location" name="dropoff_location" class="ops-input" type="text" maxlength="190" value="{{ old('dropoff_location') }}" placeholder="Resort, Island, City center">
+                            </div>
+                            <div class="ops-field" data-category-scope="excursion">
+                                <label for="property_excursion_duration_minutes">Duration (minutes)</label>
+                                <input id="property_excursion_duration_minutes" name="excursion_duration_minutes" class="ops-input" type="number" min="30" max="1440" value="{{ old('excursion_duration_minutes') }}">
+                            </div>
+                            <div class="ops-field" data-category-scope="excursion">
+                                <label for="property_excursion_difficulty">Difficulty</label>
+                                <select id="property_excursion_difficulty" name="excursion_difficulty" class="ops-select">
+                                    <option value="" @selected(old('excursion_difficulty') === null)>Select</option>
+                                    <option value="easy" @selected(old('excursion_difficulty') === 'easy')>Easy</option>
+                                    <option value="moderate" @selected(old('excursion_difficulty') === 'moderate')>Moderate</option>
+                                    <option value="hard" @selected(old('excursion_difficulty') === 'hard')>Hard</option>
+                                </select>
+                            </div>
+                            <div class="ops-field" data-category-scope="workspace">
+                                <label for="property_workspace_type">Workspace Type</label>
+                                <select id="property_workspace_type" name="workspace_type" class="ops-select">
+                                    <option value="" @selected(old('workspace_type') === null)>Select</option>
+                                    <option value="shared" @selected(old('workspace_type') === 'shared')>Shared</option>
+                                    <option value="private" @selected(old('workspace_type') === 'private')>Private</option>
+                                    <option value="cabin" @selected(old('workspace_type') === 'cabin')>Cabin</option>
+                                </select>
+                            </div>
+                            <div class="ops-field" data-category-scope="workspace">
+                                <label for="property_internet_speed_mbps">Internet Speed (Mbps)</label>
+                                <input id="property_internet_speed_mbps" name="internet_speed_mbps" class="ops-input" type="number" min="1" max="10000" step="1" value="{{ old('internet_speed_mbps') }}">
+                            </div>
+                            <div class="ops-field" data-category-scope="day_visit">
+                                <label for="property_day_visit_start_time">Day Visit Start Time</label>
+                                <input id="property_day_visit_start_time" name="day_visit_start_time" class="ops-input" type="time" value="{{ old('day_visit_start_time') }}">
+                            </div>
+                            <div class="ops-field" data-category-scope="day_visit">
+                                <label for="property_day_visit_end_time">Day Visit End Time</label>
+                                <input id="property_day_visit_end_time" name="day_visit_end_time" class="ops-input" type="time" value="{{ old('day_visit_end_time') }}">
+                            </div>
+                            <div class="ops-field ops-field-wide" data-category-scope="day_visit">
+                                <label for="property_included_access">Included Access</label>
+                                <textarea id="property_included_access" name="included_access" class="ops-textarea" maxlength="2000" placeholder="Pool access, lunch, transfer, spa credits, etc.">{{ old('included_access') }}</textarea>
+                            </div>
+                            <div class="ops-field" data-category-scope="restaurant">
+                                <label for="property_cuisine_type">Cuisine Type</label>
+                                <input id="property_cuisine_type" name="cuisine_type" class="ops-input" type="text" maxlength="120" value="{{ old('cuisine_type') }}" placeholder="Maldivian, Asian Fusion, Seafood">
+                            </div>
+                            <div class="ops-field" data-category-scope="restaurant">
+                                <label for="property_meal_service">Meal Service</label>
+                                <select id="property_meal_service" name="meal_service" class="ops-select">
+                                    <option value="" @selected(old('meal_service') === null)>Select</option>
+                                    <option value="breakfast" @selected(old('meal_service') === 'breakfast')>Breakfast</option>
+                                    <option value="lunch" @selected(old('meal_service') === 'lunch')>Lunch</option>
+                                    <option value="dinner" @selected(old('meal_service') === 'dinner')>Dinner</option>
+                                    <option value="all_day" @selected(old('meal_service') === 'all_day')>All Day</option>
+                                </select>
+                            </div>
                             <div class="ops-field" data-category-scope="vehicle">
                                 <label for="property_minimum_age">Minimum Age</label>
                                 <input id="property_minimum_age" name="minimum_age" class="ops-input" type="number" min="0" max="120" value="{{ old('minimum_age') }}">
                             </div>
-                            <div class="ops-field ops-field-wide" data-category-scope="stay,experience">
+                            <div class="ops-field" data-category-scope="rental">
+                                <label for="property_vehicle_type">Vehicle Type</label>
+                                <input id="property_vehicle_type" name="vehicle_type" class="ops-input" type="text" maxlength="120" value="{{ old('vehicle_type') }}" placeholder="Scooter, SUV, Sedan, Speedboat">
+                            </div>
+                            <div class="ops-field" data-category-scope="rental">
+                                <label for="property_transmission_type">Transmission</label>
+                                <select id="property_transmission_type" name="transmission_type" class="ops-select">
+                                    <option value="" @selected(old('transmission_type') === null)>Select</option>
+                                    <option value="automatic" @selected(old('transmission_type') === 'automatic')>Automatic</option>
+                                    <option value="manual" @selected(old('transmission_type') === 'manual')>Manual</option>
+                                </select>
+                            </div>
+                            <div class="ops-field" data-category-scope="rental">
+                                <label for="property_fuel_type">Fuel Type</label>
+                                <select id="property_fuel_type" name="fuel_type" class="ops-select">
+                                    <option value="" @selected(old('fuel_type') === null)>Select</option>
+                                    <option value="petrol" @selected(old('fuel_type') === 'petrol')>Petrol</option>
+                                    <option value="diesel" @selected(old('fuel_type') === 'diesel')>Diesel</option>
+                                    <option value="electric" @selected(old('fuel_type') === 'electric')>Electric</option>
+                                    <option value="hybrid" @selected(old('fuel_type') === 'hybrid')>Hybrid</option>
+                                </select>
+                            </div>
+                            <div class="ops-field ops-field-wide" data-category-scope="stay">
                                 <label>Property Amenities (tick all available)</label>
                                 <div class="feature-checklist">
                                     <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="wifi" @checked(in_array('wifi', $oldPropertyAmenities, true))> Wi-Fi</label>
@@ -1959,7 +2045,7 @@
                                     <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="workspace_desk" @checked(in_array('workspace_desk', $oldPropertyAmenities, true))> Workspace Desk</label>
                                 </div>
                             </div>
-                            <div class="ops-field ops-field-wide" data-category-scope="stay,experience">
+                            <div class="ops-field ops-field-wide" data-category-scope="stay">
                                 <label>Property Features (tick all available)</label>
                                 <div class="feature-checklist">
                                     <label class="feature-item"><input type="checkbox" name="property_features[]" value="wheelchair_access" @checked(in_array('wheelchair_access', $oldPropertyFeatures, true))> Wheelchair Access</label>
@@ -3442,8 +3528,27 @@
                 const normalized = normalizeCategoryKey(category);
 
                 if (normalized === "accommodation") {
-                    return ["stay", "capacity", "experience"];
+                    return ["stay", "capacity"];
                 }
+
+                if (normalized === "transport") {
+                    return ["capacity", "service", "transport"];
+                }
+
+                if (normalized === "excursion") {
+                    return ["capacity", "service", "excursion"];
+                }
+
+                if (normalized === "remote_workspace") {
+                    return ["capacity", "workspace", "stay"];
+                }
+
+                if (normalized === "resort_day_visit") {
+                    return ["capacity", "day_visit"];
+                }
+
+                if (normalized === "restaurant") {
+                    return ["capacity", "restaurant"];
 
                 if (normalized === "excursion" || normalized === "resort_day_visit") {
                     return ["capacity", "experience", "service"];
@@ -3457,7 +3562,109 @@
                     return ["vehicle", "capacity", "service"];
                 }
 
-                return ["stay", "capacity", "service", "vehicle", "experience"];
+                if (normalized === "vehicle_rental") {
+                    return ["vehicle", "capacity", "rental"];
+                }
+
+                return ["stay", "capacity", "service", "vehicle", "transport", "excursion", "workspace", "day_visit", "restaurant", "rental"];
+            }
+
+            function refreshCategoryViewPanels() {
+                if (!propertyCategorySelect || categoryViewPanels.length === 0) {
+                    return;
+                }
+                const activeCategory = normalizeCategoryKey(propertyCategorySelect.value);
+                categoryViewPanels.forEach((panel) => {
+                    const panelCategory = normalizeCategoryKey(panel.getAttribute('data-category-view'));
+                    panel.hidden = panelCategory !== activeCategory;
+                });
+            }
+
+            function categoryMetaFor(category) {
+                const normalized = normalizeCategoryKey(category);
+                const fallbackLabel = propertyCategorySelect
+                    ? (propertyCategorySelect.options[propertyCategorySelect.selectedIndex]?.textContent || 'Listing')
+                    : 'Listing';
+
+                const categoryMeta = {
+                    accommodation: {
+                        title: 'Accommodation Enlist Form',
+                        subtitle: 'Add stay-focused listing details, space setup, and guest capacity.',
+                        submit: 'Save Accommodation Listing',
+                        note: 'Accommodation fields are active for this category.',
+                        propertyType: 'property',
+                    },
+                    transport: {
+                        title: 'Transport Enlist Form',
+                        subtitle: 'Add transfer and transport service listing details.',
+                        submit: 'Save Transport Listing',
+                        note: 'Transport-focused fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                    excursion: {
+                        title: 'Excursion Enlist Form',
+                        subtitle: 'Add activity and guided experience listing details.',
+                        submit: 'Save Excursion Listing',
+                        note: 'Excursion-focused fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                    remote_workspace: {
+                        title: 'Remote Workspace Enlist Form',
+                        subtitle: 'Add workspace listing details for remote workers and teams.',
+                        submit: 'Save Remote Workspace Listing',
+                        note: 'Remote workspace fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                    resort_day_visit: {
+                        title: 'Resort Day Visit Enlist Form',
+                        subtitle: 'Add day-visit package listing details for resort access.',
+                        submit: 'Save Resort Day Visit Listing',
+                        note: 'Resort day visit fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                    restaurant: {
+                        title: 'Restaurant Enlist Form',
+                        subtitle: 'Add restaurant listing details with seating and service scope.',
+                        submit: 'Save Restaurant Listing',
+                        note: 'Restaurant-focused fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                    vehicle_rental: {
+                        title: 'Vehicle Rental Enlist Form',
+                        subtitle: 'Add rental fleet listing details with vehicle constraints.',
+                        submit: 'Save Vehicle Rental Listing',
+                        note: 'Vehicle-rental-focused fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                };
+
+                return categoryMeta[normalized] || {
+                    title: fallbackLabel + ' Enlist Form',
+                    subtitle: 'Add listing details specific to ' + fallbackLabel + '.',
+                    submit: 'Save ' + fallbackLabel + ' Listing',
+                    note: 'Category-specific fields will change based on your selection.',
+                    propertyType: null,
+                };
+            }
+
+            function applyCategoryFormMeta(category, forceType) {
+                const meta = categoryMetaFor(category);
+                if (propertyCreateFormTitle) {
+                    propertyCreateFormTitle.textContent = meta.title;
+                }
+                if (propertyCreateFormSubtitle) {
+                    propertyCreateFormSubtitle.textContent = meta.subtitle;
+                }
+                if (propertyCreateSubmitButton) {
+                    propertyCreateSubmitButton.textContent = meta.submit;
+                }
+                if (propertyCategoryScopeNote) {
+                    propertyCategoryScopeNote.textContent = meta.note;
+                }
+                if (forceType && propertyTypeSelect && meta.propertyType) {
+                    ensureSelectHasOption(propertyTypeSelect, meta.propertyType);
+                    propertyTypeSelect.value = meta.propertyType;
+                }
             }
 
             function refreshCategoryViewPanels() {
@@ -3952,6 +4159,31 @@
                         return;
                     }
                     openEditForm('[data-property-edit-form="' + editId + '"]');
+                });
+            });
+
+            propertyEditCancelButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const editId = String(button.getAttribute('data-property-edit-id') || '').trim();
+                    if (!editId) {
+                        return;
+                    }
+                    closeEditForm('[data-property-edit-form="' + editId + '"]');
+                });
+            });
+
+            roomEditButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const editId = String(button.getAttribute('data-room-edit-id') || '').trim();
+                    if (!editId) {
+                        return;
+                    }
+                    openEditForm('[data-room-edit-form="' + editId + '"]');
+                });
+            });
+
+            roomEditCancelButtons.forEach((button) => {
+                button.addEventListener('click', function () {
                 });
             });
 

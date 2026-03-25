@@ -738,14 +738,6 @@
             color: #4f6479;
         }
 
-        .listing-wizard-controls {
-            margin: 10px 0;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            align-items: center;
-        }
-
         .listing-category-shortcuts {
             margin: 8px 0 10px;
             display: grid;
@@ -984,6 +976,14 @@
             display: flex;
             gap: 6px;
             flex-wrap: wrap;
+        }
+
+        .edit-toggle-actions {
+            align-items: center;
+        }
+
+        .update-row-form[hidden] {
+            display: none;
         }
 
         .btn-danger {
@@ -1723,13 +1723,6 @@
                 <p class="ops-title">Operations Console</p>
                 <span class="ops-chip">Database-backed</span>
             </div>
-            <div class="listing-wizard-controls">
-                <button type="button" class="btn btn-primary" id="startListingWizard">Start Add Listings Wizard</button>
-                <a class="hero-link" href="#vendorPropertiesSection" data-wizard-step="1">Step 1: Property Details</a>
-                <a class="hero-link" href="#vendorPropertiesSection" data-wizard-step="2">Step 2: Review Property</a>
-                <a class="hero-link" href="#vendorRoomsSection" data-wizard-step="3">Step 3: Room Setup</a>
-                <a class="hero-link" href="#vendorMediaSection" data-wizard-step="4">Step 4: Upload Pictures</a>
-            </div>
             @php
                 $listingShortcutOrder = ['accommodation', 'transport', 'excursion', 'remote_workspace', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
             @endphp
@@ -2018,7 +2011,15 @@
                                     </td>
                                     <td>
                                         <div class="listing-cell-actions">
-                                            <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/properties/{{ $property->id }}/update">
+                                            <div class="inline-actions edit-toggle-actions">
+                                                <button class="btn btn-secondary" type="button" data-open-property-edit data-property-edit-id="{{ (int) $property->id }}">Edit Listing</button>
+                                                <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ (int) $property->id }}">Add Room</button>
+                                                <form method="POST" action="/portal/vendor/properties/{{ $property->id }}/delete" onsubmit="return confirm('Remove this property listing?');">
+                                                    @csrf
+                                                    <button class="btn btn-danger" type="submit">Remove</button>
+                                                </form>
+                                            </div>
+                                            <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/properties/{{ $property->id }}/update" data-property-edit-form="{{ (int) $property->id }}" hidden>
                                                 @csrf
                                                 <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $property->name }}" required>
                                                 <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) $property->base_price }}">
@@ -2027,15 +2028,11 @@
                                                     <option value="active" @selected((string) $property->status === 'active')>Active</option>
                                                     <option value="inactive" @selected((string) $property->status === 'inactive')>Inactive</option>
                                                 </select>
-                                                <button class="btn btn-secondary js-row-update" type="submit">Update Property</button>
+                                                <div class="inline-actions">
+                                                    <button class="btn btn-secondary js-row-update" type="submit">Update Property</button>
+                                                    <button class="btn btn-secondary" type="button" data-close-property-edit data-property-edit-id="{{ (int) $property->id }}">Cancel Edit</button>
+                                                </div>
                                             </form>
-                                            <div class="inline-actions">
-                                                <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ (int) $property->id }}">Add Room</button>
-                                                <form method="POST" action="/portal/vendor/properties/{{ $property->id }}/delete" onsubmit="return confirm('Remove this property listing?');">
-                                                    @csrf
-                                                    <button class="btn btn-danger" type="submit">Remove</button>
-                                                </form>
-                                            </div>
                                             <form class="inline-table-form media-upload-row" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
                                                 @csrf
                                                 <input type="hidden" name="entity_type" value="property">
@@ -2169,17 +2166,23 @@
                                     </td>
                                     <td>
                                         <div class="listing-cell-actions">
-                                            <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/rooms/{{ $room->id }}/update">
+                                            <div class="inline-actions edit-toggle-actions">
+                                                <button class="btn btn-secondary" type="button" data-open-room-edit data-room-edit-id="{{ (int) $room->id }}">Edit Room</button>
+                                                <form method="POST" action="/portal/vendor/rooms/{{ $room->id }}/delete" onsubmit="return confirm('Remove this room category?');">
+                                                    @csrf
+                                                    <button class="btn btn-danger" type="submit">Remove</button>
+                                                </form>
+                                            </div>
+                                            <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/rooms/{{ $room->id }}/update" data-room-edit-form="{{ (int) $room->id }}" hidden>
                                                 @csrf
                                                 <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $room->name }}" required>
                                                 <input class="ops-input" name="quantity" type="number" min="1" max="10000" value="{{ (int) ($room->quantity ?? 1) }}">
                                                 <input class="ops-input" name="max_occupancy" type="number" min="1" max="50" value="{{ (int) ($room->max_occupancy ?? 1) }}">
                                                 <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($room->base_price ?? 0) }}">
-                                                <button class="btn btn-secondary js-row-update" type="submit">Update Room</button>
-                                            </form>
-                                            <form method="POST" action="/portal/vendor/rooms/{{ $room->id }}/delete" onsubmit="return confirm('Remove this room category?');">
-                                                @csrf
-                                                <button class="btn btn-danger" type="submit">Remove</button>
+                                                <div class="inline-actions">
+                                                    <button class="btn btn-secondary js-row-update" type="submit">Update Room</button>
+                                                    <button class="btn btn-secondary" type="button" data-close-room-edit data-room-edit-id="{{ (int) $room->id }}">Cancel Edit</button>
+                                                </div>
                                             </form>
                                             <form class="inline-table-form media-upload-row" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
                                                 @csrf
@@ -2715,7 +2718,6 @@
             const billingCountry = document.getElementById("billing_country");
             const billingState = document.getElementById("billing_state");
             const billingCity = document.getElementById("billing_city");
-            const startListingWizard = document.getElementById("startListingWizard");
             const openPropertyCreateForm = document.getElementById("openPropertyCreateForm");
             const closePropertyCreateForm = document.getElementById("closePropertyCreateForm");
             const propertyCreateForm = document.getElementById("propertyCreateForm");
@@ -2726,6 +2728,10 @@
             const roomCreateForm = document.getElementById("roomCreateForm");
             const roomPropertySelect = document.getElementById("room_vendor_property_id");
             const roomQuickOpenButtons = Array.from(document.querySelectorAll("[data-open-room-form]"));
+            const propertyEditButtons = Array.from(document.querySelectorAll('[data-open-property-edit]'));
+            const propertyEditCancelButtons = Array.from(document.querySelectorAll('[data-close-property-edit]'));
+            const roomEditButtons = Array.from(document.querySelectorAll('[data-open-room-edit]'));
+            const roomEditCancelButtons = Array.from(document.querySelectorAll('[data-close-room-edit]'));
             const listingCategoryShortcutButtons = Array.from(document.querySelectorAll('[data-listing-category-shortcut]'));
             const listingCategoryFilterButtons = Array.from(document.querySelectorAll('[data-listing-category-filter]'));
             const propertyListingRows = Array.from(document.querySelectorAll('[data-property-row]'));
@@ -3726,16 +3732,6 @@
                 showPanelGroup(resolvePanelFromHash(window.location.hash));
             });
 
-            if (startListingWizard) {
-                startListingWizard.addEventListener("click", function () {
-                    guidedWizardTrack = "property";
-                    guidedWizardIndex = 0;
-                    window.location.hash = "listings";
-                    renderGuidedWizard();
-                    applyGuidedWizardStep(true);
-                });
-            }
-
             if (guidedTrackProperty) {
                 guidedTrackProperty.addEventListener("click", function () {
                     guidedWizardTrack = "property";
@@ -3773,16 +3769,6 @@
                     applyGuidedWizardStep(true);
                 });
             }
-
-            document.querySelectorAll('[data-wizard-step]').forEach((link) => {
-                link.addEventListener("click", function (event) {
-                    event.preventDefault();
-                    window.location.hash = "listings";
-                    showPanelGroup("listings");
-                    const targetStep = Number(link.getAttribute("data-wizard-step") || "1");
-                    activateListingWizardStep(targetStep, true);
-                });
-            });
 
             if (openPropertyCreateForm && propertyCreateForm) {
                 openPropertyCreateForm.addEventListener("click", function () {
@@ -3830,6 +3816,66 @@
                         roomPropertySelect.dispatchEvent(new Event("change"));
                         roomPropertySelect.focus();
                     }
+                });
+            });
+
+            function openEditForm(selector) {
+                const form = document.querySelector(selector);
+                if (!form) {
+                    return;
+                }
+                form.hidden = false;
+                const firstInput = form.querySelector('input, select, textarea');
+                if (firstInput) {
+                    firstInput.focus();
+                }
+            }
+
+            function closeEditForm(selector) {
+                const form = document.querySelector(selector);
+                if (!form) {
+                    return;
+                }
+                form.hidden = true;
+            }
+
+            propertyEditButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const editId = String(button.getAttribute('data-property-edit-id') || '').trim();
+                    if (!editId) {
+                        return;
+                    }
+                    openEditForm('[data-property-edit-form="' + editId + '"]');
+                });
+            });
+
+            propertyEditCancelButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const editId = String(button.getAttribute('data-property-edit-id') || '').trim();
+                    if (!editId) {
+                        return;
+                    }
+                    closeEditForm('[data-property-edit-form="' + editId + '"]');
+                });
+            });
+
+            roomEditButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const editId = String(button.getAttribute('data-room-edit-id') || '').trim();
+                    if (!editId) {
+                        return;
+                    }
+                    openEditForm('[data-room-edit-form="' + editId + '"]');
+                });
+            });
+
+            roomEditCancelButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const editId = String(button.getAttribute('data-room-edit-id') || '').trim();
+                    if (!editId) {
+                        return;
+                    }
+                    closeEditForm('[data-room-edit-form="' + editId + '"]');
                 });
             });
 

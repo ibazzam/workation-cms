@@ -3549,6 +3549,17 @@
 
                 if (normalized === "restaurant") {
                     return ["capacity", "restaurant"];
+
+                if (normalized === "excursion" || normalized === "resort_day_visit") {
+                    return ["capacity", "experience", "service"];
+                }
+
+                if (normalized === "remote_workspace" || normalized === "restaurant") {
+                    return ["capacity", "service"];
+                }
+
+                if (normalized === "transport" || normalized === "vehicle_rental") {
+                    return ["vehicle", "capacity", "service"];
                 }
 
                 if (normalized === "vehicle_rental") {
@@ -3556,6 +3567,104 @@
                 }
 
                 return ["stay", "capacity", "service", "vehicle", "transport", "excursion", "workspace", "day_visit", "restaurant", "rental"];
+            }
+
+            function refreshCategoryViewPanels() {
+                if (!propertyCategorySelect || categoryViewPanels.length === 0) {
+                    return;
+                }
+                const activeCategory = normalizeCategoryKey(propertyCategorySelect.value);
+                categoryViewPanels.forEach((panel) => {
+                    const panelCategory = normalizeCategoryKey(panel.getAttribute('data-category-view'));
+                    panel.hidden = panelCategory !== activeCategory;
+                });
+            }
+
+            function categoryMetaFor(category) {
+                const normalized = normalizeCategoryKey(category);
+                const fallbackLabel = propertyCategorySelect
+                    ? (propertyCategorySelect.options[propertyCategorySelect.selectedIndex]?.textContent || 'Listing')
+                    : 'Listing';
+
+                const categoryMeta = {
+                    accommodation: {
+                        title: 'Accommodation Enlist Form',
+                        subtitle: 'Add stay-focused listing details, space setup, and guest capacity.',
+                        submit: 'Save Accommodation Listing',
+                        note: 'Accommodation fields are active for this category.',
+                        propertyType: 'property',
+                    },
+                    transport: {
+                        title: 'Transport Enlist Form',
+                        subtitle: 'Add transfer and transport service listing details.',
+                        submit: 'Save Transport Listing',
+                        note: 'Transport-focused fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                    excursion: {
+                        title: 'Excursion Enlist Form',
+                        subtitle: 'Add activity and guided experience listing details.',
+                        submit: 'Save Excursion Listing',
+                        note: 'Excursion-focused fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                    remote_workspace: {
+                        title: 'Remote Workspace Enlist Form',
+                        subtitle: 'Add workspace listing details for remote workers and teams.',
+                        submit: 'Save Remote Workspace Listing',
+                        note: 'Remote workspace fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                    resort_day_visit: {
+                        title: 'Resort Day Visit Enlist Form',
+                        subtitle: 'Add day-visit package listing details for resort access.',
+                        submit: 'Save Resort Day Visit Listing',
+                        note: 'Resort day visit fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                    restaurant: {
+                        title: 'Restaurant Enlist Form',
+                        subtitle: 'Add restaurant listing details with seating and service scope.',
+                        submit: 'Save Restaurant Listing',
+                        note: 'Restaurant-focused fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                    vehicle_rental: {
+                        title: 'Vehicle Rental Enlist Form',
+                        subtitle: 'Add rental fleet listing details with vehicle constraints.',
+                        submit: 'Save Vehicle Rental Listing',
+                        note: 'Vehicle-rental-focused fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                };
+
+                return categoryMeta[normalized] || {
+                    title: fallbackLabel + ' Enlist Form',
+                    subtitle: 'Add listing details specific to ' + fallbackLabel + '.',
+                    submit: 'Save ' + fallbackLabel + ' Listing',
+                    note: 'Category-specific fields will change based on your selection.',
+                    propertyType: null,
+                };
+            }
+
+            function applyCategoryFormMeta(category, forceType) {
+                const meta = categoryMetaFor(category);
+                if (propertyCreateFormTitle) {
+                    propertyCreateFormTitle.textContent = meta.title;
+                }
+                if (propertyCreateFormSubtitle) {
+                    propertyCreateFormSubtitle.textContent = meta.subtitle;
+                }
+                if (propertyCreateSubmitButton) {
+                    propertyCreateSubmitButton.textContent = meta.submit;
+                }
+                if (propertyCategoryScopeNote) {
+                    propertyCategoryScopeNote.textContent = meta.note;
+                }
+                if (forceType && propertyTypeSelect && meta.propertyType) {
+                    ensureSelectHasOption(propertyTypeSelect, meta.propertyType);
+                    propertyTypeSelect.value = meta.propertyType;
+                }
             }
 
             function refreshCategoryViewPanels() {
@@ -4050,6 +4159,31 @@
                         return;
                     }
                     openEditForm('[data-property-edit-form="' + editId + '"]');
+                });
+            });
+
+            propertyEditCancelButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const editId = String(button.getAttribute('data-property-edit-id') || '').trim();
+                    if (!editId) {
+                        return;
+                    }
+                    closeEditForm('[data-property-edit-form="' + editId + '"]');
+                });
+            });
+
+            roomEditButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const editId = String(button.getAttribute('data-room-edit-id') || '').trim();
+                    if (!editId) {
+                        return;
+                    }
+                    openEditForm('[data-room-edit-form="' + editId + '"]');
+                });
+            });
+
+            roomEditCancelButtons.forEach((button) => {
+                button.addEventListener('click', function () {
                 });
             });
 

@@ -3623,12 +3623,6 @@
                     return ["capacity", "day_visit"];
                 }
 
-                }
-
-                if (normalized === "resort_day_visit") {
-                    return ["capacity", "day_visit"];
-                }
-
                 if (normalized === "restaurant") {
                     return ["capacity", "restaurant"];
 
@@ -4300,31 +4294,6 @@
 
             roomEditCancelButtons.forEach((button) => {
                 button.addEventListener('click', function () {
-                });
-            });
-
-            propertyEditCancelButtons.forEach((button) => {
-                button.addEventListener('click', function () {
-                    const editId = String(button.getAttribute('data-property-edit-id') || '').trim();
-                    if (!editId) {
-                        return;
-                    }
-                    closeEditForm('[data-property-edit-form="' + editId + '"]');
-                });
-            });
-
-            roomEditButtons.forEach((button) => {
-                button.addEventListener('click', function () {
-                    const editId = String(button.getAttribute('data-room-edit-id') || '').trim();
-                    if (!editId) {
-                        return;
-                    }
-                    openEditForm('[data-room-edit-form="' + editId + '"]');
-                });
-            });
-
-            roomEditCancelButtons.forEach((button) => {
-                button.addEventListener('click', function () {
                     const editId = String(button.getAttribute('data-room-edit-id') || '').trim();
                     if (!editId) {
                         return;
@@ -4402,6 +4371,162 @@
             applyPropertyCategoryFilter('all');
         })();
     </script>
+    <script>
+        (function () {
+            function normalizeCategoryKey(value) {
+                return String(value || "")
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[\s-]+/g, "_")
+                    .replace(/[^a-z0-9_]/g, "");
+            }
+
+            function initFallbackPanelNavigation() {
+                const navLinks = Array.from(document.querySelectorAll('.portal-nav a[data-panel-key]'));
+                const panelGroups = Array.from(document.querySelectorAll('[data-panel-group]'));
+                if (navLinks.length === 0 || panelGroups.length === 0) {
+                    return;
+                }
+
+                const validKeys = new Set(navLinks.map((link) => String(link.dataset.panelKey || "")).filter(Boolean));
+
+                function resolvePanelKey(hashValue) {
+                    const panelKey = String(hashValue || "").replace(/^#/, "").trim().toLowerCase();
+                    return validKeys.has(panelKey) ? panelKey : "overview";
+                }
+
+                function showPanel(panelKey) {
+                    panelGroups.forEach((panel) => {
+                        panel.hidden = (panel.getAttribute('data-panel-group') || '') !== panelKey;
+                    });
+                    navLinks.forEach((link) => {
+                        const isActive = String(link.dataset.panelKey || '') === panelKey;
+                        link.classList.toggle('is-active', isActive);
+                    });
+                }
+
+                navLinks.forEach((link) => {
+                    link.addEventListener('click', function (event) {
+                        event.preventDefault();
+                        const panelKey = String(link.dataset.panelKey || "").trim().toLowerCase();
+                        if (!panelKey) {
+                            return;
+                        }
+                        window.location.hash = panelKey;
+                        showPanel(panelKey);
+                    });
+                });
+
+                window.addEventListener('hashchange', function () {
+                    showPanel(resolvePanelKey(window.location.hash));
+                });
+
+                showPanel(resolvePanelKey(window.location.hash || '#overview'));
+            }
+
+            function initFallbackListingActions() {
+                const openPropertyCreateForm = document.getElementById('openPropertyCreateForm');
+                const closePropertyCreateForm = document.getElementById('closePropertyCreateForm');
+                const propertyCreateForm = document.getElementById('propertyCreateForm');
+                const propertyCategorySelect = document.getElementById('property_listing_category');
+                const roomCreateForm = document.getElementById('roomCreateForm');
+                const closeRoomCreateForm = document.getElementById('closeRoomCreateForm');
+                const roomPropertySelect = document.getElementById('room_vendor_property_id');
+
+                if (openPropertyCreateForm && propertyCreateForm) {
+                    openPropertyCreateForm.addEventListener('click', function () {
+                        propertyCreateForm.hidden = false;
+                        if (closePropertyCreateForm) {
+                            closePropertyCreateForm.hidden = false;
+                        }
+                    });
+                }
+
+                if (closePropertyCreateForm && propertyCreateForm) {
+                    closePropertyCreateForm.addEventListener('click', function () {
+                        propertyCreateForm.hidden = true;
+                        closePropertyCreateForm.hidden = true;
+                    });
+                }
+
+                document.querySelectorAll('[data-listing-category-shortcut]').forEach((button) => {
+                    button.addEventListener('click', function () {
+                        if (propertyCreateForm) {
+                            propertyCreateForm.hidden = false;
+                        }
+                        if (closePropertyCreateForm) {
+                            closePropertyCreateForm.hidden = false;
+                        }
+
+                        const categoryKey = normalizeCategoryKey(button.getAttribute('data-listing-category-shortcut') || '');
+                        if (propertyCategorySelect && categoryKey) {
+                            let option = Array.from(propertyCategorySelect.options).find((item) => normalizeCategoryKey(item.value) === categoryKey);
+                            if (!option) {
+                                option = document.createElement('option');
+                                option.value = categoryKey;
+                                option.textContent = categoryKey;
+                                propertyCategorySelect.appendChild(option);
+                            }
+                            propertyCategorySelect.value = option.value;
+                            propertyCategorySelect.dispatchEvent(new Event('change'));
+                        }
+
+                        window.location.hash = 'listings';
+                    });
+                });
+
+                document.querySelectorAll('[data-open-room-form]').forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const propertyId = String(button.getAttribute('data-property-id') || '').trim();
+                        if (roomCreateForm) {
+                            roomCreateForm.hidden = false;
+                        }
+                        if (closeRoomCreateForm) {
+                            closeRoomCreateForm.hidden = false;
+                        }
+                        if (roomPropertySelect && propertyId) {
+                            let option = Array.from(roomPropertySelect.options).find((item) => String(item.value) === propertyId);
+                            if (!option) {
+                                option = document.createElement('option');
+                                option.value = propertyId;
+                                option.textContent = '#' + propertyId;
+                                roomPropertySelect.appendChild(option);
+                            }
+                            roomPropertySelect.value = propertyId;
+                        }
+                        window.location.hash = 'listings';
+                    });
+                });
+
+                document.querySelectorAll('[data-open-property-edit]').forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const editId = String(button.getAttribute('data-property-edit-id') || '').trim();
+                        if (!editId) return;
+                        const form = document.querySelector('[data-property-edit-form="' + editId + '"]');
+                        if (form) form.hidden = false;
+                    });
+                });
+
+                document.querySelectorAll('[data-close-property-edit]').forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const editId = String(button.getAttribute('data-property-edit-id') || '').trim();
+                        if (!editId) return;
+                        const form = document.querySelector('[data-property-edit-form="' + editId + '"]');
+                        if (form) form.hidden = true;
+                    });
+                });
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function () {
+                    initFallbackPanelNavigation();
+                    initFallbackListingActions();
+                });
+            } else {
+                initFallbackPanelNavigation();
+                initFallbackListingActions();
+            }
+        })();
+    </script>
 </body>
 </html>
-

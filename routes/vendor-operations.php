@@ -110,6 +110,13 @@ if (!function_exists('vendorPortalRequiresAccommodation')) {
     }
 }
 
+if (!function_exists('vendorPortalPropertyTypeForCategory')) {
+    function vendorPortalPropertyTypeForCategory(string $listingCategory): string
+    {
+        return $listingCategory === 'accommodation' ? 'property' : 'service';
+    }
+}
+
 if (!function_exists('vendorPortalNormalizedNumeric')) {
     function vendorPortalNormalizedNumeric(mixed $value): ?float
     {
@@ -899,7 +906,7 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
     $validated = $request->validate([
         'name' => ['required', 'string', 'max:160'],
         'listing_category' => ['required', 'string', 'max:80'],
-        'property_type' => ['required', Rule::in(['property', 'service'])],
+        'property_type' => ['nullable', Rule::in(['property', 'service'])],
         'location' => ['nullable', 'string', 'max:190'],
         'location_country' => ['nullable', 'string', 'max:90'],
         'location_state' => ['nullable', 'string', 'max:120'],
@@ -910,7 +917,7 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'map_place_id' => ['nullable', 'string', 'max:190'],
         'description' => ['nullable', 'string', 'max:3000'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
-        'max_guests' => ['nullable', 'integer', 'min:1', 'max:10000'],
+        'max_guests' => ['nullable', 'integer', 'min:0', 'max:10000'],
         'measurement_system' => ['nullable', Rule::in(['metric', 'imperial'])],
         'area_value' => ['nullable', 'numeric', 'min:1', 'max:100000'],
         'area_unit' => ['nullable', Rule::in(['sqm', 'sqft'])],
@@ -952,6 +959,8 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         return back()->withErrors(['profile' => 'Select category in onboarding before creating this listing.']);
     }
 
+    $resolvedPropertyType = vendorPortalPropertyTypeForCategory($canonicalListingCategory);
+
     $propertyDetails = vendorPortalBuildPropertyDetails($validated, $canonicalListingCategory);
     $propertyDetailErrors = vendorPortalValidatePropertyDetails($canonicalListingCategory, $propertyDetails);
     if (!empty($propertyDetailErrors)) {
@@ -973,17 +982,23 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
     $propertyAmenities = vendorPortalNormalizedStringList($validated['property_amenities'] ?? []);
     $propertyFeatures = vendorPortalNormalizedStringList($validated['property_features'] ?? []);
     $selectedAmenityTokens = array_values(array_unique(array_merge($propertyAmenities, $propertyFeatures)));
+    $categoryCapacity = isset($propertyDetails['capacity_value']) && is_numeric($propertyDetails['capacity_value'])
+        ? (int) $propertyDetails['capacity_value']
+        : null;
+    $normalizedMaxGuests = $canonicalListingCategory === 'accommodation'
+        ? (int) ($validated['max_guests'] ?? 1)
+        : max(0, (int) ($categoryCapacity ?? ($validated['max_guests'] ?? 0)));
 
     $payload = [
         'vendor_user_id' => $vendorUserId,
         'name' => trim((string) $validated['name']),
-        'property_type' => (string) $validated['property_type'],
+        'property_type' => $resolvedPropertyType,
         'location' => $resolvedLocation,
         'description' => trim((string) ($validated['description'] ?? '')),
         'status' => 'active',
         'base_price' => (float) ($validated['base_price'] ?? 0),
         'currency' => 'MVR',
-        'max_guests' => (int) ($validated['max_guests'] ?? 1),
+        'max_guests' => $normalizedMaxGuests,
         'created_at' => now(),
         'updated_at' => now(),
     ];

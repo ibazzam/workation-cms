@@ -772,6 +772,32 @@
             color: #446079;
         }
 
+        .category-view-panels {
+            margin-top: 8px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .category-view-panel {
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            background: #f8fcff;
+            padding: 10px;
+        }
+
+        .category-view-panel strong {
+            display: block;
+            color: #1f3346;
+            margin-bottom: 4px;
+            font-size: 0.84rem;
+        }
+
+        .category-view-panel p {
+            margin: 0;
+            color: #446079;
+            font-size: 0.78rem;
+        }
+
         .form-toggle-row {
             margin: 10px 0;
             display: flex;
@@ -1735,56 +1761,6 @@
                         @endif
                     @endforeach
                 </div>
-                <div class="listing-category-shortcuts-head">Quick List Filter</div>
-                <div class="listing-category-shortcuts-row">
-                    <button type="button" class="btn btn-secondary is-active" data-listing-category-filter="all">Show All Listings</button>
-                    @foreach ($listingShortcutOrder as $categoryKey)
-                        @if (isset($vendorCategoryMap[$categoryKey]))
-                            <button type="button" class="btn btn-secondary" data-listing-category-filter="{{ $categoryKey }}">{{ $vendorCategoryMap[$categoryKey] }}</button>
-                        @endif
-                    @endforeach
-                </div>
-            </div>
-            <article class="guided-wizard" aria-label="Guided listing wizard">
-                <div class="guided-wizard-head">
-                    <div>
-                        <p class="guided-wizard-title">Guided Enlisting Wizard</p>
-                        <p class="guided-wizard-subtitle">Follow simple steps to onboard property listings with less friction.</p>
-                    </div>
-                    <div class="guided-track-toggle" role="group" aria-label="Wizard track switcher">
-                        <button type="button" class="btn btn-secondary" id="guidedTrackProperty">Property Track</button>
-                    </div>
-                </div>
-                <div class="guided-progress-wrap" aria-live="polite">
-                    <div class="guided-progress-rail">
-                        <div class="guided-progress-fill" id="guidedWizardProgressFill"></div>
-                    </div>
-                    <div class="guided-step-text" id="guidedWizardStepText">Step 1 of 5</div>
-                </div>
-                <ol class="guided-steps" id="guidedWizardSteps"></ol>
-                <div class="guided-actions">
-                    <button type="button" class="btn btn-secondary" id="guidedWizardPrev">Back</button>
-                    <button type="button" class="btn btn-secondary" id="guidedWizardResume">Resume Last Step</button>
-                    <button type="button" class="btn btn-primary" id="guidedWizardNext">Next Step</button>
-                </div>
-            </article>
-            <div class="wizard-progress" aria-label="Listings wizard progress">
-                <article class="wizard-progress-step @if($listingWizardStep > 1) is-complete @elseif($listingWizardStep === 1) is-active @endif">
-                    <strong>Step 1</strong>
-                    Add property details
-                </article>
-                <article class="wizard-progress-step @if($listingWizardStep > 2) is-complete @elseif($listingWizardStep === 2) is-active @endif">
-                    <strong>Step 2</strong>
-                    Review property list and update/remove
-                </article>
-                <article class="wizard-progress-step @if($listingWizardStep > 3) is-complete @elseif($listingWizardStep === 3) is-active @endif">
-                    <strong>Step 3</strong>
-                    Add room inventory and toilet features
-                </article>
-                <article class="wizard-progress-step @if($listingWizardStep === 4) is-active @endif">
-                    <strong>Step 4</strong>
-                    Add property and room pictures
-                </article>
             </div>
             @if (!$hasSelectedCategories)
                 <p class="wizard-note">Select at least one category in Category Wizard before creating listings.</p>
@@ -1840,6 +1816,8 @@
                     <form id="propertyCreateForm" class="ops-form" method="POST" action="/portal/vendor/properties/create" @if (!$showCreatePropertyForm) hidden @endif>
                         @csrf
                         <input type="hidden" name="property_form_intent" value="1">
+                        <p class="guided-wizard-title" id="propertyCreateFormTitle">Create New Listing</p>
+                        <p class="guided-wizard-subtitle" id="propertyCreateFormSubtitle">Choose a category-specific add button to load the right enlist form view.</p>
                         <div class="ops-form-grid">
                             <div class="ops-field">
                                 <label for="property_listing_category">Listing Category</label>
@@ -1849,6 +1827,25 @@
                                     @endforeach
                                 </select>
                                 <p id="propertyCategoryScopeNote" class="category-scope-note">Category-specific fields will change based on your selection.</p>
+                                @php
+                                    $categoryViewCopy = [
+                                        'accommodation' => 'Use this view for stays and properties where guests can book space and rooms.',
+                                        'transport' => 'Use this view for transfers and transport options with route and capacity details.',
+                                        'excursion' => 'Use this view for activities and guided experiences with participant capacity.',
+                                        'remote_workspace' => 'Use this view for coworking and remote-work listings with usage capacity.',
+                                        'resort_day_visit' => 'Use this view for day access packages and visit-based resort offerings.',
+                                        'restaurant' => 'Use this view for dining listings with seating and service coverage details.',
+                                        'vehicle_rental' => 'Use this view for rental vehicles with age, capacity, and service constraints.',
+                                    ];
+                                @endphp
+                                <div class="category-view-panels" id="propertyCategoryViews" aria-live="polite">
+                                    @foreach ($vendorCategoryMap as $categoryKey => $categoryLabel)
+                                        <div class="category-view-panel" data-category-view="{{ $categoryKey }}" hidden>
+                                            <strong>{{ $categoryLabel }} Enlist View</strong>
+                                            <p>{{ $categoryViewCopy[$categoryKey] ?? ('Use this view to complete ' . $categoryLabel . ' listing details.') }}</p>
+                                        </div>
+                                    @endforeach
+                                </div>
                             </div>
                             <div class="ops-field">
                                 <label for="property_name">Name</label>
@@ -1983,7 +1980,7 @@
                             </div>
                         </div>
                         <p class="standards-note">International listing standard: fields adapt to selected category. Create one property at a time, then add rooms under that property.</p>
-                        <button class="btn btn-primary" type="submit">Save Property</button>
+                        <button class="btn btn-primary" id="propertyCreateSubmitButton" type="submit">Save Listing</button>
                     </form>
                 </article>
 
@@ -2721,8 +2718,14 @@
             const openPropertyCreateForm = document.getElementById("openPropertyCreateForm");
             const closePropertyCreateForm = document.getElementById("closePropertyCreateForm");
             const propertyCreateForm = document.getElementById("propertyCreateForm");
+            const propertyCreateFormTitle = document.getElementById("propertyCreateFormTitle");
+            const propertyCreateFormSubtitle = document.getElementById("propertyCreateFormSubtitle");
+            const propertyCreateSubmitButton = document.getElementById("propertyCreateSubmitButton");
             const propertyCategorySelect = document.getElementById("property_listing_category");
+            const propertyTypeSelect = document.getElementById("property_type");
+            const propertyCategoryScopeNote = document.getElementById("propertyCategoryScopeNote");
             const categoryScopedFields = Array.from(document.querySelectorAll("[data-category-scope]"));
+            const categoryViewPanels = Array.from(document.querySelectorAll('[data-category-view]'));
             const openRoomCreateForm = document.getElementById("openRoomCreateForm");
             const closeRoomCreateForm = document.getElementById("closeRoomCreateForm");
             const roomCreateForm = document.getElementById("roomCreateForm");
@@ -2733,7 +2736,6 @@
             const roomEditButtons = Array.from(document.querySelectorAll('[data-open-room-edit]'));
             const roomEditCancelButtons = Array.from(document.querySelectorAll('[data-close-room-edit]'));
             const listingCategoryShortcutButtons = Array.from(document.querySelectorAll('[data-listing-category-shortcut]'));
-            const listingCategoryFilterButtons = Array.from(document.querySelectorAll('[data-listing-category-filter]'));
             const propertyListingRows = Array.from(document.querySelectorAll('[data-property-row]'));
             const guidedTrackProperty = document.getElementById("guidedTrackProperty");
             const guidedWizardSteps = document.getElementById("guidedWizardSteps");
@@ -3428,27 +3430,132 @@
                 locationCity.dataset.selectedValue = "";
             }
 
+            function normalizeCategoryKey(value) {
+                return String(value || "")
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[\s-]+/g, "_")
+                    .replace(/[^a-z0-9_]/g, "");
+            }
+
             function categoryScopesFor(category) {
-                const raw = String(category || "").trim().toLowerCase();
-                const normalized = raw.replace(/[^a-z0-9]/g, "");
+                const normalized = normalizeCategoryKey(category);
 
                 if (normalized === "accommodation") {
                     return ["stay", "capacity", "experience"];
                 }
 
-                if (normalized === "excursions" || normalized === "resortdayvisits") {
+                if (normalized === "excursion" || normalized === "resort_day_visit") {
                     return ["capacity", "experience", "service"];
                 }
 
-                if (normalized === "remoteworkspaces" || normalized === "restaurants") {
+                if (normalized === "remote_workspace" || normalized === "restaurant") {
                     return ["capacity", "service"];
                 }
 
-                if (normalized === "transports" || normalized === "vehiclerentals") {
+                if (normalized === "transport" || normalized === "vehicle_rental") {
                     return ["vehicle", "capacity", "service"];
                 }
 
                 return ["stay", "capacity", "service", "vehicle", "experience"];
+            }
+
+            function refreshCategoryViewPanels() {
+                if (!propertyCategorySelect || categoryViewPanels.length === 0) {
+                    return;
+                }
+                const activeCategory = normalizeCategoryKey(propertyCategorySelect.value);
+                categoryViewPanels.forEach((panel) => {
+                    const panelCategory = normalizeCategoryKey(panel.getAttribute('data-category-view'));
+                    panel.hidden = panelCategory !== activeCategory;
+                });
+            }
+
+            function categoryMetaFor(category) {
+                const normalized = normalizeCategoryKey(category);
+                const fallbackLabel = propertyCategorySelect
+                    ? (propertyCategorySelect.options[propertyCategorySelect.selectedIndex]?.textContent || 'Listing')
+                    : 'Listing';
+
+                const categoryMeta = {
+                    accommodation: {
+                        title: 'Accommodation Enlist Form',
+                        subtitle: 'Add stay-focused listing details, space setup, and guest capacity.',
+                        submit: 'Save Accommodation Listing',
+                        note: 'Accommodation fields are active for this category.',
+                        propertyType: 'property',
+                    },
+                    transport: {
+                        title: 'Transport Enlist Form',
+                        subtitle: 'Add transfer and transport service listing details.',
+                        submit: 'Save Transport Listing',
+                        note: 'Transport-focused fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                    excursion: {
+                        title: 'Excursion Enlist Form',
+                        subtitle: 'Add activity and guided experience listing details.',
+                        submit: 'Save Excursion Listing',
+                        note: 'Excursion-focused fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                    remote_workspace: {
+                        title: 'Remote Workspace Enlist Form',
+                        subtitle: 'Add workspace listing details for remote workers and teams.',
+                        submit: 'Save Remote Workspace Listing',
+                        note: 'Remote workspace fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                    resort_day_visit: {
+                        title: 'Resort Day Visit Enlist Form',
+                        subtitle: 'Add day-visit package listing details for resort access.',
+                        submit: 'Save Resort Day Visit Listing',
+                        note: 'Resort day visit fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                    restaurant: {
+                        title: 'Restaurant Enlist Form',
+                        subtitle: 'Add restaurant listing details with seating and service scope.',
+                        submit: 'Save Restaurant Listing',
+                        note: 'Restaurant-focused fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                    vehicle_rental: {
+                        title: 'Vehicle Rental Enlist Form',
+                        subtitle: 'Add rental fleet listing details with vehicle constraints.',
+                        submit: 'Save Vehicle Rental Listing',
+                        note: 'Vehicle-rental-focused fields are active for this category.',
+                        propertyType: 'service',
+                    },
+                };
+
+                return categoryMeta[normalized] || {
+                    title: fallbackLabel + ' Enlist Form',
+                    subtitle: 'Add listing details specific to ' + fallbackLabel + '.',
+                    submit: 'Save ' + fallbackLabel + ' Listing',
+                    note: 'Category-specific fields will change based on your selection.',
+                    propertyType: null,
+                };
+            }
+
+            function applyCategoryFormMeta(category, forceType) {
+                const meta = categoryMetaFor(category);
+                if (propertyCreateFormTitle) {
+                    propertyCreateFormTitle.textContent = meta.title;
+                }
+                if (propertyCreateFormSubtitle) {
+                    propertyCreateFormSubtitle.textContent = meta.subtitle;
+                }
+                if (propertyCreateSubmitButton) {
+                    propertyCreateSubmitButton.textContent = meta.submit;
+                }
+                if (propertyCategoryScopeNote) {
+                    propertyCategoryScopeNote.textContent = meta.note;
+                }
+                if (forceType && propertyTypeSelect && meta.propertyType) {
+                    ensureSelectHasOption(propertyTypeSelect, meta.propertyType);
+                    propertyTypeSelect.value = meta.propertyType;
+                }
             }
 
             function refreshPropertyCategoryFields() {
@@ -3465,24 +3572,22 @@
                     }
                     field.hidden = !scopes.some((scope) => activeScopes.includes(scope));
                 });
+                refreshCategoryViewPanels();
+                applyCategoryFormMeta(propertyCategorySelect.value, false);
             }
 
             function applyPropertyCategoryFilter(categoryKey) {
-                const normalizedCategory = String(categoryKey || 'all').trim().toLowerCase();
+                const normalizedCategory = normalizeCategoryKey(categoryKey || 'all');
                 propertyListingRows.forEach((row) => {
-                    const rowCategory = String(row.getAttribute('data-listing-category') || '').trim().toLowerCase();
+                    const rowCategory = normalizeCategoryKey(row.getAttribute('data-listing-category') || '');
                     const shouldShow = normalizedCategory === 'all' || rowCategory === normalizedCategory;
                     row.hidden = !shouldShow;
                 });
 
-                listingCategoryFilterButtons.forEach((button) => {
-                    const buttonCategory = String(button.getAttribute('data-listing-category-filter') || '');
-                    button.classList.toggle('is-active', buttonCategory === normalizedCategory);
-                });
             }
 
             function openPropertyFlowWithCategory(categoryKey) {
-                const normalizedCategory = String(categoryKey || '').trim().toLowerCase();
+                const normalizedCategory = normalizeCategoryKey(categoryKey || '');
                 window.location.hash = 'listings';
                 showPanelGroup('listings');
                 activateListingWizardStep(1, true);
@@ -3497,6 +3602,7 @@
                     ensureSelectHasOption(propertyCategorySelect, normalizedCategory);
                     propertyCategorySelect.value = normalizedCategory;
                     propertyCategorySelect.dispatchEvent(new Event('change'));
+                    applyCategoryFormMeta(normalizedCategory, true);
                 }
                 if (document.getElementById('property_name')) {
                     document.getElementById('property_name').focus();
@@ -3883,13 +3989,6 @@
                 button.addEventListener('click', function () {
                     const categoryKey = String(button.getAttribute('data-listing-category-shortcut') || '');
                     openPropertyFlowWithCategory(categoryKey);
-                });
-            });
-
-            listingCategoryFilterButtons.forEach((button) => {
-                button.addEventListener('click', function () {
-                    const categoryKey = String(button.getAttribute('data-listing-category-filter') || 'all');
-                    applyPropertyCategoryFilter(categoryKey);
                 });
             });
 

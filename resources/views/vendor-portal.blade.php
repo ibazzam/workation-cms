@@ -2081,6 +2081,16 @@
                         </thead>
                         <tbody>
                             @forelse ($vendorProperties->take(12) as $property)
+                                @php
+                                    $propertyDetails = [];
+                                    if (isset($property->listing_details) && is_string($property->listing_details) && trim((string) $property->listing_details) !== '') {
+                                        $decodedPropertyDetails = json_decode((string) $property->listing_details, true);
+                                        if (is_array($decodedPropertyDetails)) {
+                                            $propertyDetails = $decodedPropertyDetails;
+                                        }
+                                    }
+                                    $editCategory = strtolower((string) ($property->listing_category ?? ''));
+                                @endphp
                                 <tr data-property-row data-listing-category="{{ strtolower((string) ($property->listing_category ?? '')) }}">
                                     <td>
                                         <strong>{{ $property->name }}</strong><br>
@@ -2095,18 +2105,62 @@
                                     <td>
                                         <div class="listing-cell-actions">
                                             <div class="inline-actions edit-toggle-actions">
-                                                <button class="btn btn-secondary" type="button" data-open-property-edit data-property-edit-id="{{ (int) $property->id }}">Edit Listing</button>
+                                                <button class="btn btn-secondary" type="button" data-open-property-edit data-property-edit-id="{{ (int) $property->id }}" data-property-edit-category="{{ $editCategory }}">Edit Listing</button>
                                                 <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ (int) $property->id }}">Add Room</button>
                                                 <form method="POST" action="/portal/vendor/properties/{{ $property->id }}/delete" onsubmit="return confirm('Remove this property listing?');">
                                                     @csrf
                                                     <button class="btn btn-danger" type="submit">Remove</button>
                                                 </form>
                                             </div>
-                                            <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/properties/{{ $property->id }}/update" data-property-edit-form="{{ (int) $property->id }}" hidden>
+                                            <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/properties/{{ $property->id }}/update" data-property-edit-form="{{ (int) $property->id }}" data-property-edit-category="{{ $editCategory }}" hidden>
                                                 @csrf
                                                 <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $property->name }}" required>
                                                 <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) $property->base_price }}">
                                                 <input class="ops-input" name="max_guests" type="number" min="0" max="10000" value="{{ (int) ($property->max_guests ?? 1) }}">
+                                                <input class="ops-input" name="capacity_value" type="number" min="1" max="20000" value="{{ (int) ($propertyDetails['capacity_value'] ?? 0) }}" placeholder="Capacity" data-property-edit-scope="capacity">
+                                                <input class="ops-input" name="service_radius_km" type="number" min="0" max="5000" step="0.1" value="{{ (float) ($propertyDetails['service_radius_km'] ?? 0) }}" placeholder="Service Radius (km)" data-property-edit-scope="service">
+                                                <input class="ops-input" name="transport_mode" type="text" maxlength="80" value="{{ (string) ($propertyDetails['transport_mode'] ?? '') }}" placeholder="Transport Mode" data-property-edit-scope="transport">
+                                                <input class="ops-input" name="pickup_location" type="text" maxlength="190" value="{{ (string) ($propertyDetails['pickup_location'] ?? '') }}" placeholder="Pickup Location" data-property-edit-scope="transport">
+                                                <input class="ops-input" name="dropoff_location" type="text" maxlength="190" value="{{ (string) ($propertyDetails['dropoff_location'] ?? '') }}" placeholder="Dropoff Location" data-property-edit-scope="transport">
+                                                <input class="ops-input" name="excursion_duration_minutes" type="number" min="30" max="1440" value="{{ (int) ($propertyDetails['excursion_duration_minutes'] ?? 0) }}" placeholder="Excursion Duration (min)" data-property-edit-scope="excursion">
+                                                <select class="ops-select" name="excursion_difficulty" data-property-edit-scope="excursion">
+                                                    <option value="" @selected(($propertyDetails['excursion_difficulty'] ?? '') === '')>Difficulty</option>
+                                                    <option value="easy" @selected(($propertyDetails['excursion_difficulty'] ?? '') === 'easy')>Easy</option>
+                                                    <option value="moderate" @selected(($propertyDetails['excursion_difficulty'] ?? '') === 'moderate')>Moderate</option>
+                                                    <option value="hard" @selected(($propertyDetails['excursion_difficulty'] ?? '') === 'hard')>Hard</option>
+                                                </select>
+                                                <select class="ops-select" name="workspace_type" data-property-edit-scope="workspace">
+                                                    <option value="" @selected(($propertyDetails['workspace_type'] ?? '') === '')>Workspace Type</option>
+                                                    <option value="shared" @selected(($propertyDetails['workspace_type'] ?? '') === 'shared')>Shared</option>
+                                                    <option value="private" @selected(($propertyDetails['workspace_type'] ?? '') === 'private')>Private</option>
+                                                    <option value="cabin" @selected(($propertyDetails['workspace_type'] ?? '') === 'cabin')>Cabin</option>
+                                                </select>
+                                                <input class="ops-input" name="internet_speed_mbps" type="number" min="1" max="10000" step="1" value="{{ (int) ($propertyDetails['internet_speed_mbps'] ?? 0) }}" placeholder="Internet Speed (Mbps)" data-property-edit-scope="workspace">
+                                                <input class="ops-input" name="day_visit_start_time" type="time" value="{{ (string) ($propertyDetails['day_visit_start_time'] ?? '') }}" data-property-edit-scope="day_visit">
+                                                <input class="ops-input" name="day_visit_end_time" type="time" value="{{ (string) ($propertyDetails['day_visit_end_time'] ?? '') }}" data-property-edit-scope="day_visit">
+                                                <input class="ops-input" name="included_access" type="text" maxlength="2000" value="{{ (string) ($propertyDetails['included_access'] ?? '') }}" placeholder="Included Access" data-property-edit-scope="day_visit">
+                                                <input class="ops-input" name="cuisine_type" type="text" maxlength="120" value="{{ (string) ($propertyDetails['cuisine_type'] ?? '') }}" placeholder="Cuisine Type" data-property-edit-scope="restaurant">
+                                                <select class="ops-select" name="meal_service" data-property-edit-scope="restaurant">
+                                                    <option value="" @selected(($propertyDetails['meal_service'] ?? '') === '')>Meal Service</option>
+                                                    <option value="breakfast" @selected(($propertyDetails['meal_service'] ?? '') === 'breakfast')>Breakfast</option>
+                                                    <option value="lunch" @selected(($propertyDetails['meal_service'] ?? '') === 'lunch')>Lunch</option>
+                                                    <option value="dinner" @selected(($propertyDetails['meal_service'] ?? '') === 'dinner')>Dinner</option>
+                                                    <option value="all_day" @selected(($propertyDetails['meal_service'] ?? '') === 'all_day')>All Day</option>
+                                                </select>
+                                                <input class="ops-input" name="minimum_age" type="number" min="0" max="120" value="{{ (int) ($propertyDetails['minimum_age'] ?? 0) }}" placeholder="Minimum Age" data-property-edit-scope="vehicle">
+                                                <input class="ops-input" name="vehicle_type" type="text" maxlength="120" value="{{ (string) ($propertyDetails['vehicle_type'] ?? '') }}" placeholder="Vehicle Type" data-property-edit-scope="rental">
+                                                <select class="ops-select" name="transmission_type" data-property-edit-scope="rental">
+                                                    <option value="" @selected(($propertyDetails['transmission_type'] ?? '') === '')>Transmission</option>
+                                                    <option value="automatic" @selected(($propertyDetails['transmission_type'] ?? '') === 'automatic')>Automatic</option>
+                                                    <option value="manual" @selected(($propertyDetails['transmission_type'] ?? '') === 'manual')>Manual</option>
+                                                </select>
+                                                <select class="ops-select" name="fuel_type" data-property-edit-scope="rental">
+                                                    <option value="" @selected(($propertyDetails['fuel_type'] ?? '') === '')>Fuel Type</option>
+                                                    <option value="petrol" @selected(($propertyDetails['fuel_type'] ?? '') === 'petrol')>Petrol</option>
+                                                    <option value="diesel" @selected(($propertyDetails['fuel_type'] ?? '') === 'diesel')>Diesel</option>
+                                                    <option value="electric" @selected(($propertyDetails['fuel_type'] ?? '') === 'electric')>Electric</option>
+                                                    <option value="hybrid" @selected(($propertyDetails['fuel_type'] ?? '') === 'hybrid')>Hybrid</option>
+                                                </select>
                                                 <select class="ops-select" name="status" required>
                                                     <option value="active" @selected((string) $property->status === 'active')>Active</option>
                                                     <option value="inactive" @selected((string) $property->status === 'inactive')>Inactive</option>
@@ -4132,10 +4186,27 @@
                 });
             });
 
+            function applyPropertyEditScope(form, category) {
+                if (!form) {
+                    return;
+                }
+                const activeScopes = categoryScopesFor(category);
+                form.querySelectorAll('[data-property-edit-scope]').forEach((field) => {
+                    const scope = String(field.getAttribute('data-property-edit-scope') || '').trim().toLowerCase();
+                    const shouldShow = scope !== '' && activeScopes.includes(scope);
+                    field.hidden = !shouldShow;
+                    field.disabled = !shouldShow;
+                });
+            }
+
             function openEditForm(selector) {
                 const form = document.querySelector(selector);
                 if (!form) {
                     return;
+                }
+                const category = String(form.getAttribute('data-property-edit-category') || '').trim();
+                if (category !== '') {
+                    applyPropertyEditScope(form, category);
                 }
                 form.hidden = false;
                 const firstInput = form.querySelector('input, select, textarea');
@@ -4158,7 +4229,13 @@
                     if (!editId) {
                         return;
                     }
-                    openEditForm('[data-property-edit-form="' + editId + '"]');
+                    const category = String(button.getAttribute('data-property-edit-category') || '').trim();
+                    const selector = '[data-property-edit-form="' + editId + '"]';
+                    const form = document.querySelector(selector);
+                    if (form && category !== '') {
+                        applyPropertyEditScope(form, category);
+                    }
+                    openEditForm(selector);
                 });
             });
 

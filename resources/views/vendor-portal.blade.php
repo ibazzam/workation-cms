@@ -3851,9 +3851,12 @@
                         .filter(Boolean);
                     if (scopes.length === 0) {
                         field.hidden = false;
+                        field.style.display = '';
                         return;
                     }
-                    field.hidden = !scopes.some((scope) => activeScopes.includes(scope));
+                    const shouldShow = scopes.some((scope) => activeScopes.includes(scope));
+                    field.hidden = !shouldShow;
+                    field.style.display = shouldShow ? '' : 'none';
                 });
                 refreshCategoryViewPanels();
                 applyCategoryFormMeta(propertyCategorySelect.value, false);
@@ -4228,6 +4231,7 @@
                     const scope = String(field.getAttribute('data-property-edit-scope') || '').trim().toLowerCase();
                     const shouldShow = scope !== '' && activeScopes.includes(scope);
                     field.hidden = !shouldShow;
+                    field.style.display = shouldShow ? '' : 'none';
                     field.disabled = !shouldShow;
                 });
             }
@@ -4478,6 +4482,7 @@
                             .filter(Boolean);
                         const shouldShow = scopes.length === 0 || scopes.some((scope) => activeScopes.includes(scope));
                         field.hidden = !shouldShow;
+                        field.style.display = shouldShow ? '' : 'none';
                         field.querySelectorAll('input, select, textarea').forEach((input) => {
                             if (!input.hasAttribute('data-preserve-enabled')) {
                                 input.setAttribute('data-preserve-enabled', input.disabled ? '1' : '0');
@@ -4574,6 +4579,7 @@
                                 const scope = normalizeCategoryKey(field.getAttribute('data-property-edit-scope') || '');
                                 const shouldShow = activeScopes.includes(scope);
                                 field.hidden = !shouldShow;
+                                field.style.display = shouldShow ? '' : 'none';
                                 field.disabled = !shouldShow;
                             });
                             form.hidden = false;

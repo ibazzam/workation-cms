@@ -1040,6 +1040,24 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'name' => ['required', 'string', 'max:160'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
         'max_guests' => ['nullable', 'integer', 'min:0', 'max:10000'],
+        'capacity_value' => ['nullable', 'integer', 'min:1', 'max:20000'],
+        'service_radius_km' => ['nullable', 'numeric', 'min:0', 'max:5000'],
+        'minimum_age' => ['nullable', 'integer', 'min:0', 'max:120'],
+        'transport_mode' => ['nullable', 'string', 'max:80'],
+        'pickup_location' => ['nullable', 'string', 'max:190'],
+        'dropoff_location' => ['nullable', 'string', 'max:190'],
+        'excursion_duration_minutes' => ['nullable', 'integer', 'min:30', 'max:1440'],
+        'excursion_difficulty' => ['nullable', Rule::in(['easy', 'moderate', 'hard'])],
+        'workspace_type' => ['nullable', Rule::in(['shared', 'private', 'cabin'])],
+        'internet_speed_mbps' => ['nullable', 'numeric', 'min:1', 'max:10000'],
+        'day_visit_start_time' => ['nullable', 'date_format:H:i'],
+        'day_visit_end_time' => ['nullable', 'date_format:H:i'],
+        'included_access' => ['nullable', 'string', 'max:2000'],
+        'cuisine_type' => ['nullable', 'string', 'max:120'],
+        'meal_service' => ['nullable', Rule::in(['breakfast', 'lunch', 'dinner', 'all_day'])],
+        'vehicle_type' => ['nullable', 'string', 'max:120'],
+        'transmission_type' => ['nullable', Rule::in(['automatic', 'manual'])],
+        'fuel_type' => ['nullable', Rule::in(['petrol', 'diesel', 'electric', 'hybrid'])],
         'status' => ['required', Rule::in(['active', 'inactive'])],
     ]);
 
@@ -1054,6 +1072,16 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
 
     if ($canonicalListingCategory === null && isset($existingDetails['listing_category'])) {
         $canonicalListingCategory = vendorPortalCanonicalCategory((string) $existingDetails['listing_category']);
+    }
+
+    if ($canonicalListingCategory !== null) {
+        $mergedDetailsInput = array_merge($existingDetails, $validated);
+        $mergedDetails = vendorPortalBuildPropertyDetails($mergedDetailsInput, $canonicalListingCategory);
+        $detailErrors = vendorPortalValidatePropertyDetails($canonicalListingCategory, $mergedDetails);
+        if (!empty($detailErrors)) {
+            return back()->withErrors(['profile' => implode(' ', $detailErrors)])->withInput();
+        }
+        $existingDetails = $mergedDetails;
     }
 
     $categoryCapacity = isset($existingDetails['capacity_value']) && is_numeric($existingDetails['capacity_value'])

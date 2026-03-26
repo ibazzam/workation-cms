@@ -181,7 +181,6 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['area_value'] = vendorPortalNormalizedNumeric($validated['area_value'] ?? null);
             $details['area_unit'] = (string) ($validated['area_unit'] ?? '');
             $details['bedroom_count'] = isset($validated['bedroom_count']) ? (int) $validated['bedroom_count'] : null;
-            $details['bathroom_count'] = vendorPortalNormalizedNumeric($validated['bathroom_count'] ?? null);
             $details['property_amenities'] = $propertyAmenities;
             $details['property_features'] = $propertyFeatures;
         }
@@ -793,12 +792,16 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         'name' => ['required', 'string', 'max:160'],
         'quantity' => ['nullable', 'integer', 'min:1', 'max:10000'],
         'max_occupancy' => ['nullable', 'integer', 'min:1', 'max:50'],
+        'extra_person_capacity' => ['nullable', 'integer', 'min:0', 'max:20'],
+        'child_capacity' => ['nullable', 'integer', 'min:0', 'max:20'],
         'bed_type' => ['nullable', 'string', 'max:80'],
         'room_amenities' => ['nullable', 'array'],
         'room_amenities.*' => ['required', 'string', 'max:80'],
         'room_features' => ['nullable', 'array'],
         'room_features.*' => ['required', 'string', 'max:80'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
+        'extra_person_price' => ['nullable', 'numeric', 'min:0'],
+        'child_price' => ['nullable', 'numeric', 'min:0'],
     ]);
 
     $roomAmenities = vendorPortalNormalizedStringList($validated['room_amenities'] ?? []);
@@ -806,16 +809,21 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
     $roomAmenityTokens = array_values(array_unique(array_merge($roomAmenities, $roomFeatures)));
     $vendorPropertyId = (int) ($validated['vendor_property_id'] ?? 0);
 
-    $ownsProperty = DB::table('vendor_properties')
+    $propertyRecord = DB::table('vendor_properties')
         ->where('id', $vendorPropertyId)
         ->where('vendor_user_id', $vendorUserId)
-        ->exists();
+        ->first(['id', 'listing_category']);
 
-    if (!$ownsProperty) {
+    if (!$propertyRecord) {
         return back()->withErrors(['profile' => 'Select a valid property owned by your vendor account.'])->withInput();
     }
 
-    DB::table('vendor_property_room_categories')->insert([
+    $propertyCategory = vendorPortalCanonicalCategory((string) ($propertyRecord->listing_category ?? ''));
+    if ($propertyCategory !== 'accommodation') {
+        return back()->withErrors(['profile' => 'Room categories can only be added under accommodation listings.'])->withInput();
+    }
+
+    $insertPayload = [
         'vendor_user_id' => $vendorUserId,
         'vendor_property_id' => $vendorPropertyId,
         'name' => trim((string) $validated['name']),
@@ -827,7 +835,22 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         'currency' => 'MVR',
         'created_at' => now(),
         'updated_at' => now(),
-    ]);
+    ];
+
+    if (Schema::hasColumn('vendor_property_room_categories', 'extra_person_capacity')) {
+        $insertPayload['extra_person_capacity'] = (int) ($validated['extra_person_capacity'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'child_capacity')) {
+        $insertPayload['child_capacity'] = (int) ($validated['child_capacity'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'extra_person_price')) {
+        $insertPayload['extra_person_price'] = (float) ($validated['extra_person_price'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'child_price')) {
+        $insertPayload['child_price'] = (float) ($validated['child_price'] ?? 0);
+    }
+
+    DB::table('vendor_property_room_categories')->insert($insertPayload);
 
     return vendorPortalListingsBackResponse('Room category added.', 3);
 });
@@ -855,21 +878,51 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
         'name' => ['required', 'string', 'max:160'],
         'quantity' => ['nullable', 'integer', 'min:1', 'max:10000'],
         'max_occupancy' => ['nullable', 'integer', 'min:1', 'max:50'],
+        'extra_person_capacity' => ['nullable', 'integer', 'min:0', 'max:20'],
+        'child_capacity' => ['nullable', 'integer', 'min:0', 'max:20'],
         'bed_type' => ['nullable', 'string', 'max:80'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
+        'extra_person_price' => ['nullable', 'numeric', 'min:0'],
+        'child_price' => ['nullable', 'numeric', 'min:0'],
     ]);
+
+    if (Schema::hasTable('vendor_properties') && isset($roomRecord->vendor_property_id)) {
+        $propertyRecord = DB::table('vendor_properties')
+            ->where('id', (int) $roomRecord->vendor_property_id)
+            ->where('vendor_user_id', $vendorUserId)
+            ->first(['listing_category']);
+        $propertyCategory = vendorPortalCanonicalCategory((string) ($propertyRecord->listing_category ?? ''));
+        if ($propertyCategory !== 'accommodation') {
+            return back()->withErrors(['profile' => 'Only rooms under accommodation listings can be updated here.'])->withInput();
+        }
+    }
+
+    $updatePayload = [
+        'name' => trim((string) $validated['name']),
+        'quantity' => (int) ($validated['quantity'] ?? 1),
+        'max_occupancy' => (int) ($validated['max_occupancy'] ?? 1),
+        'bed_type' => trim((string) ($validated['bed_type'] ?? '')),
+        'base_price' => (float) ($validated['base_price'] ?? 0),
+        'updated_at' => now(),
+    ];
+
+    if (Schema::hasColumn('vendor_property_room_categories', 'extra_person_capacity')) {
+        $updatePayload['extra_person_capacity'] = (int) ($validated['extra_person_capacity'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'child_capacity')) {
+        $updatePayload['child_capacity'] = (int) ($validated['child_capacity'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'extra_person_price')) {
+        $updatePayload['extra_person_price'] = (float) ($validated['extra_person_price'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'child_price')) {
+        $updatePayload['child_price'] = (float) ($validated['child_price'] ?? 0);
+    }
 
     DB::table('vendor_property_room_categories')
         ->where('id', $room)
         ->where('vendor_user_id', $vendorUserId)
-        ->update([
-            'name' => trim((string) $validated['name']),
-            'quantity' => (int) ($validated['quantity'] ?? 1),
-            'max_occupancy' => (int) ($validated['max_occupancy'] ?? 1),
-            'bed_type' => trim((string) ($validated['bed_type'] ?? '')),
-            'base_price' => (float) ($validated['base_price'] ?? 0),
-            'updated_at' => now(),
-        ]);
+        ->update($updatePayload);
 
     return vendorPortalListingsBackResponse('Room category updated.', 3);
 });
@@ -922,7 +975,6 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'area_value' => ['nullable', 'numeric', 'min:1', 'max:100000'],
         'area_unit' => ['nullable', Rule::in(['sqm', 'sqft'])],
         'bedroom_count' => ['nullable', 'integer', 'min:0', 'max:1000'],
-        'bathroom_count' => ['nullable', 'numeric', 'min:0', 'max:1000'],
         'capacity_value' => ['nullable', 'integer', 'min:1', 'max:20000'],
         'service_radius_km' => ['nullable', 'numeric', 'min:0', 'max:5000'],
         'minimum_age' => ['nullable', 'integer', 'min:0', 'max:120'],
@@ -986,8 +1038,12 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         ? (int) $propertyDetails['capacity_value']
         : null;
     $normalizedMaxGuests = $canonicalListingCategory === 'accommodation'
-        ? (int) ($validated['max_guests'] ?? 1)
+        ? 0
         : max(0, (int) ($categoryCapacity ?? ($validated['max_guests'] ?? 0)));
+
+    $resolvedBasePrice = $canonicalListingCategory === 'accommodation'
+        ? 0
+        : (float) ($validated['base_price'] ?? 0);
 
     $payload = [
         'vendor_user_id' => $vendorUserId,
@@ -996,7 +1052,7 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'location' => $resolvedLocation,
         'description' => trim((string) ($validated['description'] ?? '')),
         'status' => 'active',
-        'base_price' => (float) ($validated['base_price'] ?? 0),
+        'base_price' => $resolvedBasePrice,
         'currency' => 'MVR',
         'max_guests' => $normalizedMaxGuests,
         'created_at' => now(),
@@ -1038,8 +1094,21 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
 
     $validated = $request->validate([
         'name' => ['required', 'string', 'max:160'],
+        'location' => ['nullable', 'string', 'max:190'],
+        'location_country' => ['nullable', 'string', 'max:90'],
+        'location_state' => ['nullable', 'string', 'max:120'],
+        'location_city' => ['nullable', 'string', 'max:120'],
+        'address_line' => ['nullable', 'string', 'max:255'],
+        'map_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+        'map_longitude' => ['nullable', 'numeric', 'between:-180,180'],
+        'map_place_id' => ['nullable', 'string', 'max:190'],
+        'description' => ['nullable', 'string', 'max:3000'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
         'max_guests' => ['nullable', 'integer', 'min:0', 'max:10000'],
+        'measurement_system' => ['nullable', Rule::in(['metric', 'imperial'])],
+        'area_value' => ['nullable', 'numeric', 'min:1', 'max:100000'],
+        'area_unit' => ['nullable', Rule::in(['sqm', 'sqft'])],
+        'bedroom_count' => ['nullable', 'integer', 'min:0', 'max:1000'],
         'capacity_value' => ['nullable', 'integer', 'min:1', 'max:20000'],
         'service_radius_km' => ['nullable', 'numeric', 'min:0', 'max:5000'],
         'minimum_age' => ['nullable', 'integer', 'min:0', 'max:120'],
@@ -1058,6 +1127,10 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'vehicle_type' => ['nullable', 'string', 'max:120'],
         'transmission_type' => ['nullable', Rule::in(['automatic', 'manual'])],
         'fuel_type' => ['nullable', Rule::in(['petrol', 'diesel', 'electric', 'hybrid'])],
+        'property_amenities' => ['nullable', 'array'],
+        'property_amenities.*' => ['required', 'string', 'max:80'],
+        'property_features' => ['nullable', 'array'],
+        'property_features.*' => ['required', 'string', 'max:80'],
         'status' => ['required', Rule::in(['active', 'inactive'])],
     ]);
 
@@ -1089,16 +1162,42 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         : null;
 
     $normalizedMaxGuests = $canonicalListingCategory === 'accommodation'
-        ? max(1, (int) ($validated['max_guests'] ?? ($propertyRecord->max_guests ?? 1)))
+        ? 0
         : max(0, (int) ($categoryCapacity ?? ($validated['max_guests'] ?? ($propertyRecord->max_guests ?? 0))));
+
+    $resolvedBasePrice = $canonicalListingCategory === 'accommodation'
+        ? 0
+        : (float) ($validated['base_price'] ?? ($propertyRecord->base_price ?? 0));
+
+    $locationCountry = trim((string) ($validated['location_country'] ?? ''));
+    $locationState = trim((string) ($validated['location_state'] ?? ''));
+    $locationCity = trim((string) ($validated['location_city'] ?? ''));
+    $addressLine = trim((string) ($validated['address_line'] ?? ''));
+    $locationParts = array_values(array_filter([$locationCity, $locationState, $locationCountry], static fn (string $item): bool => $item !== ''));
+    $locationFromStructuredFields = implode(', ', $locationParts);
+    $resolvedLocation = $locationFromStructuredFields !== '' ? $locationFromStructuredFields : trim((string) ($validated['location'] ?? ''));
+
+    if ($addressLine !== '') {
+        $resolvedLocation = $resolvedLocation !== '' ? ($addressLine . ' - ' . $resolvedLocation) : $addressLine;
+    }
+
+    $propertyAmenities = vendorPortalNormalizedStringList($validated['property_amenities'] ?? []);
+    $propertyFeatures = vendorPortalNormalizedStringList($validated['property_features'] ?? []);
+    $selectedAmenityTokens = array_values(array_unique(array_merge($propertyAmenities, $propertyFeatures)));
 
     $updatePayload = [
         'name' => trim((string) $validated['name']),
-        'base_price' => (float) ($validated['base_price'] ?? 0),
+        'location' => $resolvedLocation,
+        'description' => trim((string) ($validated['description'] ?? '')),
+        'base_price' => $resolvedBasePrice,
         'max_guests' => $normalizedMaxGuests,
         'status' => (string) $validated['status'],
         'updated_at' => now(),
     ];
+
+    if (Schema::hasColumn('vendor_properties', 'amenities')) {
+        $updatePayload['amenities'] = implode(', ', $selectedAmenityTokens);
+    }
 
     if ($canonicalListingCategory !== null) {
         if (Schema::hasColumn('vendor_properties', 'property_type')) {

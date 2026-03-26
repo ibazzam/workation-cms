@@ -165,7 +165,7 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
         $normalized = strtolower(trim($transportMode));
         $normalized = preg_replace('/[^a-z0-9]+/', ' ', $normalized) ?? $normalized;
 
-        $isMarine = preg_match('/\b(speed ?boat|ferry|boat|dhoni|launch|catamaran|yacht)\b/', $normalized) === 1;
+        $isMarine = preg_match('/\b(speed ?boat|ferry|boat|safari|dhoni|launch|catamaran|yacht)\b/', $normalized) === 1;
 
         return [
             'is_marine' => $isMarine,
@@ -224,6 +224,9 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['departure_date'] = trim((string) ($validated['departure_date'] ?? ''));
             $details['departure_time'] = trim((string) ($validated['departure_time'] ?? ''));
             $details['reporting_time'] = trim((string) ($validated['reporting_time'] ?? ''));
+            $details['reporting_lead_minutes'] = isset($validated['reporting_lead_minutes']) && $validated['reporting_lead_minutes'] !== ''
+                ? (int) $validated['reporting_lead_minutes']
+                : null;
             $details['trip_duration_minutes'] = isset($validated['trip_duration_minutes']) ? (int) $validated['trip_duration_minutes'] : null;
 
             $transportModeProfile = vendorPortalTransportModeProfile((string) ($details['transport_mode'] ?? ''));
@@ -331,22 +334,27 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
 
             if (!empty($transportModeProfile['is_marine'])) {
                 if (!in_array(($details['transport_trip_type'] ?? ''), ['one_way', 'round_trip'], true)) {
-                    $errors[] = 'Select one-way or round-trip for boat and ferry transport listings.';
+                    $errors[] = 'Select one-way or round-trip for marine transport listings.';
                 }
                 if (!isset($details['capacity_value']) || (int) $details['capacity_value'] < 1) {
-                    $errors[] = 'Seat capacity is required for boat and ferry transport listings.';
+                    $errors[] = 'Seat capacity is required for marine transport listings.';
                 }
                 if (empty($details['departure_location'])) {
-                    $errors[] = 'Departure location is required for boat and ferry transport listings.';
+                    $errors[] = 'Departure location is required for marine transport listings.';
                 }
                 if (empty($details['departure_time'])) {
-                    $errors[] = 'Departure time is required for boat and ferry transport listings.';
+                    $errors[] = 'Departure time is required for marine transport listings.';
                 }
-                if (empty($details['reporting_time'])) {
-                    $errors[] = 'Reporting time is required for boat and ferry transport listings.';
+                $hasReportingClock = !empty($details['reporting_time']);
+                $hasReportingLead = isset($details['reporting_lead_minutes']) && $details['reporting_lead_minutes'] !== '';
+                if (!$hasReportingClock && !$hasReportingLead) {
+                    $errors[] = 'Reporting lead time is required for marine transport listings.';
+                }
+                if ($hasReportingLead && ((int) $details['reporting_lead_minutes'] < 0 || (int) $details['reporting_lead_minutes'] > 720)) {
+                    $errors[] = 'Reporting lead time must be between 0 and 720 minutes for marine transport listings.';
                 }
                 if (!isset($details['trip_duration_minutes']) || (int) $details['trip_duration_minutes'] < 5 || (int) $details['trip_duration_minutes'] > 1440) {
-                    $errors[] = 'Trip duration must be between 5 and 1440 minutes for boat and ferry transport listings.';
+                    $errors[] = 'Trip duration must be between 5 and 1440 minutes for marine transport listings.';
                 }
             } else {
                 $pricingModel = (string) ($details['transport_pricing_model'] ?? 'per_trip');
@@ -1179,6 +1187,7 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'departure_date' => ['nullable', 'date'],
         'departure_time' => ['nullable', 'date_format:H:i'],
         'reporting_time' => ['nullable', 'date_format:H:i'],
+        'reporting_lead_minutes' => ['nullable', 'integer', 'min:0', 'max:720'],
         'trip_duration_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
         'excursion_duration_minutes' => ['nullable', 'integer', 'min:30', 'max:1440'],
         'excursion_difficulty' => ['nullable', Rule::in(['easy', 'moderate', 'hard'])],
@@ -1338,6 +1347,7 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'departure_date' => ['nullable', 'date'],
         'departure_time' => ['nullable', 'date_format:H:i'],
         'reporting_time' => ['nullable', 'date_format:H:i'],
+        'reporting_lead_minutes' => ['nullable', 'integer', 'min:0', 'max:720'],
         'trip_duration_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
         'excursion_duration_minutes' => ['nullable', 'integer', 'min:30', 'max:1440'],
         'excursion_difficulty' => ['nullable', Rule::in(['easy', 'moderate', 'hard'])],

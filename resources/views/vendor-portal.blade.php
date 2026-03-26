@@ -1086,6 +1086,14 @@
             gap: 8px;
         }
 
+        .property-subsection-toggle {
+            margin-top: 6px;
+        }
+
+        .property-subsection[hidden] {
+            display: none;
+        }
+
         .property-subsection-head {
             margin: 0;
             font-size: 0.8rem;
@@ -2290,6 +2298,9 @@
                                                         <strong>{{ $property->name }}</strong><br>
                                                         ID: {{ $propertyId }}<br>
                                                         {{ strtoupper((string) ($property->property_type ?? 'N/A')) }}
+                                                        <div class="property-subsection-toggle">
+                                                            <button class="btn btn-secondary" type="button" data-toggle-property-subsection data-property-subsection-id="{{ $propertyId }}" aria-expanded="false">Show Details</button>
+                                                        </div>
                                                     </td>
                                                     <td>
                                                         {{ $property->location ?: 'N/A' }}<br>
@@ -2297,7 +2308,7 @@
                                                         Guests/Capacity: {{ (int) ($property->max_guests ?? 0) }}
                                                     </td>
                                                     <td>
-                                                        <div class="property-subsection">
+                                                        <div class="property-subsection" data-property-subsection="{{ $propertyId }}" hidden>
                                                             <p class="property-subsection-head">Rooms Under This Property ({{ $propertyRooms->count() }})</p>
                                                             @if ($propertyRooms->isEmpty())
                                                                 <p class="ops-empty">No rooms for this listing yet.</p>
@@ -4682,6 +4693,23 @@
                     });
                 });
 
+                document.querySelectorAll('[data-toggle-property-subsection]').forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const propertyId = String(button.getAttribute('data-property-subsection-id') || '').trim();
+                        if (!propertyId) {
+                            return;
+                        }
+                        const target = document.querySelector('[data-property-subsection="' + propertyId + '"]');
+                        if (!target) {
+                            return;
+                        }
+                        const willShow = target.hidden;
+                        target.hidden = !willShow;
+                        button.textContent = willShow ? 'Hide Details' : 'Show Details';
+                        button.setAttribute('aria-expanded', willShow ? 'true' : 'false');
+                    });
+                });
+
                 if (propertyCategorySelect) {
                     propertyCategorySelect.addEventListener('change', function () {
                         applyCategoryMode(propertyCategorySelect.value);
@@ -4703,4 +4731,3 @@
     </script>
 </body>
 </html>
-

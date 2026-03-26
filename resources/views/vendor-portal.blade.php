@@ -1870,11 +1870,7 @@
                     $oldPropertyFeatures = collect(old('property_features', []))->map(fn ($item) => (string) $item)->all();
                 @endphp
                 <article class="ops-form ops-field-wide">
-                    <div class="form-toggle-row">
-                        <button class="btn btn-primary" type="button" id="openPropertyCreateForm">Create New Property</button>
-                        <button class="btn btn-secondary" type="button" id="closePropertyCreateForm" @if (!$showCreatePropertyForm) hidden @endif>Cancel</button>
-                    </div>
-                    <form id="propertyCreateForm" class="ops-form" method="POST" action="/portal/vendor/properties/create" @if (!$showCreatePropertyForm) hidden @endif>
+                    <form id="propertyCreateForm" class="ops-form" method="POST" action="/portal/vendor/properties/create">
                         @csrf
                         <input type="hidden" name="property_form_intent" value="1">
                         <p class="guided-wizard-title" id="propertyCreateFormTitle">Create New Listing</p>
@@ -2127,8 +2123,7 @@
                     </form>
 
                     <div class="form-toggle-row" style="margin-top:14px;">
-                        <button class="btn btn-primary" type="button" id="openRoomCreateForm">Add Room To Property</button>
-                        <button class="btn btn-secondary" type="button" id="closeRoomCreateForm" @if (!$showCreateRoomForm) hidden @endif>Cancel</button>
+                        <button class="btn btn-secondary" type="button" id="closeRoomCreateForm" @if (!$showCreateRoomForm) hidden @endif>Cancel Room Form</button>
                     </div>
                     <form id="roomCreateForm" class="ops-form" method="POST" action="/portal/vendor/rooms/create" @if (!$showCreateRoomForm) hidden @endif>
                         @csrf
@@ -2465,32 +2460,6 @@
                         </article>
                     @endforeach
                 </div>
-            </div>
-        </section>
-
-        <section id="vendorRoomsSection" class="card ops-section" aria-label="Vendor room inventory" data-panel-group="listings" data-listing-step="2" hidden>
-            <div class="ops-header">
-                <p class="ops-title">Room Inventory</p>
-                <span class="ops-chip">{{ $vendorRooms->count() }} total</span>
-            </div>
-            <div class="ops-grid">
-                <article class="ops-form ops-field-wide">
-                    <p class="wizard-note">Room views are now shown inside each listing under the category sections in Properties and Listings.</p>
-                    <p class="wizard-note">Use Add Room from the respective listing card to create rooms for a specific property.</p>
-                </article>
-            </div>
-        </section>
-
-        <section id="vendorMediaSection" class="card ops-section" aria-label="Vendor media" data-panel-group="listings" data-listing-step="3" hidden>
-            <div class="ops-header">
-                <p class="ops-title">Media Library</p>
-                <span class="ops-chip">{{ $vendorMediaAssets->count() }} files</span>
-            </div>
-            <div class="ops-grid">
-                <article class="ops-form ops-field-wide">
-                    <p class="wizard-note">Media views are now shown inside each listing under the category sections in Properties and Listings.</p>
-                    <p class="wizard-note">Use property and room media upload actions under each listing to attach files to the correct parent record.</p>
-                </article>
             </div>
         </section>
 
@@ -3012,16 +2981,16 @@
                         title: "Room inventory",
                         hint: "Add room types and occupancy for each property.",
                         panel: "listings",
-                        targetId: "vendorRoomsSection",
-                        wizardStep: 3,
+                        targetId: "vendorPropertiesSection",
+                        wizardStep: 1,
                         openRoomForm: true,
                     },
                     {
                         title: "Photos and media",
                         hint: "Upload property and room photos.",
                         panel: "listings",
-                        targetId: "vendorMediaSection",
-                        wizardStep: 4,
+                        targetId: "vendorPropertiesSection",
+                        wizardStep: 1,
                     },
                     {
                         title: "Publish readiness",
@@ -3392,8 +3361,8 @@
                 const stepTargets = {
                     1: "vendorPropertiesSection",
                     2: "vendorPropertiesSection",
-                    3: "vendorRoomsSection",
-                    4: "vendorMediaSection"
+                    3: "vendorPropertiesSection",
+                    4: "vendorPropertiesSection"
                 };
                 const targetId = stepTargets[safeStep] || "vendorPropertiesSection";
                 const targetEl = document.getElementById(targetId);
@@ -3402,9 +3371,6 @@
             }
 
             function listingPanelStepFromWizardStep(step) {
-                const safeStep = Math.max(1, Math.min(4, Number(step) || 1));
-                if (safeStep >= 4) return 3;
-                if (safeStep >= 3) return 2;
                 return 1;
             }
 
@@ -3415,7 +3381,7 @@
             }
 
             function applyListingWizardVisibility() {
-                const activeStepPanel = Math.max(1, Math.min(3, Number(listingWizardPanelStep) || 1));
+                const activeStepPanel = 1;
                 listingStepPanels.forEach((panel) => {
                     const panelStep = Number(panel.getAttribute("data-listing-step") || "0");
                     panel.hidden = panelStep !== activeStepPanel;
@@ -4195,7 +4161,7 @@
                     const propertyId = String(button.getAttribute("data-property-id") || "").trim();
                     window.location.hash = "listings";
                     showPanelGroup("listings");
-                    activateListingWizardStep(3, true);
+                    activateListingWizardStep(1, false);
 
                     if (roomCreateForm) roomCreateForm.hidden = false;
                     if (closeRoomCreateForm) closeRoomCreateForm.hidden = false;
@@ -4205,6 +4171,9 @@
                         roomPropertySelect.value = propertyId;
                         roomPropertySelect.dispatchEvent(new Event("change"));
                         roomPropertySelect.focus();
+                    }
+                    if (roomCreateForm) {
+                        roomCreateForm.scrollIntoView({ behavior: "smooth", block: "start" });
                     }
                 });
             });
@@ -4556,6 +4525,9 @@
                             roomPropertySelect.value = propertyId;
                         }
                         window.location.hash = 'listings';
+                        if (roomCreateForm) {
+                            roomCreateForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
                     });
                 });
 

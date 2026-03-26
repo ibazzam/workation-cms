@@ -384,6 +384,94 @@ if (!function_exists('vendorPortalAccommodationRoomCount')) {
     }
 }
 
+if (!function_exists('vendorPortalAccommodationRoomPricing')) {
+    function vendorPortalAccommodationRoomPricing(
+        int $vendorUserId,
+        ?int $propertyId,
+        ?int $roomId,
+        int $adultGuests,
+        int $childGuests,
+        string $startAt,
+        string $endAt
+    ): ?array {
+        if ($vendorUserId <= 0 || $roomId === null || $roomId <= 0 || !Schema::hasTable('vendor_property_room_categories')) {
+            return null;
+        }
+
+        $roomQuery = DB::table('vendor_property_room_categories')
+            ->where('id', $roomId)
+            ->where('vendor_user_id', $vendorUserId);
+
+        if ($propertyId !== null && $propertyId > 0) {
+            $roomQuery->where('vendor_property_id', $propertyId);
+        }
+
+        $room = $roomQuery->first();
+        if (!$room) {
+            return null;
+        }
+
+        $resolvedPropertyId = (int) ($room->vendor_property_id ?? 0);
+        if ($resolvedPropertyId <= 0 || !Schema::hasTable('vendor_properties')) {
+            return null;
+        }
+
+        $property = DB::table('vendor_properties')
+            ->where('id', $resolvedPropertyId)
+            ->where('vendor_user_id', $vendorUserId)
+            ->first(['listing_category']);
+
+        $propertyCategory = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
+        if ($propertyCategory !== 'accommodation') {
+            return null;
+        }
+
+        $startTs = strtotime($startAt);
+        $endTs = strtotime($endAt);
+        $nights = 1;
+        if ($startTs !== false && $endTs !== false && $endTs > $startTs) {
+            $nights = max(1, (int) ceil(($endTs - $startTs) / 86400));
+        }
+
+        $baseOccupancy = max(1, (int) ($room->max_occupancy ?? 1));
+        $extraAdultCapacity = max(0, (int) ($room->extra_person_capacity ?? 0));
+        $childCapacity = max(0, (int) ($room->child_capacity ?? 0));
+
+        $chargeableExtraAdults = max(0, $adultGuests - $baseOccupancy);
+        if ($extraAdultCapacity > 0) {
+            $chargeableExtraAdults = min($chargeableExtraAdults, $extraAdultCapacity);
+        }
+
+        $chargeableChildren = max(0, $childGuests);
+        if ($childCapacity > 0) {
+            $chargeableChildren = min($chargeableChildren, $childCapacity);
+        }
+
+        $baseRoomPrice = max(0, (float) ($room->base_price ?? 0));
+        $extraAdultPrice = max(0, (float) ($room->extra_person_price ?? 0));
+        $childPrice = max(0, (float) ($room->child_price ?? 0));
+
+        $nightlySubtotal = $baseRoomPrice + ($chargeableExtraAdults * $extraAdultPrice) + ($chargeableChildren * $childPrice);
+        $subtotal = round($nightlySubtotal * $nights, 2);
+
+        return [
+            'property_id' => $resolvedPropertyId,
+            'room_id' => (int) ($room->id ?? 0),
+            'nights' => $nights,
+            'base_occupancy' => $baseOccupancy,
+            'adult_guests' => $adultGuests,
+            'child_guests' => $childGuests,
+            'chargeable_extra_adults' => $chargeableExtraAdults,
+            'chargeable_children' => $chargeableChildren,
+            'base_room_price' => $baseRoomPrice,
+            'extra_adult_price' => $extraAdultPrice,
+            'child_price' => $childPrice,
+            'nightly_subtotal' => round($nightlySubtotal, 2),
+            'subtotal' => $subtotal,
+        ];
+    }
+}
+
 if (!function_exists('vendorPortalReservationInvoiceTaxes')) {
     function vendorPortalReservationInvoiceTaxes(
         int $vendorUserId,
@@ -1356,22 +1444,62 @@ Route::post('/portal/vendor/reservations/create', function (Request $request) {
         'start_at' => ['required', 'date'],
         'end_at' => ['required', 'date', 'after_or_equal:start_at'],
         'guests' => ['required', 'integer', 'min:1', 'max:10000'],
+        'adult_guests' => ['nullable', 'integer', 'min:0', 'max:10000'],
+        'child_guests' => ['nullable', 'integer', 'min:0', 'max:10000'],
         'guest_is_foreigner' => ['required', 'boolean'],
-        'total_amount' => ['required', 'numeric', 'min:0'],
+        'total_amount' => ['nullable', 'numeric', 'min:0'],
         'vendor_property_id' => ['nullable', 'integer'],
+        'vendor_room_category_id' => ['nullable', 'integer', 'min:1'],
         'vendor_service_id' => ['nullable', 'integer'],
         'notes' => ['nullable', 'string', 'max:2000'],
     ]);
 
     $vendorPropertyId = filled($validated['vendor_property_id'] ?? null) ? (int) $validated['vendor_property_id'] : null;
+    $vendorRoomCategoryId = filled($validated['vendor_room_category_id'] ?? null) ? (int) $validated['vendor_room_category_id'] : null;
     $guestIsForeigner = (bool) $validated['guest_is_foreigner'];
+    $adultGuests = isset($validated['adult_guests']) ? max(0, (int) $validated['adult_guests']) : max(1, (int) $validated['guests']);
+    $childGuests = isset($validated['child_guests']) ? max(0, (int) $validated['child_guests']) : 0;
+    if ($adultGuests + $childGuests <= 0) {
+        $adultGuests = max(1, (int) $validated['guests']);
+    }
+
+    $roomPricing = vendorPortalAccommodationRoomPricing(
+        $vendorUserId,
+        $vendorPropertyId,
+        $vendorRoomCategoryId,
+        $adultGuests,
+        $childGuests,
+        (string) $validated['start_at'],
+        (string) $validated['end_at']
+    );
+
+    if ($roomPricing !== null) {
+        $vendorPropertyId = (int) ($roomPricing['property_id'] ?? $vendorPropertyId);
+    }
+
+    $subtotalAmount = $roomPricing !== null
+        ? (float) ($roomPricing['subtotal'] ?? 0)
+        : (float) ($validated['total_amount'] ?? 0);
+
+    if ($subtotalAmount <= 0) {
+        return back()->withErrors(['profile' => 'Provide a valid amount or select a room to auto-calculate accommodation pricing.'])->withInput();
+    }
+
+    $totalGuests = max(1, $adultGuests + $childGuests);
     $taxes = vendorPortalReservationInvoiceTaxes(
         $vendorUserId,
         $vendorPropertyId,
-        (int) $validated['guests'],
-        (float) $validated['total_amount'],
+        $totalGuests,
+        $subtotalAmount,
         $guestIsForeigner
     );
+
+    $taxBreakdown = $taxes;
+    $taxBreakdown['adult_guests'] = $adultGuests;
+    $taxBreakdown['child_guests'] = $childGuests;
+    if ($roomPricing !== null) {
+        $taxBreakdown['room_pricing'] = $roomPricing;
+    }
 
     $payload = [
         'vendor_user_id' => $vendorUserId,
@@ -1381,8 +1509,8 @@ Route::post('/portal/vendor/reservations/create', function (Request $request) {
         'customer_email' => strtolower(trim((string) $validated['customer_email'])),
         'start_at' => (string) $validated['start_at'],
         'end_at' => (string) $validated['end_at'],
-        'guests' => (int) $validated['guests'],
-        'total_amount' => (float) $validated['total_amount'],
+        'guests' => $totalGuests,
+        'total_amount' => $subtotalAmount,
         'currency' => 'MVR',
         'status' => 'pending',
         'payment_status' => 'unpaid',
@@ -1390,6 +1518,16 @@ Route::post('/portal/vendor/reservations/create', function (Request $request) {
         'created_at' => now(),
         'updated_at' => now(),
     ];
+
+    if (Schema::hasColumn('vendor_reservations', 'vendor_room_category_id')) {
+        $payload['vendor_room_category_id'] = $vendorRoomCategoryId;
+    }
+    if (Schema::hasColumn('vendor_reservations', 'adult_guests')) {
+        $payload['adult_guests'] = $adultGuests;
+    }
+    if (Schema::hasColumn('vendor_reservations', 'child_guests')) {
+        $payload['child_guests'] = $childGuests;
+    }
 
     if (Schema::hasColumn('vendor_reservations', 'guest_is_foreigner')) {
         $payload['guest_is_foreigner'] = $guestIsForeigner;
@@ -1428,7 +1566,7 @@ Route::post('/portal/vendor/reservations/create', function (Request $request) {
         $payload['invoice_total_amount'] = $taxes['invoice_total_amount'];
     }
     if (Schema::hasColumn('vendor_reservations', 'tax_breakdown_json')) {
-        $payload['tax_breakdown_json'] = json_encode($taxes);
+        $payload['tax_breakdown_json'] = json_encode($taxBreakdown);
     }
 
     DB::table('vendor_reservations')->insert($payload);

@@ -2596,6 +2596,14 @@
                             <input id="reservation_guests" name="guests" class="ops-input" type="number" min="1" max="10000" required>
                         </div>
                         <div class="ops-field">
+                            <label for="reservation_adult_guests">Adults</label>
+                            <input id="reservation_adult_guests" name="adult_guests" class="ops-input" type="number" min="0" max="10000" value="1">
+                        </div>
+                        <div class="ops-field">
+                            <label for="reservation_child_guests">Children</label>
+                            <input id="reservation_child_guests" name="child_guests" class="ops-input" type="number" min="0" max="10000" value="0">
+                        </div>
+                        <div class="ops-field">
                             <label for="reservation_guest_origin">Guest Type</label>
                             <select id="reservation_guest_origin" name="guest_is_foreigner" class="ops-select" required>
                                 <option value="1">Foreigner</option>
@@ -2603,12 +2611,16 @@
                             </select>
                         </div>
                         <div class="ops-field">
-                            <label for="reservation_total_amount">Total Amount (MVR)</label>
-                            <input id="reservation_total_amount" name="total_amount" class="ops-input" type="number" min="0" step="0.01" required>
+                            <label for="reservation_total_amount">Base/Subtotal Amount (MVR)</label>
+                            <input id="reservation_total_amount" name="total_amount" class="ops-input" type="number" min="0" step="0.01">
                         </div>
                         <div class="ops-field">
                             <label for="reservation_property_id">Property ID (optional)</label>
                             <input id="reservation_property_id" name="vendor_property_id" class="ops-input" type="number" min="1">
+                        </div>
+                        <div class="ops-field">
+                            <label for="reservation_room_id">Room Category ID (accommodation)</label>
+                            <input id="reservation_room_id" name="vendor_room_category_id" class="ops-input" type="number" min="1">
                         </div>
                         <div class="ops-field">
                             <label for="reservation_service_id">Service ID (optional)</label>
@@ -2619,7 +2631,7 @@
                             <textarea id="reservation_notes" name="notes" class="ops-textarea" maxlength="2000"></textarea>
                         </div>
                     </div>
-                    <p class="standards-note">Accommodation invoice charges: Service Charge 10% + Foreigner taxes (Green Tax $12/person for 50+ rooms, else $6/person and TGST 17%) or Local tax (CGST 8%).</p>
+                    <p class="standards-note">Accommodation pricing is customer-detailed: select room category + adult/child counts to auto-calculate subtotal (base room + extra adult + child), then taxes are applied transparently.</p>
                     <button class="btn btn-primary" type="submit">Create Reservation</button>
                 </form>
 
@@ -2635,6 +2647,16 @@
                         </thead>
                         <tbody>
                             @forelse ($vendorReservations->take(12) as $reservation)
+                                @php
+                                    $reservationBreakdown = [];
+                                    if (isset($reservation->tax_breakdown_json) && is_string($reservation->tax_breakdown_json) && trim((string) $reservation->tax_breakdown_json) !== '') {
+                                        $decodedReservationBreakdown = json_decode((string) $reservation->tax_breakdown_json, true);
+                                        if (is_array($decodedReservationBreakdown)) {
+                                            $reservationBreakdown = $decodedReservationBreakdown;
+                                        }
+                                    }
+                                    $roomPricingBreakdown = is_array($reservationBreakdown['room_pricing'] ?? null) ? $reservationBreakdown['room_pricing'] : null;
+                                @endphp
                                 <tr>
                                     <td>
                                         {{ $reservation->customer_name }}<br>
@@ -2642,6 +2664,12 @@
                                     </td>
                                     <td>{{ $reservation->start_at }}<br>{{ $reservation->end_at }}</td>
                                     <td>
+                                        @if (is_array($roomPricingBreakdown))
+                                            Room Pricing: {{ $reservation->currency }} {{ number_format((float) ($roomPricingBreakdown['nightly_subtotal'] ?? 0), 2) }} x {{ (int) ($roomPricingBreakdown['nights'] ?? 1) }} nights<br>
+                                            Base Room: {{ $reservation->currency }} {{ number_format((float) ($roomPricingBreakdown['base_room_price'] ?? 0), 2) }}<br>
+                                            Extra Adult: {{ (int) ($roomPricingBreakdown['chargeable_extra_adults'] ?? 0) }} x {{ $reservation->currency }} {{ number_format((float) ($roomPricingBreakdown['extra_adult_price'] ?? 0), 2) }}<br>
+                                            Child: {{ (int) ($roomPricingBreakdown['chargeable_children'] ?? 0) }} x {{ $reservation->currency }} {{ number_format((float) ($roomPricingBreakdown['child_price'] ?? 0), 2) }}<br>
+                                        @endif
                                         Base: {{ $reservation->currency }} {{ number_format((float) ($reservation->subtotal_amount ?? $reservation->total_amount), 2) }}<br>
                                         Service Charge: {{ $reservation->currency }} {{ number_format((float) ($reservation->service_charge_total ?? 0), 2) }}<br>
                                         Taxes: {{ $reservation->currency }} {{ number_format((float) ($reservation->total_tax_amount ?? 0), 2) }}<br>

@@ -160,6 +160,21 @@ if (!function_exists('vendorPortalListingsBackResponse')) {
 }
 
 if (!function_exists('vendorPortalBuildPropertyDetails')) {
+    function vendorPortalTransportModeProfile(string $transportMode): array
+    {
+        $normalized = strtolower(trim($transportMode));
+        $normalized = preg_replace('/[^a-z0-9]+/', ' ', $normalized) ?? $normalized;
+
+        $isMarine = preg_match('/\b(speed ?boat|ferry|boat|dhoni|launch|catamaran|yacht)\b/', $normalized) === 1;
+
+        return [
+            'is_marine' => $isMarine,
+            'pricing_basis' => $isMarine ? 'per_seat' : 'per_trip',
+        ];
+    }
+}
+
+if (!function_exists('vendorPortalBuildPropertyDetails')) {
     function vendorPortalBuildPropertyDetails(array $validated, string $listingCategory): array
     {
         $propertyAmenities = vendorPortalNormalizedStringList($validated['property_amenities'] ?? []);
@@ -197,6 +212,38 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['transport_mode'] = trim((string) ($validated['transport_mode'] ?? ''));
             $details['pickup_location'] = trim((string) ($validated['pickup_location'] ?? ''));
             $details['dropoff_location'] = trim((string) ($validated['dropoff_location'] ?? ''));
+            $details['transport_trip_type'] = trim((string) ($validated['transport_trip_type'] ?? ''));
+            $details['vehicle_name'] = trim((string) ($validated['vehicle_name'] ?? ''));
+            $details['registration_plate'] = trim((string) ($validated['registration_plate'] ?? ''));
+            $details['contact_name'] = trim((string) ($validated['contact_name'] ?? ''));
+            $details['contact_number'] = trim((string) ($validated['contact_number'] ?? ''));
+            $details['transport_pricing_model'] = trim((string) ($validated['transport_pricing_model'] ?? ''));
+            $details['hourly_rate'] = vendorPortalNormalizedNumeric($validated['hourly_rate'] ?? null);
+            $details['daily_rate'] = vendorPortalNormalizedNumeric($validated['daily_rate'] ?? null);
+            $details['departure_location'] = trim((string) ($validated['departure_location'] ?? ''));
+            $details['departure_date'] = trim((string) ($validated['departure_date'] ?? ''));
+            $details['departure_time'] = trim((string) ($validated['departure_time'] ?? ''));
+            $details['reporting_time'] = trim((string) ($validated['reporting_time'] ?? ''));
+            $details['trip_duration_minutes'] = isset($validated['trip_duration_minutes']) ? (int) $validated['trip_duration_minutes'] : null;
+
+            $transportModeProfile = vendorPortalTransportModeProfile((string) ($details['transport_mode'] ?? ''));
+            $details['transport_pricing_basis'] = (string) ($transportModeProfile['pricing_basis'] ?? 'per_trip');
+            if (($details['transport_pricing_basis'] ?? 'per_trip') === 'per_seat') {
+                $details['transport_pricing_model'] = 'per_seat';
+                $details['hourly_rate'] = null;
+                $details['daily_rate'] = null;
+            } elseif (!in_array(($details['transport_pricing_model'] ?? ''), ['per_trip', 'hourly', 'daily'], true)) {
+                $details['transport_pricing_model'] = 'per_trip';
+            }
+
+            if (($details['transport_pricing_model'] ?? 'per_trip') === 'per_trip') {
+                $details['hourly_rate'] = null;
+                $details['daily_rate'] = null;
+            } elseif (($details['transport_pricing_model'] ?? '') === 'hourly') {
+                $details['daily_rate'] = null;
+            } elseif (($details['transport_pricing_model'] ?? '') === 'daily') {
+                $details['hourly_rate'] = null;
+            }
         }
 
         if ($listingCategory === 'excursion') {
@@ -262,6 +309,57 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
 
         if ($listingCategory === 'transport' && empty($details['transport_mode'])) {
             $errors[] = 'Transport mode is required for transport listings.';
+        }
+
+        if ($listingCategory === 'transport' && !empty($details['transport_mode'])) {
+            $transportModeProfile = vendorPortalTransportModeProfile((string) $details['transport_mode']);
+            if (empty($details['pickup_location']) || empty($details['dropoff_location'])) {
+                $errors[] = 'Pickup and dropoff locations are required for transport listings.';
+            }
+            if (empty($details['vehicle_name'])) {
+                $errors[] = 'Vehicle name is required for transport listings.';
+            }
+            if (empty($details['registration_plate'])) {
+                $errors[] = 'Registration plate number is required for transport listings.';
+            }
+            if (empty($details['contact_name'])) {
+                $errors[] = 'Contact name is required for transport listings.';
+            }
+            if (empty($details['contact_number'])) {
+                $errors[] = 'Contact number is required for transport listings.';
+            }
+
+            if (!empty($transportModeProfile['is_marine'])) {
+                if (!in_array(($details['transport_trip_type'] ?? ''), ['one_way', 'round_trip'], true)) {
+                    $errors[] = 'Select one-way or round-trip for boat and ferry transport listings.';
+                }
+                if (!isset($details['capacity_value']) || (int) $details['capacity_value'] < 1) {
+                    $errors[] = 'Seat capacity is required for boat and ferry transport listings.';
+                }
+                if (empty($details['departure_location'])) {
+                    $errors[] = 'Departure location is required for boat and ferry transport listings.';
+                }
+                if (empty($details['departure_time'])) {
+                    $errors[] = 'Departure time is required for boat and ferry transport listings.';
+                }
+                if (empty($details['reporting_time'])) {
+                    $errors[] = 'Reporting time is required for boat and ferry transport listings.';
+                }
+                if (!isset($details['trip_duration_minutes']) || (int) $details['trip_duration_minutes'] < 5 || (int) $details['trip_duration_minutes'] > 1440) {
+                    $errors[] = 'Trip duration must be between 5 and 1440 minutes for boat and ferry transport listings.';
+                }
+            } else {
+                $pricingModel = (string) ($details['transport_pricing_model'] ?? 'per_trip');
+                if (!in_array($pricingModel, ['per_trip', 'hourly', 'daily'], true)) {
+                    $errors[] = 'Select per-trip, hourly, or daily pricing for land transport listings.';
+                }
+                if ($pricingModel === 'hourly' && (!isset($details['hourly_rate']) || (float) $details['hourly_rate'] <= 0)) {
+                    $errors[] = 'Hourly rate is required when hourly pricing is selected.';
+                }
+                if ($pricingModel === 'daily' && (!isset($details['daily_rate']) || (float) $details['daily_rate'] <= 0)) {
+                    $errors[] = 'Daily rate is required when daily pricing is selected.';
+                }
+            }
         }
 
         if ($listingCategory === 'excursion') {
@@ -1067,8 +1165,21 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'service_radius_km' => ['nullable', 'numeric', 'min:0', 'max:5000'],
         'minimum_age' => ['nullable', 'integer', 'min:0', 'max:120'],
         'transport_mode' => ['nullable', 'string', 'max:80'],
+        'transport_trip_type' => ['nullable', Rule::in(['one_way', 'round_trip'])],
+        'transport_pricing_model' => ['nullable', Rule::in(['per_trip', 'hourly', 'daily'])],
+        'vehicle_name' => ['nullable', 'string', 'max:120'],
+        'registration_plate' => ['nullable', 'string', 'max:80'],
+        'contact_name' => ['nullable', 'string', 'max:120'],
+        'contact_number' => ['nullable', 'string', 'max:60'],
         'pickup_location' => ['nullable', 'string', 'max:190'],
         'dropoff_location' => ['nullable', 'string', 'max:190'],
+        'hourly_rate' => ['nullable', 'numeric', 'min:0'],
+        'daily_rate' => ['nullable', 'numeric', 'min:0'],
+        'departure_location' => ['nullable', 'string', 'max:190'],
+        'departure_date' => ['nullable', 'date'],
+        'departure_time' => ['nullable', 'date_format:H:i'],
+        'reporting_time' => ['nullable', 'date_format:H:i'],
+        'trip_duration_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
         'excursion_duration_minutes' => ['nullable', 'integer', 'min:30', 'max:1440'],
         'excursion_difficulty' => ['nullable', Rule::in(['easy', 'moderate', 'hard'])],
         'workspace_type' => ['nullable', Rule::in(['shared', 'private', 'cabin'])],
@@ -1119,6 +1230,14 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         $resolvedLocation = $resolvedLocation !== '' ? ($addressLine . ' - ' . $resolvedLocation) : $addressLine;
     }
 
+    if ($canonicalListingCategory === 'transport') {
+        $pickup = trim((string) ($propertyDetails['pickup_location'] ?? ''));
+        $dropoff = trim((string) ($propertyDetails['dropoff_location'] ?? ''));
+        $resolvedLocation = ($pickup !== '' && $dropoff !== '')
+            ? ($pickup . ' -> ' . $dropoff)
+            : ($pickup !== '' ? $pickup : ($dropoff !== '' ? $dropoff : 'Route details pending'));
+    }
+
     $propertyAmenities = vendorPortalNormalizedStringList($validated['property_amenities'] ?? []);
     $propertyFeatures = vendorPortalNormalizedStringList($validated['property_features'] ?? []);
     $selectedAmenityTokens = array_values(array_unique(array_merge($propertyAmenities, $propertyFeatures)));
@@ -1132,6 +1251,10 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
     $resolvedBasePrice = $canonicalListingCategory === 'accommodation'
         ? 0
         : (float) ($validated['base_price'] ?? 0);
+
+    if ($canonicalListingCategory === 'transport') {
+        $normalizedMaxGuests = max(0, (int) ($categoryCapacity ?? ($validated['max_guests'] ?? 0)));
+    }
 
     $payload = [
         'vendor_user_id' => $vendorUserId,
@@ -1201,8 +1324,21 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'service_radius_km' => ['nullable', 'numeric', 'min:0', 'max:5000'],
         'minimum_age' => ['nullable', 'integer', 'min:0', 'max:120'],
         'transport_mode' => ['nullable', 'string', 'max:80'],
+        'transport_trip_type' => ['nullable', Rule::in(['one_way', 'round_trip'])],
+        'transport_pricing_model' => ['nullable', Rule::in(['per_trip', 'hourly', 'daily'])],
+        'vehicle_name' => ['nullable', 'string', 'max:120'],
+        'registration_plate' => ['nullable', 'string', 'max:80'],
+        'contact_name' => ['nullable', 'string', 'max:120'],
+        'contact_number' => ['nullable', 'string', 'max:60'],
         'pickup_location' => ['nullable', 'string', 'max:190'],
         'dropoff_location' => ['nullable', 'string', 'max:190'],
+        'hourly_rate' => ['nullable', 'numeric', 'min:0'],
+        'daily_rate' => ['nullable', 'numeric', 'min:0'],
+        'departure_location' => ['nullable', 'string', 'max:190'],
+        'departure_date' => ['nullable', 'date'],
+        'departure_time' => ['nullable', 'date_format:H:i'],
+        'reporting_time' => ['nullable', 'date_format:H:i'],
+        'trip_duration_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
         'excursion_duration_minutes' => ['nullable', 'integer', 'min:30', 'max:1440'],
         'excursion_difficulty' => ['nullable', Rule::in(['easy', 'moderate', 'hard'])],
         'workspace_type' => ['nullable', Rule::in(['shared', 'private', 'cabin'])],
@@ -1269,9 +1405,21 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         $resolvedLocation = $resolvedLocation !== '' ? ($addressLine . ' - ' . $resolvedLocation) : $addressLine;
     }
 
+    if ($canonicalListingCategory === 'transport') {
+        $pickup = trim((string) ($existingDetails['pickup_location'] ?? ''));
+        $dropoff = trim((string) ($existingDetails['dropoff_location'] ?? ''));
+        $resolvedLocation = ($pickup !== '' && $dropoff !== '')
+            ? ($pickup . ' -> ' . $dropoff)
+            : ($pickup !== '' ? $pickup : ($dropoff !== '' ? $dropoff : 'Route details pending'));
+    }
+
     $propertyAmenities = vendorPortalNormalizedStringList($validated['property_amenities'] ?? []);
     $propertyFeatures = vendorPortalNormalizedStringList($validated['property_features'] ?? []);
     $selectedAmenityTokens = array_values(array_unique(array_merge($propertyAmenities, $propertyFeatures)));
+
+    if ($canonicalListingCategory === 'transport') {
+        $normalizedMaxGuests = max(0, (int) ($categoryCapacity ?? ($validated['max_guests'] ?? ($propertyRecord->max_guests ?? 0))));
+    }
 
     $updatePayload = [
         'name' => trim((string) $validated['name']),

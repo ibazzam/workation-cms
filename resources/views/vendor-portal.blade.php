@@ -1812,19 +1812,6 @@
                 <p class="ops-title">Operations Console</p>
                 <span class="ops-chip">Database-backed</span>
             </div>
-            @php
-                $listingShortcutOrder = ['accommodation', 'transport', 'excursion', 'remote_workspace', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
-            @endphp
-            <div class="listing-category-shortcuts" aria-label="Listing category actions">
-                <div class="listing-category-shortcuts-head">Quick Add By Category</div>
-                <div class="listing-category-shortcuts-row">
-                    @foreach ($listingShortcutOrder as $categoryKey)
-                        @if (isset($vendorCategoryMap[$categoryKey]))
-                            <button type="button" class="btn btn-secondary" data-listing-category-shortcut="{{ $categoryKey }}">Add {{ $vendorCategoryMap[$categoryKey] }}</button>
-                        @endif
-                    @endforeach
-                </div>
-            </div>
             @if (!$hasSelectedCategories)
                 <p class="wizard-note">Select at least one category in Category Wizard before creating listings.</p>
             @endif
@@ -1861,16 +1848,13 @@
                 <p class="ops-title">Properties and Listings</p>
                 <span class="ops-chip">{{ $vendorProperties->count() }} total</span>
             </div>
-            <div class="panel-links" aria-label="Listings actions">
-                <a href="#vendorPropertiesSection">Listings</a>
-            </div>
             <div class="ops-grid properties-grid">
                 @php
                     $oldPropertyAmenities = collect(old('property_amenities', []))->map(fn ($item) => (string) $item)->all();
                     $oldPropertyFeatures = collect(old('property_features', []))->map(fn ($item) => (string) $item)->all();
                 @endphp
                 <article class="ops-form ops-field-wide">
-                    <form id="propertyCreateForm" class="ops-form" method="POST" action="/portal/vendor/properties/create">
+                    <form id="propertyCreateForm" class="ops-form" method="POST" action="/portal/vendor/properties/create" @if (!$showCreatePropertyForm) hidden @endif>
                         @csrf
                         <input type="hidden" name="property_form_intent" value="1">
                         <p class="guided-wizard-title" id="propertyCreateFormTitle">Create New Listing</p>
@@ -1915,7 +1899,7 @@
                                     <option value="service" @selected(old('property_type') === 'service')>Service Space</option>
                                 </select>
                             </div>
-                            <div class="ops-field">
+                            <div class="ops-field" data-category-scope="geo">
                                 <label for="location_country">Country</label>
                                 <select id="location_country" name="location_country" class="ops-select" data-selected-value="{{ old('location_country', 'Maldives') }}" required>
                                     <option value="Maldives" @selected(old('location_country', 'Maldives') === 'Maldives')>Maldives</option>
@@ -1924,31 +1908,31 @@
                                     <option value="Other" @selected(old('location_country') === 'Other')>Other</option>
                                 </select>
                             </div>
-                            <div class="ops-field">
+                            <div class="ops-field" data-category-scope="geo">
                                 <label for="location_state">State / Province / Atoll</label>
                                 <select id="location_state" name="location_state" class="ops-select" data-selected-value="{{ old('location_state') }}" required>
                                     <option value="">Select state/province</option>
                                 </select>
                             </div>
-                            <div class="ops-field">
+                            <div class="ops-field" data-category-scope="geo">
                                 <label for="location_city">City / Island</label>
                                 <select id="location_city" name="location_city" class="ops-select" data-selected-value="{{ old('location_city') }}" required>
                                     <option value="">Select city/island</option>
                                 </select>
                             </div>
-                            <div class="ops-field ops-field-wide">
+                            <div class="ops-field ops-field-wide" data-category-scope="geo">
                                 <label for="address_line">Exact Address</label>
                                 <input id="address_line" name="address_line" class="ops-input" type="text" maxlength="255" value="{{ old('address_line') }}" placeholder="Street, house/building name, nearby landmark" required>
                             </div>
-                            <div class="ops-field">
+                            <div class="ops-field" data-category-scope="geo">
                                 <label for="map_latitude">Map Latitude</label>
                                 <input id="map_latitude" name="map_latitude" class="ops-input" type="number" min="-90" max="90" step="0.000001" value="{{ old('map_latitude') }}" placeholder="4.1755">
                             </div>
-                            <div class="ops-field">
+                            <div class="ops-field" data-category-scope="geo">
                                 <label for="map_longitude">Map Longitude</label>
                                 <input id="map_longitude" name="map_longitude" class="ops-input" type="number" min="-180" max="180" step="0.000001" value="{{ old('map_longitude') }}" placeholder="73.5093">
                             </div>
-                            <div class="ops-field">
+                            <div class="ops-field" data-category-scope="geo">
                                 <label for="map_place_id">Map Place ID (optional)</label>
                                 <input id="map_place_id" name="map_place_id" class="ops-input" type="text" maxlength="190" value="{{ old('map_place_id') }}" placeholder="Generated from pin-drop">
                             </div>
@@ -1997,7 +1981,58 @@
                             </div>
                             <div class="ops-field" data-category-scope="transport">
                                 <label for="property_transport_mode">Transport Mode</label>
-                                <input id="property_transport_mode" name="transport_mode" class="ops-input" type="text" maxlength="80" value="{{ old('transport_mode') }}" placeholder="Boat, Van, Ferry, Speedboat">
+                                @php
+                                    $transportModeOld = strtolower(trim((string) old('transport_mode', '')));
+                                    $knownTransportModes = ['speedboat', 'ferry', 'boat', 'dhoni', 'launch', 'catamaran', 'yacht', 'van', 'car', 'pickup', 'bus', 'suv', 'other vessel', 'other land vehicle'];
+                                @endphp
+                                <select id="property_transport_mode" name="transport_mode" class="ops-select">
+                                    <option value="" @selected($transportModeOld === '')>Select transport mode</option>
+                                    @if ($transportModeOld !== '' && !in_array($transportModeOld, $knownTransportModes, true))
+                                        <option value="{{ $transportModeOld }}" selected>{{ ucfirst($transportModeOld) }} (existing)</option>
+                                    @endif
+                                    <optgroup label="Vessel / Marine">
+                                        <option value="speedboat" @selected($transportModeOld === 'speedboat')>Speedboat</option>
+                                        <option value="ferry" @selected($transportModeOld === 'ferry')>Ferry</option>
+                                        <option value="boat" @selected($transportModeOld === 'boat')>Boat</option>
+                                        <option value="dhoni" @selected($transportModeOld === 'dhoni')>Dhoni</option>
+                                        <option value="launch" @selected($transportModeOld === 'launch')>Launch</option>
+                                        <option value="catamaran" @selected($transportModeOld === 'catamaran')>Catamaran</option>
+                                        <option value="yacht" @selected($transportModeOld === 'yacht')>Yacht</option>
+                                        <option value="other vessel" @selected($transportModeOld === 'other vessel')>Other Vessel</option>
+                                    </optgroup>
+                                    <optgroup label="Vehicle / Land">
+                                        <option value="van" @selected($transportModeOld === 'van')>Van</option>
+                                        <option value="car" @selected($transportModeOld === 'car')>Car</option>
+                                        <option value="pickup" @selected($transportModeOld === 'pickup')>Pickup</option>
+                                        <option value="bus" @selected($transportModeOld === 'bus')>Bus</option>
+                                        <option value="suv" @selected($transportModeOld === 'suv')>SUV</option>
+                                        <option value="other land vehicle" @selected($transportModeOld === 'other land vehicle')>Other Land Vehicle</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <div class="ops-field" data-category-scope="transport">
+                                <label for="property_vehicle_name">Vehicle / Vessel Name</label>
+                                <input id="property_vehicle_name" name="vehicle_name" class="ops-input" type="text" maxlength="120" value="{{ old('vehicle_name') }}" placeholder="Sea Rider 01, Airport Van 3">
+                            </div>
+                            <div class="ops-field" data-category-scope="transport">
+                                <label for="property_registration_plate">Registration Plate No.</label>
+                                <input id="property_registration_plate" name="registration_plate" class="ops-input" type="text" maxlength="80" value="{{ old('registration_plate') }}" placeholder="AB-1234 / Vessel Reg ID">
+                            </div>
+                            <div class="ops-field" data-category-scope="transport">
+                                <label for="property_contact_name">Contact Name</label>
+                                <input id="property_contact_name" name="contact_name" class="ops-input" type="text" maxlength="120" value="{{ old('contact_name') }}" placeholder="Dispatcher / Driver / Captain">
+                            </div>
+                            <div class="ops-field" data-category-scope="transport">
+                                <label for="property_contact_number">Contact Number</label>
+                                <input id="property_contact_number" name="contact_number" class="ops-input" type="text" maxlength="60" value="{{ old('contact_number') }}" placeholder="+960 7xxxxxx">
+                            </div>
+                            <div class="ops-field" data-category-scope="transport">
+                                <label for="property_transport_trip_type">Trip Type</label>
+                                <select id="property_transport_trip_type" name="transport_trip_type" class="ops-select">
+                                    <option value="" @selected(old('transport_trip_type') === null)>Select</option>
+                                    <option value="one_way" @selected(old('transport_trip_type') === 'one_way')>Pickup to Dropoff (One-way)</option>
+                                    <option value="round_trip" @selected(old('transport_trip_type') === 'round_trip')>Round Trip</option>
+                                </select>
                             </div>
                             <div class="ops-field" data-category-scope="transport">
                                 <label for="property_pickup_location">Pickup Location</label>
@@ -2006,6 +2041,45 @@
                             <div class="ops-field" data-category-scope="transport">
                                 <label for="property_dropoff_location">Dropoff Location</label>
                                 <input id="property_dropoff_location" name="dropoff_location" class="ops-input" type="text" maxlength="190" value="{{ old('dropoff_location') }}" placeholder="Resort, Island, City center">
+                            </div>
+                            <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
+                                <label for="property_departure_location">Departure Location</label>
+                                <input id="property_departure_location" name="departure_location" class="ops-input" type="text" maxlength="190" value="{{ old('departure_location') }}" placeholder="Jetty / Harbor / Terminal">
+                            </div>
+                            <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
+                                <label for="property_departure_date">Departure Date</label>
+                                <input id="property_departure_date" name="departure_date" class="ops-input" type="date" value="{{ old('departure_date') }}">
+                            </div>
+                            <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
+                                <label for="property_departure_time">Departure Time</label>
+                                <input id="property_departure_time" name="departure_time" class="ops-input" type="time" value="{{ old('departure_time') }}">
+                            </div>
+                            <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
+                                <label for="property_reporting_time">Reporting Time</label>
+                                <input id="property_reporting_time" name="reporting_time" class="ops-input" type="time" value="{{ old('reporting_time') }}">
+                            </div>
+                            <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
+                                <label for="property_trip_duration_minutes">Trip Duration Estimate (minutes)</label>
+                                <input id="property_trip_duration_minutes" name="trip_duration_minutes" class="ops-input" type="number" min="5" max="1440" value="{{ old('trip_duration_minutes') }}" placeholder="e.g. 90">
+                            </div>
+                            <div class="ops-field" data-category-scope="transport" data-transport-land-only>
+                                <label for="property_transport_pricing_model">Land Pricing Model</label>
+                                <select id="property_transport_pricing_model" name="transport_pricing_model" class="ops-select">
+                                    <option value="per_trip" @selected(old('transport_pricing_model', 'per_trip') === 'per_trip')>Per Trip</option>
+                                    <option value="hourly" @selected(old('transport_pricing_model') === 'hourly')>Hourly Hire</option>
+                                    <option value="daily" @selected(old('transport_pricing_model') === 'daily')>Daily Hire</option>
+                                </select>
+                            </div>
+                            <div class="ops-field" data-category-scope="transport" data-transport-land-only>
+                                <label for="property_hourly_rate">Hourly Rate (MVR)</label>
+                                <input id="property_hourly_rate" name="hourly_rate" class="ops-input" type="number" min="0" step="0.01" value="{{ old('hourly_rate') }}">
+                            </div>
+                            <div class="ops-field" data-category-scope="transport" data-transport-land-only>
+                                <label for="property_daily_rate">Daily Rate (MVR)</label>
+                                <input id="property_daily_rate" name="daily_rate" class="ops-input" type="number" min="0" step="0.01" value="{{ old('daily_rate') }}">
+                            </div>
+                            <div class="ops-field ops-field-wide" data-category-scope="transport">
+                                <p id="transportPricingHint" class="category-scope-note" style="margin:0;">Transport pricing mode will auto-adjust from transport mode: speedboat/ferry/boat as per-seat, land transport as per-trip.</p>
                             </div>
                             <div class="ops-field" data-category-scope="excursion">
                                 <label for="property_excursion_duration_minutes">Duration (minutes)</label>
@@ -2111,7 +2185,7 @@
                                     <label class="feature-item"><input type="checkbox" name="property_features[]" value="kids_play_area" @checked(in_array('kids_play_area', $oldPropertyFeatures, true))> Kids Play Area</label>
                                 </div>
                             </div>
-                            <div class="ops-field ops-field-wide">
+                            <div class="ops-field ops-field-wide" data-category-scope="geo">
                                 <div class="map-picker">
                                     <div id="propertyMap" aria-label="Map picker"></div>
                                 </div>
@@ -2122,65 +2196,6 @@
                         <button class="btn btn-primary" id="propertyCreateSubmitButton" type="submit">Save Listing</button>
                     </form>
 
-                    <div class="form-toggle-row" style="margin-top:14px;">
-                        <button class="btn btn-secondary" type="button" id="closeRoomCreateForm" @if (!$showCreateRoomForm) hidden @endif>Cancel Room Form</button>
-                    </div>
-                    <form id="roomCreateForm" class="ops-form" method="POST" action="/portal/vendor/rooms/create" @if (!$showCreateRoomForm) hidden @endif>
-                        @csrf
-                        <input type="hidden" name="room_form_intent" value="1">
-                        <div class="ops-form-grid" style="margin-top:10px;">
-                            <div class="ops-field">
-                                <label for="room_vendor_property_id">Accommodation Listing</label>
-                                <select id="room_vendor_property_id" name="vendor_property_id" class="ops-select" required>
-                                    <option value="">Select property</option>
-                                    @foreach ($vendorProperties as $propertyOption)
-                                        @if (strtolower((string) ($propertyOption->listing_category ?? '')) === 'accommodation')
-                                            <option value="{{ (int) $propertyOption->id }}" @selected((string) old('vendor_property_id') === (string) $propertyOption->id)>
-                                                {{ $propertyOption->name }} (ID {{ (int) $propertyOption->id }})
-                                            </option>
-                                        @endif
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="ops-field">
-                                <label for="room_name">Room Name</label>
-                                <input id="room_name" name="name" class="ops-input" type="text" maxlength="160" value="{{ old('name') }}" required>
-                            </div>
-                            <div class="ops-field">
-                                <label for="room_quantity">Room Quantity</label>
-                                <input id="room_quantity" name="quantity" class="ops-input" type="number" min="1" max="10000" value="{{ old('quantity', 1) }}" required>
-                            </div>
-                            <div class="ops-field">
-                                <label for="room_max_occupancy">Base Occupancy (Adults)</label>
-                                <input id="room_max_occupancy" name="max_occupancy" class="ops-input" type="number" min="1" max="50" value="{{ old('max_occupancy', 1) }}" required>
-                            </div>
-                            <div class="ops-field">
-                                <label for="room_extra_person_capacity">Extra Adult Capacity</label>
-                                <input id="room_extra_person_capacity" name="extra_person_capacity" class="ops-input" type="number" min="0" max="20" value="{{ old('extra_person_capacity', 0) }}">
-                            </div>
-                            <div class="ops-field">
-                                <label for="room_child_capacity">Child Capacity</label>
-                                <input id="room_child_capacity" name="child_capacity" class="ops-input" type="number" min="0" max="20" value="{{ old('child_capacity', 0) }}">
-                            </div>
-                            <div class="ops-field">
-                                <label for="room_base_price">Room Base Price (MVR)</label>
-                                <input id="room_base_price" name="base_price" class="ops-input" type="number" min="0" step="0.01" value="{{ old('base_price') }}">
-                            </div>
-                            <div class="ops-field">
-                                <label for="room_extra_person_price">Extra Adult Price (MVR)</label>
-                                <input id="room_extra_person_price" name="extra_person_price" class="ops-input" type="number" min="0" step="0.01" value="{{ old('extra_person_price') }}">
-                            </div>
-                            <div class="ops-field">
-                                <label for="room_child_price">Child Price (MVR)</label>
-                                <input id="room_child_price" name="child_price" class="ops-input" type="number" min="0" step="0.01" value="{{ old('child_price') }}">
-                            </div>
-                            <div class="ops-field">
-                                <label for="room_bed_type">Bed Type</label>
-                                <input id="room_bed_type" name="bed_type" class="ops-input" type="text" maxlength="80" value="{{ old('bed_type') }}" placeholder="King, Twin, Queen, Bunk">
-                            </div>
-                        </div>
-                        <button class="btn btn-primary" type="submit">Save Room</button>
-                    </form>
                 </article>
 
                 <p class="wizard-note">Listings are now managed section-by-section below by category to avoid duplicate accommodation views.</p>
@@ -2194,7 +2209,10 @@
                         <article class="category-listing-section" id="category-view-{{ $categoryKey }}">
                             <div class="category-listing-header">
                                 <h4>{{ $categoryLabel }} Listings</h4>
-                                <span class="ops-chip">{{ $categoryProperties->count() }} listed</span>
+                                <div class="inline-actions">
+                                    <span class="ops-chip">{{ $categoryProperties->count() }} listed</span>
+                                    <button type="button" class="btn btn-secondary" data-listing-category-shortcut="{{ $categoryKey }}">Add {{ $categoryLabel }}</button>
+                                </div>
                             </div>
                             @if ($categoryProperties->isEmpty())
                                 <p class="ops-empty">No {{ strtolower((string) $categoryLabel) }} listings yet.</p>
@@ -2230,6 +2248,13 @@
                                                     if (isset($propertyDetails['property_features']) && is_array($propertyDetails['property_features'])) {
                                                         $propertyFeatureValues = array_map(static fn ($item) => (string) $item, $propertyDetails['property_features']);
                                                     }
+                                                    $transportMode = strtolower((string) ($propertyDetails['transport_mode'] ?? ''));
+                                                    $transportPricingBasis = strtolower((string) ($propertyDetails['transport_pricing_basis'] ?? ''));
+                                                    if ($transportPricingBasis === '') {
+                                                        $transportPricingBasis = preg_match('/\b(speed ?boat|ferry|boat|dhoni|launch|catamaran|yacht)\b/', $transportMode) ? 'per_seat' : 'per_trip';
+                                                    }
+                                                    $transportTripType = strtolower((string) ($propertyDetails['transport_trip_type'] ?? ''));
+                                                    $transportPricingModel = strtolower((string) ($propertyDetails['transport_pricing_model'] ?? ''));
                                                 @endphp
                                                 <tr>
                                                     <td>
@@ -2244,6 +2269,40 @@
                                                         {{ $property->location ?: 'N/A' }}<br>
                                                         @if ($categoryKey === 'accommodation')
                                                             Room pricing and occupancy configured at room level.
+                                                        @elseif ($categoryKey === 'transport')
+                                                            @if ($transportPricingBasis === 'per_seat')
+                                                                {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($property->base_price ?? 0), 2) }} per seat<br>
+                                                            @elseif ($transportPricingModel === 'hourly')
+                                                                Hourly Hire: {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($propertyDetails['hourly_rate'] ?? 0), 2) }} / hour<br>
+                                                            @elseif ($transportPricingModel === 'daily')
+                                                                Daily Hire: {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($propertyDetails['daily_rate'] ?? 0), 2) }} / day<br>
+                                                            @else
+                                                                {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($property->base_price ?? 0), 2) }} per trip<br>
+                                                            @endif
+                                                            {{ $transportPricingBasis === 'per_seat' ? 'Seat Capacity' : 'Max Passengers' }}: {{ (int) ($property->max_guests ?? 0) }}
+                                                            @if ($transportTripType === 'round_trip')
+                                                                <br>Trip Type: Round Trip
+                                                            @elseif ($transportTripType === 'one_way')
+                                                                <br>Trip Type: One-way
+                                                            @endif
+                                                            @if (!empty($propertyDetails['departure_location']))
+                                                                <br>Departure: {{ (string) $propertyDetails['departure_location'] }}
+                                                            @endif
+                                                            @if (!empty($propertyDetails['departure_date']))
+                                                                <br>Date: {{ (string) $propertyDetails['departure_date'] }}
+                                                            @endif
+                                                            @if (!empty($propertyDetails['departure_time']))
+                                                                <br>Departure Time: {{ (string) $propertyDetails['departure_time'] }}
+                                                            @endif
+                                                            @if (!empty($propertyDetails['reporting_time']))
+                                                                <br>Reporting Time: {{ (string) $propertyDetails['reporting_time'] }}
+                                                            @endif
+                                                            @if (!empty($propertyDetails['trip_duration_minutes']))
+                                                                <br>Trip Duration: {{ (int) $propertyDetails['trip_duration_minutes'] }} min
+                                                            @endif
+                                                            @if (!empty($propertyDetails['vehicle_name']))
+                                                                <br>Vehicle: {{ (string) $propertyDetails['vehicle_name'] }}
+                                                            @endif
                                                         @else
                                                             {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($property->base_price ?? 0), 2) }}<br>
                                                             Guests/Capacity: {{ (int) ($property->max_guests ?? 0) }}
@@ -2353,13 +2412,13 @@
                                                             <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/properties/{{ $propertyId }}/update" data-property-edit-form="{{ $propertyId }}" data-property-edit-category="{{ $editCategory }}" hidden>
                                                                 @csrf
                                                                 <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $property->name }}" required>
-                                                                <input class="ops-input" name="location_country" type="text" maxlength="90" value="{{ (string) ($propertyDetails['location_country'] ?? '') }}" placeholder="Country">
-                                                                <input class="ops-input" name="location_state" type="text" maxlength="120" value="{{ (string) ($propertyDetails['location_state'] ?? '') }}" placeholder="State / Province / Atoll">
-                                                                <input class="ops-input" name="location_city" type="text" maxlength="120" value="{{ (string) ($propertyDetails['location_city'] ?? '') }}" placeholder="City / Island">
-                                                                <input class="ops-input" name="address_line" type="text" maxlength="255" value="{{ (string) ($propertyDetails['address_line'] ?? '') }}" placeholder="Exact Address">
-                                                                <input class="ops-input" name="map_latitude" type="number" min="-90" max="90" step="0.000001" value="{{ (string) ($propertyDetails['map_latitude'] ?? '') }}" placeholder="Latitude">
-                                                                <input class="ops-input" name="map_longitude" type="number" min="-180" max="180" step="0.000001" value="{{ (string) ($propertyDetails['map_longitude'] ?? '') }}" placeholder="Longitude">
-                                                                <input class="ops-input" name="map_place_id" type="text" maxlength="190" value="{{ (string) ($propertyDetails['map_place_id'] ?? '') }}" placeholder="Map Place ID">
+                                                                <input class="ops-input" name="location_country" type="text" maxlength="90" value="{{ (string) ($propertyDetails['location_country'] ?? '') }}" placeholder="Country" data-property-edit-scope="geo">
+                                                                <input class="ops-input" name="location_state" type="text" maxlength="120" value="{{ (string) ($propertyDetails['location_state'] ?? '') }}" placeholder="State / Province / Atoll" data-property-edit-scope="geo">
+                                                                <input class="ops-input" name="location_city" type="text" maxlength="120" value="{{ (string) ($propertyDetails['location_city'] ?? '') }}" placeholder="City / Island" data-property-edit-scope="geo">
+                                                                <input class="ops-input" name="address_line" type="text" maxlength="255" value="{{ (string) ($propertyDetails['address_line'] ?? '') }}" placeholder="Exact Address" data-property-edit-scope="geo">
+                                                                <input class="ops-input" name="map_latitude" type="number" min="-90" max="90" step="0.000001" value="{{ (string) ($propertyDetails['map_latitude'] ?? '') }}" placeholder="Latitude" data-property-edit-scope="geo">
+                                                                <input class="ops-input" name="map_longitude" type="number" min="-180" max="180" step="0.000001" value="{{ (string) ($propertyDetails['map_longitude'] ?? '') }}" placeholder="Longitude" data-property-edit-scope="geo">
+                                                                <input class="ops-input" name="map_place_id" type="text" maxlength="190" value="{{ (string) ($propertyDetails['map_place_id'] ?? '') }}" placeholder="Map Place ID" data-property-edit-scope="geo">
                                                                 <textarea class="ops-textarea" name="description" maxlength="3000" placeholder="Description">{{ (string) ($property->description ?? '') }}</textarea>
                                                                 <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($property->base_price ?? 0) }}" data-property-edit-scope="capacity">
                                                                 <input class="ops-input" name="max_guests" type="number" min="0" max="10000" value="{{ (int) ($property->max_guests ?? 0) }}" data-property-edit-scope="capacity">
@@ -2376,9 +2435,57 @@
                                                                 <input class="ops-input" name="bedroom_count" type="number" min="0" max="1000" value="{{ (string) ($propertyDetails['bedroom_count'] ?? '') }}" placeholder="Bedrooms" data-property-edit-scope="stay">
                                                                 <input class="ops-input" name="capacity_value" type="number" min="1" max="20000" value="{{ (string) ($propertyDetails['capacity_value'] ?? '') }}" placeholder="Capacity" data-property-edit-scope="capacity">
                                                                 <input class="ops-input" name="service_radius_km" type="number" min="0" max="5000" step="0.1" value="{{ (string) ($propertyDetails['service_radius_km'] ?? '') }}" placeholder="Service Radius (km)" data-property-edit-scope="service">
-                                                                <input class="ops-input" name="transport_mode" type="text" maxlength="80" value="{{ (string) ($propertyDetails['transport_mode'] ?? '') }}" placeholder="Transport Mode" data-property-edit-scope="transport">
+                                                                @php
+                                                                    $transportModeEdit = strtolower(trim((string) ($propertyDetails['transport_mode'] ?? '')));
+                                                                    $knownTransportModes = ['speedboat', 'ferry', 'boat', 'dhoni', 'launch', 'catamaran', 'yacht', 'van', 'car', 'pickup', 'bus', 'suv', 'other vessel', 'other land vehicle'];
+                                                                @endphp
+                                                                <select class="ops-select" name="transport_mode" data-property-edit-scope="transport">
+                                                                    <option value="" @selected($transportModeEdit === '')>Transport Mode</option>
+                                                                    @if ($transportModeEdit !== '' && !in_array($transportModeEdit, $knownTransportModes, true))
+                                                                        <option value="{{ $transportModeEdit }}" selected>{{ ucfirst($transportModeEdit) }} (existing)</option>
+                                                                    @endif
+                                                                    <optgroup label="Vessel / Marine">
+                                                                        <option value="speedboat" @selected($transportModeEdit === 'speedboat')>Speedboat</option>
+                                                                        <option value="ferry" @selected($transportModeEdit === 'ferry')>Ferry</option>
+                                                                        <option value="boat" @selected($transportModeEdit === 'boat')>Boat</option>
+                                                                        <option value="dhoni" @selected($transportModeEdit === 'dhoni')>Dhoni</option>
+                                                                        <option value="launch" @selected($transportModeEdit === 'launch')>Launch</option>
+                                                                        <option value="catamaran" @selected($transportModeEdit === 'catamaran')>Catamaran</option>
+                                                                        <option value="yacht" @selected($transportModeEdit === 'yacht')>Yacht</option>
+                                                                        <option value="other vessel" @selected($transportModeEdit === 'other vessel')>Other Vessel</option>
+                                                                    </optgroup>
+                                                                    <optgroup label="Vehicle / Land">
+                                                                        <option value="van" @selected($transportModeEdit === 'van')>Van</option>
+                                                                        <option value="car" @selected($transportModeEdit === 'car')>Car</option>
+                                                                        <option value="pickup" @selected($transportModeEdit === 'pickup')>Pickup</option>
+                                                                        <option value="bus" @selected($transportModeEdit === 'bus')>Bus</option>
+                                                                        <option value="suv" @selected($transportModeEdit === 'suv')>SUV</option>
+                                                                        <option value="other land vehicle" @selected($transportModeEdit === 'other land vehicle')>Other Land Vehicle</option>
+                                                                    </optgroup>
+                                                                </select>
+                                                                <input class="ops-input" name="vehicle_name" type="text" maxlength="120" value="{{ (string) ($propertyDetails['vehicle_name'] ?? '') }}" placeholder="Vehicle / Vessel Name" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="registration_plate" type="text" maxlength="80" value="{{ (string) ($propertyDetails['registration_plate'] ?? '') }}" placeholder="Registration Plate" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="contact_name" type="text" maxlength="120" value="{{ (string) ($propertyDetails['contact_name'] ?? '') }}" placeholder="Contact Name" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="contact_number" type="text" maxlength="60" value="{{ (string) ($propertyDetails['contact_number'] ?? '') }}" placeholder="Contact Number" data-property-edit-scope="transport">
+                                                                <select class="ops-select" name="transport_trip_type" data-property-edit-scope="transport">
+                                                                    <option value="" @selected((string) ($propertyDetails['transport_trip_type'] ?? '') === '')>Trip Type</option>
+                                                                    <option value="one_way" @selected((string) ($propertyDetails['transport_trip_type'] ?? '') === 'one_way')>Pickup to Dropoff (One-way)</option>
+                                                                    <option value="round_trip" @selected((string) ($propertyDetails['transport_trip_type'] ?? '') === 'round_trip')>Round Trip</option>
+                                                                </select>
+                                                                <select class="ops-select" name="transport_pricing_model" data-property-edit-scope="transport">
+                                                                    <option value="per_trip" @selected((string) ($propertyDetails['transport_pricing_model'] ?? 'per_trip') === 'per_trip')>Per Trip</option>
+                                                                    <option value="hourly" @selected((string) ($propertyDetails['transport_pricing_model'] ?? '') === 'hourly')>Hourly Hire</option>
+                                                                    <option value="daily" @selected((string) ($propertyDetails['transport_pricing_model'] ?? '') === 'daily')>Daily Hire</option>
+                                                                </select>
+                                                                <input class="ops-input" name="hourly_rate" type="number" min="0" step="0.01" value="{{ (string) ($propertyDetails['hourly_rate'] ?? '') }}" placeholder="Hourly Rate (MVR)" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="daily_rate" type="number" min="0" step="0.01" value="{{ (string) ($propertyDetails['daily_rate'] ?? '') }}" placeholder="Daily Rate (MVR)" data-property-edit-scope="transport">
                                                                 <input class="ops-input" name="pickup_location" type="text" maxlength="190" value="{{ (string) ($propertyDetails['pickup_location'] ?? '') }}" placeholder="Pickup Location" data-property-edit-scope="transport">
                                                                 <input class="ops-input" name="dropoff_location" type="text" maxlength="190" value="{{ (string) ($propertyDetails['dropoff_location'] ?? '') }}" placeholder="Dropoff Location" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="departure_location" type="text" maxlength="190" value="{{ (string) ($propertyDetails['departure_location'] ?? '') }}" placeholder="Departure Location" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="departure_date" type="date" value="{{ (string) ($propertyDetails['departure_date'] ?? '') }}" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="departure_time" type="time" value="{{ (string) ($propertyDetails['departure_time'] ?? '') }}" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="reporting_time" type="time" value="{{ (string) ($propertyDetails['reporting_time'] ?? '') }}" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="trip_duration_minutes" type="number" min="5" max="1440" value="{{ (string) ($propertyDetails['trip_duration_minutes'] ?? '') }}" placeholder="Trip Duration (min)" data-property-edit-scope="transport">
                                                                 <input class="ops-input" name="excursion_duration_minutes" type="number" min="30" max="1440" value="{{ (string) ($propertyDetails['excursion_duration_minutes'] ?? '') }}" placeholder="Excursion Duration (min)" data-property-edit-scope="excursion">
                                                                 <select class="ops-select" name="excursion_difficulty" data-property-edit-scope="excursion">
                                                                     <option value="" @selected((string) ($propertyDetails['excursion_difficulty'] ?? '') === '')>Difficulty</option>
@@ -2452,6 +2559,66 @@
                                                         </div>
                                                     </td>
                                                 </tr>
+                                                @if ($categoryKey === 'accommodation')
+                                                    @php
+                                                        $showInlineRoomRow = $showCreateRoomForm && (string) old('vendor_property_id') === (string) $propertyId;
+                                                    @endphp
+                                                    <tr data-inline-room-row="{{ $propertyId }}" @if (!$showInlineRoomRow) hidden @endif>
+                                                        <td colspan="4">
+                                                            <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/rooms/create" data-inline-room-form="{{ $propertyId }}">
+                                                                @csrf
+                                                                <input type="hidden" name="room_form_intent" value="1">
+                                                                <input type="hidden" name="vendor_property_id" value="{{ $propertyId }}">
+                                                                <div class="ops-form-grid">
+                                                                    <div class="ops-field">
+                                                                        <label>Accommodation Listing</label>
+                                                                        <input class="ops-input" type="text" value="{{ $property->name }} (ID {{ $propertyId }})" readonly>
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Room Name</label>
+                                                                        <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $showInlineRoomRow ? old('name') : '' }}" required>
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Room Quantity</label>
+                                                                        <input class="ops-input" name="quantity" type="number" min="1" max="10000" value="{{ $showInlineRoomRow ? old('quantity', 1) : 1 }}" required>
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Base Occupancy (Adults)</label>
+                                                                        <input class="ops-input" name="max_occupancy" type="number" min="1" max="50" value="{{ $showInlineRoomRow ? old('max_occupancy', 1) : 1 }}" required>
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Extra Adult Capacity</label>
+                                                                        <input class="ops-input" name="extra_person_capacity" type="number" min="0" max="20" value="{{ $showInlineRoomRow ? old('extra_person_capacity', 0) : 0 }}">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Child Capacity</label>
+                                                                        <input class="ops-input" name="child_capacity" type="number" min="0" max="20" value="{{ $showInlineRoomRow ? old('child_capacity', 0) : 0 }}">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Room Base Price (MVR)</label>
+                                                                        <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('base_price', 0) : 0 }}">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Extra Adult Price (MVR)</label>
+                                                                        <input class="ops-input" name="extra_person_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('extra_person_price', 0) : 0 }}">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Child Price (MVR)</label>
+                                                                        <input class="ops-input" name="child_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('child_price', 0) : 0 }}">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Bed Type</label>
+                                                                        <input class="ops-input" name="bed_type" type="text" maxlength="80" value="{{ $showInlineRoomRow ? old('bed_type') : '' }}" placeholder="King, Twin, Queen, Bunk">
+                                                                    </div>
+                                                                </div>
+                                                                <div class="inline-actions" style="margin-top:10px;">
+                                                                    <button class="btn btn-primary" type="submit">Save Room</button>
+                                                                    <button class="btn btn-secondary" type="button" data-close-inline-room-row="{{ $propertyId }}">Cancel</button>
+                                                                </div>
+                                                            </form>
+                                                        </td>
+                                                    </tr>
+                                                @endif
                                             @endforeach
                                         </tbody>
                                     </table>
@@ -2929,6 +3096,14 @@
             const propertyCategorySelect = document.getElementById("property_listing_category");
             const propertyTypeSelect = document.getElementById("property_type");
             const propertyCategoryScopeNote = document.getElementById("propertyCategoryScopeNote");
+            const propertyBasePriceLabel = document.querySelector('label[for="property_base_price"]');
+            const propertyMaxGuestsLabel = document.querySelector('label[for="property_max_guests"]');
+            const propertyCapacityLabel = document.querySelector('label[for="property_capacity_value"]');
+            const transportModeInput = document.getElementById("property_transport_mode");
+            const transportPricingHint = document.getElementById("transportPricingHint");
+            const transportPricingModelSelect = document.getElementById("property_transport_pricing_model");
+            const transportLandOnlyFields = Array.from(document.querySelectorAll("[data-transport-land-only]"));
+            const transportMarineOnlyFields = Array.from(document.querySelectorAll("[data-transport-marine-only]"));
             const categoryScopedFields = Array.from(document.querySelectorAll("[data-category-scope]"));
             const categoryViewPanels = Array.from(document.querySelectorAll('[data-category-view]'));
             const openRoomCreateForm = document.getElementById("openRoomCreateForm");
@@ -2936,6 +3111,8 @@
             const roomCreateForm = document.getElementById("roomCreateForm");
             const roomPropertySelect = document.getElementById("room_vendor_property_id");
             const roomQuickOpenButtons = Array.from(document.querySelectorAll("[data-open-room-form]"));
+            const inlineRoomRows = Array.from(document.querySelectorAll("[data-inline-room-row]"));
+            const inlineRoomCloseButtons = Array.from(document.querySelectorAll("[data-close-inline-room-row]"));
             const propertyEditButtons = Array.from(document.querySelectorAll('[data-open-property-edit]'));
             const propertyEditCancelButtons = Array.from(document.querySelectorAll('[data-close-property-edit]'));
             const roomEditButtons = Array.from(document.querySelectorAll('[data-open-room-edit]'));
@@ -3666,7 +3843,7 @@
                 const normalized = normalizeCategoryKey(category);
 
                 if (normalized === "accommodation") {
-                    return ["stay"];
+                    return ["stay", "geo"];
                 }
 
                 if (normalized === "transport") {
@@ -3674,26 +3851,104 @@
                 }
 
                 if (normalized === "excursion") {
-                    return ["capacity", "service", "excursion"];
+                    return ["capacity", "service", "excursion", "geo"];
                 }
 
                 if (normalized === "remote_workspace") {
-                    return ["capacity", "workspace", "stay"];
+                    return ["capacity", "workspace", "service", "geo"];
                 }
 
                 if (normalized === "resort_day_visit") {
-                    return ["capacity", "day_visit"];
+                    return ["capacity", "day_visit", "geo"];
                 }
 
                 if (normalized === "restaurant") {
-                    return ["capacity", "restaurant"];
+                    return ["capacity", "restaurant", "geo"];
                 }
 
                 if (normalized === "vehicle_rental") {
-                    return ["vehicle", "capacity", "rental"];
+                    return ["vehicle", "capacity", "rental", "geo"];
                 }
 
-                return ["stay", "capacity", "service", "vehicle", "transport", "excursion", "workspace", "day_visit", "restaurant", "rental"];
+                return ["stay", "capacity", "service", "vehicle", "transport", "excursion", "workspace", "day_visit", "restaurant", "rental", "geo"];
+            }
+
+            function isMarineTransportMode(value) {
+                const mode = String(value || "").trim().toLowerCase();
+                return /(^|\s)(speed\s?boat|ferry|boat|dhoni|launch|catamaran|yacht)(\s|$)/.test(mode);
+            }
+
+            function refreshTransportFieldLabels() {
+                if (!propertyCategorySelect) {
+                    return;
+                }
+
+                const isTransportCategory = normalizeCategoryKey(propertyCategorySelect.value) === "transport";
+                const isMarine = isMarineTransportMode(transportModeInput ? transportModeInput.value : "");
+                const selectedPricingModel = transportPricingModelSelect ? String(transportPricingModelSelect.value || "per_trip") : "per_trip";
+
+                if (propertyBasePriceLabel) {
+                    propertyBasePriceLabel.textContent = isTransportCategory
+                        ? (isMarine ? "Price Per Seat (MVR)" : "Price Per Trip (MVR)")
+                        : "Base Price (MVR)";
+                }
+
+                if (propertyCapacityLabel) {
+                    propertyCapacityLabel.textContent = isTransportCategory
+                        ? (isMarine ? "Seat Capacity" : "Max Passengers Per Trip")
+                        : "Capacity";
+                }
+
+                if (propertyMaxGuestsLabel) {
+                    propertyMaxGuestsLabel.textContent = isTransportCategory
+                        ? (isMarine ? "Seat Capacity (Legacy)" : "Max Passengers (Legacy)")
+                        : "Max Guests";
+                }
+
+                if (transportPricingHint) {
+                    transportPricingHint.textContent = isTransportCategory
+                        ? (isMarine
+                            ? "Marine transport mode detected: pricing is per seat. Define pickup and dropoff, then select one-way or round-trip."
+                            : "Land transport mode detected: choose per-trip, hourly, or daily pricing and set max passengers per trip.")
+                        : "Transport pricing mode will auto-adjust from transport mode: speedboat/ferry/boat as per-seat, land transport as per-trip.";
+                }
+
+                transportLandOnlyFields.forEach((field) => {
+                    const shouldShow = isTransportCategory && !isMarine;
+                    field.hidden = !shouldShow;
+                    field.style.display = shouldShow ? '' : 'none';
+                    field.querySelectorAll('input, select, textarea').forEach((input) => {
+                        input.disabled = !shouldShow;
+                    });
+                });
+
+                transportMarineOnlyFields.forEach((field) => {
+                    const shouldShow = isTransportCategory && isMarine;
+                    field.hidden = !shouldShow;
+                    field.style.display = shouldShow ? '' : 'none';
+                    field.querySelectorAll('input, select, textarea').forEach((input) => {
+                        input.disabled = !shouldShow;
+                    });
+                });
+
+                const hourlyField = document.getElementById("property_hourly_rate");
+                const dailyField = document.getElementById("property_daily_rate");
+                if (hourlyField) {
+                    const showHourly = isTransportCategory && !isMarine && selectedPricingModel === "hourly";
+                    hourlyField.disabled = !showHourly;
+                    if (hourlyField.parentElement) {
+                        hourlyField.parentElement.hidden = !showHourly;
+                        hourlyField.parentElement.style.display = showHourly ? '' : 'none';
+                    }
+                }
+                if (dailyField) {
+                    const showDaily = isTransportCategory && !isMarine && selectedPricingModel === "daily";
+                    dailyField.disabled = !showDaily;
+                    if (dailyField.parentElement) {
+                        dailyField.parentElement.hidden = !showDaily;
+                        dailyField.parentElement.style.display = showDaily ? '' : 'none';
+                    }
+                }
             }
 
             function refreshCategoryViewPanels() {
@@ -3737,7 +3992,7 @@
                     },
                     remote_workspace: {
                         title: 'Remote Workspace Enlist Form',
-                        subtitle: 'Add workspace listing details for remote workers and teams.',
+                        subtitle: 'Add workspace listing details for remote workers and teams with service coverage context.',
                         submit: 'Save Remote Workspace Listing',
                         note: 'Remote workspace fields are active for this category.',
                         propertyType: 'service',
@@ -3810,9 +4065,13 @@
                     const shouldShow = scopes.some((scope) => activeScopes.includes(scope));
                     field.hidden = !shouldShow;
                     field.style.display = shouldShow ? '' : 'none';
+                    field.querySelectorAll('input, select, textarea').forEach((input) => {
+                        input.disabled = !shouldShow;
+                    });
                 });
                 refreshCategoryViewPanels();
                 applyCategoryFormMeta(propertyCategorySelect.value, false);
+                refreshTransportFieldLabels();
             }
 
             function applyPropertyCategoryFilter(categoryKey) {
@@ -4141,21 +4400,6 @@
                 });
             }
 
-            if (openRoomCreateForm && roomCreateForm) {
-                openRoomCreateForm.addEventListener("click", function () {
-                    roomCreateForm.hidden = false;
-                    if (closeRoomCreateForm) closeRoomCreateForm.hidden = false;
-                    if (roomPropertySelect) roomPropertySelect.focus();
-                });
-            }
-
-            if (closeRoomCreateForm && roomCreateForm) {
-                closeRoomCreateForm.addEventListener("click", function () {
-                    roomCreateForm.hidden = true;
-                    closeRoomCreateForm.hidden = true;
-                });
-            }
-
             roomQuickOpenButtons.forEach((button) => {
                 button.addEventListener("click", function () {
                     const propertyId = String(button.getAttribute("data-property-id") || "").trim();
@@ -4163,17 +4407,35 @@
                     showPanelGroup("listings");
                     activateListingWizardStep(1, false);
 
-                    if (roomCreateForm) roomCreateForm.hidden = false;
-                    if (closeRoomCreateForm) closeRoomCreateForm.hidden = false;
-
-                    if (roomPropertySelect && propertyId) {
-                        ensureSelectHasOption(roomPropertySelect, propertyId);
-                        roomPropertySelect.value = propertyId;
-                        roomPropertySelect.dispatchEvent(new Event("change"));
-                        roomPropertySelect.focus();
+                    const targetRow = document.querySelector('[data-inline-room-row="' + propertyId + '"]');
+                    if (!targetRow) {
+                        return;
                     }
-                    if (roomCreateForm) {
-                        roomCreateForm.scrollIntoView({ behavior: "smooth", block: "start" });
+
+                    inlineRoomRows.forEach((row) => {
+                        if (row !== targetRow) {
+                            row.hidden = true;
+                        }
+                    });
+
+                    targetRow.hidden = false;
+                    const firstInput = targetRow.querySelector('input[name="name"]');
+                    if (firstInput) {
+                        firstInput.focus();
+                    }
+                    targetRow.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                });
+            });
+
+            inlineRoomCloseButtons.forEach((button) => {
+                button.addEventListener("click", function () {
+                    const propertyId = String(button.getAttribute("data-close-inline-room-row") || "").trim();
+                    if (!propertyId) {
+                        return;
+                    }
+                    const targetRow = document.querySelector('[data-inline-room-row="' + propertyId + '"]');
+                    if (targetRow) {
+                        targetRow.hidden = true;
                     }
                 });
             });
@@ -4306,6 +4568,15 @@
                 propertyCategorySelect.addEventListener("change", refreshPropertyCategoryFields);
             }
 
+            if (transportModeInput) {
+                transportModeInput.addEventListener("input", refreshTransportFieldLabels);
+                transportModeInput.addEventListener("change", refreshTransportFieldLabels);
+            }
+
+            if (transportPricingModelSelect) {
+                transportPricingModelSelect.addEventListener("change", refreshTransportFieldLabels);
+            }
+
             if (billingCountry && billingState && billingCity) {
                 billingState.dataset.selectedValue = "{{ old('billing_state', optional($vendorBilling)->billing_state ?? '') }}";
                 billingCity.dataset.selectedValue = "{{ old('billing_city', optional($vendorBilling)->billing_city ?? '') }}";
@@ -4399,6 +4670,14 @@
                 const propertyCreateFormSubtitle = document.getElementById('propertyCreateFormSubtitle');
                 const propertyCreateSubmitButton = document.getElementById('propertyCreateSubmitButton');
                 const propertyTypeSelect = document.getElementById('property_type');
+                const propertyBasePriceLabel = document.querySelector('label[for="property_base_price"]');
+                const propertyMaxGuestsLabel = document.querySelector('label[for="property_max_guests"]');
+                const propertyCapacityLabel = document.querySelector('label[for="property_capacity_value"]');
+                const transportModeInput = document.getElementById('property_transport_mode');
+                const transportPricingHint = document.getElementById('transportPricingHint');
+                const transportPricingModelSelect = document.getElementById('property_transport_pricing_model');
+                const transportLandOnlyFields = Array.from(document.querySelectorAll('[data-transport-land-only]'));
+                const transportMarineOnlyFields = Array.from(document.querySelectorAll('[data-transport-marine-only]'));
                 const categoryScopedFields = Array.from(document.querySelectorAll('[data-category-scope]'));
                 const categoryViewPanels = Array.from(document.querySelectorAll('[data-category-view]'));
                 const roomCreateForm = document.getElementById('roomCreateForm');
@@ -4407,28 +4686,103 @@
 
                 function categoryScopesFor(category) {
                     const normalized = normalizeCategoryKey(category);
-                    if (normalized === 'accommodation') return ['stay', 'capacity'];
+                    if (normalized === 'accommodation') return ['stay', 'geo'];
                     if (normalized === 'transport') return ['capacity', 'service', 'transport'];
-                    if (normalized === 'excursion') return ['capacity', 'service', 'excursion'];
-                    if (normalized === 'remote_workspace') return ['capacity', 'workspace', 'stay'];
-                    if (normalized === 'resort_day_visit') return ['capacity', 'day_visit'];
-                    if (normalized === 'restaurant') return ['capacity', 'restaurant'];
-                    if (normalized === 'vehicle_rental') return ['vehicle', 'capacity', 'rental'];
-                    return ['stay', 'capacity', 'service', 'vehicle', 'transport', 'excursion', 'workspace', 'day_visit', 'restaurant', 'rental'];
+                    if (normalized === 'excursion') return ['capacity', 'service', 'excursion', 'geo'];
+                    if (normalized === 'remote_workspace') return ['capacity', 'workspace', 'service', 'geo'];
+                    if (normalized === 'resort_day_visit') return ['capacity', 'day_visit', 'geo'];
+                    if (normalized === 'restaurant') return ['capacity', 'restaurant', 'geo'];
+                    if (normalized === 'vehicle_rental') return ['vehicle', 'capacity', 'rental', 'geo'];
+                    return ['stay', 'capacity', 'service', 'vehicle', 'transport', 'excursion', 'workspace', 'day_visit', 'restaurant', 'rental', 'geo'];
                 }
 
                 function categoryMetaFor(category) {
                     const normalized = normalizeCategoryKey(category);
                     const metaMap = {
-                        accommodation: ['Accommodation Enlist Form', 'Add stay-focused listing details, space setup, and guest capacity.', 'Save Accommodation Listing', 'Accommodation fields are active for this category.', 'property'],
+                        accommodation: ['Accommodation Enlist Form', 'Add stay-focused listing details. Room occupancy and pricing are configured at room level.', 'Save Accommodation Listing', 'Accommodation fields are active for this category.', 'property'],
                         transport: ['Transport Enlist Form', 'Add transfer and transport service listing details.', 'Save Transport Listing', 'Transport-focused fields are active for this category.', 'service'],
                         excursion: ['Excursion Enlist Form', 'Add activity and guided experience listing details.', 'Save Excursion Listing', 'Excursion-focused fields are active for this category.', 'service'],
-                        remote_workspace: ['Remote Workspace Enlist Form', 'Add workspace listing details for remote workers and teams.', 'Save Remote Workspace Listing', 'Remote workspace fields are active for this category.', 'service'],
+                        remote_workspace: ['Remote Workspace Enlist Form', 'Add workspace listing details for remote workers and teams with service coverage context.', 'Save Remote Workspace Listing', 'Remote workspace fields are active for this category.', 'service'],
                         resort_day_visit: ['Resort Day Visit Enlist Form', 'Add day-visit package listing details for resort access.', 'Save Resort Day Visit Listing', 'Resort day visit fields are active for this category.', 'service'],
                         restaurant: ['Restaurant Enlist Form', 'Add restaurant listing details with seating and service scope.', 'Save Restaurant Listing', 'Restaurant-focused fields are active for this category.', 'service'],
                         vehicle_rental: ['Vehicle Rental Enlist Form', 'Add rental fleet listing details with vehicle constraints.', 'Save Vehicle Rental Listing', 'Vehicle-rental-focused fields are active for this category.', 'service']
                     };
                     return metaMap[normalized] || ['Create New Listing', 'Choose a category-specific add button to load the right enlist form view.', 'Save Listing', 'Category-specific fields will change based on your selection.', 'service'];
+                }
+
+                function isMarineTransportMode(value) {
+                    const mode = String(value || '').trim().toLowerCase();
+                    return /(^|\s)(speed\s?boat|ferry|boat|dhoni|launch|catamaran|yacht)(\s|$)/.test(mode);
+                }
+
+                function refreshTransportFieldLabels() {
+                    if (!propertyCategorySelect) {
+                        return;
+                    }
+
+                    const isTransportCategory = normalizeCategoryKey(propertyCategorySelect.value) === 'transport';
+                    const isMarine = isMarineTransportMode(transportModeInput ? transportModeInput.value : '');
+                    const selectedPricingModel = transportPricingModelSelect ? String(transportPricingModelSelect.value || 'per_trip') : 'per_trip';
+
+                    if (propertyBasePriceLabel) {
+                        propertyBasePriceLabel.textContent = isTransportCategory
+                            ? (isMarine ? 'Price Per Seat (MVR)' : 'Price Per Trip (MVR)')
+                            : 'Base Price (MVR)';
+                    }
+                    if (propertyCapacityLabel) {
+                        propertyCapacityLabel.textContent = isTransportCategory
+                            ? (isMarine ? 'Seat Capacity' : 'Max Passengers Per Trip')
+                            : 'Capacity';
+                    }
+                    if (propertyMaxGuestsLabel) {
+                        propertyMaxGuestsLabel.textContent = isTransportCategory
+                            ? (isMarine ? 'Seat Capacity (Legacy)' : 'Max Passengers (Legacy)')
+                            : 'Max Guests';
+                    }
+                    if (transportPricingHint) {
+                        transportPricingHint.textContent = isTransportCategory
+                            ? (isMarine
+                                ? 'Marine transport mode detected: pricing is per seat. Define pickup and dropoff, then select one-way or round-trip.'
+                                : 'Land transport mode detected: choose per-trip, hourly, or daily pricing and set max passengers per trip.')
+                            : 'Transport pricing mode will auto-adjust from transport mode: speedboat/ferry/boat as per-seat, land transport as per-trip.';
+                    }
+
+                    transportLandOnlyFields.forEach((field) => {
+                        const shouldShow = isTransportCategory && !isMarine;
+                        field.hidden = !shouldShow;
+                        field.style.display = shouldShow ? '' : 'none';
+                        field.querySelectorAll('input, select, textarea').forEach((input) => {
+                            input.disabled = !shouldShow;
+                        });
+                    });
+
+                    transportMarineOnlyFields.forEach((field) => {
+                        const shouldShow = isTransportCategory && isMarine;
+                        field.hidden = !shouldShow;
+                        field.style.display = shouldShow ? '' : 'none';
+                        field.querySelectorAll('input, select, textarea').forEach((input) => {
+                            input.disabled = !shouldShow;
+                        });
+                    });
+
+                    const hourlyField = document.getElementById('property_hourly_rate');
+                    const dailyField = document.getElementById('property_daily_rate');
+                    if (hourlyField) {
+                        const showHourly = isTransportCategory && !isMarine && selectedPricingModel === 'hourly';
+                        hourlyField.disabled = !showHourly;
+                        if (hourlyField.parentElement) {
+                            hourlyField.parentElement.hidden = !showHourly;
+                            hourlyField.parentElement.style.display = showHourly ? '' : 'none';
+                        }
+                    }
+                    if (dailyField) {
+                        const showDaily = isTransportCategory && !isMarine && selectedPricingModel === 'daily';
+                        dailyField.disabled = !showDaily;
+                        if (dailyField.parentElement) {
+                            dailyField.parentElement.hidden = !showDaily;
+                            dailyField.parentElement.style.display = showDaily ? '' : 'none';
+                        }
+                    }
                 }
 
                 function applyCategoryMode(category) {
@@ -4461,6 +4815,7 @@
                     if (propertyCreateSubmitButton) propertyCreateSubmitButton.textContent = meta[2];
                     if (propertyCategoryScopeNote) propertyCategoryScopeNote.textContent = meta[3];
                     if (propertyTypeSelect) propertyTypeSelect.value = meta[4];
+                    refreshTransportFieldLabels();
                 }
 
                 if (openPropertyCreateForm && propertyCreateForm) {
@@ -4587,6 +4942,15 @@
                         applyCategoryMode(propertyCategorySelect.value);
                     });
                     applyCategoryMode(propertyCategorySelect.value);
+                }
+
+                if (transportModeInput) {
+                    transportModeInput.addEventListener('input', refreshTransportFieldLabels);
+                    transportModeInput.addEventListener('change', refreshTransportFieldLabels);
+                }
+
+                if (transportPricingModelSelect) {
+                    transportPricingModelSelect.addEventListener('change', refreshTransportFieldLabels);
                 }
             }
 

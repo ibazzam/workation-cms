@@ -340,7 +340,15 @@
                                     ? (string) $primaryPropertyMedia->file_path
                                     : ('/storage/' . ltrim((string) ($primaryPropertyMedia->file_path ?? ''), '/')))
                                 : null;
-                            $roomsForProperty = collect($customerRoomsByProperty->get($propertyId, collect()))->take(4);
+                            $allRoomsForProperty = collect($customerRoomsByProperty->get($propertyId, collect()));
+                            $roomsForProperty = $allRoomsForProperty->take(4);
+                            $lowestPricedRoom = $allRoomsForProperty
+                                ->filter(static fn ($room) => is_numeric($room->base_price ?? null))
+                                ->sortBy(static fn ($room) => (float) ($room->base_price ?? 0))
+                                ->first();
+                            $isAccommodationListing = strtolower((string) ($property->listing_category ?? '')) === 'accommodation';
+                            $lowestRoomRate = $lowestPricedRoom ? (float) ($lowestPricedRoom->base_price ?? 0) : null;
+                            $lowestRoomCurrency = strtoupper((string) (($lowestPricedRoom->currency ?? null) ?: ($property->currency ?? 'MVR')));
                         @endphp
                         <article class="listing-card">
                             @if ($propertyImageUrl)
@@ -349,7 +357,17 @@
                             <div class="listing-content">
                                 <h2 class="listing-title">{{ $property->name }}</h2>
                                 <p class="listing-meta">{{ $property->location ?: 'Location details coming soon' }}</p>
-                                <p class="listing-meta">{{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format((float) ($property->base_price ?? 0), 2) }} | Guests: {{ (int) ($property->max_guests ?? 0) }}</p>
+                                @if ($isAccommodationListing)
+                                    <p class="listing-meta">
+                                        @if ($lowestRoomRate !== null)
+                                            Starting from {{ $lowestRoomCurrency }} {{ number_format($lowestRoomRate, 2) }} per night | {{ $allRoomsForProperty->count() }} room type{{ $allRoomsForProperty->count() === 1 ? '' : 's' }}
+                                        @else
+                                            Room rates coming soon
+                                        @endif
+                                    </p>
+                                @else
+                                    <p class="listing-meta">{{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format((float) ($property->base_price ?? 0), 2) }} | Guests: {{ (int) ($property->max_guests ?? 0) }}</p>
+                                @endif
                                 <div class="room-list" aria-label="Room-level entries for {{ $property->name }}">
                                     @forelse ($roomsForProperty as $room)
                                         @php

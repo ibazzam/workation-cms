@@ -1860,7 +1860,7 @@
                         <p class="guided-wizard-title" id="propertyCreateFormTitle">Create New Listing</p>
                         <p class="guided-wizard-subtitle" id="propertyCreateFormSubtitle">Choose a category-specific add button to load the right enlist form view.</p>
                         <div class="ops-form-grid">
-                            <div class="ops-field">
+                            <div class="ops-field" hidden>
                                 <label for="property_listing_category">Listing Category</label>
                                 <select id="property_listing_category" name="listing_category" class="ops-select" required>
                                     @foreach ($vendorCategoryMap as $categoryKey => $categoryLabel)
@@ -1891,13 +1891,6 @@
                             <div class="ops-field">
                                 <label for="property_name">Name</label>
                                 <input id="property_name" name="name" class="ops-input" type="text" maxlength="160" value="{{ old('name') }}" required>
-                            </div>
-                            <div class="ops-field">
-                                <label for="property_type">Type</label>
-                                <select id="property_type" name="property_type" class="ops-select" required>
-                                    <option value="property" @selected(old('property_type', 'property') === 'property')>Property</option>
-                                    <option value="service" @selected(old('property_type') === 'service')>Service Space</option>
-                                </select>
                             </div>
                             <div class="ops-field" data-category-scope="geo">
                                 <label for="location_country">Country</label>
@@ -1983,7 +1976,7 @@
                                 <label for="property_transport_mode">Transport Mode</label>
                                 @php
                                     $transportModeOld = strtolower(trim((string) old('transport_mode', '')));
-                                    $knownTransportModes = ['speedboat', 'ferry', 'boat', 'dhoni', 'launch', 'catamaran', 'yacht', 'van', 'car', 'pickup', 'bus', 'suv', 'other vessel', 'other land vehicle'];
+                                    $knownTransportModes = ['speedboat', 'ferry', 'boat', 'safari', 'dhoni', 'launch', 'catamaran', 'yacht', 'van', 'car', 'pickup', 'bus', 'suv', 'other vessel', 'other land vehicle'];
                                 @endphp
                                 <select id="property_transport_mode" name="transport_mode" class="ops-select">
                                     <option value="" @selected($transportModeOld === '')>Select transport mode</option>
@@ -1994,6 +1987,7 @@
                                         <option value="speedboat" @selected($transportModeOld === 'speedboat')>Speedboat</option>
                                         <option value="ferry" @selected($transportModeOld === 'ferry')>Ferry</option>
                                         <option value="boat" @selected($transportModeOld === 'boat')>Boat</option>
+                                        <option value="safari" @selected($transportModeOld === 'safari')>Safari</option>
                                         <option value="dhoni" @selected($transportModeOld === 'dhoni')>Dhoni</option>
                                         <option value="launch" @selected($transportModeOld === 'launch')>Launch</option>
                                         <option value="catamaran" @selected($transportModeOld === 'catamaran')>Catamaran</option>
@@ -2055,8 +2049,8 @@
                                 <input id="property_departure_time" name="departure_time" class="ops-input" type="time" value="{{ old('departure_time') }}">
                             </div>
                             <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
-                                <label for="property_reporting_time">Reporting Time</label>
-                                <input id="property_reporting_time" name="reporting_time" class="ops-input" type="time" value="{{ old('reporting_time') }}">
+                                <label for="property_reporting_lead_minutes">Report Before Departure (minutes)</label>
+                                <input id="property_reporting_lead_minutes" name="reporting_lead_minutes" class="ops-input" type="number" min="0" max="720" step="1" value="{{ old('reporting_lead_minutes') }}" placeholder="e.g. 15 or 20">
                             </div>
                             <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
                                 <label for="property_trip_duration_minutes">Trip Duration Estimate (minutes)</label>
@@ -2079,7 +2073,10 @@
                                 <input id="property_daily_rate" name="daily_rate" class="ops-input" type="number" min="0" step="0.01" value="{{ old('daily_rate') }}">
                             </div>
                             <div class="ops-field ops-field-wide" data-category-scope="transport">
-                                <p id="transportPricingHint" class="category-scope-note" style="margin:0;">Transport pricing mode will auto-adjust from transport mode: speedboat/ferry/boat as per-seat, land transport as per-trip.</p>
+                                <p id="transportPricingHint" class="category-scope-note" style="margin:0;">Transport pricing mode will auto-adjust from transport mode: speedboat/ferry/boat/safari as per-seat, land transport as per-trip.</p>
+                            </div>
+                            <div class="ops-field ops-field-wide" data-category-scope="transport">
+                                <p class="category-scope-note" style="margin:0;">Use entry only to enlist transport basics. Manage fixed daily schedules and seat availability in <a href="#vendorAvailabilitySection">Availability Calendar</a>, and manage price fluctuations in <a href="#vendorPricingSection">Pricing Rules</a>.</p>
                             </div>
                             <div class="ops-field" data-category-scope="excursion">
                                 <label for="property_excursion_duration_minutes">Duration (minutes)</label>
@@ -2251,7 +2248,7 @@
                                                     $transportMode = strtolower((string) ($propertyDetails['transport_mode'] ?? ''));
                                                     $transportPricingBasis = strtolower((string) ($propertyDetails['transport_pricing_basis'] ?? ''));
                                                     if ($transportPricingBasis === '') {
-                                                        $transportPricingBasis = preg_match('/\b(speed ?boat|ferry|boat|dhoni|launch|catamaran|yacht)\b/', $transportMode) ? 'per_seat' : 'per_trip';
+                                                        $transportPricingBasis = preg_match('/\b(speed ?boat|ferry|boat|safari|dhoni|launch|catamaran|yacht)\b/', $transportMode) ? 'per_seat' : 'per_trip';
                                                     }
                                                     $transportTripType = strtolower((string) ($propertyDetails['transport_trip_type'] ?? ''));
                                                     $transportPricingModel = strtolower((string) ($propertyDetails['transport_pricing_model'] ?? ''));
@@ -2294,7 +2291,9 @@
                                                             @if (!empty($propertyDetails['departure_time']))
                                                                 <br>Departure Time: {{ (string) $propertyDetails['departure_time'] }}
                                                             @endif
-                                                            @if (!empty($propertyDetails['reporting_time']))
+                                                            @if (!empty($propertyDetails['reporting_lead_minutes']) || (string) ($propertyDetails['reporting_lead_minutes'] ?? '') === '0')
+                                                                <br>Report Before Departure: {{ (int) $propertyDetails['reporting_lead_minutes'] }} min
+                                                            @elseif (!empty($propertyDetails['reporting_time']))
                                                                 <br>Reporting Time: {{ (string) $propertyDetails['reporting_time'] }}
                                                             @endif
                                                             @if (!empty($propertyDetails['trip_duration_minutes']))
@@ -2437,7 +2436,7 @@
                                                                 <input class="ops-input" name="service_radius_km" type="number" min="0" max="5000" step="0.1" value="{{ (string) ($propertyDetails['service_radius_km'] ?? '') }}" placeholder="Service Radius (km)" data-property-edit-scope="service">
                                                                 @php
                                                                     $transportModeEdit = strtolower(trim((string) ($propertyDetails['transport_mode'] ?? '')));
-                                                                    $knownTransportModes = ['speedboat', 'ferry', 'boat', 'dhoni', 'launch', 'catamaran', 'yacht', 'van', 'car', 'pickup', 'bus', 'suv', 'other vessel', 'other land vehicle'];
+                                                                    $knownTransportModes = ['speedboat', 'ferry', 'boat', 'safari', 'dhoni', 'launch', 'catamaran', 'yacht', 'van', 'car', 'pickup', 'bus', 'suv', 'other vessel', 'other land vehicle'];
                                                                 @endphp
                                                                 <select class="ops-select" name="transport_mode" data-property-edit-scope="transport">
                                                                     <option value="" @selected($transportModeEdit === '')>Transport Mode</option>
@@ -2448,6 +2447,7 @@
                                                                         <option value="speedboat" @selected($transportModeEdit === 'speedboat')>Speedboat</option>
                                                                         <option value="ferry" @selected($transportModeEdit === 'ferry')>Ferry</option>
                                                                         <option value="boat" @selected($transportModeEdit === 'boat')>Boat</option>
+                                                                        <option value="safari" @selected($transportModeEdit === 'safari')>Safari</option>
                                                                         <option value="dhoni" @selected($transportModeEdit === 'dhoni')>Dhoni</option>
                                                                         <option value="launch" @selected($transportModeEdit === 'launch')>Launch</option>
                                                                         <option value="catamaran" @selected($transportModeEdit === 'catamaran')>Catamaran</option>
@@ -2484,7 +2484,7 @@
                                                                 <input class="ops-input" name="departure_location" type="text" maxlength="190" value="{{ (string) ($propertyDetails['departure_location'] ?? '') }}" placeholder="Departure Location" data-property-edit-scope="transport">
                                                                 <input class="ops-input" name="departure_date" type="date" value="{{ (string) ($propertyDetails['departure_date'] ?? '') }}" data-property-edit-scope="transport">
                                                                 <input class="ops-input" name="departure_time" type="time" value="{{ (string) ($propertyDetails['departure_time'] ?? '') }}" data-property-edit-scope="transport">
-                                                                <input class="ops-input" name="reporting_time" type="time" value="{{ (string) ($propertyDetails['reporting_time'] ?? '') }}" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="reporting_lead_minutes" type="number" min="0" max="720" step="1" value="{{ (string) ($propertyDetails['reporting_lead_minutes'] ?? '') }}" placeholder="Report Before Departure (min)" data-property-edit-scope="transport">
                                                                 <input class="ops-input" name="trip_duration_minutes" type="number" min="5" max="1440" value="{{ (string) ($propertyDetails['trip_duration_minutes'] ?? '') }}" placeholder="Trip Duration (min)" data-property-edit-scope="transport">
                                                                 <input class="ops-input" name="excursion_duration_minutes" type="number" min="30" max="1440" value="{{ (string) ($propertyDetails['excursion_duration_minutes'] ?? '') }}" placeholder="Excursion Duration (min)" data-property-edit-scope="excursion">
                                                                 <select class="ops-select" name="excursion_difficulty" data-property-edit-scope="excursion">
@@ -3875,7 +3875,7 @@
 
             function isMarineTransportMode(value) {
                 const mode = String(value || "").trim().toLowerCase();
-                return /(^|\s)(speed\s?boat|ferry|boat|dhoni|launch|catamaran|yacht)(\s|$)/.test(mode);
+                return /(^|\s)(speed\s?boat|ferry|boat|safari|dhoni|launch|catamaran|yacht)(\s|$)/.test(mode);
             }
 
             function refreshTransportFieldLabels() {
@@ -3910,7 +3910,7 @@
                         ? (isMarine
                             ? "Marine transport mode detected: pricing is per seat. Define pickup and dropoff, then select one-way or round-trip."
                             : "Land transport mode detected: choose per-trip, hourly, or daily pricing and set max passengers per trip.")
-                        : "Transport pricing mode will auto-adjust from transport mode: speedboat/ferry/boat as per-seat, land transport as per-trip.";
+                        : "Transport pricing mode will auto-adjust from transport mode: speedboat/ferry/boat/safari as per-seat, land transport as per-trip.";
                 }
 
                 transportLandOnlyFields.forEach((field) => {
@@ -4712,7 +4712,7 @@
 
                 function isMarineTransportMode(value) {
                     const mode = String(value || '').trim().toLowerCase();
-                    return /(^|\s)(speed\s?boat|ferry|boat|dhoni|launch|catamaran|yacht)(\s|$)/.test(mode);
+                    return /(^|\s)(speed\s?boat|ferry|boat|safari|dhoni|launch|catamaran|yacht)(\s|$)/.test(mode);
                 }
 
                 function refreshTransportFieldLabels() {
@@ -4744,7 +4744,7 @@
                             ? (isMarine
                                 ? 'Marine transport mode detected: pricing is per seat. Define pickup and dropoff, then select one-way or round-trip.'
                                 : 'Land transport mode detected: choose per-trip, hourly, or daily pricing and set max passengers per trip.')
-                            : 'Transport pricing mode will auto-adjust from transport mode: speedboat/ferry/boat as per-seat, land transport as per-trip.';
+                                : 'Transport pricing mode will auto-adjust from transport mode: speedboat/ferry/boat/safari as per-seat, land transport as per-trip.';
                     }
 
                     transportLandOnlyFields.forEach((field) => {
@@ -4967,3 +4967,4 @@
     </script>
 </body>
 </html>
+

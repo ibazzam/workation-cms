@@ -1956,11 +1956,11 @@
                                 <label for="map_place_id">Map Place ID (optional)</label>
                                 <input id="map_place_id" name="map_place_id" class="ops-input" type="text" maxlength="190" value="{{ old('map_place_id') }}" placeholder="Generated from pin-drop">
                             </div>
-                            <div class="ops-field">
+                            <div class="ops-field" data-category-scope="capacity">
                                 <label for="property_base_price">Base Price (MVR)</label>
                                 <input id="property_base_price" name="base_price" class="ops-input" type="number" min="0" step="0.01" value="{{ old('base_price') }}">
                             </div>
-                            <div class="ops-field">
+                            <div class="ops-field" data-category-scope="capacity">
                                 <label for="property_max_guests">Max Guests</label>
                                 <input id="property_max_guests" name="max_guests" class="ops-input" type="number" min="0" max="10000" value="{{ old('max_guests') }}">
                             </div>
@@ -1990,10 +1990,6 @@
                             <div class="ops-field" data-category-scope="stay">
                                 <label for="property_bedroom_count">Bedrooms</label>
                                 <input id="property_bedroom_count" name="bedroom_count" class="ops-input" type="number" min="0" max="1000" value="{{ old('bedroom_count') }}">
-                            </div>
-                            <div class="ops-field" data-category-scope="stay">
-                                <label for="property_bathroom_count">Bathrooms</label>
-                                <input id="property_bathroom_count" name="bathroom_count" class="ops-input" type="number" min="0" max="1000" step="0.5" value="{{ old('bathroom_count') }}">
                             </div>
                             <div class="ops-field" data-category-scope="capacity">
                                 <label for="property_capacity_value">Capacity</label>
@@ -2129,128 +2125,70 @@
                         <p class="standards-note">International listing standard: fields adapt to selected category. Create one property at a time, then add rooms under that property.</p>
                         <button class="btn btn-primary" id="propertyCreateSubmitButton" type="submit">Save Listing</button>
                     </form>
+
+                    <div class="form-toggle-row" style="margin-top:14px;">
+                        <button class="btn btn-primary" type="button" id="openRoomCreateForm">Add Room To Property</button>
+                        <button class="btn btn-secondary" type="button" id="closeRoomCreateForm" @if (!$showCreateRoomForm) hidden @endif>Cancel</button>
+                    </div>
+                    <form id="roomCreateForm" class="ops-form" method="POST" action="/portal/vendor/rooms/create" @if (!$showCreateRoomForm) hidden @endif>
+                        @csrf
+                        <input type="hidden" name="room_form_intent" value="1">
+                        <div class="ops-form-grid" style="margin-top:10px;">
+                            <div class="ops-field">
+                                <label for="room_vendor_property_id">Accommodation Listing</label>
+                                <select id="room_vendor_property_id" name="vendor_property_id" class="ops-select" required>
+                                    <option value="">Select property</option>
+                                    @foreach ($vendorProperties as $propertyOption)
+                                        @if (strtolower((string) ($propertyOption->listing_category ?? '')) === 'accommodation')
+                                            <option value="{{ (int) $propertyOption->id }}" @selected((string) old('vendor_property_id') === (string) $propertyOption->id)>
+                                                {{ $propertyOption->name }} (ID {{ (int) $propertyOption->id }})
+                                            </option>
+                                        @endif
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="ops-field">
+                                <label for="room_name">Room Name</label>
+                                <input id="room_name" name="name" class="ops-input" type="text" maxlength="160" value="{{ old('name') }}" required>
+                            </div>
+                            <div class="ops-field">
+                                <label for="room_quantity">Room Quantity</label>
+                                <input id="room_quantity" name="quantity" class="ops-input" type="number" min="1" max="10000" value="{{ old('quantity', 1) }}" required>
+                            </div>
+                            <div class="ops-field">
+                                <label for="room_max_occupancy">Base Occupancy (Adults)</label>
+                                <input id="room_max_occupancy" name="max_occupancy" class="ops-input" type="number" min="1" max="50" value="{{ old('max_occupancy', 1) }}" required>
+                            </div>
+                            <div class="ops-field">
+                                <label for="room_extra_person_capacity">Extra Adult Capacity</label>
+                                <input id="room_extra_person_capacity" name="extra_person_capacity" class="ops-input" type="number" min="0" max="20" value="{{ old('extra_person_capacity', 0) }}">
+                            </div>
+                            <div class="ops-field">
+                                <label for="room_child_capacity">Child Capacity</label>
+                                <input id="room_child_capacity" name="child_capacity" class="ops-input" type="number" min="0" max="20" value="{{ old('child_capacity', 0) }}">
+                            </div>
+                            <div class="ops-field">
+                                <label for="room_base_price">Room Base Price (MVR)</label>
+                                <input id="room_base_price" name="base_price" class="ops-input" type="number" min="0" step="0.01" value="{{ old('base_price') }}">
+                            </div>
+                            <div class="ops-field">
+                                <label for="room_extra_person_price">Extra Adult Price (MVR)</label>
+                                <input id="room_extra_person_price" name="extra_person_price" class="ops-input" type="number" min="0" step="0.01" value="{{ old('extra_person_price') }}">
+                            </div>
+                            <div class="ops-field">
+                                <label for="room_child_price">Child Price (MVR)</label>
+                                <input id="room_child_price" name="child_price" class="ops-input" type="number" min="0" step="0.01" value="{{ old('child_price') }}">
+                            </div>
+                            <div class="ops-field">
+                                <label for="room_bed_type">Bed Type</label>
+                                <input id="room_bed_type" name="bed_type" class="ops-input" type="text" maxlength="80" value="{{ old('bed_type') }}" placeholder="King, Twin, Queen, Bunk">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" type="submit">Save Room</button>
+                    </form>
                 </article>
 
-                <div class="ops-table-wrap">
-                    <table class="ops-table" aria-label="Vendor properties table">
-                        <thead>
-                            <tr>
-                                <th>Property</th>
-                                <th>List Details</th>
-                                <th>Edit / Update / Remove</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($vendorProperties->take(12) as $property)
-                                @php
-                                    $propertyDetails = [];
-                                    if (isset($property->listing_details) && is_string($property->listing_details) && trim((string) $property->listing_details) !== '') {
-                                        $decodedPropertyDetails = json_decode((string) $property->listing_details, true);
-                                        if (is_array($decodedPropertyDetails)) {
-                                            $propertyDetails = $decodedPropertyDetails;
-                                        }
-                                    }
-                                    $editCategory = strtolower((string) ($property->listing_category ?? ''));
-                                @endphp
-                                <tr data-property-row data-listing-category="{{ strtolower((string) ($property->listing_category ?? '')) }}">
-                                    <td>
-                                        <strong>{{ $property->name }}</strong><br>
-                                        ID: {{ (int) $property->id }}<br>
-                                        {{ strtoupper((string) ($property->listing_category ?? 'N/A')) }} / {{ strtoupper((string) $property->property_type) }}
-                                    </td>
-                                    <td>
-                                        {{ $property->location ?: 'N/A' }}<br>
-                                        {{ $property->currency }} {{ number_format((float) $property->base_price, 2) }}<br>
-                                        Guests: {{ (int) ($property->max_guests ?? 0) }} | Status: {{ strtoupper((string) $property->status) }}
-                                    </td>
-                                    <td>
-                                        <div class="listing-cell-actions">
-                                            <div class="inline-actions edit-toggle-actions">
-                                                <button class="btn btn-secondary" type="button" data-open-property-edit data-property-edit-id="{{ (int) $property->id }}" data-property-edit-category="{{ $editCategory }}">Edit Listing</button>
-                                                <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ (int) $property->id }}">Add Room</button>
-                                                <form method="POST" action="/portal/vendor/properties/{{ $property->id }}/delete" onsubmit="return confirm('Remove this property listing?');">
-                                                    @csrf
-                                                    <button class="btn btn-danger" type="submit">Remove</button>
-                                                </form>
-                                            </div>
-                                            <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/properties/{{ $property->id }}/update" data-property-edit-form="{{ (int) $property->id }}" data-property-edit-category="{{ $editCategory }}" hidden>
-                                                @csrf
-                                                <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $property->name }}" required>
-                                                <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) $property->base_price }}">
-                                                <input class="ops-input" name="max_guests" type="number" min="0" max="10000" value="{{ (int) ($property->max_guests ?? 1) }}">
-                                                <input class="ops-input" name="capacity_value" type="number" min="1" max="20000" value="{{ (int) ($propertyDetails['capacity_value'] ?? 0) }}" placeholder="Capacity" data-property-edit-scope="capacity">
-                                                <input class="ops-input" name="service_radius_km" type="number" min="0" max="5000" step="0.1" value="{{ (float) ($propertyDetails['service_radius_km'] ?? 0) }}" placeholder="Service Radius (km)" data-property-edit-scope="service">
-                                                <input class="ops-input" name="transport_mode" type="text" maxlength="80" value="{{ (string) ($propertyDetails['transport_mode'] ?? '') }}" placeholder="Transport Mode" data-property-edit-scope="transport">
-                                                <input class="ops-input" name="pickup_location" type="text" maxlength="190" value="{{ (string) ($propertyDetails['pickup_location'] ?? '') }}" placeholder="Pickup Location" data-property-edit-scope="transport">
-                                                <input class="ops-input" name="dropoff_location" type="text" maxlength="190" value="{{ (string) ($propertyDetails['dropoff_location'] ?? '') }}" placeholder="Dropoff Location" data-property-edit-scope="transport">
-                                                <input class="ops-input" name="excursion_duration_minutes" type="number" min="30" max="1440" value="{{ (int) ($propertyDetails['excursion_duration_minutes'] ?? 0) }}" placeholder="Excursion Duration (min)" data-property-edit-scope="excursion">
-                                                <select class="ops-select" name="excursion_difficulty" data-property-edit-scope="excursion">
-                                                    <option value="" @selected(($propertyDetails['excursion_difficulty'] ?? '') === '')>Difficulty</option>
-                                                    <option value="easy" @selected(($propertyDetails['excursion_difficulty'] ?? '') === 'easy')>Easy</option>
-                                                    <option value="moderate" @selected(($propertyDetails['excursion_difficulty'] ?? '') === 'moderate')>Moderate</option>
-                                                    <option value="hard" @selected(($propertyDetails['excursion_difficulty'] ?? '') === 'hard')>Hard</option>
-                                                </select>
-                                                <select class="ops-select" name="workspace_type" data-property-edit-scope="workspace">
-                                                    <option value="" @selected(($propertyDetails['workspace_type'] ?? '') === '')>Workspace Type</option>
-                                                    <option value="shared" @selected(($propertyDetails['workspace_type'] ?? '') === 'shared')>Shared</option>
-                                                    <option value="private" @selected(($propertyDetails['workspace_type'] ?? '') === 'private')>Private</option>
-                                                    <option value="cabin" @selected(($propertyDetails['workspace_type'] ?? '') === 'cabin')>Cabin</option>
-                                                </select>
-                                                <input class="ops-input" name="internet_speed_mbps" type="number" min="1" max="10000" step="1" value="{{ (int) ($propertyDetails['internet_speed_mbps'] ?? 0) }}" placeholder="Internet Speed (Mbps)" data-property-edit-scope="workspace">
-                                                <input class="ops-input" name="day_visit_start_time" type="time" value="{{ (string) ($propertyDetails['day_visit_start_time'] ?? '') }}" data-property-edit-scope="day_visit">
-                                                <input class="ops-input" name="day_visit_end_time" type="time" value="{{ (string) ($propertyDetails['day_visit_end_time'] ?? '') }}" data-property-edit-scope="day_visit">
-                                                <input class="ops-input" name="included_access" type="text" maxlength="2000" value="{{ (string) ($propertyDetails['included_access'] ?? '') }}" placeholder="Included Access" data-property-edit-scope="day_visit">
-                                                <input class="ops-input" name="cuisine_type" type="text" maxlength="120" value="{{ (string) ($propertyDetails['cuisine_type'] ?? '') }}" placeholder="Cuisine Type" data-property-edit-scope="restaurant">
-                                                <select class="ops-select" name="meal_service" data-property-edit-scope="restaurant">
-                                                    <option value="" @selected(($propertyDetails['meal_service'] ?? '') === '')>Meal Service</option>
-                                                    <option value="breakfast" @selected(($propertyDetails['meal_service'] ?? '') === 'breakfast')>Breakfast</option>
-                                                    <option value="lunch" @selected(($propertyDetails['meal_service'] ?? '') === 'lunch')>Lunch</option>
-                                                    <option value="dinner" @selected(($propertyDetails['meal_service'] ?? '') === 'dinner')>Dinner</option>
-                                                    <option value="all_day" @selected(($propertyDetails['meal_service'] ?? '') === 'all_day')>All Day</option>
-                                                </select>
-                                                <input class="ops-input" name="minimum_age" type="number" min="0" max="120" value="{{ (int) ($propertyDetails['minimum_age'] ?? 0) }}" placeholder="Minimum Age" data-property-edit-scope="vehicle">
-                                                <input class="ops-input" name="vehicle_type" type="text" maxlength="120" value="{{ (string) ($propertyDetails['vehicle_type'] ?? '') }}" placeholder="Vehicle Type" data-property-edit-scope="rental">
-                                                <select class="ops-select" name="transmission_type" data-property-edit-scope="rental">
-                                                    <option value="" @selected(($propertyDetails['transmission_type'] ?? '') === '')>Transmission</option>
-                                                    <option value="automatic" @selected(($propertyDetails['transmission_type'] ?? '') === 'automatic')>Automatic</option>
-                                                    <option value="manual" @selected(($propertyDetails['transmission_type'] ?? '') === 'manual')>Manual</option>
-                                                </select>
-                                                <select class="ops-select" name="fuel_type" data-property-edit-scope="rental">
-                                                    <option value="" @selected(($propertyDetails['fuel_type'] ?? '') === '')>Fuel Type</option>
-                                                    <option value="petrol" @selected(($propertyDetails['fuel_type'] ?? '') === 'petrol')>Petrol</option>
-                                                    <option value="diesel" @selected(($propertyDetails['fuel_type'] ?? '') === 'diesel')>Diesel</option>
-                                                    <option value="electric" @selected(($propertyDetails['fuel_type'] ?? '') === 'electric')>Electric</option>
-                                                    <option value="hybrid" @selected(($propertyDetails['fuel_type'] ?? '') === 'hybrid')>Hybrid</option>
-                                                </select>
-                                                <select class="ops-select" name="status" required>
-                                                    <option value="active" @selected((string) $property->status === 'active')>Active</option>
-                                                    <option value="inactive" @selected((string) $property->status === 'inactive')>Inactive</option>
-                                                </select>
-                                                <div class="inline-actions">
-                                                    <button class="btn btn-secondary js-row-update" type="submit">Update Property</button>
-                                                    <button class="btn btn-secondary" type="button" data-close-property-edit data-property-edit-id="{{ (int) $property->id }}">Cancel Edit</button>
-                                                </div>
-                                            </form>
-                                            <form class="inline-table-form media-upload-row" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
-                                                @csrf
-                                                <input type="hidden" name="entity_type" value="property">
-                                                <input type="hidden" name="entity_id" value="{{ (int) $property->id }}">
-                                                <input class="ops-input" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
-                                                <input class="ops-input" name="alt_text" type="text" maxlength="190" placeholder="Property photo alt text" required>
-                                                <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Set as primary</label>
-                                                <button class="btn btn-secondary" type="submit">Upload Property Photo</button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="3" class="ops-empty">No properties yet. Use Create New Property to add your first listing.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                <p class="wizard-note">Listings are now managed section-by-section below by category to avoid duplicate accommodation views.</p>
 
                 <div class="category-listings-stack" aria-label="Category listing views">
                     @foreach ($listingCategoryViewOrder as $categoryKey)
@@ -2281,6 +2219,22 @@
                                                 @php
                                                     $propertyId = (int) ($property->id ?? 0);
                                                     $propertyRooms = $roomsByPropertyId->get($propertyId, collect());
+                                                    $propertyDetails = [];
+                                                    if (isset($property->listing_details) && is_string($property->listing_details) && trim((string) $property->listing_details) !== '') {
+                                                        $decodedPropertyDetails = json_decode((string) $property->listing_details, true);
+                                                        if (is_array($decodedPropertyDetails)) {
+                                                            $propertyDetails = $decodedPropertyDetails;
+                                                        }
+                                                    }
+                                                    $editCategory = strtolower((string) ($property->listing_category ?? $categoryKey));
+                                                    $propertyAmenityValues = [];
+                                                    $propertyFeatureValues = [];
+                                                    if (isset($propertyDetails['property_amenities']) && is_array($propertyDetails['property_amenities'])) {
+                                                        $propertyAmenityValues = array_map(static fn ($item) => (string) $item, $propertyDetails['property_amenities']);
+                                                    }
+                                                    if (isset($propertyDetails['property_features']) && is_array($propertyDetails['property_features'])) {
+                                                        $propertyFeatureValues = array_map(static fn ($item) => (string) $item, $propertyDetails['property_features']);
+                                                    }
                                                 @endphp
                                                 <tr>
                                                     <td>
@@ -2293,8 +2247,12 @@
                                                     </td>
                                                     <td>
                                                         {{ $property->location ?: 'N/A' }}<br>
-                                                        {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($property->base_price ?? 0), 2) }}<br>
-                                                        Guests/Capacity: {{ (int) ($property->max_guests ?? 0) }}
+                                                        @if ($categoryKey === 'accommodation')
+                                                            Room pricing and occupancy configured at room level.
+                                                        @else
+                                                            {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($property->base_price ?? 0), 2) }}<br>
+                                                            Guests/Capacity: {{ (int) ($property->max_guests ?? 0) }}
+                                                        @endif
                                                     </td>
                                                     <td>
                                                         <div class="property-subsection" data-property-subsection="{{ $propertyId }}" hidden>
@@ -2308,7 +2266,9 @@
                                                                             <tr>
                                                                                 <th>Room</th>
                                                                                 <th>Inventory</th>
+                                                                                <th>Occupancy & Pricing</th>
                                                                                 <th>Media Upload</th>
+                                                                                <th>Actions</th>
                                                                             </tr>
                                                                         </thead>
                                                                         <tbody>
@@ -2326,6 +2286,11 @@
                                                                                         Max: {{ (int) ($room->max_occupancy ?? 0) }}
                                                                                     </td>
                                                                                     <td>
+                                                                                        Base: {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->base_price ?? 0), 2) }}<br>
+                                                                                        Extra Adult: {{ (int) ($room->extra_person_capacity ?? 0) }} x {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->extra_person_price ?? 0), 2) }}<br>
+                                                                                        Child: {{ (int) ($room->child_capacity ?? 0) }} x {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->child_price ?? 0), 2) }}
+                                                                                    </td>
+                                                                                    <td>
                                                                                         <form class="inline-table-form media-upload-row" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
                                                                                             @csrf
                                                                                             <input type="hidden" name="entity_type" value="room">
@@ -2334,6 +2299,31 @@
                                                                                             <input class="ops-input" name="alt_text" type="text" maxlength="190" placeholder="Room photo alt text" required>
                                                                                             <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Set as primary</label>
                                                                                             <button class="btn btn-secondary" type="submit">Upload Room Photo</button>
+                                                                                        </form>
+                                                                                    </td>
+                                                                                    <td>
+                                                                                        <div class="inline-actions">
+                                                                                            <button class="btn btn-secondary" type="button" data-open-room-edit data-room-edit-id="{{ $roomId }}">Edit Room</button>
+                                                                                            <form method="POST" action="/portal/vendor/rooms/{{ $roomId }}/delete" onsubmit="return confirm('Remove this room category?');">
+                                                                                                @csrf
+                                                                                                <button class="btn btn-danger" type="submit">Remove Room</button>
+                                                                                            </form>
+                                                                                        </div>
+                                                                                        <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/rooms/{{ $roomId }}/update" data-room-edit-form="{{ $roomId }}" hidden>
+                                                                                            @csrf
+                                                                                            <input class="ops-input" name="name" type="text" maxlength="160" value="{{ (string) ($room->name ?? '') }}" required>
+                                                                                            <input class="ops-input" name="quantity" type="number" min="1" max="10000" value="{{ (int) ($room->quantity ?? 1) }}" required>
+                                                                                            <input class="ops-input" name="max_occupancy" type="number" min="1" max="50" value="{{ (int) ($room->max_occupancy ?? 1) }}" required>
+                                                                                            <input class="ops-input" name="extra_person_capacity" type="number" min="0" max="20" value="{{ (int) ($room->extra_person_capacity ?? 0) }}" placeholder="Extra adult capacity">
+                                                                                            <input class="ops-input" name="child_capacity" type="number" min="0" max="20" value="{{ (int) ($room->child_capacity ?? 0) }}" placeholder="Child capacity">
+                                                                                            <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($room->base_price ?? 0) }}" placeholder="Base room price">
+                                                                                            <input class="ops-input" name="extra_person_price" type="number" min="0" step="0.01" value="{{ (float) ($room->extra_person_price ?? 0) }}" placeholder="Extra adult price">
+                                                                                            <input class="ops-input" name="child_price" type="number" min="0" step="0.01" value="{{ (float) ($room->child_price ?? 0) }}" placeholder="Child price">
+                                                                                            <input class="ops-input" name="bed_type" type="text" maxlength="80" value="{{ (string) ($room->bed_type ?? '') }}" placeholder="Bed Type">
+                                                                                            <div class="inline-actions">
+                                                                                                <button class="btn btn-secondary js-row-update" type="submit">Update Room</button>
+                                                                                                <button class="btn btn-secondary" type="button" data-close-room-edit data-room-edit-id="{{ $roomId }}">Cancel Edit</button>
+                                                                                            </div>
                                                                                         </form>
                                                                                     </td>
                                                                                 </tr>
@@ -2347,6 +2337,7 @@
                                                     <td>
                                                         <div class="listing-cell-actions">
                                                             <div class="inline-actions">
+                                                                <button class="btn btn-secondary" type="button" data-open-property-edit data-property-edit-id="{{ $propertyId }}" data-property-edit-category="{{ $editCategory }}">Edit Listing</button>
                                                                 @if ($categoryKey === 'accommodation')
                                                                     <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ $propertyId }}">Add Room</button>
                                                                 @endif
@@ -2363,6 +2354,105 @@
                                                                 <input class="ops-input" name="alt_text" type="text" maxlength="190" placeholder="Listing photo alt text" required>
                                                                 <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Set as primary</label>
                                                                 <button class="btn btn-secondary" type="submit">Upload Listing Photo</button>
+                                                            </form>
+                                                            <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/properties/{{ $propertyId }}/update" data-property-edit-form="{{ $propertyId }}" data-property-edit-category="{{ $editCategory }}" hidden>
+                                                                @csrf
+                                                                <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $property->name }}" required>
+                                                                <input class="ops-input" name="location_country" type="text" maxlength="90" value="{{ (string) ($propertyDetails['location_country'] ?? '') }}" placeholder="Country">
+                                                                <input class="ops-input" name="location_state" type="text" maxlength="120" value="{{ (string) ($propertyDetails['location_state'] ?? '') }}" placeholder="State / Province / Atoll">
+                                                                <input class="ops-input" name="location_city" type="text" maxlength="120" value="{{ (string) ($propertyDetails['location_city'] ?? '') }}" placeholder="City / Island">
+                                                                <input class="ops-input" name="address_line" type="text" maxlength="255" value="{{ (string) ($propertyDetails['address_line'] ?? '') }}" placeholder="Exact Address">
+                                                                <input class="ops-input" name="map_latitude" type="number" min="-90" max="90" step="0.000001" value="{{ (string) ($propertyDetails['map_latitude'] ?? '') }}" placeholder="Latitude">
+                                                                <input class="ops-input" name="map_longitude" type="number" min="-180" max="180" step="0.000001" value="{{ (string) ($propertyDetails['map_longitude'] ?? '') }}" placeholder="Longitude">
+                                                                <input class="ops-input" name="map_place_id" type="text" maxlength="190" value="{{ (string) ($propertyDetails['map_place_id'] ?? '') }}" placeholder="Map Place ID">
+                                                                <textarea class="ops-textarea" name="description" maxlength="3000" placeholder="Description">{{ (string) ($property->description ?? '') }}</textarea>
+                                                                <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($property->base_price ?? 0) }}" data-property-edit-scope="capacity">
+                                                                <input class="ops-input" name="max_guests" type="number" min="0" max="10000" value="{{ (int) ($property->max_guests ?? 0) }}" data-property-edit-scope="capacity">
+
+                                                                <select class="ops-select" name="measurement_system" data-property-edit-scope="stay">
+                                                                    <option value="metric" @selected((string) ($propertyDetails['measurement_system'] ?? 'metric') === 'metric')>Metric</option>
+                                                                    <option value="imperial" @selected((string) ($propertyDetails['measurement_system'] ?? '') === 'imperial')>Imperial</option>
+                                                                </select>
+                                                                <input class="ops-input" name="area_value" type="number" min="1" max="100000" step="0.01" value="{{ (string) ($propertyDetails['area_value'] ?? '') }}" placeholder="Area Value" data-property-edit-scope="stay">
+                                                                <select class="ops-select" name="area_unit" data-property-edit-scope="stay">
+                                                                    <option value="sqm" @selected((string) ($propertyDetails['area_unit'] ?? 'sqm') === 'sqm')>sqm</option>
+                                                                    <option value="sqft" @selected((string) ($propertyDetails['area_unit'] ?? '') === 'sqft')>sqft</option>
+                                                                </select>
+                                                                <input class="ops-input" name="bedroom_count" type="number" min="0" max="1000" value="{{ (string) ($propertyDetails['bedroom_count'] ?? '') }}" placeholder="Bedrooms" data-property-edit-scope="stay">
+                                                                <input class="ops-input" name="capacity_value" type="number" min="1" max="20000" value="{{ (string) ($propertyDetails['capacity_value'] ?? '') }}" placeholder="Capacity" data-property-edit-scope="capacity">
+                                                                <input class="ops-input" name="service_radius_km" type="number" min="0" max="5000" step="0.1" value="{{ (string) ($propertyDetails['service_radius_km'] ?? '') }}" placeholder="Service Radius (km)" data-property-edit-scope="service">
+                                                                <input class="ops-input" name="transport_mode" type="text" maxlength="80" value="{{ (string) ($propertyDetails['transport_mode'] ?? '') }}" placeholder="Transport Mode" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="pickup_location" type="text" maxlength="190" value="{{ (string) ($propertyDetails['pickup_location'] ?? '') }}" placeholder="Pickup Location" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="dropoff_location" type="text" maxlength="190" value="{{ (string) ($propertyDetails['dropoff_location'] ?? '') }}" placeholder="Dropoff Location" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="excursion_duration_minutes" type="number" min="30" max="1440" value="{{ (string) ($propertyDetails['excursion_duration_minutes'] ?? '') }}" placeholder="Excursion Duration (min)" data-property-edit-scope="excursion">
+                                                                <select class="ops-select" name="excursion_difficulty" data-property-edit-scope="excursion">
+                                                                    <option value="" @selected((string) ($propertyDetails['excursion_difficulty'] ?? '') === '')>Difficulty</option>
+                                                                    <option value="easy" @selected((string) ($propertyDetails['excursion_difficulty'] ?? '') === 'easy')>Easy</option>
+                                                                    <option value="moderate" @selected((string) ($propertyDetails['excursion_difficulty'] ?? '') === 'moderate')>Moderate</option>
+                                                                    <option value="hard" @selected((string) ($propertyDetails['excursion_difficulty'] ?? '') === 'hard')>Hard</option>
+                                                                </select>
+                                                                <select class="ops-select" name="workspace_type" data-property-edit-scope="workspace">
+                                                                    <option value="" @selected((string) ($propertyDetails['workspace_type'] ?? '') === '')>Workspace Type</option>
+                                                                    <option value="shared" @selected((string) ($propertyDetails['workspace_type'] ?? '') === 'shared')>Shared</option>
+                                                                    <option value="private" @selected((string) ($propertyDetails['workspace_type'] ?? '') === 'private')>Private</option>
+                                                                    <option value="cabin" @selected((string) ($propertyDetails['workspace_type'] ?? '') === 'cabin')>Cabin</option>
+                                                                </select>
+                                                                <input class="ops-input" name="internet_speed_mbps" type="number" min="1" max="10000" step="1" value="{{ (string) ($propertyDetails['internet_speed_mbps'] ?? '') }}" placeholder="Internet Speed (Mbps)" data-property-edit-scope="workspace">
+                                                                <input class="ops-input" name="day_visit_start_time" type="time" value="{{ (string) ($propertyDetails['day_visit_start_time'] ?? '') }}" data-property-edit-scope="day_visit">
+                                                                <input class="ops-input" name="day_visit_end_time" type="time" value="{{ (string) ($propertyDetails['day_visit_end_time'] ?? '') }}" data-property-edit-scope="day_visit">
+                                                                <input class="ops-input" name="included_access" type="text" maxlength="2000" value="{{ (string) ($propertyDetails['included_access'] ?? '') }}" placeholder="Included Access" data-property-edit-scope="day_visit">
+                                                                <input class="ops-input" name="cuisine_type" type="text" maxlength="120" value="{{ (string) ($propertyDetails['cuisine_type'] ?? '') }}" placeholder="Cuisine Type" data-property-edit-scope="restaurant">
+                                                                <select class="ops-select" name="meal_service" data-property-edit-scope="restaurant">
+                                                                    <option value="" @selected((string) ($propertyDetails['meal_service'] ?? '') === '')>Meal Service</option>
+                                                                    <option value="breakfast" @selected((string) ($propertyDetails['meal_service'] ?? '') === 'breakfast')>Breakfast</option>
+                                                                    <option value="lunch" @selected((string) ($propertyDetails['meal_service'] ?? '') === 'lunch')>Lunch</option>
+                                                                    <option value="dinner" @selected((string) ($propertyDetails['meal_service'] ?? '') === 'dinner')>Dinner</option>
+                                                                    <option value="all_day" @selected((string) ($propertyDetails['meal_service'] ?? '') === 'all_day')>All Day</option>
+                                                                </select>
+                                                                <input class="ops-input" name="minimum_age" type="number" min="0" max="120" value="{{ (string) ($propertyDetails['minimum_age'] ?? '') }}" placeholder="Minimum Age" data-property-edit-scope="vehicle">
+                                                                <input class="ops-input" name="vehicle_type" type="text" maxlength="120" value="{{ (string) ($propertyDetails['vehicle_type'] ?? '') }}" placeholder="Vehicle Type" data-property-edit-scope="rental">
+                                                                <select class="ops-select" name="transmission_type" data-property-edit-scope="rental">
+                                                                    <option value="" @selected((string) ($propertyDetails['transmission_type'] ?? '') === '')>Transmission</option>
+                                                                    <option value="automatic" @selected((string) ($propertyDetails['transmission_type'] ?? '') === 'automatic')>Automatic</option>
+                                                                    <option value="manual" @selected((string) ($propertyDetails['transmission_type'] ?? '') === 'manual')>Manual</option>
+                                                                </select>
+                                                                <select class="ops-select" name="fuel_type" data-property-edit-scope="rental">
+                                                                    <option value="" @selected((string) ($propertyDetails['fuel_type'] ?? '') === '')>Fuel Type</option>
+                                                                    <option value="petrol" @selected((string) ($propertyDetails['fuel_type'] ?? '') === 'petrol')>Petrol</option>
+                                                                    <option value="diesel" @selected((string) ($propertyDetails['fuel_type'] ?? '') === 'diesel')>Diesel</option>
+                                                                    <option value="electric" @selected((string) ($propertyDetails['fuel_type'] ?? '') === 'electric')>Electric</option>
+                                                                    <option value="hybrid" @selected((string) ($propertyDetails['fuel_type'] ?? '') === 'hybrid')>Hybrid</option>
+                                                                </select>
+
+                                                                <div class="feature-checklist" data-property-edit-scope="stay">
+                                                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="wifi" @checked(in_array('wifi', $propertyAmenityValues, true))> Wi-Fi</label>
+                                                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="parking" @checked(in_array('parking', $propertyAmenityValues, true))> Parking</label>
+                                                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="pool" @checked(in_array('pool', $propertyAmenityValues, true))> Pool</label>
+                                                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="gym" @checked(in_array('gym', $propertyAmenityValues, true))> Gym</label>
+                                                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="air_conditioning" @checked(in_array('air_conditioning', $propertyAmenityValues, true))> Air Conditioning</label>
+                                                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="breakfast" @checked(in_array('breakfast', $propertyAmenityValues, true))> Breakfast</label>
+                                                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="kitchen" @checked(in_array('kitchen', $propertyAmenityValues, true))> Kitchen</label>
+                                                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="workspace_desk" @checked(in_array('workspace_desk', $propertyAmenityValues, true))> Workspace Desk</label>
+                                                                </div>
+                                                                <div class="feature-checklist" data-property-edit-scope="stay">
+                                                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="wheelchair_access" @checked(in_array('wheelchair_access', $propertyFeatureValues, true))> Wheelchair Access</label>
+                                                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="elevator" @checked(in_array('elevator', $propertyFeatureValues, true))> Elevator</label>
+                                                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="family_friendly" @checked(in_array('family_friendly', $propertyFeatureValues, true))> Family Friendly</label>
+                                                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="pet_friendly" @checked(in_array('pet_friendly', $propertyFeatureValues, true))> Pet Friendly</label>
+                                                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="beachfront" @checked(in_array('beachfront', $propertyFeatureValues, true))> Beachfront</label>
+                                                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="sea_view" @checked(in_array('sea_view', $propertyFeatureValues, true))> Sea View</label>
+                                                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="safety_certified" @checked(in_array('safety_certified', $propertyFeatureValues, true))> Safety Certified</label>
+                                                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="kids_play_area" @checked(in_array('kids_play_area', $propertyFeatureValues, true))> Kids Play Area</label>
+                                                                </div>
+
+                                                                <select class="ops-select" name="status" required>
+                                                                    <option value="active" @selected((string) ($property->status ?? '') === 'active')>Active</option>
+                                                                    <option value="inactive" @selected((string) ($property->status ?? '') === 'inactive')>Inactive</option>
+                                                                </select>
+                                                                <div class="inline-actions">
+                                                                    <button class="btn btn-secondary js-row-update" type="submit">Update Listing</button>
+                                                                    <button class="btn btn-secondary" type="button" data-close-property-edit data-property-edit-id="{{ $propertyId }}">Cancel Edit</button>
+                                                                </div>
                                                             </form>
                                                         </div>
                                                     </td>
@@ -2506,6 +2596,14 @@
                             <input id="reservation_guests" name="guests" class="ops-input" type="number" min="1" max="10000" required>
                         </div>
                         <div class="ops-field">
+                            <label for="reservation_adult_guests">Adults</label>
+                            <input id="reservation_adult_guests" name="adult_guests" class="ops-input" type="number" min="0" max="10000" value="1">
+                        </div>
+                        <div class="ops-field">
+                            <label for="reservation_child_guests">Children</label>
+                            <input id="reservation_child_guests" name="child_guests" class="ops-input" type="number" min="0" max="10000" value="0">
+                        </div>
+                        <div class="ops-field">
                             <label for="reservation_guest_origin">Guest Type</label>
                             <select id="reservation_guest_origin" name="guest_is_foreigner" class="ops-select" required>
                                 <option value="1">Foreigner</option>
@@ -2513,12 +2611,16 @@
                             </select>
                         </div>
                         <div class="ops-field">
-                            <label for="reservation_total_amount">Total Amount (MVR)</label>
-                            <input id="reservation_total_amount" name="total_amount" class="ops-input" type="number" min="0" step="0.01" required>
+                            <label for="reservation_total_amount">Base/Subtotal Amount (MVR)</label>
+                            <input id="reservation_total_amount" name="total_amount" class="ops-input" type="number" min="0" step="0.01">
                         </div>
                         <div class="ops-field">
                             <label for="reservation_property_id">Property ID (optional)</label>
                             <input id="reservation_property_id" name="vendor_property_id" class="ops-input" type="number" min="1">
+                        </div>
+                        <div class="ops-field">
+                            <label for="reservation_room_id">Room Category ID (accommodation)</label>
+                            <input id="reservation_room_id" name="vendor_room_category_id" class="ops-input" type="number" min="1">
                         </div>
                         <div class="ops-field">
                             <label for="reservation_service_id">Service ID (optional)</label>
@@ -2529,7 +2631,7 @@
                             <textarea id="reservation_notes" name="notes" class="ops-textarea" maxlength="2000"></textarea>
                         </div>
                     </div>
-                    <p class="standards-note">Accommodation invoice charges: Service Charge 10% + Foreigner taxes (Green Tax $12/person for 50+ rooms, else $6/person and TGST 17%) or Local tax (CGST 8%).</p>
+                    <p class="standards-note">Accommodation pricing is customer-detailed: select room category + adult/child counts to auto-calculate subtotal (base room + extra adult + child), then taxes are applied transparently.</p>
                     <button class="btn btn-primary" type="submit">Create Reservation</button>
                 </form>
 
@@ -2545,6 +2647,16 @@
                         </thead>
                         <tbody>
                             @forelse ($vendorReservations->take(12) as $reservation)
+                                @php
+                                    $reservationBreakdown = [];
+                                    if (isset($reservation->tax_breakdown_json) && is_string($reservation->tax_breakdown_json) && trim((string) $reservation->tax_breakdown_json) !== '') {
+                                        $decodedReservationBreakdown = json_decode((string) $reservation->tax_breakdown_json, true);
+                                        if (is_array($decodedReservationBreakdown)) {
+                                            $reservationBreakdown = $decodedReservationBreakdown;
+                                        }
+                                    }
+                                    $roomPricingBreakdown = is_array($reservationBreakdown['room_pricing'] ?? null) ? $reservationBreakdown['room_pricing'] : null;
+                                @endphp
                                 <tr>
                                     <td>
                                         {{ $reservation->customer_name }}<br>
@@ -2552,6 +2664,12 @@
                                     </td>
                                     <td>{{ $reservation->start_at }}<br>{{ $reservation->end_at }}</td>
                                     <td>
+                                        @if (is_array($roomPricingBreakdown))
+                                            Room Pricing: {{ $reservation->currency }} {{ number_format((float) ($roomPricingBreakdown['nightly_subtotal'] ?? 0), 2) }} x {{ (int) ($roomPricingBreakdown['nights'] ?? 1) }} nights<br>
+                                            Base Room: {{ $reservation->currency }} {{ number_format((float) ($roomPricingBreakdown['base_room_price'] ?? 0), 2) }}<br>
+                                            Extra Adult: {{ (int) ($roomPricingBreakdown['chargeable_extra_adults'] ?? 0) }} x {{ $reservation->currency }} {{ number_format((float) ($roomPricingBreakdown['extra_adult_price'] ?? 0), 2) }}<br>
+                                            Child: {{ (int) ($roomPricingBreakdown['chargeable_children'] ?? 0) }} x {{ $reservation->currency }} {{ number_format((float) ($roomPricingBreakdown['child_price'] ?? 0), 2) }}<br>
+                                        @endif
                                         Base: {{ $reservation->currency }} {{ number_format((float) ($reservation->subtotal_amount ?? $reservation->total_amount), 2) }}<br>
                                         Service Charge: {{ $reservation->currency }} {{ number_format((float) ($reservation->service_charge_total ?? 0), 2) }}<br>
                                         Taxes: {{ $reservation->currency }} {{ number_format((float) ($reservation->total_tax_amount ?? 0), 2) }}<br>
@@ -3582,7 +3700,7 @@
                 const normalized = normalizeCategoryKey(category);
 
                 if (normalized === "accommodation") {
-                    return ["stay", "capacity"];
+                    return ["stay"];
                 }
 
                 if (normalized === "transport") {
@@ -3603,17 +3721,6 @@
 
                 if (normalized === "restaurant") {
                     return ["capacity", "restaurant"];
-
-                if (normalized === "excursion" || normalized === "resort_day_visit") {
-                    return ["capacity", "experience", "service"];
-                }
-
-                if (normalized === "remote_workspace" || normalized === "restaurant") {
-                    return ["capacity", "service"];
-                }
-
-                if (normalized === "transport" || normalized === "vehicle_rental") {
-                    return ["vehicle", "capacity", "service"];
                 }
 
                 if (normalized === "vehicle_rental") {
@@ -3643,105 +3750,7 @@
                 const categoryMeta = {
                     accommodation: {
                         title: 'Accommodation Enlist Form',
-                        subtitle: 'Add stay-focused listing details, space setup, and guest capacity.',
-                        submit: 'Save Accommodation Listing',
-                        note: 'Accommodation fields are active for this category.',
-                        propertyType: 'property',
-                    },
-                    transport: {
-                        title: 'Transport Enlist Form',
-                        subtitle: 'Add transfer and transport service listing details.',
-                        submit: 'Save Transport Listing',
-                        note: 'Transport-focused fields are active for this category.',
-                        propertyType: 'service',
-                    },
-                    excursion: {
-                        title: 'Excursion Enlist Form',
-                        subtitle: 'Add activity and guided experience listing details.',
-                        submit: 'Save Excursion Listing',
-                        note: 'Excursion-focused fields are active for this category.',
-                        propertyType: 'service',
-                    },
-                    remote_workspace: {
-                        title: 'Remote Workspace Enlist Form',
-                        subtitle: 'Add workspace listing details for remote workers and teams.',
-                        submit: 'Save Remote Workspace Listing',
-                        note: 'Remote workspace fields are active for this category.',
-                        propertyType: 'service',
-                    },
-                    resort_day_visit: {
-                        title: 'Resort Day Visit Enlist Form',
-                        subtitle: 'Add day-visit package listing details for resort access.',
-                        submit: 'Save Resort Day Visit Listing',
-                        note: 'Resort day visit fields are active for this category.',
-                        propertyType: 'service',
-                    },
-                    restaurant: {
-                        title: 'Restaurant Enlist Form',
-                        subtitle: 'Add restaurant listing details with seating and service scope.',
-                        submit: 'Save Restaurant Listing',
-                        note: 'Restaurant-focused fields are active for this category.',
-                        propertyType: 'service',
-                    },
-                    vehicle_rental: {
-                        title: 'Vehicle Rental Enlist Form',
-                        subtitle: 'Add rental fleet listing details with vehicle constraints.',
-                        submit: 'Save Vehicle Rental Listing',
-                        note: 'Vehicle-rental-focused fields are active for this category.',
-                        propertyType: 'service',
-                    },
-                };
-
-                return categoryMeta[normalized] || {
-                    title: fallbackLabel + ' Enlist Form',
-                    subtitle: 'Add listing details specific to ' + fallbackLabel + '.',
-                    submit: 'Save ' + fallbackLabel + ' Listing',
-                    note: 'Category-specific fields will change based on your selection.',
-                    propertyType: null,
-                };
-            }
-
-            function applyCategoryFormMeta(category, forceType) {
-                const meta = categoryMetaFor(category);
-                if (propertyCreateFormTitle) {
-                    propertyCreateFormTitle.textContent = meta.title;
-                }
-                if (propertyCreateFormSubtitle) {
-                    propertyCreateFormSubtitle.textContent = meta.subtitle;
-                }
-                if (propertyCreateSubmitButton) {
-                    propertyCreateSubmitButton.textContent = meta.submit;
-                }
-                if (propertyCategoryScopeNote) {
-                    propertyCategoryScopeNote.textContent = meta.note;
-                }
-                if (forceType && propertyTypeSelect && meta.propertyType) {
-                    ensureSelectHasOption(propertyTypeSelect, meta.propertyType);
-                    propertyTypeSelect.value = meta.propertyType;
-                }
-            }
-
-            function refreshCategoryViewPanels() {
-                if (!propertyCategorySelect || categoryViewPanels.length === 0) {
-                    return;
-                }
-                const activeCategory = normalizeCategoryKey(propertyCategorySelect.value);
-                categoryViewPanels.forEach((panel) => {
-                    const panelCategory = normalizeCategoryKey(panel.getAttribute('data-category-view'));
-                    panel.hidden = panelCategory !== activeCategory;
-                });
-            }
-
-            function categoryMetaFor(category) {
-                const normalized = normalizeCategoryKey(category);
-                const fallbackLabel = propertyCategorySelect
-                    ? (propertyCategorySelect.options[propertyCategorySelect.selectedIndex]?.textContent || 'Listing')
-                    : 'Listing';
-
-                const categoryMeta = {
-                    accommodation: {
-                        title: 'Accommodation Enlist Form',
-                        subtitle: 'Add stay-focused listing details, space setup, and guest capacity.',
+                        subtitle: 'Add stay-focused listing details. Room occupancy and pricing are configured at room level.',
                         submit: 'Save Accommodation Listing',
                         note: 'Accommodation fields are active for this category.',
                         propertyType: 'property',
@@ -4210,7 +4219,12 @@
                     const shouldShow = scope !== '' && activeScopes.includes(scope);
                     field.hidden = !shouldShow;
                     field.style.display = shouldShow ? '' : 'none';
-                    field.disabled = !shouldShow;
+                    if ('disabled' in field) {
+                        field.disabled = !shouldShow;
+                    }
+                    field.querySelectorAll('input, select, textarea').forEach((input) => {
+                        input.disabled = !shouldShow;
+                    });
                 });
             }
 
@@ -4558,7 +4572,12 @@
                                 const shouldShow = activeScopes.includes(scope);
                                 field.hidden = !shouldShow;
                                 field.style.display = shouldShow ? '' : 'none';
-                                field.disabled = !shouldShow;
+                                if ('disabled' in field) {
+                                    field.disabled = !shouldShow;
+                                }
+                                field.querySelectorAll('input, select, textarea').forEach((input) => {
+                                    input.disabled = !shouldShow;
+                                });
                             });
                             form.hidden = false;
                         }
@@ -4612,4 +4631,3 @@
     </script>
 </body>
 </html>
-

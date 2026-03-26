@@ -1051,6 +1051,48 @@
             margin-bottom: 2px;
         }
 
+        .category-listings-stack {
+            margin-top: 12px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .category-listing-section {
+            border: 1px solid #d7e0e6;
+            border-radius: 12px;
+            background: #f8fcff;
+            padding: 10px;
+        }
+
+        .category-listing-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .category-listing-header h4 {
+            margin: 0;
+            color: #1f3346;
+            font-size: 0.92rem;
+        }
+
+        .property-subsection {
+            margin-top: 8px;
+            border-top: 1px dashed #d2dee8;
+            padding-top: 8px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .property-subsection-head {
+            margin: 0;
+            font-size: 0.8rem;
+            color: #365670;
+            font-weight: 700;
+        }
+
         .standards-note {
             margin-top: 6px;
             font-size: 0.78rem;
@@ -1354,6 +1396,19 @@
         });
         $roomMediaAssets = $vendorMediaAssets->filter(static function ($media): bool {
             return strtolower((string) ($media->entity_type ?? '')) === 'room';
+        });
+        $listingCategoryViewOrder = ['accommodation', 'transport', 'excursion', 'remote_workspace', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
+        $roomsByPropertyId = $vendorRooms->groupBy(static function ($room) {
+            return (int) ($room->vendor_property_id ?? 0);
+        });
+        $propertyMediaByPropertyId = $propertyMediaAssets->groupBy(static function ($media) {
+            return (int) ($media->entity_id ?? 0);
+        });
+        $roomMediaByRoomId = $roomMediaAssets->groupBy(static function ($media) {
+            return (int) ($media->entity_id ?? 0);
+        });
+        $propertiesByCategory = $vendorProperties->groupBy(static function ($property) {
+            return strtolower((string) ($property->listing_category ?? ''));
         });
         $propertyLookupById = $vendorProperties->keyBy('id');
         $roomLookupById = $vendorRoomCategories->keyBy('id');
@@ -2190,6 +2245,122 @@
                         </tbody>
                     </table>
                 </div>
+
+                <div class="category-listings-stack" aria-label="Category listing views">
+                    @foreach ($listingCategoryViewOrder as $categoryKey)
+                        @php
+                            $categoryProperties = $propertiesByCategory->get($categoryKey, collect());
+                            $categoryLabel = $vendorCategoryMap[$categoryKey] ?? strtoupper(str_replace('_', ' ', $categoryKey));
+                        @endphp
+                        <article class="category-listing-section" id="category-view-{{ $categoryKey }}">
+                            <div class="category-listing-header">
+                                <h4>{{ $categoryLabel }} Listings</h4>
+                                <span class="ops-chip">{{ $categoryProperties->count() }} listed</span>
+                            </div>
+                            @if ($categoryProperties->isEmpty())
+                                <p class="ops-empty">No {{ strtolower((string) $categoryLabel) }} listings yet.</p>
+                            @else
+                                <div class="ops-table-wrap">
+                                    <table class="ops-table" aria-label="{{ $categoryLabel }} listings table">
+                                        <thead>
+                                            <tr>
+                                                <th>Listing</th>
+                                                <th>Base Details</th>
+                                                <th>Rooms + Media Subsections</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($categoryProperties as $property)
+                                                @php
+                                                    $propertyId = (int) ($property->id ?? 0);
+                                                    $propertyRooms = $roomsByPropertyId->get($propertyId, collect());
+                                                    $propertyPhotos = $propertyMediaByPropertyId->get($propertyId, collect());
+                                                @endphp
+                                                <tr>
+                                                    <td>
+                                                        <strong>{{ $property->name }}</strong><br>
+                                                        ID: {{ $propertyId }}<br>
+                                                        {{ strtoupper((string) ($property->property_type ?? 'N/A')) }}
+                                                    </td>
+                                                    <td>
+                                                        {{ $property->location ?: 'N/A' }}<br>
+                                                        {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($property->base_price ?? 0), 2) }}<br>
+                                                        Guests/Capacity: {{ (int) ($property->max_guests ?? 0) }}
+                                                    </td>
+                                                    <td>
+                                                        <div class="property-subsection">
+                                                            <p class="property-subsection-head">Rooms Under This Property ({{ $propertyRooms->count() }})</p>
+                                                            @if ($propertyRooms->isEmpty())
+                                                                <p class="ops-empty">No rooms for this listing yet.</p>
+                                                            @else
+                                                                <div class="ops-table-wrap">
+                                                                    <table class="ops-table" aria-label="Rooms for property {{ $propertyId }}">
+                                                                        <thead>
+                                                                            <tr>
+                                                                                <th>Room</th>
+                                                                                <th>Inventory</th>
+                                                                                <th>Room Media</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            @foreach ($propertyRooms as $room)
+                                                                                @php
+                                                                                    $roomId = (int) ($room->id ?? 0);
+                                                                                    $roomPhotos = $roomMediaByRoomId->get($roomId, collect());
+                                                                                @endphp
+                                                                                <tr>
+                                                                                    <td>
+                                                                                        <strong>{{ $room->name }}</strong><br>
+                                                                                        Room ID: {{ $roomId }}
+                                                                                    </td>
+                                                                                    <td>
+                                                                                        Qty: {{ (int) ($room->quantity ?? 0) }}<br>
+                                                                                        Max: {{ (int) ($room->max_occupancy ?? 0) }}
+                                                                                    </td>
+                                                                                    <td>
+                                                                                        @if ($roomPhotos->isEmpty())
+                                                                                            <span class="ops-empty">No room media</span>
+                                                                                        @else
+                                                                                            <div class="gallery-grid">
+                                                                                                @foreach ($roomPhotos->take(3) as $media)
+                                                                                                    <div class="gallery-card">
+                                                                                                        <img src="{{ str_starts_with((string) $media->file_path, 'http') ? (string) $media->file_path : ('/storage/' . ltrim((string) $media->file_path, '/')) }}" alt="{{ $media->alt_text ?: 'Room image' }}" loading="lazy">
+                                                                                                    </div>
+                                                                                                @endforeach
+                                                                                            </div>
+                                                                                        @endif
+                                                                                    </td>
+                                                                                </tr>
+                                                                            @endforeach
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            @endif
+
+                                                            <p class="property-subsection-head">Property Media ({{ $propertyPhotos->count() }})</p>
+                                                            @if ($propertyPhotos->isEmpty())
+                                                                <p class="ops-empty">No property media for this listing yet.</p>
+                                                            @else
+                                                                <div class="gallery-grid">
+                                                                    @foreach ($propertyPhotos->take(6) as $media)
+                                                                        <div class="gallery-card">
+                                                                            <img src="{{ str_starts_with((string) $media->file_path, 'http') ? (string) $media->file_path : ('/storage/' . ltrim((string) $media->file_path, '/')) }}" alt="{{ $media->alt_text ?: 'Property image' }}" loading="lazy">
+                                                                            <div class="gallery-meta">{{ $media->alt_text ?: 'No alt text' }}</div>
+                                                                        </div>
+                                                                    @endforeach
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
+                        </article>
+                    @endforeach
+                </div>
             </div>
         </section>
 
@@ -2199,148 +2370,10 @@
                 <span class="ops-chip">{{ $vendorRooms->count() }} total</span>
             </div>
             <div class="ops-grid">
-                @php
-                    $oldRoomAmenities = collect(old('room_amenities', []))->map(fn ($item) => (string) $item)->all();
-                    $oldRoomFeatures = collect(old('room_features', []))->map(fn ($item) => (string) $item)->all();
-                @endphp
                 <article class="ops-form ops-field-wide">
-                    <div class="form-toggle-row">
-                        <button class="btn btn-primary" type="button" id="openRoomCreateForm" @if($vendorProperties->isEmpty()) disabled @endif>Add Room Under Property</button>
-                        <button class="btn btn-secondary" type="button" id="closeRoomCreateForm" @if (!$showCreateRoomForm) hidden @endif>Cancel</button>
-                    </div>
-                    @if($vendorProperties->isEmpty())
-                        <p class="wizard-note">Create at least one property first, then add rooms under that property.</p>
-                    @endif
-                    <form id="roomCreateForm" class="ops-form" method="POST" action="/portal/vendor/rooms/create" @if (!$showCreateRoomForm) hidden @endif>
-                        @csrf
-                        <input type="hidden" name="room_form_intent" value="1">
-                        <div class="ops-form-grid">
-                            <div class="ops-field">
-                                <label for="room_vendor_property_id">Property</label>
-                                <select id="room_vendor_property_id" name="vendor_property_id" class="ops-select" required>
-                                    <option value="">Select property</option>
-                                    @foreach ($vendorProperties as $property)
-                                        <option value="{{ (int) $property->id }}" @selected((string) old('vendor_property_id') === (string) $property->id)>{{ $property->name }} (#{{ (int) $property->id }})</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="ops-field">
-                                <label for="room_name">Room Name</label>
-                                <input id="room_name" name="name" class="ops-input" type="text" maxlength="160" value="{{ old('name') }}" required>
-                            </div>
-                            <div class="ops-field">
-                                <label for="room_quantity">Quantity</label>
-                                <input id="room_quantity" name="quantity" class="ops-input" type="number" min="1" max="10000" value="{{ old('quantity', 1) }}">
-                            </div>
-                            <div class="ops-field">
-                                <label for="room_max_occupancy">Max Occupancy</label>
-                                <input id="room_max_occupancy" name="max_occupancy" class="ops-input" type="number" min="1" max="50" value="{{ old('max_occupancy', 1) }}">
-                            </div>
-                            <div class="ops-field">
-                                <label for="room_bed_type">Bed Type</label>
-                                <input id="room_bed_type" name="bed_type" class="ops-input" type="text" maxlength="80" value="{{ old('bed_type') }}" placeholder="King, Twin, Bunk, etc.">
-                            </div>
-                            <div class="ops-field">
-                                <label for="room_base_price">Base Price (MVR)</label>
-                                <input id="room_base_price" name="base_price" class="ops-input" type="number" min="0" step="0.01" value="{{ old('base_price') }}">
-                            </div>
-                            <div class="ops-field ops-field-wide">
-                                <label>Room Amenities</label>
-                                <div class="feature-checklist">
-                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="wifi" @checked(in_array('wifi', $oldRoomAmenities, true))> Wi-Fi</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="ac" @checked(in_array('ac', $oldRoomAmenities, true))> Air Conditioning</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="mini_bar" @checked(in_array('mini_bar', $oldRoomAmenities, true))> Mini Bar</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="safe" @checked(in_array('safe', $oldRoomAmenities, true))> In-room Safe</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="balcony" @checked(in_array('balcony', $oldRoomAmenities, true))> Balcony</label>
-                                </div>
-                            </div>
-                            <div class="ops-field ops-field-wide">
-                                <label>Toilet and Bathroom Features</label>
-                                <div class="feature-checklist">
-                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="private_bathroom" @checked(in_array('private_bathroom', $oldRoomFeatures, true))> Private Bathroom</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="hot_water" @checked(in_array('hot_water', $oldRoomFeatures, true))> Hot Water</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="shower" @checked(in_array('shower', $oldRoomFeatures, true))> Shower</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="bathtub" @checked(in_array('bathtub', $oldRoomFeatures, true))> Bathtub</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="bidet" @checked(in_array('bidet', $oldRoomFeatures, true))> Bidet</label>
-                                    <label class="feature-item"><input type="checkbox" name="room_features[]" value="accessible_toilet" @checked(in_array('accessible_toilet', $oldRoomFeatures, true))> Accessible Toilet</label>
-                                </div>
-                            </div>
-                        </div>
-                        <button class="btn btn-primary" type="submit">Save Room</button>
-                    </form>
+                    <p class="wizard-note">Room views are now shown inside each listing under the category sections in Properties and Listings.</p>
+                    <p class="wizard-note">Use Add Room from the respective listing card to create rooms for a specific property.</p>
                 </article>
-
-                <div class="ops-table-wrap">
-                    <table class="ops-table" aria-label="Vendor room inventory table">
-                        <thead>
-                            <tr>
-                                <th>Room</th>
-                                <th>Property</th>
-                                <th>Details</th>
-                                <th>Edit / Remove</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($vendorRooms->take(20) as $room)
-                                <tr>
-                                    <td>
-                                        <strong>{{ $room->name }}</strong><br>
-                                        ID: {{ (int) $room->id }}
-                                    </td>
-                                    <td>
-                                        @php
-                                            $linkedProperty = $room->vendor_property_id ? $propertyLookupById->get((int) $room->vendor_property_id) : null;
-                                        @endphp
-                                        {{ $linkedProperty?->name ?? 'N/A' }}
-                                        @if ($room->vendor_property_id)
-                                            <br>#{{ (int) $room->vendor_property_id }}
-                                        @endif
-                                    </td>
-                                    <td>
-                                        Qty: {{ (int) ($room->quantity ?? 0) }}<br>
-                                        Max: {{ (int) ($room->max_occupancy ?? 0) }}<br>
-                                        {{ $room->currency ?? 'MVR' }} {{ number_format((float) ($room->base_price ?? 0), 2) }}
-                                    </td>
-                                    <td>
-                                        <div class="listing-cell-actions">
-                                            <div class="inline-actions edit-toggle-actions">
-                                                <button class="btn btn-secondary" type="button" data-open-room-edit data-room-edit-id="{{ (int) $room->id }}">Edit Room</button>
-                                                <form method="POST" action="/portal/vendor/rooms/{{ $room->id }}/delete" onsubmit="return confirm('Remove this room category?');">
-                                                    @csrf
-                                                    <button class="btn btn-danger" type="submit">Remove</button>
-                                                </form>
-                                            </div>
-                                            <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/rooms/{{ $room->id }}/update" data-room-edit-form="{{ (int) $room->id }}" hidden>
-                                                @csrf
-                                                <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $room->name }}" required>
-                                                <input class="ops-input" name="quantity" type="number" min="1" max="10000" value="{{ (int) ($room->quantity ?? 1) }}">
-                                                <input class="ops-input" name="max_occupancy" type="number" min="1" max="50" value="{{ (int) ($room->max_occupancy ?? 1) }}">
-                                                <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($room->base_price ?? 0) }}">
-                                                <div class="inline-actions">
-                                                    <button class="btn btn-secondary js-row-update" type="submit">Update Room</button>
-                                                    <button class="btn btn-secondary" type="button" data-close-room-edit data-room-edit-id="{{ (int) $room->id }}">Cancel Edit</button>
-                                                </div>
-                                            </form>
-                                            <form class="inline-table-form media-upload-row" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
-                                                @csrf
-                                                <input type="hidden" name="entity_type" value="room">
-                                                <input type="hidden" name="entity_id" value="{{ (int) $room->id }}">
-                                                <input class="ops-input" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
-                                                <input class="ops-input" name="alt_text" type="text" maxlength="190" placeholder="Room photo alt text" required>
-                                                <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Set as primary</label>
-                                                <button class="btn btn-secondary" type="submit">Upload Room Photo</button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4" class="ops-empty">No rooms added yet.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
             </div>
         </section>
 
@@ -2350,78 +2383,9 @@
                 <span class="ops-chip">{{ $vendorMediaAssets->count() }} files</span>
             </div>
             <div class="ops-grid">
-                <div class="ops-table-wrap">
-                    <table class="ops-table" aria-label="Vendor media table">
-                        <thead>
-                            <tr>
-                                <th>Entity</th>
-                                <th>Path</th>
-                                <th>Size</th>
-                                <th>Quality</th>
-                                <th>Alt Text</th>
-                                <th>Uploaded</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($vendorMediaAssets->take(15) as $media)
-                                <tr>
-                                    <td>{{ strtoupper((string) $media->entity_type) }} #{{ $media->entity_id ?: 'N/A' }}</td>
-                                    <td class="media-thumb">{{ $media->file_path }}</td>
-                                    <td>{{ ($media->width_px ?? '-') }} x {{ ($media->height_px ?? '-') }}</td>
-                                    <td>{{ $media->quality_grade ?? 'N/A' }}</td>
-                                    <td>{{ $media->alt_text ?: 'N/A' }}</td>
-                                    <td>{{ $media->created_at }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="ops-empty">No media uploads yet.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
                 <article class="ops-form ops-field-wide">
-                    <p class="label">Property Pictures</p>
-                    <p class="wizard-note">Open each property by ID and verify image quality before publishing.</p>
-                    <div class="gallery-grid">
-                        @forelse ($propertyMediaAssets->take(9) as $media)
-                            <div class="gallery-card">
-                                <img src="{{ str_starts_with((string) $media->file_path, 'http') ? (string) $media->file_path : ('/storage/' . ltrim((string) $media->file_path, '/')) }}" alt="{{ $media->alt_text ?: 'Property image' }}" loading="lazy">
-                                <div class="gallery-meta">
-                                    <strong>Property #{{ $media->entity_id ?: 'N/A' }}</strong>
-                                    {{ $media->alt_text ?: 'No alt text' }}
-                                </div>
-                            </div>
-                        @empty
-                            <p class="ops-empty">No property pictures uploaded yet.</p>
-                        @endforelse
-                    </div>
-                </article>
-
-                <article class="ops-form ops-field-wide">
-                    <p class="label">Room Pictures and Toilet Features</p>
-                    <p class="wizard-note">Room media is shown separately so vendors can verify toilet and bathroom feature visuals.</p>
-                    <div class="gallery-grid">
-                        @forelse ($roomMediaAssets->take(9) as $media)
-                            <div class="gallery-card">
-                                <img src="{{ str_starts_with((string) $media->file_path, 'http') ? (string) $media->file_path : ('/storage/' . ltrim((string) $media->file_path, '/')) }}" alt="{{ $media->alt_text ?: 'Room image' }}" loading="lazy">
-                                <div class="gallery-meta">
-                                    <strong>Room #{{ $media->entity_id ?: 'N/A' }}</strong>
-                                    {{ $media->alt_text ?: 'No alt text' }}
-                                    @php
-                                        $linkedRoom = $media->entity_id ? $roomLookupById->get((int) $media->entity_id) : null;
-                                        $linkedFeatures = trim((string) ($linkedRoom->amenities ?? ''));
-                                    @endphp
-                                    @if ($linkedFeatures !== '')
-                                        <br>Features: {{ $linkedFeatures }}
-                                    @endif
-                                </div>
-                            </div>
-                        @empty
-                            <p class="ops-empty">No room pictures uploaded yet.</p>
-                        @endforelse
-                    </div>
+                    <p class="wizard-note">Media views are now shown inside each listing under the category sections in Properties and Listings.</p>
+                    <p class="wizard-note">Use property and room media upload actions under each listing to attach files to the correct parent record.</p>
                 </article>
             </div>
         </section>

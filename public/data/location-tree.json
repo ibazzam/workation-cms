@@ -1,0 +1,37 @@
+{
+  "Maldives": {
+    "Haa Alif Atoll": ["Dhidhdhoo", "Uligan", "Kelaa", "Thuraakunu", "Hoarafushi", "Ihavandhoo", "Filladhoo"],
+    "Haa Dhaalu Atoll": ["Kulhudhuffushi", "Nolhivaram", "Hanimaadhoo", "Naivaadhoo", "Nellaidhoo", "Finey", "Kumundhoo"],
+    "Shaviyani Atoll": ["Funadhoo", "Komandoo", "Maroshi", "Milandhoo", "Narudhoo", "Lhaimagu", "Goidhoo"],
+    "Noonu Atoll": ["Manadhoo", "Holhudhoo", "Velidhoo", "Kendhikulhudhoo", "Maafoaru", "Landhoo", "Miladhoo"],
+    "Raa Atoll": ["Ungoofaaru", "Maduvvari", "Innamaadhoo", "Rasdhoo", "Alifushi", "Hulhudhuffaaru", "Dhuvaafaru"],
+    "Baa Atoll": ["Eydhafushi", "Dharavandhoo", "Maalhos", "Kamadhoo", "Thulhaadhoo", "Hithaadhoo", "Fulhadhoo"],
+    "Lhaviyani Atoll": ["Naifaru", "Hinnavaru", "Kurendhoo", "Olhuvelifushi", "Felivaru"],
+    "Kaafu Atoll": ["Male", "Hulhumale", "Maafushi", "Gulhi", "Guraidhoo", "Himmafushi", "Thulusdhoo"],
+    "Alif Alif Atoll": ["Rasdhoo", "Ukulhas", "Thoddoo", "Bodufolhudhoo", "Mathiveri", "Feridhoo", "Maalhos"],
+    "Alif Dhaal Atoll": ["Mahibadhoo", "Dhigurah", "Dhangethi", "Omadhoo", "Mandhoo", "Kunburudhoo"],
+    "Vaavu Atoll": ["Felidhoo", "Fulidhoo", "Thinadhoo", "Keyodhoo", "Rakeedhoo"],
+    "Meemu Atoll": ["Muli", "Naalaafushi", "Kolhufushi", "Mulah", "Raimmandhoo", "Veyvah"],
+    "Faafu Atoll": ["Nilandhoo", "Magoodhoo", "Bilehdhoo", "Feeali", "Dharanboodhoo"],
+    "Dhaalu Atoll": ["Kudahuvadhoo", "Maaenboodhoo", "Rinbudhoo", "Vaanee", "Bandidhoo", "Meedhoo"],
+    "Thaa Atoll": ["Veymandoo", "Kinbidhoo", "Guraidhoo", "Omadhoo", "Thimarafushi", "Vilufushi"],
+    "Laamu Atoll": ["Fonadhoo", "Gan", "Isdhoo", "Maavah", "Mundoo", "Kunahandhoo", "Maamendhoo"],
+    "Gaafu Alif Atoll": ["Vilingili", "Kolamaafushi", "Maamendhoo", "Kondey", "Nilandhoo", "Gemanafushi"],
+    "Gaafu Dhaalu Atoll": ["Thinadhoo", "Nadella", "Madaveli", "Faresmaathodaa", "Gadhdhoo", "Vaadhoo"],
+    "Gnaviyani Atoll": ["Fuvahmulah"],
+    "Seenu Atoll": ["Hithadhoo", "Maradhoo", "Feydhoo", "Hulhudhoo", "Meedhoo", "Gan"]
+  },
+  "Sri Lanka": {
+    "Western Province": ["Colombo", "Negombo", "Kalutara"],
+    "Southern Province": ["Galle", "Matara", "Hambantota"],
+    "Central Province": ["Kandy", "Nuwara Eliya", "Matale"]
+  },
+  "India": {
+    "Kerala": ["Kochi", "Thiruvananthapuram", "Kozhikode"],
+    "Karnataka": ["Bengaluru", "Mysuru", "Mangaluru"],
+    "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai"]
+  },
+  "Other": {
+    "Other": ["Other"]
+  }
+}

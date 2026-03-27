@@ -147,6 +147,223 @@ if (!function_exists('vendorPortalNormalizedStringList')) {
     }
 }
 
+if (!function_exists('vendorPortalListingOptionDefaults')) {
+    function vendorPortalListingOptionDefaults(): array
+    {
+        return [
+            'transport_mode' => [
+                ['value' => 'speedboat', 'label' => 'Speedboat', 'group' => 'marine', 'sort_order' => 10],
+                ['value' => 'ferry', 'label' => 'Ferry', 'group' => 'marine', 'sort_order' => 20],
+                ['value' => 'boat', 'label' => 'Boat', 'group' => 'marine', 'sort_order' => 30],
+                ['value' => 'safari', 'label' => 'Safari', 'group' => 'marine', 'sort_order' => 40],
+                ['value' => 'dhoni', 'label' => 'Dhoni', 'group' => 'marine', 'sort_order' => 50],
+                ['value' => 'launch', 'label' => 'Launch', 'group' => 'marine', 'sort_order' => 60],
+                ['value' => 'catamaran', 'label' => 'Catamaran', 'group' => 'marine', 'sort_order' => 70],
+                ['value' => 'yacht', 'label' => 'Yacht', 'group' => 'marine', 'sort_order' => 80],
+                ['value' => 'other vessel', 'label' => 'Other Vessel', 'group' => 'marine', 'sort_order' => 90],
+                ['value' => 'van', 'label' => 'Van', 'group' => 'land', 'sort_order' => 110],
+                ['value' => 'car', 'label' => 'Car', 'group' => 'land', 'sort_order' => 120],
+                ['value' => 'pickup', 'label' => 'Pickup', 'group' => 'land', 'sort_order' => 130],
+                ['value' => 'bus', 'label' => 'Bus', 'group' => 'land', 'sort_order' => 140],
+                ['value' => 'suv', 'label' => 'SUV', 'group' => 'land', 'sort_order' => 150],
+                ['value' => 'other land vehicle', 'label' => 'Other Land Vehicle', 'group' => 'land', 'sort_order' => 160],
+            ],
+            'accommodation_facility' => [
+                ['value' => 'wifi', 'label' => 'Wi-Fi', 'group' => 'core', 'sort_order' => 10],
+                ['value' => 'parking', 'label' => 'Parking', 'group' => 'core', 'sort_order' => 20],
+                ['value' => 'pool', 'label' => 'Pool', 'group' => 'core', 'sort_order' => 30],
+                ['value' => 'gym', 'label' => 'Gym', 'group' => 'core', 'sort_order' => 40],
+                ['value' => 'air_conditioning', 'label' => 'Air Conditioning', 'group' => 'core', 'sort_order' => 50],
+                ['value' => 'breakfast', 'label' => 'Breakfast', 'group' => 'food', 'sort_order' => 60],
+                ['value' => 'kitchen', 'label' => 'Kitchen', 'group' => 'food', 'sort_order' => 70],
+                ['value' => 'workspace_desk', 'label' => 'Workspace Desk', 'group' => 'workspace', 'sort_order' => 80],
+            ],
+            'property_amenity' => [
+                ['value' => 'wifi', 'label' => 'Wi-Fi', 'group' => 'core', 'sort_order' => 10],
+                ['value' => 'parking', 'label' => 'Parking', 'group' => 'core', 'sort_order' => 20],
+                ['value' => 'pool', 'label' => 'Pool', 'group' => 'core', 'sort_order' => 30],
+                ['value' => 'gym', 'label' => 'Gym', 'group' => 'core', 'sort_order' => 40],
+                ['value' => 'air_conditioning', 'label' => 'Air Conditioning', 'group' => 'core', 'sort_order' => 50],
+                ['value' => 'breakfast', 'label' => 'Breakfast', 'group' => 'food', 'sort_order' => 60],
+                ['value' => 'kitchen', 'label' => 'Kitchen', 'group' => 'food', 'sort_order' => 70],
+                ['value' => 'workspace_desk', 'label' => 'Workspace Desk', 'group' => 'workspace', 'sort_order' => 80],
+            ],
+            'property_feature' => [
+                ['value' => 'wheelchair_access', 'label' => 'Wheelchair Access', 'group' => 'accessibility', 'sort_order' => 10],
+                ['value' => 'elevator', 'label' => 'Elevator', 'group' => 'accessibility', 'sort_order' => 20],
+                ['value' => 'family_friendly', 'label' => 'Family Friendly', 'group' => 'guest_type', 'sort_order' => 30],
+                ['value' => 'pet_friendly', 'label' => 'Pet Friendly', 'group' => 'guest_type', 'sort_order' => 40],
+                ['value' => 'beachfront', 'label' => 'Beachfront', 'group' => 'location', 'sort_order' => 50],
+                ['value' => 'sea_view', 'label' => 'Sea View', 'group' => 'location', 'sort_order' => 60],
+                ['value' => 'safety_certified', 'label' => 'Safety Certified', 'group' => 'safety', 'sort_order' => 70],
+                ['value' => 'kids_play_area', 'label' => 'Kids Play Area', 'group' => 'family', 'sort_order' => 80],
+            ],
+            'room_amenity' => [
+                ['value' => 'air_conditioning', 'label' => 'Air Conditioning', 'group' => 'room', 'sort_order' => 10],
+                ['value' => 'ensuite_bathroom', 'label' => 'Ensuite Bathroom', 'group' => 'room', 'sort_order' => 20],
+                ['value' => 'smart_tv', 'label' => 'Smart TV', 'group' => 'room', 'sort_order' => 30],
+                ['value' => 'mini_bar', 'label' => 'Mini Bar', 'group' => 'room', 'sort_order' => 40],
+                ['value' => 'balcony', 'label' => 'Balcony', 'group' => 'room', 'sort_order' => 50],
+                ['value' => 'sea_view', 'label' => 'Sea View', 'group' => 'view', 'sort_order' => 60],
+                ['value' => 'kettle', 'label' => 'Kettle', 'group' => 'room', 'sort_order' => 70],
+                ['value' => 'safe_box', 'label' => 'Safe Box', 'group' => 'room', 'sort_order' => 80],
+                ['value' => 'work_desk', 'label' => 'Work Desk', 'group' => 'workspace', 'sort_order' => 90],
+                ['value' => 'wifi', 'label' => 'Wi-Fi', 'group' => 'connectivity', 'sort_order' => 100],
+            ],
+            'bathroom_amenity' => [
+                ['value' => 'hot_water', 'label' => 'Hot Water', 'group' => 'core', 'sort_order' => 10],
+                ['value' => 'walk_in_shower', 'label' => 'Walk-in Shower', 'group' => 'fixture', 'sort_order' => 20],
+                ['value' => 'bathtub', 'label' => 'Bathtub', 'group' => 'fixture', 'sort_order' => 30],
+                ['value' => 'bidet', 'label' => 'Bidet', 'group' => 'fixture', 'sort_order' => 40],
+                ['value' => 'toiletries', 'label' => 'Toiletries', 'group' => 'service', 'sort_order' => 50],
+                ['value' => 'hair_dryer', 'label' => 'Hair Dryer', 'group' => 'service', 'sort_order' => 60],
+                ['value' => 'bathrobes', 'label' => 'Bathrobes', 'group' => 'service', 'sort_order' => 70],
+                ['value' => 'slippers', 'label' => 'Slippers', 'group' => 'service', 'sort_order' => 80],
+            ],
+            'room_bed_type' => [
+                ['value' => 'king', 'label' => 'King', 'group' => 'bed', 'sort_order' => 10],
+                ['value' => 'queen', 'label' => 'Queen', 'group' => 'bed', 'sort_order' => 20],
+                ['value' => 'double', 'label' => 'Double', 'group' => 'bed', 'sort_order' => 30],
+                ['value' => 'twin', 'label' => 'Twin', 'group' => 'bed', 'sort_order' => 40],
+                ['value' => 'bunk', 'label' => 'Bunk', 'group' => 'bed', 'sort_order' => 50],
+                ['value' => 'sofa_bed', 'label' => 'Sofa Bed', 'group' => 'bed', 'sort_order' => 60],
+                ['value' => 'dorm_bed', 'label' => 'Dorm Bed', 'group' => 'bed', 'sort_order' => 70],
+            ],
+            'excursion_type' => [
+                ['value' => 'snorkeling', 'label' => 'Snorkeling', 'group' => 'water', 'sort_order' => 10],
+                ['value' => 'island_hopping', 'label' => 'Island Hopping', 'group' => 'tour', 'sort_order' => 20],
+                ['value' => 'dolphin_cruise', 'label' => 'Dolphin Cruise', 'group' => 'water', 'sort_order' => 30],
+                ['value' => 'fishing', 'label' => 'Fishing', 'group' => 'water', 'sort_order' => 40],
+                ['value' => 'diving', 'label' => 'Diving', 'group' => 'water', 'sort_order' => 50],
+                ['value' => 'sandbank_picnic', 'label' => 'Sandbank Picnic', 'group' => 'tour', 'sort_order' => 60],
+                ['value' => 'sunset_cruise', 'label' => 'Sunset Cruise', 'group' => 'water', 'sort_order' => 70],
+                ['value' => 'cultural_tour', 'label' => 'Cultural Tour', 'group' => 'tour', 'sort_order' => 80],
+            ],
+            'restaurant_meal_service' => [
+                ['value' => 'breakfast', 'label' => 'Breakfast', 'group' => 'meal', 'sort_order' => 10],
+                ['value' => 'lunch', 'label' => 'Lunch', 'group' => 'meal', 'sort_order' => 20],
+                ['value' => 'dinner', 'label' => 'Dinner', 'group' => 'meal', 'sort_order' => 30],
+                ['value' => 'all_day', 'label' => 'All Day', 'group' => 'meal', 'sort_order' => 40],
+                ['value' => 'brunch', 'label' => 'Brunch', 'group' => 'meal', 'sort_order' => 50],
+                ['value' => 'high_tea', 'label' => 'High Tea', 'group' => 'meal', 'sort_order' => 60],
+            ],
+            'vehicle_rental_type' => [
+                ['value' => 'land_car', 'label' => 'Land - Car', 'group' => 'land', 'sort_order' => 10],
+                ['value' => 'land_suv', 'label' => 'Land - SUV', 'group' => 'land', 'sort_order' => 20],
+                ['value' => 'land_van', 'label' => 'Land - Van', 'group' => 'land', 'sort_order' => 30],
+                ['value' => 'land_bus', 'label' => 'Land - Bus', 'group' => 'land', 'sort_order' => 40],
+                ['value' => 'land_motorbike', 'label' => 'Land - Motorbike', 'group' => 'land', 'sort_order' => 50],
+                ['value' => 'land_bicycle', 'label' => 'Land - Bicycle', 'group' => 'land', 'sort_order' => 60],
+                ['value' => 'marine_speedboat', 'label' => 'Marine - Speedboat', 'group' => 'marine', 'sort_order' => 70],
+                ['value' => 'marine_dhoni', 'label' => 'Marine - Dhoni', 'group' => 'marine', 'sort_order' => 80],
+                ['value' => 'marine_launch', 'label' => 'Marine - Launch', 'group' => 'marine', 'sort_order' => 90],
+                ['value' => 'marine_catamaran', 'label' => 'Marine - Catamaran', 'group' => 'marine', 'sort_order' => 100],
+                ['value' => 'marine_yacht', 'label' => 'Marine - Yacht', 'group' => 'marine', 'sort_order' => 110],
+                ['value' => 'marine_ferry', 'label' => 'Marine - Ferry', 'group' => 'marine', 'sort_order' => 120],
+                ['value' => 'other_land_vehicle', 'label' => 'Other Land Vehicle', 'group' => 'land', 'sort_order' => 130],
+                ['value' => 'other_marine_vessel', 'label' => 'Other Marine Vessel', 'group' => 'marine', 'sort_order' => 140],
+            ],
+        ];
+    }
+}
+
+if (!function_exists('vendorPortalListingOptions')) {
+    function vendorPortalListingOptions(string $optionType): array
+    {
+        $defaults = vendorPortalListingOptionDefaults();
+        $fallback = $defaults[$optionType] ?? [];
+
+        if (!Schema::hasTable('portal_listing_option_catalog')) {
+            return $fallback;
+        }
+
+        $rows = DB::table('portal_listing_option_catalog')
+            ->where('option_type', $optionType)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('option_label')
+            ->get(['option_value', 'option_label', 'option_group', 'sort_order']);
+
+        if ($rows->isEmpty()) {
+            return $fallback;
+        }
+
+        return $rows->map(static function (object $row): array {
+            return [
+                'value' => trim((string) ($row->option_value ?? '')),
+                'label' => trim((string) ($row->option_label ?? '')),
+                'group' => trim((string) ($row->option_group ?? '')),
+                'sort_order' => (int) ($row->sort_order ?? 100),
+            ];
+        })->filter(static fn (array $row): bool => $row['value'] !== '' && $row['label'] !== '')
+            ->values()
+            ->all();
+    }
+}
+
+if (!function_exists('vendorPortalAllowedOptionValueSet')) {
+    function vendorPortalAllowedOptionValueSet(string $optionType): array
+    {
+        $allowed = [];
+        foreach (vendorPortalListingOptions($optionType) as $row) {
+            $value = trim((string) ($row['value'] ?? ''));
+            if ($value !== '') {
+                $allowed[$value] = true;
+            }
+        }
+
+        return $allowed;
+    }
+}
+
+if (!function_exists('vendorPortalDisallowedOptionValues')) {
+    function vendorPortalDisallowedOptionValues(string $optionType, array $submittedValues): array
+    {
+        $allowed = vendorPortalAllowedOptionValueSet($optionType);
+        if ($allowed === []) {
+            return [];
+        }
+
+        $invalid = [];
+        foreach ($submittedValues as $value) {
+            $normalized = trim((string) $value);
+            if ($normalized !== '' && !isset($allowed[$normalized])) {
+                $invalid[] = $normalized;
+            }
+        }
+
+        return array_values(array_unique($invalid));
+    }
+}
+
+if (!function_exists('vendorPortalDisallowedOptionValuesFromTypes')) {
+    function vendorPortalDisallowedOptionValuesFromTypes(array $optionTypes, array $submittedValues): array
+    {
+        $allowed = [];
+        foreach ($optionTypes as $optionType) {
+            foreach (vendorPortalAllowedOptionValueSet((string) $optionType) as $value => $isAllowed) {
+                if ($isAllowed) {
+                    $allowed[$value] = true;
+                }
+            }
+        }
+
+        if ($allowed === []) {
+            return [];
+        }
+
+        $invalid = [];
+        foreach ($submittedValues as $value) {
+            $normalized = trim((string) $value);
+            if ($normalized !== '' && !isset($allowed[$normalized])) {
+                $invalid[] = $normalized;
+            }
+        }
+
+        return array_values(array_unique($invalid));
+    }
+}
+
 if (!function_exists('vendorPortalListingsBackResponse')) {
     function vendorPortalListingsBackResponse(string $message, int $wizardStep = 1)
     {
@@ -159,7 +376,7 @@ if (!function_exists('vendorPortalListingsBackResponse')) {
     }
 }
 
-if (!function_exists('vendorPortalBuildPropertyDetails')) {
+if (!function_exists('vendorPortalTransportModeProfile')) {
     function vendorPortalTransportModeProfile(string $transportMode): array
     {
         $normalized = strtolower(trim($transportMode));
@@ -252,6 +469,7 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
         if ($listingCategory === 'excursion') {
             $details['excursion_duration_minutes'] = isset($validated['excursion_duration_minutes']) ? (int) $validated['excursion_duration_minutes'] : null;
             $details['excursion_difficulty'] = trim((string) ($validated['excursion_difficulty'] ?? ''));
+            $details['excursion_type'] = trim((string) ($validated['excursion_type'] ?? ''));
         }
 
         if ($listingCategory === 'remote_workspace') {
@@ -307,6 +525,12 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
         if ($listingCategory === 'vehicle_rental') {
             if (!isset($details['minimum_age']) || $details['minimum_age'] < 16 || $details['minimum_age'] > 99) {
                 $errors[] = 'Vehicle rental minimum age must be between 16 and 99.';
+            }
+            if (!empty($details['vehicle_type'])) {
+                $invalidVehicleTypes = vendorPortalDisallowedOptionValues('vehicle_rental_type', [(string) $details['vehicle_type']]);
+                if ($invalidVehicleTypes !== []) {
+                    $errors[] = 'Vehicle rental type must be selected from the allowed land or marine catalog values.';
+                }
             }
         }
 
@@ -377,6 +601,12 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
             if (!in_array(($details['excursion_difficulty'] ?? ''), ['easy', 'moderate', 'hard'], true)) {
                 $errors[] = 'Excursion difficulty must be easy, moderate, or hard.';
             }
+            if (!empty($details['excursion_type'])) {
+                $invalidExcursionTypes = vendorPortalDisallowedOptionValues('excursion_type', [(string) $details['excursion_type']]);
+                if ($invalidExcursionTypes !== []) {
+                    $errors[] = 'Excursion type must be selected from the allowed catalog values.';
+                }
+            }
         }
 
         if ($listingCategory === 'remote_workspace') {
@@ -399,6 +629,13 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
 
         if ($listingCategory === 'restaurant' && empty($details['cuisine_type'])) {
             $errors[] = 'Cuisine type is required for restaurant listings.';
+        }
+
+        if ($listingCategory === 'restaurant' && !empty($details['meal_service'])) {
+            $invalidMealServices = vendorPortalDisallowedOptionValues('restaurant_meal_service', [(string) $details['meal_service']]);
+            if ($invalidMealServices !== []) {
+                $errors[] = 'Restaurant meal service must be selected from the allowed catalog values.';
+            }
         }
 
         if ($listingCategory === 'vehicle_rental' && empty($details['vehicle_type'])) {
@@ -773,6 +1010,16 @@ Route::get('/vendor', function () {
         'vendorRoomCategories' => $vendorRoomCategories,
         'vendorRooms' => $vendorRoomCategories,
         'vendorMediaAssets' => $vendorMediaAssets,
+        'transportModeOptions' => vendorPortalListingOptions('transport_mode'),
+        'accommodationFacilityOptions' => vendorPortalListingOptions('accommodation_facility'),
+        'roomAmenityOptions' => vendorPortalListingOptions('room_amenity'),
+        'bathroomAmenityOptions' => vendorPortalListingOptions('bathroom_amenity'),
+        'propertyAmenityOptions' => vendorPortalListingOptions('property_amenity'),
+        'propertyFeatureOptions' => vendorPortalListingOptions('property_feature'),
+        'roomBedTypeOptions' => vendorPortalListingOptions('room_bed_type'),
+        'excursionTypeOptions' => vendorPortalListingOptions('excursion_type'),
+        'restaurantMealServiceOptions' => vendorPortalListingOptions('restaurant_meal_service'),
+        'vehicleRentalTypeOptions' => vendorPortalListingOptions('vehicle_rental_type'),
     ]);
 });
 
@@ -991,6 +1238,10 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         'bed_type' => ['nullable', 'string', 'max:80'],
         'room_amenities' => ['nullable', 'array'],
         'room_amenities.*' => ['required', 'string', 'max:80'],
+        'bathroom_type' => ['nullable', Rule::in(['ensuite', 'private_external', 'shared'])],
+        'bathroom_count' => ['nullable', 'integer', 'min:0', 'max:20'],
+        'bathroom_amenities' => ['nullable', 'array'],
+        'bathroom_amenities.*' => ['required', 'string', 'max:80'],
         'room_features' => ['nullable', 'array'],
         'room_features.*' => ['required', 'string', 'max:80'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
@@ -1000,7 +1251,37 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
 
     $roomAmenities = vendorPortalNormalizedStringList($validated['room_amenities'] ?? []);
     $roomFeatures = vendorPortalNormalizedStringList($validated['room_features'] ?? []);
+    $bathroomAmenities = vendorPortalNormalizedStringList($validated['bathroom_amenities'] ?? []);
     $roomAmenityTokens = array_values(array_unique(array_merge($roomAmenities, $roomFeatures)));
+    $bathroomAmenityTokens = array_values(array_unique($bathroomAmenities));
+    $submittedBedType = trim((string) ($validated['bed_type'] ?? ''));
+    $submittedBathroomType = trim((string) ($validated['bathroom_type'] ?? ''));
+    $invalidRoomAmenities = vendorPortalDisallowedOptionValues('room_amenity', $roomAmenityTokens);
+    if ($invalidRoomAmenities !== []) {
+        return back()->withErrors([
+            'profile' => 'One or more room amenities are not in the allowed catalog.',
+        ])->withInput();
+    }
+    $invalidBathroomAmenities = vendorPortalDisallowedOptionValues('bathroom_amenity', $bathroomAmenityTokens);
+    if ($invalidBathroomAmenities !== []) {
+        return back()->withErrors([
+            'profile' => 'One or more bathroom amenities are not in the allowed catalog.',
+        ])->withInput();
+    }
+    if ($submittedBedType !== '') {
+        $invalidBedTypes = vendorPortalDisallowedOptionValues('room_bed_type', [$submittedBedType]);
+        if ($invalidBedTypes !== []) {
+            return back()->withErrors([
+                'profile' => 'Selected room bed type is not in the allowed catalog.',
+            ])->withInput();
+        }
+    }
+    if ($submittedBathroomType === 'shared' && (int) ($validated['bathroom_count'] ?? 0) === 0) {
+        return back()->withErrors([
+            'profile' => 'Provide bathroom count when bathroom type is shared.',
+        ])->withInput();
+    }
+
     $vendorPropertyId = (int) ($validated['vendor_property_id'] ?? 0);
 
     $propertyRecord = DB::table('vendor_properties')
@@ -1043,6 +1324,15 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
     if (Schema::hasColumn('vendor_property_room_categories', 'child_price')) {
         $insertPayload['child_price'] = (float) ($validated['child_price'] ?? 0);
     }
+    if (Schema::hasColumn('vendor_property_room_categories', 'bathroom_type')) {
+        $insertPayload['bathroom_type'] = $submittedBathroomType === '' ? null : $submittedBathroomType;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'bathroom_count')) {
+        $insertPayload['bathroom_count'] = isset($validated['bathroom_count']) ? (int) $validated['bathroom_count'] : null;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'bathroom_amenities')) {
+        $insertPayload['bathroom_amenities'] = implode(', ', $bathroomAmenityTokens);
+    }
 
     DB::table('vendor_property_room_categories')->insert($insertPayload);
 
@@ -1075,10 +1365,47 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
         'extra_person_capacity' => ['nullable', 'integer', 'min:0', 'max:20'],
         'child_capacity' => ['nullable', 'integer', 'min:0', 'max:20'],
         'bed_type' => ['nullable', 'string', 'max:80'],
+        'room_amenities' => ['nullable', 'array'],
+        'room_amenities.*' => ['required', 'string', 'max:80'],
+        'bathroom_type' => ['nullable', Rule::in(['ensuite', 'private_external', 'shared'])],
+        'bathroom_count' => ['nullable', 'integer', 'min:0', 'max:20'],
+        'bathroom_amenities' => ['nullable', 'array'],
+        'bathroom_amenities.*' => ['required', 'string', 'max:80'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
         'extra_person_price' => ['nullable', 'numeric', 'min:0'],
         'child_price' => ['nullable', 'numeric', 'min:0'],
     ]);
+
+    $roomAmenities = vendorPortalNormalizedStringList($validated['room_amenities'] ?? []);
+    $bathroomAmenities = vendorPortalNormalizedStringList($validated['bathroom_amenities'] ?? []);
+    $bathroomAmenityTokens = array_values(array_unique($bathroomAmenities));
+    $submittedBedType = trim((string) ($validated['bed_type'] ?? ''));
+    $submittedBathroomType = trim((string) ($validated['bathroom_type'] ?? ''));
+    $invalidRoomAmenities = vendorPortalDisallowedOptionValues('room_amenity', $roomAmenities);
+    if ($invalidRoomAmenities !== []) {
+        return back()->withErrors([
+            'profile' => 'One or more room amenities are not in the allowed catalog.',
+        ])->withInput();
+    }
+    $invalidBathroomAmenities = vendorPortalDisallowedOptionValues('bathroom_amenity', $bathroomAmenityTokens);
+    if ($invalidBathroomAmenities !== []) {
+        return back()->withErrors([
+            'profile' => 'One or more bathroom amenities are not in the allowed catalog.',
+        ])->withInput();
+    }
+    if ($submittedBedType !== '') {
+        $invalidBedTypes = vendorPortalDisallowedOptionValues('room_bed_type', [$submittedBedType]);
+        if ($invalidBedTypes !== []) {
+            return back()->withErrors([
+                'profile' => 'Selected room bed type is not in the allowed catalog.',
+            ])->withInput();
+        }
+    }
+    if ($submittedBathroomType === 'shared' && (int) ($validated['bathroom_count'] ?? 0) === 0) {
+        return back()->withErrors([
+            'profile' => 'Provide bathroom count when bathroom type is shared.',
+        ])->withInput();
+    }
 
     if (Schema::hasTable('vendor_properties') && isset($roomRecord->vendor_property_id)) {
         $propertyRecord = DB::table('vendor_properties')
@@ -1096,6 +1423,7 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
         'quantity' => (int) ($validated['quantity'] ?? 1),
         'max_occupancy' => (int) ($validated['max_occupancy'] ?? 1),
         'bed_type' => trim((string) ($validated['bed_type'] ?? '')),
+        'amenities' => implode(', ', $roomAmenities),
         'base_price' => (float) ($validated['base_price'] ?? 0),
         'updated_at' => now(),
     ];
@@ -1111,6 +1439,15 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'child_price')) {
         $updatePayload['child_price'] = (float) ($validated['child_price'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'bathroom_type')) {
+        $updatePayload['bathroom_type'] = $submittedBathroomType === '' ? null : $submittedBathroomType;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'bathroom_count')) {
+        $updatePayload['bathroom_count'] = isset($validated['bathroom_count']) ? (int) $validated['bathroom_count'] : null;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'bathroom_amenities')) {
+        $updatePayload['bathroom_amenities'] = implode(', ', $bathroomAmenityTokens);
     }
 
     DB::table('vendor_property_room_categories')
@@ -1191,14 +1528,15 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'trip_duration_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
         'excursion_duration_minutes' => ['nullable', 'integer', 'min:30', 'max:1440'],
         'excursion_difficulty' => ['nullable', Rule::in(['easy', 'moderate', 'hard'])],
+        'excursion_type' => ['nullable', 'string', 'max:80'],
         'workspace_type' => ['nullable', Rule::in(['shared', 'private', 'cabin'])],
         'internet_speed_mbps' => ['nullable', 'numeric', 'min:1', 'max:10000'],
         'day_visit_start_time' => ['nullable', 'date_format:H:i'],
         'day_visit_end_time' => ['nullable', 'date_format:H:i'],
         'included_access' => ['nullable', 'string', 'max:2000'],
         'cuisine_type' => ['nullable', 'string', 'max:120'],
-        'meal_service' => ['nullable', Rule::in(['breakfast', 'lunch', 'dinner', 'all_day'])],
-        'vehicle_type' => ['nullable', 'string', 'max:120'],
+        'meal_service' => ['nullable', 'string', 'max:80'],
+        'vehicle_type' => ['nullable', 'string', 'max:80'],
         'transmission_type' => ['nullable', Rule::in(['automatic', 'manual'])],
         'fuel_type' => ['nullable', Rule::in(['petrol', 'diesel', 'electric', 'hybrid'])],
         'safety_certifications' => ['nullable', 'string', 'max:2000'],
@@ -1217,6 +1555,49 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
     $allowedForUser = vendorPortalSelectedCategories($vendorUser);
     if (!in_array($canonicalListingCategory, $allowedForUser, true)) {
         return back()->withErrors(['profile' => 'Select category in onboarding before creating this listing.']);
+    }
+
+    $submittedTransportMode = trim((string) ($validated['transport_mode'] ?? ''));
+    if ($canonicalListingCategory === 'transport' && $submittedTransportMode !== '') {
+        $invalidTransportModes = vendorPortalDisallowedOptionValues('transport_mode', [$submittedTransportMode]);
+        if ($invalidTransportModes !== []) {
+            return back()->withErrors(['profile' => 'Selected transport mode is not in the allowed catalog.'])->withInput();
+        }
+    }
+
+    $propertyAmenities = vendorPortalNormalizedStringList($validated['property_amenities'] ?? []);
+    $propertyFeatures = vendorPortalNormalizedStringList($validated['property_features'] ?? []);
+    $invalidPropertyAmenities = vendorPortalDisallowedOptionValuesFromTypes(['property_amenity', 'accommodation_facility'], $propertyAmenities);
+    if ($invalidPropertyAmenities !== []) {
+        return back()->withErrors(['profile' => 'One or more accommodation facilities are not in the allowed catalog.'])->withInput();
+    }
+    $invalidPropertyFeatures = vendorPortalDisallowedOptionValues('property_feature', $propertyFeatures);
+    if ($invalidPropertyFeatures !== []) {
+        return back()->withErrors(['profile' => 'One or more property features are not in the allowed catalog.'])->withInput();
+    }
+
+    $submittedMealService = trim((string) ($validated['meal_service'] ?? ''));
+    if ($canonicalListingCategory === 'restaurant' && $submittedMealService !== '') {
+        $invalidMealServices = vendorPortalDisallowedOptionValues('restaurant_meal_service', [$submittedMealService]);
+        if ($invalidMealServices !== []) {
+            return back()->withErrors(['profile' => 'Selected restaurant meal service is not in the allowed catalog.'])->withInput();
+        }
+    }
+
+    $submittedExcursionType = trim((string) ($validated['excursion_type'] ?? ''));
+    if ($canonicalListingCategory === 'excursion' && $submittedExcursionType !== '') {
+        $invalidExcursionTypes = vendorPortalDisallowedOptionValues('excursion_type', [$submittedExcursionType]);
+        if ($invalidExcursionTypes !== []) {
+            return back()->withErrors(['profile' => 'Selected excursion type is not in the allowed catalog.'])->withInput();
+        }
+    }
+
+    $submittedVehicleType = trim((string) ($validated['vehicle_type'] ?? ''));
+    if ($canonicalListingCategory === 'vehicle_rental' && $submittedVehicleType !== '') {
+        $invalidVehicleTypes = vendorPortalDisallowedOptionValues('vehicle_rental_type', [$submittedVehicleType]);
+        if ($invalidVehicleTypes !== []) {
+            return back()->withErrors(['profile' => 'Selected vehicle rental type is not in the allowed land/marine catalog.'])->withInput();
+        }
     }
 
     $resolvedPropertyType = vendorPortalPropertyTypeForCategory($canonicalListingCategory);
@@ -1247,8 +1628,6 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
             : ($pickup !== '' ? $pickup : ($dropoff !== '' ? $dropoff : 'Route details pending'));
     }
 
-    $propertyAmenities = vendorPortalNormalizedStringList($validated['property_amenities'] ?? []);
-    $propertyFeatures = vendorPortalNormalizedStringList($validated['property_features'] ?? []);
     $selectedAmenityTokens = array_values(array_unique(array_merge($propertyAmenities, $propertyFeatures)));
     $categoryCapacity = isset($propertyDetails['capacity_value']) && is_numeric($propertyDetails['capacity_value'])
         ? (int) $propertyDetails['capacity_value']
@@ -1351,14 +1730,15 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'trip_duration_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
         'excursion_duration_minutes' => ['nullable', 'integer', 'min:30', 'max:1440'],
         'excursion_difficulty' => ['nullable', Rule::in(['easy', 'moderate', 'hard'])],
+        'excursion_type' => ['nullable', 'string', 'max:80'],
         'workspace_type' => ['nullable', Rule::in(['shared', 'private', 'cabin'])],
         'internet_speed_mbps' => ['nullable', 'numeric', 'min:1', 'max:10000'],
         'day_visit_start_time' => ['nullable', 'date_format:H:i'],
         'day_visit_end_time' => ['nullable', 'date_format:H:i'],
         'included_access' => ['nullable', 'string', 'max:2000'],
         'cuisine_type' => ['nullable', 'string', 'max:120'],
-        'meal_service' => ['nullable', Rule::in(['breakfast', 'lunch', 'dinner', 'all_day'])],
-        'vehicle_type' => ['nullable', 'string', 'max:120'],
+        'meal_service' => ['nullable', 'string', 'max:80'],
+        'vehicle_type' => ['nullable', 'string', 'max:80'],
         'transmission_type' => ['nullable', Rule::in(['automatic', 'manual'])],
         'fuel_type' => ['nullable', Rule::in(['petrol', 'diesel', 'electric', 'hybrid'])],
         'property_amenities' => ['nullable', 'array'],
@@ -1379,6 +1759,49 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
 
     if ($canonicalListingCategory === null && isset($existingDetails['listing_category'])) {
         $canonicalListingCategory = vendorPortalCanonicalCategory((string) $existingDetails['listing_category']);
+    }
+
+    $submittedTransportMode = trim((string) ($validated['transport_mode'] ?? ''));
+    if ($canonicalListingCategory === 'transport' && $submittedTransportMode !== '') {
+        $invalidTransportModes = vendorPortalDisallowedOptionValues('transport_mode', [$submittedTransportMode]);
+        if ($invalidTransportModes !== []) {
+            return back()->withErrors(['profile' => 'Selected transport mode is not in the allowed catalog.'])->withInput();
+        }
+    }
+
+    $propertyAmenities = vendorPortalNormalizedStringList($validated['property_amenities'] ?? []);
+    $propertyFeatures = vendorPortalNormalizedStringList($validated['property_features'] ?? []);
+    $invalidPropertyAmenities = vendorPortalDisallowedOptionValuesFromTypes(['property_amenity', 'accommodation_facility'], $propertyAmenities);
+    if ($invalidPropertyAmenities !== []) {
+        return back()->withErrors(['profile' => 'One or more accommodation facilities are not in the allowed catalog.'])->withInput();
+    }
+    $invalidPropertyFeatures = vendorPortalDisallowedOptionValues('property_feature', $propertyFeatures);
+    if ($invalidPropertyFeatures !== []) {
+        return back()->withErrors(['profile' => 'One or more property features are not in the allowed catalog.'])->withInput();
+    }
+
+    $submittedMealService = trim((string) ($validated['meal_service'] ?? ''));
+    if ($canonicalListingCategory === 'restaurant' && $submittedMealService !== '') {
+        $invalidMealServices = vendorPortalDisallowedOptionValues('restaurant_meal_service', [$submittedMealService]);
+        if ($invalidMealServices !== []) {
+            return back()->withErrors(['profile' => 'Selected restaurant meal service is not in the allowed catalog.'])->withInput();
+        }
+    }
+
+    $submittedExcursionType = trim((string) ($validated['excursion_type'] ?? ''));
+    if ($canonicalListingCategory === 'excursion' && $submittedExcursionType !== '') {
+        $invalidExcursionTypes = vendorPortalDisallowedOptionValues('excursion_type', [$submittedExcursionType]);
+        if ($invalidExcursionTypes !== []) {
+            return back()->withErrors(['profile' => 'Selected excursion type is not in the allowed catalog.'])->withInput();
+        }
+    }
+
+    $submittedVehicleType = trim((string) ($validated['vehicle_type'] ?? ''));
+    if ($canonicalListingCategory === 'vehicle_rental' && $submittedVehicleType !== '') {
+        $invalidVehicleTypes = vendorPortalDisallowedOptionValues('vehicle_rental_type', [$submittedVehicleType]);
+        if ($invalidVehicleTypes !== []) {
+            return back()->withErrors(['profile' => 'Selected vehicle rental type is not in the allowed land/marine catalog.'])->withInput();
+        }
     }
 
     if ($canonicalListingCategory !== null) {
@@ -1423,8 +1846,6 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
             : ($pickup !== '' ? $pickup : ($dropoff !== '' ? $dropoff : 'Route details pending'));
     }
 
-    $propertyAmenities = vendorPortalNormalizedStringList($validated['property_amenities'] ?? []);
-    $propertyFeatures = vendorPortalNormalizedStringList($validated['property_features'] ?? []);
     $selectedAmenityTokens = array_values(array_unique(array_merge($propertyAmenities, $propertyFeatures)));
 
     if ($canonicalListingCategory === 'transport') {

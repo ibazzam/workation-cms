@@ -864,6 +864,16 @@ Route::get('/admin', function () {
         'settled_rows' => (int) $financeDailyRows->where('eligible_total', '>', 0)->count(),
     ];
 
+    $listingOptionCatalog = collect();
+    if (Schema::hasTable('portal_listing_option_catalog')) {
+        $listingOptionCatalog = DB::table('portal_listing_option_catalog')
+            ->orderBy('option_type')
+            ->orderBy('sort_order')
+            ->orderBy('option_label')
+            ->limit(600)
+            ->get();
+    }
+
     $systemHealth = [
         'db_connected' => false,
         'audit_table_ready' => Schema::hasTable('portal_admin_audit_logs'),
@@ -964,6 +974,7 @@ Route::get('/admin', function () {
         'financeSummary' => $financeSummary,
         'financeDailyRows' => $financeDailyRows,
         'financeAdjustments' => $financeAdjustments,
+        'listingOptionCatalog' => $listingOptionCatalog,
     ]);
 });
 
@@ -1076,6 +1087,83 @@ Route::post('/portal/admin/finance/adjustments/create', function (Request $reque
     ]);
 
     return back()->with('portal_notice', 'Finance adjustment applied successfully.');
+});
+
+Route::post('/portal/admin/listing-options/upsert', function (Request $request) {
+    if (!canManageVendorUsers()) {
+        return back()->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can manage listing option catalogs.']);
+    }
+
+    if (!Schema::hasTable('portal_listing_option_catalog')) {
+        return back()->withErrors(['auth' => 'Listing option catalog table is not ready. Run migrations first.']);
+    }
+
+    $validated = $request->validate([
+        'option_type' => ['required', Rule::in(['transport_mode', 'accommodation_facility', 'room_amenity'])],
+        'option_value' => ['required', 'string', 'max:120'],
+        'option_label' => ['required', 'string', 'max:190'],
+        'option_group' => ['nullable', 'string', 'max:80'],
+        'sort_order' => ['nullable', 'integer', 'min:0', 'max:100000'],
+        'is_active' => ['nullable', 'boolean'],
+    ]);
+
+    $optionValue = strtolower(trim((string) ($validated['option_value'] ?? '')));
+    $optionValue = preg_replace('/\s+/', ' ', $optionValue) ?? $optionValue;
+    if ($optionValue === '') {
+        return back()->withErrors(['auth' => 'Option value cannot be empty.'])->withInput();
+    }
+
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+
+    DB::table('portal_listing_option_catalog')->updateOrInsert(
+        [
+            'option_type' => (string) $validated['option_type'],
+            'option_value' => $optionValue,
+        ],
+        [
+            'option_label' => trim((string) $validated['option_label']),
+            'option_group' => trim((string) ($validated['option_group'] ?? '')) ?: null,
+            'sort_order' => (int) ($validated['sort_order'] ?? 100),
+            'is_active' => (bool) ($validated['is_active'] ?? true),
+            'updated_by_user_id' => $actorUserId,
+            'created_by_user_id' => $actorUserId,
+            'updated_at' => now(),
+            'created_at' => now(),
+        ]
+    );
+
+    portalAdminAuditLog('listing_option_catalog.upsert', [
+        'target_role' => 'VENDOR',
+        'option_type' => (string) $validated['option_type'],
+        'option_value' => $optionValue,
+    ]);
+
+    return back()->with('portal_notice', 'Listing option saved.');
+});
+
+Route::post('/portal/admin/listing-options/{option}/delete', function (int $option) {
+    if (!canManageVendorUsers()) {
+        return back()->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can manage listing option catalogs.']);
+    }
+
+    if (!Schema::hasTable('portal_listing_option_catalog')) {
+        return back()->withErrors(['auth' => 'Listing option catalog table is not ready. Run migrations first.']);
+    }
+
+    $targetOption = DB::table('portal_listing_option_catalog')->where('id', $option)->first();
+    if (!$targetOption) {
+        return back()->withErrors(['auth' => 'Listing option not found.']);
+    }
+
+    DB::table('portal_listing_option_catalog')->where('id', $option)->delete();
+
+    portalAdminAuditLog('listing_option_catalog.delete', [
+        'target_role' => 'VENDOR',
+        'option_type' => (string) ($targetOption->option_type ?? ''),
+        'option_value' => (string) ($targetOption->option_value ?? ''),
+    ]);
+
+    return back()->with('portal_notice', 'Listing option removed.');
 });
 
     Route::post('/portal/admin/users/create', function (\Illuminate\Http\Request $request) {

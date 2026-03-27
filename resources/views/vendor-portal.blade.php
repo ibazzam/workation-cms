@@ -1476,11 +1476,13 @@
     <main class="page" data-api-base="{{ $apiBase }}">
         <section class="hero">
             <span class="eyebrow">Partner Access</span>
+                    $oldBathroomAmenities = collect(old('bathroom_amenities', []))->map(fn ($item) => (string) $item)->all();
             <h1>Vendor Portal</h1>
             <p>Use a valid vendor bearer token to check vendor-facing APIs and account-level data.</p>
             <div class="hero-links">
                 <a class="hero-link" href="/">Back to Home</a>
                 <a class="hero-link" href="/admin">Go to Admin Portal</a>
+                    $bathroomAmenityOptionsCollection = collect($bathroomAmenityOptions ?? []);
                 <a class="hero-link" href="{{ $apiBase }}/api/v1/ops/metrics" target="_blank" rel="noopener">Open Public Metrics</a>
             </div>
             <div class="auth-bar">
@@ -1852,13 +1854,30 @@
                 @php
                     $oldPropertyAmenities = collect(old('property_amenities', []))->map(fn ($item) => (string) $item)->all();
                     $oldPropertyFeatures = collect(old('property_features', []))->map(fn ($item) => (string) $item)->all();
+                    $oldRoomAmenities = collect(old('room_amenities', []))->map(fn ($item) => (string) $item)->all();
+                    $transportModeOptionsCollection = collect($transportModeOptions ?? []);
+                    $transportModeOptionGroups = $transportModeOptionsCollection
+                        ->groupBy(fn ($item) => strtolower(trim((string) ($item['group'] ?? 'other'))));
+                    $accommodationFacilityOptionsCollection = collect($accommodationFacilityOptions ?? []);
+                    $roomAmenityOptionsCollection = collect($roomAmenityOptions ?? []);
+                    $propertyAmenityOptionsCollection = collect($propertyAmenityOptions ?? [])->values();
+                    if ($propertyAmenityOptionsCollection->isEmpty()) {
+                        $propertyAmenityOptionsCollection = $accommodationFacilityOptionsCollection->values();
+                    }
+                    $propertyFeatureOptionsCollection = collect($propertyFeatureOptions ?? [])->values();
+                    $roomBedTypeOptionsCollection = collect($roomBedTypeOptions ?? [])->values();
+                    $excursionTypeOptionsCollection = collect($excursionTypeOptions ?? [])->values();
+                    $restaurantMealServiceOptionsCollection = collect($restaurantMealServiceOptions ?? [])->values();
+                    $vehicleRentalTypeOptionsCollection = collect($vehicleRentalTypeOptions ?? [])->values();
+                    $vehicleRentalTypeOptionGroups = $vehicleRentalTypeOptionsCollection
+                        ->groupBy(fn ($item) => strtolower(trim((string) ($item['group'] ?? 'other'))));
                 @endphp
                 <article class="ops-form ops-field-wide">
                     <form id="propertyCreateForm" class="ops-form" method="POST" action="/portal/vendor/properties/create" @if (!$showCreatePropertyForm) hidden @endif>
                         @csrf
                         <input type="hidden" name="property_form_intent" value="1">
                         <p class="guided-wizard-title" id="propertyCreateFormTitle">Create New Listing</p>
-                        <p class="guided-wizard-subtitle" id="propertyCreateFormSubtitle">Choose a category-specific add button to load the right enlist form view.</p>
+                        <p class="guided-wizard-subtitle" id="propertyCreateFormSubtitle">Fill the listing basics below and save.</p>
                         <div class="ops-form-grid">
                             <div class="ops-field" hidden>
                                 <label for="property_listing_category">Listing Category</label>
@@ -1888,7 +1907,7 @@
                                     @endforeach
                                 </div>
                             </div>
-                            <div class="ops-field">
+                            <div class="ops-field ops-field-wide">
                                 <label for="property_name">Name</label>
                                 <input id="property_name" name="name" class="ops-input" type="text" maxlength="160" value="{{ old('name') }}" required>
                             </div>
@@ -1976,32 +1995,35 @@
                                 <label for="property_transport_mode">Transport Mode</label>
                                 @php
                                     $transportModeOld = strtolower(trim((string) old('transport_mode', '')));
-                                    $knownTransportModes = ['speedboat', 'ferry', 'boat', 'safari', 'dhoni', 'launch', 'catamaran', 'yacht', 'van', 'car', 'pickup', 'bus', 'suv', 'other vessel', 'other land vehicle'];
+                                    $knownTransportModes = $transportModeOptionsCollection
+                                        ->map(fn ($item) => strtolower(trim((string) ($item['value'] ?? ''))))
+                                        ->filter(fn ($item) => $item !== '')
+                                        ->values()
+                                        ->all();
                                 @endphp
                                 <select id="property_transport_mode" name="transport_mode" class="ops-select">
                                     <option value="" @selected($transportModeOld === '')>Select transport mode</option>
                                     @if ($transportModeOld !== '' && !in_array($transportModeOld, $knownTransportModes, true))
                                         <option value="{{ $transportModeOld }}" selected>{{ ucfirst($transportModeOld) }} (existing)</option>
                                     @endif
-                                    <optgroup label="Vessel / Marine">
-                                        <option value="speedboat" @selected($transportModeOld === 'speedboat')>Speedboat</option>
-                                        <option value="ferry" @selected($transportModeOld === 'ferry')>Ferry</option>
-                                        <option value="boat" @selected($transportModeOld === 'boat')>Boat</option>
-                                        <option value="safari" @selected($transportModeOld === 'safari')>Safari</option>
-                                        <option value="dhoni" @selected($transportModeOld === 'dhoni')>Dhoni</option>
-                                        <option value="launch" @selected($transportModeOld === 'launch')>Launch</option>
-                                        <option value="catamaran" @selected($transportModeOld === 'catamaran')>Catamaran</option>
-                                        <option value="yacht" @selected($transportModeOld === 'yacht')>Yacht</option>
-                                        <option value="other vessel" @selected($transportModeOld === 'other vessel')>Other Vessel</option>
-                                    </optgroup>
-                                    <optgroup label="Vehicle / Land">
-                                        <option value="van" @selected($transportModeOld === 'van')>Van</option>
-                                        <option value="car" @selected($transportModeOld === 'car')>Car</option>
-                                        <option value="pickup" @selected($transportModeOld === 'pickup')>Pickup</option>
-                                        <option value="bus" @selected($transportModeOld === 'bus')>Bus</option>
-                                        <option value="suv" @selected($transportModeOld === 'suv')>SUV</option>
-                                        <option value="other land vehicle" @selected($transportModeOld === 'other land vehicle')>Other Land Vehicle</option>
-                                    </optgroup>
+                                    @foreach ($transportModeOptionGroups as $groupKey => $groupItems)
+                                        @php
+                                            $groupLabel = $groupKey === 'marine'
+                                                ? 'Vessel / Marine'
+                                                : ($groupKey === 'land' ? 'Vehicle / Land' : ucfirst(str_replace('_', ' ', (string) $groupKey)));
+                                        @endphp
+                                        <optgroup label="{{ $groupLabel }}">
+                                            @foreach ($groupItems as $groupItem)
+                                                @php
+                                                    $groupValue = strtolower(trim((string) ($groupItem['value'] ?? '')));
+                                                    $groupText = trim((string) ($groupItem['label'] ?? $groupValue));
+                                                @endphp
+                                                @if ($groupValue !== '' && $groupText !== '')
+                                                    <option value="{{ $groupValue }}" @selected($transportModeOld === $groupValue)>{{ $groupText }}</option>
+                                                @endif
+                                            @endforeach
+                                        </optgroup>
+                                    @endforeach
                                 </select>
                             </div>
                             <div class="ops-field" data-category-scope="transport">
@@ -2091,6 +2113,32 @@
                                     <option value="hard" @selected(old('excursion_difficulty') === 'hard')>Hard</option>
                                 </select>
                             </div>
+                            <div class="ops-field" data-category-scope="excursion">
+                                <label for="property_excursion_type">Excursion Type</label>
+                                @php
+                                    $excursionTypeOld = strtolower(trim((string) old('excursion_type', '')));
+                                    $knownExcursionTypes = $excursionTypeOptionsCollection
+                                        ->map(fn ($item) => strtolower(trim((string) ($item['value'] ?? ''))))
+                                        ->filter(fn ($item) => $item !== '')
+                                        ->values()
+                                        ->all();
+                                @endphp
+                                <select id="property_excursion_type" name="excursion_type" class="ops-select">
+                                    <option value="" @selected($excursionTypeOld === '')>Select</option>
+                                    @if ($excursionTypeOld !== '' && !in_array($excursionTypeOld, $knownExcursionTypes, true))
+                                        <option value="{{ $excursionTypeOld }}" selected>{{ ucfirst(str_replace('_', ' ', $excursionTypeOld)) }} (existing)</option>
+                                    @endif
+                                    @foreach ($excursionTypeOptionsCollection as $excursionTypeOption)
+                                        @php
+                                            $excursionTypeValue = strtolower(trim((string) ($excursionTypeOption['value'] ?? '')));
+                                            $excursionTypeLabel = trim((string) ($excursionTypeOption['label'] ?? $excursionTypeValue));
+                                        @endphp
+                                        @if ($excursionTypeValue !== '' && $excursionTypeLabel !== '')
+                                            <option value="{{ $excursionTypeValue }}" @selected($excursionTypeOld === $excursionTypeValue)>{{ $excursionTypeLabel }}</option>
+                                        @endif
+                                    @endforeach
+                                </select>
+                            </div>
                             <div class="ops-field" data-category-scope="workspace">
                                 <label for="property_workspace_type">Workspace Type</label>
                                 <select id="property_workspace_type" name="workspace_type" class="ops-select">
@@ -2122,12 +2170,28 @@
                             </div>
                             <div class="ops-field" data-category-scope="restaurant">
                                 <label for="property_meal_service">Meal Service</label>
+                                @php
+                                    $mealServiceOld = strtolower(trim((string) old('meal_service', '')));
+                                    $knownMealServices = $restaurantMealServiceOptionsCollection
+                                        ->map(fn ($item) => strtolower(trim((string) ($item['value'] ?? ''))))
+                                        ->filter(fn ($item) => $item !== '')
+                                        ->values()
+                                        ->all();
+                                @endphp
                                 <select id="property_meal_service" name="meal_service" class="ops-select">
-                                    <option value="" @selected(old('meal_service') === null)>Select</option>
-                                    <option value="breakfast" @selected(old('meal_service') === 'breakfast')>Breakfast</option>
-                                    <option value="lunch" @selected(old('meal_service') === 'lunch')>Lunch</option>
-                                    <option value="dinner" @selected(old('meal_service') === 'dinner')>Dinner</option>
-                                    <option value="all_day" @selected(old('meal_service') === 'all_day')>All Day</option>
+                                    <option value="" @selected($mealServiceOld === '')>Select</option>
+                                    @if ($mealServiceOld !== '' && !in_array($mealServiceOld, $knownMealServices, true))
+                                        <option value="{{ $mealServiceOld }}" selected>{{ ucfirst(str_replace('_', ' ', $mealServiceOld)) }} (existing)</option>
+                                    @endif
+                                    @foreach ($restaurantMealServiceOptionsCollection as $mealServiceOption)
+                                        @php
+                                            $mealServiceValue = strtolower(trim((string) ($mealServiceOption['value'] ?? '')));
+                                            $mealServiceLabel = trim((string) ($mealServiceOption['label'] ?? $mealServiceValue));
+                                        @endphp
+                                        @if ($mealServiceValue !== '' && $mealServiceLabel !== '')
+                                            <option value="{{ $mealServiceValue }}" @selected($mealServiceOld === $mealServiceValue)>{{ $mealServiceLabel }}</option>
+                                        @endif
+                                    @endforeach
                                 </select>
                             </div>
                             <div class="ops-field" data-category-scope="vehicle">
@@ -2136,7 +2200,38 @@
                             </div>
                             <div class="ops-field" data-category-scope="rental">
                                 <label for="property_vehicle_type">Vehicle Type</label>
-                                <input id="property_vehicle_type" name="vehicle_type" class="ops-input" type="text" maxlength="120" value="{{ old('vehicle_type') }}" placeholder="Scooter, SUV, Sedan, Speedboat">
+                                @php
+                                    $vehicleTypeOld = strtolower(trim((string) old('vehicle_type', '')));
+                                    $knownVehicleTypes = $vehicleRentalTypeOptionsCollection
+                                        ->map(fn ($item) => strtolower(trim((string) ($item['value'] ?? ''))))
+                                        ->filter(fn ($item) => $item !== '')
+                                        ->values()
+                                        ->all();
+                                @endphp
+                                <select id="property_vehicle_type" name="vehicle_type" class="ops-select">
+                                    <option value="" @selected($vehicleTypeOld === '')>Select Vehicle Type</option>
+                                    @if ($vehicleTypeOld !== '' && !in_array($vehicleTypeOld, $knownVehicleTypes, true))
+                                        <option value="{{ $vehicleTypeOld }}" selected>{{ ucfirst(str_replace('_', ' ', $vehicleTypeOld)) }} (existing)</option>
+                                    @endif
+                                    @foreach ($vehicleRentalTypeOptionGroups as $vehicleGroupKey => $vehicleGroupItems)
+                                        @php
+                                            $vehicleGroupLabel = $vehicleGroupKey === 'land'
+                                                ? 'Land Vehicles'
+                                                : ($vehicleGroupKey === 'marine' ? 'Marine Vessels' : ucfirst(str_replace('_', ' ', (string) $vehicleGroupKey)));
+                                        @endphp
+                                        <optgroup label="{{ $vehicleGroupLabel }}">
+                                            @foreach ($vehicleGroupItems as $vehicleTypeOption)
+                                                @php
+                                                    $vehicleTypeValue = strtolower(trim((string) ($vehicleTypeOption['value'] ?? '')));
+                                                    $vehicleTypeLabel = trim((string) ($vehicleTypeOption['label'] ?? $vehicleTypeValue));
+                                                @endphp
+                                                @if ($vehicleTypeValue !== '' && $vehicleTypeLabel !== '')
+                                                    <option value="{{ $vehicleTypeValue }}" @selected($vehicleTypeOld === $vehicleTypeValue)>{{ $vehicleTypeLabel }}</option>
+                                                @endif
+                                            @endforeach
+                                        </optgroup>
+                                    @endforeach
+                                </select>
                             </div>
                             <div class="ops-field" data-category-scope="rental">
                                 <label for="property_transmission_type">Transmission</label>
@@ -2159,27 +2254,29 @@
                             <div class="ops-field ops-field-wide" data-category-scope="stay">
                                 <label>Property Amenities (tick all available)</label>
                                 <div class="feature-checklist">
-                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="wifi" @checked(in_array('wifi', $oldPropertyAmenities, true))> Wi-Fi</label>
-                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="parking" @checked(in_array('parking', $oldPropertyAmenities, true))> Parking</label>
-                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="pool" @checked(in_array('pool', $oldPropertyAmenities, true))> Pool</label>
-                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="gym" @checked(in_array('gym', $oldPropertyAmenities, true))> Gym</label>
-                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="air_conditioning" @checked(in_array('air_conditioning', $oldPropertyAmenities, true))> Air Conditioning</label>
-                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="breakfast" @checked(in_array('breakfast', $oldPropertyAmenities, true))> Breakfast</label>
-                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="kitchen" @checked(in_array('kitchen', $oldPropertyAmenities, true))> Kitchen</label>
-                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="workspace_desk" @checked(in_array('workspace_desk', $oldPropertyAmenities, true))> Workspace Desk</label>
+                                    @foreach ($propertyAmenityOptionsCollection as $facilityOption)
+                                        @php
+                                            $facilityValue = trim((string) ($facilityOption['value'] ?? ''));
+                                            $facilityLabel = trim((string) ($facilityOption['label'] ?? $facilityValue));
+                                        @endphp
+                                        @if ($facilityValue !== '' && $facilityLabel !== '')
+                                            <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="{{ $facilityValue }}" @checked(in_array($facilityValue, $oldPropertyAmenities, true))> {{ $facilityLabel }}</label>
+                                        @endif
+                                    @endforeach
                                 </div>
                             </div>
                             <div class="ops-field ops-field-wide" data-category-scope="stay">
                                 <label>Property Features (tick all available)</label>
                                 <div class="feature-checklist">
-                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="wheelchair_access" @checked(in_array('wheelchair_access', $oldPropertyFeatures, true))> Wheelchair Access</label>
-                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="elevator" @checked(in_array('elevator', $oldPropertyFeatures, true))> Elevator</label>
-                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="family_friendly" @checked(in_array('family_friendly', $oldPropertyFeatures, true))> Family Friendly</label>
-                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="pet_friendly" @checked(in_array('pet_friendly', $oldPropertyFeatures, true))> Pet Friendly</label>
-                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="beachfront" @checked(in_array('beachfront', $oldPropertyFeatures, true))> Beachfront</label>
-                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="sea_view" @checked(in_array('sea_view', $oldPropertyFeatures, true))> Sea View</label>
-                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="safety_certified" @checked(in_array('safety_certified', $oldPropertyFeatures, true))> Safety Certified</label>
-                                    <label class="feature-item"><input type="checkbox" name="property_features[]" value="kids_play_area" @checked(in_array('kids_play_area', $oldPropertyFeatures, true))> Kids Play Area</label>
+                                    @foreach ($propertyFeatureOptionsCollection as $featureOption)
+                                        @php
+                                            $featureValue = trim((string) ($featureOption['value'] ?? ''));
+                                            $featureLabel = trim((string) ($featureOption['label'] ?? $featureValue));
+                                        @endphp
+                                        @if ($featureValue !== '' && $featureLabel !== '')
+                                            <label class="feature-item"><input type="checkbox" name="property_features[]" value="{{ $featureValue }}" @checked(in_array($featureValue, $oldPropertyFeatures, true))> {{ $featureLabel }}</label>
+                                        @endif
+                                    @endforeach
                                 </div>
                             </div>
                             <div class="ops-field ops-field-wide" data-category-scope="geo">
@@ -2190,7 +2287,11 @@
                             </div>
                         </div>
                         <p class="standards-note">International listing standard: fields adapt to selected category. Create one property at a time, then add rooms under that property.</p>
-                        <button class="btn btn-primary" id="propertyCreateSubmitButton" type="submit">Save Listing</button>
+                        <div class="inline-actions">
+                            <button class="btn btn-primary" id="propertyCreateSubmitButton" type="submit">Save Listing</button>
+                            <button class="btn btn-secondary" id="closePropertyCreateForm" type="button">Cancel</button>
+                            <button class="btn btn-secondary" id="backToListingsFromCreate" type="button">Back To Listings</button>
+                        </div>
                     </form>
 
                 </article>
@@ -2328,6 +2429,16 @@
                                                                             @foreach ($propertyRooms as $room)
                                                                                 @php
                                                                                     $roomId = (int) ($room->id ?? 0);
+                                                                                    $roomAmenityValues = collect(explode(',', (string) ($room->amenities ?? '')))
+                                                                                        ->map(static fn ($token) => trim((string) $token))
+                                                                                        ->filter(static fn ($token) => $token !== '')
+                                                                                        ->values()
+                                                                                        ->all();
+                                                                                    $bathroomAmenityValues = collect(explode(',', (string) ($room->bathroom_amenities ?? '')))
+                                                                                        ->map(static fn ($token) => trim((string) $token))
+                                                                                        ->filter(static fn ($token) => $token !== '')
+                                                                                        ->values()
+                                                                                        ->all();
                                                                                 @endphp
                                                                                 <tr>
                                                                                     <td>
@@ -2372,7 +2483,58 @@
                                                                                             <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($room->base_price ?? 0) }}" placeholder="Base room price">
                                                                                             <input class="ops-input" name="extra_person_price" type="number" min="0" step="0.01" value="{{ (float) ($room->extra_person_price ?? 0) }}" placeholder="Extra adult price">
                                                                                             <input class="ops-input" name="child_price" type="number" min="0" step="0.01" value="{{ (float) ($room->child_price ?? 0) }}" placeholder="Child price">
-                                                                                            <input class="ops-input" name="bed_type" type="text" maxlength="80" value="{{ (string) ($room->bed_type ?? '') }}" placeholder="Bed Type">
+                                                                                            @php
+                                                                                                $roomBedTypeCurrent = strtolower(trim((string) ($room->bed_type ?? '')));
+                                                                                                $knownRoomBedTypes = $roomBedTypeOptionsCollection
+                                                                                                    ->map(fn ($item) => strtolower(trim((string) ($item['value'] ?? ''))))
+                                                                                                    ->filter(fn ($item) => $item !== '')
+                                                                                                    ->values()
+                                                                                                    ->all();
+                                                                                            @endphp
+                                                                                            <select class="ops-select" name="bed_type">
+                                                                                                <option value="" @selected($roomBedTypeCurrent === '')>Bed Type</option>
+                                                                                                @if ($roomBedTypeCurrent !== '' && !in_array($roomBedTypeCurrent, $knownRoomBedTypes, true))
+                                                                                                    <option value="{{ $roomBedTypeCurrent }}" selected>{{ ucfirst(str_replace('_', ' ', $roomBedTypeCurrent)) }} (existing)</option>
+                                                                                                @endif
+                                                                                                @foreach ($roomBedTypeOptionsCollection as $roomBedTypeOption)
+                                                                                                    @php
+                                                                                                        $roomBedTypeValue = strtolower(trim((string) ($roomBedTypeOption['value'] ?? '')));
+                                                                                                        $roomBedTypeLabel = trim((string) ($roomBedTypeOption['label'] ?? $roomBedTypeValue));
+                                                                                                    @endphp
+                                                                                                    @if ($roomBedTypeValue !== '' && $roomBedTypeLabel !== '')
+                                                                                                        <option value="{{ $roomBedTypeValue }}" @selected($roomBedTypeCurrent === $roomBedTypeValue)>{{ $roomBedTypeLabel }}</option>
+                                                                                                    @endif
+                                                                                                @endforeach
+                                                                                            </select>
+                                                                                            <select class="ops-select" name="bathroom_type">
+                                                                                                <option value="" @selected((string) ($room->bathroom_type ?? '') === '')>Bathroom Type</option>
+                                                                                                <option value="ensuite" @selected((string) ($room->bathroom_type ?? '') === 'ensuite')>Ensuite</option>
+                                                                                                <option value="private_external" @selected((string) ($room->bathroom_type ?? '') === 'private_external')>Private External</option>
+                                                                                                <option value="shared" @selected((string) ($room->bathroom_type ?? '') === 'shared')>Shared</option>
+                                                                                            </select>
+                                                                                            <input class="ops-input" name="bathroom_count" type="number" min="0" max="20" value="{{ (string) ($room->bathroom_count ?? '') }}" placeholder="Bathroom Count">
+                                                                                            <div class="feature-checklist">
+                                                                                                @foreach ($roomAmenityOptionsCollection as $roomAmenityOption)
+                                                                                                    @php
+                                                                                                        $roomAmenityValue = trim((string) ($roomAmenityOption['value'] ?? ''));
+                                                                                                        $roomAmenityLabel = trim((string) ($roomAmenityOption['label'] ?? $roomAmenityValue));
+                                                                                                    @endphp
+                                                                                                    @if ($roomAmenityValue !== '' && $roomAmenityLabel !== '')
+                                                                                                        <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="{{ $roomAmenityValue }}" @checked(in_array($roomAmenityValue, $roomAmenityValues, true))> {{ $roomAmenityLabel }}</label>
+                                                                                                    @endif
+                                                                                                @endforeach
+                                                                                            </div>
+                                                                                            <div class="feature-checklist">
+                                                                                                @foreach ($bathroomAmenityOptionsCollection as $bathroomAmenityOption)
+                                                                                                    @php
+                                                                                                        $bathroomAmenityValue = trim((string) ($bathroomAmenityOption['value'] ?? ''));
+                                                                                                        $bathroomAmenityLabel = trim((string) ($bathroomAmenityOption['label'] ?? $bathroomAmenityValue));
+                                                                                                    @endphp
+                                                                                                    @if ($bathroomAmenityValue !== '' && $bathroomAmenityLabel !== '')
+                                                                                                        <label class="feature-item"><input type="checkbox" name="bathroom_amenities[]" value="{{ $bathroomAmenityValue }}" @checked(in_array($bathroomAmenityValue, $bathroomAmenityValues, true))> {{ $bathroomAmenityLabel }}</label>
+                                                                                                    @endif
+                                                                                                @endforeach
+                                                                                            </div>
                                                                                             <div class="inline-actions">
                                                                                                 <button class="btn btn-secondary js-row-update" type="submit">Update Room</button>
                                                                                                 <button class="btn btn-secondary" type="button" data-close-room-edit data-room-edit-id="{{ $roomId }}">Cancel Edit</button>
@@ -2436,32 +2598,35 @@
                                                                 <input class="ops-input" name="service_radius_km" type="number" min="0" max="5000" step="0.1" value="{{ (string) ($propertyDetails['service_radius_km'] ?? '') }}" placeholder="Service Radius (km)" data-property-edit-scope="service">
                                                                 @php
                                                                     $transportModeEdit = strtolower(trim((string) ($propertyDetails['transport_mode'] ?? '')));
-                                                                    $knownTransportModes = ['speedboat', 'ferry', 'boat', 'safari', 'dhoni', 'launch', 'catamaran', 'yacht', 'van', 'car', 'pickup', 'bus', 'suv', 'other vessel', 'other land vehicle'];
+                                                                    $knownTransportModes = $transportModeOptionsCollection
+                                                                        ->map(fn ($item) => strtolower(trim((string) ($item['value'] ?? ''))))
+                                                                        ->filter(fn ($item) => $item !== '')
+                                                                        ->values()
+                                                                        ->all();
                                                                 @endphp
                                                                 <select class="ops-select" name="transport_mode" data-property-edit-scope="transport">
                                                                     <option value="" @selected($transportModeEdit === '')>Transport Mode</option>
                                                                     @if ($transportModeEdit !== '' && !in_array($transportModeEdit, $knownTransportModes, true))
                                                                         <option value="{{ $transportModeEdit }}" selected>{{ ucfirst($transportModeEdit) }} (existing)</option>
                                                                     @endif
-                                                                    <optgroup label="Vessel / Marine">
-                                                                        <option value="speedboat" @selected($transportModeEdit === 'speedboat')>Speedboat</option>
-                                                                        <option value="ferry" @selected($transportModeEdit === 'ferry')>Ferry</option>
-                                                                        <option value="boat" @selected($transportModeEdit === 'boat')>Boat</option>
-                                                                        <option value="safari" @selected($transportModeEdit === 'safari')>Safari</option>
-                                                                        <option value="dhoni" @selected($transportModeEdit === 'dhoni')>Dhoni</option>
-                                                                        <option value="launch" @selected($transportModeEdit === 'launch')>Launch</option>
-                                                                        <option value="catamaran" @selected($transportModeEdit === 'catamaran')>Catamaran</option>
-                                                                        <option value="yacht" @selected($transportModeEdit === 'yacht')>Yacht</option>
-                                                                        <option value="other vessel" @selected($transportModeEdit === 'other vessel')>Other Vessel</option>
-                                                                    </optgroup>
-                                                                    <optgroup label="Vehicle / Land">
-                                                                        <option value="van" @selected($transportModeEdit === 'van')>Van</option>
-                                                                        <option value="car" @selected($transportModeEdit === 'car')>Car</option>
-                                                                        <option value="pickup" @selected($transportModeEdit === 'pickup')>Pickup</option>
-                                                                        <option value="bus" @selected($transportModeEdit === 'bus')>Bus</option>
-                                                                        <option value="suv" @selected($transportModeEdit === 'suv')>SUV</option>
-                                                                        <option value="other land vehicle" @selected($transportModeEdit === 'other land vehicle')>Other Land Vehicle</option>
-                                                                    </optgroup>
+                                                                    @foreach ($transportModeOptionGroups as $groupKey => $groupItems)
+                                                                        @php
+                                                                            $groupLabel = $groupKey === 'marine'
+                                                                                ? 'Vessel / Marine'
+                                                                                : ($groupKey === 'land' ? 'Vehicle / Land' : ucfirst(str_replace('_', ' ', (string) $groupKey)));
+                                                                        @endphp
+                                                                        <optgroup label="{{ $groupLabel }}">
+                                                                            @foreach ($groupItems as $groupItem)
+                                                                                @php
+                                                                                    $groupValue = strtolower(trim((string) ($groupItem['value'] ?? '')));
+                                                                                    $groupText = trim((string) ($groupItem['label'] ?? $groupValue));
+                                                                                @endphp
+                                                                                @if ($groupValue !== '' && $groupText !== '')
+                                                                                    <option value="{{ $groupValue }}" @selected($transportModeEdit === $groupValue)>{{ $groupText }}</option>
+                                                                                @endif
+                                                                            @endforeach
+                                                                        </optgroup>
+                                                                    @endforeach
                                                                 </select>
                                                                 <input class="ops-input" name="vehicle_name" type="text" maxlength="120" value="{{ (string) ($propertyDetails['vehicle_name'] ?? '') }}" placeholder="Vehicle / Vessel Name" data-property-edit-scope="transport">
                                                                 <input class="ops-input" name="registration_plate" type="text" maxlength="80" value="{{ (string) ($propertyDetails['registration_plate'] ?? '') }}" placeholder="Registration Plate" data-property-edit-scope="transport">
@@ -2527,14 +2692,15 @@
                                                                 </select>
 
                                                                 <div class="feature-checklist" data-property-edit-scope="stay">
-                                                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="wifi" @checked(in_array('wifi', $propertyAmenityValues, true))> Wi-Fi</label>
-                                                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="parking" @checked(in_array('parking', $propertyAmenityValues, true))> Parking</label>
-                                                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="pool" @checked(in_array('pool', $propertyAmenityValues, true))> Pool</label>
-                                                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="gym" @checked(in_array('gym', $propertyAmenityValues, true))> Gym</label>
-                                                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="air_conditioning" @checked(in_array('air_conditioning', $propertyAmenityValues, true))> Air Conditioning</label>
-                                                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="breakfast" @checked(in_array('breakfast', $propertyAmenityValues, true))> Breakfast</label>
-                                                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="kitchen" @checked(in_array('kitchen', $propertyAmenityValues, true))> Kitchen</label>
-                                                                    <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="workspace_desk" @checked(in_array('workspace_desk', $propertyAmenityValues, true))> Workspace Desk</label>
+                                                                    @foreach ($accommodationFacilityOptionsCollection as $facilityOption)
+                                                                        @php
+                                                                            $facilityValue = trim((string) ($facilityOption['value'] ?? ''));
+                                                                            $facilityLabel = trim((string) ($facilityOption['label'] ?? $facilityValue));
+                                                                        @endphp
+                                                                        @if ($facilityValue !== '' && $facilityLabel !== '')
+                                                                            <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="{{ $facilityValue }}" @checked(in_array($facilityValue, $propertyAmenityValues, true))> {{ $facilityLabel }}</label>
+                                                                        @endif
+                                                                    @endforeach
                                                                 </div>
                                                                 <div class="feature-checklist" data-property-edit-scope="stay">
                                                                     <label class="feature-item"><input type="checkbox" name="property_features[]" value="wheelchair_access" @checked(in_array('wheelchair_access', $propertyFeatureValues, true))> Wheelchair Access</label>
@@ -2608,7 +2774,70 @@
                                                                     </div>
                                                                     <div class="ops-field">
                                                                         <label>Bed Type</label>
-                                                                        <input class="ops-input" name="bed_type" type="text" maxlength="80" value="{{ $showInlineRoomRow ? old('bed_type') : '' }}" placeholder="King, Twin, Queen, Bunk">
+                                                                        @php
+                                                                            $roomBedTypeOld = strtolower(trim((string) ($showInlineRoomRow ? old('bed_type') : '')));
+                                                                            $knownRoomBedTypes = $roomBedTypeOptionsCollection
+                                                                                ->map(fn ($item) => strtolower(trim((string) ($item['value'] ?? ''))))
+                                                                                ->filter(fn ($item) => $item !== '')
+                                                                                ->values()
+                                                                                ->all();
+                                                                        @endphp
+                                                                        <select class="ops-select" name="bed_type">
+                                                                            <option value="" @selected($roomBedTypeOld === '')>Select</option>
+                                                                            @if ($roomBedTypeOld !== '' && !in_array($roomBedTypeOld, $knownRoomBedTypes, true))
+                                                                                <option value="{{ $roomBedTypeOld }}" selected>{{ ucfirst(str_replace('_', ' ', $roomBedTypeOld)) }} (existing)</option>
+                                                                            @endif
+                                                                            @foreach ($roomBedTypeOptionsCollection as $roomBedTypeOption)
+                                                                                @php
+                                                                                    $roomBedTypeValue = strtolower(trim((string) ($roomBedTypeOption['value'] ?? '')));
+                                                                                    $roomBedTypeLabel = trim((string) ($roomBedTypeOption['label'] ?? $roomBedTypeValue));
+                                                                                @endphp
+                                                                                @if ($roomBedTypeValue !== '' && $roomBedTypeLabel !== '')
+                                                                                    <option value="{{ $roomBedTypeValue }}" @selected($roomBedTypeOld === $roomBedTypeValue)>{{ $roomBedTypeLabel }}</option>
+                                                                                @endif
+                                                                            @endforeach
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Bathroom Type</label>
+                                                                        <select class="ops-select" name="bathroom_type">
+                                                                            <option value="" @selected(($showInlineRoomRow ? old('bathroom_type') : '') === '')>Select</option>
+                                                                            <option value="ensuite" @selected(($showInlineRoomRow ? old('bathroom_type') : '') === 'ensuite')>Ensuite</option>
+                                                                            <option value="private_external" @selected(($showInlineRoomRow ? old('bathroom_type') : '') === 'private_external')>Private External</option>
+                                                                            <option value="shared" @selected(($showInlineRoomRow ? old('bathroom_type') : '') === 'shared')>Shared</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Bathroom Count</label>
+                                                                        <input class="ops-input" name="bathroom_count" type="number" min="0" max="20" value="{{ $showInlineRoomRow ? old('bathroom_count', 1) : 1 }}">
+                                                                    </div>
+                                                                    <div class="ops-field ops-field-wide">
+                                                                        <label>Room Amenities</label>
+                                                                        <div class="feature-checklist">
+                                                                            @foreach ($roomAmenityOptionsCollection as $roomAmenityOption)
+                                                                                @php
+                                                                                    $roomAmenityValue = trim((string) ($roomAmenityOption['value'] ?? ''));
+                                                                                    $roomAmenityLabel = trim((string) ($roomAmenityOption['label'] ?? $roomAmenityValue));
+                                                                                @endphp
+                                                                                @if ($roomAmenityValue !== '' && $roomAmenityLabel !== '')
+                                                                                    <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="{{ $roomAmenityValue }}" @checked(in_array($roomAmenityValue, $oldRoomAmenities, true))> {{ $roomAmenityLabel }}</label>
+                                                                                @endif
+                                                                            @endforeach
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="ops-field ops-field-wide">
+                                                                        <label>Bathroom Amenities</label>
+                                                                        <div class="feature-checklist">
+                                                                            @foreach ($bathroomAmenityOptionsCollection as $bathroomAmenityOption)
+                                                                                @php
+                                                                                    $bathroomAmenityValue = trim((string) ($bathroomAmenityOption['value'] ?? ''));
+                                                                                    $bathroomAmenityLabel = trim((string) ($bathroomAmenityOption['label'] ?? $bathroomAmenityValue));
+                                                                                @endphp
+                                                                                @if ($bathroomAmenityValue !== '' && $bathroomAmenityLabel !== '')
+                                                                                    <label class="feature-item"><input type="checkbox" name="bathroom_amenities[]" value="{{ $bathroomAmenityValue }}" @checked(in_array($bathroomAmenityValue, $oldBathroomAmenities, true))> {{ $bathroomAmenityLabel }}</label>
+                                                                                @endif
+                                                                            @endforeach
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                                 <div class="inline-actions" style="margin-top:10px;">
@@ -3089,6 +3318,7 @@
             const billingCity = document.getElementById("billing_city");
             const openPropertyCreateForm = document.getElementById("openPropertyCreateForm");
             const closePropertyCreateForm = document.getElementById("closePropertyCreateForm");
+            const backToListingsFromCreate = document.getElementById("backToListingsFromCreate");
             const propertyCreateForm = document.getElementById("propertyCreateForm");
             const propertyCreateFormTitle = document.getElementById("propertyCreateFormTitle");
             const propertyCreateFormSubtitle = document.getElementById("propertyCreateFormSubtitle");
@@ -3738,7 +3968,7 @@
                 persistGuidedWizardState();
             }
 
-            const LOCATION_TREE = {
+            const FALLBACK_LOCATION_TREE = {
                 "Maldives": {
                     "Kaafu Atoll": ["Male", "Hulhumale", "Maafushi"],
                     "Alif Alif Atoll": ["Rasdhoo", "Ukulhas", "Thoddoo"],
@@ -3759,6 +3989,74 @@
                     "Other": ["Other"]
                 }
             };
+
+            let locationTreeCache = FALLBACK_LOCATION_TREE;
+            let locationTreePromise = null;
+
+            function getCurrentLocationTree() {
+                return locationTreeCache || FALLBACK_LOCATION_TREE;
+            }
+
+            function applyLocationTree(data) {
+                if (!data || typeof data !== "object" || Array.isArray(data)) {
+                    return getCurrentLocationTree();
+                }
+                locationTreeCache = data;
+                window.__vendorPortalLocationTree = data;
+                try {
+                    window.sessionStorage.setItem("vendor_portal_location_tree_v1", JSON.stringify(data));
+                } catch (error) {
+                    // Ignore storage failures and continue with in-memory cache.
+                }
+                return locationTreeCache;
+            }
+
+            function getLocationTree() {
+                if (window.__vendorPortalLocationTree && typeof window.__vendorPortalLocationTree === "object") {
+                    locationTreeCache = window.__vendorPortalLocationTree;
+                    return Promise.resolve(locationTreeCache);
+                }
+
+                if (locationTreePromise) {
+                    return locationTreePromise;
+                }
+
+                locationTreePromise = new Promise(function (resolve) {
+                    let restoredFromSession = false;
+
+                    try {
+                        const cachedPayload = window.sessionStorage.getItem("vendor_portal_location_tree_v1");
+                        if (cachedPayload) {
+                            const parsed = JSON.parse(cachedPayload);
+                            applyLocationTree(parsed);
+                            restoredFromSession = true;
+                            resolve(getCurrentLocationTree());
+                        }
+                    } catch (error) {
+                        restoredFromSession = false;
+                    }
+
+                    if (restoredFromSession) {
+                        return;
+                    }
+
+                    fetch("{{ asset('data/location-tree.json') }}", { cache: "force-cache" })
+                        .then(function (response) {
+                            if (!response.ok) {
+                                throw new Error("Location tree request failed with status " + response.status);
+                            }
+                            return response.json();
+                        })
+                        .then(function (payload) {
+                            resolve(applyLocationTree(payload));
+                        })
+                        .catch(function () {
+                            resolve(getCurrentLocationTree());
+                        });
+                });
+
+                return locationTreePromise;
+            }
 
             function rebuildSelect(selectEl, values, placeholder) {
                 if (!selectEl) return;
@@ -3792,7 +4090,8 @@
                 ensureSelectHasOption(locationCountry, selectedCountry);
                 locationCountry.value = selectedCountry;
                 const country = locationCountry.value || "Maldives";
-                const states = Object.keys(LOCATION_TREE[country] || {});
+                const locationTree = getCurrentLocationTree();
+                const states = Object.keys(locationTree[country] || {});
                 rebuildSelect(locationState, states, "Select state/province");
                 const selectedState = locationState.dataset.selectedValue || "";
                 ensureSelectHasOption(locationState, selectedState);
@@ -3801,7 +4100,7 @@
                 } else {
                     locationState.value = states[0] || "";
                 }
-                const cities = (LOCATION_TREE[country] || {})[locationState.value] || [];
+                const cities = (locationTree[country] || {})[locationState.value] || [];
                 rebuildSelect(locationCity, cities, "Select city/island");
                 const selectedCity = locationCity.dataset.selectedValue || "";
                 ensureSelectHasOption(locationCity, selectedCity);
@@ -3819,7 +4118,8 @@
             function refreshCitySelector() {
                 if (!locationCountry || !locationState || !locationCity) return;
                 const country = locationCountry.value || "Maldives";
-                const cities = (LOCATION_TREE[country] || {})[locationState.value] || [];
+                const locationTree = getCurrentLocationTree();
+                const cities = (locationTree[country] || {})[locationState.value] || [];
                 const selectedCity = locationCity.dataset.selectedValue || "";
                 rebuildSelect(locationCity, cities, "Select city/island");
                 ensureSelectHasOption(locationCity, selectedCity);
@@ -4032,13 +4332,13 @@
             function applyCategoryFormMeta(category, forceType) {
                 const meta = categoryMetaFor(category);
                 if (propertyCreateFormTitle) {
-                    propertyCreateFormTitle.textContent = meta.title;
+                    propertyCreateFormTitle.textContent = 'Create New Listing';
                 }
                 if (propertyCreateFormSubtitle) {
-                    propertyCreateFormSubtitle.textContent = meta.subtitle;
+                    propertyCreateFormSubtitle.textContent = 'Fill the listing basics below and save.';
                 }
                 if (propertyCreateSubmitButton) {
-                    propertyCreateSubmitButton.textContent = meta.submit;
+                    propertyCreateSubmitButton.textContent = 'Save Listing';
                 }
                 if (propertyCategoryScopeNote) {
                     propertyCategoryScopeNote.textContent = meta.note;
@@ -4112,7 +4412,8 @@
             function refreshBillingLocationSelectors() {
                 if (!billingCountry || !billingState || !billingCity) return;
                 const country = billingCountry.value || "Maldives";
-                const states = Object.keys(LOCATION_TREE[country] || {});
+                const locationTree = getCurrentLocationTree();
+                const states = Object.keys(locationTree[country] || {});
                 const previousState = billingState.dataset.selectedValue || billingState.value;
                 const previousCity = billingCity.dataset.selectedValue || billingCity.value;
 
@@ -4125,7 +4426,7 @@
                     billingState.value = states[0];
                 }
 
-                const cities = (LOCATION_TREE[country] || {})[billingState.value] || [];
+                const cities = (locationTree[country] || {})[billingState.value] || [];
                 rebuildSelect(billingCity, cities, "Select city/island");
                 ensureSelectHasOption(billingCity, previousCity);
 
@@ -4142,7 +4443,8 @@
             function refreshBillingCitySelector() {
                 if (!billingCountry || !billingState || !billingCity) return;
                 const country = billingCountry.value || "Maldives";
-                const cities = (LOCATION_TREE[country] || {})[billingState.value] || [];
+                const locationTree = getCurrentLocationTree();
+                const cities = (locationTree[country] || {})[billingState.value] || [];
                 const previousCity = billingCity.dataset.selectedValue || billingCity.value;
                 rebuildSelect(billingCity, cities, "Select city/island");
                 ensureSelectHasOption(billingCity, previousCity);
@@ -4389,7 +4691,10 @@
                 openPropertyCreateForm.addEventListener("click", function () {
                     propertyCreateForm.hidden = false;
                     if (closePropertyCreateForm) closePropertyCreateForm.hidden = false;
-                    if (propertyCategorySelect) propertyCategorySelect.focus();
+                    const propertyNameInput = document.getElementById("property_name");
+                    if (propertyNameInput) {
+                        propertyNameInput.focus();
+                    }
                 });
             }
 
@@ -4397,6 +4702,16 @@
                 closePropertyCreateForm.addEventListener("click", function () {
                     propertyCreateForm.hidden = true;
                     closePropertyCreateForm.hidden = true;
+                });
+            }
+
+            if (backToListingsFromCreate && propertyCreateForm) {
+                backToListingsFromCreate.addEventListener("click", function () {
+                    propertyCreateForm.hidden = true;
+                    if (closePropertyCreateForm) closePropertyCreateForm.hidden = true;
+                    window.location.hash = "listings";
+                    showPanelGroup("listings");
+                    activateListingWizardStep(1, true);
                 });
             }
 
@@ -4559,8 +4874,15 @@
                 locationState.dataset.selectedValue = "{{ old('location_state', '') }}";
                 locationCity.dataset.selectedValue = "{{ old('location_city', '') }}";
                 refreshLocationSelectors();
-                locationCountry.addEventListener("change", refreshLocationSelectors);
-                locationState.addEventListener("change", refreshCitySelector);
+                getLocationTree().then(function () {
+                    refreshLocationSelectors();
+                });
+                locationCountry.addEventListener("change", function () {
+                    refreshLocationSelectors();
+                });
+                locationState.addEventListener("change", function () {
+                    refreshCitySelector();
+                });
             }
 
             if (propertyCategorySelect) {
@@ -4581,8 +4903,15 @@
                 billingState.dataset.selectedValue = "{{ old('billing_state', optional($vendorBilling)->billing_state ?? '') }}";
                 billingCity.dataset.selectedValue = "{{ old('billing_city', optional($vendorBilling)->billing_city ?? '') }}";
                 refreshBillingLocationSelectors();
-                billingCountry.addEventListener("change", refreshBillingLocationSelectors);
-                billingState.addEventListener("change", refreshBillingCitySelector);
+                getLocationTree().then(function () {
+                    refreshBillingLocationSelectors();
+                });
+                billingCountry.addEventListener("change", function () {
+                    refreshBillingLocationSelectors();
+                });
+                billingState.addEventListener("change", function () {
+                    refreshBillingCitySelector();
+                });
             }
             initLocationMap();
 
@@ -4663,6 +4992,7 @@
             function initFallbackListingActions() {
                 const openPropertyCreateForm = document.getElementById('openPropertyCreateForm');
                 const closePropertyCreateForm = document.getElementById('closePropertyCreateForm');
+                const backToListingsFromCreate = document.getElementById('backToListingsFromCreate');
                 const propertyCreateForm = document.getElementById('propertyCreateForm');
                 const propertyCategorySelect = document.getElementById('property_listing_category');
                 const propertyCategoryScopeNote = document.getElementById('propertyCategoryScopeNote');
@@ -4810,9 +5140,9 @@
                         panel.hidden = normalizeCategoryKey(panel.getAttribute('data-category-view') || '') !== normalized;
                     });
 
-                    if (propertyCreateFormTitle) propertyCreateFormTitle.textContent = meta[0];
-                    if (propertyCreateFormSubtitle) propertyCreateFormSubtitle.textContent = meta[1];
-                    if (propertyCreateSubmitButton) propertyCreateSubmitButton.textContent = meta[2];
+                    if (propertyCreateFormTitle) propertyCreateFormTitle.textContent = 'Create New Listing';
+                    if (propertyCreateFormSubtitle) propertyCreateFormSubtitle.textContent = 'Fill the listing basics below and save.';
+                    if (propertyCreateSubmitButton) propertyCreateSubmitButton.textContent = 'Save Listing';
                     if (propertyCategoryScopeNote) propertyCategoryScopeNote.textContent = meta[3];
                     if (propertyTypeSelect) propertyTypeSelect.value = meta[4];
                     refreshTransportFieldLabels();
@@ -4831,6 +5161,16 @@
                     closePropertyCreateForm.addEventListener('click', function () {
                         propertyCreateForm.hidden = true;
                         closePropertyCreateForm.hidden = true;
+                    });
+                }
+
+                if (backToListingsFromCreate && propertyCreateForm) {
+                    backToListingsFromCreate.addEventListener('click', function () {
+                        propertyCreateForm.hidden = true;
+                        if (closePropertyCreateForm) {
+                            closePropertyCreateForm.hidden = true;
+                        }
+                        window.location.hash = 'listings';
                     });
                 }
 
@@ -4967,4 +5307,3 @@
     </script>
 </body>
 </html>
-

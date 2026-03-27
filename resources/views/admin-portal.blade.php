@@ -903,6 +903,7 @@
             <a href="#dashboardWidgets">Dashboard</a>
             <a href="#rolePermissionsPanel">Role Permissions</a>
             <a href="#financeModerationPanel">Finance Moderation</a>
+            <a href="#listingOptionCatalogPanel">Listing Options</a>
             <a href="#sessionDebug">Session</a>
             <a href="#authApiSection">Auth and API</a>
             <a href="#moderationPanel" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Moderation</a>
@@ -1141,6 +1142,133 @@
                         @empty
                             <tr>
                                 <td colspan="8" class="finance-empty">No finance adjustments recorded.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="card manage" id="listingOptionCatalogPanel">
+            <p class="label">Listing Option Catalog</p>
+            <p class="small">Maintain vendor form options from database so transport modes, accommodation facilities, and room amenities can be expanded without code changes.</p>
+
+            @if (!$canManageVendorUsers)
+                <div class="error-box" style="margin-top:10px;">Only ADMIN_SUPER or ADMIN can update these catalog values.</div>
+            @else
+                <form class="finance-form" method="POST" action="/portal/admin/listing-options/upsert" style="margin-top:10px;">
+                    @csrf
+                    <div class="finance-form-grid">
+                        <div class="finance-field">
+                            <label for="listing_option_type">Option Type</label>
+                            <select id="listing_option_type" name="option_type" required>
+                                <option value="transport_mode">Transport Mode</option>
+                                <option value="accommodation_facility">Accommodation Facility</option>
+                                <option value="room_amenity">Room Amenity</option>
+                            </select>
+                        </div>
+                        <div class="finance-field">
+                            <label for="listing_option_group">Group (optional)</label>
+                            <input id="listing_option_group" name="option_group" type="text" maxlength="80" placeholder="marine, land, core, room">
+                        </div>
+                        <div class="finance-field">
+                            <label for="listing_option_value">Option Value</label>
+                            <input id="listing_option_value" name="option_value" type="text" maxlength="120" placeholder="speedboat, wifi, smart_tv" required>
+                        </div>
+                        <div class="finance-field">
+                            <label for="listing_option_label">Option Label</label>
+                            <input id="listing_option_label" name="option_label" type="text" maxlength="190" placeholder="Speedboat, Wi-Fi, Smart TV" required>
+                        </div>
+                        <div class="finance-field">
+                            <label for="listing_option_sort">Sort Order</label>
+                            <input id="listing_option_sort" name="sort_order" type="number" min="0" max="100000" value="100">
+                        </div>
+                        <div class="finance-field">
+                            <label for="listing_option_active">Status</label>
+                            <select id="listing_option_active" name="is_active">
+                                <option value="1">Active</option>
+                                <option value="0">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Save Listing Option</button>
+                </form>
+            @endif
+
+            <div class="finance-table-wrap" style="margin-top:10px;">
+                <table class="finance-table" aria-label="Listing option catalog table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Value</th>
+                            <th>Label</th>
+                            <th>Group</th>
+                            <th>Sort</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($listingOptionCatalog->take(240) as $option)
+                            @php
+                                $optionFormId = 'listingOptionRowForm' . (int) $option->id;
+                            @endphp
+                            <tr>
+                                <td>{{ strtoupper((string) $option->option_type) }}</td>
+                                <td>{{ $option->option_value }}</td>
+                                <td>
+                                    @if ($canManageVendorUsers)
+                                        <input form="{{ $optionFormId }}" name="option_label" type="text" maxlength="190" value="{{ $option->option_label }}" style="width:100%;border:1px solid #c8d3df;border-radius:8px;padding:7px 8px;font-size:0.82rem;">
+                                    @else
+                                        {{ $option->option_label }}
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($canManageVendorUsers)
+                                        <input form="{{ $optionFormId }}" name="option_group" type="text" maxlength="80" value="{{ $option->option_group }}" placeholder="group" style="width:100%;border:1px solid #c8d3df;border-radius:8px;padding:7px 8px;font-size:0.82rem;">
+                                    @else
+                                        {{ $option->option_group ?: 'N/A' }}
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($canManageVendorUsers)
+                                        <input form="{{ $optionFormId }}" name="sort_order" type="number" min="0" max="100000" value="{{ (int) ($option->sort_order ?? 0) }}" style="width:92px;border:1px solid #c8d3df;border-radius:8px;padding:7px 8px;font-size:0.82rem;">
+                                    @else
+                                        {{ (int) ($option->sort_order ?? 0) }}
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($canManageVendorUsers)
+                                        <select form="{{ $optionFormId }}" name="is_active" style="width:110px;border:1px solid #c8d3df;border-radius:8px;padding:7px 8px;font-size:0.82rem;background:#fff;">
+                                            <option value="1" @selected((bool) ($option->is_active ?? false))>ACTIVE</option>
+                                            <option value="0" @selected(!(bool) ($option->is_active ?? false))>INACTIVE</option>
+                                        </select>
+                                    @else
+                                        {{ (bool) ($option->is_active ?? false) ? 'ACTIVE' : 'INACTIVE' }}
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($canManageVendorUsers)
+                                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                        <form id="{{ $optionFormId }}" method="POST" action="/portal/admin/listing-options/upsert" style="display:inline;">
+                                            @csrf
+                                            <input type="hidden" name="option_type" value="{{ $option->option_type }}">
+                                            <input type="hidden" name="option_value" value="{{ $option->option_value }}">
+                                            <button class="btn btn-primary" type="submit" style="margin-top:0;padding:6px 10px;">Save</button>
+                                        </form>
+                                        <form method="POST" action="/portal/admin/listing-options/{{ $option->id }}/delete" onsubmit="return confirm('Remove this listing option?');" style="display:inline;">
+                                            @csrf
+                                            <button class="btn btn-secondary" type="submit" style="margin-top:0;padding:6px 10px;">Delete</button>
+                                        </form>
+                                        </div>
+                                    @else
+                                        Read-only
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="finance-empty">No listing option catalog entries found.</td>
                             </tr>
                         @endforelse
                     </tbody>

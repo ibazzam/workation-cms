@@ -1078,27 +1078,22 @@
             font-size: 0.92rem;
         }
 
-        .property-subsection {
-            margin-top: 8px;
-            border-top: 1px dashed #d2dee8;
-            padding-top: 8px;
-            display: grid;
-            gap: 8px;
-        }
-
-        .property-subsection-toggle {
-            margin-top: 6px;
-        }
-
-        .property-subsection[hidden] {
-            display: none;
-        }
-
         .property-subsection-head {
             margin: 0;
             font-size: 0.8rem;
             color: #365670;
             font-weight: 700;
+        }
+
+        .accommodation-room-stretch-row > td {
+            background: #f5f9fc;
+            border-top: 0;
+            padding-top: 6px;
+        }
+
+        .accommodation-room-stretch {
+            display: grid;
+            gap: 8px;
         }
 
         .standards-note {
@@ -2295,9 +2290,6 @@
                     </form>
 
                 </article>
-
-                <p class="wizard-note">Listings are now managed section-by-section below by category to avoid duplicate accommodation views.</p>
-
                 <div class="category-listings-stack" aria-label="Category listing views">
                     @foreach ($listingCategoryViewOrder as $categoryKey)
                         @php
@@ -2321,7 +2313,6 @@
                                             <tr>
                                                 <th>Listing</th>
                                                 <th>Base Details</th>
-                                                <th>Rooms Under This Listing</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -2359,9 +2350,6 @@
                                                         <strong>{{ $property->name }}</strong><br>
                                                         ID: {{ $propertyId }}<br>
                                                         {{ strtoupper((string) ($property->property_type ?? 'N/A')) }}
-                                                        <div class="property-subsection-toggle">
-                                                            <button class="btn btn-secondary" type="button" data-toggle-property-subsection data-property-subsection-id="{{ $propertyId }}" aria-expanded="false">Show Details</button>
-                                                        </div>
                                                     </td>
                                                     <td>
                                                         {{ $property->location ?: 'N/A' }}<br>
@@ -2407,147 +2395,6 @@
                                                             {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($property->base_price ?? 0), 2) }}<br>
                                                             Guests/Capacity: {{ (int) ($property->max_guests ?? 0) }}
                                                         @endif
-                                                    </td>
-                                                    <td>
-                                                        <div class="property-subsection" data-property-subsection="{{ $propertyId }}" hidden>
-                                                            <p class="property-subsection-head">Rooms Under This Property ({{ $propertyRooms->count() }})</p>
-                                                            @if ($propertyRooms->isEmpty())
-                                                                <p class="ops-empty">No rooms for this listing yet.</p>
-                                                            @else
-                                                                <div class="ops-table-wrap">
-                                                                    <table class="ops-table" aria-label="Rooms for property {{ $propertyId }}">
-                                                                        <thead>
-                                                                            <tr>
-                                                                                <th>Room</th>
-                                                                                <th>Inventory</th>
-                                                                                <th>Occupancy & Pricing</th>
-                                                                                <th>Media Upload</th>
-                                                                                <th>Actions</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody>
-                                                                            @foreach ($propertyRooms as $room)
-                                                                                @php
-                                                                                    $roomId = (int) ($room->id ?? 0);
-                                                                                    $roomAmenityValues = collect(explode(',', (string) ($room->amenities ?? '')))
-                                                                                        ->map(static fn ($token) => trim((string) $token))
-                                                                                        ->filter(static fn ($token) => $token !== '')
-                                                                                        ->values()
-                                                                                        ->all();
-                                                                                    $bathroomAmenityValues = collect(explode(',', (string) ($room->bathroom_amenities ?? '')))
-                                                                                        ->map(static fn ($token) => trim((string) $token))
-                                                                                        ->filter(static fn ($token) => $token !== '')
-                                                                                        ->values()
-                                                                                        ->all();
-                                                                                @endphp
-                                                                                <tr>
-                                                                                    <td>
-                                                                                        <strong>{{ $room->name }}</strong><br>
-                                                                                        Room ID: {{ $roomId }}
-                                                                                    </td>
-                                                                                    <td>
-                                                                                        Qty: {{ (int) ($room->quantity ?? 0) }}<br>
-                                                                                        Max: {{ (int) ($room->max_occupancy ?? 0) }}
-                                                                                    </td>
-                                                                                    <td>
-                                                                                        Base: {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->base_price ?? 0), 2) }}<br>
-                                                                                        Extra Adult: {{ (int) ($room->extra_person_capacity ?? 0) }} x {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->extra_person_price ?? 0), 2) }}<br>
-                                                                                        Child: {{ (int) ($room->child_capacity ?? 0) }} x {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->child_price ?? 0), 2) }}
-                                                                                    </td>
-                                                                                    <td>
-                                                                                        <form class="inline-table-form media-upload-row" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
-                                                                                            @csrf
-                                                                                            <input type="hidden" name="entity_type" value="room">
-                                                                                            <input type="hidden" name="entity_id" value="{{ $roomId }}">
-                                                                                            <input class="ops-input" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
-                                                                                            <input class="ops-input" name="alt_text" type="text" maxlength="190" placeholder="Room photo alt text" required>
-                                                                                            <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Set as primary</label>
-                                                                                            <button class="btn btn-secondary" type="submit">Upload Room Photo</button>
-                                                                                        </form>
-                                                                                    </td>
-                                                                                    <td>
-                                                                                        <div class="inline-actions">
-                                                                                            <button class="btn btn-secondary" type="button" data-open-room-edit data-room-edit-id="{{ $roomId }}">Edit Room</button>
-                                                                                            <form method="POST" action="/portal/vendor/rooms/{{ $roomId }}/delete" onsubmit="return confirm('Remove this room category?');">
-                                                                                                @csrf
-                                                                                                <button class="btn btn-danger" type="submit">Remove Room</button>
-                                                                                            </form>
-                                                                                        </div>
-                                                                                        <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/rooms/{{ $roomId }}/update" data-room-edit-form="{{ $roomId }}" hidden>
-                                                                                            @csrf
-                                                                                            <input class="ops-input" name="name" type="text" maxlength="160" value="{{ (string) ($room->name ?? '') }}" required>
-                                                                                            <input class="ops-input" name="quantity" type="number" min="1" max="10000" value="{{ (int) ($room->quantity ?? 1) }}" required>
-                                                                                            <input class="ops-input" name="max_occupancy" type="number" min="1" max="50" value="{{ (int) ($room->max_occupancy ?? 1) }}" required>
-                                                                                            <input class="ops-input" name="extra_person_capacity" type="number" min="0" max="20" value="{{ (int) ($room->extra_person_capacity ?? 0) }}" placeholder="Extra adult capacity">
-                                                                                            <input class="ops-input" name="child_capacity" type="number" min="0" max="20" value="{{ (int) ($room->child_capacity ?? 0) }}" placeholder="Child capacity">
-                                                                                            <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($room->base_price ?? 0) }}" placeholder="Base room price">
-                                                                                            <input class="ops-input" name="extra_person_price" type="number" min="0" step="0.01" value="{{ (float) ($room->extra_person_price ?? 0) }}" placeholder="Extra adult price">
-                                                                                            <input class="ops-input" name="child_price" type="number" min="0" step="0.01" value="{{ (float) ($room->child_price ?? 0) }}" placeholder="Child price">
-                                                                                            @php
-                                                                                                $roomBedTypeCurrent = strtolower(trim((string) ($room->bed_type ?? '')));
-                                                                                                $knownRoomBedTypes = $roomBedTypeOptionsCollection
-                                                                                                    ->map(fn ($item) => strtolower(trim((string) ($item['value'] ?? ''))))
-                                                                                                    ->filter(fn ($item) => $item !== '')
-                                                                                                    ->values()
-                                                                                                    ->all();
-                                                                                            @endphp
-                                                                                            <select class="ops-select" name="bed_type">
-                                                                                                <option value="" @selected($roomBedTypeCurrent === '')>Bed Type</option>
-                                                                                                @if ($roomBedTypeCurrent !== '' && !in_array($roomBedTypeCurrent, $knownRoomBedTypes, true))
-                                                                                                    <option value="{{ $roomBedTypeCurrent }}" selected>{{ ucfirst(str_replace('_', ' ', $roomBedTypeCurrent)) }} (existing)</option>
-                                                                                                @endif
-                                                                                                @foreach ($roomBedTypeOptionsCollection as $roomBedTypeOption)
-                                                                                                    @php
-                                                                                                        $roomBedTypeValue = strtolower(trim((string) ($roomBedTypeOption['value'] ?? '')));
-                                                                                                        $roomBedTypeLabel = trim((string) ($roomBedTypeOption['label'] ?? $roomBedTypeValue));
-                                                                                                    @endphp
-                                                                                                    @if ($roomBedTypeValue !== '' && $roomBedTypeLabel !== '')
-                                                                                                        <option value="{{ $roomBedTypeValue }}" @selected($roomBedTypeCurrent === $roomBedTypeValue)>{{ $roomBedTypeLabel }}</option>
-                                                                                                    @endif
-                                                                                                @endforeach
-                                                                                            </select>
-                                                                                            <select class="ops-select" name="bathroom_type">
-                                                                                                <option value="" @selected((string) ($room->bathroom_type ?? '') === '')>Bathroom Type</option>
-                                                                                                <option value="ensuite" @selected((string) ($room->bathroom_type ?? '') === 'ensuite')>Ensuite</option>
-                                                                                                <option value="private_external" @selected((string) ($room->bathroom_type ?? '') === 'private_external')>Private External</option>
-                                                                                                <option value="shared" @selected((string) ($room->bathroom_type ?? '') === 'shared')>Shared</option>
-                                                                                            </select>
-                                                                                            <input class="ops-input" name="bathroom_count" type="number" min="0" max="20" value="{{ (string) ($room->bathroom_count ?? '') }}" placeholder="Bathroom Count">
-                                                                                            <div class="feature-checklist">
-                                                                                                @foreach ($roomAmenityOptionsCollection as $roomAmenityOption)
-                                                                                                    @php
-                                                                                                        $roomAmenityValue = trim((string) ($roomAmenityOption['value'] ?? ''));
-                                                                                                        $roomAmenityLabel = trim((string) ($roomAmenityOption['label'] ?? $roomAmenityValue));
-                                                                                                    @endphp
-                                                                                                    @if ($roomAmenityValue !== '' && $roomAmenityLabel !== '')
-                                                                                                        <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="{{ $roomAmenityValue }}" @checked(in_array($roomAmenityValue, $roomAmenityValues, true))> {{ $roomAmenityLabel }}</label>
-                                                                                                    @endif
-                                                                                                @endforeach
-                                                                                            </div>
-                                                                                            <div class="feature-checklist">
-                                                                                                @foreach ($bathroomAmenityOptionsCollection as $bathroomAmenityOption)
-                                                                                                    @php
-                                                                                                        $bathroomAmenityValue = trim((string) ($bathroomAmenityOption['value'] ?? ''));
-                                                                                                        $bathroomAmenityLabel = trim((string) ($bathroomAmenityOption['label'] ?? $bathroomAmenityValue));
-                                                                                                    @endphp
-                                                                                                    @if ($bathroomAmenityValue !== '' && $bathroomAmenityLabel !== '')
-                                                                                                        <label class="feature-item"><input type="checkbox" name="bathroom_amenities[]" value="{{ $bathroomAmenityValue }}" @checked(in_array($bathroomAmenityValue, $bathroomAmenityValues, true))> {{ $bathroomAmenityLabel }}</label>
-                                                                                                    @endif
-                                                                                                @endforeach
-                                                                                            </div>
-                                                                                            <div class="inline-actions">
-                                                                                                <button class="btn btn-secondary js-row-update" type="submit">Update Room</button>
-                                                                                                <button class="btn btn-secondary" type="button" data-close-room-edit data-room-edit-id="{{ $roomId }}">Cancel Edit</button>
-                                                                                            </div>
-                                                                                        </form>
-                                                                                    </td>
-                                                                                </tr>
-                                                                            @endforeach
-                                                                        </tbody>
-                                                                    </table>
-                                                                </div>
-                                                            @endif
-                                                        </div>
                                                     </td>
                                                     <td>
                                                         <div class="listing-cell-actions">
@@ -2726,11 +2573,156 @@
                                                     </td>
                                                 </tr>
                                                 @if ($categoryKey === 'accommodation')
+                                                    <tr class="accommodation-room-stretch-row">
+                                                        <td colspan="3">
+                                                            <div class="accommodation-room-stretch">
+                                                                <p class="property-subsection-head">Rooms Under This Property ({{ $propertyRooms->count() }})</p>
+                                                                @if ($propertyRooms->isEmpty())
+                                                                    <p class="ops-empty">No rooms for this listing yet.</p>
+                                                                @else
+                                                                    <div class="ops-table-wrap">
+                                                                        <table class="ops-table" aria-label="Rooms for property {{ $propertyId }}">
+                                                                            <thead>
+                                                                                <tr>
+                                                                                    <th>Room</th>
+                                                                                    <th>Inventory</th>
+                                                                                    <th>Occupancy & Pricing</th>
+                                                                                    <th>Media Upload</th>
+                                                                                    <th>Actions</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                @foreach ($propertyRooms as $room)
+                                                                                    @php
+                                                                                        $roomId = (int) ($room->id ?? 0);
+                                                                                        $roomAmenityValues = collect(explode(',', (string) ($room->amenities ?? '')))
+                                                                                            ->map(static fn ($token) => trim((string) $token))
+                                                                                            ->filter(static fn ($token) => $token !== '')
+                                                                                            ->values()
+                                                                                            ->all();
+                                                                                        $bathroomAmenityValues = collect(explode(',', (string) ($room->bathroom_amenities ?? '')))
+                                                                                            ->map(static fn ($token) => trim((string) $token))
+                                                                                            ->filter(static fn ($token) => $token !== '')
+                                                                                            ->values()
+                                                                                            ->all();
+                                                                                    @endphp
+                                                                                    <tr>
+                                                                                        <td>
+                                                                                            <strong>{{ $room->name }}</strong><br>
+                                                                                            Room ID: {{ $roomId }}
+                                                                                        </td>
+                                                                                        <td>
+                                                                                            Qty: {{ (int) ($room->quantity ?? 0) }}<br>
+                                                                                            Max: {{ (int) ($room->max_occupancy ?? 0) }}
+                                                                                        </td>
+                                                                                        <td>
+                                                                                            Base: {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->base_price ?? 0), 2) }}<br>
+                                                                                            Extra Adult: {{ (int) ($room->extra_person_capacity ?? 0) }} x {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->extra_person_price ?? 0), 2) }}<br>
+                                                                                            Child: {{ (int) ($room->child_capacity ?? 0) }} x {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->child_price ?? 0), 2) }}
+                                                                                        </td>
+                                                                                        <td>
+                                                                                            <form class="inline-table-form media-upload-row" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
+                                                                                                @csrf
+                                                                                                <input type="hidden" name="entity_type" value="room">
+                                                                                                <input type="hidden" name="entity_id" value="{{ $roomId }}">
+                                                                                                <input class="ops-input" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
+                                                                                                <input class="ops-input" name="alt_text" type="text" maxlength="190" placeholder="Room photo alt text" required>
+                                                                                                <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Set as primary</label>
+                                                                                                <button class="btn btn-secondary" type="submit">Upload Room Photo</button>
+                                                                                            </form>
+                                                                                        </td>
+                                                                                        <td>
+                                                                                            <div class="inline-actions">
+                                                                                                <button class="btn btn-secondary" type="button" data-open-room-edit data-room-edit-id="{{ $roomId }}">Edit Room</button>
+                                                                                                <form method="POST" action="/portal/vendor/rooms/{{ $roomId }}/delete" onsubmit="return confirm('Remove this room category?');">
+                                                                                                    @csrf
+                                                                                                    <button class="btn btn-danger" type="submit">Remove Room</button>
+                                                                                                </form>
+                                                                                            </div>
+                                                                                            <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/rooms/{{ $roomId }}/update" data-room-edit-form="{{ $roomId }}" hidden>
+                                                                                                @csrf
+                                                                                                <input class="ops-input" name="name" type="text" maxlength="160" value="{{ (string) ($room->name ?? '') }}" required>
+                                                                                                <input class="ops-input" name="quantity" type="number" min="1" max="10000" value="{{ (int) ($room->quantity ?? 1) }}" required>
+                                                                                                <input class="ops-input" name="max_occupancy" type="number" min="1" max="50" value="{{ (int) ($room->max_occupancy ?? 1) }}" required>
+                                                                                                <input class="ops-input" name="extra_person_capacity" type="number" min="0" max="20" value="{{ (int) ($room->extra_person_capacity ?? 0) }}" placeholder="Extra adult capacity">
+                                                                                                <input class="ops-input" name="child_capacity" type="number" min="0" max="20" value="{{ (int) ($room->child_capacity ?? 0) }}" placeholder="Child capacity">
+                                                                                                <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($room->base_price ?? 0) }}" placeholder="Base room price">
+                                                                                                <input class="ops-input" name="extra_person_price" type="number" min="0" step="0.01" value="{{ (float) ($room->extra_person_price ?? 0) }}" placeholder="Extra adult price">
+                                                                                                <input class="ops-input" name="child_price" type="number" min="0" step="0.01" value="{{ (float) ($room->child_price ?? 0) }}" placeholder="Child price">
+                                                                                                @php
+                                                                                                    $roomBedTypeCurrent = strtolower(trim((string) ($room->bed_type ?? '')));
+                                                                                                    $knownRoomBedTypes = $roomBedTypeOptionsCollection
+                                                                                                        ->map(fn ($item) => strtolower(trim((string) ($item['value'] ?? ''))))
+                                                                                                        ->filter(fn ($item) => $item !== '')
+                                                                                                        ->values()
+                                                                                                        ->all();
+                                                                                                @endphp
+                                                                                                <select class="ops-select" name="bed_type">
+                                                                                                    <option value="" @selected($roomBedTypeCurrent === '')>Bed Type</option>
+                                                                                                    @if ($roomBedTypeCurrent !== '' && !in_array($roomBedTypeCurrent, $knownRoomBedTypes, true))
+                                                                                                        <option value="{{ $roomBedTypeCurrent }}" selected>{{ ucfirst(str_replace('_', ' ', $roomBedTypeCurrent)) }} (existing)</option>
+                                                                                                    @endif
+                                                                                                    @foreach ($roomBedTypeOptionsCollection as $roomBedTypeOption)
+                                                                                                        @php
+                                                                                                            $roomBedTypeValue = strtolower(trim((string) ($roomBedTypeOption['value'] ?? '')));
+                                                                                                            $roomBedTypeLabel = trim((string) ($roomBedTypeOption['label'] ?? $roomBedTypeValue));
+                                                                                                        @endphp
+                                                                                                        @if ($roomBedTypeValue !== '' && $roomBedTypeLabel !== '')
+                                                                                                            <option value="{{ $roomBedTypeValue }}" @selected($roomBedTypeCurrent === $roomBedTypeValue)>{{ $roomBedTypeLabel }}</option>
+                                                                                                        @endif
+                                                                                                    @endforeach
+                                                                                                </select>
+                                                                                                <select class="ops-select" name="bathroom_type">
+                                                                                                    <option value="" @selected((string) ($room->bathroom_type ?? '') === '')>Bathroom Type</option>
+                                                                                                    <option value="ensuite" @selected((string) ($room->bathroom_type ?? '') === 'ensuite')>Ensuite</option>
+                                                                                                    <option value="private_external" @selected((string) ($room->bathroom_type ?? '') === 'private_external')>Private External</option>
+                                                                                                    <option value="shared" @selected((string) ($room->bathroom_type ?? '') === 'shared')>Shared</option>
+                                                                                                </select>
+                                                                                                <input class="ops-input" name="bathroom_count" type="number" min="0" max="20" value="{{ (string) ($room->bathroom_count ?? '') }}" placeholder="Bathroom Count">
+                                                                                                <div class="feature-checklist">
+                                                                                                    @foreach ($roomAmenityOptionsCollection as $roomAmenityOption)
+                                                                                                        @php
+                                                                                                            $roomAmenityValue = trim((string) ($roomAmenityOption['value'] ?? ''));
+                                                                                                            $roomAmenityLabel = trim((string) ($roomAmenityOption['label'] ?? $roomAmenityValue));
+                                                                                                        @endphp
+                                                                                                        @if ($roomAmenityValue !== '' && $roomAmenityLabel !== '')
+                                                                                                            <label class="feature-item"><input type="checkbox" name="room_amenities[]" value="{{ $roomAmenityValue }}" @checked(in_array($roomAmenityValue, $roomAmenityValues, true))> {{ $roomAmenityLabel }}</label>
+                                                                                                        @endif
+                                                                                                    @endforeach
+                                                                                                </div>
+                                                                                                <div class="feature-checklist">
+                                                                                                    @foreach ($bathroomAmenityOptionsCollection as $bathroomAmenityOption)
+                                                                                                        @php
+                                                                                                            $bathroomAmenityValue = trim((string) ($bathroomAmenityOption['value'] ?? ''));
+                                                                                                            $bathroomAmenityLabel = trim((string) ($bathroomAmenityOption['label'] ?? $bathroomAmenityValue));
+                                                                                                        @endphp
+                                                                                                        @if ($bathroomAmenityValue !== '' && $bathroomAmenityLabel !== '')
+                                                                                                            <label class="feature-item"><input type="checkbox" name="bathroom_amenities[]" value="{{ $bathroomAmenityValue }}" @checked(in_array($bathroomAmenityValue, $bathroomAmenityValues, true))> {{ $bathroomAmenityLabel }}</label>
+                                                                                                        @endif
+                                                                                                    @endforeach
+                                                                                                </div>
+                                                                                                <div class="inline-actions">
+                                                                                                    <button class="btn btn-secondary js-row-update" type="submit">Update Room</button>
+                                                                                                    <button class="btn btn-secondary" type="button" data-close-room-edit data-room-edit-id="{{ $roomId }}">Cancel Edit</button>
+                                                                                                </div>
+                                                                                            </form>
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                @endforeach
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                @endif
+                                                @if ($categoryKey === 'accommodation')
                                                     @php
                                                         $showInlineRoomRow = $showCreateRoomForm && (string) old('vendor_property_id') === (string) $propertyId;
                                                     @endphp
                                                     <tr data-inline-room-row="{{ $propertyId }}" @if (!$showInlineRoomRow) hidden @endif>
-                                                        <td colspan="4">
+                                                        <td colspan="3">
                                                             <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/rooms/create" data-inline-room-form="{{ $propertyId }}">
                                                                 @csrf
                                                                 <input type="hidden" name="room_form_intent" value="1">
@@ -5257,23 +5249,6 @@
                         if (!editId) return;
                         const form = document.querySelector('[data-property-edit-form="' + editId + '"]');
                         if (form) form.hidden = true;
-                    });
-                });
-
-                document.querySelectorAll('[data-toggle-property-subsection]').forEach((button) => {
-                    button.addEventListener('click', function () {
-                        const propertyId = String(button.getAttribute('data-property-subsection-id') || '').trim();
-                        if (!propertyId) {
-                            return;
-                        }
-                        const target = document.querySelector('[data-property-subsection="' + propertyId + '"]');
-                        if (!target) {
-                            return;
-                        }
-                        const willShow = target.hidden;
-                        target.hidden = !willShow;
-                        button.textContent = willShow ? 'Hide Details' : 'Show Details';
-                        button.setAttribute('aria-expanded', willShow ? 'true' : 'false');
                     });
                 });
 

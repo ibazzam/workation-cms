@@ -1476,11 +1476,13 @@
     <main class="page" data-api-base="{{ $apiBase }}">
         <section class="hero">
             <span class="eyebrow">Partner Access</span>
+                    $oldBathroomAmenities = collect(old('bathroom_amenities', []))->map(fn ($item) => (string) $item)->all();
             <h1>Vendor Portal</h1>
             <p>Use a valid vendor bearer token to check vendor-facing APIs and account-level data.</p>
             <div class="hero-links">
                 <a class="hero-link" href="/">Back to Home</a>
                 <a class="hero-link" href="/admin">Go to Admin Portal</a>
+                    $bathroomAmenityOptionsCollection = collect($bathroomAmenityOptions ?? []);
                 <a class="hero-link" href="{{ $apiBase }}/api/v1/ops/metrics" target="_blank" rel="noopener">Open Public Metrics</a>
             </div>
             <div class="auth-bar">
@@ -1853,13 +1855,11 @@
                     $oldPropertyAmenities = collect(old('property_amenities', []))->map(fn ($item) => (string) $item)->all();
                     $oldPropertyFeatures = collect(old('property_features', []))->map(fn ($item) => (string) $item)->all();
                     $oldRoomAmenities = collect(old('room_amenities', []))->map(fn ($item) => (string) $item)->all();
-                    $oldBathroomAmenities = collect(old('bathroom_amenities', []))->map(fn ($item) => (string) $item)->all();
                     $transportModeOptionsCollection = collect($transportModeOptions ?? []);
                     $transportModeOptionGroups = $transportModeOptionsCollection
                         ->groupBy(fn ($item) => strtolower(trim((string) ($item['group'] ?? 'other'))));
                     $accommodationFacilityOptionsCollection = collect($accommodationFacilityOptions ?? []);
                     $roomAmenityOptionsCollection = collect($roomAmenityOptions ?? []);
-                    $bathroomAmenityOptionsCollection = collect($bathroomAmenityOptions ?? []);
                     $propertyAmenityOptionsCollection = collect($propertyAmenityOptions ?? [])->values();
                     if ($propertyAmenityOptionsCollection->isEmpty()) {
                         $propertyAmenityOptionsCollection = $accommodationFacilityOptionsCollection->values();

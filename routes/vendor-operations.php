@@ -401,6 +401,7 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             'location_country' => trim((string) ($validated['location_country'] ?? '')),
             'location_state' => trim((string) ($validated['location_state'] ?? '')),
             'location_city' => trim((string) ($validated['location_city'] ?? '')),
+            'location_ward' => trim((string) ($validated['location_ward'] ?? '')),
             'address_line' => trim((string) ($validated['address_line'] ?? '')),
             'building_house_lot' => trim((string) ($validated['building_house_lot'] ?? '')),
             'street' => trim((string) ($validated['street'] ?? '')),
@@ -918,6 +919,9 @@ Route::get('/vendor', function () {
 
     $vendorCategoryMap = vendorPortalCategoryMap();
     $selectedVendorCategories = vendorPortalSelectedCategories($vendorUser);
+    if ($selectedVendorCategories === []) {
+        $selectedVendorCategories = ['accommodation'];
+    }
     $vendorOnboardingStep = ($vendorUser instanceof User && Schema::hasColumn('users', 'vendor_onboarding_step'))
         ? max(1, min(4, (int) ($vendorUser->vendor_onboarding_step ?? 1)))
         : 1;
@@ -1543,6 +1547,7 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'location_country' => ['nullable', 'string', 'max:90'],
         'location_state' => ['nullable', 'string', 'max:120'],
         'location_city' => ['nullable', 'string', 'max:120'],
+        'location_ward' => ['nullable', 'string', 'max:120'],
         'address_line' => ['nullable', 'string', 'max:255'],
         'building_house_lot' => ['nullable', 'string', 'max:160'],
         'street' => ['nullable', 'string', 'max:160'],
@@ -1607,6 +1612,13 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
     }
 
     $allowedForUser = vendorPortalSelectedCategories($vendorUser);
+    if ($allowedForUser === []) {
+        $allowedForUser = ['accommodation'];
+        if ($vendorUser instanceof User && Schema::hasColumn('users', 'portal_service_categories')) {
+            $vendorUser->portal_service_categories = json_encode($allowedForUser);
+            $vendorUser->save();
+        }
+    }
     if (!in_array($canonicalListingCategory, $allowedForUser, true)) {
         return back()->withErrors(['profile' => 'Select category in onboarding before creating this listing.']);
     }
@@ -1665,10 +1677,11 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
     $locationCountry = trim((string) ($validated['location_country'] ?? ''));
     $locationState = trim((string) ($validated['location_state'] ?? ''));
     $locationCity = trim((string) ($validated['location_city'] ?? ''));
+    $locationWard = trim((string) ($validated['location_ward'] ?? ''));
     $addressLine = trim((string) ($validated['address_line'] ?? ''));
     $buildingHouseLot = trim((string) ($validated['building_house_lot'] ?? ''));
     $street = trim((string) ($validated['street'] ?? ''));
-    $locationParts = array_values(array_filter([$street, $locationCity, $locationState, $locationCountry], static fn (string $item): bool => $item !== ''));
+    $locationParts = array_values(array_filter([$street, $locationWard, $locationCity, $locationState, $locationCountry], static fn (string $item): bool => $item !== ''));
     $locationFromStructuredFields = implode(', ', $locationParts);
     $resolvedLocation = $locationFromStructuredFields !== '' ? $locationFromStructuredFields : trim((string) ($validated['location'] ?? ''));
 
@@ -1757,6 +1770,7 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'location_country' => ['nullable', 'string', 'max:90'],
         'location_state' => ['nullable', 'string', 'max:120'],
         'location_city' => ['nullable', 'string', 'max:120'],
+        'location_ward' => ['nullable', 'string', 'max:120'],
         'address_line' => ['nullable', 'string', 'max:255'],
         'building_house_lot' => ['nullable', 'string', 'max:160'],
         'street' => ['nullable', 'string', 'max:160'],
@@ -1895,10 +1909,11 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
     $locationCountry = trim((string) ($validated['location_country'] ?? ''));
     $locationState = trim((string) ($validated['location_state'] ?? ''));
     $locationCity = trim((string) ($validated['location_city'] ?? ''));
+    $locationWard = trim((string) ($validated['location_ward'] ?? ''));
     $addressLine = trim((string) ($validated['address_line'] ?? ''));
     $buildingHouseLot = trim((string) ($validated['building_house_lot'] ?? ''));
     $street = trim((string) ($validated['street'] ?? ''));
-    $locationParts = array_values(array_filter([$street, $locationCity, $locationState, $locationCountry], static fn (string $item): bool => $item !== ''));
+    $locationParts = array_values(array_filter([$street, $locationWard, $locationCity, $locationState, $locationCountry], static fn (string $item): bool => $item !== ''));
     $locationFromStructuredFields = implode(', ', $locationParts);
     $resolvedLocation = $locationFromStructuredFields !== '' ? $locationFromStructuredFields : trim((string) ($validated['location'] ?? ''));
 

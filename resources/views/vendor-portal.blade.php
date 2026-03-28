@@ -621,6 +621,17 @@
             border-bottom: 0;
         }
 
+        .ops-table.is-compact th,
+        .ops-table.is-compact td {
+            padding: 7px 8px;
+        }
+
+        .ops-table.is-compact th:last-child,
+        .ops-table.is-compact td:last-child {
+            width: 1%;
+            white-space: nowrap;
+        }
+
         .ops-empty {
             padding: 10px;
             color: var(--muted);
@@ -974,6 +985,56 @@
         .listing-cell-actions {
             display: grid;
             gap: 8px;
+        }
+
+        .listing-summary-line {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .listing-cell-main {
+            min-width: 240px;
+        }
+
+        .listing-cell-actions-cell {
+            min-width: 280px;
+        }
+
+        .listing-summary-line strong {
+            margin-right: 4px;
+        }
+
+        .listing-actions-inline {
+            align-items: center;
+        }
+
+        .listing-status-chip.is-active {
+            border-color: #9fd4b3;
+            background: #edf9f1;
+            color: #215336;
+        }
+
+        .listing-status-chip.is-inactive {
+            border-color: #e6c9c9;
+            background: #fff3f3;
+            color: #8a2f2f;
+        }
+
+        .listing-status-chip.is-neutral {
+            border-color: #d7e0e6;
+            background: #f7fbff;
+            color: #3a5b78;
+        }
+
+        .room-summary-line {
+            color: #3a5166;
+            white-space: nowrap;
+        }
+
+        .listing-actions-inline form {
+            margin: 0;
         }
 
         .update-row-form,
@@ -1363,6 +1424,20 @@
 
             .listing-category-shortcuts .btn {
                 width: 100%;
+            }
+
+            .listing-cell-actions-cell {
+                min-width: 0;
+            }
+
+            .ops-table.is-compact th:last-child,
+            .ops-table.is-compact td:last-child {
+                white-space: normal;
+                width: auto;
+            }
+
+            .room-summary-line {
+                white-space: normal;
             }
         }
     </style>
@@ -1871,8 +1946,8 @@
                     <form id="propertyCreateForm" class="ops-form" method="POST" action="/portal/vendor/properties/create" @if (!$showCreatePropertyForm) hidden @endif>
                         @csrf
                         <input type="hidden" name="property_form_intent" value="1">
-                        <p class="guided-wizard-title" id="propertyCreateFormTitle">Create New Listing</p>
-                        <p class="guided-wizard-subtitle" id="propertyCreateFormSubtitle">Fill the listing basics below and save.</p>
+                        <p class="guided-wizard-title" id="propertyCreateFormTitle">Accommodation Enlisting</p>
+                        <p class="guided-wizard-subtitle" id="propertyCreateFormSubtitle">Fill required fields and save.</p>
                         <div class="ops-form-grid">
                             <div class="ops-field" hidden>
                                 <label for="property_listing_category">Listing Category</label>
@@ -1881,26 +1956,6 @@
                                         <option value="{{ $categoryKey }}" @selected(old('listing_category') === $categoryKey) @disabled(!in_array($categoryKey, $selectedVendorCategories, true))>{{ $categoryLabel }}</option>
                                     @endforeach
                                 </select>
-                                <p id="propertyCategoryScopeNote" class="category-scope-note">Category-specific fields will change based on your selection.</p>
-                                @php
-                                    $categoryViewCopy = [
-                                        'accommodation' => 'Use this view for stays and properties where guests can book space and rooms.',
-                                        'transport' => 'Use this view for transfers and transport options with route and capacity details.',
-                                        'excursion' => 'Use this view for activities and guided experiences with participant capacity.',
-                                        'remote_workspace' => 'Use this view for coworking and remote-work listings with usage capacity.',
-                                        'resort_day_visit' => 'Use this view for day access packages and visit-based resort offerings.',
-                                        'restaurant' => 'Use this view for dining listings with seating and service coverage details.',
-                                        'vehicle_rental' => 'Use this view for rental vehicles with age, capacity, and service constraints.',
-                                    ];
-                                @endphp
-                                <div class="category-view-panels" id="propertyCategoryViews" aria-live="polite">
-                                    @foreach ($vendorCategoryMap as $categoryKey => $categoryLabel)
-                                        <div class="category-view-panel" data-category-view="{{ $categoryKey }}" hidden>
-                                            <strong>{{ $categoryLabel }} Enlist View</strong>
-                                            <p>{{ $categoryViewCopy[$categoryKey] ?? ('Use this view to complete ' . $categoryLabel . ' listing details.') }}</p>
-                                        </div>
-                                    @endforeach
-                                </div>
                             </div>
                             <div class="ops-field ops-field-wide">
                                 <label for="property_name">Name</label>
@@ -1928,21 +1983,36 @@
                                 </select>
                             </div>
                             <div class="ops-field ops-field-wide" data-category-scope="geo">
-                                <label for="address_line">Exact Address</label>
-                                <input id="address_line" name="address_line" class="ops-input" type="text" maxlength="255" value="{{ old('address_line') }}" placeholder="Street, house/building name, nearby landmark" required>
+                                <label for="address_line">Address Line</label>
+                                <input id="address_line" name="address_line" class="ops-input" type="text" maxlength="255" value="{{ old('address_line') }}" placeholder="Primary address line or landmark">
                             </div>
                             <div class="ops-field" data-category-scope="geo">
-                                <label for="map_latitude">Map Latitude</label>
-                                <input id="map_latitude" name="map_latitude" class="ops-input" type="number" min="-90" max="90" step="0.000001" value="{{ old('map_latitude') }}" placeholder="4.1755">
+                                <label for="property_building_house_lot">Building / House / Lot No.</label>
+                                <input id="property_building_house_lot" name="building_house_lot" class="ops-input" type="text" maxlength="160" value="{{ old('building_house_lot') }}" placeholder="e.g. Lily House, Lot 1142">
                             </div>
                             <div class="ops-field" data-category-scope="geo">
-                                <label for="map_longitude">Map Longitude</label>
-                                <input id="map_longitude" name="map_longitude" class="ops-input" type="number" min="-180" max="180" step="0.000001" value="{{ old('map_longitude') }}" placeholder="73.5093">
+                                <label for="property_street_name">Street</label>
+                                <input id="property_street_name" name="street" class="ops-input" type="text" maxlength="160" value="{{ old('street') }}" placeholder="Street / Road">
                             </div>
                             <div class="ops-field" data-category-scope="geo">
-                                <label for="map_place_id">Map Place ID (optional)</label>
-                                <input id="map_place_id" name="map_place_id" class="ops-input" type="text" maxlength="190" value="{{ old('map_place_id') }}" placeholder="Generated from pin-drop">
+                                <label for="property_post_code">Post Code</label>
+                                <input id="property_post_code" name="post_code" class="ops-input" type="text" maxlength="20" value="{{ old('post_code') }}" placeholder="Post code">
                             </div>
+                            <div class="ops-field" data-category-scope="geo">
+                                <label for="property_contact_name">Property Contact Name</label>
+                                <input id="property_contact_name" name="property_contact_name" class="ops-input" type="text" maxlength="120" value="{{ old('property_contact_name') }}" placeholder="On-site contact person">
+                            </div>
+                            <div class="ops-field" data-category-scope="geo">
+                                <label for="property_contact_number">Property Contact Number</label>
+                                <input id="property_contact_number" name="property_contact_number" class="ops-input" type="text" maxlength="60" value="{{ old('property_contact_number') }}" placeholder="Phone / WhatsApp">
+                            </div>
+                            <div class="ops-field" data-category-scope="geo">
+                                <label for="property_contact_email">Property Contact Email</label>
+                                <input id="property_contact_email" name="property_contact_email" class="ops-input" type="email" maxlength="190" value="{{ old('property_contact_email') }}" placeholder="property@example.com">
+                            </div>
+                            <input id="map_latitude" name="map_latitude" type="hidden" value="{{ old('map_latitude') }}">
+                            <input id="map_longitude" name="map_longitude" type="hidden" value="{{ old('map_longitude') }}">
+                            <input id="map_place_id" name="map_place_id" type="hidden" value="{{ old('map_place_id') }}">
                             <div class="ops-field" data-category-scope="capacity">
                                 <label for="property_base_price">Base Price (MVR)</label>
                                 <input id="property_base_price" name="base_price" class="ops-input" type="number" min="0" step="0.01" value="{{ old('base_price') }}">
@@ -2278,7 +2348,7 @@
                                 <div class="map-picker">
                                     <div id="propertyMap" aria-label="Map picker"></div>
                                 </div>
-                                <p class="map-help">Click on the map to drop a pin for exact location. Latitude and longitude update automatically.</p>
+                                <p class="map-help">Click the map to drop a pin. Coordinates are captured automatically.</p>
                             </div>
                         </div>
                         <p class="standards-note">International listing standard: fields adapt to selected category. Create one property at a time, then add rooms under that property.</p>
@@ -2308,11 +2378,10 @@
                                 <p class="ops-empty">No {{ strtolower((string) $categoryLabel) }} listings yet.</p>
                             @else
                                 <div class="ops-table-wrap">
-                                    <table class="ops-table" aria-label="{{ $categoryLabel }} listings table">
+                                    <table class="ops-table is-compact" aria-label="{{ $categoryLabel }} listings table">
                                         <thead>
                                             <tr>
                                                 <th>Listing</th>
-                                                <th>Base Details</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -2344,89 +2413,55 @@
                                                     }
                                                     $transportTripType = strtolower((string) ($propertyDetails['transport_trip_type'] ?? ''));
                                                     $transportPricingModel = strtolower((string) ($propertyDetails['transport_pricing_model'] ?? ''));
+                                                    $listingStatus = strtoupper((string) ($property->status ?? 'active'));
+                                                    $listingType = strtoupper((string) ($property->property_type ?? 'N/A'));
                                                 @endphp
-                                                <tr>
+                                                <tr data-property-row="{{ $propertyId }}">
                                                     <td>
-                                                        <strong>{{ $property->name }}</strong><br>
-                                                        ID: {{ $propertyId }}<br>
-                                                        {{ strtoupper((string) ($property->property_type ?? 'N/A')) }}
+                                                        <div class="listing-summary-line">
+                                                            <strong>{{ $property->name }}</strong>
+                                                            <span class="ops-chip">ID {{ $propertyId }}</span>
+                                                            <span class="ops-chip">{{ $listingType }}</span>
+                                                            <span class="ops-chip">{{ $listingStatus }}</span>
+                                                            @if ($categoryKey === 'accommodation')
+                                                                <span class="ops-chip">Rooms: {{ $propertyRooms->count() }}</span>
+                                                            @endif
+                                                        </div>
                                                     </td>
-                                                    <td>
-                                                        {{ $property->location ?: 'N/A' }}<br>
-                                                        @if ($categoryKey === 'accommodation')
-                                                            Room pricing and occupancy configured at room level.
-                                                        @elseif ($categoryKey === 'transport')
-                                                            @if ($transportPricingBasis === 'per_seat')
-                                                                {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($property->base_price ?? 0), 2) }} per seat<br>
-                                                            @elseif ($transportPricingModel === 'hourly')
-                                                                Hourly Hire: {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($propertyDetails['hourly_rate'] ?? 0), 2) }} / hour<br>
-                                                            @elseif ($transportPricingModel === 'daily')
-                                                                Daily Hire: {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($propertyDetails['daily_rate'] ?? 0), 2) }} / day<br>
-                                                            @else
-                                                                {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($property->base_price ?? 0), 2) }} per trip<br>
-                                                            @endif
-                                                            {{ $transportPricingBasis === 'per_seat' ? 'Seat Capacity' : 'Max Passengers' }}: {{ (int) ($property->max_guests ?? 0) }}
-                                                            @if ($transportTripType === 'round_trip')
-                                                                <br>Trip Type: Round Trip
-                                                            @elseif ($transportTripType === 'one_way')
-                                                                <br>Trip Type: One-way
-                                                            @endif
-                                                            @if (!empty($propertyDetails['departure_location']))
-                                                                <br>Departure: {{ (string) $propertyDetails['departure_location'] }}
-                                                            @endif
-                                                            @if (!empty($propertyDetails['departure_date']))
-                                                                <br>Date: {{ (string) $propertyDetails['departure_date'] }}
-                                                            @endif
-                                                            @if (!empty($propertyDetails['departure_time']))
-                                                                <br>Departure Time: {{ (string) $propertyDetails['departure_time'] }}
-                                                            @endif
-                                                            @if (!empty($propertyDetails['reporting_lead_minutes']) || (string) ($propertyDetails['reporting_lead_minutes'] ?? '') === '0')
-                                                                <br>Report Before Departure: {{ (int) $propertyDetails['reporting_lead_minutes'] }} min
-                                                            @elseif (!empty($propertyDetails['reporting_time']))
-                                                                <br>Reporting Time: {{ (string) $propertyDetails['reporting_time'] }}
-                                                            @endif
-                                                            @if (!empty($propertyDetails['trip_duration_minutes']))
-                                                                <br>Trip Duration: {{ (int) $propertyDetails['trip_duration_minutes'] }} min
-                                                            @endif
-                                                            @if (!empty($propertyDetails['vehicle_name']))
-                                                                <br>Vehicle: {{ (string) $propertyDetails['vehicle_name'] }}
-                                                            @endif
-                                                        @else
-                                                            {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($property->base_price ?? 0), 2) }}<br>
-                                                            Guests/Capacity: {{ (int) ($property->max_guests ?? 0) }}
-                                                        @endif
-                                                    </td>
+                                                            $listingStatusClass = 'is-neutral';
+                                                            if (strtolower($listingStatus) === 'active') {
+                                                                $listingStatusClass = 'is-active';
+                                                            } elseif (strtolower($listingStatus) === 'inactive') {
+                                                                $listingStatusClass = 'is-inactive';
+                                                            }
                                                     <td>
                                                         <div class="listing-cell-actions">
-                                                            <div class="inline-actions">
+                                                            <td class="listing-cell-main">
                                                                 <button class="btn btn-secondary" type="button" data-open-property-edit data-property-edit-id="{{ $propertyId }}" data-property-edit-category="{{ $editCategory }}">Edit Listing</button>
                                                                 @if ($categoryKey === 'accommodation')
                                                                     <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ $propertyId }}">Add Room</button>
                                                                 @endif
-                                                                <form method="POST" action="/portal/vendor/properties/{{ $propertyId }}/delete" onsubmit="return confirm('Remove this listing?');">
+                                                                    <span class="ops-chip listing-status-chip {{ $listingStatusClass }}">{{ $listingStatus }}</span>
                                                                     @csrf
                                                                     <button class="btn btn-danger" type="submit">Remove Listing</button>
                                                                 </form>
                                                             </div>
-                                                            <form class="inline-table-form media-upload-row" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
-                                                                @csrf
-                                                                <input type="hidden" name="entity_type" value="property">
-                                                                <input type="hidden" name="entity_id" value="{{ $propertyId }}">
-                                                                <input class="ops-input" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
-                                                                <input class="ops-input" name="alt_text" type="text" maxlength="190" placeholder="Listing photo alt text" required>
-                                                                <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Set as primary</label>
-                                                                <button class="btn btn-secondary" type="submit">Upload Listing Photo</button>
-                                                            </form>
                                                             <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/properties/{{ $propertyId }}/update" data-property-edit-form="{{ $propertyId }}" data-property-edit-category="{{ $editCategory }}" hidden>
-                                                                @csrf
+                                                            <td class="listing-cell-actions-cell">
                                                                 <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $property->name }}" required>
                                                                 <input class="ops-input" name="location_country" type="text" maxlength="90" value="{{ (string) ($propertyDetails['location_country'] ?? '') }}" placeholder="Country" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="location_state" type="text" maxlength="120" value="{{ (string) ($propertyDetails['location_state'] ?? '') }}" placeholder="State / Province / Atoll" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="location_city" type="text" maxlength="120" value="{{ (string) ($propertyDetails['location_city'] ?? '') }}" placeholder="City / Island" data-property-edit-scope="geo">
-                                                                <input class="ops-input" name="address_line" type="text" maxlength="255" value="{{ (string) ($propertyDetails['address_line'] ?? '') }}" placeholder="Exact Address" data-property-edit-scope="geo">
-                                                                <input class="ops-input" name="map_latitude" type="number" min="-90" max="90" step="0.000001" value="{{ (string) ($propertyDetails['map_latitude'] ?? '') }}" placeholder="Latitude" data-property-edit-scope="geo">
-                                                                <input class="ops-input" name="map_longitude" type="number" min="-180" max="180" step="0.000001" value="{{ (string) ($propertyDetails['map_longitude'] ?? '') }}" placeholder="Longitude" data-property-edit-scope="geo">
-                                                                <input class="ops-input" name="map_place_id" type="text" maxlength="190" value="{{ (string) ($propertyDetails['map_place_id'] ?? '') }}" placeholder="Map Place ID" data-property-edit-scope="geo">
+                                                                <input class="ops-input" name="address_line" type="text" maxlength="255" value="{{ (string) ($propertyDetails['address_line'] ?? '') }}" placeholder="Address line" data-property-edit-scope="geo">
+                                                                <input class="ops-input" name="building_house_lot" type="text" maxlength="160" value="{{ (string) ($propertyDetails['building_house_lot'] ?? '') }}" placeholder="Building / House / Lot No." data-property-edit-scope="geo">
+                                                                <input class="ops-input" name="street" type="text" maxlength="160" value="{{ (string) ($propertyDetails['street'] ?? '') }}" placeholder="Street" data-property-edit-scope="geo">
+                                                                <input class="ops-input" name="post_code" type="text" maxlength="20" value="{{ (string) ($propertyDetails['post_code'] ?? '') }}" placeholder="Post code" data-property-edit-scope="geo">
+                                                                <input class="ops-input" name="property_contact_name" type="text" maxlength="120" value="{{ (string) ($propertyDetails['property_contact_name'] ?? '') }}" placeholder="Property Contact Name" data-property-edit-scope="geo">
+                                                                <input class="ops-input" name="property_contact_number" type="text" maxlength="60" value="{{ (string) ($propertyDetails['property_contact_number'] ?? '') }}" placeholder="Property Contact Number" data-property-edit-scope="geo">
+                                                                <input class="ops-input" name="property_contact_email" type="email" maxlength="190" value="{{ (string) ($propertyDetails['property_contact_email'] ?? '') }}" placeholder="Property Contact Email" data-property-edit-scope="geo">
+                                                                <input name="map_latitude" type="hidden" value="{{ (string) ($propertyDetails['map_latitude'] ?? '') }}">
+                                                                <input name="map_longitude" type="hidden" value="{{ (string) ($propertyDetails['map_longitude'] ?? '') }}">
+                                                                <input name="map_place_id" type="hidden" value="{{ (string) ($propertyDetails['map_place_id'] ?? '') }}">
                                                                 <textarea class="ops-textarea" name="description" maxlength="3000" placeholder="Description">{{ (string) ($property->description ?? '') }}</textarea>
                                                                 <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($property->base_price ?? 0) }}" data-property-edit-scope="capacity">
                                                                 <input class="ops-input" name="max_guests" type="number" min="0" max="10000" value="{{ (int) ($property->max_guests ?? 0) }}" data-property-edit-scope="capacity">
@@ -2574,20 +2609,18 @@
                                                 </tr>
                                                 @if ($categoryKey === 'accommodation')
                                                     <tr class="accommodation-room-stretch-row">
-                                                        <td colspan="3">
+                                                        <td colspan="2">
                                                             <div class="accommodation-room-stretch">
                                                                 <p class="property-subsection-head">Rooms Under This Property ({{ $propertyRooms->count() }})</p>
                                                                 @if ($propertyRooms->isEmpty())
                                                                     <p class="ops-empty">No rooms for this listing yet.</p>
                                                                 @else
                                                                     <div class="ops-table-wrap">
-                                                                        <table class="ops-table" aria-label="Rooms for property {{ $propertyId }}">
+                                                                        <table class="ops-table is-compact" aria-label="Rooms for property {{ $propertyId }}">
                                                                             <thead>
                                                                                 <tr>
                                                                                     <th>Room</th>
-                                                                                    <th>Inventory</th>
-                                                                                    <th>Occupancy & Pricing</th>
-                                                                                    <th>Media Upload</th>
+                                                                                    <th>Summary</th>
                                                                                     <th>Actions</th>
                                                                                 </tr>
                                                                             </thead>
@@ -2608,31 +2641,16 @@
                                                                                     @endphp
                                                                                     <tr>
                                                                                         <td>
-                                                                                            <strong>{{ $room->name }}</strong><br>
-                                                                                            Room ID: {{ $roomId }}
+                                                                                            <div class="listing-summary-line">
+                                                                                                <strong>{{ $room->name }}</strong>
+                                                                                                <span class="ops-chip">Room ID {{ $roomId }}</span>
+                                                                                            </div>
                                                                                         </td>
                                                                                         <td>
-                                                                                            Qty: {{ (int) ($room->quantity ?? 0) }}<br>
-                                                                                            Max: {{ (int) ($room->max_occupancy ?? 0) }}
+                                                                                            <span class="room-summary-line">Qty: {{ (int) ($room->quantity ?? 0) }} | Max: {{ (int) ($room->max_occupancy ?? 0) }} | Base: {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->base_price ?? 0), 2) }}</span>
                                                                                         </td>
                                                                                         <td>
-                                                                                            Base: {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->base_price ?? 0), 2) }}<br>
-                                                                                            Extra Adult: {{ (int) ($room->extra_person_capacity ?? 0) }} x {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->extra_person_price ?? 0), 2) }}<br>
-                                                                                            Child: {{ (int) ($room->child_capacity ?? 0) }} x {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->child_price ?? 0), 2) }}
-                                                                                        </td>
-                                                                                        <td>
-                                                                                            <form class="inline-table-form media-upload-row" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
-                                                                                                @csrf
-                                                                                                <input type="hidden" name="entity_type" value="room">
-                                                                                                <input type="hidden" name="entity_id" value="{{ $roomId }}">
-                                                                                                <input class="ops-input" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
-                                                                                                <input class="ops-input" name="alt_text" type="text" maxlength="190" placeholder="Room photo alt text" required>
-                                                                                                <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Set as primary</label>
-                                                                                                <button class="btn btn-secondary" type="submit">Upload Room Photo</button>
-                                                                                            </form>
-                                                                                        </td>
-                                                                                        <td>
-                                                                                            <div class="inline-actions">
+                                                                                            <div class="inline-actions listing-actions-inline">
                                                                                                 <button class="btn btn-secondary" type="button" data-open-room-edit data-room-edit-id="{{ $roomId }}">Edit Room</button>
                                                                                                 <form method="POST" action="/portal/vendor/rooms/{{ $roomId }}/delete" onsubmit="return confirm('Remove this room category?');">
                                                                                                     @csrf
@@ -2722,7 +2740,7 @@
                                                         $showInlineRoomRow = $showCreateRoomForm && (string) old('vendor_property_id') === (string) $propertyId;
                                                     @endphp
                                                     <tr data-inline-room-row="{{ $propertyId }}" @if (!$showInlineRoomRow) hidden @endif>
-                                                        <td colspan="3">
+                                                        <td colspan="2">
                                                             <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/rooms/create" data-inline-room-form="{{ $propertyId }}">
                                                                 @csrf
                                                                 <input type="hidden" name="room_form_intent" value="1">
@@ -4123,6 +4141,102 @@
                 locationCity.dataset.selectedValue = "";
             }
 
+            const COUNTRY_MAP_CENTER = {
+                maldives: [3.2028, 73.2207, 8],
+                "sri lanka": [7.8731, 80.7718, 8],
+                india: [20.5937, 78.9629, 5],
+            };
+
+            let locationMapContext = null;
+            const mapGeocodeCache = new Map();
+            let mapLookupRequestId = 0;
+
+            function fallbackMapView(countryRaw) {
+                const key = String(countryRaw || '').trim().toLowerCase();
+                return COUNTRY_MAP_CENTER[key] || [4.1755, 73.5093, 9];
+            }
+
+            function locationSelectionPayload() {
+                const country = String(locationCountry && locationCountry.value || '').trim();
+                const state = String(locationState && locationState.value || '').trim();
+                const city = String(locationCity && locationCity.value || '').trim();
+                const queryParts = [city, state, country].filter(Boolean);
+                const query = queryParts.join(', ');
+                const hasCity = city !== '';
+                const hasState = state !== '';
+                return { country, state, city, query, hasCity, hasState };
+            }
+
+            async function geocodeMapSelection(query) {
+                const cacheKey = String(query || '').trim().toLowerCase();
+                if (cacheKey === '') {
+                    return null;
+                }
+                if (mapGeocodeCache.has(cacheKey)) {
+                    return mapGeocodeCache.get(cacheKey);
+                }
+
+                const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=' + encodeURIComponent(query);
+                try {
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            Accept: 'application/json',
+                        },
+                        cache: 'force-cache',
+                    });
+                    if (!response.ok) {
+                        return null;
+                    }
+                    const rows = await response.json();
+                    if (!Array.isArray(rows) || rows.length === 0) {
+                        return null;
+                    }
+                    const first = rows[0] || {};
+                    const lat = Number(first.lat);
+                    const lng = Number(first.lon);
+                    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                        return null;
+                    }
+                    const point = [lat, lng];
+                    mapGeocodeCache.set(cacheKey, point);
+                    return point;
+                } catch (error) {
+                    return null;
+                }
+            }
+
+            async function centerMapForLocationSelection(forceLookup) {
+                if (!locationMapContext || !locationMapContext.map) {
+                    return;
+                }
+
+                const map = locationMapContext.map;
+                const payload = locationSelectionPayload();
+                const fallback = fallbackMapView(payload.country);
+
+                if (payload.query === '') {
+                    map.flyTo([fallback[0], fallback[1]], fallback[2], { animate: true, duration: 0.35 });
+                    return;
+                }
+
+                const requestId = ++mapLookupRequestId;
+                let targetPoint = null;
+                if (forceLookup || payload.hasCity || payload.hasState) {
+                    targetPoint = await geocodeMapSelection(payload.query);
+                }
+                if (requestId !== mapLookupRequestId) {
+                    return;
+                }
+
+                if (!targetPoint) {
+                    targetPoint = [fallback[0], fallback[1]];
+                }
+
+                const zoom = payload.hasCity ? 13 : (payload.hasState ? 10 : fallback[2]);
+                map.flyTo(targetPoint, zoom, { animate: true, duration: 0.45 });
+            }
+
             function normalizeCategoryKey(value) {
                 return String(value || "")
                     .trim()
@@ -4262,61 +4376,61 @@
 
                 const categoryMeta = {
                     accommodation: {
-                        title: 'Accommodation Enlist Form',
-                        subtitle: 'Add stay-focused listing details. Room occupancy and pricing are configured at room level.',
+                        title: 'Accommodation Enlisting',
+                        subtitle: 'Fill required fields and save.',
                         submit: 'Save Accommodation Listing',
-                        note: 'Accommodation fields are active for this category.',
+                        note: 'Fill required fields and save.',
                         propertyType: 'property',
                     },
                     transport: {
-                        title: 'Transport Enlist Form',
-                        subtitle: 'Add transfer and transport service listing details.',
+                        title: 'Transport Enlisting',
+                        subtitle: 'Fill required fields and save.',
                         submit: 'Save Transport Listing',
-                        note: 'Transport-focused fields are active for this category.',
+                        note: 'Fill required fields and save.',
                         propertyType: 'service',
                     },
                     excursion: {
-                        title: 'Excursion Enlist Form',
-                        subtitle: 'Add activity and guided experience listing details.',
+                        title: 'Excursion Enlisting',
+                        subtitle: 'Fill required fields and save.',
                         submit: 'Save Excursion Listing',
-                        note: 'Excursion-focused fields are active for this category.',
+                        note: 'Fill required fields and save.',
                         propertyType: 'service',
                     },
                     remote_workspace: {
-                        title: 'Remote Workspace Enlist Form',
-                        subtitle: 'Add workspace listing details for remote workers and teams with service coverage context.',
+                        title: 'Remote Workspace Enlisting',
+                        subtitle: 'Fill required fields and save.',
                         submit: 'Save Remote Workspace Listing',
-                        note: 'Remote workspace fields are active for this category.',
+                        note: 'Fill required fields and save.',
                         propertyType: 'service',
                     },
                     resort_day_visit: {
-                        title: 'Resort Day Visit Enlist Form',
-                        subtitle: 'Add day-visit package listing details for resort access.',
+                        title: 'Resort Day Visit Enlisting',
+                        subtitle: 'Fill required fields and save.',
                         submit: 'Save Resort Day Visit Listing',
-                        note: 'Resort day visit fields are active for this category.',
+                        note: 'Fill required fields and save.',
                         propertyType: 'service',
                     },
                     restaurant: {
-                        title: 'Restaurant Enlist Form',
-                        subtitle: 'Add restaurant listing details with seating and service scope.',
+                        title: 'Restaurant Enlisting',
+                        subtitle: 'Fill required fields and save.',
                         submit: 'Save Restaurant Listing',
-                        note: 'Restaurant-focused fields are active for this category.',
+                        note: 'Fill required fields and save.',
                         propertyType: 'service',
                     },
                     vehicle_rental: {
-                        title: 'Vehicle Rental Enlist Form',
-                        subtitle: 'Add rental fleet listing details with vehicle constraints.',
+                        title: 'Vehicle Rental Enlisting',
+                        subtitle: 'Fill required fields and save.',
                         submit: 'Save Vehicle Rental Listing',
-                        note: 'Vehicle-rental-focused fields are active for this category.',
+                        note: 'Fill required fields and save.',
                         propertyType: 'service',
                     },
                 };
 
                 return categoryMeta[normalized] || {
-                    title: fallbackLabel + ' Enlist Form',
-                    subtitle: 'Add listing details specific to ' + fallbackLabel + '.',
+                    title: fallbackLabel + ' Enlisting',
+                    subtitle: 'Fill required fields and save.',
                     submit: 'Save ' + fallbackLabel + ' Listing',
-                    note: 'Category-specific fields will change based on your selection.',
+                    note: 'Fill required fields and save.',
                     propertyType: null,
                 };
             }
@@ -4324,13 +4438,13 @@
             function applyCategoryFormMeta(category, forceType) {
                 const meta = categoryMetaFor(category);
                 if (propertyCreateFormTitle) {
-                    propertyCreateFormTitle.textContent = 'Create New Listing';
+                    propertyCreateFormTitle.textContent = meta.title;
                 }
                 if (propertyCreateFormSubtitle) {
-                    propertyCreateFormSubtitle.textContent = 'Fill the listing basics below and save.';
+                    propertyCreateFormSubtitle.textContent = meta.subtitle;
                 }
                 if (propertyCreateSubmitButton) {
-                    propertyCreateSubmitButton.textContent = 'Save Listing';
+                    propertyCreateSubmitButton.textContent = meta.submit;
                 }
                 if (propertyCategoryScopeNote) {
                     propertyCategoryScopeNote.textContent = meta.note;
@@ -4455,14 +4569,44 @@
 
                 const defaultLat = Number(mapLatitude && mapLatitude.value) || 4.1755;
                 const defaultLng = Number(mapLongitude && mapLongitude.value) || 73.5093;
-                const map = window.L.map(mapEl).setView([defaultLat, defaultLng], 9);
+                const map = window.L.map(mapEl, {
+                    preferCanvas: true,
+                    zoomControl: true,
+                    worldCopyJump: true,
+                    inertia: true,
+                    fadeAnimation: false,
+                    markerZoomAnimation: false,
+                }).setView([defaultLat, defaultLng], 11);
 
-                window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                const cartoLayer = window.L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+                    subdomains: "abcd",
+                    maxZoom: 20,
+                    keepBuffer: 4,
+                    updateWhenIdle: true,
+                    updateWhenZooming: false,
+                    attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
+                });
+                const osmFallbackLayer = window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
                     maxZoom: 19,
+                    keepBuffer: 4,
+                    updateWhenIdle: true,
+                    updateWhenZooming: false,
                     attribution: "&copy; OpenStreetMap contributors"
-                }).addTo(map);
+                });
 
-                let marker = window.L.marker([defaultLat, defaultLng]).addTo(map);
+                cartoLayer.addTo(map);
+                let fallbackActivated = false;
+                cartoLayer.on("tileerror", function () {
+                    if (fallbackActivated) {
+                        return;
+                    }
+                    fallbackActivated = true;
+                    map.removeLayer(cartoLayer);
+                    osmFallbackLayer.addTo(map);
+                });
+
+                let marker = window.L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+                locationMapContext = { map, marker };
 
                 function updateLocationFromMap(latlng) {
                     const lat = Number(latlng.lat.toFixed(6));
@@ -4480,6 +4624,16 @@
                 map.on("click", function (event) {
                     updateLocationFromMap(event.latlng);
                 });
+
+                marker.on("dragend", function () {
+                    updateLocationFromMap(marker.getLatLng());
+                });
+
+                setTimeout(function () {
+                    map.invalidateSize();
+                }, 180);
+
+                centerMapForLocationSelection(false);
             }
 
             async function refreshSummary() {
@@ -4868,12 +5022,18 @@
                 refreshLocationSelectors();
                 getLocationTree().then(function () {
                     refreshLocationSelectors();
+                    centerMapForLocationSelection(true);
                 });
                 locationCountry.addEventListener("change", function () {
                     refreshLocationSelectors();
+                    centerMapForLocationSelection(true);
                 });
                 locationState.addEventListener("change", function () {
                     refreshCitySelector();
+                    centerMapForLocationSelection(true);
+                });
+                locationCity.addEventListener("change", function () {
+                    centerMapForLocationSelection(true);
                 });
             }
 
@@ -5021,15 +5181,15 @@
                 function categoryMetaFor(category) {
                     const normalized = normalizeCategoryKey(category);
                     const metaMap = {
-                        accommodation: ['Accommodation Enlist Form', 'Add stay-focused listing details. Room occupancy and pricing are configured at room level.', 'Save Accommodation Listing', 'Accommodation fields are active for this category.', 'property'],
-                        transport: ['Transport Enlist Form', 'Add transfer and transport service listing details.', 'Save Transport Listing', 'Transport-focused fields are active for this category.', 'service'],
-                        excursion: ['Excursion Enlist Form', 'Add activity and guided experience listing details.', 'Save Excursion Listing', 'Excursion-focused fields are active for this category.', 'service'],
-                        remote_workspace: ['Remote Workspace Enlist Form', 'Add workspace listing details for remote workers and teams with service coverage context.', 'Save Remote Workspace Listing', 'Remote workspace fields are active for this category.', 'service'],
-                        resort_day_visit: ['Resort Day Visit Enlist Form', 'Add day-visit package listing details for resort access.', 'Save Resort Day Visit Listing', 'Resort day visit fields are active for this category.', 'service'],
-                        restaurant: ['Restaurant Enlist Form', 'Add restaurant listing details with seating and service scope.', 'Save Restaurant Listing', 'Restaurant-focused fields are active for this category.', 'service'],
-                        vehicle_rental: ['Vehicle Rental Enlist Form', 'Add rental fleet listing details with vehicle constraints.', 'Save Vehicle Rental Listing', 'Vehicle-rental-focused fields are active for this category.', 'service']
+                        accommodation: ['Accommodation Enlisting', 'Fill required fields and save.', 'Save Accommodation Listing', 'Fill required fields and save.', 'property'],
+                        transport: ['Transport Enlisting', 'Fill required fields and save.', 'Save Transport Listing', 'Fill required fields and save.', 'service'],
+                        excursion: ['Excursion Enlisting', 'Fill required fields and save.', 'Save Excursion Listing', 'Fill required fields and save.', 'service'],
+                        remote_workspace: ['Remote Workspace Enlisting', 'Fill required fields and save.', 'Save Remote Workspace Listing', 'Fill required fields and save.', 'service'],
+                        resort_day_visit: ['Resort Day Visit Enlisting', 'Fill required fields and save.', 'Save Resort Day Visit Listing', 'Fill required fields and save.', 'service'],
+                        restaurant: ['Restaurant Enlisting', 'Fill required fields and save.', 'Save Restaurant Listing', 'Fill required fields and save.', 'service'],
+                        vehicle_rental: ['Vehicle Rental Enlisting', 'Fill required fields and save.', 'Save Vehicle Rental Listing', 'Fill required fields and save.', 'service']
                     };
-                    return metaMap[normalized] || ['Create New Listing', 'Choose a category-specific add button to load the right enlist form view.', 'Save Listing', 'Category-specific fields will change based on your selection.', 'service'];
+                    return metaMap[normalized] || ['Listing Enlisting', 'Fill required fields and save.', 'Save Listing', 'Fill required fields and save.', 'service'];
                 }
 
                 function isMarineTransportMode(value) {
@@ -5132,9 +5292,9 @@
                         panel.hidden = normalizeCategoryKey(panel.getAttribute('data-category-view') || '') !== normalized;
                     });
 
-                    if (propertyCreateFormTitle) propertyCreateFormTitle.textContent = 'Create New Listing';
-                    if (propertyCreateFormSubtitle) propertyCreateFormSubtitle.textContent = 'Fill the listing basics below and save.';
-                    if (propertyCreateSubmitButton) propertyCreateSubmitButton.textContent = 'Save Listing';
+                    if (propertyCreateFormTitle) propertyCreateFormTitle.textContent = meta[0];
+                    if (propertyCreateFormSubtitle) propertyCreateFormSubtitle.textContent = meta[1];
+                    if (propertyCreateSubmitButton) propertyCreateSubmitButton.textContent = meta[2];
                     if (propertyCategoryScopeNote) propertyCategoryScopeNote.textContent = meta[3];
                     if (propertyTypeSelect) propertyTypeSelect.value = meta[4];
                     refreshTransportFieldLabels();

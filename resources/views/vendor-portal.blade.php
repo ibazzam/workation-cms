@@ -2415,6 +2415,7 @@
                                                     $transportPricingModel = strtolower((string) ($propertyDetails['transport_pricing_model'] ?? ''));
                                                     $listingStatus = strtoupper((string) ($property->status ?? 'active'));
                                                     $listingType = strtoupper((string) ($property->property_type ?? 'N/A'));
+                                                    $propertyMediaItems = $propertyMediaByPropertyId->get($propertyId, collect());
                                                     $listingStatusClass = 'is-neutral';
                                                     if (strtolower($listingStatus) === 'active') {
                                                         $listingStatusClass = 'is-active';
@@ -2440,6 +2441,7 @@
                                                                 <button class="btn btn-secondary" type="button" data-open-property-edit data-property-edit-id="{{ $propertyId }}" data-property-edit-category="{{ $editCategory }}">Edit Listing</button>
                                                                 @if ($categoryKey === 'accommodation')
                                                                     <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ $propertyId }}">Add Room</button>
+                                                                    <button class="btn btn-secondary" type="button" data-toggle-property-media="{{ $propertyId }}">Manage Media</button>
                                                                 @endif
                                                                 <form method="POST" action="/portal/vendor/properties/{{ $propertyId }}/delete" onsubmit="return confirm('Remove this listing?');">
                                                                     @csrf
@@ -2603,6 +2605,41 @@
                                                                     <button class="btn btn-secondary" type="button" data-close-property-edit data-property-edit-id="{{ $propertyId }}">Cancel Edit</button>
                                                                 </div>
                                                             </form>
+                                                            @if ($categoryKey === 'accommodation')
+                                                                <div class="media-upload-row" data-property-media-panel="{{ $propertyId }}" hidden>
+                                                                    <form class="inline-table-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
+                                                                        @csrf
+                                                                        <input type="hidden" name="entity_type" value="property">
+                                                                        <input type="hidden" name="entity_id" value="{{ $propertyId }}">
+                                                                        <input class="ops-input" name="alt_text" type="text" maxlength="190" value="{{ $property->name }} photo" placeholder="Photo alt text" required>
+                                                                        <input class="ops-input" name="photo" type="file" accept="image/png,image/jpeg,image/webp" required>
+                                                                        <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Primary photo</label>
+                                                                        <button class="btn btn-secondary" type="submit">Upload</button>
+                                                                        <button class="btn btn-secondary" type="button" data-close-property-media="{{ $propertyId }}">Close</button>
+                                                                    </form>
+                                                                    @if ($propertyMediaItems->isEmpty())
+                                                                        <p class="ops-empty">No listing photos uploaded yet.</p>
+                                                                    @else
+                                                                        <div class="gallery-grid">
+                                                                            @foreach ($propertyMediaItems as $media)
+                                                                                @php
+                                                                                    $mediaPath = (string) ($media->file_path ?? '');
+                                                                                    $mediaUrl = str_starts_with($mediaPath, 'http') ? $mediaPath : asset('storage/' . ltrim($mediaPath, '/'));
+                                                                                @endphp
+                                                                                <article class="gallery-card">
+                                                                                    <img src="{{ $mediaUrl }}" alt="{{ (string) ($media->alt_text ?? $property->name) }}">
+                                                                                    <div style="padding:6px 8px; font-size:0.72rem; color:#35506a;">
+                                                                                        {{ (string) ($media->alt_text ?? 'Listing photo') }}
+                                                                                        @if ((bool) ($media->is_primary ?? false))
+                                                                                            <span class="ops-chip" style="margin-left:6px;">Primary</span>
+                                                                                        @endif
+                                                                                    </div>
+                                                                                </article>
+                                                                            @endforeach
+                                                                        </div>
+                                                                    @endif
+                                                                </div>
+                                                            @endif
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -2627,6 +2664,7 @@
                                                                                 @foreach ($propertyRooms as $room)
                                                                                     @php
                                                                                         $roomId = (int) ($room->id ?? 0);
+                                                                                        $roomMediaItems = $roomMediaByRoomId->get($roomId, collect());
                                                                                         $roomAmenityValues = collect(explode(',', (string) ($room->amenities ?? '')))
                                                                                             ->map(static fn ($token) => trim((string) $token))
                                                                                             ->filter(static fn ($token) => $token !== '')
@@ -2651,6 +2689,7 @@
                                                                                         <td>
                                                                                             <div class="inline-actions listing-actions-inline">
                                                                                                 <button class="btn btn-secondary" type="button" data-open-room-edit data-room-edit-id="{{ $roomId }}">Edit Room</button>
+                                                                                                <button class="btn btn-secondary" type="button" data-toggle-room-media="{{ $roomId }}">Manage Media</button>
                                                                                                 <form method="POST" action="/portal/vendor/rooms/{{ $roomId }}/delete" onsubmit="return confirm('Remove this room category?');">
                                                                                                     @csrf
                                                                                                     <button class="btn btn-danger" type="submit">Remove Room</button>
@@ -2723,6 +2762,39 @@
                                                                                                     <button class="btn btn-secondary" type="button" data-close-room-edit data-room-edit-id="{{ $roomId }}">Cancel Edit</button>
                                                                                                 </div>
                                                                                             </form>
+                                                                                            <div class="media-upload-row" data-room-media-panel="{{ $roomId }}" hidden>
+                                                                                                <form class="inline-table-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
+                                                                                                    @csrf
+                                                                                                    <input type="hidden" name="entity_type" value="room">
+                                                                                                    <input type="hidden" name="entity_id" value="{{ $roomId }}">
+                                                                                                    <input class="ops-input" name="alt_text" type="text" maxlength="190" value="{{ $room->name }} photo" placeholder="Photo alt text" required>
+                                                                                                    <input class="ops-input" name="photo" type="file" accept="image/png,image/jpeg,image/webp" required>
+                                                                                                    <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Primary photo</label>
+                                                                                                    <button class="btn btn-secondary" type="submit">Upload</button>
+                                                                                                    <button class="btn btn-secondary" type="button" data-close-room-media="{{ $roomId }}">Close</button>
+                                                                                                </form>
+                                                                                                @if ($roomMediaItems->isEmpty())
+                                                                                                    <p class="ops-empty">No room photos uploaded yet.</p>
+                                                                                                @else
+                                                                                                    <div class="gallery-grid">
+                                                                                                        @foreach ($roomMediaItems as $media)
+                                                                                                            @php
+                                                                                                                $roomMediaPath = (string) ($media->file_path ?? '');
+                                                                                                                $roomMediaUrl = str_starts_with($roomMediaPath, 'http') ? $roomMediaPath : asset('storage/' . ltrim($roomMediaPath, '/'));
+                                                                                                            @endphp
+                                                                                                            <article class="gallery-card">
+                                                                                                                <img src="{{ $roomMediaUrl }}" alt="{{ (string) ($media->alt_text ?? $room->name) }}">
+                                                                                                                <div style="padding:6px 8px; font-size:0.72rem; color:#35506a;">
+                                                                                                                    {{ (string) ($media->alt_text ?? 'Room photo') }}
+                                                                                                                    @if ((bool) ($media->is_primary ?? false))
+                                                                                                                        <span class="ops-chip" style="margin-left:6px;">Primary</span>
+                                                                                                                    @endif
+                                                                                                                </div>
+                                                                                                            </article>
+                                                                                                        @endforeach
+                                                                                                    </div>
+                                                                                                @endif
+                                                                                            </div>
                                                                                         </td>
                                                                                     </tr>
                                                                                 @endforeach
@@ -3356,6 +3428,10 @@
             const propertyEditCancelButtons = Array.from(document.querySelectorAll('[data-close-property-edit]'));
             const roomEditButtons = Array.from(document.querySelectorAll('[data-open-room-edit]'));
             const roomEditCancelButtons = Array.from(document.querySelectorAll('[data-close-room-edit]'));
+            const propertyMediaToggleButtons = Array.from(document.querySelectorAll('[data-toggle-property-media]'));
+            const propertyMediaCloseButtons = Array.from(document.querySelectorAll('[data-close-property-media]'));
+            const roomMediaToggleButtons = Array.from(document.querySelectorAll('[data-toggle-room-media]'));
+            const roomMediaCloseButtons = Array.from(document.querySelectorAll('[data-close-room-media]'));
             const listingCategoryShortcutButtons = Array.from(document.querySelectorAll('[data-listing-category-shortcut]'));
             const propertyListingRows = Array.from(document.querySelectorAll('[data-property-row]'));
             const guidedTrackProperty = document.getElementById("guidedTrackProperty");
@@ -4992,6 +5068,66 @@
                 });
             });
 
+            propertyMediaToggleButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const propertyId = String(button.getAttribute('data-toggle-property-media') || '').trim();
+                    if (!propertyId) {
+                        return;
+                    }
+                    const panel = document.querySelector('[data-property-media-panel="' + propertyId + '"]');
+                    if (!panel) {
+                        return;
+                    }
+                    panel.hidden = !panel.hidden;
+                    if (!panel.hidden) {
+                        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                });
+            });
+
+            propertyMediaCloseButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const propertyId = String(button.getAttribute('data-close-property-media') || '').trim();
+                    if (!propertyId) {
+                        return;
+                    }
+                    const panel = document.querySelector('[data-property-media-panel="' + propertyId + '"]');
+                    if (panel) {
+                        panel.hidden = true;
+                    }
+                });
+            });
+
+            roomMediaToggleButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const roomId = String(button.getAttribute('data-toggle-room-media') || '').trim();
+                    if (!roomId) {
+                        return;
+                    }
+                    const panel = document.querySelector('[data-room-media-panel="' + roomId + '"]');
+                    if (!panel) {
+                        return;
+                    }
+                    panel.hidden = !panel.hidden;
+                    if (!panel.hidden) {
+                        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                });
+            });
+
+            roomMediaCloseButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const roomId = String(button.getAttribute('data-close-room-media') || '').trim();
+                    if (!roomId) {
+                        return;
+                    }
+                    const panel = document.querySelector('[data-room-media-panel="' + roomId + '"]');
+                    if (panel) {
+                        panel.hidden = true;
+                    }
+                });
+            });
+
             listingCategoryShortcutButtons.forEach((button) => {
                 button.addEventListener('click', function () {
                     const categoryKey = String(button.getAttribute('data-listing-category-shortcut') || '');
@@ -5383,6 +5519,44 @@
                         if (roomCreateForm) {
                             roomCreateForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         }
+                    });
+                });
+
+                document.querySelectorAll('[data-toggle-property-media]').forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const propertyId = String(button.getAttribute('data-toggle-property-media') || '').trim();
+                        if (!propertyId) return;
+                        const panel = document.querySelector('[data-property-media-panel="' + propertyId + '"]');
+                        if (!panel) return;
+                        panel.hidden = !panel.hidden;
+                    });
+                });
+
+                document.querySelectorAll('[data-close-property-media]').forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const propertyId = String(button.getAttribute('data-close-property-media') || '').trim();
+                        if (!propertyId) return;
+                        const panel = document.querySelector('[data-property-media-panel="' + propertyId + '"]');
+                        if (panel) panel.hidden = true;
+                    });
+                });
+
+                document.querySelectorAll('[data-toggle-room-media]').forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const roomId = String(button.getAttribute('data-toggle-room-media') || '').trim();
+                        if (!roomId) return;
+                        const panel = document.querySelector('[data-room-media-panel="' + roomId + '"]');
+                        if (!panel) return;
+                        panel.hidden = !panel.hidden;
+                    });
+                });
+
+                document.querySelectorAll('[data-close-room-media]').forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const roomId = String(button.getAttribute('data-close-room-media') || '').trim();
+                        if (!roomId) return;
+                        const panel = document.querySelector('[data-room-media-panel="' + roomId + '"]');
+                        if (panel) panel.hidden = true;
                     });
                 });
 

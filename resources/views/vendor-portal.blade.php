@@ -3142,7 +3142,7 @@
                         $openCount = max(0, $trackedCount - $closedCount);
                         $inventoryTotal = (int) $categorySlots->sum('inventory');
                     @endphp
-                    <article class="ops-category-card" data-category-view="{{ $categoryKey }}">
+                    <article class="ops-category-card" data-ops-category-section="availability-{{ $categoryKey }}">
                         <div class="ops-header">
                             <p class="ops-title">{{ $labelForCategory($categoryKey) }} Availability</p>
                             <span class="ops-chip">{{ $listingCountByCategory[$categoryKey] ?? 0 }} listings</span>
@@ -3389,7 +3389,7 @@
                         $reservationCancelledCount = $categoryReservations->where('status', 'cancelled')->count();
                         $reservationRevenueTotal = (float) $categoryReservations->sum('invoice_total_amount');
                     @endphp
-                    <article class="ops-category-card" data-category-view="{{ $categoryKey }}">
+                    <article class="ops-category-card" data-ops-category-section="reservations-{{ $categoryKey }}">
                         <div class="ops-header">
                             <p class="ops-title">{{ $labelForCategory($categoryKey) }} Reservations</p>
                             <span class="ops-chip">{{ $categoryReservations->count() }} total</span>

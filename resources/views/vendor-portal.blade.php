@@ -4150,6 +4150,19 @@
             const mapGeocodeCache = new Map();
             let mapLookupRequestId = 0;
 
+            function refreshLocationMapViewport() {
+                if (!locationMapContext || !locationMapContext.map) {
+                    return;
+                }
+                const map = locationMapContext.map;
+                setTimeout(function () {
+                    map.invalidateSize();
+                    centerMapForLocationSelection(false);
+                }, 120);
+            }
+
+            window.__vendorPortalRefreshLocationMap = refreshLocationMapViewport;
+
             function fallbackMapView(countryRaw) {
                 const key = String(countryRaw || '').trim().toLowerCase();
                 return COUNTRY_MAP_CENTER[key] || [4.1755, 73.5093, 9];
@@ -4213,9 +4226,13 @@
                 const map = locationMapContext.map;
                 const payload = locationSelectionPayload();
                 const fallback = fallbackMapView(payload.country);
+                const fallbackPoint = [fallback[0], fallback[1]];
+                const fallbackZoom = payload.hasCity ? 11 : (payload.hasState ? 9 : fallback[2]);
+
+                // Move immediately so the map always responds even if geocoding is slow.
+                map.flyTo(fallbackPoint, fallbackZoom, { animate: true, duration: 0.28 });
 
                 if (payload.query === '') {
-                    map.flyTo([fallback[0], fallback[1]], fallback[2], { animate: true, duration: 0.35 });
                     return;
                 }
 
@@ -4229,7 +4246,7 @@
                 }
 
                 if (!targetPoint) {
-                    targetPoint = [fallback[0], fallback[1]];
+                    return;
                 }
 
                 const zoom = payload.hasCity ? 13 : (payload.hasState ? 10 : fallback[2]);
@@ -4511,6 +4528,8 @@
                     document.getElementById('property_name').focus();
                 }
 
+                refreshLocationMapViewport();
+
                 applyPropertyCategoryFilter(normalizedCategory || 'all');
             }
 
@@ -4577,15 +4596,7 @@
                     markerZoomAnimation: false,
                 }).setView([defaultLat, defaultLng], 11);
 
-                const cartoLayer = window.L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-                    subdomains: "abcd",
-                    maxZoom: 20,
-                    keepBuffer: 4,
-                    updateWhenIdle: true,
-                    updateWhenZooming: false,
-                    attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
-                });
-                const osmFallbackLayer = window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                const osmLayer = window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
                     maxZoom: 19,
                     keepBuffer: 4,
                     updateWhenIdle: true,
@@ -4593,16 +4604,7 @@
                     attribution: "&copy; OpenStreetMap contributors"
                 });
 
-                cartoLayer.addTo(map);
-                let fallbackActivated = false;
-                cartoLayer.on("tileerror", function () {
-                    if (fallbackActivated) {
-                        return;
-                    }
-                    fallbackActivated = true;
-                    map.removeLayer(cartoLayer);
-                    osmFallbackLayer.addTo(map);
-                });
+                osmLayer.addTo(map);
 
                 let marker = window.L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
                 locationMapContext = { map, marker };
@@ -4840,6 +4842,7 @@
                     if (propertyNameInput) {
                         propertyNameInput.focus();
                     }
+                    refreshLocationMapViewport();
                 });
             }
 
@@ -5305,6 +5308,9 @@
                         if (closePropertyCreateForm) {
                             closePropertyCreateForm.hidden = false;
                         }
+                        if (typeof window.__vendorPortalRefreshLocationMap === 'function') {
+                            window.__vendorPortalRefreshLocationMap();
+                        }
                     });
                 }
 
@@ -5348,6 +5354,9 @@
                         }
 
                         window.location.hash = 'listings';
+                        if (typeof window.__vendorPortalRefreshLocationMap === 'function') {
+                            window.__vendorPortalRefreshLocationMap();
+                        }
                     });
                 });
 

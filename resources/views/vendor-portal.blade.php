@@ -504,6 +504,96 @@
             margin-top: 12px;
         }
 
+        .ops-category-card {
+            border: 1px solid #d7e0e6;
+            border-radius: 12px;
+            background: #f9fcff;
+            padding: 10px;
+        }
+
+        .ops-category-card + .ops-category-card {
+            margin-top: 10px;
+        }
+
+        .ops-category-toggle {
+            width: 100%;
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px;
+            cursor: pointer;
+            font: inherit;
+            text-align: left;
+            color: inherit;
+        }
+
+        .ops-category-toggle-main {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .ops-category-toggle .ops-title {
+            font-size: 0.96rem;
+            margin: 0;
+        }
+
+        .ops-category-toggle-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 999px;
+            border: 1px solid #d7e0e6;
+            background: #f6faff;
+            color: #30495f;
+            font-size: 0.74rem;
+            transition: transform 0.16s ease;
+        }
+
+        .ops-category-toggle[aria-expanded="true"] .ops-category-toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .ops-category-body {
+            margin-top: 10px;
+        }
+
+        .ops-target-quicklist {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .ops-target-quickpick {
+            border: 1px solid #d7e0e6;
+            background: #fff;
+            color: #2a4259;
+            border-radius: 999px;
+            padding: 5px 10px;
+            font-size: 0.76rem;
+            cursor: pointer;
+        }
+
+        .ops-target-quickpick:hover {
+            border-color: #9ab1c6;
+            background: #f3f8fd;
+        }
+
+        .ops-subtitle {
+            margin: 0 0 8px;
+            font-size: 0.8rem;
+            color: #3a556f;
+            font-weight: 700;
+        }
+
         .ops-header {
             display: flex;
             align-items: center;
@@ -2973,8 +3063,12 @@
 
         <section id="vendorAvailabilitySection" class="card ops-section" aria-label="Vendor availability calendar" data-panel-group="reservations">
             <div class="ops-header">
-                <p class="ops-title">Availability Calendar</p>
-                <span class="ops-chip">{{ $vendorAvailability->count() }} days tracked</span>
+                <p class="ops-title">Category Operations</p>
+                <span class="ops-chip">{{ count($allVendorCategoryKeys ?? []) }} categories</span>
+            </div>
+            <div class="panel-links" aria-label="Category operations actions">
+                <a href="#vendorAvailabilitySection">Availability + Reservations</a>
+                <a href="#vendorPricingSection">Pricing Rules</a>
             </div>
             @php
                 $allVendorCategoryKeys = array_keys($vendorCategoryMap);
@@ -3102,31 +3196,114 @@
                     }
 
                     $slotTargetLabel = 'Global / Generic';
+                    $slotTargetValue = '';
                     if ($slotRoomId > 0) {
                         $slotRoom = $roomById->get($slotRoomId);
                         $slotTargetLabel = $slotRoom instanceof \stdClass
                             ? ('Room #' . $slotRoomId . ' - ' . (string) ($slotRoom->name ?? ('Room ' . $slotRoomId)))
                             : ('Room #' . $slotRoomId);
+                        $slotTargetValue = 'room:' . $slotRoomId;
                     } elseif ($slotServiceId > 0) {
                         $slotService = $serviceById->get($slotServiceId);
                         $slotTargetLabel = $slotService instanceof \stdClass
                             ? ('Service #' . $slotServiceId . ' - ' . (string) ($slotService->name ?? ('Service ' . $slotServiceId)))
                             : ('Service #' . $slotServiceId);
+                        $slotTargetValue = 'service:' . $slotServiceId;
                     } elseif ($slotPropertyId > 0) {
                         $slotProperty = $propertyById->get($slotPropertyId);
                         $slotTargetLabel = $slotProperty instanceof \stdClass
                             ? ('Property #' . $slotPropertyId . ' - ' . (string) ($slotProperty->name ?? ('Property ' . $slotPropertyId)))
                             : ('Property #' . $slotPropertyId);
+                        $slotTargetValue = 'property:' . $slotPropertyId;
                     }
 
                     $availabilityRowsByCategory[$slotCategory]->push([
                         'slot_date' => (string) ($slot->slot_date ?? ''),
                         'target_label' => $slotTargetLabel,
+                        'target_value' => $slotTargetValue,
                         'route_name' => (string) ($slot->route_name ?? ($slotNotesMeta['route_name'] ?? '')),
                         'service_id' => $slotServiceId,
                         'inventory' => (int) ($slot->inventory ?? 0),
                         'reserved_count' => (int) ($slot->reserved_count ?? 0),
                         'is_closed' => (bool) ($slot->is_closed ?? false),
+                    ]);
+                }
+
+                $reservationRowsByCategory = [];
+                foreach ($allVendorCategoryKeys as $categoryKey) {
+                    $reservationRowsByCategory[$categoryKey] = collect();
+                }
+
+                foreach ($vendorReservations as $reservation) {
+                    $reservationBreakdown = [];
+                    if (isset($reservation->tax_breakdown_json) && is_string($reservation->tax_breakdown_json) && trim((string) $reservation->tax_breakdown_json) !== '') {
+                        $decodedReservationBreakdown = json_decode((string) $reservation->tax_breakdown_json, true);
+                        if (is_array($decodedReservationBreakdown)) {
+                            $reservationBreakdown = $decodedReservationBreakdown;
+                        }
+                    }
+                    $roomPricingBreakdown = is_array($reservationBreakdown['room_pricing'] ?? null) ? $reservationBreakdown['room_pricing'] : null;
+
+                    $reservationPropertyId = (int) ($reservation->vendor_property_id ?? 0);
+                    $reservationServiceId = (int) ($reservation->vendor_service_id ?? 0);
+                    $reservationRoomId = (int) ($reservation->vendor_room_category_id ?? 0);
+                    $reservationCategory = vendorPortalCanonicalCategory((string) ($reservation->listing_category ?? ''));
+
+                    if ($reservationCategory === null && $reservationRoomId > 0) {
+                        $reservationCategory = 'accommodation';
+                    }
+                    if ($reservationCategory === null && $reservationPropertyId > 0) {
+                        $reservationProperty = $propertyById->get($reservationPropertyId);
+                        if ($reservationProperty instanceof \stdClass) {
+                            $reservationCategory = vendorPortalCanonicalCategory((string) ($reservationProperty->listing_category ?? ''));
+                        }
+                    }
+                    if ($reservationCategory === null && $reservationServiceId > 0) {
+                        $reservationService = $serviceById->get($reservationServiceId);
+                        if ($reservationService instanceof \stdClass) {
+                            $reservationCategory = vendorPortalCanonicalCategory((string) ($reservationService->listing_category ?? ''));
+                        }
+                    }
+                    if (!is_string($reservationCategory) || $reservationCategory === '' || !in_array($reservationCategory, $allVendorCategoryKeys, true)) {
+                        continue;
+                    }
+
+                    $reservationTargetLabel = 'Global / Unlinked';
+                    if ($reservationRoomId > 0) {
+                        $roomItem = $roomById->get($reservationRoomId);
+                        $reservationTargetLabel = $roomItem instanceof \stdClass
+                            ? ('Room #' . $reservationRoomId . ' - ' . (string) ($roomItem->name ?? ('Room ' . $reservationRoomId)))
+                            : ('Room #' . $reservationRoomId);
+                    } elseif ($reservationServiceId > 0) {
+                        $serviceItem = $serviceById->get($reservationServiceId);
+                        $reservationTargetLabel = $serviceItem instanceof \stdClass
+                            ? ('Service #' . $reservationServiceId . ' - ' . (string) ($serviceItem->name ?? ('Service ' . $reservationServiceId)))
+                            : ('Service #' . $reservationServiceId);
+                    } elseif ($reservationPropertyId > 0) {
+                        $propertyItem = $propertyById->get($reservationPropertyId);
+                        $reservationTargetLabel = $propertyItem instanceof \stdClass
+                            ? ('Property #' . $reservationPropertyId . ' - ' . (string) ($propertyItem->name ?? ('Property ' . $reservationPropertyId)))
+                            : ('Property #' . $reservationPropertyId);
+                    }
+
+                    $reservationRowsByCategory[$reservationCategory]->push([
+                        'id' => (int) ($reservation->id ?? 0),
+                        'target_label' => $reservationTargetLabel,
+                        'customer_name' => (string) ($reservation->customer_name ?? ''),
+                        'customer_email' => (string) ($reservation->customer_email ?? ''),
+                        'start_at' => (string) ($reservation->start_at ?? ''),
+                        'end_at' => (string) ($reservation->end_at ?? ''),
+                        'status' => (string) ($reservation->status ?? 'pending'),
+                        'payment_status' => (string) ($reservation->payment_status ?? 'unpaid'),
+                        'currency' => (string) ($reservation->currency ?? 'MVR'),
+                        'subtotal_amount' => (float) ($reservation->subtotal_amount ?? $reservation->total_amount ?? 0),
+                        'service_charge_total' => (float) ($reservation->service_charge_total ?? 0),
+                        'total_tax_amount' => (float) ($reservation->total_tax_amount ?? 0),
+                        'invoice_total_amount' => (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0),
+                        'green_tax_total' => (float) ($reservation->green_tax_total ?? 0),
+                        'tgst_total' => (float) ($reservation->tgst_total ?? 0),
+                        'cgst_total' => (float) ($reservation->cgst_total ?? 0),
+                        'room_pricing' => $roomPricingBreakdown,
                     ]);
                 }
             @endphp
@@ -3137,15 +3314,53 @@
                         $categorySlug = str_replace('_', '-', (string) $categoryKey);
                         $categoryTargets = $availabilityTargetsByCategory[$categoryKey] ?? collect();
                         $categorySlots = ($availabilityRowsByCategory[$categoryKey] ?? collect())->sortByDesc('slot_date')->values();
+                        $categoryReservations = ($reservationRowsByCategory[$categoryKey] ?? collect())->sortByDesc('start_at')->values();
                         $trackedCount = $categorySlots->count();
                         $closedCount = $categorySlots->where('is_closed', true)->count();
                         $openCount = max(0, $trackedCount - $closedCount);
                         $inventoryTotal = (int) $categorySlots->sum('inventory');
+                        $reservationPendingCount = $categoryReservations->where('status', 'pending')->count();
+                        $reservationConfirmedCount = $categoryReservations->where('status', 'confirmed')->count();
+                        $reservationCompletedCount = $categoryReservations->where('status', 'completed')->count();
+                        $reservationCancelledCount = $categoryReservations->where('status', 'cancelled')->count();
+                        $reservationRevenueTotal = (float) $categoryReservations->sum('invoice_total_amount');
                     @endphp
-                    <article class="ops-category-card" data-ops-category-section="availability-{{ $categoryKey }}">
-                        <div class="ops-header">
-                            <p class="ops-title">{{ $labelForCategory($categoryKey) }} Availability</p>
-                            <span class="ops-chip">{{ $listingCountByCategory[$categoryKey] ?? 0 }} listings</span>
+                    <article class="ops-category-card" data-ops-category-section="category-operations-{{ $categoryKey }}">
+                        <button
+                            class="ops-category-toggle"
+                            type="button"
+                            data-ops-category-toggle
+                            data-ops-group="category_operations"
+                            data-ops-target="availability_panel_{{ $categorySlug }}"
+                            aria-expanded="false"
+                        >
+                            <span class="ops-category-toggle-main">
+                                <span class="ops-title">{{ $labelForCategory($categoryKey) }}</span>
+                                <span class="ops-chip">{{ $listingCountByCategory[$categoryKey] ?? 0 }} listings / {{ $categoryReservations->count() }} reservations</span>
+                            </span>
+                            <span class="ops-category-toggle-icon" aria-hidden="true">▾</span>
+                        </button>
+                        <div id="availability_panel_{{ $categorySlug }}" class="ops-category-body" hidden>
+                        <p class="ops-subtitle">Listings in {{ $labelForCategory($categoryKey) }} (click to edit availability)</p>
+                        <div class="ops-target-quicklist">
+                            @forelse ($categoryTargets as $targetOption)
+                                @php
+                                    $targetKind = (string) ($targetOption['kind'] ?? '');
+                                    $targetId = (string) ($targetOption['id'] ?? '');
+                                    $targetValue = $targetKind !== '' && $targetId !== '' ? ($targetKind . ':' . $targetId) : '';
+                                @endphp
+                                @if ($targetValue !== '')
+                                    <button
+                                        type="button"
+                                        class="ops-target-quickpick"
+                                        data-availability-pick-target
+                                        data-availability-form-key="{{ $categoryKey }}"
+                                        data-target-value="{{ $targetValue }}"
+                                    >{{ (string) ($targetOption['label'] ?? $targetValue) }}</button>
+                                @endif
+                            @empty
+                                <span class="small">No listings yet in this category.</span>
+                            @endforelse
                         </div>
                         <div class="billing-ledger-grid" style="margin-bottom:10px;">
                             <article class="billing-ledger-card">
@@ -3262,7 +3477,19 @@
                                         @forelse ($categorySlots->take(20) as $slotRow)
                                             <tr>
                                                 <td>{{ (string) ($slotRow['slot_date'] ?? '-') }}</td>
-                                                <td>{{ (string) ($slotRow['target_label'] ?? 'N/A') }}</td>
+                                                <td>
+                                                    @if ((string) ($slotRow['target_value'] ?? '') !== '')
+                                                        <button
+                                                            type="button"
+                                                            class="ops-target-quickpick"
+                                                            data-availability-pick-target
+                                                            data-availability-form-key="{{ $categoryKey }}"
+                                                            data-target-value="{{ (string) ($slotRow['target_value'] ?? '') }}"
+                                                        >{{ (string) ($slotRow['target_label'] ?? 'N/A') }}</button>
+                                                    @else
+                                                        {{ (string) ($slotRow['target_label'] ?? 'N/A') }}
+                                                    @endif
+                                                </td>
                                                 <td>
                                                     {{ (string) ($slotRow['route_name'] ?? '') !== '' ? (string) ($slotRow['route_name'] ?? '') : 'N/A' }}
                                                     @if ((int) ($slotRow['service_id'] ?? 0) > 0)
@@ -3282,118 +3509,8 @@
                                 </table>
                             </div>
                         </div>
-                    </article>
-                @endforeach
-            </div>
-        </section>
 
-        <section id="vendorReservationsSection" class="card ops-section" aria-label="Vendor reservations" data-panel-group="reservations">
-            <div class="ops-header">
-                <p class="ops-title">Reservations</p>
-                <span class="ops-chip">{{ $vendorReservations->count() }} total</span>
-            </div>
-            <div class="panel-links" aria-label="Reservation actions">
-                <a href="#vendorReservationsSection">Booking Inquiries</a>
-                <a href="#vendorAvailabilitySection">Availability Updates</a>
-                <a href="#vendorPricingSection">Pricing Rules</a>
-            </div>
-            <p class="standards-note">Bookings/reservations are customer-generated. Vendors moderate booking and payment status under each category section.</p>
-
-            @php
-                $reservationRowsByCategory = [];
-                foreach ($allVendorCategoryKeys as $categoryKey) {
-                    $reservationRowsByCategory[$categoryKey] = collect();
-                }
-
-                foreach ($vendorReservations as $reservation) {
-                    $reservationBreakdown = [];
-                    if (isset($reservation->tax_breakdown_json) && is_string($reservation->tax_breakdown_json) && trim((string) $reservation->tax_breakdown_json) !== '') {
-                        $decodedReservationBreakdown = json_decode((string) $reservation->tax_breakdown_json, true);
-                        if (is_array($decodedReservationBreakdown)) {
-                            $reservationBreakdown = $decodedReservationBreakdown;
-                        }
-                    }
-                    $roomPricingBreakdown = is_array($reservationBreakdown['room_pricing'] ?? null) ? $reservationBreakdown['room_pricing'] : null;
-
-                    $reservationPropertyId = (int) ($reservation->vendor_property_id ?? 0);
-                    $reservationServiceId = (int) ($reservation->vendor_service_id ?? 0);
-                    $reservationRoomId = (int) ($reservation->vendor_room_category_id ?? 0);
-                    $reservationCategory = vendorPortalCanonicalCategory((string) ($reservation->listing_category ?? ''));
-
-                    if ($reservationCategory === null && $reservationRoomId > 0) {
-                        $reservationCategory = 'accommodation';
-                    }
-                    if ($reservationCategory === null && $reservationPropertyId > 0) {
-                        $reservationProperty = $propertyById->get($reservationPropertyId);
-                        if ($reservationProperty instanceof \stdClass) {
-                            $reservationCategory = vendorPortalCanonicalCategory((string) ($reservationProperty->listing_category ?? ''));
-                        }
-                    }
-                    if ($reservationCategory === null && $reservationServiceId > 0) {
-                        $reservationService = $serviceById->get($reservationServiceId);
-                        if ($reservationService instanceof \stdClass) {
-                            $reservationCategory = vendorPortalCanonicalCategory((string) ($reservationService->listing_category ?? ''));
-                        }
-                    }
-                    if (!is_string($reservationCategory) || $reservationCategory === '' || !in_array($reservationCategory, $allVendorCategoryKeys, true)) {
-                        continue;
-                    }
-
-                    $reservationTargetLabel = 'Global / Unlinked';
-                    if ($reservationRoomId > 0) {
-                        $roomItem = $roomById->get($reservationRoomId);
-                        $reservationTargetLabel = $roomItem instanceof \stdClass
-                            ? ('Room #' . $reservationRoomId . ' - ' . (string) ($roomItem->name ?? ('Room ' . $reservationRoomId)))
-                            : ('Room #' . $reservationRoomId);
-                    } elseif ($reservationServiceId > 0) {
-                        $serviceItem = $serviceById->get($reservationServiceId);
-                        $reservationTargetLabel = $serviceItem instanceof \stdClass
-                            ? ('Service #' . $reservationServiceId . ' - ' . (string) ($serviceItem->name ?? ('Service ' . $reservationServiceId)))
-                            : ('Service #' . $reservationServiceId);
-                    } elseif ($reservationPropertyId > 0) {
-                        $propertyItem = $propertyById->get($reservationPropertyId);
-                        $reservationTargetLabel = $propertyItem instanceof \stdClass
-                            ? ('Property #' . $reservationPropertyId . ' - ' . (string) ($propertyItem->name ?? ('Property ' . $reservationPropertyId)))
-                            : ('Property #' . $reservationPropertyId);
-                    }
-
-                    $reservationRowsByCategory[$reservationCategory]->push([
-                        'id' => (int) ($reservation->id ?? 0),
-                        'target_label' => $reservationTargetLabel,
-                        'customer_name' => (string) ($reservation->customer_name ?? ''),
-                        'customer_email' => (string) ($reservation->customer_email ?? ''),
-                        'start_at' => (string) ($reservation->start_at ?? ''),
-                        'end_at' => (string) ($reservation->end_at ?? ''),
-                        'status' => (string) ($reservation->status ?? 'pending'),
-                        'payment_status' => (string) ($reservation->payment_status ?? 'unpaid'),
-                        'currency' => (string) ($reservation->currency ?? 'MVR'),
-                        'subtotal_amount' => (float) ($reservation->subtotal_amount ?? $reservation->total_amount ?? 0),
-                        'service_charge_total' => (float) ($reservation->service_charge_total ?? 0),
-                        'total_tax_amount' => (float) ($reservation->total_tax_amount ?? 0),
-                        'invoice_total_amount' => (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0),
-                        'green_tax_total' => (float) ($reservation->green_tax_total ?? 0),
-                        'tgst_total' => (float) ($reservation->tgst_total ?? 0),
-                        'cgst_total' => (float) ($reservation->cgst_total ?? 0),
-                        'room_pricing' => $roomPricingBreakdown,
-                    ]);
-                }
-            @endphp
-
-            <div class="ops-grid" style="grid-template-columns:1fr;">
-                @foreach ($allVendorCategoryKeys as $categoryKey)
-                    @php
-                        $categoryReservations = ($reservationRowsByCategory[$categoryKey] ?? collect())->sortByDesc('start_at')->values();
-                        $reservationPendingCount = $categoryReservations->where('status', 'pending')->count();
-                        $reservationConfirmedCount = $categoryReservations->where('status', 'confirmed')->count();
-                        $reservationCompletedCount = $categoryReservations->where('status', 'completed')->count();
-                        $reservationCancelledCount = $categoryReservations->where('status', 'cancelled')->count();
-                        $reservationRevenueTotal = (float) $categoryReservations->sum('invoice_total_amount');
-                    @endphp
-                    <article class="ops-category-card" data-ops-category-section="reservations-{{ $categoryKey }}">
-                        <div class="ops-header">
-                            <p class="ops-title">{{ $labelForCategory($categoryKey) }} Reservations</p>
-                            <span class="ops-chip">{{ $categoryReservations->count() }} total</span>
-                        </div>
+                        <p class="ops-subtitle" style="margin-top:12px;">{{ $labelForCategory($categoryKey) }} Reservations</p>
                         <div class="billing-ledger-grid" style="margin-bottom:10px;">
                             <article class="billing-ledger-card">
                                 <p class="metric-label">Pending</p>
@@ -3473,6 +3590,7 @@
                                     @endforelse
                                 </tbody>
                             </table>
+                        </div>
                         </div>
                     </article>
                 @endforeach
@@ -5843,6 +5961,53 @@
                     .replace(/[^a-z0-9_]/g, "");
             }
 
+            function initOpsCategoryToggles() {
+                const toggles = Array.from(document.querySelectorAll('[data-ops-category-toggle]'));
+                if (toggles.length === 0) {
+                    return;
+                }
+
+                const groups = new Map();
+
+                function setExpanded(toggle, content, expanded) {
+                    toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                    content.hidden = !expanded;
+                    const card = toggle.closest('.ops-category-card');
+                    if (card) {
+                        card.classList.toggle('is-collapsed', !expanded);
+                    }
+                }
+
+                toggles.forEach((toggle) => {
+                    const targetId = String(toggle.getAttribute('data-ops-target') || '').trim();
+                    if (targetId === '') {
+                        return;
+                    }
+
+                    const content = document.getElementById(targetId);
+                    if (!content) {
+                        return;
+                    }
+
+                    const groupKey = String(toggle.getAttribute('data-ops-group') || 'ops').trim() || 'ops';
+                    if (!groups.has(groupKey)) {
+                        groups.set(groupKey, []);
+                    }
+                    groups.get(groupKey).push({ toggle, content });
+
+                    toggle.addEventListener('click', function () {
+                        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+                        setExpanded(toggle, content, !isExpanded);
+                    });
+                });
+
+                groups.forEach((entries) => {
+                    entries.forEach((entry, index) => {
+                        setExpanded(entry.toggle, entry.content, index === 0);
+                    });
+                });
+            }
+
             function initFallbackPanelNavigation() {
                 const navLinks = Array.from(document.querySelectorAll('.portal-nav a[data-panel-key]'));
                 const panelGroups = Array.from(document.querySelectorAll('[data-panel-group]'));
@@ -6184,7 +6349,106 @@
                     targetSelect.addEventListener('change', function () {
                         applyAvailabilityTargetSelectionFor(form);
                     });
+
+                    const closedSelect = form.querySelector('select[name="is_closed"]');
+                    if (closedSelect) {
+                        closedSelect.dataset.userTouched = 'false';
+                        closedSelect.addEventListener('change', function () {
+                            closedSelect.dataset.userTouched = 'true';
+                        });
+                    }
+
                     applyAvailabilityTargetSelectionFor(form);
+                });
+
+                const availabilityFormByKey = new Map();
+                availabilityForms.forEach((form) => {
+                    const formKey = String(form.getAttribute('data-availability-form') || '').trim();
+                    if (formKey !== '') {
+                        availabilityFormByKey.set(formKey, form);
+                    }
+                });
+
+                function expandCategoryCardFor(element) {
+                    const card = element ? element.closest('.ops-category-card') : null;
+                    if (!card) {
+                        return;
+                    }
+
+                    const toggle = card.querySelector('[data-ops-category-toggle]');
+                    if (!toggle) {
+                        return;
+                    }
+
+                    const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+                    if (isExpanded) {
+                        return;
+                    }
+
+                    const targetId = String(toggle.getAttribute('data-ops-target') || '').trim();
+                    if (targetId !== '') {
+                        const content = document.getElementById(targetId);
+                        if (content) {
+                            content.hidden = false;
+                        }
+                    }
+                    toggle.setAttribute('aria-expanded', 'true');
+                    card.classList.remove('is-collapsed');
+                }
+
+                function todayIsoDate() {
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const day = String(now.getDate()).padStart(2, '0');
+                    return year + '-' + month + '-' + day;
+                }
+
+                document.querySelectorAll('[data-availability-pick-target]').forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const formKey = String(button.getAttribute('data-availability-form-key') || '').trim();
+                        const targetValue = String(button.getAttribute('data-target-value') || '').trim();
+                        if (formKey === '' || targetValue === '') {
+                            return;
+                        }
+
+                        const form = availabilityFormByKey.get(formKey);
+                        if (!form) {
+                            return;
+                        }
+
+                        const targetSelect = form.querySelector('[data-availability-target]');
+                        if (!targetSelect) {
+                            return;
+                        }
+
+                        const hasOption = Array.from(targetSelect.options).some((option) => String(option.value) === targetValue);
+                        if (!hasOption) {
+                            return;
+                        }
+
+                        expandCategoryCardFor(button);
+                        targetSelect.value = targetValue;
+                        applyAvailabilityTargetSelectionFor(form);
+
+                        const dateInput = form.querySelector('input[name="slot_date"]');
+                        if (dateInput && String(dateInput.value || '').trim() === '') {
+                            dateInput.value = todayIsoDate();
+                        }
+
+                        const closedSelect = form.querySelector('select[name="is_closed"]');
+                        if (closedSelect && closedSelect.dataset.userTouched !== 'true') {
+                            closedSelect.value = '0';
+                        }
+
+                        const inventoryInput = form.querySelector('input[name="inventory"]');
+                        if (inventoryInput) {
+                            inventoryInput.focus({ preventScroll: true });
+                            inventoryInput.select();
+                        }
+
+                        form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    });
                 });
 
                 document.querySelectorAll('[data-price-suggestion]').forEach((button) => {
@@ -6346,10 +6610,12 @@
                 document.addEventListener('DOMContentLoaded', function () {
                     initFallbackPanelNavigation();
                     initFallbackListingActions();
+                    initOpsCategoryToggles();
                 });
             } else {
                 initFallbackPanelNavigation();
                 initFallbackListingActions();
+                initOpsCategoryToggles();
             }
         })();
     </script>

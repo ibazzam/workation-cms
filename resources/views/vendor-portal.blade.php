@@ -2632,6 +2632,11 @@
                                                                                         {{ (string) ($media->alt_text ?? 'Listing photo') }}
                                                                                         @if ((bool) ($media->is_primary ?? false))
                                                                                             <span class="ops-chip" style="margin-left:6px;">Primary</span>
+                                                                                        @else
+                                                                                            <form method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/primary" style="margin-top:6px;">
+                                                                                                @csrf
+                                                                                                <button class="btn btn-secondary" type="submit">Set Primary</button>
+                                                                                            </form>
                                                                                         @endif
                                                                                     </div>
                                                                                 </article>
@@ -2788,6 +2793,11 @@
                                                                                                                     {{ (string) ($media->alt_text ?? 'Room photo') }}
                                                                                                                     @if ((bool) ($media->is_primary ?? false))
                                                                                                                         <span class="ops-chip" style="margin-left:6px;">Primary</span>
+                                                                                                                    @else
+                                                                                                                        <form method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/primary" style="margin-top:6px;">
+                                                                                                                            @csrf
+                                                                                                                            <button class="btn btn-secondary" type="submit">Set Primary</button>
+                                                                                                                        </form>
                                                                                                                     @endif
                                                                                                                 </div>
                                                                                                             </article>

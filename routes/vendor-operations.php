@@ -1219,6 +1219,48 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
     return vendorPortalListingsBackResponse('Photo uploaded successfully.', 4);
 });
 
+Route::post('/portal/vendor/media/{media}/primary', function (int $media) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    if (!Schema::hasTable('vendor_listing_media')) {
+        return back()->withErrors(['profile' => 'Media storage table is not ready. Run migrations first.']);
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $mediaRecord = DB::table('vendor_listing_media')
+        ->where('id', $media)
+        ->where('vendor_user_id', $vendorUserId)
+        ->first();
+
+    if (!$mediaRecord) {
+        return back()->withErrors(['profile' => 'Media item not found for this vendor account.']);
+    }
+
+    $entityType = (string) ($mediaRecord->entity_type ?? '');
+    $entityId = isset($mediaRecord->entity_id) ? (int) $mediaRecord->entity_id : null;
+
+    DB::table('vendor_listing_media')
+        ->where('vendor_user_id', $vendorUserId)
+        ->where('entity_type', $entityType)
+        ->where('entity_id', $entityId)
+        ->update([
+            'is_primary' => false,
+            'updated_at' => now(),
+        ]);
+
+    DB::table('vendor_listing_media')
+        ->where('id', $media)
+        ->where('vendor_user_id', $vendorUserId)
+        ->update([
+            'is_primary' => true,
+            'updated_at' => now(),
+        ]);
+
+    return vendorPortalListingsBackResponse('Primary photo updated.', 4);
+});
+
 Route::post('/portal/vendor/rooms/create', function (Request $request) {
     if (!session('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');

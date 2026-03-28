@@ -2005,6 +2005,10 @@
                                 </select>
                             </div>
                             <div class="ops-field" data-category-scope="geo">
+                                <label for="location_ward">Ward</label>
+                                <input id="location_ward" name="location_ward" class="ops-input" type="text" maxlength="120" value="{{ old('location_ward') }}" placeholder="Ward / Neighborhood">
+                            </div>
+                            <div class="ops-field" data-category-scope="geo">
                                 <label for="property_building_house_lot">Building / House / Lot No.</label>
                                 <input id="property_building_house_lot" name="building_house_lot" class="ops-input" type="text" maxlength="160" value="{{ old('building_house_lot') }}" placeholder="e.g. Lily House, Lot 1142">
                             </div>
@@ -2017,11 +2021,11 @@
                                 <input id="property_post_code" name="post_code" class="ops-input" type="text" maxlength="20" value="{{ old('post_code') }}" placeholder="Post code">
                             </div>
                             <div class="ops-field" data-category-scope="geo">
-                                <label for="property_contact_name">Property Contact Name</label>
+                                <label for="property_contact_name">Contact Name</label>
                                 <input id="property_contact_name" name="property_contact_name" class="ops-input" type="text" maxlength="120" value="{{ old('property_contact_name') }}" placeholder="Contact Name">
                             </div>
                             <div class="ops-field" data-category-scope="geo">
-                                <label for="property_contact_number">Property Contact Number</label>
+                                <label for="property_contact_number">Contact Number</label>
                                 <input id="property_contact_number" name="property_contact_number" class="ops-input" type="text" maxlength="60" value="{{ old('property_contact_number') }}" placeholder="Phone / WhatsApp">
                             </div>
                             <div class="ops-field" data-category-scope="geo">
@@ -2471,12 +2475,13 @@
                                                                 <input class="ops-input" name="location_country" type="text" maxlength="90" value="{{ (string) ($propertyDetails['location_country'] ?? '') }}" placeholder="Country" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="location_state" type="text" maxlength="120" value="{{ (string) ($propertyDetails['location_state'] ?? '') }}" placeholder="State / Province / Atoll" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="location_city" type="text" maxlength="120" value="{{ (string) ($propertyDetails['location_city'] ?? '') }}" placeholder="City / Island" data-property-edit-scope="geo">
+                                                                <input class="ops-input" name="location_ward" type="text" maxlength="120" value="{{ (string) ($propertyDetails['location_ward'] ?? '') }}" placeholder="Ward / Neighborhood" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="address_line" type="text" maxlength="255" value="{{ (string) ($propertyDetails['address_line'] ?? '') }}" placeholder="Address line" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="building_house_lot" type="text" maxlength="160" value="{{ (string) ($propertyDetails['building_house_lot'] ?? '') }}" placeholder="Building / House / Lot No." data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="street" type="text" maxlength="160" value="{{ (string) ($propertyDetails['street'] ?? '') }}" placeholder="Street" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="post_code" type="text" maxlength="20" value="{{ (string) ($propertyDetails['post_code'] ?? '') }}" placeholder="Post code" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="property_contact_name" type="text" maxlength="120" value="{{ (string) ($propertyDetails['property_contact_name'] ?? '') }}" placeholder="Contact Name" data-property-edit-scope="geo">
-                                                                <input class="ops-input" name="property_contact_number" type="text" maxlength="60" value="{{ (string) ($propertyDetails['property_contact_number'] ?? '') }}" placeholder="Property Contact Number" data-property-edit-scope="geo">
+                                                                <input class="ops-input" name="property_contact_number" type="text" maxlength="60" value="{{ (string) ($propertyDetails['property_contact_number'] ?? '') }}" placeholder="Contact Number" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="property_contact_email" type="email" maxlength="190" value="{{ (string) ($propertyDetails['property_contact_email'] ?? '') }}" placeholder="Property Contact Email" data-property-edit-scope="geo">
                                                                 <input name="map_latitude" type="hidden" value="{{ (string) ($propertyDetails['map_latitude'] ?? '') }}">
                                                                 <input name="map_longitude" type="hidden" value="{{ (string) ($propertyDetails['map_longitude'] ?? '') }}">

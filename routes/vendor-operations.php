@@ -402,6 +402,12 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             'location_state' => trim((string) ($validated['location_state'] ?? '')),
             'location_city' => trim((string) ($validated['location_city'] ?? '')),
             'address_line' => trim((string) ($validated['address_line'] ?? '')),
+            'building_house_lot' => trim((string) ($validated['building_house_lot'] ?? '')),
+            'street' => trim((string) ($validated['street'] ?? '')),
+            'post_code' => trim((string) ($validated['post_code'] ?? '')),
+            'property_contact_name' => trim((string) ($validated['property_contact_name'] ?? '')),
+            'property_contact_number' => trim((string) ($validated['property_contact_number'] ?? '')),
+            'property_contact_email' => trim((string) ($validated['property_contact_email'] ?? '')),
             'map_latitude' => vendorPortalNormalizedNumeric($validated['map_latitude'] ?? null),
             'map_longitude' => vendorPortalNormalizedNumeric($validated['map_longitude'] ?? null),
             'map_place_id' => trim((string) ($validated['map_place_id'] ?? '')),
@@ -1624,6 +1630,12 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'location_state' => ['nullable', 'string', 'max:120'],
         'location_city' => ['nullable', 'string', 'max:120'],
         'address_line' => ['nullable', 'string', 'max:255'],
+        'building_house_lot' => ['nullable', 'string', 'max:160'],
+        'street' => ['nullable', 'string', 'max:160'],
+        'post_code' => ['nullable', 'string', 'max:20'],
+        'property_contact_name' => ['nullable', 'string', 'max:120'],
+        'property_contact_number' => ['nullable', 'string', 'max:60'],
+        'property_contact_email' => ['nullable', 'email:rfc', 'max:190'],
         'map_latitude' => ['nullable', 'numeric', 'between:-90,90'],
         'map_longitude' => ['nullable', 'numeric', 'between:-180,180'],
         'map_place_id' => ['nullable', 'string', 'max:190'],
@@ -1740,9 +1752,15 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
     $locationState = trim((string) ($validated['location_state'] ?? ''));
     $locationCity = trim((string) ($validated['location_city'] ?? ''));
     $addressLine = trim((string) ($validated['address_line'] ?? ''));
-    $locationParts = array_values(array_filter([$locationCity, $locationState, $locationCountry], static fn (string $item): bool => $item !== ''));
+    $buildingHouseLot = trim((string) ($validated['building_house_lot'] ?? ''));
+    $street = trim((string) ($validated['street'] ?? ''));
+    $locationParts = array_values(array_filter([$street, $locationCity, $locationState, $locationCountry], static fn (string $item): bool => $item !== ''));
     $locationFromStructuredFields = implode(', ', $locationParts);
     $resolvedLocation = $locationFromStructuredFields !== '' ? $locationFromStructuredFields : trim((string) ($validated['location'] ?? ''));
+
+    if ($buildingHouseLot !== '') {
+        $resolvedLocation = $resolvedLocation !== '' ? ($buildingHouseLot . ', ' . $resolvedLocation) : $buildingHouseLot;
+    }
 
     if ($addressLine !== '') {
         $resolvedLocation = $resolvedLocation !== '' ? ($addressLine . ' - ' . $resolvedLocation) : $addressLine;
@@ -1826,6 +1844,12 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'location_state' => ['nullable', 'string', 'max:120'],
         'location_city' => ['nullable', 'string', 'max:120'],
         'address_line' => ['nullable', 'string', 'max:255'],
+        'building_house_lot' => ['nullable', 'string', 'max:160'],
+        'street' => ['nullable', 'string', 'max:160'],
+        'post_code' => ['nullable', 'string', 'max:20'],
+        'property_contact_name' => ['nullable', 'string', 'max:120'],
+        'property_contact_number' => ['nullable', 'string', 'max:60'],
+        'property_contact_email' => ['nullable', 'email:rfc', 'max:190'],
         'map_latitude' => ['nullable', 'numeric', 'between:-90,90'],
         'map_longitude' => ['nullable', 'numeric', 'between:-180,180'],
         'map_place_id' => ['nullable', 'string', 'max:190'],
@@ -1958,9 +1982,15 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
     $locationState = trim((string) ($validated['location_state'] ?? ''));
     $locationCity = trim((string) ($validated['location_city'] ?? ''));
     $addressLine = trim((string) ($validated['address_line'] ?? ''));
-    $locationParts = array_values(array_filter([$locationCity, $locationState, $locationCountry], static fn (string $item): bool => $item !== ''));
+    $buildingHouseLot = trim((string) ($validated['building_house_lot'] ?? ''));
+    $street = trim((string) ($validated['street'] ?? ''));
+    $locationParts = array_values(array_filter([$street, $locationCity, $locationState, $locationCountry], static fn (string $item): bool => $item !== ''));
     $locationFromStructuredFields = implode(', ', $locationParts);
     $resolvedLocation = $locationFromStructuredFields !== '' ? $locationFromStructuredFields : trim((string) ($validated['location'] ?? ''));
+
+    if ($buildingHouseLot !== '') {
+        $resolvedLocation = $resolvedLocation !== '' ? ($buildingHouseLot . ', ' . $resolvedLocation) : $buildingHouseLot;
+    }
 
     if ($addressLine !== '') {
         $resolvedLocation = $resolvedLocation !== '' ? ($addressLine . ' - ' . $resolvedLocation) : $addressLine;

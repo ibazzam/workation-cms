@@ -2399,18 +2399,65 @@ Route::post('/portal/vendor/pricing/create', function (Request $request) {
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
     $validated = $request->validate([
         'name' => ['required', 'string', 'max:160'],
-        'rule_type' => ['required', Rule::in(['flat', 'percent', 'nightly', 'weekend_markup'])],
+        'rule_type' => ['required', Rule::in(['flat', 'percent', 'nightly', 'weekend_markup', 'demand_discount', 'promo_discount'])],
         'value' => ['required', 'numeric', 'min:0'],
         'starts_on' => ['nullable', 'date'],
         'ends_on' => ['nullable', 'date', 'after_or_equal:starts_on'],
-        'vendor_property_id' => ['nullable', 'integer'],
-        'vendor_service_id' => ['nullable', 'integer'],
+        'vendor_property_id' => ['nullable', 'integer', 'min:1'],
+        'vendor_service_id' => ['nullable', 'integer', 'min:1'],
+        'vendor_room_category_id' => ['nullable', 'integer', 'min:1'],
     ]);
 
-    DB::table('vendor_pricing_rules')->insert([
+    $vendorPropertyId = filled($validated['vendor_property_id'] ?? null) ? (int) $validated['vendor_property_id'] : null;
+    $vendorServiceId = filled($validated['vendor_service_id'] ?? null) ? (int) $validated['vendor_service_id'] : null;
+    $vendorRoomCategoryId = filled($validated['vendor_room_category_id'] ?? null) ? (int) $validated['vendor_room_category_id'] : null;
+
+    if ($vendorPropertyId !== null) {
+        if (!Schema::hasTable('vendor_properties')) {
+            return back()->withErrors(['profile' => 'Properties table is not ready. Run migrations first.'])->withInput();
+        }
+
+        $propertyExists = DB::table('vendor_properties')
+            ->where('id', $vendorPropertyId)
+            ->where('vendor_user_id', $vendorUserId)
+            ->exists();
+        if (!$propertyExists) {
+            return back()->withErrors(['profile' => 'Property ID is not valid for this vendor account.'])->withInput();
+        }
+    }
+
+    if ($vendorServiceId !== null) {
+        if (!Schema::hasTable('vendor_services')) {
+            return back()->withErrors(['profile' => 'Services table is not ready. Run migrations first.'])->withInput();
+        }
+
+        $serviceExists = DB::table('vendor_services')
+            ->where('id', $vendorServiceId)
+            ->where('vendor_user_id', $vendorUserId)
+            ->exists();
+        if (!$serviceExists) {
+            return back()->withErrors(['profile' => 'Service ID is not valid for this vendor account.'])->withInput();
+        }
+    }
+
+    if ($vendorRoomCategoryId !== null) {
+        if (!Schema::hasTable('vendor_property_room_categories')) {
+            return back()->withErrors(['profile' => 'Room categories table is not ready. Run migrations first.'])->withInput();
+        }
+
+        $roomExists = DB::table('vendor_property_room_categories')
+            ->where('id', $vendorRoomCategoryId)
+            ->where('vendor_user_id', $vendorUserId)
+            ->exists();
+        if (!$roomExists) {
+            return back()->withErrors(['profile' => 'Room category ID is not valid for this vendor account.'])->withInput();
+        }
+    }
+
+    $payload = [
         'vendor_user_id' => $vendorUserId,
-        'vendor_property_id' => filled($validated['vendor_property_id'] ?? null) ? (int) $validated['vendor_property_id'] : null,
-        'vendor_service_id' => filled($validated['vendor_service_id'] ?? null) ? (int) $validated['vendor_service_id'] : null,
+        'vendor_property_id' => $vendorPropertyId,
+        'vendor_service_id' => $vendorServiceId,
         'name' => trim((string) $validated['name']),
         'rule_type' => (string) $validated['rule_type'],
         'value' => (float) $validated['value'],
@@ -2419,7 +2466,13 @@ Route::post('/portal/vendor/pricing/create', function (Request $request) {
         'is_active' => true,
         'created_at' => now(),
         'updated_at' => now(),
-    ]);
+    ];
+
+    if (Schema::hasColumn('vendor_pricing_rules', 'vendor_room_category_id')) {
+        $payload['vendor_room_category_id'] = $vendorRoomCategoryId;
+    }
+
+    DB::table('vendor_pricing_rules')->insert($payload);
 
     return back()->with('portal_notice', 'Pricing rule saved.');
 });

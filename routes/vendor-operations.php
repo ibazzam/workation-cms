@@ -1219,7 +1219,7 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
     return vendorPortalListingsBackResponse('Photo uploaded successfully.', 4);
 });
 
-Route::post('/portal/vendor/media/upload/batch', function (Request $request) {
+Route::post('/portal/vendor/media/{media}/primary', function (int $media) {
     if (!session('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');
     }
@@ -1229,122 +1229,36 @@ Route::post('/portal/vendor/media/upload/batch', function (Request $request) {
     }
 
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
-    $validated = $request->validate([
-        'entity_type' => ['required', Rule::in(['property', 'service', 'room', 'profile', 'menu', 'vehicle'])],
-        'entity_id' => ['nullable', 'integer', 'min:1'],
-        'photos' => ['required', 'array', 'min:1', 'max:20'],
-        'photos.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
-        'alt_text' => ['nullable', 'string', 'max:190'],
-        'primary_index' => ['nullable', 'integer', 'min:0', 'max:99'],
-    ]);
+    $mediaRecord = DB::table('vendor_listing_media')
+        ->where('id', $media)
+        ->where('vendor_user_id', $vendorUserId)
+        ->first();
 
-    $entityType = (string) $validated['entity_type'];
-    $entityId = filled($validated['entity_id'] ?? null) ? (int) $validated['entity_id'] : null;
-
-    if (in_array($entityType, ['property', 'room'], true) && ($entityId === null || $entityId <= 0)) {
-        return back()->withErrors(['profile' => 'Choose a valid property or room before uploading photos.'])->withInput();
+    if (!$mediaRecord) {
+        return back()->withErrors(['profile' => 'Media item not found for this vendor account.']);
     }
 
-    if ($entityType === 'property') {
-        if (!Schema::hasTable('vendor_properties')) {
-            return back()->withErrors(['profile' => 'Properties table is not ready. Run migrations first.']);
-        }
+    $entityType = (string) ($mediaRecord->entity_type ?? '');
+    $entityId = isset($mediaRecord->entity_id) ? (int) $mediaRecord->entity_id : null;
 
-        $propertyExists = DB::table('vendor_properties')
-            ->where('id', (int) $entityId)
-            ->where('vendor_user_id', $vendorUserId)
-            ->exists();
-
-        if (!$propertyExists) {
-            return back()->withErrors(['profile' => 'Property not found for this vendor account.'])->withInput();
-        }
-    }
-
-    if ($entityType === 'room') {
-        if (!Schema::hasTable('vendor_property_room_categories')) {
-            return back()->withErrors(['profile' => 'Room categories table is not ready. Run migrations first.']);
-        }
-
-        $roomExists = DB::table('vendor_property_room_categories')
-            ->where('id', (int) $entityId)
-            ->where('vendor_user_id', $vendorUserId)
-            ->exists();
-
-        if (!$roomExists) {
-            return back()->withErrors(['profile' => 'Room not found for this vendor account.'])->withInput();
-        }
-    }
-
-    $files = $request->file('photos', []);
-    if (!is_array($files) || $files === []) {
-        return back()->withErrors(['profile' => 'Select at least one image to upload.'])->withInput();
-    }
-
-    $primaryIndex = isset($validated['primary_index']) ? (int) $validated['primary_index'] : -1;
-    $altBase = trim((string) ($validated['alt_text'] ?? ''));
-
-    if ($primaryIndex >= 0) {
-        DB::table('vendor_listing_media')
-            ->where('vendor_user_id', $vendorUserId)
-            ->where('entity_type', $entityType)
-            ->where('entity_id', $entityId)
-            ->update(['is_primary' => false, 'updated_at' => now()]);
-    }
-
-    foreach (array_values($files) as $fileIndex => $file) {
-        $imageSize = @getimagesize($file->getPathname());
-        if (!is_array($imageSize) || count($imageSize) < 2) {
-            return back()->withErrors(['profile' => 'One or more uploaded files are not valid images.'])->withInput();
-        }
-
-        $widthPx = (int) $imageSize[0];
-        $heightPx = (int) $imageSize[1];
-        $fileSizeKb = (int) ceil(((int) $file->getSize()) / 1024);
-
-        if ($widthPx < 1200 || $heightPx < 800) {
-            return back()->withErrors(['profile' => 'Each image must be at least 1200x800 pixels.'])->withInput();
-        }
-        if ($widthPx > 10000 || $heightPx > 10000) {
-            return back()->withErrors(['profile' => 'One or more images exceed maximum dimensions of 10000x10000 pixels.'])->withInput();
-        }
-
-        $qualityGrade = ($widthPx >= 2400 && $heightPx >= 1600 && $fileSizeKb <= 6000) ? 'A' : 'B';
-        $filePath = $file->store('vendor-listings/' . $vendorUserId, 'public');
-        $isPrimary = $primaryIndex >= 0 && $primaryIndex === (int) $fileIndex;
-
-        $generatedAlt = pathinfo((string) $file->getClientOriginalName(), PATHINFO_FILENAME);
-        $generatedAlt = str_replace(['_', '-'], ' ', trim((string) $generatedAlt));
-        $resolvedAlt = $altBase !== '' ? ($altBase . ' #' . ($fileIndex + 1)) : ($generatedAlt !== '' ? $generatedAlt : 'Listing Photo');
-
-        $mediaPayload = [
-            'vendor_user_id' => $vendorUserId,
-            'entity_type' => $entityType,
-            'entity_id' => $entityId,
-            'file_path' => (string) $filePath,
-            'mime_type' => $file->getMimeType(),
-            'alt_text' => $resolvedAlt,
-            'is_primary' => $isPrimary,
-            'created_at' => now(),
+    DB::table('vendor_listing_media')
+        ->where('vendor_user_id', $vendorUserId)
+        ->where('entity_type', $entityType)
+        ->where('entity_id', $entityId)
+        ->update([
+            'is_primary' => false,
             'updated_at' => now(),
-        ];
+        ]);
 
-        if (Schema::hasColumn('vendor_listing_media', 'width_px')) {
-            $mediaPayload['width_px'] = $widthPx;
-        }
-        if (Schema::hasColumn('vendor_listing_media', 'height_px')) {
-            $mediaPayload['height_px'] = $heightPx;
-        }
-        if (Schema::hasColumn('vendor_listing_media', 'file_size_kb')) {
-            $mediaPayload['file_size_kb'] = $fileSizeKb;
-        }
-        if (Schema::hasColumn('vendor_listing_media', 'quality_grade')) {
-            $mediaPayload['quality_grade'] = $qualityGrade;
-        }
+    DB::table('vendor_listing_media')
+        ->where('id', $media)
+        ->where('vendor_user_id', $vendorUserId)
+        ->update([
+            'is_primary' => true,
+            'updated_at' => now(),
+        ]);
 
-        DB::table('vendor_listing_media')->insert($mediaPayload);
-    }
-
-    return vendorPortalListingsBackResponse('Photos uploaded successfully.', 4);
+    return vendorPortalListingsBackResponse('Primary photo updated.', 4);
 });
 
 Route::post('/portal/vendor/rooms/create', function (Request $request) {

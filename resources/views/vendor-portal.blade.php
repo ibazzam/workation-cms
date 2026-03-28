@@ -580,6 +580,18 @@
             background: #fff;
         }
 
+        .ops-input.is-invalid,
+        .ops-select.is-invalid,
+        .ops-textarea.is-invalid {
+            border-color: #c13d3d;
+            box-shadow: 0 0 0 2px rgba(193, 61, 61, 0.14);
+            background: #fff8f8;
+        }
+
+        .ops-field.has-invalid label {
+            color: #8a2f2f;
+        }
+
         .ops-textarea {
             min-height: 90px;
             resize: vertical;
@@ -1949,11 +1961,21 @@
                         <p class="guided-wizard-title" id="propertyCreateFormTitle">Accommodation Enlisting</p>
                         <p class="guided-wizard-subtitle" id="propertyCreateFormSubtitle">Fill required fields and save.</p>
                         <div class="ops-form-grid">
-                            <div class="ops-field" hidden>
-                                <label for="property_listing_category">Listing Category</label>
-                                <select id="property_listing_category" name="listing_category" class="ops-select" required>
-                                    @foreach ($vendorCategoryMap as $categoryKey => $categoryLabel)
-                                        <option value="{{ $categoryKey }}" @selected(old('listing_category') === $categoryKey) @disabled(!in_array($categoryKey, $selectedVendorCategories, true))>{{ $categoryLabel }}</option>
+                            @php
+                                $defaultCreateCategory = old('listing_category');
+                                if (!is_string($defaultCreateCategory) || trim($defaultCreateCategory) === '') {
+                                    $defaultCreateCategory = in_array('accommodation', $selectedVendorCategories, true)
+                                        ? 'accommodation'
+                                        : ((string) ($selectedVendorCategories[0] ?? 'accommodation'));
+                                }
+                            @endphp
+                            <div class="ops-field" style="display:none;">
+                                <select id="property_listing_category" name="listing_category" class="ops-select" data-default-category="{{ $defaultCreateCategory }}">
+                                    @foreach ($selectedVendorCategories as $categoryKey)
+                                        @php
+                                            $categoryLabel = $vendorCategoryMap[$categoryKey] ?? strtoupper(str_replace('_', ' ', (string) $categoryKey));
+                                        @endphp
+                                        <option value="{{ $categoryKey }}" @selected($defaultCreateCategory === $categoryKey)>{{ $categoryLabel }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -1982,10 +2004,6 @@
                                     <option value="">Select city/island</option>
                                 </select>
                             </div>
-                            <div class="ops-field ops-field-wide" data-category-scope="geo">
-                                <label for="address_line">Address Line</label>
-                                <input id="address_line" name="address_line" class="ops-input" type="text" maxlength="255" value="{{ old('address_line') }}" placeholder="Primary address line or landmark">
-                            </div>
                             <div class="ops-field" data-category-scope="geo">
                                 <label for="property_building_house_lot">Building / House / Lot No.</label>
                                 <input id="property_building_house_lot" name="building_house_lot" class="ops-input" type="text" maxlength="160" value="{{ old('building_house_lot') }}" placeholder="e.g. Lily House, Lot 1142">
@@ -2000,7 +2018,7 @@
                             </div>
                             <div class="ops-field" data-category-scope="geo">
                                 <label for="property_contact_name">Property Contact Name</label>
-                                <input id="property_contact_name" name="property_contact_name" class="ops-input" type="text" maxlength="120" value="{{ old('property_contact_name') }}" placeholder="On-site contact person">
+                                <input id="property_contact_name" name="property_contact_name" class="ops-input" type="text" maxlength="120" value="{{ old('property_contact_name') }}" placeholder="Contact Name">
                             </div>
                             <div class="ops-field" data-category-scope="geo">
                                 <label for="property_contact_number">Property Contact Number</label>
@@ -2415,6 +2433,7 @@
                                                     $transportPricingModel = strtolower((string) ($propertyDetails['transport_pricing_model'] ?? ''));
                                                     $listingStatus = strtoupper((string) ($property->status ?? 'active'));
                                                     $listingType = strtoupper((string) ($property->property_type ?? 'N/A'));
+                                                    $propertyMediaItems = $propertyMediaByPropertyId->get($propertyId, collect());
                                                     $listingStatusClass = 'is-neutral';
                                                     if (strtolower($listingStatus) === 'active') {
                                                         $listingStatusClass = 'is-active';
@@ -2440,6 +2459,7 @@
                                                                 <button class="btn btn-secondary" type="button" data-open-property-edit data-property-edit-id="{{ $propertyId }}" data-property-edit-category="{{ $editCategory }}">Edit Listing</button>
                                                                 @if ($categoryKey === 'accommodation')
                                                                     <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ $propertyId }}">Add Room</button>
+                                                                    <button class="btn btn-secondary" type="button" data-toggle-property-media="{{ $propertyId }}">Manage Media</button>
                                                                 @endif
                                                                 <form method="POST" action="/portal/vendor/properties/{{ $propertyId }}/delete" onsubmit="return confirm('Remove this listing?');">
                                                                     @csrf
@@ -2455,7 +2475,7 @@
                                                                 <input class="ops-input" name="building_house_lot" type="text" maxlength="160" value="{{ (string) ($propertyDetails['building_house_lot'] ?? '') }}" placeholder="Building / House / Lot No." data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="street" type="text" maxlength="160" value="{{ (string) ($propertyDetails['street'] ?? '') }}" placeholder="Street" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="post_code" type="text" maxlength="20" value="{{ (string) ($propertyDetails['post_code'] ?? '') }}" placeholder="Post code" data-property-edit-scope="geo">
-                                                                <input class="ops-input" name="property_contact_name" type="text" maxlength="120" value="{{ (string) ($propertyDetails['property_contact_name'] ?? '') }}" placeholder="Property Contact Name" data-property-edit-scope="geo">
+                                                                <input class="ops-input" name="property_contact_name" type="text" maxlength="120" value="{{ (string) ($propertyDetails['property_contact_name'] ?? '') }}" placeholder="Contact Name" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="property_contact_number" type="text" maxlength="60" value="{{ (string) ($propertyDetails['property_contact_number'] ?? '') }}" placeholder="Property Contact Number" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="property_contact_email" type="email" maxlength="190" value="{{ (string) ($propertyDetails['property_contact_email'] ?? '') }}" placeholder="Property Contact Email" data-property-edit-scope="geo">
                                                                 <input name="map_latitude" type="hidden" value="{{ (string) ($propertyDetails['map_latitude'] ?? '') }}">
@@ -2603,6 +2623,46 @@
                                                                     <button class="btn btn-secondary" type="button" data-close-property-edit data-property-edit-id="{{ $propertyId }}">Cancel Edit</button>
                                                                 </div>
                                                             </form>
+                                                            @if ($categoryKey === 'accommodation')
+                                                                <div class="media-upload-row" data-property-media-panel="{{ $propertyId }}" hidden>
+                                                                    <form class="inline-table-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
+                                                                        @csrf
+                                                                        <input type="hidden" name="entity_type" value="property">
+                                                                        <input type="hidden" name="entity_id" value="{{ $propertyId }}">
+                                                                        <input class="ops-input" name="alt_text" type="text" maxlength="190" value="{{ $property->name }} photo" placeholder="Photo alt text" required>
+                                                                        <input class="ops-input" name="photo" type="file" accept="image/png,image/jpeg,image/webp" required>
+                                                                        <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Primary photo</label>
+                                                                        <button class="btn btn-secondary" type="submit">Upload</button>
+                                                                        <button class="btn btn-secondary" type="button" data-close-property-media="{{ $propertyId }}">Close</button>
+                                                                    </form>
+                                                                    @if ($propertyMediaItems->isEmpty())
+                                                                        <p class="ops-empty">No listing photos uploaded yet.</p>
+                                                                    @else
+                                                                        <div class="gallery-grid">
+                                                                            @foreach ($propertyMediaItems as $media)
+                                                                                @php
+                                                                                    $mediaPath = (string) ($media->file_path ?? '');
+                                                                                    $mediaUrl = str_starts_with($mediaPath, 'http') ? $mediaPath : asset('storage/' . ltrim($mediaPath, '/'));
+                                                                                @endphp
+                                                                                <article class="gallery-card">
+                                                                                    <img src="{{ $mediaUrl }}" alt="{{ (string) ($media->alt_text ?? $property->name) }}">
+                                                                                    <div style="padding:6px 8px; font-size:0.72rem; color:#35506a;">
+                                                                                        {{ (string) ($media->alt_text ?? 'Listing photo') }}
+                                                                                        @if ((bool) ($media->is_primary ?? false))
+                                                                                            <span class="ops-chip" style="margin-left:6px;">Primary</span>
+                                                                                        @else
+                                                                                            <form method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/primary" style="margin-top:6px;">
+                                                                                                @csrf
+                                                                                                <button class="btn btn-secondary" type="submit">Set Primary</button>
+                                                                                            </form>
+                                                                                        @endif
+                                                                                    </div>
+                                                                                </article>
+                                                                            @endforeach
+                                                                        </div>
+                                                                    @endif
+                                                                </div>
+                                                            @endif
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -2627,6 +2687,7 @@
                                                                                 @foreach ($propertyRooms as $room)
                                                                                     @php
                                                                                         $roomId = (int) ($room->id ?? 0);
+                                                                                        $roomMediaItems = $roomMediaByRoomId->get($roomId, collect());
                                                                                         $roomAmenityValues = collect(explode(',', (string) ($room->amenities ?? '')))
                                                                                             ->map(static fn ($token) => trim((string) $token))
                                                                                             ->filter(static fn ($token) => $token !== '')
@@ -2651,6 +2712,7 @@
                                                                                         <td>
                                                                                             <div class="inline-actions listing-actions-inline">
                                                                                                 <button class="btn btn-secondary" type="button" data-open-room-edit data-room-edit-id="{{ $roomId }}">Edit Room</button>
+                                                                                                <button class="btn btn-secondary" type="button" data-toggle-room-media="{{ $roomId }}">Manage Media</button>
                                                                                                 <form method="POST" action="/portal/vendor/rooms/{{ $roomId }}/delete" onsubmit="return confirm('Remove this room category?');">
                                                                                                     @csrf
                                                                                                     <button class="btn btn-danger" type="submit">Remove Room</button>
@@ -2723,6 +2785,44 @@
                                                                                                     <button class="btn btn-secondary" type="button" data-close-room-edit data-room-edit-id="{{ $roomId }}">Cancel Edit</button>
                                                                                                 </div>
                                                                                             </form>
+                                                                                            <div class="media-upload-row" data-room-media-panel="{{ $roomId }}" hidden>
+                                                                                                <form class="inline-table-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
+                                                                                                    @csrf
+                                                                                                    <input type="hidden" name="entity_type" value="room">
+                                                                                                    <input type="hidden" name="entity_id" value="{{ $roomId }}">
+                                                                                                    <input class="ops-input" name="alt_text" type="text" maxlength="190" value="{{ $room->name }} photo" placeholder="Photo alt text" required>
+                                                                                                    <input class="ops-input" name="photo" type="file" accept="image/png,image/jpeg,image/webp" required>
+                                                                                                    <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Primary photo</label>
+                                                                                                    <button class="btn btn-secondary" type="submit">Upload</button>
+                                                                                                    <button class="btn btn-secondary" type="button" data-close-room-media="{{ $roomId }}">Close</button>
+                                                                                                </form>
+                                                                                                @if ($roomMediaItems->isEmpty())
+                                                                                                    <p class="ops-empty">No room photos uploaded yet.</p>
+                                                                                                @else
+                                                                                                    <div class="gallery-grid">
+                                                                                                        @foreach ($roomMediaItems as $media)
+                                                                                                            @php
+                                                                                                                $roomMediaPath = (string) ($media->file_path ?? '');
+                                                                                                                $roomMediaUrl = str_starts_with($roomMediaPath, 'http') ? $roomMediaPath : asset('storage/' . ltrim($roomMediaPath, '/'));
+                                                                                                            @endphp
+                                                                                                            <article class="gallery-card">
+                                                                                                                <img src="{{ $roomMediaUrl }}" alt="{{ (string) ($media->alt_text ?? $room->name) }}">
+                                                                                                                <div style="padding:6px 8px; font-size:0.72rem; color:#35506a;">
+                                                                                                                    {{ (string) ($media->alt_text ?? 'Room photo') }}
+                                                                                                                    @if ((bool) ($media->is_primary ?? false))
+                                                                                                                        <span class="ops-chip" style="margin-left:6px;">Primary</span>
+                                                                                                                    @else
+                                                                                                                        <form method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/primary" style="margin-top:6px;">
+                                                                                                                            @csrf
+                                                                                                                            <button class="btn btn-secondary" type="submit">Set Primary</button>
+                                                                                                                        </form>
+                                                                                                                    @endif
+                                                                                                                </div>
+                                                                                                            </article>
+                                                                                                        @endforeach
+                                                                                                    </div>
+                                                                                                @endif
+                                                                                            </div>
                                                                                         </td>
                                                                                     </tr>
                                                                                 @endforeach
@@ -3356,6 +3456,10 @@
             const propertyEditCancelButtons = Array.from(document.querySelectorAll('[data-close-property-edit]'));
             const roomEditButtons = Array.from(document.querySelectorAll('[data-open-room-edit]'));
             const roomEditCancelButtons = Array.from(document.querySelectorAll('[data-close-room-edit]'));
+            const propertyMediaToggleButtons = Array.from(document.querySelectorAll('[data-toggle-property-media]'));
+            const propertyMediaCloseButtons = Array.from(document.querySelectorAll('[data-close-property-media]'));
+            const roomMediaToggleButtons = Array.from(document.querySelectorAll('[data-toggle-room-media]'));
+            const roomMediaCloseButtons = Array.from(document.querySelectorAll('[data-close-room-media]'));
             const listingCategoryShortcutButtons = Array.from(document.querySelectorAll('[data-listing-category-shortcut]'));
             const propertyListingRows = Array.from(document.querySelectorAll('[data-property-row]'));
             const guidedTrackProperty = document.getElementById("guidedTrackProperty");
@@ -4471,9 +4575,28 @@
                 }
             }
 
+            function ensureAutoCategorySelected(preferredCategory) {
+                if (!propertyCategorySelect) {
+                    return '';
+                }
+                const preferred = normalizeCategoryKey(preferredCategory || propertyCategorySelect.getAttribute('data-default-category') || 'accommodation');
+                if (preferred !== '') {
+                    const matched = Array.from(propertyCategorySelect.options)
+                        .find((option) => normalizeCategoryKey(option.value) === preferred);
+                    if (matched) {
+                        propertyCategorySelect.value = matched.value;
+                    }
+                }
+                if ((!propertyCategorySelect.value || String(propertyCategorySelect.value).trim() === '') && propertyCategorySelect.options.length > 0) {
+                    propertyCategorySelect.value = propertyCategorySelect.options[0].value;
+                }
+                return String(propertyCategorySelect.value || '');
+            }
+
             function refreshPropertyCategoryFields() {
                 if (!propertyCategorySelect || categoryScopedFields.length === 0) return;
-                const activeScopes = categoryScopesFor(propertyCategorySelect.value);
+                const activeCategory = ensureAutoCategorySelected('');
+                const activeScopes = categoryScopesFor(activeCategory);
                 categoryScopedFields.forEach((field) => {
                     const scopes = String(field.getAttribute("data-category-scope") || "")
                         .split(",")
@@ -4492,7 +4615,7 @@
                     });
                 });
                 refreshCategoryViewPanels();
-                applyCategoryFormMeta(propertyCategorySelect.value, false);
+                applyCategoryFormMeta(activeCategory, false);
                 refreshTransportFieldLabels();
             }
 
@@ -4518,11 +4641,10 @@
                 if (closePropertyCreateForm) {
                     closePropertyCreateForm.hidden = false;
                 }
-                if (propertyCategorySelect && normalizedCategory !== '') {
-                    ensureSelectHasOption(propertyCategorySelect, normalizedCategory);
-                    propertyCategorySelect.value = normalizedCategory;
+                if (propertyCategorySelect) {
+                    const selectedCategory = ensureAutoCategorySelected(normalizedCategory);
                     propertyCategorySelect.dispatchEvent(new Event('change'));
-                    applyCategoryFormMeta(normalizedCategory, true);
+                    applyCategoryFormMeta(selectedCategory, true);
                 }
                 if (document.getElementById('property_name')) {
                     document.getElementById('property_name').focus();
@@ -4531,6 +4653,66 @@
                 refreshLocationMapViewport();
 
                 applyPropertyCategoryFilter(normalizedCategory || 'all');
+            }
+
+            function isFieldVisibleForValidation(field) {
+                if (!field || field.disabled || field.type === 'hidden') {
+                    return false;
+                }
+                if (field.closest('[hidden]')) {
+                    return false;
+                }
+                return field.offsetParent !== null;
+            }
+
+            function applyFieldValidationState(field) {
+                if (!field) {
+                    return true;
+                }
+
+                const visible = isFieldVisibleForValidation(field);
+                const shouldValidate = visible && field.required;
+                const isInvalid = shouldValidate && !field.checkValidity();
+
+                field.classList.toggle('is-invalid', isInvalid);
+                const fieldWrap = field.closest('.ops-field');
+                if (fieldWrap) {
+                    fieldWrap.classList.toggle('has-invalid', isInvalid);
+                }
+
+                return !isInvalid;
+            }
+
+            function validatePropertyCreateForm(showNativeMessage) {
+                if (!propertyCreateForm) {
+                    return true;
+                }
+
+                const requiredFields = Array.from(propertyCreateForm.querySelectorAll('input, select, textarea'))
+                    .filter((field) => field.required);
+
+                let firstInvalid = null;
+                let allValid = true;
+
+                requiredFields.forEach((field) => {
+                    const valid = applyFieldValidationState(field);
+                    if (!valid && !firstInvalid) {
+                        firstInvalid = field;
+                    }
+                    if (!valid) {
+                        allValid = false;
+                    }
+                });
+
+                if (!allValid && firstInvalid) {
+                    firstInvalid.focus();
+                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if (showNativeMessage && typeof firstInvalid.reportValidity === 'function') {
+                        firstInvalid.reportValidity();
+                    }
+                }
+
+                return allValid;
             }
 
             function refreshBillingLocationSelectors() {
@@ -4838,11 +5020,49 @@
                 openPropertyCreateForm.addEventListener("click", function () {
                     propertyCreateForm.hidden = false;
                     if (closePropertyCreateForm) closePropertyCreateForm.hidden = false;
+                    refreshPropertyCategoryFields();
                     const propertyNameInput = document.getElementById("property_name");
                     if (propertyNameInput) {
                         propertyNameInput.focus();
                     }
                     refreshLocationMapViewport();
+                });
+            }
+
+            if (propertyCreateForm) {
+                propertyCreateForm.querySelectorAll('input, select, textarea').forEach((field) => {
+                    if (!field.required) {
+                        return;
+                    }
+                    field.addEventListener('input', function () {
+                        applyFieldValidationState(field);
+                    });
+                    field.addEventListener('change', function () {
+                        applyFieldValidationState(field);
+                    });
+                    field.addEventListener('blur', function () {
+                        applyFieldValidationState(field);
+                    });
+                });
+
+                propertyCreateForm.addEventListener('submit', function (event) {
+                    if (!validatePropertyCreateForm(true)) {
+                        event.preventDefault();
+                    }
+                });
+            }
+
+            if (propertyCreateSubmitButton && propertyCreateForm) {
+                propertyCreateSubmitButton.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    if (!validatePropertyCreateForm(true)) {
+                        return;
+                    }
+                    if (typeof propertyCreateForm.requestSubmit === 'function') {
+                        propertyCreateForm.requestSubmit();
+                    } else {
+                        propertyCreateForm.submit();
+                    }
                 });
             }
 
@@ -4989,6 +5209,66 @@
                         return;
                     }
                     closeEditForm('[data-room-edit-form="' + editId + '"]');
+                });
+            });
+
+            propertyMediaToggleButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const propertyId = String(button.getAttribute('data-toggle-property-media') || '').trim();
+                    if (!propertyId) {
+                        return;
+                    }
+                    const panel = document.querySelector('[data-property-media-panel="' + propertyId + '"]');
+                    if (!panel) {
+                        return;
+                    }
+                    panel.hidden = !panel.hidden;
+                    if (!panel.hidden) {
+                        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                });
+            });
+
+            propertyMediaCloseButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const propertyId = String(button.getAttribute('data-close-property-media') || '').trim();
+                    if (!propertyId) {
+                        return;
+                    }
+                    const panel = document.querySelector('[data-property-media-panel="' + propertyId + '"]');
+                    if (panel) {
+                        panel.hidden = true;
+                    }
+                });
+            });
+
+            roomMediaToggleButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const roomId = String(button.getAttribute('data-toggle-room-media') || '').trim();
+                    if (!roomId) {
+                        return;
+                    }
+                    const panel = document.querySelector('[data-room-media-panel="' + roomId + '"]');
+                    if (!panel) {
+                        return;
+                    }
+                    panel.hidden = !panel.hidden;
+                    if (!panel.hidden) {
+                        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                });
+            });
+
+            roomMediaCloseButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const roomId = String(button.getAttribute('data-close-room-media') || '').trim();
+                    if (!roomId) {
+                        return;
+                    }
+                    const panel = document.querySelector('[data-room-media-panel="' + roomId + '"]');
+                    if (panel) {
+                        panel.hidden = true;
+                    }
                 });
             });
 
@@ -5194,6 +5474,21 @@
                     return metaMap[normalized] || ['Listing Enlisting', 'Fill required fields and save.', 'Save Listing', 'Fill required fields and save.', 'service'];
                 }
 
+                function ensureAutoCategorySelected(preferredCategory) {
+                    if (!propertyCategorySelect) return '';
+                    const preferred = normalizeCategoryKey(preferredCategory || propertyCategorySelect.getAttribute('data-default-category') || 'accommodation');
+                    if (preferred !== '') {
+                        const matched = Array.from(propertyCategorySelect.options).find((item) => normalizeCategoryKey(item.value) === preferred);
+                        if (matched) {
+                            propertyCategorySelect.value = matched.value;
+                        }
+                    }
+                    if ((!propertyCategorySelect.value || String(propertyCategorySelect.value).trim() === '') && propertyCategorySelect.options.length > 0) {
+                        propertyCategorySelect.value = propertyCategorySelect.options[0].value;
+                    }
+                    return String(propertyCategorySelect.value || '');
+                }
+
                 function isMarineTransportMode(value) {
                     const mode = String(value || '').trim().toLowerCase();
                     return /(^|\s)(speed\s?boat|ferry|boat|safari|dhoni|launch|catamaran|yacht)(\s|$)/.test(mode);
@@ -5308,6 +5603,7 @@
                         if (closePropertyCreateForm) {
                             closePropertyCreateForm.hidden = false;
                         }
+                        applyCategoryMode(ensureAutoCategorySelected(''));
                         if (typeof window.__vendorPortalRefreshLocationMap === 'function') {
                             window.__vendorPortalRefreshLocationMap();
                         }
@@ -5349,8 +5645,8 @@
                                 option.textContent = categoryKey;
                                 propertyCategorySelect.appendChild(option);
                             }
-                            propertyCategorySelect.value = option.value;
-                            applyCategoryMode(option.value);
+                            propertyCategorySelect.value = ensureAutoCategorySelected(option.value);
+                            applyCategoryMode(propertyCategorySelect.value);
                         }
 
                         window.location.hash = 'listings';
@@ -5383,6 +5679,44 @@
                         if (roomCreateForm) {
                             roomCreateForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         }
+                    });
+                });
+
+                document.querySelectorAll('[data-toggle-property-media]').forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const propertyId = String(button.getAttribute('data-toggle-property-media') || '').trim();
+                        if (!propertyId) return;
+                        const panel = document.querySelector('[data-property-media-panel="' + propertyId + '"]');
+                        if (!panel) return;
+                        panel.hidden = !panel.hidden;
+                    });
+                });
+
+                document.querySelectorAll('[data-close-property-media]').forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const propertyId = String(button.getAttribute('data-close-property-media') || '').trim();
+                        if (!propertyId) return;
+                        const panel = document.querySelector('[data-property-media-panel="' + propertyId + '"]');
+                        if (panel) panel.hidden = true;
+                    });
+                });
+
+                document.querySelectorAll('[data-toggle-room-media]').forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const roomId = String(button.getAttribute('data-toggle-room-media') || '').trim();
+                        if (!roomId) return;
+                        const panel = document.querySelector('[data-room-media-panel="' + roomId + '"]');
+                        if (!panel) return;
+                        panel.hidden = !panel.hidden;
+                    });
+                });
+
+                document.querySelectorAll('[data-close-room-media]').forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const roomId = String(button.getAttribute('data-close-room-media') || '').trim();
+                        if (!roomId) return;
+                        const panel = document.querySelector('[data-room-media-panel="' + roomId + '"]');
+                        if (panel) panel.hidden = true;
                     });
                 });
 
@@ -5424,7 +5758,7 @@
                     propertyCategorySelect.addEventListener('change', function () {
                         applyCategoryMode(propertyCategorySelect.value);
                     });
-                    applyCategoryMode(propertyCategorySelect.value);
+                    applyCategoryMode(ensureAutoCategorySelected(''));
                 }
 
                 if (transportModeInput) {

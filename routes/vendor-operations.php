@@ -942,6 +942,15 @@ Route::get('/vendor', function () {
                 ->orderByDesc('updated_at')
                 ->limit(200)
                 ->get();
+
+            $existingListingCategories = $vendorProperties
+                ->map(static fn ($property) => vendorPortalCanonicalCategory((string) ($property->listing_category ?? '')))
+                ->filter(static fn ($category) => is_string($category) && $category !== '')
+                ->values()
+                ->all();
+            if ($existingListingCategories !== []) {
+                $selectedVendorCategories = array_values(array_unique(array_merge($selectedVendorCategories, $existingListingCategories)));
+            }
         }
 
         if (Schema::hasTable('vendor_services')) {
@@ -1620,7 +1629,12 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         }
     }
     if (!in_array($canonicalListingCategory, $allowedForUser, true)) {
-        return back()->withErrors(['profile' => 'Select category in onboarding before creating this listing.']);
+        $allowedForUser[] = $canonicalListingCategory;
+        $allowedForUser = array_values(array_unique($allowedForUser));
+        if ($vendorUser instanceof User && Schema::hasColumn('users', 'portal_service_categories')) {
+            $vendorUser->portal_service_categories = json_encode($allowedForUser);
+            $vendorUser->save();
+        }
     }
 
     $submittedTransportMode = trim((string) ($validated['transport_mode'] ?? ''));

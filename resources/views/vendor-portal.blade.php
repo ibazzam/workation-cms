@@ -2463,8 +2463,8 @@
                                                                 <button class="btn btn-secondary" type="button" data-open-property-edit data-property-edit-id="{{ $propertyId }}" data-property-edit-category="{{ $editCategory }}">Edit Listing</button>
                                                                 @if ($categoryKey === 'accommodation')
                                                                     <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ $propertyId }}">Add Room</button>
-                                                                    <button class="btn btn-secondary" type="button" data-toggle-property-media="{{ $propertyId }}">Manage Media</button>
                                                                 @endif
+                                                                <button class="btn btn-secondary" type="button" data-toggle-property-media="{{ $propertyId }}">Manage Media</button>
                                                                 <form method="POST" action="/portal/vendor/properties/{{ $propertyId }}/delete" onsubmit="return confirm('Remove this listing?');">
                                                                     @csrf
                                                                     <button class="btn btn-danger" type="submit">Remove Listing</button>
@@ -2628,46 +2628,44 @@
                                                                     <button class="btn btn-secondary" type="button" data-close-property-edit data-property-edit-id="{{ $propertyId }}">Cancel Edit</button>
                                                                 </div>
                                                             </form>
-                                                            @if ($categoryKey === 'accommodation')
-                                                                <div class="media-upload-row" data-property-media-panel="{{ $propertyId }}" hidden>
-                                                                    <form class="inline-table-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
-                                                                        @csrf
-                                                                        <input type="hidden" name="entity_type" value="property">
-                                                                        <input type="hidden" name="entity_id" value="{{ $propertyId }}">
-                                                                        <input class="ops-input" name="alt_text" type="text" maxlength="190" value="{{ $property->name }} photo" placeholder="Photo alt text" required>
-                                                                        <input class="ops-input" name="photo" type="file" accept="image/png,image/jpeg,image/webp" required>
-                                                                        <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Primary photo</label>
-                                                                        <button class="btn btn-secondary" type="submit">Upload</button>
-                                                                        <button class="btn btn-secondary" type="button" data-close-property-media="{{ $propertyId }}">Close</button>
-                                                                    </form>
-                                                                    @if ($propertyMediaItems->isEmpty())
-                                                                        <p class="ops-empty">No listing photos uploaded yet.</p>
-                                                                    @else
-                                                                        <div class="gallery-grid">
-                                                                            @foreach ($propertyMediaItems as $media)
-                                                                                @php
-                                                                                    $mediaPath = (string) ($media->file_path ?? '');
-                                                                                    $mediaUrl = str_starts_with($mediaPath, 'http') ? $mediaPath : asset('storage/' . ltrim($mediaPath, '/'));
-                                                                                @endphp
-                                                                                <article class="gallery-card">
-                                                                                    <img src="{{ $mediaUrl }}" alt="{{ (string) ($media->alt_text ?? $property->name) }}">
-                                                                                    <div style="padding:6px 8px; font-size:0.72rem; color:#35506a;">
-                                                                                        {{ (string) ($media->alt_text ?? 'Listing photo') }}
-                                                                                        @if ((bool) ($media->is_primary ?? false))
-                                                                                            <span class="ops-chip" style="margin-left:6px;">Primary</span>
-                                                                                        @else
-                                                                                            <form method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/primary" style="margin-top:6px;">
-                                                                                                @csrf
-                                                                                                <button class="btn btn-secondary" type="submit">Set Primary</button>
-                                                                                            </form>
-                                                                                        @endif
-                                                                                    </div>
-                                                                                </article>
-                                                                            @endforeach
-                                                                        </div>
-                                                                    @endif
-                                                                </div>
-                                                            @endif
+                                                            <div class="media-upload-row" data-property-media-panel="{{ $propertyId }}" hidden>
+                                                                <form class="inline-table-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
+                                                                    @csrf
+                                                                    <input type="hidden" name="entity_type" value="property">
+                                                                    <input type="hidden" name="entity_id" value="{{ $propertyId }}">
+                                                                    <input class="ops-input" name="alt_text" type="text" maxlength="190" value="{{ $property->name }} photo" placeholder="Photo alt text" required>
+                                                                    <input class="ops-input" name="photo" type="file" accept="image/png,image/jpeg,image/webp" required>
+                                                                    <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Primary photo</label>
+                                                                    <button class="btn btn-secondary" type="submit">Upload</button>
+                                                                    <button class="btn btn-secondary" type="button" data-close-property-media="{{ $propertyId }}">Close</button>
+                                                                </form>
+                                                                @if ($propertyMediaItems->isEmpty())
+                                                                    <p class="ops-empty">No listing photos uploaded yet.</p>
+                                                                @else
+                                                                    <div class="gallery-grid">
+                                                                        @foreach ($propertyMediaItems as $media)
+                                                                            @php
+                                                                                $mediaPath = (string) ($media->file_path ?? '');
+                                                                                $mediaUrl = str_starts_with($mediaPath, 'http') ? $mediaPath : asset('storage/' . ltrim($mediaPath, '/'));
+                                                                            @endphp
+                                                                            <article class="gallery-card">
+                                                                                <img src="{{ $mediaUrl }}" alt="{{ (string) ($media->alt_text ?? $property->name) }}">
+                                                                                <div style="padding:6px 8px; font-size:0.72rem; color:#35506a;">
+                                                                                    {{ (string) ($media->alt_text ?? 'Listing photo') }}
+                                                                                    @if ((bool) ($media->is_primary ?? false))
+                                                                                        <span class="ops-chip" style="margin-left:6px;">Primary</span>
+                                                                                    @else
+                                                                                        <form method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/primary" style="margin-top:6px;">
+                                                                                            @csrf
+                                                                                            <button class="btn btn-secondary" type="submit">Set Primary</button>
+                                                                                        </form>
+                                                                                    @endif
+                                                                                </div>
+                                                                            </article>
+                                                                        @endforeach
+                                                                    </div>
+                                                                @endif
+                                                            </div>
                                                         </div>
                                                     </td>
                                                 </tr>

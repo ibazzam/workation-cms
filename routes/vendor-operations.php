@@ -959,6 +959,15 @@ Route::get('/vendor', function () {
                 ->orderByDesc('updated_at')
                 ->limit(250)
                 ->get();
+
+            $existingServiceCategories = $vendorServices
+                ->map(static fn ($service) => vendorPortalCanonicalCategory((string) ($service->listing_category ?? '')))
+                ->filter(static fn ($category) => is_string($category) && $category !== '')
+                ->values()
+                ->all();
+            if ($existingServiceCategories !== []) {
+                $selectedVendorCategories = array_values(array_unique(array_merge($selectedVendorCategories, $existingServiceCategories)));
+            }
         }
 
         if (Schema::hasTable('vendor_availability_slots')) {
@@ -2092,6 +2101,7 @@ Route::post('/portal/vendor/availability/save', function (Request $request) {
         'listing_category' => ['nullable', 'string', 'max:80'],
         'vendor_property_id' => ['nullable', 'integer', 'min:1'],
         'vendor_service_id' => ['nullable', 'integer', 'min:1'],
+        'vendor_room_category_id' => ['nullable', 'integer', 'min:1'],
         'route_name' => ['nullable', 'string', 'max:120'],
         'schedule_profile' => ['nullable', Rule::in(['one_off', 'daily', 'weekly_6', 'weekly_3', 'weekly_custom'])],
         'service_days' => ['nullable', 'array'],
@@ -2149,8 +2159,63 @@ Route::post('/portal/vendor/availability/save', function (Request $request) {
     $normalizedListingCategory = $canonicalListingCategory ?? strtolower(trim((string) ($validated['listing_category'] ?? '')));
     $vendorPropertyId = filled($validated['vendor_property_id'] ?? null) ? (int) $validated['vendor_property_id'] : null;
     $vendorServiceId = filled($validated['vendor_service_id'] ?? null) ? (int) $validated['vendor_service_id'] : null;
+    $vendorRoomCategoryId = filled($validated['vendor_room_category_id'] ?? null) ? (int) $validated['vendor_room_category_id'] : null;
     $routeName = trim((string) ($validated['route_name'] ?? ''));
     $freeNotes = trim((string) ($validated['notes'] ?? ''));
+
+    $propertyCategoryFromTarget = null;
+    if ($vendorPropertyId !== null && Schema::hasTable('vendor_properties')) {
+        $propertyRecord = DB::table('vendor_properties')
+            ->select(['id', 'listing_category'])
+            ->where('id', $vendorPropertyId)
+            ->where('vendor_user_id', $vendorUserId)
+            ->first();
+        if (!$propertyRecord) {
+            return back()->withErrors(['profile' => 'Selected property is not valid for this vendor account.'])->withInput();
+        }
+        $propertyCategoryFromTarget = vendorPortalCanonicalCategory((string) ($propertyRecord->listing_category ?? ''));
+    }
+
+    $serviceCategoryFromTarget = null;
+    if ($vendorServiceId !== null && Schema::hasTable('vendor_services')) {
+        $serviceRecord = DB::table('vendor_services')
+            ->select(['id', 'listing_category'])
+            ->where('id', $vendorServiceId)
+            ->where('vendor_user_id', $vendorUserId)
+            ->first();
+        if (!$serviceRecord) {
+            return back()->withErrors(['profile' => 'Selected service is not valid for this vendor account.'])->withInput();
+        }
+        $serviceCategoryFromTarget = vendorPortalCanonicalCategory((string) ($serviceRecord->listing_category ?? ''));
+    }
+
+    if ($vendorRoomCategoryId !== null) {
+        if (!Schema::hasTable('vendor_property_room_categories')) {
+            return back()->withErrors(['profile' => 'Room categories table is not ready. Run migrations first.'])->withInput();
+        }
+
+        $roomRecord = DB::table('vendor_property_room_categories')
+            ->select(['id', 'vendor_property_id'])
+            ->where('id', $vendorRoomCategoryId)
+            ->where('vendor_user_id', $vendorUserId)
+            ->first();
+        if (!$roomRecord) {
+            return back()->withErrors(['profile' => 'Selected room category is not valid for this vendor account.'])->withInput();
+        }
+
+        if ($vendorPropertyId === null && isset($roomRecord->vendor_property_id)) {
+            $vendorPropertyId = (int) $roomRecord->vendor_property_id;
+        }
+        if ($normalizedListingCategory === '') {
+            $normalizedListingCategory = 'accommodation';
+        }
+    }
+
+    if ($normalizedListingCategory === '') {
+        $normalizedListingCategory = $propertyCategoryFromTarget
+            ?? $serviceCategoryFromTarget
+            ?? '';
+    }
 
     $appliedCount = 0;
     foreach ($slotDates as $slotDate) {
@@ -2162,7 +2227,9 @@ Route::post('/portal/vendor/availability/save', function (Request $request) {
 
         $meta = array_filter([
             'listing_category' => $normalizedListingCategory,
+            'vendor_property_id' => $vendorPropertyId,
             'vendor_service_id' => $vendorServiceId,
+            'vendor_room_category_id' => $vendorRoomCategoryId,
             'route_name' => $routeName,
             'schedule_profile' => $scheduleProfile,
             'service_days' => $effectiveServiceDays,
@@ -2182,6 +2249,9 @@ Route::post('/portal/vendor/availability/save', function (Request $request) {
         if (Schema::hasColumn('vendor_availability_slots', 'vendor_service_id')) {
             $matchAttributes['vendor_service_id'] = $vendorServiceId;
         }
+        if (Schema::hasColumn('vendor_availability_slots', 'vendor_room_category_id')) {
+            $matchAttributes['vendor_room_category_id'] = $vendorRoomCategoryId;
+        }
 
         $updatePayload = [
             'inventory' => (int) $validated['inventory'],
@@ -2192,6 +2262,9 @@ Route::post('/portal/vendor/availability/save', function (Request $request) {
         ];
         if (Schema::hasColumn('vendor_availability_slots', 'vendor_service_id')) {
             $updatePayload['vendor_service_id'] = $vendorServiceId;
+        }
+        if (Schema::hasColumn('vendor_availability_slots', 'vendor_room_category_id')) {
+            $updatePayload['vendor_room_category_id'] = $vendorRoomCategoryId;
         }
         if (Schema::hasColumn('vendor_availability_slots', 'listing_category')) {
             $updatePayload['listing_category'] = $normalizedListingCategory;

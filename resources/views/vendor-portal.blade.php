@@ -580,6 +580,18 @@
             background: #fff;
         }
 
+        .ops-input.is-invalid,
+        .ops-select.is-invalid,
+        .ops-textarea.is-invalid {
+            border-color: #c13d3d;
+            box-shadow: 0 0 0 2px rgba(193, 61, 61, 0.14);
+            background: #fff8f8;
+        }
+
+        .ops-field.has-invalid label {
+            color: #8a2f2f;
+        }
+
         .ops-textarea {
             min-height: 90px;
             resize: vertical;
@@ -1949,11 +1961,21 @@
                         <p class="guided-wizard-title" id="propertyCreateFormTitle">Accommodation Enlisting</p>
                         <p class="guided-wizard-subtitle" id="propertyCreateFormSubtitle">Fill required fields and save.</p>
                         <div class="ops-form-grid">
-                            <div class="ops-field" hidden>
-                                <label for="property_listing_category">Listing Category</label>
-                                <select id="property_listing_category" name="listing_category" class="ops-select" required>
-                                    @foreach ($vendorCategoryMap as $categoryKey => $categoryLabel)
-                                        <option value="{{ $categoryKey }}" @selected(old('listing_category') === $categoryKey) @disabled(!in_array($categoryKey, $selectedVendorCategories, true))>{{ $categoryLabel }}</option>
+                            @php
+                                $defaultCreateCategory = old('listing_category');
+                                if (!is_string($defaultCreateCategory) || trim($defaultCreateCategory) === '') {
+                                    $defaultCreateCategory = in_array('accommodation', $selectedVendorCategories, true)
+                                        ? 'accommodation'
+                                        : ((string) ($selectedVendorCategories[0] ?? 'accommodation'));
+                                }
+                            @endphp
+                            <div class="ops-field" style="display:none;">
+                                <select id="property_listing_category" name="listing_category" class="ops-select" data-default-category="{{ $defaultCreateCategory }}">
+                                    @foreach ($selectedVendorCategories as $categoryKey)
+                                        @php
+                                            $categoryLabel = $vendorCategoryMap[$categoryKey] ?? strtoupper(str_replace('_', ' ', (string) $categoryKey));
+                                        @endphp
+                                        <option value="{{ $categoryKey }}" @selected($defaultCreateCategory === $categoryKey)>{{ $categoryLabel }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -1982,10 +2004,6 @@
                                     <option value="">Select city/island</option>
                                 </select>
                             </div>
-                            <div class="ops-field ops-field-wide" data-category-scope="geo">
-                                <label for="address_line">Address Line</label>
-                                <input id="address_line" name="address_line" class="ops-input" type="text" maxlength="255" value="{{ old('address_line') }}" placeholder="Primary address line or landmark">
-                            </div>
                             <div class="ops-field" data-category-scope="geo">
                                 <label for="property_building_house_lot">Building / House / Lot No.</label>
                                 <input id="property_building_house_lot" name="building_house_lot" class="ops-input" type="text" maxlength="160" value="{{ old('building_house_lot') }}" placeholder="e.g. Lily House, Lot 1142">
@@ -2000,7 +2018,7 @@
                             </div>
                             <div class="ops-field" data-category-scope="geo">
                                 <label for="property_contact_name">Property Contact Name</label>
-                                <input id="property_contact_name" name="property_contact_name" class="ops-input" type="text" maxlength="120" value="{{ old('property_contact_name') }}" placeholder="On-site contact person">
+                                <input id="property_contact_name" name="property_contact_name" class="ops-input" type="text" maxlength="120" value="{{ old('property_contact_name') }}" placeholder="Contact Name">
                             </div>
                             <div class="ops-field" data-category-scope="geo">
                                 <label for="property_contact_number">Property Contact Number</label>
@@ -2457,7 +2475,7 @@
                                                                 <input class="ops-input" name="building_house_lot" type="text" maxlength="160" value="{{ (string) ($propertyDetails['building_house_lot'] ?? '') }}" placeholder="Building / House / Lot No." data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="street" type="text" maxlength="160" value="{{ (string) ($propertyDetails['street'] ?? '') }}" placeholder="Street" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="post_code" type="text" maxlength="20" value="{{ (string) ($propertyDetails['post_code'] ?? '') }}" placeholder="Post code" data-property-edit-scope="geo">
-                                                                <input class="ops-input" name="property_contact_name" type="text" maxlength="120" value="{{ (string) ($propertyDetails['property_contact_name'] ?? '') }}" placeholder="Property Contact Name" data-property-edit-scope="geo">
+                                                                <input class="ops-input" name="property_contact_name" type="text" maxlength="120" value="{{ (string) ($propertyDetails['property_contact_name'] ?? '') }}" placeholder="Contact Name" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="property_contact_number" type="text" maxlength="60" value="{{ (string) ($propertyDetails['property_contact_number'] ?? '') }}" placeholder="Property Contact Number" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="property_contact_email" type="email" maxlength="190" value="{{ (string) ($propertyDetails['property_contact_email'] ?? '') }}" placeholder="Property Contact Email" data-property-edit-scope="geo">
                                                                 <input name="map_latitude" type="hidden" value="{{ (string) ($propertyDetails['map_latitude'] ?? '') }}">
@@ -4557,9 +4575,28 @@
                 }
             }
 
+            function ensureAutoCategorySelected(preferredCategory) {
+                if (!propertyCategorySelect) {
+                    return '';
+                }
+                const preferred = normalizeCategoryKey(preferredCategory || propertyCategorySelect.getAttribute('data-default-category') || 'accommodation');
+                if (preferred !== '') {
+                    const matched = Array.from(propertyCategorySelect.options)
+                        .find((option) => normalizeCategoryKey(option.value) === preferred);
+                    if (matched) {
+                        propertyCategorySelect.value = matched.value;
+                    }
+                }
+                if ((!propertyCategorySelect.value || String(propertyCategorySelect.value).trim() === '') && propertyCategorySelect.options.length > 0) {
+                    propertyCategorySelect.value = propertyCategorySelect.options[0].value;
+                }
+                return String(propertyCategorySelect.value || '');
+            }
+
             function refreshPropertyCategoryFields() {
                 if (!propertyCategorySelect || categoryScopedFields.length === 0) return;
-                const activeScopes = categoryScopesFor(propertyCategorySelect.value);
+                const activeCategory = ensureAutoCategorySelected('');
+                const activeScopes = categoryScopesFor(activeCategory);
                 categoryScopedFields.forEach((field) => {
                     const scopes = String(field.getAttribute("data-category-scope") || "")
                         .split(",")
@@ -4578,7 +4615,7 @@
                     });
                 });
                 refreshCategoryViewPanels();
-                applyCategoryFormMeta(propertyCategorySelect.value, false);
+                applyCategoryFormMeta(activeCategory, false);
                 refreshTransportFieldLabels();
             }
 
@@ -4604,11 +4641,10 @@
                 if (closePropertyCreateForm) {
                     closePropertyCreateForm.hidden = false;
                 }
-                if (propertyCategorySelect && normalizedCategory !== '') {
-                    ensureSelectHasOption(propertyCategorySelect, normalizedCategory);
-                    propertyCategorySelect.value = normalizedCategory;
+                if (propertyCategorySelect) {
+                    const selectedCategory = ensureAutoCategorySelected(normalizedCategory);
                     propertyCategorySelect.dispatchEvent(new Event('change'));
-                    applyCategoryFormMeta(normalizedCategory, true);
+                    applyCategoryFormMeta(selectedCategory, true);
                 }
                 if (document.getElementById('property_name')) {
                     document.getElementById('property_name').focus();
@@ -4617,6 +4653,66 @@
                 refreshLocationMapViewport();
 
                 applyPropertyCategoryFilter(normalizedCategory || 'all');
+            }
+
+            function isFieldVisibleForValidation(field) {
+                if (!field || field.disabled || field.type === 'hidden') {
+                    return false;
+                }
+                if (field.closest('[hidden]')) {
+                    return false;
+                }
+                return field.offsetParent !== null;
+            }
+
+            function applyFieldValidationState(field) {
+                if (!field) {
+                    return true;
+                }
+
+                const visible = isFieldVisibleForValidation(field);
+                const shouldValidate = visible && field.required;
+                const isInvalid = shouldValidate && !field.checkValidity();
+
+                field.classList.toggle('is-invalid', isInvalid);
+                const fieldWrap = field.closest('.ops-field');
+                if (fieldWrap) {
+                    fieldWrap.classList.toggle('has-invalid', isInvalid);
+                }
+
+                return !isInvalid;
+            }
+
+            function validatePropertyCreateForm(showNativeMessage) {
+                if (!propertyCreateForm) {
+                    return true;
+                }
+
+                const requiredFields = Array.from(propertyCreateForm.querySelectorAll('input, select, textarea'))
+                    .filter((field) => field.required);
+
+                let firstInvalid = null;
+                let allValid = true;
+
+                requiredFields.forEach((field) => {
+                    const valid = applyFieldValidationState(field);
+                    if (!valid && !firstInvalid) {
+                        firstInvalid = field;
+                    }
+                    if (!valid) {
+                        allValid = false;
+                    }
+                });
+
+                if (!allValid && firstInvalid) {
+                    firstInvalid.focus();
+                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if (showNativeMessage && typeof firstInvalid.reportValidity === 'function') {
+                        firstInvalid.reportValidity();
+                    }
+                }
+
+                return allValid;
             }
 
             function refreshBillingLocationSelectors() {
@@ -4924,11 +5020,49 @@
                 openPropertyCreateForm.addEventListener("click", function () {
                     propertyCreateForm.hidden = false;
                     if (closePropertyCreateForm) closePropertyCreateForm.hidden = false;
+                    refreshPropertyCategoryFields();
                     const propertyNameInput = document.getElementById("property_name");
                     if (propertyNameInput) {
                         propertyNameInput.focus();
                     }
                     refreshLocationMapViewport();
+                });
+            }
+
+            if (propertyCreateForm) {
+                propertyCreateForm.querySelectorAll('input, select, textarea').forEach((field) => {
+                    if (!field.required) {
+                        return;
+                    }
+                    field.addEventListener('input', function () {
+                        applyFieldValidationState(field);
+                    });
+                    field.addEventListener('change', function () {
+                        applyFieldValidationState(field);
+                    });
+                    field.addEventListener('blur', function () {
+                        applyFieldValidationState(field);
+                    });
+                });
+
+                propertyCreateForm.addEventListener('submit', function (event) {
+                    if (!validatePropertyCreateForm(true)) {
+                        event.preventDefault();
+                    }
+                });
+            }
+
+            if (propertyCreateSubmitButton && propertyCreateForm) {
+                propertyCreateSubmitButton.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    if (!validatePropertyCreateForm(true)) {
+                        return;
+                    }
+                    if (typeof propertyCreateForm.requestSubmit === 'function') {
+                        propertyCreateForm.requestSubmit();
+                    } else {
+                        propertyCreateForm.submit();
+                    }
                 });
             }
 
@@ -5340,6 +5474,21 @@
                     return metaMap[normalized] || ['Listing Enlisting', 'Fill required fields and save.', 'Save Listing', 'Fill required fields and save.', 'service'];
                 }
 
+                function ensureAutoCategorySelected(preferredCategory) {
+                    if (!propertyCategorySelect) return '';
+                    const preferred = normalizeCategoryKey(preferredCategory || propertyCategorySelect.getAttribute('data-default-category') || 'accommodation');
+                    if (preferred !== '') {
+                        const matched = Array.from(propertyCategorySelect.options).find((item) => normalizeCategoryKey(item.value) === preferred);
+                        if (matched) {
+                            propertyCategorySelect.value = matched.value;
+                        }
+                    }
+                    if ((!propertyCategorySelect.value || String(propertyCategorySelect.value).trim() === '') && propertyCategorySelect.options.length > 0) {
+                        propertyCategorySelect.value = propertyCategorySelect.options[0].value;
+                    }
+                    return String(propertyCategorySelect.value || '');
+                }
+
                 function isMarineTransportMode(value) {
                     const mode = String(value || '').trim().toLowerCase();
                     return /(^|\s)(speed\s?boat|ferry|boat|safari|dhoni|launch|catamaran|yacht)(\s|$)/.test(mode);
@@ -5454,6 +5603,7 @@
                         if (closePropertyCreateForm) {
                             closePropertyCreateForm.hidden = false;
                         }
+                        applyCategoryMode(ensureAutoCategorySelected(''));
                         if (typeof window.__vendorPortalRefreshLocationMap === 'function') {
                             window.__vendorPortalRefreshLocationMap();
                         }
@@ -5495,8 +5645,8 @@
                                 option.textContent = categoryKey;
                                 propertyCategorySelect.appendChild(option);
                             }
-                            propertyCategorySelect.value = option.value;
-                            applyCategoryMode(option.value);
+                            propertyCategorySelect.value = ensureAutoCategorySelected(option.value);
+                            applyCategoryMode(propertyCategorySelect.value);
                         }
 
                         window.location.hash = 'listings';
@@ -5608,7 +5758,7 @@
                     propertyCategorySelect.addEventListener('change', function () {
                         applyCategoryMode(propertyCategorySelect.value);
                     });
-                    applyCategoryMode(propertyCategorySelect.value);
+                    applyCategoryMode(ensureAutoCategorySelected(''));
                 }
 
                 if (transportModeInput) {

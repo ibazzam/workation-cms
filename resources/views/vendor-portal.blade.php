@@ -2981,8 +2981,51 @@
                     @csrf
                     <div class="ops-form-grid">
                         <div class="ops-field">
+                            <label for="availability_listing_category">Listing Category</label>
+                            <select id="availability_listing_category" name="listing_category" class="ops-select">
+                                <option value="">All / Generic</option>
+                                @foreach ($selectedVendorCategories as $categoryKey)
+                                    <option value="{{ $categoryKey }}">{{ $vendorCategoryMap[$categoryKey] ?? ucfirst(str_replace('_', ' ', (string) $categoryKey)) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="ops-field">
                             <label for="availability_date">Date</label>
-                            <input id="availability_date" name="slot_date" class="ops-input" type="date" required>
+                            <input id="availability_date" name="slot_date" class="ops-input" type="date">
+                        </div>
+                        <div class="ops-field">
+                            <label for="availability_from">Range From (optional)</label>
+                            <input id="availability_from" name="apply_range_from" class="ops-input" type="date">
+                        </div>
+                        <div class="ops-field">
+                            <label for="availability_to">Range To (optional)</label>
+                            <input id="availability_to" name="apply_range_to" class="ops-input" type="date">
+                        </div>
+                        <div class="ops-field">
+                            <label for="availability_schedule_profile">Schedule Profile</label>
+                            <select id="availability_schedule_profile" name="schedule_profile" class="ops-select">
+                                <option value="one_off">One-off day</option>
+                                <option value="daily">Daily in selected range</option>
+                                <option value="weekly_6">Weekly 6 days (Mon-Sat)</option>
+                                <option value="weekly_3">Weekly 3 days (default Mon/Wed/Fri)</option>
+                                <option value="weekly_custom">Weekly custom days</option>
+                            </select>
+                        </div>
+                        <div class="ops-field ops-field-wide">
+                            <label>Service Days (for weekly profiles)</label>
+                            <div class="feature-checklist">
+                                <label class="feature-item"><input type="checkbox" name="service_days[]" value="1"> Mon</label>
+                                <label class="feature-item"><input type="checkbox" name="service_days[]" value="2"> Tue</label>
+                                <label class="feature-item"><input type="checkbox" name="service_days[]" value="3"> Wed</label>
+                                <label class="feature-item"><input type="checkbox" name="service_days[]" value="4"> Thu</label>
+                                <label class="feature-item"><input type="checkbox" name="service_days[]" value="5"> Fri</label>
+                                <label class="feature-item"><input type="checkbox" name="service_days[]" value="6"> Sat</label>
+                                <label class="feature-item"><input type="checkbox" name="service_days[]" value="0"> Sun</label>
+                            </div>
+                        </div>
+                        <div class="ops-field">
+                            <label for="availability_route_name">Route Name (ferry/speedboat)</label>
+                            <input id="availability_route_name" name="route_name" class="ops-input" type="text" maxlength="120" placeholder="e.g. Male -> Maafushi 07:30">
                         </div>
                         <div class="ops-field">
                             <label for="availability_inventory">Inventory</label>
@@ -2991,6 +3034,10 @@
                         <div class="ops-field">
                             <label for="availability_property">Property ID (optional)</label>
                             <input id="availability_property" name="vendor_property_id" class="ops-input" type="number" min="1">
+                        </div>
+                        <div class="ops-field">
+                            <label for="availability_service">Service ID (optional)</label>
+                            <input id="availability_service" name="vendor_service_id" class="ops-input" type="number" min="1">
                         </div>
                         <div class="ops-field">
                             <label for="availability_closed">Closed Day</label>
@@ -3012,6 +3059,8 @@
                         <thead>
                             <tr>
                                 <th>Date</th>
+                                <th>Category</th>
+                                <th>Route / Service</th>
                                 <th>Inventory</th>
                                 <th>Reserved</th>
                                 <th>Closed</th>
@@ -3020,8 +3069,23 @@
                         </thead>
                         <tbody>
                             @forelse ($vendorAvailability->take(20) as $slot)
+                                @php
+                                    $slotNotesRaw = (string) ($slot->notes ?? '');
+                                    $slotDecodedNotes = is_string($slotNotesRaw) ? json_decode($slotNotesRaw, true) : null;
+                                    $slotNotesMeta = is_array($slotDecodedNotes) ? $slotDecodedNotes : [];
+                                    $slotCategory = (string) ($slot->listing_category ?? ($slotNotesMeta['listing_category'] ?? 'N/A'));
+                                    $slotRouteName = (string) ($slot->route_name ?? ($slotNotesMeta['route_name'] ?? ''));
+                                    $slotServiceId = (string) ($slot->vendor_service_id ?? ($slotNotesMeta['vendor_service_id'] ?? ''));
+                                @endphp
                                 <tr>
                                     <td>{{ $slot->slot_date }}</td>
+                                    <td>{{ $slotCategory !== '' ? strtoupper(str_replace('_', ' ', $slotCategory)) : 'N/A' }}</td>
+                                    <td>
+                                        {{ $slotRouteName !== '' ? $slotRouteName : 'N/A' }}
+                                        @if ($slotServiceId !== '')
+                                            <br><span class="small">Service ID {{ $slotServiceId }}</span>
+                                        @endif
+                                    </td>
                                     <td>{{ (int) $slot->inventory }}</td>
                                     <td>{{ (int) $slot->reserved_count }}</td>
                                     <td>{{ $slot->is_closed ? 'YES' : 'NO' }}</td>
@@ -3029,7 +3093,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="ops-empty">No availability slots yet.</td>
+                                    <td colspan="7" class="ops-empty">No availability slots yet.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -3047,6 +3111,37 @@
                 <a href="#vendorReservationsSection">Booking Inquiries</a>
                 <a href="#vendorAvailabilitySection">Availability Updates</a>
                 <a href="#vendorPricingSection">Pricing Rules</a>
+            </div>
+            @php
+                $reservationConfirmedCount = $vendorReservations->where('status', 'confirmed')->count();
+                $reservationPendingCount = $vendorReservations->where('status', 'pending')->count();
+                $reservationCompletedCount = $vendorReservations->where('status', 'completed')->count();
+                $reservationCancelledCount = $vendorReservations->where('status', 'cancelled')->count();
+                $reservationRevenueTotal = $vendorReservations->reduce(function ($carry, $reservation) {
+                    return $carry + (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0);
+                }, 0.0);
+            @endphp
+            <div class="billing-ledger-grid" style="margin-bottom:10px;">
+                <article class="billing-ledger-card">
+                    <p class="metric-label">Pending</p>
+                    <p class="metric-value">{{ $reservationPendingCount }}</p>
+                </article>
+                <article class="billing-ledger-card">
+                    <p class="metric-label">Confirmed</p>
+                    <p class="metric-value">{{ $reservationConfirmedCount }}</p>
+                </article>
+                <article class="billing-ledger-card">
+                    <p class="metric-label">Completed</p>
+                    <p class="metric-value">{{ $reservationCompletedCount }}</p>
+                </article>
+                <article class="billing-ledger-card">
+                    <p class="metric-label">Cancelled</p>
+                    <p class="metric-value">{{ $reservationCancelledCount }}</p>
+                </article>
+                <article class="billing-ledger-card">
+                    <p class="metric-label">Booked Revenue</p>
+                    <p class="metric-value">MVR {{ number_format($reservationRevenueTotal, 2) }}</p>
+                </article>
             </div>
             <div class="ops-grid">
                 <form class="ops-form" method="POST" action="/portal/vendor/reservations/create">
@@ -3193,6 +3288,110 @@
                 <p class="ops-title">Pricing Rules</p>
                 <span class="ops-chip">{{ $vendorPricingRules->count() }} active + historical</span>
             </div>
+            @php
+                $recentReservationRows = $vendorReservations->filter(function ($reservation) {
+                    $startAt = (string) ($reservation->start_at ?? $reservation->created_at ?? '');
+                    $ts = strtotime($startAt);
+                    return $ts !== false && $ts >= strtotime('-30 days');
+                });
+
+                $propertyDemandMap = $recentReservationRows
+                    ->groupBy(static fn ($reservation) => (int) ($reservation->vendor_property_id ?? 0))
+                    ->map(static fn ($rows) => $rows->count());
+
+                $serviceDemandMap = $recentReservationRows
+                    ->groupBy(static fn ($reservation) => (int) ($reservation->vendor_service_id ?? 0))
+                    ->map(static fn ($rows) => $rows->count());
+
+                $roomDemandMap = $recentReservationRows
+                    ->groupBy(static fn ($reservation) => (int) ($reservation->vendor_room_category_id ?? 0))
+                    ->map(static fn ($rows) => $rows->count());
+
+                $buildPricingSuggestion = static function (
+                    string $targetType,
+                    int $targetId,
+                    string $targetLabel,
+                    float $basePrice,
+                    int $recentBookings,
+                    string $currency = 'MVR'
+                ): ?array {
+                    if ($targetId <= 0 || $basePrice <= 0) {
+                        return null;
+                    }
+
+                    $ruleType = 'weekend_markup';
+                    $ruleValue = 10.0;
+                    $reason = 'Steady demand - apply weekend uplift.';
+
+                    if ($recentBookings <= 2) {
+                        $ruleType = 'promo_discount';
+                        $ruleValue = 12.0;
+                        $reason = 'Low recent demand - run promotional discount.';
+                    } elseif ($recentBookings <= 5) {
+                        $ruleType = 'demand_discount';
+                        $ruleValue = 8.0;
+                        $reason = 'Demand softening - apply tactical discount.';
+                    } elseif ($recentBookings >= 10) {
+                        $ruleType = 'weekend_markup';
+                        $ruleValue = 15.0;
+                        $reason = 'Strong demand - increase weekend pricing.';
+                    }
+
+                    $suggestedPrice = $ruleType === 'weekend_markup'
+                        ? round($basePrice * (1 + ($ruleValue / 100)), 2)
+                        : round($basePrice * (1 - ($ruleValue / 100)), 2);
+
+                    return [
+                        'target_type' => $targetType,
+                        'target_id' => $targetId,
+                        'target_label' => $targetLabel,
+                        'base_price' => round($basePrice, 2),
+                        'recent_bookings' => $recentBookings,
+                        'rule_type' => $ruleType,
+                        'rule_value' => $ruleValue,
+                        'suggested_price' => $suggestedPrice,
+                        'currency' => $currency,
+                        'reason' => $reason,
+                    ];
+                };
+
+                $pricingSuggestions = collect();
+
+                foreach ($vendorProperties as $property) {
+                    $propertyId = (int) ($property->id ?? 0);
+                    $basePrice = (float) ($property->base_price ?? 0);
+                    $bookings = (int) ($propertyDemandMap->get($propertyId, 0));
+                    $suggestion = $buildPricingSuggestion('property', $propertyId, (string) ($property->name ?? ('Property ' . $propertyId)), $basePrice, $bookings, (string) ($property->currency ?? 'MVR'));
+                    if (is_array($suggestion)) {
+                        $pricingSuggestions->push($suggestion);
+                    }
+                }
+
+                foreach ($vendorServices as $service) {
+                    $serviceId = (int) ($service->id ?? 0);
+                    $basePrice = (float) ($service->price ?? 0);
+                    $bookings = (int) ($serviceDemandMap->get($serviceId, 0));
+                    $suggestion = $buildPricingSuggestion('service', $serviceId, (string) ($service->name ?? ('Service ' . $serviceId)), $basePrice, $bookings, (string) ($service->currency ?? 'MVR'));
+                    if (is_array($suggestion)) {
+                        $pricingSuggestions->push($suggestion);
+                    }
+                }
+
+                foreach ($vendorRooms as $room) {
+                    $roomId = (int) ($room->id ?? 0);
+                    $basePrice = (float) ($room->base_price ?? 0);
+                    $bookings = (int) ($roomDemandMap->get($roomId, 0));
+                    $suggestion = $buildPricingSuggestion('room', $roomId, (string) ($room->name ?? ('Room ' . $roomId)), $basePrice, $bookings, (string) ($room->currency ?? 'MVR'));
+                    if (is_array($suggestion)) {
+                        $pricingSuggestions->push($suggestion);
+                    }
+                }
+
+                $pricingSuggestions = $pricingSuggestions
+                    ->sortByDesc('recent_bookings')
+                    ->take(30)
+                    ->values();
+            @endphp
             <div class="ops-grid">
                 <form class="ops-form" method="POST" action="/portal/vendor/pricing/create">
                     @csrf
@@ -3208,6 +3407,8 @@
                                 <option value="percent">Percent</option>
                                 <option value="nightly">Nightly</option>
                                 <option value="weekend_markup">Weekend Markup</option>
+                                <option value="demand_discount">Demand Discount</option>
+                                <option value="promo_discount">Promo Discount</option>
                             </select>
                         </div>
                         <div class="ops-field">
@@ -3230,15 +3431,67 @@
                             <label for="pricing_service_id">Service ID (optional)</label>
                             <input id="pricing_service_id" name="vendor_service_id" class="ops-input" type="number" min="1">
                         </div>
+                        <div class="ops-field">
+                            <label for="pricing_room_id">Room Category ID (optional)</label>
+                            <input id="pricing_room_id" name="vendor_room_category_id" class="ops-input" type="number" min="1">
+                        </div>
                     </div>
+                    <p class="standards-note">Use Weekend Markup for peak days. Use Demand/Promo Discount when bookings soften to auto-run promotions across properties, services, and rooms.</p>
                     <button class="btn btn-primary" type="submit">Save Pricing Rule</button>
                 </form>
+
+                <div class="ops-table-wrap">
+                    <table class="ops-table" aria-label="Auto price suggestions table">
+                        <thead>
+                            <tr>
+                                <th>Target</th>
+                                <th>30d Demand</th>
+                                <th>Current Price</th>
+                                <th>Suggested Rule</th>
+                                <th>Suggested Price</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($pricingSuggestions as $suggestion)
+                                <tr>
+                                    <td>
+                                        {{ strtoupper((string) ($suggestion['target_type'] ?? '')) }} #{{ (int) ($suggestion['target_id'] ?? 0) }}<br>
+                                        {{ (string) ($suggestion['target_label'] ?? 'N/A') }}
+                                    </td>
+                                    <td>{{ (int) ($suggestion['recent_bookings'] ?? 0) }} bookings</td>
+                                    <td>{{ (string) ($suggestion['currency'] ?? 'MVR') }} {{ number_format((float) ($suggestion['base_price'] ?? 0), 2) }}</td>
+                                    <td>{{ strtoupper(str_replace('_', ' ', (string) ($suggestion['rule_type'] ?? ''))) }} {{ number_format((float) ($suggestion['rule_value'] ?? 0), 2) }}%</td>
+                                    <td>{{ (string) ($suggestion['currency'] ?? 'MVR') }} {{ number_format((float) ($suggestion['suggested_price'] ?? 0), 2) }}</td>
+                                    <td>
+                                        <button
+                                            class="btn btn-secondary"
+                                            type="button"
+                                            data-price-suggestion="1"
+                                            data-target-type="{{ (string) ($suggestion['target_type'] ?? '') }}"
+                                            data-target-id="{{ (int) ($suggestion['target_id'] ?? 0) }}"
+                                            data-rule-type="{{ (string) ($suggestion['rule_type'] ?? '') }}"
+                                            data-rule-value="{{ (float) ($suggestion['rule_value'] ?? 0) }}"
+                                            data-target-label="{{ (string) ($suggestion['target_label'] ?? '') }}"
+                                            data-reason="{{ (string) ($suggestion['reason'] ?? '') }}"
+                                        >Use Suggestion</button>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="ops-empty">No suggestions yet. Add room/service prices and reservations to generate recommendations.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
 
                 <div class="ops-table-wrap">
                     <table class="ops-table" aria-label="Vendor pricing rules table">
                         <thead>
                             <tr>
                                 <th>Name</th>
+                                <th>Target</th>
                                 <th>Type</th>
                                 <th>Value</th>
                                 <th>Window</th>
@@ -3249,6 +3502,17 @@
                             @forelse ($vendorPricingRules->take(12) as $rule)
                                 <tr>
                                     <td>{{ $rule->name }}</td>
+                                    <td>
+                                        @if (!empty($rule->vendor_property_id))
+                                            Property #{{ (int) $rule->vendor_property_id }}
+                                        @elseif (!empty($rule->vendor_service_id))
+                                            Service #{{ (int) $rule->vendor_service_id }}
+                                        @elseif (!empty($rule->vendor_room_category_id ?? null))
+                                            Room #{{ (int) ($rule->vendor_room_category_id ?? 0) }}
+                                        @else
+                                            Global
+                                        @endif
+                                    </td>
                                     <td>{{ strtoupper((string) $rule->rule_type) }}</td>
                                     <td>{{ number_format((float) $rule->value, 2) }}</td>
                                     <td>{{ $rule->starts_on ?: '-' }} to {{ $rule->ends_on ?: '-' }}</td>
@@ -3256,7 +3520,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="ops-empty">No pricing rules yet.</td>
+                                    <td colspan="6" class="ops-empty">No pricing rules yet.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -5450,6 +5714,14 @@
                 const roomCreateForm = document.getElementById('roomCreateForm');
                 const closeRoomCreateForm = document.getElementById('closeRoomCreateForm');
                 const roomPropertySelect = document.getElementById('room_vendor_property_id');
+                const pricingNameInput = document.getElementById('pricing_name');
+                const pricingTypeInput = document.getElementById('pricing_type');
+                const pricingValueInput = document.getElementById('pricing_value');
+                const pricingStartsInput = document.getElementById('pricing_starts');
+                const pricingEndsInput = document.getElementById('pricing_ends');
+                const pricingPropertyInput = document.getElementById('pricing_property_id');
+                const pricingServiceInput = document.getElementById('pricing_service_id');
+                const pricingRoomInput = document.getElementById('pricing_room_id');
 
                 function categoryScopesFor(category) {
                     const normalized = normalizeCategoryKey(category);
@@ -5681,6 +5953,72 @@
                         window.location.hash = 'listings';
                         if (roomCreateForm) {
                             roomCreateForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    });
+                });
+
+                document.querySelectorAll('[data-price-suggestion]').forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const targetType = String(button.getAttribute('data-target-type') || '').trim().toLowerCase();
+                        const targetId = String(button.getAttribute('data-target-id') || '').trim();
+                        const ruleType = String(button.getAttribute('data-rule-type') || '').trim();
+                        const ruleValue = String(button.getAttribute('data-rule-value') || '').trim();
+                        const targetLabel = String(button.getAttribute('data-target-label') || '').trim();
+
+                        if (pricingTypeInput && ruleType !== '') {
+                            pricingTypeInput.value = ruleType;
+                        }
+                        if (pricingValueInput && ruleValue !== '') {
+                            pricingValueInput.value = ruleValue;
+                        }
+                        if (pricingNameInput) {
+                            const title = targetLabel !== '' ? targetLabel : (targetType + ' ' + targetId);
+                            pricingNameInput.value = (ruleType === 'weekend_markup' ? 'Weekend uplift: ' : 'Promo: ') + title;
+                        }
+
+                        if (pricingPropertyInput) pricingPropertyInput.value = '';
+                        if (pricingServiceInput) pricingServiceInput.value = '';
+                        if (pricingRoomInput) pricingRoomInput.value = '';
+
+                        if (targetType === 'property' && pricingPropertyInput) {
+                            pricingPropertyInput.value = targetId;
+                        } else if (targetType === 'service' && pricingServiceInput) {
+                            pricingServiceInput.value = targetId;
+                        } else if (targetType === 'room' && pricingRoomInput) {
+                            pricingRoomInput.value = targetId;
+                        }
+
+                        const today = new Date();
+                        const plusThirty = new Date();
+                        plusThirty.setDate(today.getDate() + 30);
+                        const nextFriday = new Date(today);
+                        const dayOfWeek = nextFriday.getDay();
+                        const daysUntilFriday = (5 - dayOfWeek + 7) % 7;
+                        nextFriday.setDate(nextFriday.getDate() + (daysUntilFriday === 0 ? 7 : daysUntilFriday));
+                        const nextSaturday = new Date(nextFriday);
+                        nextSaturday.setDate(nextFriday.getDate() + 1);
+                        const isoDay = (date) => {
+                            const y = date.getFullYear();
+                            const m = String(date.getMonth() + 1).padStart(2, '0');
+                            const d = String(date.getDate()).padStart(2, '0');
+                            return y + '-' + m + '-' + d;
+                        };
+
+                        if (pricingStartsInput && !pricingStartsInput.value && ruleType === 'weekend_markup') {
+                            pricingStartsInput.value = isoDay(nextFriday);
+                        } else if (pricingStartsInput && !pricingStartsInput.value) {
+                            pricingStartsInput.value = isoDay(today);
+                        }
+                        if (pricingEndsInput && !pricingEndsInput.value && ruleType === 'weekend_markup') {
+                            pricingEndsInput.value = isoDay(nextSaturday);
+                        }
+                        if (pricingEndsInput && !pricingEndsInput.value && (ruleType === 'promo_discount' || ruleType === 'demand_discount')) {
+                            pricingEndsInput.value = isoDay(plusThirty);
+                        }
+
+                        const pricingSection = document.getElementById('vendorPricingSection');
+                        if (pricingSection) {
+                            pricingSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         }
                     });
                 });

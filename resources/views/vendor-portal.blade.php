@@ -5991,6 +5991,12 @@
                         const today = new Date();
                         const plusThirty = new Date();
                         plusThirty.setDate(today.getDate() + 30);
+                        const nextFriday = new Date(today);
+                        const dayOfWeek = nextFriday.getDay();
+                        const daysUntilFriday = (5 - dayOfWeek + 7) % 7;
+                        nextFriday.setDate(nextFriday.getDate() + (daysUntilFriday === 0 ? 7 : daysUntilFriday));
+                        const nextSaturday = new Date(nextFriday);
+                        nextSaturday.setDate(nextFriday.getDate() + 1);
                         const isoDay = (date) => {
                             const y = date.getFullYear();
                             const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -5998,8 +6004,13 @@
                             return y + '-' + m + '-' + d;
                         };
 
-                        if (pricingStartsInput && !pricingStartsInput.value) {
+                        if (pricingStartsInput && !pricingStartsInput.value && ruleType === 'weekend_markup') {
+                            pricingStartsInput.value = isoDay(nextFriday);
+                        } else if (pricingStartsInput && !pricingStartsInput.value) {
                             pricingStartsInput.value = isoDay(today);
+                        }
+                        if (pricingEndsInput && !pricingEndsInput.value && ruleType === 'weekend_markup') {
+                            pricingEndsInput.value = isoDay(nextSaturday);
                         }
                         if (pricingEndsInput && !pricingEndsInput.value && (ruleType === 'promo_discount' || ruleType === 'demand_discount')) {
                             pricingEndsInput.value = isoDay(plusThirty);

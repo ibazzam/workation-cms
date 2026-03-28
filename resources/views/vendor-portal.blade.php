@@ -2415,39 +2415,38 @@
                                                     $transportPricingModel = strtolower((string) ($propertyDetails['transport_pricing_model'] ?? ''));
                                                     $listingStatus = strtoupper((string) ($property->status ?? 'active'));
                                                     $listingType = strtoupper((string) ($property->property_type ?? 'N/A'));
+                                                    $listingStatusClass = 'is-neutral';
+                                                    if (strtolower($listingStatus) === 'active') {
+                                                        $listingStatusClass = 'is-active';
+                                                    } elseif (strtolower($listingStatus) === 'inactive') {
+                                                        $listingStatusClass = 'is-inactive';
+                                                    }
                                                 @endphp
                                                 <tr data-property-row="{{ $propertyId }}">
-                                                    <td>
+                                                    <td class="listing-cell-main">
                                                         <div class="listing-summary-line">
                                                             <strong>{{ $property->name }}</strong>
                                                             <span class="ops-chip">ID {{ $propertyId }}</span>
                                                             <span class="ops-chip">{{ $listingType }}</span>
-                                                            <span class="ops-chip">{{ $listingStatus }}</span>
+                                                            <span class="ops-chip listing-status-chip {{ $listingStatusClass }}">{{ $listingStatus }}</span>
                                                             @if ($categoryKey === 'accommodation')
                                                                 <span class="ops-chip">Rooms: {{ $propertyRooms->count() }}</span>
                                                             @endif
                                                         </div>
                                                     </td>
-                                                            $listingStatusClass = 'is-neutral';
-                                                            if (strtolower($listingStatus) === 'active') {
-                                                                $listingStatusClass = 'is-active';
-                                                            } elseif (strtolower($listingStatus) === 'inactive') {
-                                                                $listingStatusClass = 'is-inactive';
-                                                            }
-                                                    <td>
+                                                    <td class="listing-cell-actions-cell">
                                                         <div class="listing-cell-actions">
-                                                            <td class="listing-cell-main">
+                                                            <div class="inline-actions listing-actions-inline">
                                                                 <button class="btn btn-secondary" type="button" data-open-property-edit data-property-edit-id="{{ $propertyId }}" data-property-edit-category="{{ $editCategory }}">Edit Listing</button>
                                                                 @if ($categoryKey === 'accommodation')
                                                                     <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ $propertyId }}">Add Room</button>
                                                                 @endif
-                                                                    <span class="ops-chip listing-status-chip {{ $listingStatusClass }}">{{ $listingStatus }}</span>
+                                                                <form method="POST" action="/portal/vendor/properties/{{ $propertyId }}/delete" onsubmit="return confirm('Remove this listing?');">
                                                                     @csrf
                                                                     <button class="btn btn-danger" type="submit">Remove Listing</button>
                                                                 </form>
                                                             </div>
                                                             <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/properties/{{ $propertyId }}/update" data-property-edit-form="{{ $propertyId }}" data-property-edit-category="{{ $editCategory }}" hidden>
-                                                            <td class="listing-cell-actions-cell">
                                                                 <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $property->name }}" required>
                                                                 <input class="ops-input" name="location_country" type="text" maxlength="90" value="{{ (string) ($propertyDetails['location_country'] ?? '') }}" placeholder="Country" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="location_state" type="text" maxlength="120" value="{{ (string) ($propertyDetails['location_state'] ?? '') }}" placeholder="State / Province / Atoll" data-property-edit-scope="geo">

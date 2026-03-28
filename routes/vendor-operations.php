@@ -2084,29 +2084,137 @@ Route::post('/portal/vendor/availability/save', function (Request $request) {
 
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
     $validated = $request->validate([
-        'slot_date' => ['required', 'date'],
+        'slot_date' => ['nullable', 'date'],
+        'apply_range_from' => ['nullable', 'date'],
+        'apply_range_to' => ['nullable', 'date', 'after_or_equal:apply_range_from'],
         'inventory' => ['required', 'integer', 'min:0', 'max:100000'],
         'is_closed' => ['nullable', 'boolean'],
-        'vendor_property_id' => ['nullable', 'integer'],
+        'listing_category' => ['nullable', 'string', 'max:80'],
+        'vendor_property_id' => ['nullable', 'integer', 'min:1'],
+        'vendor_service_id' => ['nullable', 'integer', 'min:1'],
+        'route_name' => ['nullable', 'string', 'max:120'],
+        'schedule_profile' => ['nullable', Rule::in(['one_off', 'daily', 'weekly_6', 'weekly_3', 'weekly_custom'])],
+        'service_days' => ['nullable', 'array'],
+        'service_days.*' => ['integer', 'between:0,6'],
         'notes' => ['nullable', 'string', 'max:2000'],
     ]);
 
-    DB::table('vendor_availability_slots')->updateOrInsert(
-        [
+    $singleDate = filled($validated['slot_date'] ?? null) ? (string) $validated['slot_date'] : '';
+    $rangeFrom = filled($validated['apply_range_from'] ?? null) ? (string) $validated['apply_range_from'] : '';
+    $rangeTo = filled($validated['apply_range_to'] ?? null) ? (string) $validated['apply_range_to'] : '';
+
+    if ($singleDate === '' && ($rangeFrom === '' || $rangeTo === '')) {
+        return back()->withErrors([
+            'profile' => 'Provide either a single date or a date range for recurring schedule updates.',
+        ])->withInput();
+    }
+
+    $scheduleProfile = (string) ($validated['schedule_profile'] ?? 'one_off');
+    $submittedServiceDays = collect($validated['service_days'] ?? [])
+        ->map(static fn ($day) => (int) $day)
+        ->filter(static fn (int $day): bool => $day >= 0 && $day <= 6)
+        ->unique()
+        ->sort()
+        ->values()
+        ->all();
+
+    $effectiveServiceDays = $submittedServiceDays;
+    if ($scheduleProfile === 'weekly_6') {
+        // Default six-day pattern: Monday-Saturday.
+        $effectiveServiceDays = [1, 2, 3, 4, 5, 6];
+    } elseif ($scheduleProfile === 'weekly_3' && $effectiveServiceDays === []) {
+        // Default three-day pattern for marine routes if none selected.
+        $effectiveServiceDays = [1, 3, 5];
+    }
+
+    if ($scheduleProfile === 'weekly_custom' && $effectiveServiceDays === []) {
+        return back()->withErrors([
+            'profile' => 'Select at least one service day for weekly custom schedules.',
+        ])->withInput();
+    }
+
+    $slotDates = [];
+    if ($singleDate !== '') {
+        $slotDates[] = $singleDate;
+    } else {
+        $cursor = \Carbon\Carbon::parse($rangeFrom)->startOfDay();
+        $last = \Carbon\Carbon::parse($rangeTo)->startOfDay();
+        while ($cursor->lessThanOrEqualTo($last)) {
+            $slotDates[] = $cursor->toDateString();
+            $cursor->addDay();
+        }
+    }
+
+    $canonicalListingCategory = vendorPortalCanonicalCategory((string) ($validated['listing_category'] ?? ''));
+    $normalizedListingCategory = $canonicalListingCategory ?? strtolower(trim((string) ($validated['listing_category'] ?? '')));
+    $vendorPropertyId = filled($validated['vendor_property_id'] ?? null) ? (int) $validated['vendor_property_id'] : null;
+    $vendorServiceId = filled($validated['vendor_service_id'] ?? null) ? (int) $validated['vendor_service_id'] : null;
+    $routeName = trim((string) ($validated['route_name'] ?? ''));
+    $freeNotes = trim((string) ($validated['notes'] ?? ''));
+
+    $appliedCount = 0;
+    foreach ($slotDates as $slotDate) {
+        $slotWeekday = (int) \Carbon\Carbon::parse($slotDate)->dayOfWeek;
+        $isWeeklyProfile = in_array($scheduleProfile, ['weekly_6', 'weekly_3', 'weekly_custom'], true);
+        if ($isWeeklyProfile && !in_array($slotWeekday, $effectiveServiceDays, true)) {
+            continue;
+        }
+
+        $meta = array_filter([
+            'listing_category' => $normalizedListingCategory,
+            'vendor_service_id' => $vendorServiceId,
+            'route_name' => $routeName,
+            'schedule_profile' => $scheduleProfile,
+            'service_days' => $effectiveServiceDays,
+            'text' => $freeNotes,
+        ], static fn ($value) => !($value === null || $value === '' || $value === []));
+
+        $encodedNotes = $freeNotes;
+        if ($meta !== []) {
+            $encodedNotes = json_encode($meta);
+        }
+
+        $matchAttributes = [
             'vendor_user_id' => $vendorUserId,
-            'vendor_property_id' => filled($validated['vendor_property_id'] ?? null) ? (int) $validated['vendor_property_id'] : null,
-            'slot_date' => (string) $validated['slot_date'],
-        ],
-        [
+            'vendor_property_id' => $vendorPropertyId,
+            'slot_date' => $slotDate,
+        ];
+        if (Schema::hasColumn('vendor_availability_slots', 'vendor_service_id')) {
+            $matchAttributes['vendor_service_id'] = $vendorServiceId;
+        }
+
+        $updatePayload = [
             'inventory' => (int) $validated['inventory'],
             'is_closed' => (bool) ($validated['is_closed'] ?? false),
-            'notes' => trim((string) ($validated['notes'] ?? '')),
+            'notes' => $encodedNotes,
             'updated_at' => now(),
             'created_at' => now(),
-        ]
-    );
+        ];
+        if (Schema::hasColumn('vendor_availability_slots', 'vendor_service_id')) {
+            $updatePayload['vendor_service_id'] = $vendorServiceId;
+        }
+        if (Schema::hasColumn('vendor_availability_slots', 'listing_category')) {
+            $updatePayload['listing_category'] = $normalizedListingCategory;
+        }
+        if (Schema::hasColumn('vendor_availability_slots', 'route_name')) {
+            $updatePayload['route_name'] = $routeName;
+        }
 
-    return back()->with('portal_notice', 'Availability updated.');
+        DB::table('vendor_availability_slots')->updateOrInsert($matchAttributes, $updatePayload);
+        $appliedCount++;
+    }
+
+    if ($appliedCount === 0) {
+        return back()->withErrors([
+            'profile' => 'No slots matched the selected schedule pattern. Adjust range or service days and try again.',
+        ])->withInput();
+    }
+
+    $message = $appliedCount === 1
+        ? 'Availability updated for 1 day.'
+        : ('Availability updated for ' . $appliedCount . ' days.');
+
+    return back()->with('portal_notice', $message);
 });
 
 Route::post('/portal/vendor/reservations/create', function (Request $request) {

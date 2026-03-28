@@ -2981,8 +2981,51 @@
                     @csrf
                     <div class="ops-form-grid">
                         <div class="ops-field">
+                            <label for="availability_listing_category">Listing Category</label>
+                            <select id="availability_listing_category" name="listing_category" class="ops-select">
+                                <option value="">All / Generic</option>
+                                @foreach ($selectedVendorCategories as $categoryKey)
+                                    <option value="{{ $categoryKey }}">{{ $vendorCategoryMap[$categoryKey] ?? ucfirst(str_replace('_', ' ', (string) $categoryKey)) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="ops-field">
                             <label for="availability_date">Date</label>
-                            <input id="availability_date" name="slot_date" class="ops-input" type="date" required>
+                            <input id="availability_date" name="slot_date" class="ops-input" type="date">
+                        </div>
+                        <div class="ops-field">
+                            <label for="availability_from">Range From (optional)</label>
+                            <input id="availability_from" name="apply_range_from" class="ops-input" type="date">
+                        </div>
+                        <div class="ops-field">
+                            <label for="availability_to">Range To (optional)</label>
+                            <input id="availability_to" name="apply_range_to" class="ops-input" type="date">
+                        </div>
+                        <div class="ops-field">
+                            <label for="availability_schedule_profile">Schedule Profile</label>
+                            <select id="availability_schedule_profile" name="schedule_profile" class="ops-select">
+                                <option value="one_off">One-off day</option>
+                                <option value="daily">Daily in selected range</option>
+                                <option value="weekly_6">Weekly 6 days (Mon-Sat)</option>
+                                <option value="weekly_3">Weekly 3 days (default Mon/Wed/Fri)</option>
+                                <option value="weekly_custom">Weekly custom days</option>
+                            </select>
+                        </div>
+                        <div class="ops-field ops-field-wide">
+                            <label>Service Days (for weekly profiles)</label>
+                            <div class="feature-checklist">
+                                <label class="feature-item"><input type="checkbox" name="service_days[]" value="1"> Mon</label>
+                                <label class="feature-item"><input type="checkbox" name="service_days[]" value="2"> Tue</label>
+                                <label class="feature-item"><input type="checkbox" name="service_days[]" value="3"> Wed</label>
+                                <label class="feature-item"><input type="checkbox" name="service_days[]" value="4"> Thu</label>
+                                <label class="feature-item"><input type="checkbox" name="service_days[]" value="5"> Fri</label>
+                                <label class="feature-item"><input type="checkbox" name="service_days[]" value="6"> Sat</label>
+                                <label class="feature-item"><input type="checkbox" name="service_days[]" value="0"> Sun</label>
+                            </div>
+                        </div>
+                        <div class="ops-field">
+                            <label for="availability_route_name">Route Name (ferry/speedboat)</label>
+                            <input id="availability_route_name" name="route_name" class="ops-input" type="text" maxlength="120" placeholder="e.g. Male -> Maafushi 07:30">
                         </div>
                         <div class="ops-field">
                             <label for="availability_inventory">Inventory</label>
@@ -2991,6 +3034,10 @@
                         <div class="ops-field">
                             <label for="availability_property">Property ID (optional)</label>
                             <input id="availability_property" name="vendor_property_id" class="ops-input" type="number" min="1">
+                        </div>
+                        <div class="ops-field">
+                            <label for="availability_service">Service ID (optional)</label>
+                            <input id="availability_service" name="vendor_service_id" class="ops-input" type="number" min="1">
                         </div>
                         <div class="ops-field">
                             <label for="availability_closed">Closed Day</label>
@@ -3012,6 +3059,8 @@
                         <thead>
                             <tr>
                                 <th>Date</th>
+                                <th>Category</th>
+                                <th>Route / Service</th>
                                 <th>Inventory</th>
                                 <th>Reserved</th>
                                 <th>Closed</th>
@@ -3020,8 +3069,23 @@
                         </thead>
                         <tbody>
                             @forelse ($vendorAvailability->take(20) as $slot)
+                                @php
+                                    $slotNotesRaw = (string) ($slot->notes ?? '');
+                                    $slotDecodedNotes = is_string($slotNotesRaw) ? json_decode($slotNotesRaw, true) : null;
+                                    $slotNotesMeta = is_array($slotDecodedNotes) ? $slotDecodedNotes : [];
+                                    $slotCategory = (string) ($slot->listing_category ?? ($slotNotesMeta['listing_category'] ?? 'N/A'));
+                                    $slotRouteName = (string) ($slot->route_name ?? ($slotNotesMeta['route_name'] ?? ''));
+                                    $slotServiceId = (string) ($slot->vendor_service_id ?? ($slotNotesMeta['vendor_service_id'] ?? ''));
+                                @endphp
                                 <tr>
                                     <td>{{ $slot->slot_date }}</td>
+                                    <td>{{ $slotCategory !== '' ? strtoupper(str_replace('_', ' ', $slotCategory)) : 'N/A' }}</td>
+                                    <td>
+                                        {{ $slotRouteName !== '' ? $slotRouteName : 'N/A' }}
+                                        @if ($slotServiceId !== '')
+                                            <br><span class="small">Service ID {{ $slotServiceId }}</span>
+                                        @endif
+                                    </td>
                                     <td>{{ (int) $slot->inventory }}</td>
                                     <td>{{ (int) $slot->reserved_count }}</td>
                                     <td>{{ $slot->is_closed ? 'YES' : 'NO' }}</td>
@@ -3029,7 +3093,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="ops-empty">No availability slots yet.</td>
+                                    <td colspan="7" class="ops-empty">No availability slots yet.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -3047,6 +3111,37 @@
                 <a href="#vendorReservationsSection">Booking Inquiries</a>
                 <a href="#vendorAvailabilitySection">Availability Updates</a>
                 <a href="#vendorPricingSection">Pricing Rules</a>
+            </div>
+            @php
+                $reservationConfirmedCount = $vendorReservations->where('status', 'confirmed')->count();
+                $reservationPendingCount = $vendorReservations->where('status', 'pending')->count();
+                $reservationCompletedCount = $vendorReservations->where('status', 'completed')->count();
+                $reservationCancelledCount = $vendorReservations->where('status', 'cancelled')->count();
+                $reservationRevenueTotal = $vendorReservations->reduce(function ($carry, $reservation) {
+                    return $carry + (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0);
+                }, 0.0);
+            @endphp
+            <div class="billing-ledger-grid" style="margin-bottom:10px;">
+                <article class="billing-ledger-card">
+                    <p class="metric-label">Pending</p>
+                    <p class="metric-value">{{ $reservationPendingCount }}</p>
+                </article>
+                <article class="billing-ledger-card">
+                    <p class="metric-label">Confirmed</p>
+                    <p class="metric-value">{{ $reservationConfirmedCount }}</p>
+                </article>
+                <article class="billing-ledger-card">
+                    <p class="metric-label">Completed</p>
+                    <p class="metric-value">{{ $reservationCompletedCount }}</p>
+                </article>
+                <article class="billing-ledger-card">
+                    <p class="metric-label">Cancelled</p>
+                    <p class="metric-value">{{ $reservationCancelledCount }}</p>
+                </article>
+                <article class="billing-ledger-card">
+                    <p class="metric-label">Booked Revenue</p>
+                    <p class="metric-value">MVR {{ number_format($reservationRevenueTotal, 2) }}</p>
+                </article>
             </div>
             <div class="ops-grid">
                 <form class="ops-form" method="POST" action="/portal/vendor/reservations/create">

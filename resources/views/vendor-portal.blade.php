@@ -984,6 +984,131 @@
             padding: 8px;
         }
 
+        .media-action-stack {
+            display: grid;
+            gap: 6px;
+        }
+
+        .media-count-note {
+            font-size: 0.74rem;
+            color: #4f6479;
+        }
+
+        .media-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1200;
+            display: grid;
+            place-items: center;
+            padding: 16px;
+            background: rgba(9, 21, 33, 0.58);
+        }
+
+        .media-modal[hidden] {
+            display: none;
+        }
+
+        .media-modal-card {
+            width: min(940px, 96vw);
+            max-height: 92vh;
+            overflow: auto;
+            border-radius: 14px;
+            border: 1px solid #c8d4df;
+            background: #ffffff;
+            padding: 14px;
+            box-shadow: 0 20px 42px rgba(12, 28, 44, 0.28);
+        }
+
+        .media-modal-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .media-modal-title {
+            margin: 0;
+            color: #1f3346;
+            font-size: 1rem;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .media-dropzone {
+            border: 2px dashed #9fb4c6;
+            border-radius: 12px;
+            background: #f6fbff;
+            padding: 14px;
+            text-align: center;
+            color: #35516a;
+            font-size: 0.84rem;
+            cursor: pointer;
+            transition: border-color 0.16s ease, background 0.16s ease;
+        }
+
+        .media-dropzone.is-dragover {
+            border-color: #0f6b74;
+            background: #e9f7f9;
+        }
+
+        .media-selected-list {
+            margin-top: 8px;
+            display: grid;
+            gap: 6px;
+        }
+
+        .media-selected-item {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 8px;
+            align-items: center;
+            border: 1px solid #d7e0e6;
+            border-radius: 9px;
+            padding: 7px 8px;
+            font-size: 0.8rem;
+            color: #253b50;
+        }
+
+        .media-gallery-grid {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 8px;
+        }
+
+        .media-gallery-item {
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .media-gallery-item img {
+            width: 100%;
+            height: 110px;
+            object-fit: cover;
+            display: block;
+            background: #edf3f9;
+        }
+
+        .media-gallery-meta {
+            padding: 7px;
+            font-size: 0.74rem;
+            color: #30485e;
+        }
+
+        .media-primary-badge {
+            display: inline-block;
+            margin-top: 4px;
+            border: 1px solid #77bfa2;
+            background: #eef8f1;
+            color: #215336;
+            border-radius: 999px;
+            padding: 2px 7px;
+            font-size: 0.68rem;
+            font-weight: 700;
+        }
+
         .update-row-form .btn,
         .media-upload-row .btn,
         .inline-table-form .btn {
@@ -1410,6 +1535,26 @@
         $roomMediaByRoomId = $roomMediaAssets->groupBy(static function ($media) {
             return (int) ($media->entity_id ?? 0);
         });
+        $buildMediaPayloadByEntity = static function ($groupedMedia) {
+            return $groupedMedia->map(static function ($items) {
+                return collect($items)->map(static function ($media) {
+                    $filePath = trim((string) ($media->file_path ?? ''));
+                    $resolvedUrl = $filePath;
+                    if ($filePath !== '' && !preg_match('/^https?:\/\//i', $filePath)) {
+                        $resolvedUrl = asset('storage/' . ltrim($filePath, '/'));
+                    }
+
+                    return [
+                        'id' => (int) ($media->id ?? 0),
+                        'url' => $resolvedUrl,
+                        'alt' => trim((string) ($media->alt_text ?? '')),
+                        'is_primary' => (bool) ($media->is_primary ?? false),
+                    ];
+                })->values()->all();
+            })->toArray();
+        };
+        $propertyMediaPayloadByPropertyId = $buildMediaPayloadByEntity($propertyMediaByPropertyId);
+        $roomMediaPayloadByRoomId = $buildMediaPayloadByEntity($roomMediaByRoomId);
         $propertiesByCategory = $vendorProperties->groupBy(static function ($property) {
             return strtolower((string) ($property->listing_category ?? ''));
         });
@@ -1867,7 +2012,7 @@
                     $vehicleRentalTypeOptionGroups = $vehicleRentalTypeOptionsCollection
                         ->groupBy(fn ($item) => strtolower(trim((string) ($item['group'] ?? 'other'))));
                 @endphp
-                <article class="ops-form ops-field-wide">
+                <article class="ops-form ops-field-wide" id="propertyCreateFormContainer" @if (!$showCreatePropertyForm) hidden @endif>
                     <form id="propertyCreateForm" class="ops-form" method="POST" action="/portal/vendor/properties/create" @if (!$showCreatePropertyForm) hidden @endif>
                         @csrf
                         <input type="hidden" name="property_form_intent" value="1">
@@ -2344,6 +2489,7 @@
                                                     }
                                                     $transportTripType = strtolower((string) ($propertyDetails['transport_trip_type'] ?? ''));
                                                     $transportPricingModel = strtolower((string) ($propertyDetails['transport_pricing_model'] ?? ''));
+                                                    $propertyMediaCount = (int) ($propertyMediaByPropertyId->get($propertyId, collect())->count());
                                                 @endphp
                                                 <tr>
                                                     <td>
@@ -2408,15 +2554,16 @@
                                                                     <button class="btn btn-danger" type="submit">Remove Listing</button>
                                                                 </form>
                                                             </div>
-                                                            <form class="inline-table-form media-upload-row" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
-                                                                @csrf
-                                                                <input type="hidden" name="entity_type" value="property">
-                                                                <input type="hidden" name="entity_id" value="{{ $propertyId }}">
-                                                                <input class="ops-input" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
-                                                                <input class="ops-input" name="alt_text" type="text" maxlength="190" placeholder="Listing photo alt text" required>
-                                                                <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Set as primary</label>
-                                                                <button class="btn btn-secondary" type="submit">Upload Listing Photo</button>
-                                                            </form>
+                                                            <div class="media-action-stack">
+                                                                <button class="btn btn-secondary" type="button"
+                                                                    data-open-media-modal
+                                                                    data-media-entity-type="property"
+                                                                    data-media-entity-id="{{ $propertyId }}"
+                                                                    data-media-entity-label="{{ $property->name }}">
+                                                                    Manage Listing Media
+                                                                </button>
+                                                                <span class="media-count-note">{{ $propertyMediaCount }} media file(s)</span>
+                                                            </div>
                                                             <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/properties/{{ $propertyId }}/update" data-property-edit-form="{{ $propertyId }}" data-property-edit-category="{{ $editCategory }}" hidden>
                                                                 @csrf
                                                                 <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $property->name }}" required>
@@ -2595,6 +2742,7 @@
                                                                                 @foreach ($propertyRooms as $room)
                                                                                     @php
                                                                                         $roomId = (int) ($room->id ?? 0);
+                                                                                        $roomMediaCount = (int) ($roomMediaByRoomId->get($roomId, collect())->count());
                                                                                         $roomAmenityValues = collect(explode(',', (string) ($room->amenities ?? '')))
                                                                                             ->map(static fn ($token) => trim((string) $token))
                                                                                             ->filter(static fn ($token) => $token !== '')
@@ -2621,15 +2769,16 @@
                                                                                             Child: {{ (int) ($room->child_capacity ?? 0) }} x {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->child_price ?? 0), 2) }}
                                                                                         </td>
                                                                                         <td>
-                                                                                            <form class="inline-table-form media-upload-row" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
-                                                                                                @csrf
-                                                                                                <input type="hidden" name="entity_type" value="room">
-                                                                                                <input type="hidden" name="entity_id" value="{{ $roomId }}">
-                                                                                                <input class="ops-input" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
-                                                                                                <input class="ops-input" name="alt_text" type="text" maxlength="190" placeholder="Room photo alt text" required>
-                                                                                                <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Set as primary</label>
-                                                                                                <button class="btn btn-secondary" type="submit">Upload Room Photo</button>
-                                                                                            </form>
+                                                                                            <div class="media-action-stack">
+                                                                                                <button class="btn btn-secondary" type="button"
+                                                                                                    data-open-media-modal
+                                                                                                    data-media-entity-type="room"
+                                                                                                    data-media-entity-id="{{ $roomId }}"
+                                                                                                    data-media-entity-label="{{ $room->name }}">
+                                                                                                    Manage Room Media
+                                                                                                </button>
+                                                                                                <span class="media-count-note">{{ $roomMediaCount }} media file(s)</span>
+                                                                                            </div>
                                                                                         </td>
                                                                                         <td>
                                                                                             <div class="inline-actions">
@@ -2850,6 +2999,50 @@
                 </div>
             </div>
         </section>
+
+        <div id="mediaUploadModal" class="media-modal" hidden>
+            <div class="media-modal-card" role="dialog" aria-modal="true" aria-labelledby="mediaModalTitle">
+                <div class="media-modal-head">
+                    <p id="mediaModalTitle" class="media-modal-title">Manage Media</p>
+                    <button id="mediaModalClose" class="btn btn-secondary" type="button">Close</button>
+                </div>
+
+                <form id="mediaModalForm" class="ops-form" method="POST" action="/portal/vendor/media/upload/batch" enctype="multipart/form-data">
+                    @csrf
+                    <input type="hidden" id="mediaEntityType" name="entity_type" value="property">
+                    <input type="hidden" id="mediaEntityId" name="entity_id" value="">
+                    <input type="hidden" id="mediaPrimaryIndex" name="primary_index" value="0">
+
+                    <div class="ops-form-grid">
+                        <div class="ops-field ops-field-wide">
+                            <label for="mediaAltText">Alt Text Base (optional)</label>
+                            <input id="mediaAltText" class="ops-input" name="alt_text" type="text" maxlength="190" placeholder="Used as base text, e.g. Ocean View Villa">
+                        </div>
+
+                        <div class="ops-field ops-field-wide">
+                            <label>Upload Files</label>
+                            <div id="mediaDropZone" class="media-dropzone" tabindex="0" role="button" aria-label="Drop images here or click to browse">
+                                Drag & drop JPG/PNG/WEBP images here, or click to select multiple files.
+                            </div>
+                            <input id="mediaFilesInput" name="photos[]" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
+                            <div id="mediaSelectedList" class="media-selected-list"></div>
+                        </div>
+                    </div>
+
+                    <div class="inline-actions" style="margin-top:10px;">
+                        <button id="mediaUploadSubmit" class="btn btn-primary" type="submit">Upload Selected Media</button>
+                    </div>
+                </form>
+
+                <div class="ops-table-wrap" style="margin-top:10px;">
+                    <div style="padding:10px;">
+                        <p class="property-subsection-head" style="margin-bottom:6px;">Existing Media Gallery</p>
+                        <div id="mediaExistingGallery" class="media-gallery-grid"></div>
+                        <p id="mediaExistingEmpty" class="ops-empty" hidden>No media uploaded yet for this item.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <section id="vendorAvailabilitySection" class="card ops-section" aria-label="Vendor availability calendar" data-panel-group="reservations">
             <div class="ops-header">
@@ -3312,6 +3505,7 @@
             const closePropertyCreateForm = document.getElementById("closePropertyCreateForm");
             const backToListingsFromCreate = document.getElementById("backToListingsFromCreate");
             const propertyCreateForm = document.getElementById("propertyCreateForm");
+            const propertyCreateFormContainer = document.getElementById("propertyCreateFormContainer");
             const propertyCreateFormTitle = document.getElementById("propertyCreateFormTitle");
             const propertyCreateFormSubtitle = document.getElementById("propertyCreateFormSubtitle");
             const propertyCreateSubmitButton = document.getElementById("propertyCreateSubmitButton");
@@ -3455,6 +3649,19 @@
 
             function formatDateTime(epochSeconds) {
                 return new Date(epochSeconds * 1000).toLocaleString();
+            }
+
+            function setPropertyCreateVisibility(show) {
+                const shouldShow = Boolean(show);
+                if (propertyCreateForm) {
+                    propertyCreateForm.hidden = !shouldShow;
+                }
+                if (propertyCreateFormContainer) {
+                    propertyCreateFormContainer.hidden = !shouldShow;
+                }
+                if (closePropertyCreateForm) {
+                    closePropertyCreateForm.hidden = !shouldShow;
+                }
             }
 
             function evaluateToken(token) {
@@ -3888,10 +4095,7 @@
                 }
 
                 if (currentStep.openPropertyForm && propertyCreateForm) {
-                    propertyCreateForm.hidden = false;
-                    if (closePropertyCreateForm) {
-                        closePropertyCreateForm.hidden = false;
-                    }
+                    setPropertyCreateVisibility(true);
                 }
 
                 if (currentStep.openRoomForm && roomCreateForm) {
@@ -4383,10 +4587,7 @@
                 activateListingWizardStep(1, true);
 
                 if (propertyCreateForm) {
-                    propertyCreateForm.hidden = false;
-                }
-                if (closePropertyCreateForm) {
-                    closePropertyCreateForm.hidden = false;
+                    setPropertyCreateVisibility(true);
                 }
                 if (propertyCategorySelect && normalizedCategory !== '') {
                     ensureSelectHasOption(propertyCategorySelect, normalizedCategory);
@@ -4681,8 +4882,7 @@
 
             if (openPropertyCreateForm && propertyCreateForm) {
                 openPropertyCreateForm.addEventListener("click", function () {
-                    propertyCreateForm.hidden = false;
-                    if (closePropertyCreateForm) closePropertyCreateForm.hidden = false;
+                    setPropertyCreateVisibility(true);
                     const propertyNameInput = document.getElementById("property_name");
                     if (propertyNameInput) {
                         propertyNameInput.focus();
@@ -4692,15 +4892,13 @@
 
             if (closePropertyCreateForm && propertyCreateForm) {
                 closePropertyCreateForm.addEventListener("click", function () {
-                    propertyCreateForm.hidden = true;
-                    closePropertyCreateForm.hidden = true;
+                    setPropertyCreateVisibility(false);
                 });
             }
 
             if (backToListingsFromCreate && propertyCreateForm) {
                 backToListingsFromCreate.addEventListener("click", function () {
-                    propertyCreateForm.hidden = true;
-                    if (closePropertyCreateForm) closePropertyCreateForm.hidden = true;
+                    setPropertyCreateVisibility(false);
                     window.location.hash = "listings";
                     showPanelGroup("listings");
                     activateListingWizardStep(1, true);
@@ -4986,6 +5184,7 @@
                 const closePropertyCreateForm = document.getElementById('closePropertyCreateForm');
                 const backToListingsFromCreate = document.getElementById('backToListingsFromCreate');
                 const propertyCreateForm = document.getElementById('propertyCreateForm');
+                const propertyCreateFormContainer = document.getElementById('propertyCreateFormContainer');
                 const propertyCategorySelect = document.getElementById('property_listing_category');
                 const propertyCategoryScopeNote = document.getElementById('propertyCategoryScopeNote');
                 const propertyCreateFormTitle = document.getElementById('propertyCreateFormTitle');
@@ -5005,6 +5204,149 @@
                 const roomCreateForm = document.getElementById('roomCreateForm');
                 const closeRoomCreateForm = document.getElementById('closeRoomCreateForm');
                 const roomPropertySelect = document.getElementById('room_vendor_property_id');
+                const mediaByPropertyId = @json($propertyMediaPayloadByPropertyId ?? []);
+                const mediaByRoomId = @json($roomMediaPayloadByRoomId ?? []);
+                const mediaModal = document.getElementById('mediaUploadModal');
+                const mediaModalClose = document.getElementById('mediaModalClose');
+                const mediaModalTitle = document.getElementById('mediaModalTitle');
+                const mediaEntityTypeInput = document.getElementById('mediaEntityType');
+                const mediaEntityIdInput = document.getElementById('mediaEntityId');
+                const mediaPrimaryIndexInput = document.getElementById('mediaPrimaryIndex');
+                const mediaFilesInput = document.getElementById('mediaFilesInput');
+                const mediaDropZone = document.getElementById('mediaDropZone');
+                const mediaSelectedList = document.getElementById('mediaSelectedList');
+                const mediaExistingGallery = document.getElementById('mediaExistingGallery');
+                const mediaExistingEmpty = document.getElementById('mediaExistingEmpty');
+
+                function setPropertyCreateFormVisible(visible) {
+                    const show = Boolean(visible);
+                    if (propertyCreateForm) {
+                        propertyCreateForm.hidden = !show;
+                    }
+                    if (propertyCreateFormContainer) {
+                        propertyCreateFormContainer.hidden = !show;
+                    }
+                    if (closePropertyCreateForm) {
+                        closePropertyCreateForm.hidden = !show;
+                    }
+                }
+
+                function renderMediaSelectedFiles() {
+                    if (!mediaFilesInput || !mediaSelectedList || !mediaPrimaryIndexInput) {
+                        return;
+                    }
+
+                    mediaSelectedList.innerHTML = '';
+                    const files = Array.from(mediaFilesInput.files || []);
+                    if (files.length === 0) {
+                        mediaPrimaryIndexInput.value = '0';
+                        const empty = document.createElement('p');
+                        empty.className = 'ops-empty';
+                        empty.textContent = 'No files selected yet.';
+                        mediaSelectedList.appendChild(empty);
+                        return;
+                    }
+
+                    let selectedPrimary = Number.parseInt(mediaPrimaryIndexInput.value || '0', 10);
+                    if (!Number.isFinite(selectedPrimary) || selectedPrimary < 0 || selectedPrimary >= files.length) {
+                        selectedPrimary = 0;
+                    }
+                    mediaPrimaryIndexInput.value = String(selectedPrimary);
+
+                    files.forEach((file, index) => {
+                        const row = document.createElement('div');
+                        row.className = 'media-selected-item';
+
+                        const radio = document.createElement('input');
+                        radio.type = 'radio';
+                        radio.name = 'mediaPrimaryRadio';
+                        radio.value = String(index);
+                        radio.checked = index === selectedPrimary;
+                        radio.addEventListener('change', () => {
+                            mediaPrimaryIndexInput.value = String(index);
+                        });
+
+                        const name = document.createElement('span');
+                        const sizeKb = Math.max(1, Math.round((Number(file.size) || 0) / 1024));
+                        name.textContent = file.name + ' (' + sizeKb + ' KB)';
+
+                        const tag = document.createElement('span');
+                        tag.textContent = index === selectedPrimary ? 'Primary' : '';
+                        tag.className = 'media-primary-badge';
+                        tag.style.visibility = index === selectedPrimary ? 'visible' : 'hidden';
+
+                        row.appendChild(radio);
+                        row.appendChild(name);
+                        row.appendChild(tag);
+                        mediaSelectedList.appendChild(row);
+                    });
+                }
+
+                function renderExistingMedia(entityType, entityId) {
+                    if (!mediaExistingGallery || !mediaExistingEmpty) {
+                        return;
+                    }
+
+                    mediaExistingGallery.innerHTML = '';
+                    const key = String(entityId || '0');
+                    const source = entityType === 'room' ? mediaByRoomId : mediaByPropertyId;
+                    const items = Array.isArray(source[key]) ? source[key] : [];
+
+                    if (items.length === 0) {
+                        mediaExistingEmpty.hidden = false;
+                        return;
+                    }
+
+                    mediaExistingEmpty.hidden = true;
+                    items.forEach((item) => {
+                        const card = document.createElement('div');
+                        card.className = 'media-gallery-item';
+
+                        const img = document.createElement('img');
+                        img.src = String(item.url || '');
+                        img.alt = String(item.alt || 'Listing image');
+
+                        const meta = document.createElement('div');
+                        meta.className = 'media-gallery-meta';
+                        meta.textContent = String(item.alt || 'Uploaded image');
+                        if (item.is_primary) {
+                            const badge = document.createElement('span');
+                            badge.className = 'media-primary-badge';
+                            badge.textContent = 'Primary';
+                            meta.appendChild(document.createElement('br'));
+                            meta.appendChild(badge);
+                        }
+
+                        card.appendChild(img);
+                        card.appendChild(meta);
+                        mediaExistingGallery.appendChild(card);
+                    });
+                }
+
+                function closeMediaModal() {
+                    if (mediaModal) {
+                        mediaModal.hidden = true;
+                    }
+                    if (mediaFilesInput) {
+                        mediaFilesInput.value = '';
+                    }
+                    if (mediaSelectedList) {
+                        mediaSelectedList.innerHTML = '';
+                    }
+                }
+
+                function openMediaModal(entityType, entityId, entityLabel) {
+                    if (!mediaModal || !mediaEntityTypeInput || !mediaEntityIdInput || !mediaModalTitle || !mediaPrimaryIndexInput) {
+                        return;
+                    }
+                    mediaEntityTypeInput.value = entityType;
+                    mediaEntityIdInput.value = String(entityId || '');
+                    mediaPrimaryIndexInput.value = '0';
+                    mediaModalTitle.textContent = 'Manage ' + (entityType === 'room' ? 'Room' : 'Listing') + ' Media: ' + String(entityLabel || ('#' + entityId));
+                    renderExistingMedia(entityType, String(entityId || '0'));
+                    renderMediaSelectedFiles();
+                    mediaModal.hidden = false;
+                }
 
                 function categoryScopesFor(category) {
                     const normalized = normalizeCategoryKey(category);
@@ -5142,38 +5484,26 @@
 
                 if (openPropertyCreateForm && propertyCreateForm) {
                     openPropertyCreateForm.addEventListener('click', function () {
-                        propertyCreateForm.hidden = false;
-                        if (closePropertyCreateForm) {
-                            closePropertyCreateForm.hidden = false;
-                        }
+                        setPropertyCreateFormVisible(true);
                     });
                 }
 
                 if (closePropertyCreateForm && propertyCreateForm) {
                     closePropertyCreateForm.addEventListener('click', function () {
-                        propertyCreateForm.hidden = true;
-                        closePropertyCreateForm.hidden = true;
+                        setPropertyCreateFormVisible(false);
                     });
                 }
 
                 if (backToListingsFromCreate && propertyCreateForm) {
                     backToListingsFromCreate.addEventListener('click', function () {
-                        propertyCreateForm.hidden = true;
-                        if (closePropertyCreateForm) {
-                            closePropertyCreateForm.hidden = true;
-                        }
+                        setPropertyCreateFormVisible(false);
                         window.location.hash = 'listings';
                     });
                 }
 
                 document.querySelectorAll('[data-listing-category-shortcut]').forEach((button) => {
                     button.addEventListener('click', function () {
-                        if (propertyCreateForm) {
-                            propertyCreateForm.hidden = false;
-                        }
-                        if (closePropertyCreateForm) {
-                            closePropertyCreateForm.hidden = false;
-                        }
+                        setPropertyCreateFormVisible(true);
 
                         const categoryKey = normalizeCategoryKey(button.getAttribute('data-listing-category-shortcut') || '');
                         if (propertyCategorySelect && categoryKey) {
@@ -5191,6 +5521,63 @@
                         window.location.hash = 'listings';
                     });
                 });
+
+                document.querySelectorAll('[data-open-media-modal]').forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const entityType = String(button.getAttribute('data-media-entity-type') || 'property').trim().toLowerCase();
+                        const entityId = String(button.getAttribute('data-media-entity-id') || '').trim();
+                        const entityLabel = String(button.getAttribute('data-media-entity-label') || '').trim();
+                        if (!entityId) {
+                            return;
+                        }
+                        openMediaModal(entityType === 'room' ? 'room' : 'property', entityId, entityLabel);
+                    });
+                });
+
+                if (mediaModalClose) {
+                    mediaModalClose.addEventListener('click', closeMediaModal);
+                }
+
+                if (mediaModal) {
+                    mediaModal.addEventListener('click', function (event) {
+                        if (event.target === mediaModal) {
+                            closeMediaModal();
+                        }
+                    });
+                }
+
+                if (mediaDropZone && mediaFilesInput) {
+                    const applyFiles = (files) => {
+                        const accepted = Array.from(files || []).filter((file) => /^image\//i.test(String(file.type || '')));
+                        const dataTransfer = new DataTransfer();
+                        accepted.forEach((file) => dataTransfer.items.add(file));
+                        mediaFilesInput.files = dataTransfer.files;
+                        renderMediaSelectedFiles();
+                    };
+
+                    mediaDropZone.addEventListener('click', () => mediaFilesInput.click());
+                    mediaDropZone.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            mediaFilesInput.click();
+                        }
+                    });
+                    mediaDropZone.addEventListener('dragover', (event) => {
+                        event.preventDefault();
+                        mediaDropZone.classList.add('is-dragover');
+                    });
+                    mediaDropZone.addEventListener('dragleave', () => {
+                        mediaDropZone.classList.remove('is-dragover');
+                    });
+                    mediaDropZone.addEventListener('drop', (event) => {
+                        event.preventDefault();
+                        mediaDropZone.classList.remove('is-dragover');
+                        applyFiles(event.dataTransfer ? event.dataTransfer.files : []);
+                    });
+                    mediaFilesInput.addEventListener('change', renderMediaSelectedFiles);
+                }
+
+                setPropertyCreateFormVisible(propertyCreateForm ? !propertyCreateForm.hidden : false);
 
                 document.querySelectorAll('[data-open-room-form]').forEach((button) => {
                     button.addEventListener('click', function () {

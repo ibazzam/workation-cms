@@ -280,6 +280,25 @@
         $customerRoomsByProperty = $customerRoomsByProperty ?? collect();
         $propertyMediaByProperty = $propertyMediaByProperty ?? collect();
         $roomMediaByRoom = $roomMediaByRoom ?? collect();
+        $mediaVariantUrl = static function ($media, string $variant = 'banner'): ?string {
+            $path = trim((string) ($media->file_path ?? ''));
+            if ($path === '') {
+                return null;
+            }
+            if (str_starts_with($path, 'http')) {
+                return $path;
+            }
+
+            $normalizedPath = ltrim($path, '/');
+            $candidatePath = $normalizedPath;
+            if ($variant === 'thumb') {
+                $candidatePath = preg_replace('/-banner(\.[a-z0-9]+)$/i', '-thumb$1', $normalizedPath) ?? $normalizedPath;
+            } elseif ($variant === 'banner') {
+                $candidatePath = preg_replace('/-thumb(\.[a-z0-9]+)$/i', '-banner$1', $normalizedPath) ?? $normalizedPath;
+            }
+
+            return '/storage/' . ltrim($candidatePath, '/');
+        };
     @endphp
     <main class="page">
         <section class="hero">
@@ -335,11 +354,8 @@
                             $propertyId = (int) ($property->id ?? 0);
                             $propertyMedia = collect($propertyMediaByProperty->get($propertyId, collect()));
                             $primaryPropertyMedia = $propertyMedia->first();
-                            $propertyImageUrl = $primaryPropertyMedia
-                                ? (str_starts_with((string) ($primaryPropertyMedia->file_path ?? ''), 'http')
-                                    ? (string) $primaryPropertyMedia->file_path
-                                    : ('/storage/' . ltrim((string) ($primaryPropertyMedia->file_path ?? ''), '/')))
-                                : null;
+                            $propertyImageThumbUrl = $primaryPropertyMedia ? $mediaVariantUrl($primaryPropertyMedia, 'thumb') : null;
+                            $propertyImageBannerUrl = $primaryPropertyMedia ? $mediaVariantUrl($primaryPropertyMedia, 'banner') : null;
                             $allRoomsForProperty = collect($customerRoomsByProperty->get($propertyId, collect()));
                             $roomsForProperty = $allRoomsForProperty->take(4);
                             $lowestPricedRoom = $allRoomsForProperty
@@ -351,8 +367,8 @@
                             $lowestRoomCurrency = strtoupper((string) (($lowestPricedRoom->currency ?? null) ?: ($property->currency ?? 'MVR')));
                         @endphp
                         <article class="listing-card">
-                            @if ($propertyImageUrl)
-                                <img class="listing-property-media" src="{{ $propertyImageUrl }}" alt="{{ $primaryPropertyMedia->alt_text ?? ($property->name . ' photo') }}" loading="lazy">
+                            @if ($propertyImageThumbUrl)
+                                <img class="listing-property-media" src="{{ $propertyImageThumbUrl }}" srcset="{{ $propertyImageThumbUrl }} 480w, {{ $propertyImageBannerUrl ?? $propertyImageThumbUrl }} 1600w" sizes="(max-width: 900px) 100vw, 50vw" alt="{{ $primaryPropertyMedia->alt_text ?? ($property->name . ' photo') }}" loading="lazy">
                             @endif
                             <div class="listing-content">
                                 <h2 class="listing-title">{{ $property->name }}</h2>
@@ -374,15 +390,12 @@
                                             $roomId = (int) ($room->id ?? 0);
                                             $roomMediaItems = collect($roomMediaByRoom->get($roomId, collect()));
                                             $primaryRoomMedia = $roomMediaItems->first();
-                                            $roomImageUrl = $primaryRoomMedia
-                                                ? (str_starts_with((string) ($primaryRoomMedia->file_path ?? ''), 'http')
-                                                    ? (string) $primaryRoomMedia->file_path
-                                                    : ('/storage/' . ltrim((string) ($primaryRoomMedia->file_path ?? ''), '/')))
-                                                : null;
+                                            $roomImageThumbUrl = $primaryRoomMedia ? $mediaVariantUrl($primaryRoomMedia, 'thumb') : null;
+                                            $roomImageBannerUrl = $primaryRoomMedia ? $mediaVariantUrl($primaryRoomMedia, 'banner') : null;
                                         @endphp
                                         <article class="room-item">
-                                            @if ($roomImageUrl)
-                                                <img src="{{ $roomImageUrl }}" alt="{{ $primaryRoomMedia->alt_text ?? ($room->name . ' photo') }}" loading="lazy">
+                                            @if ($roomImageThumbUrl)
+                                                <img src="{{ $roomImageThumbUrl }}" srcset="{{ $roomImageThumbUrl }} 480w, {{ $roomImageBannerUrl ?? $roomImageThumbUrl }} 1600w" sizes="70px" alt="{{ $primaryRoomMedia->alt_text ?? ($room->name . ' photo') }}" loading="lazy">
                                             @else
                                                 <div class="empty" style="margin:0; padding:6px; font-size:0.74rem;">No photo</div>
                                             @endif

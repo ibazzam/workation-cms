@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 if (!function_exists('vendorPortalCategoryMap')) {
@@ -144,6 +145,121 @@ if (!function_exists('vendorPortalNormalizedStringList')) {
         }
 
         return array_values(array_unique($normalized));
+    }
+}
+
+if (!function_exists('vendorPortalPreferredMediaOutputFormat')) {
+    function vendorPortalPreferredMediaOutputFormat(): array
+    {
+        if (function_exists('imagewebp')) {
+            return [
+                'extension' => 'webp',
+                'mime' => 'image/webp',
+            ];
+        }
+
+        return [
+            'extension' => 'jpg',
+            'mime' => 'image/jpeg',
+        ];
+    }
+}
+
+if (!function_exists('vendorPortalCreateImageResourceFromFile')) {
+    function vendorPortalCreateImageResourceFromFile(string $filePath, string $mimeType)
+    {
+        if ($filePath === '' || !is_file($filePath)) {
+            return null;
+        }
+
+        $mime = strtolower(trim($mimeType));
+        if ($mime === 'image/jpeg' || $mime === 'image/jpg') {
+            return @imagecreatefromjpeg($filePath) ?: null;
+        }
+        if ($mime === 'image/png') {
+            return @imagecreatefrompng($filePath) ?: null;
+        }
+        if ($mime === 'image/webp' && function_exists('imagecreatefromwebp')) {
+            return @imagecreatefromwebp($filePath) ?: null;
+        }
+
+        return null;
+    }
+}
+
+if (!function_exists('vendorPortalResizeImageToFill')) {
+    function vendorPortalResizeImageToFill($sourceImage, int $sourceWidth, int $sourceHeight, int $targetWidth, int $targetHeight)
+    {
+        if (!is_resource($sourceImage) && !($sourceImage instanceof \GdImage)) {
+            return null;
+        }
+        if ($sourceWidth <= 0 || $sourceHeight <= 0 || $targetWidth <= 0 || $targetHeight <= 0) {
+            return null;
+        }
+
+        $sourceAspect = $sourceWidth / $sourceHeight;
+        $targetAspect = $targetWidth / $targetHeight;
+
+        $cropWidth = $sourceWidth;
+        $cropHeight = $sourceHeight;
+        $sourceX = 0;
+        $sourceY = 0;
+
+        if ($sourceAspect > $targetAspect) {
+            $cropWidth = (int) round($sourceHeight * $targetAspect);
+            $sourceX = (int) floor(($sourceWidth - $cropWidth) / 2);
+        } elseif ($sourceAspect < $targetAspect) {
+            $cropHeight = (int) round($sourceWidth / $targetAspect);
+            $sourceY = (int) floor(($sourceHeight - $cropHeight) / 2);
+        }
+
+        $destinationImage = imagecreatetruecolor($targetWidth, $targetHeight);
+        if ($destinationImage === false) {
+            return null;
+        }
+
+        imagealphablending($destinationImage, false);
+        imagesavealpha($destinationImage, true);
+        $transparent = imagecolorallocatealpha($destinationImage, 0, 0, 0, 127);
+        imagefill($destinationImage, 0, 0, $transparent);
+
+        imagecopyresampled(
+            $destinationImage,
+            $sourceImage,
+            0,
+            0,
+            $sourceX,
+            $sourceY,
+            $targetWidth,
+            $targetHeight,
+            $cropWidth,
+            $cropHeight
+        );
+
+        return $destinationImage;
+    }
+}
+
+if (!function_exists('vendorPortalWriteMediaVariant')) {
+    function vendorPortalWriteMediaVariant($image, string $relativePath, string $extension): bool
+    {
+        if ((!is_resource($image) && !($image instanceof \GdImage)) || $relativePath === '') {
+            return false;
+        }
+
+        $disk = Storage::disk('public');
+        $absolutePath = $disk->path($relativePath);
+        $directoryPath = dirname($absolutePath);
+        if (!is_dir($directoryPath) && !@mkdir($directoryPath, 0755, true) && !is_dir($directoryPath)) {
+            return false;
+        }
+
+        $ext = strtolower(trim($extension));
+        if ($ext === 'webp' && function_exists('imagewebp')) {
+            return (bool) @imagewebp($image, $absolutePath, 82);
+        }
+
+        return (bool) @imagejpeg($image, $absolutePath, 84);
     }
 }
 
@@ -1409,7 +1525,7 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
     $validated = $request->validate([
         'entity_type' => ['required', Rule::in(['property', 'service', 'room', 'profile', 'menu', 'vehicle'])],
         'entity_id' => ['nullable', 'integer', 'min:1'],
-        'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
+        'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         'alt_text' => ['required', 'string', 'max:190'],
         'is_primary' => ['nullable', 'boolean'],
     ]);
@@ -1464,12 +1580,56 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
     if ($widthPx < 1200 || $heightPx < 800) {
         return back()->withErrors(['profile' => 'Image dimensions must be at least 1200x800 pixels.'])->withInput();
     }
-    if ($widthPx > 10000 || $heightPx > 10000) {
-        return back()->withErrors(['profile' => 'Image dimensions exceed allowed maximum of 10000x10000 pixels.'])->withInput();
+    if ($widthPx > 2400 || $heightPx > 1600) {
+        return back()->withErrors(['profile' => 'Image dimensions exceed allowed maximum of 2400x1600 pixels. Please resize before upload.'])->withInput();
     }
 
-    $qualityGrade = ($widthPx >= 2400 && $heightPx >= 1600 && $fileSizeKb <= 6000) ? 'A' : 'B';
-    $filePath = $file->store('vendor-listings/' . $vendorUserId, 'public');
+    $format = vendorPortalPreferredMediaOutputFormat();
+    $outputExtension = (string) ($format['extension'] ?? 'jpg');
+    $outputMime = (string) ($format['mime'] ?? 'image/jpeg');
+
+    $sourceImage = vendorPortalCreateImageResourceFromFile(
+        (string) $file->getPathname(),
+        (string) ($file->getMimeType() ?? '')
+    );
+    if ($sourceImage === null) {
+        return back()->withErrors(['profile' => 'Unable to process this image. Please upload a JPG, PNG, or WebP file.'])->withInput();
+    }
+
+    $storagePrefix = 'vendor-listings/' . $vendorUserId;
+    $entityToken = $entityType . '-' . ($entityId ?? 'shared');
+    $baseToken = now()->format('YmdHis') . '-' . bin2hex(random_bytes(4)) . '-' . $entityToken;
+    $bannerPath = $storagePrefix . '/' . $baseToken . '-banner.' . $outputExtension;
+    $thumbPath = $storagePrefix . '/' . $baseToken . '-thumb.' . $outputExtension;
+
+    $bannerImage = vendorPortalResizeImageToFill($sourceImage, $widthPx, $heightPx, 1600, 900);
+    $thumbImage = vendorPortalResizeImageToFill($sourceImage, $widthPx, $heightPx, 480, 320);
+
+    $bannerWritten = $bannerImage !== null
+        ? vendorPortalWriteMediaVariant($bannerImage, $bannerPath, $outputExtension)
+        : false;
+    $thumbWritten = $thumbImage !== null
+        ? vendorPortalWriteMediaVariant($thumbImage, $thumbPath, $outputExtension)
+        : false;
+
+    if (is_resource($sourceImage) || $sourceImage instanceof \GdImage) {
+        imagedestroy($sourceImage);
+    }
+    if ((is_resource($bannerImage) || $bannerImage instanceof \GdImage)) {
+        imagedestroy($bannerImage);
+    }
+    if ((is_resource($thumbImage) || $thumbImage instanceof \GdImage)) {
+        imagedestroy($thumbImage);
+    }
+
+    if (!$bannerWritten || !$thumbWritten) {
+        return back()->withErrors(['profile' => 'Failed to generate optimized image variants. Please try another image.'])->withInput();
+    }
+
+    $filePath = $bannerPath;
+    $storedBannerSizeBytes = (int) (@filesize(Storage::disk('public')->path($bannerPath)) ?: 0);
+    $storedBannerSizeKb = (int) ceil($storedBannerSizeBytes / 1024);
+    $qualityGrade = $storedBannerSizeKb > 0 && $storedBannerSizeKb <= 900 ? 'A' : 'B';
 
     if ((bool) ($validated['is_primary'] ?? false)) {
         DB::table('vendor_listing_media')
@@ -1484,7 +1644,7 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
         'entity_type' => $entityType,
         'entity_id' => $entityId,
         'file_path' => (string) $filePath,
-        'mime_type' => $file->getMimeType(),
+        'mime_type' => $outputMime,
         'alt_text' => trim((string) ($validated['alt_text'] ?? '')),
         'is_primary' => (bool) ($validated['is_primary'] ?? false),
         'created_at' => now(),
@@ -1492,13 +1652,13 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
     ];
 
     if (Schema::hasColumn('vendor_listing_media', 'width_px')) {
-        $mediaPayload['width_px'] = $widthPx;
+        $mediaPayload['width_px'] = 1600;
     }
     if (Schema::hasColumn('vendor_listing_media', 'height_px')) {
-        $mediaPayload['height_px'] = $heightPx;
+        $mediaPayload['height_px'] = 900;
     }
     if (Schema::hasColumn('vendor_listing_media', 'file_size_kb')) {
-        $mediaPayload['file_size_kb'] = $fileSizeKb;
+        $mediaPayload['file_size_kb'] = $storedBannerSizeKb > 0 ? $storedBannerSizeKb : $fileSizeKb;
     }
     if (Schema::hasColumn('vendor_listing_media', 'quality_grade')) {
         $mediaPayload['quality_grade'] = $qualityGrade;

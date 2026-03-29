@@ -2781,6 +2781,7 @@
                                                                     <input type="hidden" name="entity_id" value="{{ $propertyId }}">
                                                                     <input class="ops-input" name="alt_text" type="text" maxlength="190" value="{{ $property->name }} photo" placeholder="Photo alt text" required>
                                                                     <input class="ops-input" name="photo" type="file" accept="image/png,image/jpeg,image/webp" required>
+                                                                    <p class="small" style="grid-column:1 / -1; margin:0;">Upload standard: JPG/PNG/WebP, 1200x800 to 2400x1600 pixels, max 4MB.</p>
                                                                     <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Primary photo</label>
                                                                     <button class="btn btn-secondary" type="submit">Upload</button>
                                                                     <button class="btn btn-secondary" type="button" data-close-property-media="{{ $propertyId }}">Close</button>
@@ -2941,6 +2942,7 @@
                                                                                                     <input type="hidden" name="entity_id" value="{{ $roomId }}">
                                                                                                     <input class="ops-input" name="alt_text" type="text" maxlength="190" value="{{ $room->name }} photo" placeholder="Photo alt text" required>
                                                                                                     <input class="ops-input" name="photo" type="file" accept="image/png,image/jpeg,image/webp" required>
+                                                                                                    <p class="small" style="grid-column:1 / -1; margin:0;">Upload standard: JPG/PNG/WebP, 1200x800 to 2400x1600 pixels, max 4MB.</p>
                                                                                                     <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Primary photo</label>
                                                                                                     <button class="btn btn-secondary" type="submit">Upload</button>
                                                                                                     <button class="btn btn-secondary" type="button" data-close-room-media="{{ $roomId }}">Close</button>
@@ -4998,6 +5000,10 @@
             });
 
             propertyMediaToggleButtons.forEach((button) => {
+                if (button.dataset.mediaToggleBound === '1') {
+                    return;
+                }
+                button.dataset.mediaToggleBound = '1';
                 button.addEventListener('click', function () {
                     const propertyId = String(button.getAttribute('data-toggle-property-media') || '').trim();
                     if (!propertyId) {
@@ -5015,6 +5021,10 @@
             });
 
             propertyMediaCloseButtons.forEach((button) => {
+                if (button.dataset.mediaCloseBound === '1') {
+                    return;
+                }
+                button.dataset.mediaCloseBound = '1';
                 button.addEventListener('click', function () {
                     const propertyId = String(button.getAttribute('data-close-property-media') || '').trim();
                     if (!propertyId) {
@@ -5028,6 +5038,10 @@
             });
 
             roomMediaToggleButtons.forEach((button) => {
+                if (button.dataset.mediaToggleBound === '1') {
+                    return;
+                }
+                button.dataset.mediaToggleBound = '1';
                 button.addEventListener('click', function () {
                     const roomId = String(button.getAttribute('data-toggle-room-media') || '').trim();
                     if (!roomId) {
@@ -5045,6 +5059,10 @@
             });
 
             roomMediaCloseButtons.forEach((button) => {
+                if (button.dataset.mediaCloseBound === '1') {
+                    return;
+                }
+                button.dataset.mediaCloseBound = '1';
                 button.addEventListener('click', function () {
                     const roomId = String(button.getAttribute('data-close-room-media') || '').trim();
                     if (!roomId) {
@@ -5817,6 +5835,10 @@
                 });
 
                 document.querySelectorAll('[data-toggle-property-media]').forEach((button) => {
+                    if (button.dataset.mediaToggleBound === '1') {
+                        return;
+                    }
+                    button.dataset.mediaToggleBound = '1';
                     button.addEventListener('click', function () {
                         const propertyId = String(button.getAttribute('data-toggle-property-media') || '').trim();
                         if (!propertyId) return;
@@ -5827,6 +5849,10 @@
                 });
 
                 document.querySelectorAll('[data-close-property-media]').forEach((button) => {
+                    if (button.dataset.mediaCloseBound === '1') {
+                        return;
+                    }
+                    button.dataset.mediaCloseBound = '1';
                     button.addEventListener('click', function () {
                         const propertyId = String(button.getAttribute('data-close-property-media') || '').trim();
                         if (!propertyId) return;
@@ -5836,6 +5862,10 @@
                 });
 
                 document.querySelectorAll('[data-toggle-room-media]').forEach((button) => {
+                    if (button.dataset.mediaToggleBound === '1') {
+                        return;
+                    }
+                    button.dataset.mediaToggleBound = '1';
                     button.addEventListener('click', function () {
                         const roomId = String(button.getAttribute('data-toggle-room-media') || '').trim();
                         if (!roomId) return;
@@ -5846,6 +5876,10 @@
                 });
 
                 document.querySelectorAll('[data-close-room-media]').forEach((button) => {
+                    if (button.dataset.mediaCloseBound === '1') {
+                        return;
+                    }
+                    button.dataset.mediaCloseBound = '1';
                     button.addEventListener('click', function () {
                         const roomId = String(button.getAttribute('data-close-room-media') || '').trim();
                         if (!roomId) return;

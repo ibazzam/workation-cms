@@ -416,9 +416,9 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
         ];
 
         if ($listingCategory === 'accommodation') {
-            $details['measurement_system'] = (string) ($validated['measurement_system'] ?? 'metric');
+            $details['measurement_system'] = 'imperial';
             $details['area_value'] = vendorPortalNormalizedNumeric($validated['area_value'] ?? null);
-            $details['area_unit'] = (string) ($validated['area_unit'] ?? '');
+            $details['area_unit'] = 'sqft';
             $details['bedroom_count'] = isset($validated['bedroom_count']) ? (int) $validated['bedroom_count'] : null;
             $details['property_amenities'] = $propertyAmenities;
             $details['property_features'] = $propertyFeatures;
@@ -428,7 +428,7 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['capacity_value'] = isset($validated['capacity_value']) ? (int) $validated['capacity_value'] : null;
         }
 
-        if (in_array($listingCategory, ['transport', 'excursion'], true)) {
+        if (in_array($listingCategory, ['excursion'], true)) {
             $details['service_radius_km'] = vendorPortalNormalizedNumeric($validated['service_radius_km'] ?? null);
         }
 
@@ -436,6 +436,11 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['transport_mode'] = trim((string) ($validated['transport_mode'] ?? ''));
             $details['pickup_location'] = trim((string) ($validated['pickup_location'] ?? ''));
             $details['dropoff_location'] = trim((string) ($validated['dropoff_location'] ?? ''));
+            $details['transport_departure_state'] = trim((string) ($validated['transport_departure_state'] ?? ''));
+            $details['transport_departure_city'] = trim((string) ($validated['transport_departure_city'] ?? ''));
+            $details['transport_arrival_state'] = trim((string) ($validated['transport_arrival_state'] ?? ''));
+            $details['transport_arrival_city'] = trim((string) ($validated['transport_arrival_city'] ?? ''));
+            $details['departure_area_port_jetty'] = trim((string) ($validated['departure_area_port_jetty'] ?? ''));
             $details['transport_trip_type'] = trim((string) ($validated['transport_trip_type'] ?? ''));
             $details['vehicle_name'] = trim((string) ($validated['vehicle_name'] ?? ''));
             $details['registration_plate'] = trim((string) ($validated['registration_plate'] ?? ''));
@@ -444,7 +449,6 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['transport_pricing_model'] = trim((string) ($validated['transport_pricing_model'] ?? ''));
             $details['hourly_rate'] = vendorPortalNormalizedNumeric($validated['hourly_rate'] ?? null);
             $details['daily_rate'] = vendorPortalNormalizedNumeric($validated['daily_rate'] ?? null);
-            $details['departure_location'] = trim((string) ($validated['departure_location'] ?? ''));
             $details['departure_date'] = trim((string) ($validated['departure_date'] ?? ''));
             $details['departure_time'] = trim((string) ($validated['departure_time'] ?? ''));
             $details['reporting_time'] = trim((string) ($validated['reporting_time'] ?? ''));
@@ -480,9 +484,8 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
         }
 
         if ($listingCategory === 'remote_workspace') {
-            $details['measurement_system'] = (string) ($validated['measurement_system'] ?? 'metric');
             $details['area_value'] = vendorPortalNormalizedNumeric($validated['area_value'] ?? null);
-            $details['area_unit'] = (string) ($validated['area_unit'] ?? '');
+            $details['area_unit'] = 'sqft';
             $details['workspace_type'] = trim((string) ($validated['workspace_type'] ?? ''));
             $details['internet_speed_mbps'] = vendorPortalNormalizedNumeric($validated['internet_speed_mbps'] ?? null);
 
@@ -495,14 +498,17 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
                 'tea',
                 'snacks',
             ];
-            $workspaceAmenityStatusInput = is_array($validated['workspace_amenity_status'] ?? null)
-                ? $validated['workspace_amenity_status']
-                : [];
+            $workspaceAmenitiesFree = vendorPortalNormalizedStringList($validated['workspace_amenities_free'] ?? []);
+            $workspaceAmenitiesPaid = vendorPortalNormalizedStringList($validated['workspace_amenities_paid'] ?? []);
+            $workspaceAmenitiesFree = array_values(array_intersect($workspaceAmenityCatalog, $workspaceAmenitiesFree));
+            $workspaceAmenitiesPaid = array_values(array_intersect($workspaceAmenityCatalog, $workspaceAmenitiesPaid));
             $workspaceAmenities = [];
             foreach ($workspaceAmenityCatalog as $amenityKey) {
-                $status = strtolower(trim((string) ($workspaceAmenityStatusInput[$amenityKey] ?? 'not_available')));
-                if (!in_array($status, ['free', 'paid', 'not_available'], true)) {
-                    $status = 'not_available';
+                $status = 'not_available';
+                if (in_array($amenityKey, $workspaceAmenitiesPaid, true)) {
+                    $status = 'paid';
+                } elseif (in_array($amenityKey, $workspaceAmenitiesFree, true)) {
+                    $status = 'free';
                 }
 
                 $workspaceAmenities[$amenityKey] = [
@@ -510,6 +516,8 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
                 ];
             }
             $details['workspace_amenities'] = $workspaceAmenities;
+            $details['workspace_amenities_free'] = $workspaceAmenitiesFree;
+            $details['workspace_amenities_paid'] = $workspaceAmenitiesPaid;
         }
 
         if ($listingCategory === 'resort_day_visit') {
@@ -595,8 +603,14 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
                 if (!isset($details['capacity_value']) || (int) $details['capacity_value'] < 1) {
                     $errors[] = 'Seat capacity is required for marine transport listings.';
                 }
-                if (empty($details['departure_location'])) {
-                    $errors[] = 'Departure location is required for marine transport listings.';
+                if (empty($details['transport_departure_state']) || empty($details['transport_departure_city'])) {
+                    $errors[] = 'Departure state/atoll and city/island are required for marine transport listings.';
+                }
+                if (empty($details['transport_arrival_state']) || empty($details['transport_arrival_city'])) {
+                    $errors[] = 'Arrival state/atoll and city/island are required for marine transport listings.';
+                }
+                if (empty($details['departure_area_port_jetty'])) {
+                    $errors[] = 'Departure area/port/jetty is required for marine transport listings.';
                 }
                 if (empty($details['departure_time'])) {
                     $errors[] = 'Departure time is required for marine transport listings.';
@@ -616,6 +630,9 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
                 $pricingModel = (string) ($details['transport_pricing_model'] ?? 'per_trip');
                 if (!in_array($pricingModel, ['per_trip', 'hourly', 'daily'], true)) {
                     $errors[] = 'Select per-trip, hourly, or daily pricing for land transport listings.';
+                }
+                if (empty($details['location_state']) || empty($details['location_city'])) {
+                    $errors[] = 'State/atoll and city/island are required for land transport listings.';
                 }
                 if ($pricingModel === 'hourly' && (!isset($details['hourly_rate']) || (float) $details['hourly_rate'] <= 0)) {
                     $errors[] = 'Hourly rate is required when hourly pricing is selected.';
@@ -658,6 +675,16 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
             $workspaceAmenities = is_array($details['workspace_amenities'] ?? null)
                 ? $details['workspace_amenities']
                 : [];
+            $workspaceAmenitiesFree = is_array($details['workspace_amenities_free'] ?? null)
+                ? array_map(static fn ($item) => strtolower(trim((string) $item)), $details['workspace_amenities_free'])
+                : [];
+            $workspaceAmenitiesPaid = is_array($details['workspace_amenities_paid'] ?? null)
+                ? array_map(static fn ($item) => strtolower(trim((string) $item)), $details['workspace_amenities_paid'])
+                : [];
+            $workspaceAmenityOverlap = array_values(array_intersect($workspaceAmenitiesFree, $workspaceAmenitiesPaid));
+            if ($workspaceAmenityOverlap !== []) {
+                $errors[] = 'Each workspace amenity can be marked either free or paid, not both.';
+            }
             foreach ($workspaceAmenityCatalog as $amenityKey) {
                 $amenityConfig = is_array($workspaceAmenities[$amenityKey] ?? null)
                     ? $workspaceAmenities[$amenityKey]
@@ -1685,9 +1712,13 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'contact_number' => ['nullable', 'string', 'max:60'],
         'pickup_location' => ['nullable', 'string', 'max:190'],
         'dropoff_location' => ['nullable', 'string', 'max:190'],
+        'transport_departure_state' => ['nullable', 'string', 'max:120'],
+        'transport_departure_city' => ['nullable', 'string', 'max:120'],
+        'transport_arrival_state' => ['nullable', 'string', 'max:120'],
+        'transport_arrival_city' => ['nullable', 'string', 'max:120'],
+        'departure_area_port_jetty' => ['nullable', 'string', 'max:190'],
         'hourly_rate' => ['nullable', 'numeric', 'min:0'],
         'daily_rate' => ['nullable', 'numeric', 'min:0'],
-        'departure_location' => ['nullable', 'string', 'max:190'],
         'departure_date' => ['nullable', 'date'],
         'departure_time' => ['nullable', 'date_format:H:i'],
         'reporting_time' => ['nullable', 'date_format:H:i'],
@@ -1698,8 +1729,10 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'excursion_type' => ['nullable', 'string', 'max:80'],
         'workspace_type' => ['nullable', Rule::in(['shared', 'private', 'cabin'])],
         'internet_speed_mbps' => ['nullable', 'numeric', 'min:1', 'max:10000'],
-        'workspace_amenity_status' => ['nullable', 'array'],
-        'workspace_amenity_status.*' => ['nullable', Rule::in(['free', 'paid', 'not_available'])],
+        'workspace_amenities_free' => ['nullable', 'array'],
+        'workspace_amenities_free.*' => ['required', 'string', 'max:80'],
+        'workspace_amenities_paid' => ['nullable', 'array'],
+        'workspace_amenities_paid.*' => ['required', 'string', 'max:80'],
         'day_visit_start_time' => ['nullable', 'date_format:H:i'],
         'day_visit_end_time' => ['nullable', 'date_format:H:i'],
         'included_access' => ['nullable', 'string', 'max:2000'],
@@ -1915,9 +1948,13 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'contact_number' => ['nullable', 'string', 'max:60'],
         'pickup_location' => ['nullable', 'string', 'max:190'],
         'dropoff_location' => ['nullable', 'string', 'max:190'],
+        'transport_departure_state' => ['nullable', 'string', 'max:120'],
+        'transport_departure_city' => ['nullable', 'string', 'max:120'],
+        'transport_arrival_state' => ['nullable', 'string', 'max:120'],
+        'transport_arrival_city' => ['nullable', 'string', 'max:120'],
+        'departure_area_port_jetty' => ['nullable', 'string', 'max:190'],
         'hourly_rate' => ['nullable', 'numeric', 'min:0'],
         'daily_rate' => ['nullable', 'numeric', 'min:0'],
-        'departure_location' => ['nullable', 'string', 'max:190'],
         'departure_date' => ['nullable', 'date'],
         'departure_time' => ['nullable', 'date_format:H:i'],
         'reporting_time' => ['nullable', 'date_format:H:i'],
@@ -1928,8 +1965,10 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'excursion_type' => ['nullable', 'string', 'max:80'],
         'workspace_type' => ['nullable', Rule::in(['shared', 'private', 'cabin'])],
         'internet_speed_mbps' => ['nullable', 'numeric', 'min:1', 'max:10000'],
-        'workspace_amenity_status' => ['nullable', 'array'],
-        'workspace_amenity_status.*' => ['nullable', Rule::in(['free', 'paid', 'not_available'])],
+        'workspace_amenities_free' => ['nullable', 'array'],
+        'workspace_amenities_free.*' => ['required', 'string', 'max:80'],
+        'workspace_amenities_paid' => ['nullable', 'array'],
+        'workspace_amenities_paid.*' => ['required', 'string', 'max:80'],
         'day_visit_start_time' => ['nullable', 'date_format:H:i'],
         'day_visit_end_time' => ['nullable', 'date_format:H:i'],
         'included_access' => ['nullable', 'string', 'max:2000'],
@@ -2391,6 +2430,81 @@ Route::post('/portal/vendor/reservations/create', function (Request $request) {
     return back()->withErrors([
         'profile' => 'Reservations are customer-generated. Vendors can manage booking status and payments from the reservations dashboard.',
     ]);
+});
+
+Route::post('/portal/vendor/transport/tariff/save', function (Request $request) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+    if (!Schema::hasTable('vendor_properties')) {
+        return back()->withErrors(['profile' => 'Vendor properties table is not ready. Run migrations first.']);
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $validated = $request->validate([
+        'vendor_property_id' => ['required', 'integer', 'min:1'],
+        'tariff_mode' => ['required', Rule::in(['per_trip', 'hourly', 'daily', 'private_hire'])],
+        'per_trip_rate' => ['nullable', 'numeric', 'min:0'],
+        'hourly_rate' => ['nullable', 'numeric', 'min:0'],
+        'daily_rate' => ['nullable', 'numeric', 'min:0'],
+        'private_hire_rate' => ['nullable', 'numeric', 'min:0'],
+    ]);
+
+    $property = DB::table('vendor_properties')
+        ->where('id', (int) $validated['vendor_property_id'])
+        ->where('vendor_user_id', $vendorUserId)
+        ->first();
+    if (!$property) {
+        return back()->withErrors(['profile' => 'Selected transport listing was not found for this vendor account.'])->withInput();
+    }
+
+    $listingCategory = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
+    if ($listingCategory !== 'transport') {
+        return back()->withErrors(['profile' => 'Tariff options can only be updated for transport listings.'])->withInput();
+    }
+
+    $tariffMode = (string) $validated['tariff_mode'];
+    $rateByMode = [
+        'per_trip' => (float) ($validated['per_trip_rate'] ?? 0),
+        'hourly' => (float) ($validated['hourly_rate'] ?? 0),
+        'daily' => (float) ($validated['daily_rate'] ?? 0),
+        'private_hire' => (float) ($validated['private_hire_rate'] ?? 0),
+    ];
+
+    if (($rateByMode[$tariffMode] ?? 0) <= 0) {
+        return back()->withErrors(['profile' => 'Provide a tariff amount greater than zero for the selected mode.'])->withInput();
+    }
+
+    $details = [];
+    if (is_string($property->listing_details ?? null) && trim((string) $property->listing_details) !== '') {
+        $decoded = json_decode((string) $property->listing_details, true);
+        if (is_array($decoded)) {
+            $details = $decoded;
+        }
+    }
+
+    $details['transport_tariff_mode'] = $tariffMode;
+    $details['per_trip_rate'] = $rateByMode['per_trip'];
+    $details['hourly_rate'] = $rateByMode['hourly'];
+    $details['daily_rate'] = $rateByMode['daily'];
+    $details['private_hire_rate'] = $rateByMode['private_hire'];
+    if (in_array($tariffMode, ['per_trip', 'hourly', 'daily'], true)) {
+        $details['transport_pricing_model'] = $tariffMode;
+    } else {
+        $details['transport_pricing_model'] = 'per_trip';
+    }
+
+    $selectedRate = (float) ($rateByMode[$tariffMode] ?? 0);
+    DB::table('vendor_properties')
+        ->where('id', (int) $validated['vendor_property_id'])
+        ->where('vendor_user_id', $vendorUserId)
+        ->update([
+            'base_price' => $selectedRate,
+            'listing_details' => json_encode($details),
+            'updated_at' => now(),
+        ]);
+
+    return back()->with('portal_notice', 'Transport tariff updated.');
 });
 
 Route::post('/portal/vendor/reservations/{reservation}/status', function (Request $request, int $reservation) {

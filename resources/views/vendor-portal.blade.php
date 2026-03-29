@@ -1833,11 +1833,22 @@
                         'snacks' => 'Snacks',
                     ];
                     $oldWorkspaceAmenityStatusInput = old('workspace_amenity_status', []);
+                    $oldWorkspaceAmenitiesFree = collect(old('workspace_amenities_free', []))->map(fn ($item) => strtolower(trim((string) $item)))->values()->all();
+                    $oldWorkspaceAmenitiesPaid = collect(old('workspace_amenities_paid', []))->map(fn ($item) => strtolower(trim((string) $item)))->values()->all();
                     $oldWorkspaceAmenityStatus = [];
                     foreach ($workspaceAmenityCatalog as $workspaceAmenityKey => $workspaceAmenityLabel) {
-                        $statusValue = strtolower(trim((string) ($oldWorkspaceAmenityStatusInput[$workspaceAmenityKey] ?? '')));
-                        if (!in_array($statusValue, ['free', 'paid', 'not_available'], true)) {
-                            $statusValue = in_array($workspaceAmenityKey, ['workdesk', 'wifi'], true) ? 'free' : 'paid';
+                        $statusValue = 'not_available';
+                        if (in_array($workspaceAmenityKey, $oldWorkspaceAmenitiesPaid, true)) {
+                            $statusValue = 'paid';
+                        } elseif (in_array($workspaceAmenityKey, $oldWorkspaceAmenitiesFree, true)) {
+                            $statusValue = 'free';
+                        } else {
+                            $legacyStatusValue = strtolower(trim((string) ($oldWorkspaceAmenityStatusInput[$workspaceAmenityKey] ?? '')));
+                            if (in_array($legacyStatusValue, ['free', 'paid', 'not_available'], true)) {
+                                $statusValue = $legacyStatusValue;
+                            } elseif (in_array($workspaceAmenityKey, ['workdesk', 'wifi'], true)) {
+                                $statusValue = 'free';
+                            }
                         }
                         $oldWorkspaceAmenityStatus[$workspaceAmenityKey] = $statusValue;
                     }
@@ -1956,24 +1967,12 @@
                             </div>
 
                             <div class="ops-field" data-category-scope="stay">
-                                <label for="property_measurement_system">Measurement System</label>
-                                <select id="property_measurement_system" name="measurement_system" class="ops-select">
-                                    <option value="metric" @selected(old('measurement_system', 'metric') === 'metric')>Metric</option>
-                                    <option value="imperial" @selected(old('measurement_system') === 'imperial')>Imperial</option>
-                                </select>
-                            </div>
-                            <div class="ops-field" data-category-scope="stay">
-                                <label for="property_area_value">Area Value</label>
+                                <label for="property_area_value">Area Value (sqft)</label>
                                 <input id="property_area_value" name="area_value" class="ops-input" type="number" min="5" max="100000" step="0.01" value="{{ old('area_value') }}" placeholder="e.g. 120">
                             </div>
-                            <div class="ops-field" data-category-scope="stay">
-                                <label for="property_area_unit">Area Unit</label>
-                                <select id="property_area_unit" name="area_unit" class="ops-select">
-                                    <option value="sqm" @selected(old('area_unit', 'sqm') === 'sqm')>sqm</option>
-                                    <option value="sqft" @selected(old('area_unit') === 'sqft')>sqft</option>
-                                </select>
-                            </div>
-                            <div class="ops-field" data-category-scope="stay">
+                            <input name="area_unit" type="hidden" value="sqft">
+                            <input name="measurement_system" type="hidden" value="imperial">
+                            <div class="ops-field" data-category-scope="accommodation">
                                 <label for="property_bedroom_count">Bedrooms</label>
                                 <input id="property_bedroom_count" name="bedroom_count" class="ops-input" type="number" min="0" max="1000" value="{{ old('bedroom_count') }}">
                             </div>
@@ -2056,8 +2055,24 @@
                                 <input id="property_dropoff_location" name="dropoff_location" class="ops-input" type="text" maxlength="190" value="{{ old('dropoff_location') }}" placeholder="Resort, Island, City center">
                             </div>
                             <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
-                                <label for="property_departure_location">Departure Location</label>
-                                <input id="property_departure_location" name="departure_location" class="ops-input" type="text" maxlength="190" value="{{ old('departure_location') }}" placeholder="Jetty / Harbor / Terminal">
+                                <label for="property_transport_departure_state">Departure State / Atoll</label>
+                                <input id="property_transport_departure_state" name="transport_departure_state" class="ops-input" type="text" maxlength="120" value="{{ old('transport_departure_state') }}" placeholder="e.g. Kaafu Atoll">
+                            </div>
+                            <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
+                                <label for="property_transport_departure_city">Departure City / Island</label>
+                                <input id="property_transport_departure_city" name="transport_departure_city" class="ops-input" type="text" maxlength="120" value="{{ old('transport_departure_city') }}" placeholder="e.g. Male">
+                            </div>
+                            <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
+                                <label for="property_transport_arrival_state">Arrival State / Atoll</label>
+                                <input id="property_transport_arrival_state" name="transport_arrival_state" class="ops-input" type="text" maxlength="120" value="{{ old('transport_arrival_state') }}" placeholder="e.g. Alif Dhaal Atoll">
+                            </div>
+                            <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
+                                <label for="property_transport_arrival_city">Arrival City / Island</label>
+                                <input id="property_transport_arrival_city" name="transport_arrival_city" class="ops-input" type="text" maxlength="120" value="{{ old('transport_arrival_city') }}" placeholder="e.g. Dhigurah">
+                            </div>
+                            <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
+                                <label for="property_departure_area_port_jetty">Departure Area / Port / Jetty</label>
+                                <input id="property_departure_area_port_jetty" name="departure_area_port_jetty" class="ops-input" type="text" maxlength="190" value="{{ old('departure_area_port_jetty') }}" placeholder="Jetty / Harbor / Terminal">
                             </div>
                             <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
                                 <label for="property_departure_date">Departure Date</label>
@@ -2151,19 +2166,22 @@
                             </div>
                             <div class="ops-field ops-field-wide" data-category-scope="workspace">
                                 <label>Workspace Amenities (information only)</label>
-                                <div class="ops-form-grid">
+                                <p class="small" style="margin-bottom:8px;">Free Amenities (tick all)</p>
+                                <div class="feature-checklist" style="margin-bottom:10px;">
                                     @foreach ($workspaceAmenityCatalog as $workspaceAmenityKey => $workspaceAmenityLabel)
                                         @php
                                             $workspaceStatusValue = (string) ($oldWorkspaceAmenityStatus[$workspaceAmenityKey] ?? 'not_available');
                                         @endphp
-                                        <div class="ops-field">
-                                            <label for="workspace_amenity_status_{{ $workspaceAmenityKey }}">{{ $workspaceAmenityLabel }} Status</label>
-                                            <select id="workspace_amenity_status_{{ $workspaceAmenityKey }}" name="workspace_amenity_status[{{ $workspaceAmenityKey }}]" class="ops-select">
-                                                <option value="free" @selected($workspaceStatusValue === 'free')>Free</option>
-                                                <option value="paid" @selected($workspaceStatusValue === 'paid')>Purchase Separately On-Site</option>
-                                                <option value="not_available" @selected($workspaceStatusValue === 'not_available')>Not Available</option>
-                                            </select>
-                                        </div>
+                                        <label class="feature-item"><input type="checkbox" name="workspace_amenities_free[]" value="{{ $workspaceAmenityKey }}" @checked($workspaceStatusValue === 'free')> {{ $workspaceAmenityLabel }}</label>
+                                    @endforeach
+                                </div>
+                                <p class="small" style="margin-bottom:8px;">Paid Amenities (tick all)</p>
+                                <div class="feature-checklist">
+                                    @foreach ($workspaceAmenityCatalog as $workspaceAmenityKey => $workspaceAmenityLabel)
+                                        @php
+                                            $workspaceStatusValue = (string) ($oldWorkspaceAmenityStatus[$workspaceAmenityKey] ?? 'not_available');
+                                        @endphp
+                                        <label class="feature-item"><input type="checkbox" name="workspace_amenities_paid[]" value="{{ $workspaceAmenityKey }}" @checked($workspaceStatusValue === 'paid')> {{ $workspaceAmenityLabel }}</label>
                                     @endforeach
                                 </div>
                                 <p class="small">Set each item as Free, Purchase Separately On-Site, or Not Available. The app only collects the booking fee; extras are purchased separately.</p>
@@ -2360,6 +2378,19 @@
                                                     $workspaceAmenityConfig = is_array($propertyDetails['workspace_amenities'] ?? null)
                                                         ? $propertyDetails['workspace_amenities']
                                                         : [];
+                                                    $workspaceAmenityFreeValues = [];
+                                                    $workspaceAmenityPaidValues = [];
+                                                    foreach ($workspaceAmenityConfig as $workspaceAmenityKey => $workspaceAmenityRow) {
+                                                        if (!is_array($workspaceAmenityRow)) {
+                                                            continue;
+                                                        }
+                                                        $workspaceAmenityStatus = strtolower(trim((string) ($workspaceAmenityRow['status'] ?? 'not_available')));
+                                                        if ($workspaceAmenityStatus === 'free') {
+                                                            $workspaceAmenityFreeValues[] = strtolower(trim((string) $workspaceAmenityKey));
+                                                        } elseif ($workspaceAmenityStatus === 'paid') {
+                                                            $workspaceAmenityPaidValues[] = strtolower(trim((string) $workspaceAmenityKey));
+                                                        }
+                                                    }
                                                     $transportMode = strtolower((string) ($propertyDetails['transport_mode'] ?? ''));
                                                     $transportPricingBasis = strtolower((string) ($propertyDetails['transport_pricing_basis'] ?? ''));
                                                     if ($transportPricingBasis === '') {
@@ -2422,16 +2453,10 @@
                                                                 <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($property->base_price ?? 0) }}" data-property-edit-scope="capacity">
                                                                 <input class="ops-input" name="max_guests" type="number" min="0" max="10000" value="{{ (int) ($property->max_guests ?? 0) }}" data-property-edit-scope="capacity">
 
-                                                                <select class="ops-select" name="measurement_system" data-property-edit-scope="stay">
-                                                                    <option value="metric" @selected((string) ($propertyDetails['measurement_system'] ?? 'metric') === 'metric')>Metric</option>
-                                                                    <option value="imperial" @selected((string) ($propertyDetails['measurement_system'] ?? '') === 'imperial')>Imperial</option>
-                                                                </select>
-                                                                <input class="ops-input" name="area_value" type="number" min="5" max="100000" step="0.01" value="{{ (string) ($propertyDetails['area_value'] ?? '') }}" placeholder="Area Value" data-property-edit-scope="stay">
-                                                                <select class="ops-select" name="area_unit" data-property-edit-scope="stay">
-                                                                    <option value="sqm" @selected((string) ($propertyDetails['area_unit'] ?? 'sqm') === 'sqm')>sqm</option>
-                                                                    <option value="sqft" @selected((string) ($propertyDetails['area_unit'] ?? '') === 'sqft')>sqft</option>
-                                                                </select>
-                                                                <input class="ops-input" name="bedroom_count" type="number" min="0" max="1000" value="{{ (string) ($propertyDetails['bedroom_count'] ?? '') }}" placeholder="Bedrooms" data-property-edit-scope="stay">
+                                                                <input class="ops-input" name="area_value" type="number" min="5" max="100000" step="0.01" value="{{ (string) ($propertyDetails['area_value'] ?? '') }}" placeholder="Area Value (sqft)" data-property-edit-scope="stay">
+                                                                <input name="area_unit" type="hidden" value="sqft" data-property-edit-scope="stay">
+                                                                <input name="measurement_system" type="hidden" value="imperial" data-property-edit-scope="stay">
+                                                                <input class="ops-input" name="bedroom_count" type="number" min="0" max="1000" value="{{ (string) ($propertyDetails['bedroom_count'] ?? '') }}" placeholder="Bedrooms" data-property-edit-scope="accommodation">
                                                                 <input class="ops-input" name="capacity_value" type="number" min="1" max="20000" value="{{ (string) ($propertyDetails['capacity_value'] ?? '') }}" placeholder="Capacity" data-property-edit-scope="capacity">
                                                                 <input class="ops-input" name="service_radius_km" type="number" min="0" max="5000" step="0.1" value="{{ (string) ($propertyDetails['service_radius_km'] ?? '') }}" placeholder="Service Radius (km)" data-property-edit-scope="service">
                                                                 @php
@@ -2484,7 +2509,11 @@
                                                                 <input class="ops-input" name="daily_rate" type="number" min="0" step="0.01" value="{{ (string) ($propertyDetails['daily_rate'] ?? '') }}" placeholder="Daily Rate (MVR)" data-property-edit-scope="transport">
                                                                 <input class="ops-input" name="pickup_location" type="text" maxlength="190" value="{{ (string) ($propertyDetails['pickup_location'] ?? '') }}" placeholder="Pickup Location" data-property-edit-scope="transport">
                                                                 <input class="ops-input" name="dropoff_location" type="text" maxlength="190" value="{{ (string) ($propertyDetails['dropoff_location'] ?? '') }}" placeholder="Dropoff Location" data-property-edit-scope="transport">
-                                                                <input class="ops-input" name="departure_location" type="text" maxlength="190" value="{{ (string) ($propertyDetails['departure_location'] ?? '') }}" placeholder="Departure Location" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="transport_departure_state" type="text" maxlength="120" value="{{ (string) ($propertyDetails['transport_departure_state'] ?? '') }}" placeholder="Departure State / Atoll" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="transport_departure_city" type="text" maxlength="120" value="{{ (string) ($propertyDetails['transport_departure_city'] ?? '') }}" placeholder="Departure City / Island" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="transport_arrival_state" type="text" maxlength="120" value="{{ (string) ($propertyDetails['transport_arrival_state'] ?? '') }}" placeholder="Arrival State / Atoll" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="transport_arrival_city" type="text" maxlength="120" value="{{ (string) ($propertyDetails['transport_arrival_city'] ?? '') }}" placeholder="Arrival City / Island" data-property-edit-scope="transport">
+                                                                <input class="ops-input" name="departure_area_port_jetty" type="text" maxlength="190" value="{{ (string) ($propertyDetails['departure_area_port_jetty'] ?? '') }}" placeholder="Departure Area / Port / Jetty" data-property-edit-scope="transport">
                                                                 <input class="ops-input" name="departure_date" type="date" value="{{ (string) ($propertyDetails['departure_date'] ?? '') }}" data-property-edit-scope="transport">
                                                                 <input class="ops-input" name="departure_time" type="time" value="{{ (string) ($propertyDetails['departure_time'] ?? '') }}" data-property-edit-scope="transport">
                                                                 <input class="ops-input" name="reporting_lead_minutes" type="number" min="0" max="720" step="1" value="{{ (string) ($propertyDetails['reporting_lead_minutes'] ?? '') }}" placeholder="Report Before Departure (min)" data-property-edit-scope="transport">
@@ -2504,25 +2533,24 @@
                                                                 </select>
                                                                 <input class="ops-input" name="internet_speed_mbps" type="number" min="1" max="10000" step="1" value="{{ (string) ($propertyDetails['internet_speed_mbps'] ?? '') }}" placeholder="Internet Speed (Mbps)" data-property-edit-scope="workspace">
                                                                 <div class="ops-form-grid" data-property-edit-scope="workspace">
+                                                                    <p class="small" style="margin:0;">Free Amenities (tick all)</p>
+                                                                    <div class="feature-checklist" style="margin-bottom:8px;">
+                                                                        @foreach ($workspaceAmenityCatalog as $workspaceAmenityKey => $workspaceAmenityLabel)
+                                                                            @php
+                                                                                $workspaceAmenityKeyNormalized = strtolower(trim((string) $workspaceAmenityKey));
+                                                                            @endphp
+                                                                            <label class="feature-item"><input type="checkbox" name="workspace_amenities_free[]" value="{{ $workspaceAmenityKey }}" @checked(in_array($workspaceAmenityKeyNormalized, $workspaceAmenityFreeValues, true))> {{ $workspaceAmenityLabel }}</label>
+                                                                        @endforeach
+                                                                    </div>
+                                                                    <p class="small" style="margin:0;">Paid Amenities (tick all)</p>
+                                                                    <div class="feature-checklist">
                                                                     @foreach ($workspaceAmenityCatalog as $workspaceAmenityKey => $workspaceAmenityLabel)
                                                                         @php
-                                                                            $workspaceAmenityRow = is_array($workspaceAmenityConfig[$workspaceAmenityKey] ?? null)
-                                                                                ? $workspaceAmenityConfig[$workspaceAmenityKey]
-                                                                                : [];
-                                                                            $workspaceAmenityStatusValue = strtolower(trim((string) ($workspaceAmenityRow['status'] ?? (in_array($workspaceAmenityKey, ['workdesk', 'wifi'], true) ? 'free' : 'paid'))));
-                                                                            if (!in_array($workspaceAmenityStatusValue, ['free', 'paid', 'not_available'], true)) {
-                                                                                $workspaceAmenityStatusValue = 'not_available';
-                                                                            }
+                                                                            $workspaceAmenityKeyNormalized = strtolower(trim((string) $workspaceAmenityKey));
                                                                         @endphp
-                                                                        <div class="ops-field">
-                                                                            <label>{{ $workspaceAmenityLabel }} Status</label>
-                                                                            <select class="ops-select" name="workspace_amenity_status[{{ $workspaceAmenityKey }}]">
-                                                                                <option value="free" @selected($workspaceAmenityStatusValue === 'free')>Free</option>
-                                                                                <option value="paid" @selected($workspaceAmenityStatusValue === 'paid')>Purchase Separately On-Site</option>
-                                                                                <option value="not_available" @selected($workspaceAmenityStatusValue === 'not_available')>Not Available</option>
-                                                                            </select>
-                                                                        </div>
+                                                                        <label class="feature-item"><input type="checkbox" name="workspace_amenities_paid[]" value="{{ $workspaceAmenityKey }}" @checked(in_array($workspaceAmenityKeyNormalized, $workspaceAmenityPaidValues, true))> {{ $workspaceAmenityLabel }}</label>
                                                                     @endforeach
+                                                                    </div>
                                                                 </div>
                                                                 <input class="ops-input" name="day_visit_start_time" type="time" value="{{ (string) ($propertyDetails['day_visit_start_time'] ?? '') }}" data-property-edit-scope="day_visit">
                                                                 <input class="ops-input" name="day_visit_end_time" type="time" value="{{ (string) ($propertyDetails['day_visit_end_time'] ?? '') }}" data-property-edit-scope="day_visit">
@@ -3951,11 +3979,11 @@
                 const normalized = normalizeCategoryKey(category);
 
                 if (normalized === "accommodation") {
-                    return ["stay", "geo"];
+                    return ["stay", "accommodation", "geo"];
                 }
 
                 if (normalized === "transport") {
-                    return ["capacity", "service", "transport"];
+                    return ["capacity", "transport", "geo"];
                 }
 
                 if (normalized === "excursion") {
@@ -3978,7 +4006,7 @@
                     return ["vehicle", "capacity", "rental", "geo"];
                 }
 
-                return ["stay", "capacity", "service", "vehicle", "transport", "excursion", "workspace", "day_visit", "restaurant", "rental", "geo"];
+                return ["stay", "accommodation", "capacity", "service", "vehicle", "transport", "excursion", "workspace", "day_visit", "restaurant", "rental", "geo"];
             }
 
             function isMarineTransportMode(value) {
@@ -5090,14 +5118,14 @@
 
                 function categoryScopesFor(category) {
                     const normalized = normalizeCategoryKey(category);
-                    if (normalized === 'accommodation') return ['stay', 'geo'];
-                    if (normalized === 'transport') return ['capacity', 'service', 'transport'];
+                    if (normalized === 'accommodation') return ['stay', 'accommodation', 'geo'];
+                    if (normalized === 'transport') return ['capacity', 'transport', 'geo'];
                     if (normalized === 'excursion') return ['capacity', 'service', 'excursion', 'geo'];
                     if (normalized === 'remote_workspace') return ['stay', 'capacity', 'workspace', 'geo'];
                     if (normalized === 'resort_day_visit') return ['capacity', 'day_visit', 'geo'];
                     if (normalized === 'restaurant') return ['capacity', 'restaurant', 'geo'];
                     if (normalized === 'vehicle_rental') return ['vehicle', 'capacity', 'rental', 'geo'];
-                    return ['stay', 'capacity', 'service', 'vehicle', 'transport', 'excursion', 'workspace', 'day_visit', 'restaurant', 'rental', 'geo'];
+                    return ['stay', 'accommodation', 'capacity', 'service', 'vehicle', 'transport', 'excursion', 'workspace', 'day_visit', 'restaurant', 'rental', 'geo'];
                 }
 
                 function categoryMetaFor(category) {

@@ -1146,6 +1146,15 @@
             grid-template-columns: 1fr;
         }
 
+        .room-management-table tr.is-editing td:nth-child(1),
+        .room-management-table tr.is-editing td:nth-child(2) {
+            display: none;
+        }
+
+        .room-management-table tr.is-editing td:nth-child(3) {
+            width: 100%;
+        }
+
         .listing-summary-line strong {
             margin-right: 4px;
         }
@@ -2863,11 +2872,11 @@
                                                                                                 <input class="ops-input" name="name" type="text" maxlength="160" value="{{ (string) ($room->name ?? '') }}" required>
                                                                                                 <input class="ops-input" name="quantity" type="number" min="1" max="10000" value="{{ (int) ($room->quantity ?? 1) }}" required>
                                                                                                 <input class="ops-input" name="max_occupancy" type="number" min="1" max="50" value="{{ (int) ($room->max_occupancy ?? 1) }}" required>
-                                                                                                <input class="ops-input" name="extra_person_capacity" type="number" min="0" max="20" value="{{ (int) ($room->extra_person_capacity ?? 0) }}" placeholder="Extra adult capacity">
-                                                                                                <input class="ops-input" name="child_capacity" type="number" min="0" max="20" value="{{ (int) ($room->child_capacity ?? 0) }}" placeholder="Child capacity">
-                                                                                                <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($room->base_price ?? 0) }}" placeholder="Base room price">
-                                                                                                <input class="ops-input" name="extra_person_price" type="number" min="0" step="0.01" value="{{ (float) ($room->extra_person_price ?? 0) }}" placeholder="Extra adult price">
-                                                                                                <input class="ops-input" name="child_price" type="number" min="0" step="0.01" value="{{ (float) ($room->child_price ?? 0) }}" placeholder="Child price">
+                                                                                                <input class="ops-input" name="extra_person_capacity" type="number" min="0" max="20" value="{{ (int) ($room->extra_person_capacity ?? 0) > 0 ? (int) ($room->extra_person_capacity ?? 0) : '' }}" placeholder="Extra adult capacity">
+                                                                                                <input class="ops-input" name="child_capacity" type="number" min="0" max="20" value="{{ (int) ($room->child_capacity ?? 0) > 0 ? (int) ($room->child_capacity ?? 0) : '' }}" placeholder="Child capacity">
+                                                                                                <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($room->base_price ?? 0) > 0 ? (float) ($room->base_price ?? 0) : '' }}" placeholder="Base room price">
+                                                                                                <input class="ops-input" name="extra_person_price" type="number" min="0" step="0.01" value="{{ (float) ($room->extra_person_price ?? 0) > 0 ? (float) ($room->extra_person_price ?? 0) : '' }}" placeholder="Extra adult price">
+                                                                                                <input class="ops-input" name="child_price" type="number" min="0" step="0.01" value="{{ (float) ($room->child_price ?? 0) > 0 ? (float) ($room->child_price ?? 0) : '' }}" placeholder="Child price">
                                                                                                 @php
                                                                                                     $roomBedTypeCurrent = strtolower(trim((string) ($room->bed_type ?? '')));
                                                                                                     $knownRoomBedTypes = $roomBedTypeOptionsCollection
@@ -2897,7 +2906,7 @@
                                                                                                     <option value="private_external" @selected((string) ($room->bathroom_type ?? '') === 'private_external')>Private External</option>
                                                                                                     <option value="shared" @selected((string) ($room->bathroom_type ?? '') === 'shared')>Shared</option>
                                                                                                 </select>
-                                                                                                <input class="ops-input" name="bathroom_count" type="number" min="0" max="20" value="{{ (string) ($room->bathroom_count ?? '') }}" placeholder="Bathroom Count">
+                                                                                                <input class="ops-input" name="bathroom_count" type="number" min="0" max="20" value="{{ (int) ($room->bathroom_count ?? 0) > 0 ? (int) ($room->bathroom_count ?? 0) : '' }}" placeholder="Bathroom Count">
                                                                                                 <div class="feature-checklist">
                                                                                                     @foreach ($roomAmenityOptionsCollection as $roomAmenityOption)
                                                                                                         @php
@@ -3003,23 +3012,23 @@
                                                                     </div>
                                                                     <div class="ops-field">
                                                                         <label>Extra Adult Capacity</label>
-                                                                        <input class="ops-input" name="extra_person_capacity" type="number" min="0" max="20" value="{{ $showInlineRoomRow ? old('extra_person_capacity', 0) : 0 }}">
+                                                                        <input class="ops-input" name="extra_person_capacity" type="number" min="0" max="20" value="{{ $showInlineRoomRow ? old('extra_person_capacity', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
                                                                         <label>Child Capacity</label>
-                                                                        <input class="ops-input" name="child_capacity" type="number" min="0" max="20" value="{{ $showInlineRoomRow ? old('child_capacity', 0) : 0 }}">
+                                                                        <input class="ops-input" name="child_capacity" type="number" min="0" max="20" value="{{ $showInlineRoomRow ? old('child_capacity', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
                                                                         <label>Room Base Price (MVR)</label>
-                                                                        <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('base_price', 0) : 0 }}">
+                                                                        <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('base_price', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
                                                                         <label>Extra Adult Price (MVR)</label>
-                                                                        <input class="ops-input" name="extra_person_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('extra_person_price', 0) : 0 }}">
+                                                                        <input class="ops-input" name="extra_person_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('extra_person_price', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
                                                                         <label>Child Price (MVR)</label>
-                                                                        <input class="ops-input" name="child_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('child_price', 0) : 0 }}">
+                                                                        <input class="ops-input" name="child_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('child_price', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
                                                                         <label>Bed Type</label>
@@ -4920,11 +4929,9 @@
                     applyPropertyEditScope(form, category);
                 }
                 form.hidden = false;
-                if (form.hasAttribute('data-property-edit-form')) {
-                    const row = form.closest('tr');
-                    if (row) {
-                        row.classList.add('is-editing');
-                    }
+                const row = form.closest('tr');
+                if (row) {
+                    row.classList.add('is-editing');
                 }
                 const firstInput = form.querySelector('input, select, textarea');
                 if (firstInput) {
@@ -4938,11 +4945,9 @@
                     return;
                 }
                 form.hidden = true;
-                if (form.hasAttribute('data-property-edit-form')) {
-                    const row = form.closest('tr');
-                    if (row) {
-                        row.classList.remove('is-editing');
-                    }
+                const row = form.closest('tr');
+                if (row) {
+                    row.classList.remove('is-editing');
                 }
             }
 

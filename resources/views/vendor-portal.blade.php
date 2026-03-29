@@ -691,7 +691,8 @@
             margin-top: 10px;
             border: 1px solid #d7e0e6;
             border-radius: 10px;
-            overflow: hidden;
+            overflow-x: auto;
+            overflow-y: hidden;
             background: #fff;
         }
 
@@ -730,8 +731,37 @@
 
         .ops-table.is-compact th:last-child,
         .ops-table.is-compact td:last-child {
-            width: 1%;
-            white-space: nowrap;
+            width: auto;
+            white-space: normal;
+        }
+
+        .ops-table.is-compact td:last-child {
+            min-width: 0;
+        }
+
+        .listing-management-table th:nth-child(1),
+        .listing-management-table td:nth-child(1) {
+            width: auto;
+        }
+
+        .listing-management-table th:nth-child(2),
+        .listing-management-table td:nth-child(2) {
+            width: auto;
+        }
+
+        .room-management-table th:nth-child(1),
+        .room-management-table td:nth-child(1) {
+            width: auto;
+        }
+
+        .room-management-table th:nth-child(2),
+        .room-management-table td:nth-child(2) {
+            width: auto;
+        }
+
+        .room-management-table th:nth-child(3),
+        .room-management-table td:nth-child(3) {
+            width: auto;
         }
 
         .ops-empty {
@@ -1075,7 +1105,7 @@
 
         .inline-table-form {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
             gap: 6px;
             align-items: end;
         }
@@ -1101,7 +1131,7 @@
         }
 
         .listing-cell-actions-cell {
-            min-width: 280px;
+            min-width: 0;
         }
 
         .listing-summary-line strong {
@@ -1145,6 +1175,25 @@
             border-radius: 10px;
             background: #fafcff;
             padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .update-row-form.inline-table-form {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .update-row-form .ops-textarea,
+        .update-row-form .ops-form-grid,
+        .update-row-form .feature-checklist,
+        .update-row-form .inline-actions {
+            grid-column: 1 / -1;
+        }
+
+        .update-row-form .ops-form-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            align-items: start;
         }
 
         .update-row-form .btn,
@@ -1173,6 +1222,38 @@
 
         .update-row-form[hidden] {
             display: none;
+        }
+
+        /* Category-specific listing edit scopes: keep only relevant fields visible per listing category */
+        .update-row-form[data-property-edit-form] [data-property-edit-scope] {
+            display: none;
+        }
+
+        .update-row-form[data-property-edit-category="accommodation"] [data-property-edit-scope="stay"],
+        .update-row-form[data-property-edit-category="accommodation"] [data-property-edit-scope="accommodation"],
+        .update-row-form[data-property-edit-category="accommodation"] [data-property-edit-scope="geo"],
+        .update-row-form[data-property-edit-category="transport"] [data-property-edit-scope="capacity"],
+        .update-row-form[data-property-edit-category="transport"] [data-property-edit-scope="transport"],
+        .update-row-form[data-property-edit-category="transport"] [data-property-edit-scope="geo"],
+        .update-row-form[data-property-edit-category="excursion"] [data-property-edit-scope="capacity"],
+        .update-row-form[data-property-edit-category="excursion"] [data-property-edit-scope="service"],
+        .update-row-form[data-property-edit-category="excursion"] [data-property-edit-scope="excursion"],
+        .update-row-form[data-property-edit-category="excursion"] [data-property-edit-scope="geo"],
+        .update-row-form[data-property-edit-category="remote_workspace"] [data-property-edit-scope="stay"],
+        .update-row-form[data-property-edit-category="remote_workspace"] [data-property-edit-scope="capacity"],
+        .update-row-form[data-property-edit-category="remote_workspace"] [data-property-edit-scope="workspace"],
+        .update-row-form[data-property-edit-category="remote_workspace"] [data-property-edit-scope="geo"],
+        .update-row-form[data-property-edit-category="resort_day_visit"] [data-property-edit-scope="capacity"],
+        .update-row-form[data-property-edit-category="resort_day_visit"] [data-property-edit-scope="day_visit"],
+        .update-row-form[data-property-edit-category="resort_day_visit"] [data-property-edit-scope="geo"],
+        .update-row-form[data-property-edit-category="restaurant"] [data-property-edit-scope="capacity"],
+        .update-row-form[data-property-edit-category="restaurant"] [data-property-edit-scope="restaurant"],
+        .update-row-form[data-property-edit-category="restaurant"] [data-property-edit-scope="geo"],
+        .update-row-form[data-property-edit-category="vehicle_rental"] [data-property-edit-scope="vehicle"],
+        .update-row-form[data-property-edit-category="vehicle_rental"] [data-property-edit-scope="capacity"],
+        .update-row-form[data-property-edit-category="vehicle_rental"] [data-property-edit-scope="rental"],
+        .update-row-form[data-property-edit-category="vehicle_rental"] [data-property-edit-scope="geo"] {
+            display: revert;
         }
 
         .btn-danger {
@@ -1458,6 +1539,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .update-row-form.inline-table-form {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
             .guided-steps {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
@@ -1530,6 +1615,10 @@
 
             .listing-cell-actions-cell {
                 min-width: 0;
+            }
+
+            .update-row-form.inline-table-form {
+                grid-template-columns: 1fr;
             }
 
             .ops-table.is-compact th:last-child,
@@ -2376,7 +2465,7 @@
                                 <p class="ops-empty">No {{ strtolower((string) $categoryLabel) }} listings yet.</p>
                             @else
                                 <div class="ops-table-wrap">
-                                    <table class="ops-table is-compact" aria-label="{{ $categoryLabel }} listings table">
+                                    <table class="ops-table is-compact listing-management-table" aria-label="{{ $categoryLabel }} listings table">
                                         <thead>
                                             <tr>
                                                 <th>Listing</th>
@@ -2395,7 +2484,9 @@
                                                             $propertyDetails = $decodedPropertyDetails;
                                                         }
                                                     }
-                                                    $editCategory = strtolower((string) ($property->listing_category ?? $categoryKey));
+                                                    $editCategoryRaw = strtolower((string) ($property->listing_category ?? $categoryKey));
+                                                    $editCategory = preg_replace('/[^a-z0-9]+/', '_', $editCategoryRaw) ?? $editCategoryRaw;
+                                                    $editCategory = trim((string) preg_replace('/_+/', '_', $editCategory), '_');
                                                     $propertyAmenityValues = [];
                                                     $propertyFeatureValues = [];
                                                     if (isset($propertyDetails['property_amenities']) && is_array($propertyDetails['property_amenities'])) {
@@ -2711,7 +2802,7 @@
                                                                     <p class="ops-empty">No rooms for this listing yet.</p>
                                                                 @else
                                                                     <div class="ops-table-wrap">
-                                                                        <table class="ops-table is-compact" aria-label="Rooms for property {{ $propertyId }}">
+                                                                        <table class="ops-table is-compact room-management-table" aria-label="Rooms for property {{ $propertyId }}">
                                                                             <thead>
                                                                                 <tr>
                                                                                     <th>Room</th>

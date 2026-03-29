@@ -147,6 +147,20 @@ if (!function_exists('vendorPortalNormalizedStringList')) {
     }
 }
 
+if (!function_exists('vendorPortalTransferOptionCatalog')) {
+    function vendorPortalTransferOptionCatalog(): array
+    {
+        return [
+            'car',
+            'van',
+            'ferry',
+            'speedboat',
+            'seaplane',
+            'domestic_flight',
+        ];
+    }
+}
+
 if (!function_exists('vendorPortalListingOptionDefaults')) {
     function vendorPortalListingOptionDefaults(): array
     {
@@ -396,6 +410,22 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
     {
         $propertyAmenities = vendorPortalNormalizedStringList($validated['property_amenities'] ?? []);
         $propertyFeatures = vendorPortalNormalizedStringList($validated['property_features'] ?? []);
+        $transferOptionCatalog = vendorPortalTransferOptionCatalog();
+        $submittedTransferOptions = array_map(
+            static fn ($item): string => strtolower(trim((string) $item)),
+            vendorPortalNormalizedStringList($validated['transfer_options'] ?? [])
+        );
+        $transferOptions = array_values(array_intersect($transferOptionCatalog, $submittedTransferOptions));
+        $submittedTransferRates = is_array($validated['transfer_rates'] ?? null)
+            ? $validated['transfer_rates']
+            : [];
+        $transferRates = [];
+        foreach ($transferOptionCatalog as $transferOptionKey) {
+            $normalizedRate = vendorPortalNormalizedNumeric($submittedTransferRates[$transferOptionKey] ?? null);
+            if ($normalizedRate !== null && $normalizedRate >= 0) {
+                $transferRates[$transferOptionKey] = $normalizedRate;
+            }
+        }
 
         $details = [
             'location_country' => trim((string) ($validated['location_country'] ?? '')),
@@ -422,6 +452,9 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['bedroom_count'] = isset($validated['bedroom_count']) ? (int) $validated['bedroom_count'] : null;
             $details['property_amenities'] = $propertyAmenities;
             $details['property_features'] = $propertyFeatures;
+            $details['transfer_pricing_basis'] = 'per_pax';
+            $details['transfer_options'] = $transferOptions;
+            $details['transfer_rates'] = $transferRates;
         }
 
         if (in_array($listingCategory, ['transport', 'excursion', 'remote_workspace', 'resort_day_visit', 'restaurant', 'vehicle_rental'], true)) {
@@ -518,6 +551,9 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['workspace_amenities'] = $workspaceAmenities;
             $details['workspace_amenities_free'] = $workspaceAmenitiesFree;
             $details['workspace_amenities_paid'] = $workspaceAmenitiesPaid;
+            $details['transfer_pricing_basis'] = 'per_pax';
+            $details['transfer_options'] = $transferOptions;
+            $details['transfer_rates'] = $transferRates;
         }
 
         if ($listingCategory === 'resort_day_visit') {
@@ -546,6 +582,7 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
     function vendorPortalValidatePropertyDetails(string $listingCategory, array $details): array
     {
         $errors = [];
+        $transferOptionCatalog = vendorPortalTransferOptionCatalog();
 
         if (in_array($listingCategory, ['accommodation', 'remote_workspace'], true)) {
             if (!isset($details['area_value']) || $details['area_value'] < 5 || $details['area_value'] > 100000) {
@@ -693,6 +730,28 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
                 if (!in_array($status, ['free', 'paid', 'not_available'], true)) {
                     $errors[] = 'Workspace amenity status must be free, paid, or not available.';
                     continue;
+                }
+            }
+        }
+
+        if (in_array($listingCategory, ['accommodation', 'remote_workspace'], true)) {
+            $transferOptions = is_array($details['transfer_options'] ?? null)
+                ? array_map(static fn ($item): string => strtolower(trim((string) $item)), $details['transfer_options'])
+                : [];
+            $transferOptions = array_values(array_unique(array_filter($transferOptions, static fn (string $item): bool => $item !== '')));
+            $invalidTransferOptions = array_values(array_diff($transferOptions, $transferOptionCatalog));
+            if ($invalidTransferOptions !== []) {
+                $errors[] = 'Transfer options must be selected from the allowed transfer catalog.';
+            }
+
+            $transferRates = is_array($details['transfer_rates'] ?? null)
+                ? $details['transfer_rates']
+                : [];
+            foreach ($transferOptions as $transferOption) {
+                $transferRate = $transferRates[$transferOption] ?? null;
+                if (!is_numeric($transferRate) || (float) $transferRate <= 0) {
+                    $errors[] = 'Set a transfer charge greater than zero for each selected transfer option.';
+                    break;
                 }
             }
         }
@@ -1733,6 +1792,10 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'workspace_amenities_free.*' => ['required', 'string', 'max:80'],
         'workspace_amenities_paid' => ['nullable', 'array'],
         'workspace_amenities_paid.*' => ['required', 'string', 'max:80'],
+        'transfer_options' => ['nullable', 'array'],
+        'transfer_options.*' => ['required', 'string', 'max:80'],
+        'transfer_rates' => ['nullable', 'array'],
+        'transfer_rates.*' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
         'day_visit_start_time' => ['nullable', 'date_format:H:i'],
         'day_visit_end_time' => ['nullable', 'date_format:H:i'],
         'included_access' => ['nullable', 'string', 'max:2000'],
@@ -1969,6 +2032,10 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'workspace_amenities_free.*' => ['required', 'string', 'max:80'],
         'workspace_amenities_paid' => ['nullable', 'array'],
         'workspace_amenities_paid.*' => ['required', 'string', 'max:80'],
+        'transfer_options' => ['nullable', 'array'],
+        'transfer_options.*' => ['required', 'string', 'max:80'],
+        'transfer_rates' => ['nullable', 'array'],
+        'transfer_rates.*' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
         'day_visit_start_time' => ['nullable', 'date_format:H:i'],
         'day_visit_end_time' => ['nullable', 'date_format:H:i'],
         'included_access' => ['nullable', 'string', 'max:2000'],
@@ -2505,6 +2572,105 @@ Route::post('/portal/vendor/transport/tariff/save', function (Request $request) 
         ]);
 
     return back()->with('portal_notice', 'Transport tariff updated.');
+});
+
+Route::post('/portal/vendor/transfer/rates/save', function (Request $request) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+    if (!Schema::hasTable('vendor_properties')) {
+        return back()->withErrors(['profile' => 'Vendor properties table is not ready. Run migrations first.']);
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $validated = $request->validate([
+        'vendor_property_id' => ['required', 'integer', 'min:1'],
+        'transfer_options' => ['required', 'array', 'min:1'],
+        'transfer_options.*' => ['required', 'string', 'max:80'],
+        'transfer_rates' => ['nullable', 'array'],
+        'transfer_rates.*' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+    ]);
+
+    $property = DB::table('vendor_properties')
+        ->where('id', (int) $validated['vendor_property_id'])
+        ->where('vendor_user_id', $vendorUserId)
+        ->first();
+    if (!$property) {
+        return back()->withErrors(['profile' => 'Selected listing was not found for this vendor account.'])->withInput();
+    }
+
+    $listingCategory = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
+    if (!in_array($listingCategory, ['accommodation', 'remote_workspace'], true)) {
+        return back()->withErrors(['profile' => 'Transfer rates can only be updated for accommodation or remote workspace listings.'])->withInput();
+    }
+
+    $details = [];
+    if (is_string($property->listing_details ?? null) && trim((string) $property->listing_details) !== '') {
+        $decoded = json_decode((string) $property->listing_details, true);
+        if (is_array($decoded)) {
+            $details = $decoded;
+        }
+    }
+
+    $transferCatalog = vendorPortalTransferOptionCatalog();
+    $configuredTransferOptions = collect(is_array($details['transfer_options'] ?? null) ? $details['transfer_options'] : [])
+        ->map(static fn ($item): string => strtolower(trim((string) $item)))
+        ->filter(static fn (string $item): bool => $item !== '')
+        ->values()
+        ->all();
+
+    if ($configuredTransferOptions === []) {
+        return back()->withErrors(['profile' => 'Set transfer options in listing setup before changing rates from operations.'])->withInput();
+    }
+
+    $submittedTransferOptions = collect($validated['transfer_options'] ?? [])
+        ->map(static fn ($item): string => strtolower(trim((string) $item)))
+        ->filter(static fn (string $item): bool => $item !== '')
+        ->unique()
+        ->values()
+        ->all();
+
+    $invalidTransferOptions = array_values(array_diff($submittedTransferOptions, $transferCatalog));
+    if ($invalidTransferOptions !== []) {
+        return back()->withErrors(['profile' => 'Transfer options must be selected from the allowed transfer catalog.'])->withInput();
+    }
+
+    $disallowedTransferOptions = array_values(array_diff($submittedTransferOptions, $configuredTransferOptions));
+    if ($disallowedTransferOptions !== []) {
+        return back()->withErrors(['profile' => 'Only transfer options configured in listing setup can be updated from operations.'])->withInput();
+    }
+
+    $submittedTransferRates = is_array($validated['transfer_rates'] ?? null)
+        ? $validated['transfer_rates']
+        : [];
+
+    $currentTransferRates = is_array($details['transfer_rates'] ?? null)
+        ? $details['transfer_rates']
+        : [];
+
+    foreach ($submittedTransferOptions as $transferOption) {
+        $candidateRate = $submittedTransferRates[$transferOption] ?? null;
+        if (!is_numeric($candidateRate) || (float) $candidateRate <= 0) {
+            return back()->withErrors(['profile' => 'Provide a transfer rate greater than zero for every selected transfer option.'])->withInput();
+        }
+
+        $currentTransferRates[$transferOption] = round((float) $candidateRate, 2);
+    }
+
+    $details['listing_category'] = $listingCategory;
+    $details['transfer_pricing_basis'] = 'per_pax';
+    $details['transfer_options'] = array_values(array_unique($configuredTransferOptions));
+    $details['transfer_rates'] = $currentTransferRates;
+
+    DB::table('vendor_properties')
+        ->where('id', (int) $validated['vendor_property_id'])
+        ->where('vendor_user_id', $vendorUserId)
+        ->update([
+            'listing_details' => json_encode($details),
+            'updated_at' => now(),
+        ]);
+
+    return back()->with('portal_notice', 'Transfer rates updated for availability and bookings.');
 });
 
 Route::post('/portal/vendor/reservations/{reservation}/status', function (Request $request, int $reservation) {

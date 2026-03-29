@@ -1051,6 +1051,48 @@ Route::get('/vendor', function () {
     ]);
 });
 
+Route::get('/vendor/overview', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    return redirect('/vendor')->with('portal_active_panel', 'overview');
+});
+
+Route::get('/vendor/listings', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    return redirect('/vendor')
+        ->with('portal_active_panel', 'listings')
+        ->with('listing_wizard_step', 1);
+});
+
+Route::get('/vendor/operations', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    return redirect('/vendor#vendorAvailabilitySection')->with('portal_active_panel', 'reservations');
+});
+
+Route::get('/vendor/pricing', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    return redirect('/vendor#vendorPricingSection')->with('portal_active_panel', 'reservations');
+});
+
+Route::get('/vendor/billing', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    return redirect('/vendor#vendorDailyCollectionSection')->with('portal_active_panel', 'billing');
+});
+
 Route::post('/portal/vendor/categories/update', function (Request $request) {
     if (!session('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');

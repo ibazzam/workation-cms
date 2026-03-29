@@ -3101,6 +3101,12 @@
                     if (!is_string($categoryKey) || $categoryKey === '' || !in_array($categoryKey, $allVendorCategoryKeys, true)) {
                         continue;
                     }
+
+                    // Accommodation availability is managed at room level only.
+                    if ($categoryKey === 'accommodation') {
+                        continue;
+                    }
+
                     $listingCountByCategory[$categoryKey]++;
                     $availabilityTargetsByCategory[$categoryKey]->push([
                         'kind' => 'property',
@@ -3141,6 +3147,10 @@
                     }
                     $roomPropertyId = (int) ($room->vendor_property_id ?? 0);
                     $roomProperty = $propertyById->get($roomPropertyId);
+                    $roomPropertyName = $roomProperty instanceof \stdClass
+                        ? trim((string) ($roomProperty->name ?? ('Property ' . $roomPropertyId)))
+                        : ('Property ' . $roomPropertyId);
+                    $roomName = trim((string) ($room->name ?? ('Room ' . $roomId)));
                     $categoryKey = 'accommodation';
                     if ($roomProperty instanceof \stdClass) {
                         $categoryFromProperty = vendorPortalCanonicalCategory((string) ($roomProperty->listing_category ?? ''));
@@ -3158,8 +3168,10 @@
                         'property_id' => $roomPropertyId > 0 ? $roomPropertyId : '',
                         'service_id' => '',
                         'room_id' => $roomId,
+                        'property_name' => $roomPropertyName,
+                        'room_name' => $roomName,
                         'route_name' => '',
-                        'label' => 'Room #' . $roomId . ' - ' . (string) ($room->name ?? ('Room ' . $roomId)),
+                        'label' => $roomPropertyName . ' -> ' . $roomName,
                     ]);
                 }
 
@@ -3192,6 +3204,11 @@
                         }
                     }
                     if (!is_string($slotCategory) || $slotCategory === '' || !in_array($slotCategory, $allVendorCategoryKeys, true)) {
+                        continue;
+                    }
+
+                    // For accommodation, only room-level availability rows are valid.
+                    if ($slotCategory === 'accommodation' && $slotRoomId <= 0) {
                         continue;
                     }
 
@@ -3268,6 +3285,11 @@
                         continue;
                     }
 
+                    // For accommodation, only room-level reservations are valid in this operations view.
+                    if ($reservationCategory === 'accommodation' && $reservationRoomId <= 0) {
+                        continue;
+                    }
+
                     $reservationTargetLabel = 'Global / Unlinked';
                     if ($reservationRoomId > 0) {
                         $roomItem = $roomById->get($reservationRoomId);
@@ -3313,6 +3335,13 @@
                     @php
                         $categorySlug = str_replace('_', '-', (string) $categoryKey);
                         $categoryTargets = $availabilityTargetsByCategory[$categoryKey] ?? collect();
+                        $accommodationRoomTargetsByProperty = collect();
+                        if ($categoryKey === 'accommodation') {
+                            $accommodationRoomTargetsByProperty = $categoryTargets
+                                ->filter(static fn ($target) => (string) ($target['kind'] ?? '') === 'room')
+                                ->groupBy(static fn ($target) => (string) ($target['property_name'] ?? ('Property #' . (string) ($target['property_id'] ?? ''))))
+                                ->sortKeys();
+                        }
                         $categorySlots = ($availabilityRowsByCategory[$categoryKey] ?? collect())->sortByDesc('slot_date')->values();
                         $categoryReservations = ($reservationRowsByCategory[$categoryKey] ?? collect())->sortByDesc('start_at')->values();
                         $trackedCount = $categorySlots->count();
@@ -3342,26 +3371,56 @@
                         </button>
                         <div id="availability_panel_{{ $categorySlug }}" class="ops-category-body" hidden>
                         <p class="ops-subtitle">Listings in {{ $labelForCategory($categoryKey) }} (click to edit availability)</p>
-                        <div class="ops-target-quicklist">
-                            @forelse ($categoryTargets as $targetOption)
-                                @php
-                                    $targetKind = (string) ($targetOption['kind'] ?? '');
-                                    $targetId = (string) ($targetOption['id'] ?? '');
-                                    $targetValue = $targetKind !== '' && $targetId !== '' ? ($targetKind . ':' . $targetId) : '';
-                                @endphp
-                                @if ($targetValue !== '')
-                                    <button
-                                        type="button"
-                                        class="ops-target-quickpick"
-                                        data-availability-pick-target
-                                        data-availability-form-key="{{ $categoryKey }}"
-                                        data-target-value="{{ $targetValue }}"
-                                    >{{ (string) ($targetOption['label'] ?? $targetValue) }}</button>
-                                @endif
-                            @empty
-                                <span class="small">No listings yet in this category.</span>
-                            @endforelse
-                        </div>
+                        @if ($categoryKey === 'accommodation')
+                            @if ($accommodationRoomTargetsByProperty->isEmpty())
+                                <div class="ops-target-quicklist">
+                                    <span class="small">No rooms yet under accommodation properties.</span>
+                                </div>
+                            @else
+                                @foreach ($accommodationRoomTargetsByProperty as $propertyName => $propertyRooms)
+                                    <p class="small" style="margin:8px 0 4px;"><strong>{{ (string) $propertyName }}</strong></p>
+                                    <div class="ops-target-quicklist">
+                                        @foreach ($propertyRooms as $targetOption)
+                                            @php
+                                                $targetKind = (string) ($targetOption['kind'] ?? '');
+                                                $targetId = (string) ($targetOption['id'] ?? '');
+                                                $targetValue = $targetKind !== '' && $targetId !== '' ? ($targetKind . ':' . $targetId) : '';
+                                            @endphp
+                                            @if ($targetValue !== '')
+                                                <button
+                                                    type="button"
+                                                    class="ops-target-quickpick"
+                                                    data-availability-pick-target
+                                                    data-availability-form-key="{{ $categoryKey }}"
+                                                    data-target-value="{{ $targetValue }}"
+                                                >{{ (string) ($targetOption['room_name'] ?? ('Room ' . $targetId)) }}</button>
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                @endforeach
+                            @endif
+                        @else
+                            <div class="ops-target-quicklist">
+                                @forelse ($categoryTargets as $targetOption)
+                                    @php
+                                        $targetKind = (string) ($targetOption['kind'] ?? '');
+                                        $targetId = (string) ($targetOption['id'] ?? '');
+                                        $targetValue = $targetKind !== '' && $targetId !== '' ? ($targetKind . ':' . $targetId) : '';
+                                    @endphp
+                                    @if ($targetValue !== '')
+                                        <button
+                                            type="button"
+                                            class="ops-target-quickpick"
+                                            data-availability-pick-target
+                                            data-availability-form-key="{{ $categoryKey }}"
+                                            data-target-value="{{ $targetValue }}"
+                                        >{{ (string) ($targetOption['label'] ?? $targetValue) }}</button>
+                                    @endif
+                                @empty
+                                    <span class="small">No listings yet in this category.</span>
+                                @endforelse
+                            </div>
+                        @endif
                         <div class="billing-ledger-grid" style="margin-bottom:10px;">
                             <article class="billing-ledger-card">
                                 <p class="metric-label">Tracked Days</p>
@@ -3391,7 +3450,11 @@
                                     <div class="ops-field ops-field-wide">
                                         <label for="availability_target_{{ $categorySlug }}">Listing / Product / Room</label>
                                         <select id="availability_target_{{ $categorySlug }}" class="ops-select" data-availability-target>
-                                            <option value="">Generic slot for {{ $labelForCategory($categoryKey) }}</option>
+                                            @if ($categoryKey === 'accommodation')
+                                                <option value="">Select room for accommodation availability</option>
+                                            @else
+                                                <option value="">Generic slot for {{ $labelForCategory($categoryKey) }}</option>
+                                            @endif
                                             @foreach ($categoryTargets as $targetOption)
                                                 <option
                                                     value="{{ (string) ($targetOption['kind'] ?? '') }}:{{ (string) ($targetOption['id'] ?? '') }}"
@@ -6348,6 +6411,35 @@
                     if (!targetSelect) return;
                     targetSelect.addEventListener('change', function () {
                         applyAvailabilityTargetSelectionFor(form);
+                    });
+
+                    form.addEventListener('submit', function (event) {
+                        const listingCategoryInput = form.querySelector('input[name="listing_category"]');
+                        const listingCategory = String(listingCategoryInput ? listingCategoryInput.value : '').trim().toLowerCase();
+                        if (listingCategory !== 'accommodation') {
+                            if (targetSelect.setCustomValidity) {
+                                targetSelect.setCustomValidity('');
+                            }
+                            return;
+                        }
+
+                        const roomInput = form.querySelector('[data-availability-role="room"]');
+                        const selectedRoomId = String(roomInput ? roomInput.value : '').trim();
+                        if (selectedRoomId !== '') {
+                            if (targetSelect.setCustomValidity) {
+                                targetSelect.setCustomValidity('');
+                            }
+                            return;
+                        }
+
+                        event.preventDefault();
+                        if (targetSelect.setCustomValidity) {
+                            targetSelect.setCustomValidity('Please select a room for accommodation availability.');
+                        }
+                        if (targetSelect.reportValidity) {
+                            targetSelect.reportValidity();
+                        }
+                        targetSelect.focus();
                     });
 
                     const closedSelect = form.querySelector('select[name="is_closed"]');

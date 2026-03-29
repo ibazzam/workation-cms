@@ -485,6 +485,31 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['area_unit'] = (string) ($validated['area_unit'] ?? '');
             $details['workspace_type'] = trim((string) ($validated['workspace_type'] ?? ''));
             $details['internet_speed_mbps'] = vendorPortalNormalizedNumeric($validated['internet_speed_mbps'] ?? null);
+
+            $workspaceAmenityCatalog = [
+                'workdesk',
+                'wifi',
+                'printing',
+                'water_bottles',
+                'coffee',
+                'tea',
+                'snacks',
+            ];
+            $workspaceAmenityStatusInput = is_array($validated['workspace_amenity_status'] ?? null)
+                ? $validated['workspace_amenity_status']
+                : [];
+            $workspaceAmenities = [];
+            foreach ($workspaceAmenityCatalog as $amenityKey) {
+                $status = strtolower(trim((string) ($workspaceAmenityStatusInput[$amenityKey] ?? 'not_available')));
+                if (!in_array($status, ['free', 'paid', 'not_available'], true)) {
+                    $status = 'not_available';
+                }
+
+                $workspaceAmenities[$amenityKey] = [
+                    'status' => $status,
+                ];
+            }
+            $details['workspace_amenities'] = $workspaceAmenities;
         }
 
         if ($listingCategory === 'resort_day_visit') {
@@ -619,6 +644,29 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
         if ($listingCategory === 'remote_workspace') {
             if (!in_array(($details['workspace_type'] ?? ''), ['shared', 'private', 'cabin'], true)) {
                 $errors[] = 'Workspace type must be shared, private, or cabin.';
+            }
+
+            $workspaceAmenityCatalog = [
+                'workdesk',
+                'wifi',
+                'printing',
+                'water_bottles',
+                'coffee',
+                'tea',
+                'snacks',
+            ];
+            $workspaceAmenities = is_array($details['workspace_amenities'] ?? null)
+                ? $details['workspace_amenities']
+                : [];
+            foreach ($workspaceAmenityCatalog as $amenityKey) {
+                $amenityConfig = is_array($workspaceAmenities[$amenityKey] ?? null)
+                    ? $workspaceAmenities[$amenityKey]
+                    : [];
+                $status = strtolower(trim((string) ($amenityConfig['status'] ?? 'not_available')));
+                if (!in_array($status, ['free', 'paid', 'not_available'], true)) {
+                    $errors[] = 'Workspace amenity status must be free, paid, or not available.';
+                    continue;
+                }
             }
         }
 
@@ -1622,7 +1670,7 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'base_price' => ['nullable', 'numeric', 'min:0'],
         'max_guests' => ['nullable', 'integer', 'min:0', 'max:10000'],
         'measurement_system' => ['nullable', Rule::in(['metric', 'imperial'])],
-        'area_value' => ['nullable', 'numeric', 'min:1', 'max:100000'],
+        'area_value' => ['nullable', 'numeric', 'min:5', 'max:100000'],
         'area_unit' => ['nullable', Rule::in(['sqm', 'sqft'])],
         'bedroom_count' => ['nullable', 'integer', 'min:0', 'max:1000'],
         'capacity_value' => ['nullable', 'integer', 'min:1', 'max:20000'],
@@ -1650,6 +1698,8 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'excursion_type' => ['nullable', 'string', 'max:80'],
         'workspace_type' => ['nullable', Rule::in(['shared', 'private', 'cabin'])],
         'internet_speed_mbps' => ['nullable', 'numeric', 'min:1', 'max:10000'],
+        'workspace_amenity_status' => ['nullable', 'array'],
+        'workspace_amenity_status.*' => ['nullable', Rule::in(['free', 'paid', 'not_available'])],
         'day_visit_start_time' => ['nullable', 'date_format:H:i'],
         'day_visit_end_time' => ['nullable', 'date_format:H:i'],
         'included_access' => ['nullable', 'string', 'max:2000'],
@@ -1850,7 +1900,7 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'base_price' => ['nullable', 'numeric', 'min:0'],
         'max_guests' => ['nullable', 'integer', 'min:0', 'max:10000'],
         'measurement_system' => ['nullable', Rule::in(['metric', 'imperial'])],
-        'area_value' => ['nullable', 'numeric', 'min:1', 'max:100000'],
+        'area_value' => ['nullable', 'numeric', 'min:5', 'max:100000'],
         'area_unit' => ['nullable', Rule::in(['sqm', 'sqft'])],
         'bedroom_count' => ['nullable', 'integer', 'min:0', 'max:1000'],
         'capacity_value' => ['nullable', 'integer', 'min:1', 'max:20000'],
@@ -1878,6 +1928,8 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'excursion_type' => ['nullable', 'string', 'max:80'],
         'workspace_type' => ['nullable', Rule::in(['shared', 'private', 'cabin'])],
         'internet_speed_mbps' => ['nullable', 'numeric', 'min:1', 'max:10000'],
+        'workspace_amenity_status' => ['nullable', 'array'],
+        'workspace_amenity_status.*' => ['nullable', Rule::in(['free', 'paid', 'not_available'])],
         'day_visit_start_time' => ['nullable', 'date_format:H:i'],
         'day_visit_end_time' => ['nullable', 'date_format:H:i'],
         'included_access' => ['nullable', 'string', 'max:2000'],

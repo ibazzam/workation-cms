@@ -876,7 +876,8 @@ if (!function_exists('vendorPortalAccommodationRoomPricing')) {
         int $adultGuests,
         int $childGuests,
         string $startAt,
-        string $endAt
+        string $endAt,
+        ?string $transferOption = null
     ): ?array {
         if ($vendorUserId <= 0 || $roomId === null || $roomId <= 0 || !Schema::hasTable('vendor_property_room_categories')) {
             return null;
@@ -903,7 +904,7 @@ if (!function_exists('vendorPortalAccommodationRoomPricing')) {
         $property = DB::table('vendor_properties')
             ->where('id', $resolvedPropertyId)
             ->where('vendor_user_id', $vendorUserId)
-            ->first(['listing_category']);
+            ->first(['listing_category', 'listing_details']);
 
         $propertyCategory = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
         if ($propertyCategory !== 'accommodation') {
@@ -937,6 +938,18 @@ if (!function_exists('vendorPortalAccommodationRoomPricing')) {
 
         $nightlySubtotal = $baseRoomPrice + ($chargeableExtraAdults * $extraAdultPrice) + ($chargeableChildren * $childPrice);
         $subtotal = round($nightlySubtotal * $nights, 2);
+        $transferCharge = vendorPortalPropertyTransferCharge(
+            $vendorUserId,
+            $resolvedPropertyId,
+            $transferOption,
+            $adultGuests + $childGuests
+        );
+
+        $transferOptionApplied = trim((string) ($transferCharge['transfer_option'] ?? ''));
+        $transferRatePerPax = max(0, (float) ($transferCharge['transfer_rate_per_pax'] ?? 0));
+        $transferGuestCount = max(0, (int) ($transferCharge['transfer_guest_count'] ?? 0));
+        $transferChargeTotal = max(0, (float) ($transferCharge['transfer_charge_total'] ?? 0));
+        $subtotalWithTransfer = round($subtotal + $transferChargeTotal, 2);
 
         return [
             'property_id' => $resolvedPropertyId,
@@ -952,7 +965,80 @@ if (!function_exists('vendorPortalAccommodationRoomPricing')) {
             'child_price' => $childPrice,
             'nightly_subtotal' => round($nightlySubtotal, 2),
             'subtotal' => $subtotal,
+            'transfer_option' => $transferOptionApplied,
+            'transfer_rate_per_pax' => round($transferRatePerPax, 2),
+            'transfer_guest_count' => $transferGuestCount,
+            'transfer_charge_total' => round($transferChargeTotal, 2),
+            'subtotal_with_transfer' => $subtotalWithTransfer,
         ];
+    }
+}
+
+if (!function_exists('vendorPortalPropertyTransferCharge')) {
+    function vendorPortalPropertyTransferCharge(
+        int $vendorUserId,
+        ?int $propertyId,
+        ?string $transferOption,
+        int $guestCount
+    ): array {
+        $requestedOption = strtolower(trim((string) $transferOption));
+        $effectiveGuestCount = max(0, $guestCount);
+
+        $result = [
+            'transfer_option' => '',
+            'transfer_rate_per_pax' => 0.0,
+            'transfer_guest_count' => $effectiveGuestCount,
+            'transfer_charge_total' => 0.0,
+        ];
+
+        if ($vendorUserId <= 0 || $propertyId === null || $propertyId <= 0 || $requestedOption === '' || !Schema::hasTable('vendor_properties')) {
+            return $result;
+        }
+
+        $property = DB::table('vendor_properties')
+            ->where('id', $propertyId)
+            ->where('vendor_user_id', $vendorUserId)
+            ->first(['listing_category', 'listing_details']);
+
+        if (!$property) {
+            return $result;
+        }
+
+        $listingCategory = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
+        if (!in_array($listingCategory, ['accommodation', 'remote_workspace'], true)) {
+            return $result;
+        }
+
+        $detailsRaw = (string) ($property->listing_details ?? '');
+        $details = is_string($detailsRaw) && trim($detailsRaw) !== ''
+            ? json_decode($detailsRaw, true)
+            : [];
+        if (!is_array($details)) {
+            return $result;
+        }
+
+        $configuredOptions = array_map(
+            static fn ($item): string => strtolower(trim((string) $item)),
+            is_array($details['transfer_options'] ?? null) ? $details['transfer_options'] : []
+        );
+        $configuredOptions = array_values(array_filter($configuredOptions, static fn (string $item): bool => $item !== ''));
+        if (!in_array($requestedOption, $configuredOptions, true)) {
+            return $result;
+        }
+
+        $rates = is_array($details['transfer_rates'] ?? null) ? $details['transfer_rates'] : [];
+        $ratePerPax = isset($rates[$requestedOption]) && is_numeric($rates[$requestedOption])
+            ? max(0, (float) $rates[$requestedOption])
+            : 0.0;
+        if ($ratePerPax <= 0 || $effectiveGuestCount <= 0) {
+            return $result;
+        }
+
+        $result['transfer_option'] = $requestedOption;
+        $result['transfer_rate_per_pax'] = round($ratePerPax, 2);
+        $result['transfer_charge_total'] = round($ratePerPax * $effectiveGuestCount, 2);
+
+        return $result;
     }
 }
 
@@ -962,9 +1048,11 @@ if (!function_exists('vendorPortalReservationInvoiceTaxes')) {
         ?int $propertyId,
         int $guests,
         float $baseAmount,
-        bool $isForeigner
+        bool $isForeigner,
+        float $transferChargeTotal = 0
     ): array {
         $subtotalAmount = round(max(0, $baseAmount), 2);
+        $transferChargeAmount = round(max(0, $transferChargeTotal), 2);
         $guestCount = max(1, $guests);
 
         $breakdown = [
@@ -981,8 +1069,9 @@ if (!function_exists('vendorPortalReservationInvoiceTaxes')) {
             'cgst_rate_percent' => 0.0,
             'cgst_total' => 0.0,
             'subtotal_amount' => $subtotalAmount,
+            'transfer_charge_total' => $transferChargeAmount,
             'total_tax_amount' => 0.0,
-            'invoice_total_amount' => $subtotalAmount,
+            'invoice_total_amount' => round($subtotalAmount + $transferChargeAmount, 2),
         ];
 
         if ($propertyId === null || $propertyId <= 0 || !Schema::hasTable('vendor_properties')) {
@@ -1037,7 +1126,10 @@ if (!function_exists('vendorPortalReservationInvoiceTaxes')) {
         );
 
         $breakdown['total_tax_amount'] = $totalTaxAmount;
-        $breakdown['invoice_total_amount'] = round($subtotalAmount + $breakdown['service_charge_total'] + $totalTaxAmount, 2);
+        $breakdown['invoice_total_amount'] = round(
+            $subtotalAmount + $breakdown['service_charge_total'] + $totalTaxAmount + $transferChargeAmount,
+            2
+        );
 
         return $breakdown;
     }

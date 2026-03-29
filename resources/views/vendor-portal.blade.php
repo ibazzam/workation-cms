@@ -736,32 +736,32 @@
         }
 
         .ops-table.is-compact td:last-child {
-            min-width: clamp(340px, 42vw, 760px);
+            min-width: 0;
         }
 
         .listing-management-table th:nth-child(1),
         .listing-management-table td:nth-child(1) {
-            width: 34%;
+            width: auto;
         }
 
         .listing-management-table th:nth-child(2),
         .listing-management-table td:nth-child(2) {
-            width: 66%;
+            width: auto;
         }
 
         .room-management-table th:nth-child(1),
         .room-management-table td:nth-child(1) {
-            width: 30%;
+            width: auto;
         }
 
         .room-management-table th:nth-child(2),
         .room-management-table td:nth-child(2) {
-            width: 30%;
+            width: auto;
         }
 
         .room-management-table th:nth-child(3),
         .room-management-table td:nth-child(3) {
-            width: 40%;
+            width: auto;
         }
 
         .ops-empty {
@@ -1131,7 +1131,7 @@
         }
 
         .listing-cell-actions-cell {
-            min-width: clamp(360px, 44vw, 760px);
+            min-width: 0;
         }
 
         .listing-summary-line strong {
@@ -1177,6 +1177,23 @@
             padding: 8px;
             width: 100%;
             box-sizing: border-box;
+        }
+
+        .update-row-form.inline-table-form {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .update-row-form .ops-textarea,
+        .update-row-form .ops-form-grid,
+        .update-row-form .feature-checklist,
+        .update-row-form .inline-actions {
+            grid-column: 1 / -1;
+        }
+
+        .update-row-form .ops-form-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            align-items: start;
         }
 
         .update-row-form .btn,
@@ -1522,6 +1539,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .update-row-form.inline-table-form {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
             .guided-steps {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
@@ -1594,6 +1615,10 @@
 
             .listing-cell-actions-cell {
                 min-width: 0;
+            }
+
+            .update-row-form.inline-table-form {
+                grid-template-columns: 1fr;
             }
 
             .ops-table.is-compact th:last-child,

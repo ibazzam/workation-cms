@@ -1134,6 +1134,18 @@
             min-width: 0;
         }
 
+        .listing-management-table tr.is-editing .listing-cell-main {
+            display: none;
+        }
+
+        .listing-management-table tr.is-editing .listing-cell-actions-cell {
+            width: 100%;
+        }
+
+        .listing-management-table tr.is-editing .listing-cell-actions {
+            grid-template-columns: 1fr;
+        }
+
         .listing-summary-line strong {
             margin-right: 4px;
         }
@@ -2561,6 +2573,7 @@
                                                                 </form>
                                                             </div>
                                                             <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/properties/{{ $propertyId }}/update" data-property-edit-form="{{ $propertyId }}" data-property-edit-category="{{ $editCategory }}" hidden>
+                                                                @csrf
                                                                 <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $property->name }}" required>
                                                                 <input class="ops-input" name="location_country" type="text" maxlength="90" value="{{ (string) ($propertyDetails['location_country'] ?? '') }}" placeholder="Country" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="location_state" type="text" maxlength="120" value="{{ (string) ($propertyDetails['location_state'] ?? '') }}" placeholder="State / Province / Atoll" data-property-edit-scope="geo">
@@ -4907,6 +4920,12 @@
                     applyPropertyEditScope(form, category);
                 }
                 form.hidden = false;
+                if (form.hasAttribute('data-property-edit-form')) {
+                    const row = form.closest('tr');
+                    if (row) {
+                        row.classList.add('is-editing');
+                    }
+                }
                 const firstInput = form.querySelector('input, select, textarea');
                 if (firstInput) {
                     firstInput.focus();
@@ -4919,6 +4938,12 @@
                     return;
                 }
                 form.hidden = true;
+                if (form.hasAttribute('data-property-edit-form')) {
+                    const row = form.closest('tr');
+                    if (row) {
+                        row.classList.remove('is-editing');
+                    }
+                }
             }
 
             propertyEditButtons.forEach((button) => {

@@ -691,7 +691,8 @@
             margin-top: 10px;
             border: 1px solid #d7e0e6;
             border-radius: 10px;
-            overflow: hidden;
+            overflow-x: auto;
+            overflow-y: hidden;
             background: #fff;
         }
 
@@ -730,8 +731,37 @@
 
         .ops-table.is-compact th:last-child,
         .ops-table.is-compact td:last-child {
-            width: 1%;
-            white-space: nowrap;
+            width: auto;
+            white-space: normal;
+        }
+
+        .ops-table.is-compact td:last-child {
+            min-width: clamp(340px, 42vw, 760px);
+        }
+
+        .listing-management-table th:nth-child(1),
+        .listing-management-table td:nth-child(1) {
+            width: 34%;
+        }
+
+        .listing-management-table th:nth-child(2),
+        .listing-management-table td:nth-child(2) {
+            width: 66%;
+        }
+
+        .room-management-table th:nth-child(1),
+        .room-management-table td:nth-child(1) {
+            width: 30%;
+        }
+
+        .room-management-table th:nth-child(2),
+        .room-management-table td:nth-child(2) {
+            width: 30%;
+        }
+
+        .room-management-table th:nth-child(3),
+        .room-management-table td:nth-child(3) {
+            width: 40%;
         }
 
         .ops-empty {
@@ -1075,7 +1105,7 @@
 
         .inline-table-form {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
             gap: 6px;
             align-items: end;
         }
@@ -1101,7 +1131,7 @@
         }
 
         .listing-cell-actions-cell {
-            min-width: 280px;
+            min-width: clamp(360px, 44vw, 760px);
         }
 
         .listing-summary-line strong {
@@ -1145,6 +1175,8 @@
             border-radius: 10px;
             background: #fafcff;
             padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .update-row-form .btn,
@@ -1173,6 +1205,38 @@
 
         .update-row-form[hidden] {
             display: none;
+        }
+
+        /* Category-specific listing edit scopes: keep only relevant fields visible per listing category */
+        .update-row-form[data-property-edit-form] [data-property-edit-scope] {
+            display: none;
+        }
+
+        .update-row-form[data-property-edit-category="accommodation"] [data-property-edit-scope="stay"],
+        .update-row-form[data-property-edit-category="accommodation"] [data-property-edit-scope="accommodation"],
+        .update-row-form[data-property-edit-category="accommodation"] [data-property-edit-scope="geo"],
+        .update-row-form[data-property-edit-category="transport"] [data-property-edit-scope="capacity"],
+        .update-row-form[data-property-edit-category="transport"] [data-property-edit-scope="transport"],
+        .update-row-form[data-property-edit-category="transport"] [data-property-edit-scope="geo"],
+        .update-row-form[data-property-edit-category="excursion"] [data-property-edit-scope="capacity"],
+        .update-row-form[data-property-edit-category="excursion"] [data-property-edit-scope="service"],
+        .update-row-form[data-property-edit-category="excursion"] [data-property-edit-scope="excursion"],
+        .update-row-form[data-property-edit-category="excursion"] [data-property-edit-scope="geo"],
+        .update-row-form[data-property-edit-category="remote_workspace"] [data-property-edit-scope="stay"],
+        .update-row-form[data-property-edit-category="remote_workspace"] [data-property-edit-scope="capacity"],
+        .update-row-form[data-property-edit-category="remote_workspace"] [data-property-edit-scope="workspace"],
+        .update-row-form[data-property-edit-category="remote_workspace"] [data-property-edit-scope="geo"],
+        .update-row-form[data-property-edit-category="resort_day_visit"] [data-property-edit-scope="capacity"],
+        .update-row-form[data-property-edit-category="resort_day_visit"] [data-property-edit-scope="day_visit"],
+        .update-row-form[data-property-edit-category="resort_day_visit"] [data-property-edit-scope="geo"],
+        .update-row-form[data-property-edit-category="restaurant"] [data-property-edit-scope="capacity"],
+        .update-row-form[data-property-edit-category="restaurant"] [data-property-edit-scope="restaurant"],
+        .update-row-form[data-property-edit-category="restaurant"] [data-property-edit-scope="geo"],
+        .update-row-form[data-property-edit-category="vehicle_rental"] [data-property-edit-scope="vehicle"],
+        .update-row-form[data-property-edit-category="vehicle_rental"] [data-property-edit-scope="capacity"],
+        .update-row-form[data-property-edit-category="vehicle_rental"] [data-property-edit-scope="rental"],
+        .update-row-form[data-property-edit-category="vehicle_rental"] [data-property-edit-scope="geo"] {
+            display: revert;
         }
 
         .btn-danger {
@@ -1832,9 +1896,19 @@
                         'tea' => 'Tea',
                         'snacks' => 'Snacks',
                     ];
+                    $transferOptionCatalog = [
+                        'car' => 'Car',
+                        'van' => 'Van',
+                        'ferry' => 'Ferry',
+                        'speedboat' => 'SpeedBoat',
+                        'seaplane' => 'SeaPlane',
+                        'domestic_flight' => 'Domestic Flight',
+                    ];
                     $oldWorkspaceAmenityStatusInput = old('workspace_amenity_status', []);
                     $oldWorkspaceAmenitiesFree = collect(old('workspace_amenities_free', []))->map(fn ($item) => strtolower(trim((string) $item)))->values()->all();
                     $oldWorkspaceAmenitiesPaid = collect(old('workspace_amenities_paid', []))->map(fn ($item) => strtolower(trim((string) $item)))->values()->all();
+                    $oldTransferOptions = collect(old('transfer_options', []))->map(fn ($item) => strtolower(trim((string) $item)))->values()->all();
+                    $oldTransferRatesInput = old('transfer_rates', []);
                     $oldWorkspaceAmenityStatus = [];
                     foreach ($workspaceAmenityCatalog as $workspaceAmenityKey => $workspaceAmenityLabel) {
                         $statusValue = 'not_available';
@@ -2186,6 +2260,25 @@
                                 </div>
                                 <p class="small">Set each item as Free, Purchase Separately On-Site, or Not Available. The app only collects the booking fee; extras are purchased separately.</p>
                             </div>
+                            <div class="ops-field ops-field-wide" data-category-scope="stay">
+                                <label>Transfer Options and Charges (Per Pax)</label>
+                                <p class="small" style="margin-bottom:8px;">Select transfer options you provide and set the per-pax charge for each selected option.</p>
+                                <div class="ops-form-grid">
+                                    @foreach ($transferOptionCatalog as $transferOptionKey => $transferOptionLabel)
+                                        @php
+                                            $transferRateValue = '';
+                                            if (is_array($oldTransferRatesInput) && array_key_exists($transferOptionKey, $oldTransferRatesInput)) {
+                                                $transferRateValue = (string) $oldTransferRatesInput[$transferOptionKey];
+                                            }
+                                        @endphp
+                                        <label class="feature-item" style="display:flex; align-items:center; gap:8px;">
+                                            <input type="checkbox" name="transfer_options[]" value="{{ $transferOptionKey }}" @checked(in_array($transferOptionKey, $oldTransferOptions, true))>
+                                            <span>{{ $transferOptionLabel }}</span>
+                                        </label>
+                                        <input name="transfer_rates[{{ $transferOptionKey }}]" class="ops-input" type="number" min="0" step="0.01" value="{{ $transferRateValue }}" placeholder="{{ $transferOptionLabel }} per pax (MVR)">
+                                    @endforeach
+                                </div>
+                            </div>
                             <div class="ops-field" data-category-scope="day_visit">
                                 <label for="property_day_visit_start_time">Day Visit Start Time</label>
                                 <input id="property_day_visit_start_time" name="day_visit_start_time" class="ops-input" type="time" value="{{ old('day_visit_start_time') }}">
@@ -2285,7 +2378,7 @@
                                     <option value="hybrid" @selected(old('fuel_type') === 'hybrid')>Hybrid</option>
                                 </select>
                             </div>
-                            <div class="ops-field ops-field-wide" data-category-scope="stay">
+                            <div class="ops-field ops-field-wide" data-category-scope="accommodation">
                                 <label>Property Amenities (tick all available)</label>
                                 <div class="feature-checklist">
                                     @foreach ($propertyAmenityOptionsCollection as $facilityOption)
@@ -2299,7 +2392,7 @@
                                     @endforeach
                                 </div>
                             </div>
-                            <div class="ops-field ops-field-wide" data-category-scope="stay">
+                            <div class="ops-field ops-field-wide" data-category-scope="accommodation">
                                 <label>Property Features (tick all available)</label>
                                 <div class="feature-checklist">
                                     @foreach ($propertyFeatureOptionsCollection as $featureOption)
@@ -2347,7 +2440,7 @@
                                 <p class="ops-empty">No {{ strtolower((string) $categoryLabel) }} listings yet.</p>
                             @else
                                 <div class="ops-table-wrap">
-                                    <table class="ops-table is-compact" aria-label="{{ $categoryLabel }} listings table">
+                                    <table class="ops-table is-compact listing-management-table" aria-label="{{ $categoryLabel }} listings table">
                                         <thead>
                                             <tr>
                                                 <th>Listing</th>
@@ -2366,7 +2459,9 @@
                                                             $propertyDetails = $decodedPropertyDetails;
                                                         }
                                                     }
-                                                    $editCategory = strtolower((string) ($property->listing_category ?? $categoryKey));
+                                                    $editCategoryRaw = strtolower((string) ($property->listing_category ?? $categoryKey));
+                                                    $editCategory = preg_replace('/[^a-z0-9]+/', '_', $editCategoryRaw) ?? $editCategoryRaw;
+                                                    $editCategory = trim((string) preg_replace('/_+/', '_', $editCategory), '_');
                                                     $propertyAmenityValues = [];
                                                     $propertyFeatureValues = [];
                                                     if (isset($propertyDetails['property_amenities']) && is_array($propertyDetails['property_amenities'])) {
@@ -2391,6 +2486,13 @@
                                                             $workspaceAmenityPaidValues[] = strtolower(trim((string) $workspaceAmenityKey));
                                                         }
                                                     }
+                                                    $transferOptionValues = [];
+                                                    if (isset($propertyDetails['transfer_options']) && is_array($propertyDetails['transfer_options'])) {
+                                                        $transferOptionValues = array_map(static fn ($item) => strtolower(trim((string) $item)), $propertyDetails['transfer_options']);
+                                                    }
+                                                    $transferRates = is_array($propertyDetails['transfer_rates'] ?? null)
+                                                        ? $propertyDetails['transfer_rates']
+                                                        : [];
                                                     $transportMode = strtolower((string) ($propertyDetails['transport_mode'] ?? ''));
                                                     $transportPricingBasis = strtolower((string) ($propertyDetails['transport_pricing_basis'] ?? ''));
                                                     if ($transportPricingBasis === '') {
@@ -2552,6 +2654,22 @@
                                                                     @endforeach
                                                                     </div>
                                                                 </div>
+                                                                <div class="ops-form-grid" data-property-edit-scope="stay">
+                                                                    <p class="small" style="margin:0;">Transfer Options and Charges (Per Pax)</p>
+                                                                    @foreach ($transferOptionCatalog as $transferOptionKey => $transferOptionLabel)
+                                                                        @php
+                                                                            $transferEditRate = '';
+                                                                            if (array_key_exists($transferOptionKey, $transferRates)) {
+                                                                                $transferEditRate = (string) $transferRates[$transferOptionKey];
+                                                                            }
+                                                                        @endphp
+                                                                        <label class="feature-item" style="display:flex; align-items:center; gap:8px;">
+                                                                            <input type="checkbox" name="transfer_options[]" value="{{ $transferOptionKey }}" @checked(in_array($transferOptionKey, $transferOptionValues, true))>
+                                                                            <span>{{ $transferOptionLabel }}</span>
+                                                                        </label>
+                                                                        <input class="ops-input" name="transfer_rates[{{ $transferOptionKey }}]" type="number" min="0" step="0.01" value="{{ $transferEditRate }}" placeholder="{{ $transferOptionLabel }} per pax (MVR)">
+                                                                    @endforeach
+                                                                </div>
                                                                 <input class="ops-input" name="day_visit_start_time" type="time" value="{{ (string) ($propertyDetails['day_visit_start_time'] ?? '') }}" data-property-edit-scope="day_visit">
                                                                 <input class="ops-input" name="day_visit_end_time" type="time" value="{{ (string) ($propertyDetails['day_visit_end_time'] ?? '') }}" data-property-edit-scope="day_visit">
                                                                 <input class="ops-input" name="included_access" type="text" maxlength="2000" value="{{ (string) ($propertyDetails['included_access'] ?? '') }}" placeholder="Included Access" data-property-edit-scope="day_visit">
@@ -2578,7 +2696,7 @@
                                                                     <option value="hybrid" @selected((string) ($propertyDetails['fuel_type'] ?? '') === 'hybrid')>Hybrid</option>
                                                                 </select>
 
-                                                                <div class="feature-checklist" data-property-edit-scope="stay">
+                                                                <div class="feature-checklist" data-property-edit-scope="accommodation">
                                                                     @foreach ($accommodationFacilityOptionsCollection as $facilityOption)
                                                                         @php
                                                                             $facilityValue = trim((string) ($facilityOption['value'] ?? ''));
@@ -2589,7 +2707,7 @@
                                                                         @endif
                                                                     @endforeach
                                                                 </div>
-                                                                <div class="feature-checklist" data-property-edit-scope="stay">
+                                                                <div class="feature-checklist" data-property-edit-scope="accommodation">
                                                                     <label class="feature-item"><input type="checkbox" name="property_features[]" value="wheelchair_access" @checked(in_array('wheelchair_access', $propertyFeatureValues, true))> Wheelchair Access</label>
                                                                     <label class="feature-item"><input type="checkbox" name="property_features[]" value="elevator" @checked(in_array('elevator', $propertyFeatureValues, true))> Elevator</label>
                                                                     <label class="feature-item"><input type="checkbox" name="property_features[]" value="family_friendly" @checked(in_array('family_friendly', $propertyFeatureValues, true))> Family Friendly</label>
@@ -2659,7 +2777,7 @@
                                                                     <p class="ops-empty">No rooms for this listing yet.</p>
                                                                 @else
                                                                     <div class="ops-table-wrap">
-                                                                        <table class="ops-table is-compact" aria-label="Rooms for property {{ $propertyId }}">
+                                                                        <table class="ops-table is-compact room-management-table" aria-label="Rooms for property {{ $propertyId }}">
                                                                             <thead>
                                                                                 <tr>
                                                                                     <th>Room</th>
@@ -5115,6 +5233,7 @@
                 const pricingServiceInput = document.getElementById('pricing_service_id');
                 const pricingRoomInput = document.getElementById('pricing_room_id');
                 const availabilityForms = Array.from(document.querySelectorAll('[data-availability-form]'));
+                const transferRateForms = Array.from(document.querySelectorAll('[data-transfer-rate-form]'));
 
                 function categoryScopesFor(category) {
                     const normalized = normalizeCategoryKey(category);
@@ -5376,6 +5495,56 @@
                     }
                 }
 
+                function parseTransferOptions(rawValue) {
+                    return String(rawValue || '')
+                        .split(',')
+                        .map((token) => token.trim().toLowerCase())
+                        .filter((token) => token !== '');
+                }
+
+                function applyTransferRateSelectionFor(form) {
+                    if (!form) {
+                        return;
+                    }
+
+                    const targetSelect = form.querySelector('[data-transfer-rate-target]');
+                    if (!targetSelect) {
+                        return;
+                    }
+
+                    const selectedOption = targetSelect.options[targetSelect.selectedIndex] || null;
+                    const configuredOptions = parseTransferOptions(selectedOption ? selectedOption.getAttribute('data-transfer-options') : '');
+                    const configuredOptionSet = new Set(configuredOptions);
+                    const hasListingSelected = String(targetSelect.value || '').trim() !== '';
+
+                    const optionChecks = Array.from(form.querySelectorAll('[data-transfer-option-check]'));
+                    const rateInputs = Array.from(form.querySelectorAll('[data-transfer-rate-input]'));
+
+                    optionChecks.forEach((check) => {
+                        const transferKey = String(check.value || '').trim().toLowerCase();
+                        const isConfiguredForListing = hasListingSelected && configuredOptionSet.has(transferKey);
+                        check.disabled = !isConfiguredForListing;
+                        check.checked = isConfiguredForListing;
+                    });
+
+                    rateInputs.forEach((input) => {
+                        const transferKey = String(input.getAttribute('data-transfer-rate-input') || '').trim().toLowerCase();
+                        const isConfiguredForListing = hasListingSelected && configuredOptionSet.has(transferKey);
+                        input.disabled = !isConfiguredForListing;
+                        input.value = '';
+
+                        if (!isConfiguredForListing || !selectedOption) {
+                            return;
+                        }
+
+                        const rateAttr = selectedOption.getAttribute('data-transfer-rate-' + transferKey);
+                        const rateValue = Number(rateAttr);
+                        if (Number.isFinite(rateValue) && rateValue > 0) {
+                            input.value = String(rateValue);
+                        }
+                    });
+                }
+
                 availabilityForms.forEach((form) => {
                     const targetSelect = form.querySelector('[data-availability-target]');
                     if (!targetSelect) return;
@@ -5421,6 +5590,19 @@
                     }
 
                     applyAvailabilityTargetSelectionFor(form);
+                });
+
+                transferRateForms.forEach((form) => {
+                    const targetSelect = form.querySelector('[data-transfer-rate-target]');
+                    if (!targetSelect) {
+                        return;
+                    }
+
+                    targetSelect.addEventListener('change', function () {
+                        applyTransferRateSelectionFor(form);
+                    });
+
+                    applyTransferRateSelectionFor(form);
                 });
 
                 const availabilityFormByKey = new Map();

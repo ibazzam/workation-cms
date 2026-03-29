@@ -23,10 +23,20 @@
                 $availabilityTargetsByCategory = [];
                 $availabilityRowsByCategory = [];
                 $listingCountByCategory = [];
+                $transferRatePropertyTargetsByCategory = [];
+                $transferOptionLabels = [
+                    'car' => 'Car',
+                    'van' => 'Van',
+                    'ferry' => 'Ferry',
+                    'speedboat' => 'SpeedBoat',
+                    'seaplane' => 'SeaPlane',
+                    'domestic_flight' => 'Domestic Flight',
+                ];
                 foreach ($allVendorCategoryKeys as $categoryKey) {
                     $availabilityTargetsByCategory[$categoryKey] = collect();
                     $availabilityRowsByCategory[$categoryKey] = collect();
                     $listingCountByCategory[$categoryKey] = 0;
+                    $transferRatePropertyTargetsByCategory[$categoryKey] = collect();
                 }
 
                 foreach ($vendorProperties as $property) {
@@ -37,6 +47,34 @@
                     $categoryKey = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
                     if (!is_string($categoryKey) || $categoryKey === '' || !in_array($categoryKey, $allVendorCategoryKeys, true)) {
                         continue;
+                    }
+
+                    if (in_array($categoryKey, ['accommodation', 'remote_workspace'], true)) {
+                        $propertyDetails = [];
+                        if (isset($property->listing_details) && is_string($property->listing_details) && trim((string) $property->listing_details) !== '') {
+                            $decodedPropertyDetails = json_decode((string) $property->listing_details, true);
+                            if (is_array($decodedPropertyDetails)) {
+                                $propertyDetails = $decodedPropertyDetails;
+                            }
+                        }
+
+                        $configuredTransferOptions = collect(is_array($propertyDetails['transfer_options'] ?? null) ? $propertyDetails['transfer_options'] : [])
+                            ->map(static fn ($value): string => strtolower(trim((string) $value)))
+                            ->filter(static fn (string $value): bool => $value !== '')
+                            ->unique()
+                            ->values()
+                            ->all();
+
+                        $configuredTransferRates = is_array($propertyDetails['transfer_rates'] ?? null)
+                            ? $propertyDetails['transfer_rates']
+                            : [];
+
+                        $transferRatePropertyTargetsByCategory[$categoryKey]->push([
+                            'id' => $propertyId,
+                            'label' => 'Property #' . $propertyId . ' - ' . (string) ($property->name ?? ('Property ' . $propertyId)),
+                            'transfer_options' => $configuredTransferOptions,
+                            'transfer_rates' => $configuredTransferRates,
+                        ]);
                     }
 
                     // Accommodation availability is managed at room level only.
@@ -278,6 +316,12 @@
                                 ->filter(static fn ($target) => (string) ($target['kind'] ?? '') === 'property')
                                 ->values();
                         }
+                        $categoryTransferRateTargets = collect();
+                        if (in_array($categoryKey, ['accommodation', 'remote_workspace'], true)) {
+                            $categoryTransferRateTargets = ($transferRatePropertyTargetsByCategory[$categoryKey] ?? collect())
+                                ->sortBy('label')
+                                ->values();
+                        }
                         $accommodationRoomTargetsByProperty = collect();
                         if ($categoryKey === 'accommodation') {
                             $accommodationRoomTargetsByProperty = $categoryTargets
@@ -466,6 +510,59 @@
                                 </div>
                                 <button class="btn btn-primary" type="submit">Save {{ $labelForCategory($categoryKey) }} Availability</button>
                             </form>
+
+                            @if (in_array($categoryKey, ['accommodation', 'remote_workspace'], true))
+                                <form class="ops-form" method="POST" action="/portal/vendor/transfer/rates/save" data-transfer-rate-form="{{ $categoryKey }}">
+                                    @csrf
+                                    <p class="label">Transfer Rate Updates (Availability + Bookings)</p>
+                                    <div class="ops-form-grid">
+                                        <div class="ops-field ops-field-wide">
+                                            <label for="transfer_rate_property_{{ $categorySlug }}">Property / Workspace Listing</label>
+                                            <select id="transfer_rate_property_{{ $categorySlug }}" name="vendor_property_id" class="ops-select" data-transfer-rate-target required>
+                                                <option value="">Select listing</option>
+                                                @foreach ($categoryTransferRateTargets as $transferTarget)
+                                                    @php
+                                                        $configuredTransferOptions = collect(is_array($transferTarget['transfer_options'] ?? null) ? $transferTarget['transfer_options'] : [])
+                                                            ->map(static fn ($item): string => strtolower(trim((string) $item)))
+                                                            ->filter(static fn (string $item): bool => $item !== '')
+                                                            ->values()
+                                                            ->all();
+                                                        $configuredTransferRates = is_array($transferTarget['transfer_rates'] ?? null)
+                                                            ? $transferTarget['transfer_rates']
+                                                            : [];
+                                                    @endphp
+                                                    <option
+                                                        value="{{ (int) ($transferTarget['id'] ?? 0) }}"
+                                                        data-transfer-options="{{ implode(',', $configuredTransferOptions) }}"
+                                                        @foreach ($transferOptionLabels as $transferKey => $transferLabel)
+                                                            data-transfer-rate-{{ $transferKey }}="{{ isset($configuredTransferRates[$transferKey]) && is_numeric($configuredTransferRates[$transferKey]) ? (string) ((float) $configuredTransferRates[$transferKey]) : '' }}"
+                                                        @endforeach
+                                                    >{{ (string) ($transferTarget['label'] ?? ('Property #' . (int) ($transferTarget['id'] ?? 0))) }}</option>
+                                                @endforeach
+                                            </select>
+                                            <p class="small">Only selected transfer options are updated. Keep base transfer options managed at listing setup.</p>
+                                        </div>
+                                        @foreach ($transferOptionLabels as $transferKey => $transferLabel)
+                                            <div class="ops-field">
+                                                <label class="feature-item" style="margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+                                                    <input type="checkbox" name="transfer_options[]" value="{{ $transferKey }}" data-transfer-option-check>
+                                                    {{ $transferLabel }}
+                                                </label>
+                                                <input
+                                                    name="transfer_rates[{{ $transferKey }}]"
+                                                    class="ops-input"
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    data-transfer-rate-input="{{ $transferKey }}"
+                                                    placeholder="Rate per pax (MVR)"
+                                                >
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    <button class="btn btn-secondary" type="submit">Update Transfer Rates</button>
+                                </form>
+                            @endif
 
                             @if ($categoryKey === 'transport')
                                 <form class="ops-form" method="POST" action="/portal/vendor/transport/tariff/save">

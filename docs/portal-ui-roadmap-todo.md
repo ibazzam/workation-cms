@@ -51,6 +51,10 @@ Target: complete launch-critical portal work by March 31, 2026.
 - [x] Add category-based onboarding wizard for vendor vertical selection (transport/accommodation/excursions/remote workspace/resort day visit/restaurants/vehicle rentals)
 - [x] Add room category setup flow for accommodation vendors (quantity, occupancy, amenities, price)
 - [x] Add vendor listing photo upload workflow (entity-based image uploads + media list)
+- [x] Unify vendor category operations UX so availability and reservations are managed together per category card
+- [x] Enforce accommodation room-level operations (property -> room linking, room-only availability updates, room-only accommodation reservations in operations view)
+- [x] Split heavy vendor portal Blade into partials (sidebar, profile, billing settings, category operations, pricing, billing collection)
+- [x] Add route-per-page vendor portal aliases (`/vendor/overview`, `/vendor/listings`, `/vendor/operations`, `/vendor/pricing`, `/vendor/billing`) with shared layout/nav wrapper
 - [ ] Add category-specific advanced listing forms (transport schedule fields, restaurant table windows, excursion slot constraints, rental license rules)
 - [ ] Add per-category publish readiness checks and mandatory image/field validation before listing publish
 

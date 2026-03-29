@@ -272,6 +272,12 @@
                     @php
                         $categorySlug = str_replace('_', '-', (string) $categoryKey);
                         $categoryTargets = $availabilityTargetsByCategory[$categoryKey] ?? collect();
+                        $transportPropertyTargets = collect();
+                        if ($categoryKey === 'transport') {
+                            $transportPropertyTargets = $categoryTargets
+                                ->filter(static fn ($target) => (string) ($target['kind'] ?? '') === 'property')
+                                ->values();
+                        }
                         $accommodationRoomTargetsByProperty = collect();
                         if ($categoryKey === 'accommodation') {
                             $accommodationRoomTargetsByProperty = $categoryTargets
@@ -460,6 +466,51 @@
                                 </div>
                                 <button class="btn btn-primary" type="submit">Save {{ $labelForCategory($categoryKey) }} Availability</button>
                             </form>
+
+                            @if ($categoryKey === 'transport')
+                                <form class="ops-form" method="POST" action="/portal/vendor/transport/tariff/save">
+                                    @csrf
+                                    <p class="label">Transport Tariff (Availability + Bookings)</p>
+                                    <div class="ops-form-grid">
+                                        <div class="ops-field ops-field-wide">
+                                            <label for="transport_tariff_property_{{ $categorySlug }}">Vehicle / Vessel Listing</label>
+                                            <select id="transport_tariff_property_{{ $categorySlug }}" name="vendor_property_id" class="ops-select" required>
+                                                <option value="">Select transport listing</option>
+                                                @foreach ($transportPropertyTargets as $transportTarget)
+                                                    <option value="{{ (int) ($transportTarget['id'] ?? 0) }}">{{ (string) ($transportTarget['label'] ?? ('Property #' . (int) ($transportTarget['id'] ?? 0))) }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="ops-field">
+                                            <label for="transport_tariff_mode_{{ $categorySlug }}">Tariff Type</label>
+                                            <select id="transport_tariff_mode_{{ $categorySlug }}" name="tariff_mode" class="ops-select" required>
+                                                <option value="per_trip">Per Trip</option>
+                                                <option value="hourly">Hourly Hire</option>
+                                                <option value="daily">Daily Hire</option>
+                                                <option value="private_hire">Private Hire</option>
+                                            </select>
+                                        </div>
+                                        <div class="ops-field">
+                                            <label for="transport_per_trip_rate_{{ $categorySlug }}">Per Trip Rate (MVR)</label>
+                                            <input id="transport_per_trip_rate_{{ $categorySlug }}" name="per_trip_rate" class="ops-input" type="number" min="0" step="0.01" value="0">
+                                        </div>
+                                        <div class="ops-field">
+                                            <label for="transport_hourly_rate_{{ $categorySlug }}">Hourly Hire Rate (MVR)</label>
+                                            <input id="transport_hourly_rate_{{ $categorySlug }}" name="hourly_rate" class="ops-input" type="number" min="0" step="0.01" value="0">
+                                        </div>
+                                        <div class="ops-field">
+                                            <label for="transport_daily_rate_{{ $categorySlug }}">Daily Hire Rate (MVR)</label>
+                                            <input id="transport_daily_rate_{{ $categorySlug }}" name="daily_rate" class="ops-input" type="number" min="0" step="0.01" value="0">
+                                        </div>
+                                        <div class="ops-field">
+                                            <label for="transport_private_hire_rate_{{ $categorySlug }}">Private Hire Tariff (MVR)</label>
+                                            <input id="transport_private_hire_rate_{{ $categorySlug }}" name="private_hire_rate" class="ops-input" type="number" min="0" step="0.01" value="0">
+                                        </div>
+                                    </div>
+                                    <p class="small">Set the tariff mode and rates after creating the vehicle/vessel listing. Customers will see these tariffs during booking.</p>
+                                    <button class="btn btn-secondary" type="submit">Save Transport Tariff</button>
+                                </form>
+                            @endif
 
                             <div class="ops-table-wrap">
                                 <table class="ops-table" aria-label="{{ $labelForCategory($categoryKey) }} availability table">

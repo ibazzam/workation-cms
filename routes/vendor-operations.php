@@ -1736,6 +1736,143 @@ Route::post('/portal/vendor/media/{media}/primary', function (int $media) {
     return vendorPortalListingsBackResponse('Primary photo updated.', 4);
 });
 
+Route::post('/portal/vendor/media/{media}/update', function (Request $request, int $media) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    if (!Schema::hasTable('vendor_listing_media')) {
+        return back()->withErrors(['profile' => 'Media storage table is not ready. Run migrations first.']);
+    }
+
+    $validated = $request->validate([
+        'alt_text' => ['required', 'string', 'max:190'],
+    ]);
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $updated = DB::table('vendor_listing_media')
+        ->where('id', $media)
+        ->where('vendor_user_id', $vendorUserId)
+        ->update([
+            'alt_text' => trim((string) $validated['alt_text']),
+            'updated_at' => now(),
+        ]);
+
+    if ($updated <= 0) {
+        return back()->withErrors(['profile' => 'Media item not found for this vendor account.']);
+    }
+
+    return vendorPortalListingsBackResponse('Photo details updated.', 4);
+});
+
+Route::post('/portal/vendor/media/{media}/delete', function (int $media) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    if (!Schema::hasTable('vendor_listing_media')) {
+        return back()->withErrors(['profile' => 'Media storage table is not ready. Run migrations first.']);
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $mediaRecord = DB::table('vendor_listing_media')
+        ->where('id', $media)
+        ->where('vendor_user_id', $vendorUserId)
+        ->first();
+
+    if (!$mediaRecord) {
+        return back()->withErrors(['profile' => 'Media item not found for this vendor account.']);
+    }
+
+    $entityType = (string) ($mediaRecord->entity_type ?? '');
+    $entityId = isset($mediaRecord->entity_id) ? (int) $mediaRecord->entity_id : null;
+    $isPrimary = (bool) ($mediaRecord->is_primary ?? false);
+
+    $originalPath = trim((string) ($mediaRecord->file_path ?? ''));
+    $bannerPath = $originalPath;
+    $thumbPath = $originalPath;
+    if ($originalPath !== '') {
+        $bannerPath = preg_replace('/-thumb(\.[a-z0-9]+)$/i', '-banner$1', $originalPath) ?? $originalPath;
+        $thumbPath = preg_replace('/-banner(\.[a-z0-9]+)$/i', '-thumb$1', $originalPath) ?? $originalPath;
+    }
+
+    $normalizeDiskPath = static function (string $path): string {
+        $normalized = trim(str_replace('\\', '/', $path));
+        if ($normalized === '') {
+            return '';
+        }
+
+        $normalized = ltrim($normalized, '/');
+        if (str_starts_with($normalized, 'public/')) {
+            $normalized = substr($normalized, 7);
+        }
+        if (str_starts_with($normalized, 'storage/')) {
+            $normalized = substr($normalized, 8);
+        }
+
+        return ltrim($normalized, '/');
+    };
+
+    $pathsToDelete = collect([
+        $bannerPath,
+        $thumbPath,
+        $normalizeDiskPath($bannerPath),
+        $normalizeDiskPath($thumbPath),
+    ])->map(static fn ($path) => trim((string) $path))
+      ->filter(static fn ($path) => $path !== '')
+      ->unique()
+      ->values()
+      ->all();
+
+    foreach ($pathsToDelete as $path) {
+        try {
+            if (Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+        } catch (\Throwable $e) {
+            // Best effort deletion.
+        }
+
+        try {
+            if (Storage::disk('local')->exists($path)) {
+                Storage::disk('local')->delete($path);
+            }
+            $localPublicPath = 'public/' . ltrim($path, '/');
+            if (Storage::disk('local')->exists($localPublicPath)) {
+                Storage::disk('local')->delete($localPublicPath);
+            }
+        } catch (\Throwable $e) {
+            // Best effort deletion.
+        }
+    }
+
+    DB::table('vendor_listing_media')
+        ->where('id', $media)
+        ->where('vendor_user_id', $vendorUserId)
+        ->delete();
+
+    if ($isPrimary) {
+        $replacement = DB::table('vendor_listing_media')
+            ->where('vendor_user_id', $vendorUserId)
+            ->where('entity_type', $entityType)
+            ->where('entity_id', $entityId)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if ($replacement) {
+            DB::table('vendor_listing_media')
+                ->where('id', (int) ($replacement->id ?? 0))
+                ->where('vendor_user_id', $vendorUserId)
+                ->update([
+                    'is_primary' => true,
+                    'updated_at' => now(),
+                ]);
+        }
+    }
+
+    return vendorPortalListingsBackResponse('Photo removed.', 4);
+});
+
 Route::post('/portal/vendor/rooms/create', function (Request $request) {
     if (!session('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');

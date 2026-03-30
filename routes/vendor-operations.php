@@ -1616,8 +1616,8 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
         $heightPx = (int) $imageSize[1];
         $fileSizeKb = (int) ceil(((int) $file->getSize()) / 1024);
 
-        if ($widthPx < 1200 || $heightPx < 800) {
-            return back()->withErrors(['profile' => 'All uploaded images must be at least 1200x800 pixels.'])->withInput();
+        if ($widthPx < 800 || $heightPx < 600) {
+            return back()->withErrors(['profile' => 'All uploaded images must be at least 800x600 pixels.'])->withInput();
         }
         if ($widthPx > 2400 || $heightPx > 1600) {
             return back()->withErrors(['profile' => 'All uploaded images must be 2400x1600 pixels or smaller.'])->withInput();

@@ -32,17 +32,18 @@
         }
 
         .page {
-            max-width: 1120px;
-            margin: 0 auto;
-            padding: 24px 18px 34px;
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            padding: 10px 12px 20px;
         }
 
         .hero {
             background: linear-gradient(130deg, var(--hero-1) 0%, var(--hero-2) 52%, var(--hero-3) 100%);
-            border-radius: 18px;
+            border-radius: 12px;
             color: #fff;
-            padding: 24px;
-            box-shadow: 0 22px 44px rgba(18, 38, 58, 0.2);
+            padding: 12px 14px;
+            box-shadow: 0 10px 24px rgba(18, 38, 58, 0.18);
         }
 
         .eyebrow {
@@ -57,32 +58,59 @@
 
         .hero h1 {
             margin: 0 0 8px;
-            font-size: clamp(1.45rem, 2.8vw, 2.3rem);
+            font-size: clamp(1.2rem, 2vw, 1.65rem);
             line-height: 1.15;
         }
 
         .hero p {
             margin: 0;
             color: #dcf4f3;
-            max-width: 780px;
+            max-width: 980px;
+            font-size: 0.86rem;
+        }
+
+        .portal-shell {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: 240px minmax(0, 1fr);
+            gap: 10px;
+            align-items: start;
+            min-height: calc(100vh - 86px);
+        }
+
+        .portal-content {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .portal-content > section,
+        .portal-content > div {
+            width: 100%;
         }
 
         .hero-links {
-            margin-top: 14px;
             display: flex;
-            flex-wrap: wrap;
+            flex-direction: column;
             gap: 8px;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #f7fbff;
+            position: sticky;
+            top: 8px;
+            max-height: calc(100vh - 16px);
+            overflow-y: auto;
         }
 
         .hero-link {
             color: #ecfbff;
             text-decoration: none;
-            border: 1px solid #b8dfe4;
-            border-radius: 9px;
+            border-radius: 10px;
             padding: 8px 10px;
             font-size: 0.82rem;
+            font-size: 0.82rem;
             background: rgba(11, 49, 75, 0.32);
-        }
+            background: #ffffff;
 
         .portal-nav {
             margin-top: 12px;
@@ -268,6 +296,8 @@
         .status-pill.warn { color: var(--warn); background: var(--warn-bg); }
 
         @media (max-width: 900px) {
+            .portal-shell { grid-template-columns: 1fr; min-height: auto; }
+            .portal-nav { position: static; overflow-x: auto; overflow-y: hidden; white-space: nowrap; flex-direction: row; flex-wrap: wrap; }
             .summary-grid { grid-template-columns: 1fr 1fr; }
             .listing-grid { grid-template-columns: 1fr; }
             .layout { grid-template-columns: 1fr; }
@@ -306,14 +336,16 @@
             </div>
         </section>
 
-        <nav class="portal-nav" aria-label="Customer navigation">
-            <a href="#customerSummary">Summary</a>
-            <a href="#discoverListings">Listings</a>
-            <a href="#bookingsCard">Bookings</a>
-            <a href="#paymentsCard">Payments</a>
-            <a href="#notificationsCard">Notifications</a>
-        </nav>
+        <div class="portal-shell">
+            <nav class="portal-nav" aria-label="Customer navigation">
+                <a href="#customerSummary">Summary</a>
+                <a href="#discoverListings">Listings</a>
+                <a href="#bookingsCard">Bookings</a>
+                <a href="#paymentsCard">Payments</a>
+                <a href="#notificationsCard">Notifications</a>
+            </nav>
 
+            <div class="portal-content">
         <section id="customerSummary" class="summary-grid" aria-label="Customer dashboard summary">
             <article class="summary-card">
                 <p class="summary-label">Upcoming Trips</p>
@@ -435,6 +467,8 @@
                 </ul>
             </article>
         </section>
+            </div>
+        </div>
     </main>
 </body>
 </html>

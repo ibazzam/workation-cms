@@ -34,17 +34,18 @@
         }
 
         .page {
-            max-width: 1120px;
-            margin: 0 auto;
-            padding: 24px 18px 34px;
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            padding: 10px 12px 20px;
         }
 
         .hero {
             background: linear-gradient(130deg, var(--hero-1) 0%, var(--hero-2) 48%, var(--hero-3) 100%);
-            border-radius: 18px;
+            border-radius: 12px;
             color: #fff;
-            padding: 24px;
-            box-shadow: 0 22px 44px rgba(18, 38, 58, 0.2);
+            padding: 12px 14px;
+            box-shadow: 0 10px 24px rgba(18, 38, 58, 0.18);
         }
 
         .eyebrow {
@@ -59,32 +60,61 @@
 
         .hero h1 {
             margin: 0 0 8px;
-            font-size: clamp(1.45rem, 2.8vw, 2.3rem);
+            font-size: clamp(1.2rem, 2vw, 1.65rem);
             line-height: 1.15;
         }
 
         .hero p {
             margin: 0;
             color: #dcf4f3;
-            max-width: 780px;
+            max-width: 980px;
+            font-size: 0.86rem;
+        }
+
+        .portal-shell {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: 240px minmax(0, 1fr);
+            gap: 10px;
+            align-items: start;
+            min-height: calc(100vh - 86px);
+        }
+
+        .portal-content {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .portal-content > section,
+        .portal-content > div,
+        .portal-content > button,
+        .portal-content > footer {
+            width: 100%;
         }
 
         .hero-links {
-            margin-top: 14px;
             display: flex;
-            flex-wrap: wrap;
+            flex-direction: column;
             gap: 8px;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #f7fbff;
+            position: sticky;
+            top: 8px;
+            max-height: calc(100vh - 16px);
+            overflow-y: auto;
         }
 
         .auth-bar {
             margin-top: 10px;
             display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 8px;
+            border-radius: 10px;
+            padding: 8px 10px;
+            font-size: 0.82rem;
         }
 
-        .auth-user {
+            background: #ffffff;
             font-size: 0.82rem;
             border: 1px solid #b8dfe4;
             border-radius: 999px;
@@ -835,6 +865,11 @@
         }
 
         @media (max-width: 900px) {
+            .portal-shell {
+                grid-template-columns: 1fr;
+                min-height: auto;
+            }
+
             .layout {
                 grid-template-columns: 1fr;
             }
@@ -861,8 +896,12 @@
             }
 
             .portal-nav {
+                position: static;
                 overflow-x: auto;
+                overflow-y: hidden;
                 white-space: nowrap;
+                flex-direction: row;
+                flex-wrap: wrap;
             }
         }
         .prominent {
@@ -899,6 +938,7 @@
             </div>
         </section>
 
+        <div class="portal-shell">
         <nav class="portal-nav" aria-label="Admin navigation">
             <a href="#dashboardWidgets">Dashboard</a>
             <a href="#rolePermissionsPanel">Role Permissions</a>
@@ -911,6 +951,8 @@
             <a href="#vendorRegistrationHistoryPanel" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Vendor Review History</a>
             <a href="#auditPanel">Audit History</a>
         </nav>
+
+        <div class="portal-content">
 
         <section class="widget-grid" id="dashboardWidgets">
             <article class="widget-card">
@@ -1754,6 +1796,8 @@
             <a href="mailto:support@workation.mv">Email Support</a>
             <a href="{{ $apiBase }}/api/v1/ops/runbooks" target="_blank" rel="noopener">Operations Runbooks</a>
         </footer>
+        </div>
+        </div>
     </main>
 
     <script>

@@ -744,4 +744,3 @@
                 @endforeach
             </div>
         </section>
-        </section>

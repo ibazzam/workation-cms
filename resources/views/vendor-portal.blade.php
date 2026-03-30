@@ -1169,12 +1169,29 @@
             grid-template-columns: 1fr;
         }
 
+        .listing-management-table tr.is-media-open .listing-cell-main {
+            display: none;
+        }
+
+        .listing-management-table tr.is-media-open .listing-cell-actions-cell {
+            width: 100%;
+        }
+
         .room-management-table tr.is-editing td:nth-child(1),
         .room-management-table tr.is-editing td:nth-child(2) {
             display: none;
         }
 
         .room-management-table tr.is-editing td:nth-child(3) {
+            width: 100%;
+        }
+
+        .room-management-table tr.is-media-open td:nth-child(1),
+        .room-management-table tr.is-media-open td:nth-child(2) {
+            display: none;
+        }
+
+        .room-management-table tr.is-media-open td:nth-child(3) {
             width: 100%;
         }
 
@@ -1431,6 +1448,29 @@
 
         .gallery-card-actions form {
             margin: 0;
+        }
+
+        .gallery-edit-form {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 6px;
+            width: 100%;
+        }
+
+        .gallery-edit-form input {
+            border: 1px solid #c8d3df;
+            border-radius: 8px;
+            padding: 6px 8px;
+            font-size: 0.75rem;
+            font-family: "Outfit", "Trebuchet MS", sans-serif;
+            color: #1d3045;
+            background: #fff;
+        }
+
+        .gallery-delete-form .btn-danger {
+            width: auto;
+            margin-top: 0;
+            margin-left: 0;
         }
 
         .gallery-meta {
@@ -2930,6 +2970,11 @@
                                                                                 <img src="{{ $mediaUrl }}" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $mediaFallbackUrl }}';}" alt="{{ (string) ($media->alt_text ?? $property->name) }}" loading="lazy">
                                                                                 <div class="gallery-card-body">
                                                                                     <p class="gallery-card-title">{{ (string) ($media->alt_text ?? 'Listing photo') }}</p>
+                                                                                    <form class="gallery-edit-form" method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/update">
+                                                                                        @csrf
+                                                                                        <input name="alt_text" type="text" maxlength="190" value="{{ (string) ($media->alt_text ?? 'Listing photo') }}" aria-label="Edit listing photo text">
+                                                                                        <button class="btn btn-secondary" type="submit">Save</button>
+                                                                                    </form>
                                                                                     <div class="gallery-card-actions">
                                                                                         @if ((bool) ($media->is_primary ?? false))
                                                                                             <span class="ops-chip">Primary</span>
@@ -2939,6 +2984,10 @@
                                                                                                 <button class="btn btn-secondary" type="submit">Set Primary</button>
                                                                                             </form>
                                                                                         @endif
+                                                                                        <form class="gallery-delete-form" method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/delete" onsubmit="return confirm('Remove this photo?');">
+                                                                                            @csrf
+                                                                                            <button class="btn btn-danger" type="submit">Remove</button>
+                                                                                        </form>
                                                                                     </div>
                                                                                 </div>
                                                                             </article>
@@ -3095,6 +3144,11 @@
                                                                                                                 <img src="{{ $roomMediaUrl }}" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $roomMediaFallbackUrl }}';}" alt="{{ (string) ($media->alt_text ?? $room->name) }}" loading="lazy">
                                                                                                                 <div class="gallery-card-body">
                                                                                                                     <p class="gallery-card-title">{{ (string) ($media->alt_text ?? 'Room photo') }}</p>
+                                                                                                                    <form class="gallery-edit-form" method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/update">
+                                                                                                                        @csrf
+                                                                                                                        <input name="alt_text" type="text" maxlength="190" value="{{ (string) ($media->alt_text ?? 'Room photo') }}" aria-label="Edit room photo text">
+                                                                                                                        <button class="btn btn-secondary" type="submit">Save</button>
+                                                                                                                    </form>
                                                                                                                     <div class="gallery-card-actions">
                                                                                                                         @if ((bool) ($media->is_primary ?? false))
                                                                                                                             <span class="ops-chip">Primary</span>
@@ -3104,6 +3158,10 @@
                                                                                                                                 <button class="btn btn-secondary" type="submit">Set Primary</button>
                                                                                                                             </form>
                                                                                                                         @endif
+                                                                                                                        <form class="gallery-delete-form" method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/delete" onsubmit="return confirm('Remove this photo?');">
+                                                                                                                            @csrf
+                                                                                                                            <button class="btn btn-danger" type="submit">Remove</button>
+                                                                                                                        </form>
                                                                                                                     </div>
                                                                                                                 </div>
                                                                                                             </article>
@@ -5151,6 +5209,10 @@
                         return;
                     }
                     panel.hidden = !panel.hidden;
+                    const row = panel.closest('tr');
+                    if (row) {
+                        row.classList.toggle('is-media-open', !panel.hidden);
+                    }
                     if (!panel.hidden) {
                         panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     }
@@ -5170,6 +5232,10 @@
                     const panel = document.querySelector('[data-property-media-panel="' + propertyId + '"]');
                     if (panel) {
                         panel.hidden = true;
+                        const row = panel.closest('tr');
+                        if (row) {
+                            row.classList.remove('is-media-open');
+                        }
                     }
                 });
             });
@@ -5189,6 +5255,10 @@
                         return;
                     }
                     panel.hidden = !panel.hidden;
+                    const row = panel.closest('tr');
+                    if (row) {
+                        row.classList.toggle('is-media-open', !panel.hidden);
+                    }
                     if (!panel.hidden) {
                         panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     }
@@ -5208,6 +5278,10 @@
                     const panel = document.querySelector('[data-room-media-panel="' + roomId + '"]');
                     if (panel) {
                         panel.hidden = true;
+                        const row = panel.closest('tr');
+                        if (row) {
+                            row.classList.remove('is-media-open');
+                        }
                     }
                 });
             });
@@ -6130,6 +6204,10 @@
                         const panel = document.querySelector('[data-property-media-panel="' + propertyId + '"]');
                         if (!panel) return;
                         panel.hidden = !panel.hidden;
+                        const row = panel.closest('tr');
+                        if (row) {
+                            row.classList.toggle('is-media-open', !panel.hidden);
+                        }
                     });
                 });
 
@@ -6142,7 +6220,13 @@
                         const propertyId = String(button.getAttribute('data-close-property-media') || '').trim();
                         if (!propertyId) return;
                         const panel = document.querySelector('[data-property-media-panel="' + propertyId + '"]');
-                        if (panel) panel.hidden = true;
+                        if (panel) {
+                            panel.hidden = true;
+                            const row = panel.closest('tr');
+                            if (row) {
+                                row.classList.remove('is-media-open');
+                            }
+                        }
                     });
                 });
 
@@ -6157,6 +6241,10 @@
                         const panel = document.querySelector('[data-room-media-panel="' + roomId + '"]');
                         if (!panel) return;
                         panel.hidden = !panel.hidden;
+                        const row = panel.closest('tr');
+                        if (row) {
+                            row.classList.toggle('is-media-open', !panel.hidden);
+                        }
                     });
                 });
 
@@ -6169,7 +6257,13 @@
                         const roomId = String(button.getAttribute('data-close-room-media') || '').trim();
                         if (!roomId) return;
                         const panel = document.querySelector('[data-room-media-panel="' + roomId + '"]');
-                        if (panel) panel.hidden = true;
+                        if (panel) {
+                            panel.hidden = true;
+                            const row = panel.closest('tr');
+                            if (row) {
+                                row.classList.remove('is-media-open');
+                            }
+                        }
                     });
                 });
 

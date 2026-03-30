@@ -8,318 +8,393 @@
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
     <style>
         :root {
-            --sand: #efe4d2;
-            --seafoam: #d9e9e4;
-            --ink: #19232f;
-            --muted: #5e6978;
-            --card: #fffefb;
-            --line: #d8dee6;
-            --hero-1: #123550;
-            --hero-2: #0f6d80;
-            --hero-3: #1f9a86;
-            --ok-text: #0b5c2a;
-            --ok-bg: #d8f7e2;
-            --warn-text: #7a4606;
-            --warn-bg: #ffeccd;
-            --down-text: #6d1111;
-            --down-bg: #ffe0de;
+            --bg-a: #e8f7f4;
+            --bg-b: #fff8e9;
+            --ink: #16212f;
+            --muted: #526274;
+            --line: #d6e0ea;
+            --card: #ffffff;
+            --brand-a: #0f4f7e;
+            --brand-b: #0f7f7d;
+            --brand-c: #f6a53e;
+            --ok: #0f6a33;
+            --ok-bg: #ddf8e5;
+            --warn: #864d04;
+            --warn-bg: #fff0d0;
+            --down: #841f1f;
+            --down-bg: #ffdede;
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
-            font-family: "Outfit", "Trebuchet MS", sans-serif;
             color: var(--ink);
+            font-family: "Outfit", "Trebuchet MS", sans-serif;
             background:
-                radial-gradient(circle at 12% 20%, #c8e8df 0, #c8e8df00 35%),
-                radial-gradient(circle at 88% 12%, #ffe7bf 0, #ffe7bf00 32%),
-                linear-gradient(110deg, var(--seafoam) 0%, var(--sand) 100%);
+                radial-gradient(circle at 9% 9%, #c7ece5 0, #c7ece500 30%),
+                radial-gradient(circle at 88% 8%, #ffe4b6 0, #ffe4b600 28%),
+                linear-gradient(120deg, var(--bg-a) 0%, var(--bg-b) 100%);
         }
 
         .page {
-            max-width: 1120px;
-            margin: 0 auto;
-            padding: 28px 20px 42px;
+            width: min(1200px, 100% - 28px);
+            margin: 18px auto 30px;
         }
 
         .hero {
-            background: linear-gradient(135deg, var(--hero-1) 0%, var(--hero-2) 46%, var(--hero-3) 100%);
+            border-radius: 24px;
+            padding: 28px;
             color: #fff;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 24px 46px rgba(18, 38, 58, 0.2);
+            background: linear-gradient(136deg, var(--brand-a) 0%, var(--brand-b) 52%, #2a9f9a 100%);
+            box-shadow: 0 24px 56px rgba(14, 55, 78, 0.25);
             position: relative;
             overflow: hidden;
-            animation: rise-in 500ms ease-out both;
         }
 
+        .hero::before,
         .hero::after {
             content: "";
             position: absolute;
-            right: -80px;
-            top: -80px;
+            border-radius: 999px;
+            pointer-events: none;
+        }
+
+        .hero::before {
             width: 220px;
             height: 220px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0) 65%);
-            pointer-events: none;
+            right: -80px;
+            top: -80px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 68%);
+        }
+
+        .hero::after {
+            width: 300px;
+            height: 300px;
+            left: -150px;
+            bottom: -170px;
+            background: radial-gradient(circle, rgba(255, 204, 114, 0.3) 0%, rgba(255, 204, 114, 0) 72%);
         }
 
         .eyebrow {
             display: inline-block;
             margin-bottom: 10px;
-            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
             font-size: 0.78rem;
-            letter-spacing: 0.14em;
+            letter-spacing: 0.13em;
             text-transform: uppercase;
-            color: #cdebef;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            color: #d5f4f6;
         }
 
         .hero h1 {
-            margin: 0 0 10px;
-            font-size: clamp(1.7rem, 3.1vw, 2.65rem);
-            letter-spacing: 0.01em;
-            line-height: 1.1;
+            margin: 0;
+            font-size: clamp(1.7rem, 3.4vw, 2.9rem);
+            line-height: 1.08;
+            max-width: 880px;
         }
 
         .hero p {
-            margin: 0;
-            color: #dbf2f0;
-            max-width: 780px;
-            line-height: 1.5;
+            margin: 12px 0 0;
+            color: #daf6f7;
+            max-width: 760px;
             font-size: 1.02rem;
+            line-height: 1.5;
         }
 
-        .cta {
-            margin-top: 20px;
+        .hero-cta {
+            margin-top: 18px;
             display: flex;
-            gap: 10px;
             flex-wrap: wrap;
+            gap: 10px;
         }
 
         .btn {
             text-decoration: none;
-            border-radius: 11px;
-            padding: 10px 15px;
+            border-radius: 12px;
+            padding: 11px 16px;
             font-weight: 700;
-            display: inline-block;
+            font-size: 0.9rem;
             transition: transform 180ms ease, box-shadow 180ms ease;
+            display: inline-block;
         }
+
+        .btn:hover { transform: translateY(-1px); }
 
         .btn-primary {
-            background: #fff;
-            color: #073d36;
-            box-shadow: 0 6px 16px rgba(11, 36, 54, 0.2);
+            background: #ffffff;
+            color: #0f4b4a;
+            box-shadow: 0 10px 22px rgba(11, 45, 63, 0.24);
         }
 
-        .btn-secondary {
-            border: 1px solid #b5dde0;
-            color: #e8f8f7;
+        .btn-soft {
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(216, 245, 248, 0.45);
+            color: #f3fdff;
         }
 
-        .btn:hover {
-            transform: translateY(-1px);
-        }
-
-        .hero-meta {
+        .hero-pills {
             margin-top: 14px;
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
         }
 
-        .meta-pill {
-            font-size: 0.75rem;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            padding: 6px 9px;
+        .pill {
+            border: 1px solid rgba(216, 245, 248, 0.42);
+            background: rgba(8, 58, 72, 0.28);
+            color: #dff7f8;
             border-radius: 999px;
-            border: 1px solid rgba(206, 238, 235, 0.5);
-            color: #e3f5f2;
-            background: rgba(12, 52, 73, 0.28);
+            padding: 6px 10px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .strip {
+            margin-top: 12px;
+            border-radius: 14px;
+            border: 1px solid #f2d4ab;
+            background: linear-gradient(90deg, #fff5df 0%, #fff2dd 50%, #ffedd4 100%);
+            color: #5f3f18;
+            padding: 10px 12px;
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+
+        .quick-links {
+            margin-top: 16px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .quick-link {
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            text-decoration: none;
+            color: #193348;
+            background: #fff;
+            padding: 14px;
+            display: grid;
+            gap: 5px;
+            box-shadow: 0 5px 12px rgba(23, 45, 67, 0.06);
+        }
+
+        .quick-link small {
+            color: #5d6f83;
+            font-size: 0.8rem;
         }
 
         .grid {
+            margin-top: 16px;
             display: grid;
             grid-template-columns: repeat(12, minmax(0, 1fr));
-            gap: 14px;
-            margin-top: 18px;
+            gap: 12px;
         }
 
         .card {
             background: var(--card);
-            border-radius: 16px;
-            padding: 16px;
             border: 1px solid var(--line);
-            box-shadow: 0 2px 0 rgba(39, 58, 79, 0.04);
-            animation: rise-in 460ms ease-out both;
+            border-radius: 16px;
+            padding: 14px;
         }
 
         .kpi { grid-column: span 3; }
-        .wide { grid-column: span 6; }
+        .half { grid-column: span 6; }
 
         .label {
-            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
-            font-size: 0.75rem;
-            color: var(--muted);
+            margin: 0;
+            font-size: 0.73rem;
             text-transform: uppercase;
-            letter-spacing: 0.13em;
-            margin-bottom: 6px;
+            letter-spacing: 0.12em;
+            color: var(--muted);
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
         }
 
         .value {
-            font-size: 1.9rem;
-            font-weight: 700;
-            line-height: 1.1;
+            margin-top: 8px;
+            font-size: 1.8rem;
+            font-weight: 800;
+            line-height: 1.05;
         }
 
         .status {
-            font-size: 0.82rem;
-            font-weight: 700;
-            display: inline-block;
-            letter-spacing: 0.03em;
-            padding: 5px 9px;
-            border-radius: 999px;
             margin-top: 8px;
+            display: inline-block;
+            border-radius: 999px;
+            padding: 5px 9px;
+            font-size: 0.78rem;
+            font-weight: 700;
         }
 
-        .ok { color: var(--ok-text); background: var(--ok-bg); }
-        .warn { color: var(--warn-text); background: var(--warn-bg); }
-        .down { color: var(--down-text); background: var(--down-bg); }
+        .ok { color: var(--ok); background: var(--ok-bg); }
+        .warn { color: var(--warn); background: var(--warn-bg); }
+        .down { color: var(--down); background: var(--down-bg); }
+
+        .steps {
+            margin: 12px 0 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            gap: 8px;
+        }
+
+        .steps li {
+            border: 1px solid #e2ebf3;
+            border-radius: 12px;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: 26px 1fr;
+            gap: 8px;
+            align-items: start;
+            color: #33495f;
+            font-size: 0.9rem;
+        }
+
+        .steps b {
+            width: 26px;
+            height: 26px;
+            border-radius: 999px;
+            background: #edf6ff;
+            border: 1px solid #d4e5f6;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            color: #22517a;
+            font-size: 0.84rem;
+        }
 
         .list {
-            margin: 0;
+            margin: 10px 0 0;
             padding-left: 18px;
-            line-height: 1.6;
-        }
-
-        .list li {
-            margin-bottom: 6px;
+            font-size: 0.9rem;
+            color: #365168;
+            line-height: 1.55;
         }
 
         .list a {
-            color: #0f4f8f;
+            color: #115f9a;
             text-underline-offset: 2px;
         }
 
-        .list a:hover {
-            color: #093965;
-        }
-
-        .kpi:nth-child(1) { animation-delay: 70ms; }
-        .kpi:nth-child(2) { animation-delay: 120ms; }
-        .kpi:nth-child(3) { animation-delay: 170ms; }
-        .kpi:nth-child(4) { animation-delay: 220ms; }
-
-        @keyframes rise-in {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @media (max-width: 900px) {
-            .kpi, .wide { grid-column: span 12; }
-            .hero { padding: 24px; }
-            .value { font-size: 1.75rem; }
-        }
-
         .footer-nav {
-            margin-top: 18px;
+            margin-top: 16px;
+            border-top: 1px solid #cad6e3;
+            padding-top: 12px;
             display: flex;
+            gap: 8px;
             flex-wrap: wrap;
-            gap: 10px;
             justify-content: center;
-            border-top: 1px solid #c9d8df;
-            padding-top: 14px;
         }
 
         .footer-link {
-            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
-            font-size: 0.78rem;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: #0b446a;
             text-decoration: none;
-            padding: 8px 10px;
-            border: 1px solid #bfd2df;
+            border: 1px solid #c8d6e5;
             border-radius: 10px;
-            background: #f8fbff;
+            padding: 8px 10px;
+            background: #f6fbff;
+            font-size: 0.8rem;
+            color: #19466a;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
         }
 
-        .footer-link:hover {
-            background: #edf5fd;
+        @media (max-width: 980px) {
+            .quick-links { grid-template-columns: 1fr 1fr; }
+            .kpi, .half { grid-column: span 12; }
+        }
+
+        @media (max-width: 700px) {
+            .page { width: calc(100% - 20px); }
+            .hero { padding: 20px; }
+            .hero p { font-size: 0.94rem; }
+            .quick-links { grid-template-columns: 1fr; }
+            .btn { width: 100%; text-align: center; }
         }
     </style>
 </head>
 <body>
-    <div class="page" data-api-base="{{ $apiBase }}">
+    <main class="page" data-api-base="{{ $apiBase }}">
         <section class="hero">
-            <span class="eyebrow">Production Surface</span>
-            <h1>Workation Maldives Launch Console</h1>
+            <span class="eyebrow">Your Island Travel Playground</span>
+            <h1>Discover work-friendly stays, island trips, and transport in one joyful flow.</h1>
             <p>
-                The platform is live with strict preflight checks passing, alert routing configured,
-                and launch governance complete. This page replaces the default framework splash and
-                surfaces current runtime activity.
+                Workation Maldives brings accommodation, transfers, excursions, and remote workspace options together so families,
+                solo travelers, and teams can plan in minutes.
             </p>
-            <div class="cta">
-                <a class="btn btn-primary" href="/admin">Admin Portal</a>
-                <a class="btn btn-secondary" href="/vendor">Vendor Portal</a>
-                <a class="btn btn-secondary" href="/customer">Customer Portal</a>
-                <a class="btn btn-secondary" href="/users">Users Console</a>
-                <a class="btn btn-primary" href="{{ $apiBase }}/api/v1/health" target="_blank" rel="noopener">Open API Health</a>
-                <a class="btn btn-secondary" href="https://github.com/ibazzam/workation-cms/actions/runs/22991556615" target="_blank" rel="noopener">Strict Preflight Evidence</a>
+            <div class="hero-cta">
+                <a class="btn btn-primary" href="/customer">Start Exploring</a>
+                <a class="btn btn-soft" href="/customer#discoverListings">Find Stays and Rooms</a>
+                <a class="btn btn-soft" href="/portal/vendor/register?mode=email">Become a Vendor</a>
             </div>
-            <div class="hero-meta">
-                <span class="meta-pill">Strict Gate: Passed</span>
-                <span class="meta-pill">Routing: Pager, Slack, Email</span>
-                <span class="meta-pill">Domain: workation.mv</span>
+            <div class="hero-pills">
+                <span class="pill">Live Listings</span>
+                <span class="pill">Family Friendly</span>
+                <span class="pill">Fast Booking Journey</span>
             </div>
         </section>
 
-        <section class="grid">
+        <p class="strip">Simple by design: pick destination, compare options, choose room, and confirm with clear pricing.</p>
+
+        <section class="quick-links" aria-label="Primary routes">
+            <a class="quick-link" href="/customer">
+                <strong>Customer Portal</strong>
+                <small>Browse and compare listings instantly</small>
+            </a>
+            <a class="quick-link" href="/vendor">
+                <strong>Vendor Portal</strong>
+                <small>Manage listings, rooms, and media</small>
+            </a>
+            <a class="quick-link" href="/admin">
+                <strong>Admin Portal</strong>
+                <small>Oversee operations and governance</small>
+            </a>
+            <a class="quick-link" href="/users">
+                <strong>Users Console</strong>
+                <small>Portal account controls and access</small>
+            </a>
+        </section>
+
+        <section class="grid" aria-label="Live platform confidence">
             <article class="card kpi">
-                <div class="label">Homepage Runtime</div>
-                <div class="value" id="pageTime">--</div>
-                <div class="status ok" id="pageStatus">ACTIVE</div>
+                <p class="label">Server Time</p>
+                <p class="value" id="pageTime">--</p>
+                <span class="status ok">ACTIVE</span>
+            </article>
+            <article class="card kpi">
+                <p class="label">API Health</p>
+                <p class="value" id="healthCode">checking</p>
+                <span class="status warn" id="healthState">PENDING</span>
+            </article>
+            <article class="card kpi">
+                <p class="label">Preflight</p>
+                <p class="value">PASS</p>
+                <span class="status ok">STRICT GATE</span>
+            </article>
+            <article class="card kpi">
+                <p class="label">Alert Routing</p>
+                <p class="value">PASS</p>
+                <span class="status ok">PAGER | SLACK | EMAIL</span>
             </article>
 
-            <article class="card kpi">
-                <div class="label">API Health</div>
-                <div class="value" id="healthCode">checking</div>
-                <div class="status warn" id="healthState">PENDING</div>
+            <article class="card half">
+                <p class="label">How It Works</p>
+                <ul class="steps">
+                    <li><b>1</b><span>Open Customer Portal and choose what you need: stay, transport, or experience.</span></li>
+                    <li><b>2</b><span>Filter by category, price, and location so only relevant options remain.</span></li>
+                    <li><b>3</b><span>Pick your best match and proceed with clear room-level pricing.</span></li>
+                </ul>
             </article>
 
-            <article class="card kpi">
-                <div class="label">Preflight</div>
-                <div class="value">PASS</div>
-                <div class="status ok">RUN 22991556615</div>
-            </article>
-
-            <article class="card kpi">
-                <div class="label">Alert Routing</div>
-                <div class="value">PASS</div>
-                <div class="status ok">PAGER/SLACK/EMAIL</div>
-            </article>
-
-            <article class="card wide">
-                <div class="label">Recent Activity</div>
+            <article class="card half">
+                <p class="label">Operations Evidence</p>
                 <ul class="list">
                     @foreach ($activityLinks as $item)
                         <li><a href="{{ $item['url'] }}" target="_blank" rel="noopener">{{ $item['label'] }}</a></li>
                     @endforeach
                 </ul>
-            </article>
-
-            <article class="card wide">
-                <div class="label">Launch Artifacts</div>
                 <ul class="list">
                     @foreach ($artifactLinks as $item)
                         <li><a href="{{ $item['url'] }}" target="_blank" rel="noopener">{{ $item['label'] }}</a></li>
@@ -328,42 +403,51 @@
             </article>
         </section>
 
-        <footer class="footer-nav" aria-label="Global support links">
-            <a class="footer-link" href="/terms-of-service">Terms of Service</a>
-            <a class="footer-link" href="/privacy-policy">Privacy Policy</a>
-            <a class="footer-link" href="mailto:support@workation.mv">Email Support</a>
-            <a class="footer-link" href="{{ $apiBase }}/api/v1/ops/runbooks" target="_blank" rel="noopener">Operations Runbooks</a>
+        <footer class="footer-nav" aria-label="Support links">
+            <a class="footer-link" href="/terms-of-service">Terms</a>
+            <a class="footer-link" href="/privacy-policy">Privacy</a>
+            <a class="footer-link" href="mailto:support@workation.mv">Support Email</a>
+            <a class="footer-link" href="{{ $apiBase }}/api/v1/health" target="_blank" rel="noopener">API Health</a>
+            <a class="footer-link" href="{{ $apiBase }}/api/v1/ops/runbooks" target="_blank" rel="noopener">Runbooks</a>
         </footer>
-    </div>
+    </main>
 
     <script>
         (function () {
-            const root = document.querySelector(".page");
-            const apiBase = root ? root.getAttribute("data-api-base") : "https://api.workation.mv";
-            const pageTime = document.getElementById("pageTime");
-            const healthCode = document.getElementById("healthCode");
-            const healthState = document.getElementById("healthState");
+            const root = document.querySelector('.page');
+            const apiBase = root ? root.getAttribute('data-api-base') : 'https://api.workation.mv';
+            const pageTime = document.getElementById('pageTime');
+            const healthCode = document.getElementById('healthCode');
+            const healthState = document.getElementById('healthState');
 
             function stamp() {
+                if (!pageTime) {
+                    return;
+                }
+
                 const now = new Date();
-                pageTime.textContent = now.toISOString().replace("T", " ").replace(".000Z", " UTC");
+                pageTime.textContent = now.toISOString().replace('T', ' ').replace('.000Z', ' UTC');
             }
 
             async function probeHealth() {
+                if (!healthCode || !healthState) {
+                    return;
+                }
+
                 try {
-                    const response = await fetch(apiBase + "/api/v1/health", { cache: "no-store" });
+                    const response = await fetch(apiBase + '/api/v1/health', { cache: 'no-store' });
                     healthCode.textContent = String(response.status);
                     if (response.ok) {
-                        healthState.textContent = "ONLINE";
-                        healthState.className = "status ok";
+                        healthState.textContent = 'ONLINE';
+                        healthState.className = 'status ok';
                     } else {
-                        healthState.textContent = "DEGRADED";
-                        healthState.className = "status warn";
+                        healthState.textContent = 'DEGRADED';
+                        healthState.className = 'status warn';
                     }
-                } catch (error) {
-                    healthCode.textContent = "n/a";
-                    healthState.textContent = "UNREACHABLE";
-                    healthState.className = "status down";
+                } catch (e) {
+                    healthCode.textContent = 'n/a';
+                    healthState.textContent = 'UNREACHABLE';
+                    healthState.className = 'status down';
                 }
             }
 

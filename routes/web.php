@@ -529,16 +529,70 @@ Route::get('/media/vendor/{media}/{variant?}', function (int $media, ?string $va
         $candidatePath = preg_replace('/-thumb(\.[a-z0-9]+)$/i', '-banner$1', $originalPath) ?? $originalPath;
     }
 
-    $disk = Storage::disk('public');
-    $resolvedPath = $disk->exists($candidatePath) ? $candidatePath : $originalPath;
-    if (!$disk->exists($resolvedPath)) {
+    $normalizeDiskPath = static function (string $path): string {
+        $normalized = trim(str_replace('\\', '/', $path));
+        if ($normalized === '') {
+            return '';
+        }
+
+        $normalized = ltrim($normalized, '/');
+        if (str_starts_with($normalized, 'public/')) {
+            $normalized = substr($normalized, 7);
+        }
+        if (str_starts_with($normalized, 'storage/')) {
+            $normalized = substr($normalized, 8);
+        }
+
+        return ltrim($normalized, '/');
+    };
+
+    $candidatePaths = collect([
+        $candidatePath,
+        $originalPath,
+        $normalizeDiskPath($candidatePath),
+        $normalizeDiskPath($originalPath),
+    ])->map(static fn ($path) => trim((string) $path))
+      ->filter(static fn ($path) => $path !== '')
+      ->unique()
+      ->values()
+      ->all();
+
+    $resolvedBinary = null;
+    $resolvedMimeType = '';
+
+    $publicDisk = Storage::disk('public');
+    foreach ($candidatePaths as $path) {
+        if (!$publicDisk->exists($path)) {
+            continue;
+        }
+
+        $resolvedBinary = $publicDisk->get($path);
+        $resolvedMimeType = (string) ($publicDisk->mimeType($path) ?: '');
+        break;
+    }
+
+    if ($resolvedBinary === null) {
+        $localDisk = Storage::disk('local');
+        foreach ($candidatePaths as $path) {
+            foreach ([$path, 'public/' . ltrim($path, '/')] as $localPath) {
+                if (!$localDisk->exists($localPath)) {
+                    continue;
+                }
+
+                $resolvedBinary = $localDisk->get($localPath);
+                $resolvedMimeType = (string) ($localDisk->mimeType($localPath) ?: '');
+                break 2;
+            }
+        }
+    }
+
+    if ($resolvedBinary === null) {
         abort(404);
     }
 
-    $binary = $disk->get($resolvedPath);
-    $mimeType = $disk->mimeType($resolvedPath) ?: ((string) ($mediaRecord->mime_type ?? 'image/jpeg'));
+    $mimeType = $resolvedMimeType !== '' ? $resolvedMimeType : ((string) ($mediaRecord->mime_type ?? 'image/jpeg'));
 
-    return response($binary, 200, [
+    return response($resolvedBinary, 200, [
         'Content-Type' => $mimeType,
         'Cache-Control' => 'public, max-age=31536000, immutable',
     ]);
@@ -3094,4 +3148,3 @@ if (app()->environment('testing')) {
         Route::post('transport/holds/{hold}/release', [\App\Http\Controllers\TransportHoldController::class, 'release']);
     });
 }
-

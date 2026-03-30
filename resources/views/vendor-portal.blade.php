@@ -1321,8 +1321,8 @@
         .gallery-grid {
             margin-top: 10px;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 8px;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
         }
 
         .media-dropzone {
@@ -1392,17 +1392,45 @@
 
         .gallery-card {
             border: 1px solid #d7e0e6;
-            border-radius: 10px;
+            border-radius: 12px;
             overflow: hidden;
             background: #fff;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            box-shadow: 0 6px 18px rgba(17, 43, 68, 0.08);
         }
 
         .gallery-card img {
             width: 100%;
-            height: 130px;
+            aspect-ratio: 4 / 3;
+            height: auto;
             object-fit: cover;
             display: block;
             background: #edf2f7;
+        }
+
+        .gallery-card-body {
+            padding: 8px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .gallery-card-title {
+            margin: 0;
+            font-size: 0.76rem;
+            color: #35506a;
+            line-height: 1.35;
+        }
+
+        .gallery-card-actions {
+            display: flex;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .gallery-card-actions form {
+            margin: 0;
         }
 
         .gallery-meta {
@@ -2896,19 +2924,22 @@
                                                                         @foreach ($propertyMediaItems as $media)
                                                                             @php
                                                                                 $mediaUrl = '/media/vendor/' . (int) ($media->id ?? 0) . '/banner';
+                                                                                $mediaFallbackUrl = '/storage/' . ltrim((string) ($media->file_path ?? ''), '/');
                                                                             @endphp
                                                                             <article class="gallery-card">
-                                                                                <img src="{{ $mediaUrl }}" alt="{{ (string) ($media->alt_text ?? $property->name) }}">
-                                                                                <div style="padding:6px 8px; font-size:0.72rem; color:#35506a;">
-                                                                                    {{ (string) ($media->alt_text ?? 'Listing photo') }}
-                                                                                    @if ((bool) ($media->is_primary ?? false))
-                                                                                        <span class="ops-chip" style="margin-left:6px;">Primary</span>
-                                                                                    @else
-                                                                                        <form method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/primary" style="margin-top:6px;">
-                                                                                            @csrf
-                                                                                            <button class="btn btn-secondary" type="submit">Set Primary</button>
-                                                                                        </form>
-                                                                                    @endif
+                                                                                <img src="{{ $mediaUrl }}" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $mediaFallbackUrl }}';}" alt="{{ (string) ($media->alt_text ?? $property->name) }}" loading="lazy">
+                                                                                <div class="gallery-card-body">
+                                                                                    <p class="gallery-card-title">{{ (string) ($media->alt_text ?? 'Listing photo') }}</p>
+                                                                                    <div class="gallery-card-actions">
+                                                                                        @if ((bool) ($media->is_primary ?? false))
+                                                                                            <span class="ops-chip">Primary</span>
+                                                                                        @else
+                                                                                            <form method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/primary">
+                                                                                                @csrf
+                                                                                                <button class="btn btn-secondary" type="submit">Set Primary</button>
+                                                                                            </form>
+                                                                                        @endif
+                                                                                    </div>
                                                                                 </div>
                                                                             </article>
                                                                         @endforeach
@@ -3058,19 +3089,22 @@
                                                                                                         @foreach ($roomMediaItems as $media)
                                                                                                             @php
                                                                                                                 $roomMediaUrl = '/media/vendor/' . (int) ($media->id ?? 0) . '/banner';
+                                                                                                                $roomMediaFallbackUrl = '/storage/' . ltrim((string) ($media->file_path ?? ''), '/');
                                                                                                             @endphp
                                                                                                             <article class="gallery-card">
-                                                                                                                <img src="{{ $roomMediaUrl }}" alt="{{ (string) ($media->alt_text ?? $room->name) }}">
-                                                                                                                <div style="padding:6px 8px; font-size:0.72rem; color:#35506a;">
-                                                                                                                    {{ (string) ($media->alt_text ?? 'Room photo') }}
-                                                                                                                    @if ((bool) ($media->is_primary ?? false))
-                                                                                                                        <span class="ops-chip" style="margin-left:6px;">Primary</span>
-                                                                                                                    @else
-                                                                                                                        <form method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/primary" style="margin-top:6px;">
-                                                                                                                            @csrf
-                                                                                                                            <button class="btn btn-secondary" type="submit">Set Primary</button>
-                                                                                                                        </form>
-                                                                                                                    @endif
+                                                                                                                <img src="{{ $roomMediaUrl }}" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $roomMediaFallbackUrl }}';}" alt="{{ (string) ($media->alt_text ?? $room->name) }}" loading="lazy">
+                                                                                                                <div class="gallery-card-body">
+                                                                                                                    <p class="gallery-card-title">{{ (string) ($media->alt_text ?? 'Room photo') }}</p>
+                                                                                                                    <div class="gallery-card-actions">
+                                                                                                                        @if ((bool) ($media->is_primary ?? false))
+                                                                                                                            <span class="ops-chip">Primary</span>
+                                                                                                                        @else
+                                                                                                                            <form method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/primary">
+                                                                                                                                @csrf
+                                                                                                                                <button class="btn btn-secondary" type="submit">Set Primary</button>
+                                                                                                                            </form>
+                                                                                                                        @endif
+                                                                                                                    </div>
                                                                                                                 </div>
                                                                                                             </article>
                                                                                                         @endforeach

@@ -3148,4 +3148,3 @@ if (app()->environment('testing')) {
         Route::post('transport/holds/{hold}/release', [\App\Http\Controllers\TransportHoldController::class, 'release']);
     });
 }
-

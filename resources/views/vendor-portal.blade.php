@@ -2849,7 +2849,7 @@
                                                                     <div class="media-dropzone" data-media-dropzone>Drag and drop photos here, or click to choose files.</div>
                                                                     <input class="ops-input" name="photos[]" type="file" accept="image/png,image/jpeg,image/webp" multiple required data-media-input>
                                                                     <div class="media-upload-preview" data-media-preview></div>
-                                                                    <p class="small" style="grid-column:1 / -1; margin:0;">Upload standard: JPG/PNG/WebP, 1200x800 to 2400x1600 pixels, max 4MB.</p>
+                                                                    <p class="small" style="grid-column:1 / -1; margin:0;">Upload standard: JPG/PNG/WebP, minimum 800x600 (recommended 1600x900), max 2400x1600, max 4MB.</p>
                                                                     <button class="btn btn-secondary" type="submit">Upload</button>
                                                                     <button class="btn btn-secondary" type="button" data-close-property-media="{{ $propertyId }}">Close</button>
                                                                 </form>
@@ -3012,7 +3012,7 @@
                                                                                                     <div class="media-dropzone" data-media-dropzone>Drag and drop photos here, or click to choose files.</div>
                                                                                                     <input class="ops-input" name="photos[]" type="file" accept="image/png,image/jpeg,image/webp" multiple required data-media-input>
                                                                                                     <div class="media-upload-preview" data-media-preview></div>
-                                                                                                    <p class="small" style="grid-column:1 / -1; margin:0;">Upload standard: JPG/PNG/WebP, 1200x800 to 2400x1600 pixels, max 4MB.</p>
+                                                                                                    <p class="small" style="grid-column:1 / -1; margin:0;">Upload standard: JPG/PNG/WebP, minimum 800x600 (recommended 1600x900), max 2400x1600, max 4MB.</p>
                                                                                                     <button class="btn btn-secondary" type="submit">Upload</button>
                                                                                                     <button class="btn btn-secondary" type="button" data-close-room-media="{{ $roomId }}">Close</button>
                                                                                                 </form>

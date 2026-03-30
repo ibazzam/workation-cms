@@ -38,17 +38,18 @@
         }
 
         .page {
-            max-width: 1120px;
-            margin: 0 auto;
-            padding: 24px 18px 34px;
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            padding: 10px 12px 20px;
         }
 
         .hero {
             background: linear-gradient(130deg, var(--hero-1) 0%, var(--hero-2) 48%, var(--hero-3) 100%);
-            border-radius: 18px;
+            border-radius: 12px;
             color: #fff;
-            padding: 24px;
-            box-shadow: 0 22px 44px rgba(18, 38, 58, 0.2);
+            padding: 12px 14px;
+            box-shadow: 0 10px 24px rgba(18, 38, 58, 0.18);
         }
 
         .eyebrow {
@@ -63,14 +64,15 @@
 
         .hero h1 {
             margin: 0 0 8px;
-            font-size: clamp(1.45rem, 2.8vw, 2.3rem);
+            font-size: clamp(1.2rem, 2vw, 1.65rem);
             line-height: 1.15;
         }
 
         .hero p {
             margin: 0;
             color: #dcf4f3;
-            max-width: 780px;
+            max-width: 980px;
+            font-size: 0.86rem;
         }
 
         .hero-links {
@@ -119,27 +121,36 @@
         }
 
         .portal-shell {
-            margin-top: 12px;
+            margin-top: 10px;
             display: grid;
-            grid-template-columns: 252px minmax(0, 1fr);
-            gap: 12px;
+            grid-template-columns: 240px minmax(0, 1fr);
+            gap: 10px;
             align-items: start;
+            min-height: calc(100vh - 86px);
         }
 
         .portal-nav {
             position: sticky;
-            top: 12px;
+            top: 8px;
             display: flex;
             flex-direction: column;
             gap: 8px;
             padding: 12px;
             border: 1px solid var(--line);
-            border-radius: 14px;
+            border-radius: 12px;
             background: #f7fbff;
+            max-height: calc(100vh - 16px);
+            overflow-y: auto;
         }
 
         .portal-content {
             min-width: 0;
+            width: 100%;
+        }
+
+        .portal-content > section,
+        .portal-content > div {
+            width: 100%;
         }
 
         .portal-nav a {
@@ -1285,7 +1296,7 @@
         .gallery-grid {
             margin-top: 10px;
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             gap: 8px;
         }
 
@@ -2859,8 +2870,7 @@
                                                                     <div class="gallery-grid">
                                                                         @foreach ($propertyMediaItems as $media)
                                                                             @php
-                                                                                $mediaPath = (string) ($media->file_path ?? '');
-                                                                                $mediaUrl = str_starts_with($mediaPath, 'http') ? $mediaPath : asset('storage/' . ltrim($mediaPath, '/'));
+                                                                                $mediaUrl = '/media/vendor/' . (int) ($media->id ?? 0) . '/banner';
                                                                             @endphp
                                                                             <article class="gallery-card">
                                                                                 <img src="{{ $mediaUrl }}" alt="{{ (string) ($media->alt_text ?? $property->name) }}">
@@ -3022,8 +3032,7 @@
                                                                                                     <div class="gallery-grid">
                                                                                                         @foreach ($roomMediaItems as $media)
                                                                                                             @php
-                                                                                                                $roomMediaPath = (string) ($media->file_path ?? '');
-                                                                                                                $roomMediaUrl = str_starts_with($roomMediaPath, 'http') ? $roomMediaPath : asset('storage/' . ltrim($roomMediaPath, '/'));
+                                                                                                                $roomMediaUrl = '/media/vendor/' . (int) ($media->id ?? 0) . '/banner';
                                                                                                             @endphp
                                                                                                             <article class="gallery-card">
                                                                                                                 <img src="{{ $roomMediaUrl }}" alt="{{ (string) ($media->alt_text ?? $room->name) }}">

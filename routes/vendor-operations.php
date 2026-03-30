@@ -1527,9 +1527,9 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
     $validated = $request->validate([
         'entity_type' => ['required', Rule::in(['property', 'service', 'room', 'profile', 'menu', 'vehicle'])],
         'entity_id' => ['nullable', 'integer', 'min:1'],
-        'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         'photos' => ['nullable', 'array', 'min:1'],
-        'photos.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        'photos.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         'alt_text' => ['required', 'string', 'max:190'],
         'is_primary' => ['nullable', 'boolean'],
         'primary_upload_index' => ['nullable', 'integer', 'min:0'],
@@ -1615,13 +1615,6 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
         $widthPx = (int) $imageSize[0];
         $heightPx = (int) $imageSize[1];
         $fileSizeKb = (int) ceil(((int) $file->getSize()) / 1024);
-
-        if ($widthPx < 800 || $heightPx < 600) {
-            return back()->withErrors(['profile' => 'All uploaded images must be at least 800x600 pixels.'])->withInput();
-        }
-        if ($widthPx > 2400 || $heightPx > 1600) {
-            return back()->withErrors(['profile' => 'All uploaded images must be 2400x1600 pixels or smaller.'])->withInput();
-        }
 
         $sourceImage = vendorPortalCreateImageResourceFromFile(
             (string) $file->getPathname(),

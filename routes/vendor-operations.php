@@ -247,19 +247,21 @@ if (!function_exists('vendorPortalWriteMediaVariant')) {
             return false;
         }
 
-        $disk = Storage::disk('public');
-        $absolutePath = $disk->path($relativePath);
-        $directoryPath = dirname($absolutePath);
-        if (!is_dir($directoryPath) && !@mkdir($directoryPath, 0755, true) && !is_dir($directoryPath)) {
+        $ext = strtolower(trim($extension));
+        ob_start();
+        $encoded = false;
+        if ($ext === 'webp' && function_exists('imagewebp')) {
+            $encoded = (bool) @imagewebp($image, null, 82);
+        } else {
+            $encoded = (bool) @imagejpeg($image, null, 84);
+        }
+
+        $binary = ob_get_clean();
+        if (!$encoded || !is_string($binary) || $binary === '') {
             return false;
         }
 
-        $ext = strtolower(trim($extension));
-        if ($ext === 'webp' && function_exists('imagewebp')) {
-            return (bool) @imagewebp($image, $absolutePath, 82);
-        }
-
-        return (bool) @imagejpeg($image, $absolutePath, 84);
+        return Storage::disk('public')->put($relativePath, $binary);
     }
 }
 
@@ -1659,7 +1661,12 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
             return back()->withErrors(['profile' => 'Failed to generate optimized variants for one of the images.'])->withInput();
         }
 
-        $storedBannerSizeBytes = (int) (@filesize(Storage::disk('public')->path($bannerPath)) ?: 0);
+        $storedBannerSizeBytes = 0;
+        try {
+            $storedBannerSizeBytes = (int) (Storage::disk('public')->size($bannerPath) ?? 0);
+        } catch (\Throwable $e) {
+            $storedBannerSizeBytes = 0;
+        }
         $storedBannerSizeKb = (int) ceil($storedBannerSizeBytes / 1024);
         $qualityGrade = $storedBannerSizeKb > 0 && $storedBannerSizeKb <= 900 ? 'A' : 'B';
 

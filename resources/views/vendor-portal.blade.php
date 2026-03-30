@@ -1289,6 +1289,60 @@
             gap: 8px;
         }
 
+        .media-dropzone {
+            grid-column: 1 / -1;
+            border: 1px dashed #9eb2c6;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #2f4f6c;
+            background: #f7fbff;
+            cursor: pointer;
+        }
+
+        .media-dropzone.is-dragover {
+            border-color: #0f6b74;
+            background: #ecf8f9;
+            color: #0c4f56;
+        }
+
+        .media-upload-preview {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 8px;
+        }
+
+        .media-upload-item {
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            background: #ffffff;
+            overflow: hidden;
+        }
+
+        .media-upload-item img {
+            display: block;
+            width: 100%;
+            height: 90px;
+            object-fit: cover;
+            background: #e8eef4;
+        }
+
+        .media-upload-item .media-upload-meta {
+            padding: 6px;
+            display: grid;
+            gap: 4px;
+        }
+
+        .media-primary-select {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            color: #31506a;
+        }
+
         .gallery-card {
             border: 1px solid #d7e0e6;
             border-radius: 10px;
@@ -2775,14 +2829,16 @@
                                                                 </div>
                                                             </form>
                                                             <div class="media-upload-row" data-property-media-panel="{{ $propertyId }}" hidden>
-                                                                <form class="inline-table-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
+                                                                <form class="inline-table-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data" data-media-upload-form>
                                                                     @csrf
                                                                     <input type="hidden" name="entity_type" value="property">
                                                                     <input type="hidden" name="entity_id" value="{{ $propertyId }}">
+                                                                    <input type="hidden" name="primary_upload_index" value="0" data-media-primary-index>
                                                                     <input class="ops-input" name="alt_text" type="text" maxlength="190" value="{{ $property->name }} photo" placeholder="Photo alt text" required>
-                                                                    <input class="ops-input" name="photo" type="file" accept="image/png,image/jpeg,image/webp" required>
+                                                                    <div class="media-dropzone" data-media-dropzone>Drag and drop photos here, or click to choose files.</div>
+                                                                    <input class="ops-input" name="photos[]" type="file" accept="image/png,image/jpeg,image/webp" multiple required data-media-input>
+                                                                    <div class="media-upload-preview" data-media-preview></div>
                                                                     <p class="small" style="grid-column:1 / -1; margin:0;">Upload standard: JPG/PNG/WebP, 1200x800 to 2400x1600 pixels, max 4MB.</p>
-                                                                    <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Primary photo</label>
                                                                     <button class="btn btn-secondary" type="submit">Upload</button>
                                                                     <button class="btn btn-secondary" type="button" data-close-property-media="{{ $propertyId }}">Close</button>
                                                                 </form>
@@ -2936,14 +2992,16 @@
                                                                                                 </div>
                                                                                             </form>
                                                                                             <div class="media-upload-row" data-room-media-panel="{{ $roomId }}" hidden>
-                                                                                                <form class="inline-table-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data">
+                                                                                                <form class="inline-table-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data" data-media-upload-form>
                                                                                                     @csrf
                                                                                                     <input type="hidden" name="entity_type" value="room">
                                                                                                     <input type="hidden" name="entity_id" value="{{ $roomId }}">
+                                                                                                    <input type="hidden" name="primary_upload_index" value="0" data-media-primary-index>
                                                                                                     <input class="ops-input" name="alt_text" type="text" maxlength="190" value="{{ $room->name }} photo" placeholder="Photo alt text" required>
-                                                                                                    <input class="ops-input" name="photo" type="file" accept="image/png,image/jpeg,image/webp" required>
+                                                                                                    <div class="media-dropzone" data-media-dropzone>Drag and drop photos here, or click to choose files.</div>
+                                                                                                    <input class="ops-input" name="photos[]" type="file" accept="image/png,image/jpeg,image/webp" multiple required data-media-input>
+                                                                                                    <div class="media-upload-preview" data-media-preview></div>
                                                                                                     <p class="small" style="grid-column:1 / -1; margin:0;">Upload standard: JPG/PNG/WebP, 1200x800 to 2400x1600 pixels, max 4MB.</p>
-                                                                                                    <label class="feature-item"><input type="checkbox" name="is_primary" value="1"> Primary photo</label>
                                                                                                     <button class="btn btn-secondary" type="submit">Upload</button>
                                                                                                     <button class="btn btn-secondary" type="button" data-close-room-media="{{ $roomId }}">Close</button>
                                                                                                 </form>
@@ -5074,6 +5132,121 @@
                     }
                 });
             });
+
+            function initMediaUploadForms() {
+                document.querySelectorAll('[data-media-upload-form]').forEach((form, formIndex) => {
+                    if (form.dataset.mediaUploaderBound === '1') {
+                        return;
+                    }
+                    form.dataset.mediaUploaderBound = '1';
+
+                    const dropzone = form.querySelector('[data-media-dropzone]');
+                    const fileInput = form.querySelector('[data-media-input]');
+                    const preview = form.querySelector('[data-media-preview]');
+                    const primaryIndexInput = form.querySelector('[data-media-primary-index]');
+                    if (!dropzone || !fileInput || !preview || !primaryIndexInput) {
+                        return;
+                    }
+
+                    const radioName = 'media_primary_picker_' + formIndex;
+
+                    function syncFilesFromList(fileList) {
+                        if (typeof DataTransfer === 'undefined') {
+                            return;
+                        }
+                        const transfer = new DataTransfer();
+                        fileList.forEach((file) => transfer.items.add(file));
+                        fileInput.files = transfer.files;
+                    }
+
+                    function renderPreview() {
+                        preview.innerHTML = '';
+                        const files = Array.from(fileInput.files || []);
+                        if (files.length === 0) {
+                            primaryIndexInput.value = '0';
+                            return;
+                        }
+
+                        const currentPrimary = Math.max(0, Math.min(files.length - 1, parseInt(primaryIndexInput.value || '0', 10) || 0));
+                        primaryIndexInput.value = String(currentPrimary);
+
+                        files.forEach((file, index) => {
+                            const item = document.createElement('article');
+                            item.className = 'media-upload-item';
+
+                            const img = document.createElement('img');
+                            img.alt = file.name;
+                            img.src = URL.createObjectURL(file);
+                            img.onload = function () {
+                                URL.revokeObjectURL(img.src);
+                            };
+
+                            const meta = document.createElement('div');
+                            meta.className = 'media-upload-meta';
+
+                            const name = document.createElement('p');
+                            name.className = 'small';
+                            name.style.margin = '0';
+                            name.textContent = file.name;
+
+                            const label = document.createElement('label');
+                            label.className = 'media-primary-select';
+
+                            const radio = document.createElement('input');
+                            radio.type = 'radio';
+                            radio.name = radioName;
+                            radio.value = String(index);
+                            radio.checked = index === currentPrimary;
+                            radio.addEventListener('change', function () {
+                                primaryIndexInput.value = String(index);
+                            });
+
+                            const text = document.createElement('span');
+                            text.textContent = 'Primary';
+
+                            label.appendChild(radio);
+                            label.appendChild(text);
+                            meta.appendChild(name);
+                            meta.appendChild(label);
+                            item.appendChild(img);
+                            item.appendChild(meta);
+                            preview.appendChild(item);
+                        });
+                    }
+
+                    fileInput.addEventListener('change', function () {
+                        renderPreview();
+                    });
+
+                    dropzone.addEventListener('click', function () {
+                        fileInput.click();
+                    });
+
+                    dropzone.addEventListener('dragover', function (event) {
+                        event.preventDefault();
+                        dropzone.classList.add('is-dragover');
+                    });
+
+                    dropzone.addEventListener('dragleave', function () {
+                        dropzone.classList.remove('is-dragover');
+                    });
+
+                    dropzone.addEventListener('drop', function (event) {
+                        event.preventDefault();
+                        dropzone.classList.remove('is-dragover');
+                        const droppedFiles = Array.from((event.dataTransfer && event.dataTransfer.files) ? event.dataTransfer.files : []);
+                        if (droppedFiles.length === 0) {
+                            return;
+                        }
+                        syncFilesFromList(droppedFiles);
+                        renderPreview();
+                    });
+
+                    renderPreview();
+                });
+            }
+
+            initMediaUploadForms();
 
             listingCategoryShortcutButtons.forEach((button) => {
                 button.addEventListener('click', function () {

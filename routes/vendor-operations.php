@@ -1525,9 +1525,12 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
     $validated = $request->validate([
         'entity_type' => ['required', Rule::in(['property', 'service', 'room', 'profile', 'menu', 'vehicle'])],
         'entity_id' => ['nullable', 'integer', 'min:1'],
-        'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        'photos' => ['nullable', 'array', 'min:1'],
+        'photos.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         'alt_text' => ['required', 'string', 'max:190'],
         'is_primary' => ['nullable', 'boolean'],
+        'primary_upload_index' => ['nullable', 'integer', 'min:0'],
     ]);
 
     $entityType = (string) $validated['entity_type'];
@@ -1567,106 +1570,128 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
         }
     }
 
-    $file = $request->file('photo');
-    $imageSize = @getimagesize($file->getPathname());
-    if (!is_array($imageSize) || count($imageSize) < 2) {
-        return back()->withErrors(['profile' => 'Uploaded file is not a valid image.'])->withInput();
+    $uploadedFiles = [];
+    if ($request->hasFile('photos')) {
+        $candidateFiles = $request->file('photos');
+        if (is_array($candidateFiles)) {
+            $uploadedFiles = array_values(array_filter($candidateFiles));
+        }
+    }
+    if ($uploadedFiles === [] && $request->hasFile('photo')) {
+        $singleFile = $request->file('photo');
+        if ($singleFile) {
+            $uploadedFiles[] = $singleFile;
+        }
     }
 
-    $widthPx = (int) $imageSize[0];
-    $heightPx = (int) $imageSize[1];
-    $fileSizeKb = (int) ceil(((int) $file->getSize()) / 1024);
+    if ($uploadedFiles === []) {
+        return back()->withErrors(['profile' => 'Please choose at least one photo to upload.'])->withInput();
+    }
 
-    if ($widthPx < 1200 || $heightPx < 800) {
-        return back()->withErrors(['profile' => 'Image dimensions must be at least 1200x800 pixels.'])->withInput();
-    }
-    if ($widthPx > 2400 || $heightPx > 1600) {
-        return back()->withErrors(['profile' => 'Image dimensions exceed allowed maximum of 2400x1600 pixels. Please resize before upload.'])->withInput();
-    }
+    $selectedPrimaryIndex = isset($validated['primary_upload_index'])
+        ? (int) $validated['primary_upload_index']
+        : 0;
+    $selectedPrimaryIndex = max(0, min(count($uploadedFiles) - 1, $selectedPrimaryIndex));
+
+    // Batch upload defines one clear primary image for this entity.
+    DB::table('vendor_listing_media')
+        ->where('vendor_user_id', $vendorUserId)
+        ->where('entity_type', $entityType)
+        ->where('entity_id', $entityId)
+        ->update(['is_primary' => false, 'updated_at' => now()]);
 
     $format = vendorPortalPreferredMediaOutputFormat();
     $outputExtension = (string) ($format['extension'] ?? 'jpg');
     $outputMime = (string) ($format['mime'] ?? 'image/jpeg');
 
-    $sourceImage = vendorPortalCreateImageResourceFromFile(
-        (string) $file->getPathname(),
-        (string) ($file->getMimeType() ?? '')
-    );
-    if ($sourceImage === null) {
-        return back()->withErrors(['profile' => 'Unable to process this image. Please upload a JPG, PNG, or WebP file.'])->withInput();
+    foreach ($uploadedFiles as $fileIndex => $file) {
+        $imageSize = @getimagesize($file->getPathname());
+        if (!is_array($imageSize) || count($imageSize) < 2) {
+            return back()->withErrors(['profile' => 'One of the uploaded files is not a valid image.'])->withInput();
+        }
+
+        $widthPx = (int) $imageSize[0];
+        $heightPx = (int) $imageSize[1];
+        $fileSizeKb = (int) ceil(((int) $file->getSize()) / 1024);
+
+        if ($widthPx < 1200 || $heightPx < 800) {
+            return back()->withErrors(['profile' => 'All uploaded images must be at least 1200x800 pixels.'])->withInput();
+        }
+        if ($widthPx > 2400 || $heightPx > 1600) {
+            return back()->withErrors(['profile' => 'All uploaded images must be 2400x1600 pixels or smaller.'])->withInput();
+        }
+
+        $sourceImage = vendorPortalCreateImageResourceFromFile(
+            (string) $file->getPathname(),
+            (string) ($file->getMimeType() ?? '')
+        );
+        if ($sourceImage === null) {
+            return back()->withErrors(['profile' => 'Unable to process one of the uploaded images. Use JPG, PNG, or WebP.'])->withInput();
+        }
+
+        $storagePrefix = 'vendor-listings/' . $vendorUserId;
+        $entityToken = $entityType . '-' . ($entityId ?? 'shared');
+        $baseToken = now()->format('YmdHis') . '-' . bin2hex(random_bytes(4)) . '-' . $entityToken . '-' . $fileIndex;
+        $bannerPath = $storagePrefix . '/' . $baseToken . '-banner.' . $outputExtension;
+        $thumbPath = $storagePrefix . '/' . $baseToken . '-thumb.' . $outputExtension;
+
+        $bannerImage = vendorPortalResizeImageToFill($sourceImage, $widthPx, $heightPx, 1600, 900);
+        $thumbImage = vendorPortalResizeImageToFill($sourceImage, $widthPx, $heightPx, 480, 320);
+
+        $bannerWritten = $bannerImage !== null
+            ? vendorPortalWriteMediaVariant($bannerImage, $bannerPath, $outputExtension)
+            : false;
+        $thumbWritten = $thumbImage !== null
+            ? vendorPortalWriteMediaVariant($thumbImage, $thumbPath, $outputExtension)
+            : false;
+
+        if (is_resource($sourceImage) || $sourceImage instanceof \GdImage) {
+            imagedestroy($sourceImage);
+        }
+        if ((is_resource($bannerImage) || $bannerImage instanceof \GdImage)) {
+            imagedestroy($bannerImage);
+        }
+        if ((is_resource($thumbImage) || $thumbImage instanceof \GdImage)) {
+            imagedestroy($thumbImage);
+        }
+
+        if (!$bannerWritten || !$thumbWritten) {
+            return back()->withErrors(['profile' => 'Failed to generate optimized variants for one of the images.'])->withInput();
+        }
+
+        $storedBannerSizeBytes = (int) (@filesize(Storage::disk('public')->path($bannerPath)) ?: 0);
+        $storedBannerSizeKb = (int) ceil($storedBannerSizeBytes / 1024);
+        $qualityGrade = $storedBannerSizeKb > 0 && $storedBannerSizeKb <= 900 ? 'A' : 'B';
+
+        $mediaPayload = [
+            'vendor_user_id' => $vendorUserId,
+            'entity_type' => $entityType,
+            'entity_id' => $entityId,
+            'file_path' => (string) $bannerPath,
+            'mime_type' => $outputMime,
+            'alt_text' => trim((string) ($validated['alt_text'] ?? '')),
+            'is_primary' => $fileIndex === $selectedPrimaryIndex,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        if (Schema::hasColumn('vendor_listing_media', 'width_px')) {
+            $mediaPayload['width_px'] = 1600;
+        }
+        if (Schema::hasColumn('vendor_listing_media', 'height_px')) {
+            $mediaPayload['height_px'] = 900;
+        }
+        if (Schema::hasColumn('vendor_listing_media', 'file_size_kb')) {
+            $mediaPayload['file_size_kb'] = $storedBannerSizeKb > 0 ? $storedBannerSizeKb : $fileSizeKb;
+        }
+        if (Schema::hasColumn('vendor_listing_media', 'quality_grade')) {
+            $mediaPayload['quality_grade'] = $qualityGrade;
+        }
+
+        DB::table('vendor_listing_media')->insert($mediaPayload);
     }
 
-    $storagePrefix = 'vendor-listings/' . $vendorUserId;
-    $entityToken = $entityType . '-' . ($entityId ?? 'shared');
-    $baseToken = now()->format('YmdHis') . '-' . bin2hex(random_bytes(4)) . '-' . $entityToken;
-    $bannerPath = $storagePrefix . '/' . $baseToken . '-banner.' . $outputExtension;
-    $thumbPath = $storagePrefix . '/' . $baseToken . '-thumb.' . $outputExtension;
-
-    $bannerImage = vendorPortalResizeImageToFill($sourceImage, $widthPx, $heightPx, 1600, 900);
-    $thumbImage = vendorPortalResizeImageToFill($sourceImage, $widthPx, $heightPx, 480, 320);
-
-    $bannerWritten = $bannerImage !== null
-        ? vendorPortalWriteMediaVariant($bannerImage, $bannerPath, $outputExtension)
-        : false;
-    $thumbWritten = $thumbImage !== null
-        ? vendorPortalWriteMediaVariant($thumbImage, $thumbPath, $outputExtension)
-        : false;
-
-    if (is_resource($sourceImage) || $sourceImage instanceof \GdImage) {
-        imagedestroy($sourceImage);
-    }
-    if ((is_resource($bannerImage) || $bannerImage instanceof \GdImage)) {
-        imagedestroy($bannerImage);
-    }
-    if ((is_resource($thumbImage) || $thumbImage instanceof \GdImage)) {
-        imagedestroy($thumbImage);
-    }
-
-    if (!$bannerWritten || !$thumbWritten) {
-        return back()->withErrors(['profile' => 'Failed to generate optimized image variants. Please try another image.'])->withInput();
-    }
-
-    $filePath = $bannerPath;
-    $storedBannerSizeBytes = (int) (@filesize(Storage::disk('public')->path($bannerPath)) ?: 0);
-    $storedBannerSizeKb = (int) ceil($storedBannerSizeBytes / 1024);
-    $qualityGrade = $storedBannerSizeKb > 0 && $storedBannerSizeKb <= 900 ? 'A' : 'B';
-
-    if ((bool) ($validated['is_primary'] ?? false)) {
-        DB::table('vendor_listing_media')
-            ->where('vendor_user_id', $vendorUserId)
-            ->where('entity_type', $entityType)
-            ->where('entity_id', $entityId)
-            ->update(['is_primary' => false, 'updated_at' => now()]);
-    }
-
-    $mediaPayload = [
-        'vendor_user_id' => $vendorUserId,
-        'entity_type' => $entityType,
-        'entity_id' => $entityId,
-        'file_path' => (string) $filePath,
-        'mime_type' => $outputMime,
-        'alt_text' => trim((string) ($validated['alt_text'] ?? '')),
-        'is_primary' => (bool) ($validated['is_primary'] ?? false),
-        'created_at' => now(),
-        'updated_at' => now(),
-    ];
-
-    if (Schema::hasColumn('vendor_listing_media', 'width_px')) {
-        $mediaPayload['width_px'] = 1600;
-    }
-    if (Schema::hasColumn('vendor_listing_media', 'height_px')) {
-        $mediaPayload['height_px'] = 900;
-    }
-    if (Schema::hasColumn('vendor_listing_media', 'file_size_kb')) {
-        $mediaPayload['file_size_kb'] = $storedBannerSizeKb > 0 ? $storedBannerSizeKb : $fileSizeKb;
-    }
-    if (Schema::hasColumn('vendor_listing_media', 'quality_grade')) {
-        $mediaPayload['quality_grade'] = $qualityGrade;
-    }
-
-    DB::table('vendor_listing_media')->insert($mediaPayload);
-
-    return vendorPortalListingsBackResponse('Photo uploaded successfully.', 4);
+    return vendorPortalListingsBackResponse('Photos uploaded successfully.', 4);
 });
 
 Route::post('/portal/vendor/media/{media}/primary', function (int $media) {

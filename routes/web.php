@@ -495,6 +495,55 @@ Route::get('/customer', function () {
     ]);
 });
 
+Route::get('/media/vendor/{media}/{variant?}', function (int $media, ?string $variant = 'banner') {
+    if (!Schema::hasTable('vendor_listing_media')) {
+        abort(404);
+    }
+
+    $mediaRecord = DB::table('vendor_listing_media')
+        ->where('id', $media)
+        ->first(['file_path', 'mime_type']);
+
+    if (!$mediaRecord) {
+        abort(404);
+    }
+
+    $originalPath = trim((string) ($mediaRecord->file_path ?? ''));
+    if ($originalPath === '') {
+        abort(404);
+    }
+
+    if (str_starts_with($originalPath, 'http://') || str_starts_with($originalPath, 'https://')) {
+        return redirect()->away($originalPath);
+    }
+
+    $normalizedVariant = strtolower(trim((string) $variant));
+    if (!in_array($normalizedVariant, ['banner', 'thumb'], true)) {
+        $normalizedVariant = 'banner';
+    }
+
+    $candidatePath = $originalPath;
+    if ($normalizedVariant === 'thumb') {
+        $candidatePath = preg_replace('/-banner(\.[a-z0-9]+)$/i', '-thumb$1', $originalPath) ?? $originalPath;
+    } else {
+        $candidatePath = preg_replace('/-thumb(\.[a-z0-9]+)$/i', '-banner$1', $originalPath) ?? $originalPath;
+    }
+
+    $disk = Storage::disk('public');
+    $resolvedPath = $disk->exists($candidatePath) ? $candidatePath : $originalPath;
+    if (!$disk->exists($resolvedPath)) {
+        abort(404);
+    }
+
+    $binary = $disk->get($resolvedPath);
+    $mimeType = $disk->mimeType($resolvedPath) ?: ((string) ($mediaRecord->mime_type ?? 'image/jpeg'));
+
+    return response($binary, 200, [
+        'Content-Type' => $mimeType,
+        'Cache-Control' => 'public, max-age=31536000, immutable',
+    ]);
+});
+
 Route::get('/users', function (Request $request) {
     if (!session()->get('portal_admin_authenticated', false)) {
         return redirect('/portal/admin/login');

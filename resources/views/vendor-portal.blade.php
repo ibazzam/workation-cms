@@ -581,6 +581,8 @@
             flex-wrap: wrap;
             gap: 6px;
             margin-bottom: 10px;
+            justify-content: flex-end;
+            flex-direction: row-reverse;
         }
 
         .ops-target-quickpick {
@@ -642,6 +644,16 @@
             border-radius: 10px;
             background: #fff;
             padding: 10px;
+        }
+
+        .ops-category-card .ops-form > .btn {
+            display: block;
+            margin-left: auto;
+        }
+
+        .ops-category-card .ops-table .inline-status-form {
+            justify-content: flex-end;
+            flex-direction: row-reverse;
         }
 
         .ops-form-grid {
@@ -1246,6 +1258,19 @@
             display: flex;
             gap: 6px;
             flex-wrap: wrap;
+        }
+
+        .listing-management-table .inline-actions,
+        .room-management-table .inline-actions,
+        .listing-management-table .inline-status-form,
+        .room-management-table .inline-status-form {
+            justify-content: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .listing-management-table .inline-actions form,
+        .room-management-table .inline-actions form {
+            margin: 0;
         }
 
         .edit-toggle-actions {

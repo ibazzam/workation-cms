@@ -1343,6 +1343,17 @@
             color: #31506a;
         }
 
+        .media-remove-btn {
+            border: 1px solid #d8b3b3;
+            background: #fff5f5;
+            color: #8e2e2e;
+            border-radius: 8px;
+            font-size: 0.72rem;
+            padding: 4px 6px;
+            cursor: pointer;
+            width: fit-content;
+        }
+
         .gallery-card {
             border: 1px solid #d7e0e6;
             border-radius: 10px;
@@ -5159,6 +5170,30 @@
                         fileInput.files = transfer.files;
                     }
 
+                    function removeFileAt(indexToRemove) {
+                        const files = Array.from(fileInput.files || []);
+                        if (indexToRemove < 0 || indexToRemove >= files.length) {
+                            return;
+                        }
+
+                        const nextFiles = files.filter((_, index) => index !== indexToRemove);
+                        let currentPrimary = parseInt(primaryIndexInput.value || '0', 10) || 0;
+                        if (indexToRemove < currentPrimary) {
+                            currentPrimary -= 1;
+                        } else if (indexToRemove === currentPrimary) {
+                            currentPrimary = Math.max(0, currentPrimary - 1);
+                        }
+                        if (nextFiles.length === 0) {
+                            currentPrimary = 0;
+                        } else {
+                            currentPrimary = Math.min(currentPrimary, nextFiles.length - 1);
+                        }
+
+                        primaryIndexInput.value = String(currentPrimary);
+                        syncFilesFromList(nextFiles);
+                        renderPreview();
+                    }
+
                     function renderPreview() {
                         preview.innerHTML = '';
                         const files = Array.from(fileInput.files || []);
@@ -5204,10 +5239,19 @@
                             const text = document.createElement('span');
                             text.textContent = 'Primary';
 
+                            const removeButton = document.createElement('button');
+                            removeButton.type = 'button';
+                            removeButton.className = 'media-remove-btn';
+                            removeButton.textContent = 'Remove';
+                            removeButton.addEventListener('click', function () {
+                                removeFileAt(index);
+                            });
+
                             label.appendChild(radio);
                             label.appendChild(text);
                             meta.appendChild(name);
                             meta.appendChild(label);
+                            meta.appendChild(removeButton);
                             item.appendChild(img);
                             item.appendChild(meta);
                             preview.appendChild(item);

@@ -281,23 +281,17 @@
         $propertyMediaByProperty = $propertyMediaByProperty ?? collect();
         $roomMediaByRoom = $roomMediaByRoom ?? collect();
         $mediaVariantUrl = static function ($media, string $variant = 'banner'): ?string {
-            $path = trim((string) ($media->file_path ?? ''));
-            if ($path === '') {
+            $mediaId = (int) ($media->id ?? 0);
+            if ($mediaId <= 0) {
                 return null;
             }
-            if (str_starts_with($path, 'http')) {
-                return $path;
+
+            $normalizedVariant = strtolower(trim($variant));
+            if (!in_array($normalizedVariant, ['banner', 'thumb'], true)) {
+                $normalizedVariant = 'banner';
             }
 
-            $normalizedPath = ltrim($path, '/');
-            $candidatePath = $normalizedPath;
-            if ($variant === 'thumb') {
-                $candidatePath = preg_replace('/-banner(\.[a-z0-9]+)$/i', '-thumb$1', $normalizedPath) ?? $normalizedPath;
-            } elseif ($variant === 'banner') {
-                $candidatePath = preg_replace('/-thumb(\.[a-z0-9]+)$/i', '-banner$1', $normalizedPath) ?? $normalizedPath;
-            }
-
-            return '/storage/' . ltrim($candidatePath, '/');
+            return '/media/vendor/' . $mediaId . '/' . $normalizedVariant;
         };
     @endphp
     <main class="page">

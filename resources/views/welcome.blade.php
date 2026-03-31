@@ -339,22 +339,63 @@
         .item-card {
             border: 1px solid #dbe7f0;
             border-radius: 12px;
-            background: #fbfdff;
-            padding: 11px;
+            background: #f5fbff;
             text-decoration: none;
             color: #1b3f58;
             display: grid;
-            gap: 5px;
+            overflow: hidden;
+            min-height: 210px;
+            grid-template-rows: 128px auto;
+        }
+
+        .item-card-media {
+            position: relative;
+            width: 100%;
+            height: 128px;
+            background: linear-gradient(140deg, #d6edf1 0%, #bfdfeb 45%, #ffe3be 100%);
+            overflow: hidden;
+        }
+
+        .item-card-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .item-card-media::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(7, 35, 52, 0.35), rgba(7, 35, 52, 0.05));
+        }
+
+        .item-card-body {
+            padding: 10px;
+            display: grid;
+            gap: 4px;
+            align-content: start;
+            background: #fbfdff;
         }
 
         .item-card strong {
-            font-size: 0.92rem;
+            font-size: 0.95rem;
+            line-height: 1.28;
+            color: #133b55;
         }
 
         .item-card span {
-            color: #5a6f82;
-            font-size: 0.8rem;
-            line-height: 1.43;
+            color: #5b7185;
+            font-size: 0.79rem;
+            line-height: 1.35;
+        }
+
+        .item-card-meta {
+            color: #2b617e;
+            font-size: 0.74rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .chip-row {
@@ -554,8 +595,15 @@
             <div class="browse-grid">
                 @foreach ($homeBrowseCards as $card)
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
-                        <strong>{{ $card['title'] ?? 'Category' }}</strong>
-                        <span>{{ $card['subtitle'] ?? 'Explore listings in this category.' }}</span>
+                        <div class="item-card-media">
+                            @if (!empty($card['image_url']))
+                                <img src="{{ $card['image_url'] }}" alt="{{ $card['title'] ?? 'Category' }} thumbnail" loading="lazy">
+                            @endif
+                        </div>
+                        <div class="item-card-body">
+                            <strong>{{ $card['title'] ?? 'Category' }}</strong>
+                            <span>{{ $card['subtitle'] ?? 'Explore listings in this category.' }}</span>
+                        </div>
                     </a>
                 @endforeach
             </div>
@@ -574,8 +622,15 @@
             <div class="trending-grid">
                 @foreach ($homeTrendingCards as $card)
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
-                        <strong>{{ $card['title'] ?? 'Trending Destination' }}</strong>
-                        <span>{{ $card['subtitle'] ?? 'Trending destination currently popular with guests.' }}</span>
+                        <div class="item-card-media">
+                            @if (!empty($card['image_url']))
+                                <img src="{{ $card['image_url'] }}" alt="{{ $card['title'] ?? 'Trending Destination' }} thumbnail" loading="lazy">
+                            @endif
+                        </div>
+                        <div class="item-card-body">
+                            <strong>{{ $card['title'] ?? 'Trending Destination' }}</strong>
+                            <span>{{ $card['subtitle'] ?? 'Trending destination currently popular with guests.' }}</span>
+                        </div>
                     </a>
                 @endforeach
             </div>
@@ -589,8 +644,18 @@
             <div class="deal-grid">
                 @foreach ($homeWeekendDealCards as $card)
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
-                        <strong>{{ $card['title'] ?? 'Weekend Deal' }}</strong>
-                        <span>{{ $card['subtitle'] ?? 'Recommended weekend offer for quick getaways.' }}</span>
+                        <div class="item-card-media">
+                            @if (!empty($card['image_url']))
+                                <img src="{{ $card['image_url'] }}" alt="{{ $card['title'] ?? 'Weekend Deal' }} thumbnail" loading="lazy">
+                            @endif
+                        </div>
+                        <div class="item-card-body">
+                            @if (!empty($card['meta']))
+                                <span class="item-card-meta">{{ $card['meta'] }}</span>
+                            @endif
+                            <strong>{{ $card['title'] ?? 'Weekend Deal' }}</strong>
+                            <span>{{ $card['subtitle'] ?? 'Recommended weekend offer for quick getaways.' }}</span>
+                        </div>
                     </a>
                 @endforeach
             </div>
@@ -604,8 +669,18 @@
             <div class="loved-grid">
                 @foreach ($homeLovedCards as $card)
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
-                        <strong>{{ $card['title'] ?? 'Loved Place' }}</strong>
-                        <span>{{ $card['subtitle'] ?? 'Highly rated by guests and repeat visitors.' }}</span>
+                        <div class="item-card-media">
+                            @if (!empty($card['image_url']))
+                                <img src="{{ $card['image_url'] }}" alt="{{ $card['title'] ?? 'Loved Place' }} thumbnail" loading="lazy">
+                            @endif
+                        </div>
+                        <div class="item-card-body">
+                            @if (!empty($card['meta']))
+                                <span class="item-card-meta">{{ $card['meta'] }}</span>
+                            @endif
+                            <strong>{{ $card['title'] ?? 'Loved Place' }}</strong>
+                            <span>{{ $card['subtitle'] ?? 'Highly rated by guests and repeat visitors.' }}</span>
+                        </div>
                     </a>
                 @endforeach
             </div>

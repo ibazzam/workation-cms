@@ -304,29 +304,6 @@
             cursor: not-allowed;
         }
 
-        .support-links {
-            margin-top: 12px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .support-footer {
-            margin-top: 16px;
-            padding-top: 8px;
-            border-top: 1px solid #d7e0e6;
-        }
-
-        .support-links a {
-            text-decoration: none;
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            background: #fff;
-            color: #20415d;
-            padding: 10px 12px;
-            font-weight: 700;
-            font-size: 0.85rem;
-        }
 
         .notice {
             margin-top: 12px;
@@ -1742,10 +1719,6 @@
             }
 
             .payout-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .support-links {
                 grid-template-columns: 1fr;
             }
 
@@ -3354,12 +3327,7 @@
             </article>
         </section>
 
-        <footer class="support-links support-footer" aria-label="Global support links">
-            <a href="/terms-of-service">Terms of Service</a>
-            <a href="/privacy-policy">Privacy Policy</a>
-            <a href="mailto:support@workation.mv">Email Support</a>
-            <a href="{{ $apiBase }}/api/v1/ops/runbooks" target="_blank" rel="noopener">Operations Runbooks</a>
-        </footer>
+        @include('partials.global-site-footer')
         </div>
         </div>
     </main>

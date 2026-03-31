@@ -171,6 +171,8 @@
 
         @if ($portal === 'vendor')
             <div class="hint">Vendor access requires an enabled account with <strong>VENDOR</strong> role. Too many failed attempts will temporarily lock login for security.</div>
+        @elseif ($portal === 'customer')
+            <div class="hint">Customer access uses your registered email and password from the customer signup flow.</div>
         @else
             <div class="hint">Admin access is restricted to enabled admin roles. Repeated failed attempts are rate-limited for security.</div>
         @endif
@@ -186,7 +188,7 @@
         <form method="POST" action="/portal/{{ $portal }}/login" aria-describedby="portal-login-hint">
             @csrf
             <p id="portal-login-hint" class="sr-only">Enter your username and password, then submit to sign in.</p>
-            <label for="username">Username</label>
+            <label for="username">{{ $portal === 'customer' ? 'Email' : 'Username' }}</label>
             <input id="username" name="username" type="text" value="{{ old('username') }}" autocomplete="username" required>
 
             <label for="password">Password</label>
@@ -198,6 +200,8 @@
                 <a href="/portal/{{ $portal }}/forgot-password">Forgot Password?</a>
                 @if ($portal === 'vendor')
                     <a href="/portal/vendor/register">Register as Vendor</a>
+                @elseif ($portal === 'customer')
+                    <a href="/portal/customer/register">Create Customer Account</a>
                 @endif
             </div>
         </form>

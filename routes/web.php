@@ -38,6 +38,14 @@ if (!function_exists('portalConfig')) {
             ];
         }
 
+        if ($portal === 'customer') {
+            return [
+                'session_key' => 'portal_customer_authenticated',
+                'name' => 'Customer',
+                'allowed_roles' => [],
+            ];
+        }
+
         return [
             'session_key' => 'portal_vendor_authenticated',
             'name' => 'Vendor',
@@ -49,7 +57,15 @@ if (!function_exists('portalConfig')) {
 if (!function_exists('portalRoutePath')) {
     function portalRoutePath(string $portal): string
     {
-        return $portal === 'admin' ? '/admin' : '/vendor';
+        if ($portal === 'admin') {
+            return '/admin';
+        }
+
+        if ($portal === 'customer') {
+            return '/customer';
+        }
+
+        return '/vendor';
     }
 }
 
@@ -1563,7 +1579,7 @@ Route::get('/portal/{portal}/login', function (Request $request, string $portal)
         return $canonicalRedirect;
     }
 
-    if (!in_array($portal, ['admin', 'vendor'], true)) {
+    if (!in_array($portal, ['admin', 'vendor', 'customer'], true)) {
         abort(404);
     }
 
@@ -2267,13 +2283,70 @@ Route::post('/portal/vendor/register', function (Request $request) {
     return back()->with('status', 'Registration submitted successfully. You can complete business and service verification after login by submitting your listings for review.');
 });
 
+Route::get('/portal/customer/register', function (Request $request) {
+    $canonicalRedirect = portalCanonicalHostRedirect($request);
+    if ($canonicalRedirect) {
+        return $canonicalRedirect;
+    }
+
+    if (session()->get('portal_customer_authenticated', false)) {
+        return redirect('/customer');
+    }
+
+    return view('portal-customer-register');
+});
+
+Route::post('/portal/customer/register', function (Request $request) {
+    $validated = $request->validate([
+        'name' => ['required', 'string', 'max:120'],
+        'email' => ['required', 'email', 'max:160'],
+        'password' => ['required', 'string', 'min:8', 'confirmed'],
+    ]);
+
+    $email = strtolower(trim((string) $validated['email']));
+
+    $existingCustomer = \App\Models\Customer::query()
+        ->whereRaw('LOWER(email) = ?', [$email])
+        ->first();
+
+    if ($existingCustomer) {
+        return back()->withErrors([
+            'email' => 'A customer account with this email already exists. Please log in or reset password.',
+        ])->withInput();
+    }
+
+    $now = now();
+    $payload = [
+        'name' => trim((string) $validated['name']),
+        'email' => $email,
+        'password' => Hash::make((string) $validated['password']),
+    ];
+
+    if (Schema::hasColumn('User', 'createdAt')) {
+        $payload['createdAt'] = $now;
+    }
+    if (Schema::hasColumn('User', 'updatedAt')) {
+        $payload['updatedAt'] = $now;
+    }
+    if (Schema::hasColumn('User', 'created_at')) {
+        $payload['created_at'] = $now;
+    }
+    if (Schema::hasColumn('User', 'updated_at')) {
+        $payload['updated_at'] = $now;
+    }
+
+    DB::table('User')->insert($payload);
+
+    return redirect('/portal/customer/login')->with('status', 'Customer registration successful. Please sign in.');
+});
+
 Route::get('/portal/{portal}/forgot-password', function (Request $request, string $portal) {
     $canonicalRedirect = portalCanonicalHostRedirect($request);
     if ($canonicalRedirect) {
         return $canonicalRedirect;
     }
 
-    if (!in_array($portal, ['admin', 'vendor'], true)) {
+    if (!in_array($portal, ['admin', 'vendor', 'customer'], true)) {
         abort(404);
     }
 
@@ -2286,7 +2359,7 @@ Route::get('/portal/{portal}/forgot-password', function (Request $request, strin
 });
 
 Route::post('/portal/{portal}/forgot-password', function (Request $request, string $portal) {
-    if (!in_array($portal, ['admin', 'vendor'], true)) {
+    if (!in_array($portal, ['admin', 'vendor', 'customer'], true)) {
         abort(404);
     }
 
@@ -2339,7 +2412,7 @@ Route::get('/portal/{portal}/reset-password/{token}', function (Request $request
         return $canonicalRedirect;
     }
 
-    if (!in_array($portal, ['admin', 'vendor'], true)) {
+    if (!in_array($portal, ['admin', 'vendor', 'customer'], true)) {
         abort(404);
     }
 
@@ -2354,7 +2427,7 @@ Route::get('/portal/{portal}/reset-password/{token}', function (Request $request
 });
 
 Route::post('/portal/{portal}/reset-password', function (Request $request, string $portal) {
-    if (!in_array($portal, ['admin', 'vendor'], true)) {
+    if (!in_array($portal, ['admin', 'vendor', 'customer'], true)) {
         abort(404);
     }
 
@@ -2438,8 +2511,8 @@ Route::post('/portal/{portal}/reset-password', function (Request $request, strin
             'password' => (string) $validated['password'],
         ];
 
-        // Some production databases may not include remember_token on legacy users schemas.
-        if (Schema::hasColumn('users', 'remember_token')) {
+        $rememberTokenTable = $portalUser instanceof \App\Models\User ? 'users' : 'User';
+        if (Schema::hasColumn($rememberTokenTable, 'remember_token')) {
             $updates['remember_token'] = Str::random(60);
         }
 
@@ -2461,7 +2534,7 @@ Route::post('/portal/{portal}/reset-password', function (Request $request, strin
 });
 
 Route::post('/portal/{portal}/login', function (Request $request, string $portal) {
-    if (!in_array($portal, ['admin', 'vendor'], true)) {
+    if (!in_array($portal, ['admin', 'vendor', 'customer'], true)) {
         abort(404);
     }
 
@@ -2476,7 +2549,7 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
 
     if (RateLimiter::tooManyAttempts($throttleKey, $maxAttempts)) {
         $seconds = RateLimiter::availableIn($throttleKey);
-        $portalLabel = $portal === 'vendor' ? 'Vendor' : 'Admin';
+        $portalLabel = $portal === 'vendor' ? 'Vendor' : ($portal === 'customer' ? 'Customer' : 'Admin');
         return back()->withErrors([
             'username' => $portalLabel . ' login temporarily locked due to repeated attempts. Try again in ' . $seconds . ' seconds.',
         ])->withInput($request->only('username'));
@@ -2546,7 +2619,7 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
 
             $portalMessage = $portal === 'vendor'
                 ? 'Invalid vendor username/password, or account access is not enabled.'
-                : 'Invalid username or password.';
+                : ($portal === 'customer' ? 'Invalid customer email or password.' : 'Invalid username or password.');
 
             return back()->withErrors([
                 'username' => $portalMessage,
@@ -2589,7 +2662,7 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
 });
 
 Route::post('/portal/{portal}/logout', function (Request $request, string $portal) {
-    if (!in_array($portal, ['admin', 'vendor'], true)) {
+    if (!in_array($portal, ['admin', 'vendor', 'customer'], true)) {
         abort(404);
     }
 

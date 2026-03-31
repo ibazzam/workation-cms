@@ -387,8 +387,221 @@ if (!function_exists('portalAdminAuditLog')) {
 Route::get('/', function () {
     $apiBase = workationApiBase();
 
+    $homeTopCategoryLinks = collect([
+        ['emoji' => '🏨', 'title' => 'Accommodation', 'subtitle' => 'Hotels, villas, guesthouses', 'url' => '/catalog/accommodation'],
+        ['emoji' => '🚤', 'title' => 'Transport', 'subtitle' => 'Marine and land transfers', 'url' => '/catalog/transport'],
+        ['emoji' => '🌊', 'title' => 'Excursions', 'subtitle' => 'Diving, snorkel, island tours', 'url' => '/catalog/excursion'],
+        ['emoji' => '💻', 'title' => 'Remote Workspace', 'subtitle' => 'Wi-Fi, desks, quiet corners', 'url' => '/catalog/remote_workspace'],
+        ['emoji' => '🏝️', 'title' => 'Resort Day Visit', 'subtitle' => 'Day access and passes', 'url' => '/catalog/resort_day_visit'],
+        ['emoji' => '🍽️', 'title' => 'Restaurants', 'subtitle' => 'Dining and local cuisine', 'url' => '/catalog/restaurant'],
+        ['emoji' => '🚗', 'title' => 'Vehicle Rental', 'subtitle' => 'Cars, bikes, vans and more', 'url' => '/catalog/vehicle_rental'],
+    ]);
+
+    $homePromoBanner = [
+        'message' => '🎉 Offers & Promotions: Save up to 25% on selected stays and transfer bundles this week.',
+        'url' => '/catalog/accommodation?sort=price_low_high',
+        'cta' => 'View Promotions',
+    ];
+
+    $homeTrendingChips = collect(['Top Islands', 'Top Cities', 'Top Atolls', 'Newly Rising']);
+
+    $homeBrowseCards = collect([
+        ['title' => 'Stay Options', 'subtitle' => 'Hotels, villas, guesthouses', 'url' => '/catalog/accommodation'],
+        ['title' => 'Transport', 'subtitle' => 'Speedboat, ferry, airport pickup', 'url' => '/catalog/transport'],
+        ['title' => 'Experiences', 'subtitle' => 'Diving, snorkel, island tours', 'url' => '/catalog/excursion'],
+        ['title' => 'Work-Friendly', 'subtitle' => 'Wi-Fi, desks, quiet corners', 'url' => '/catalog/remote_workspace'],
+        ['title' => 'Family Picks', 'subtitle' => 'Kid-friendly places and services', 'url' => '/catalog/accommodation?q=family'],
+        ['title' => 'Deals Zone', 'subtitle' => 'Promotions and last-minute value', 'url' => '/catalog/accommodation?sort=price_low_high'],
+    ]);
+
+    $homeTrendingCards = collect([
+        ['title' => 'Maafushi Island', 'subtitle' => 'Most searched for affordable island escapes.', 'url' => '/catalog/accommodation?q=Maafushi'],
+        ['title' => 'Male City', 'subtitle' => 'Convenient urban stays and transfer access.', 'url' => '/catalog/accommodation?q=Male'],
+        ['title' => 'Baa Atoll', 'subtitle' => 'Nature-rich stays and iconic snorkeling spots.', 'url' => '/catalog/accommodation?q=Baa+Atoll'],
+        ['title' => 'Ari Atoll', 'subtitle' => 'Popular for diving and premium island resorts.', 'url' => '/catalog/accommodation?q=Ari+Atoll'],
+    ]);
+
+    $homeWeekendDealCards = collect([
+        ['title' => '2-Night Beach Stay', 'subtitle' => 'Weekend promo with breakfast included.', 'url' => '/catalog/accommodation?q=beach&sort=price_low_high'],
+        ['title' => 'Stay + Transfer Bundle', 'subtitle' => 'Save when you combine stay and transport.', 'url' => '/catalog/transport?sort=price_low_high'],
+        ['title' => 'Family Weekend Pack', 'subtitle' => 'Room upgrade and activity credits included.', 'url' => '/catalog/accommodation?q=family&sort=most_wanted'],
+        ['title' => 'Couple Escape Offer', 'subtitle' => 'Curated stay options for a quick retreat.', 'url' => '/catalog/accommodation?q=couple&sort=highest_reviews'],
+    ]);
+
+    $homeLovedCards = collect([
+        ['title' => 'Hulhumale Seafront', 'subtitle' => 'Consistently high ratings for convenience.', 'url' => '/catalog/accommodation?q=Hulhumale'],
+        ['title' => 'Thulusdhoo Island', 'subtitle' => 'Guest favorite for surf culture and charm.', 'url' => '/catalog/accommodation?q=Thulusdhoo'],
+        ['title' => 'Ukulhas Island', 'subtitle' => 'Loved for clean beaches and relaxed stays.', 'url' => '/catalog/accommodation?q=Ukulhas'],
+        ['title' => 'Dhigurah Island', 'subtitle' => 'Strong demand for reef and marine experiences.', 'url' => '/catalog/accommodation?q=Dhigurah'],
+    ]);
+
+    if (Schema::hasTable('vendor_properties')) {
+        $baseQuery = DB::table('vendor_properties')->where('status', 'active');
+        $allProperties = $baseQuery->limit(300)->get();
+
+        if (Schema::hasColumn('vendor_properties', 'listing_category')) {
+            $categoryCounts = DB::table('vendor_properties')
+                ->where('status', 'active')
+                ->selectRaw('LOWER(listing_category) as category_key, COUNT(*) as total')
+                ->groupBy('category_key')
+                ->pluck('total', 'category_key');
+
+            $homeTopCategoryLinks = $homeTopCategoryLinks->map(function (array $card) use ($categoryCounts) {
+                $key = strtolower(trim((string) ($card['title'] ?? '')));
+                $categoryHint = match ($key) {
+                    'accommodation' => 'accommodation',
+                    'transport' => 'transport',
+                    'excursions' => 'excursion',
+                    'remote workspace' => 'remote_workspace',
+                    'resort day visit' => 'resort_day_visit',
+                    'restaurants' => 'restaurant',
+                    'vehicle rental' => 'vehicle_rental',
+                    default => null,
+                };
+
+                if ($categoryHint === null) {
+                    return $card;
+                }
+
+                $total = (int) ($categoryCounts[$categoryHint] ?? 0);
+                if ($total > 0) {
+                    $card['subtitle'] = $total . ' active listings';
+                }
+
+                return $card;
+            })->values();
+
+            $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categoryCounts) {
+                $categoryHint = match ($card['title']) {
+                    'Stay Options' => 'accommodation',
+                    'Transport' => 'transport',
+                    'Experiences' => 'excursion',
+                    'Work-Friendly' => 'remote_workspace',
+                    default => null,
+                };
+
+                if ($categoryHint === null) {
+                    return $card;
+                }
+
+                $total = (int) ($categoryCounts[$categoryHint] ?? 0);
+                if ($total > 0) {
+                    $card['subtitle'] = $total . ' active listings available';
+                }
+
+                return $card;
+            });
+        }
+
+        $locationScores = [];
+        foreach ($allProperties as $property) {
+            $location = trim((string) ($property->island ?? ''));
+            if ($location === '') {
+                $location = trim((string) ($property->city ?? ''));
+            }
+            if ($location === '') {
+                $location = trim((string) ($property->atoll ?? ''));
+            }
+            if ($location === '') {
+                continue;
+            }
+
+            $key = strtolower($location);
+            if (!array_key_exists($key, $locationScores)) {
+                $locationScores[$key] = ['title' => $location, 'count' => 0];
+            }
+            $locationScores[$key]['count']++;
+        }
+
+        if (!empty($locationScores)) {
+            uasort($locationScores, static fn (array $a, array $b) => $b['count'] <=> $a['count']);
+            $homeTrendingCards = collect(array_slice(array_values($locationScores), 0, 4))
+                ->map(function (array $row) {
+                    return [
+                        'title' => $row['title'],
+                        'subtitle' => $row['count'] . ' active listings currently in this destination.',
+                        'url' => '/catalog/accommodation?q=' . urlencode($row['title']),
+                    ];
+                })
+                ->values();
+        }
+
+        $priceSorted = $allProperties
+            ->filter(static fn ($property) => isset($property->base_price) && is_numeric($property->base_price))
+            ->sortBy(static fn ($property) => (float) $property->base_price)
+            ->values();
+
+        if ($priceSorted->isNotEmpty()) {
+            $homeWeekendDealCards = $priceSorted->take(4)->map(function ($property) {
+                $name = trim((string) ($property->name ?? 'Weekend Offer'));
+                $currency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
+                $price = number_format((float) ($property->base_price ?? 0), 2);
+                $place = trim((string) ($property->island ?? ''));
+                if ($place === '') {
+                    $place = trim((string) ($property->atoll ?? ''));
+                }
+
+                return [
+                    'title' => $name,
+                    'subtitle' => 'From ' . $currency . ' ' . $price . ($place !== '' ? (' in ' . $place) : '') . '.',
+                    'url' => '/catalog/' . strtolower((string) ($property->listing_category ?? 'accommodation')) . '?q=' . urlencode($name),
+                ];
+            })->values();
+
+            $lowestPrice = (float) ($priceSorted->first()->base_price ?? 0);
+            $homePromoBanner = [
+                'message' => '🎉 Offers & Promotions: Trending deals now live across stays and services from MVR ' . number_format($lowestPrice, 2) . '.',
+                'url' => '/catalog/accommodation?sort=price_low_high',
+                'cta' => 'Explore Deals',
+            ];
+        }
+
+        $reviewColumns = ['review_score', 'rating_average', 'average_rating', 'rating'];
+        $popularityColumns = ['bookings_count', 'total_bookings', 'wishlist_count', 'view_count'];
+        $sortColumn = null;
+        foreach (array_merge($reviewColumns, $popularityColumns) as $column) {
+            if (Schema::hasColumn('vendor_properties', $column)) {
+                $sortColumn = $column;
+                break;
+            }
+        }
+
+        if ($sortColumn !== null) {
+            $lovedRows = DB::table('vendor_properties')
+                ->where('status', 'active')
+                ->orderByDesc($sortColumn)
+                ->orderByDesc('updated_at')
+                ->limit(4)
+                ->get();
+
+            if ($lovedRows->isNotEmpty()) {
+                $homeLovedCards = $lovedRows->map(function ($property) use ($sortColumn) {
+                    $name = trim((string) ($property->name ?? 'Loved Listing'));
+                    $score = (string) ($property->{$sortColumn} ?? '0');
+                    $loc = trim((string) ($property->island ?? ''));
+                    if ($loc === '') {
+                        $loc = trim((string) ($property->atoll ?? ''));
+                    }
+
+                    return [
+                        'title' => $name,
+                        'subtitle' => 'Top-performing listing' . ($loc !== '' ? (' in ' . $loc) : '') . ' | score ' . $score,
+                        'url' => '/catalog/' . strtolower((string) ($property->listing_category ?? 'accommodation')) . '?q=' . urlencode($name),
+                    ];
+                })->values();
+            }
+        }
+    }
+
     return view('welcome', [
         'apiBase' => $apiBase,
+        'homeTopCategoryLinks' => $homeTopCategoryLinks,
+        'homePromoBanner' => $homePromoBanner,
+        'homeTrendingChips' => $homeTrendingChips,
+        'homeBrowseCards' => $homeBrowseCards,
+        'homeTrendingCards' => $homeTrendingCards,
+        'homeWeekendDealCards' => $homeWeekendDealCards,
+        'homeLovedCards' => $homeLovedCards,
         'activityLinks' => [
             [
                 'label' => 'Strict Live Preflight PASS - Run 22991556615',
@@ -426,6 +639,186 @@ Route::get('/privacy-policy', function () {
 
 Route::get('/terms-of-service', function () {
     return response()->view('terms-of-service');
+});
+
+Route::get('/catalog/{category}', function (Request $request, string $category) {
+    $categoryMap = [
+        'accommodation' => ['label' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas, and guesthouses.'],
+        'transport' => ['label' => 'Transport', 'subtitle' => 'Marine and land transport services.'],
+        'excursion' => ['label' => 'Excursion', 'subtitle' => 'Experiences, tours, and activity packages.'],
+        'remote_workspace' => ['label' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces and productivity stays.'],
+        'resort_day_visit' => ['label' => 'Resort Day Visit', 'subtitle' => 'Day access offers for top resort properties.'],
+        'restaurant' => ['label' => 'Restaurant', 'subtitle' => 'Dining and culinary service listings.'],
+        'vehicle_rental' => ['label' => 'Vehicle Rental', 'subtitle' => 'Cars, bikes, and local mobility rentals.'],
+    ];
+
+    $categoryKey = strtolower(trim($category));
+    if (!array_key_exists($categoryKey, $categoryMap)) {
+        abort(404);
+    }
+
+    $queryText = trim((string) $request->query('q', ''));
+    $atollFilter = trim((string) $request->query('atoll', ''));
+    $islandFilter = trim((string) $request->query('island', ''));
+    $minPrice = (float) $request->query('min_price', 0);
+    $maxPrice = (float) $request->query('max_price', 0);
+    $sort = strtolower(trim((string) $request->query('sort', 'recommended')));
+
+    $catalogProperties = collect();
+    $catalogPropertyMediaByProperty = collect();
+    $atollOptions = collect();
+    $islandOptions = collect();
+
+    if (Schema::hasTable('vendor_properties')) {
+        $propertiesQuery = DB::table('vendor_properties')->where('status', 'active');
+        if (Schema::hasColumn('vendor_properties', 'listing_category')) {
+            $propertiesQuery->whereRaw('LOWER(listing_category) = ?', [$categoryKey]);
+        }
+
+        $searchColumns = [];
+        foreach (['name', 'listing_name', 'atoll', 'island', 'city', 'description'] as $candidateColumn) {
+            if (Schema::hasColumn('vendor_properties', $candidateColumn)) {
+                $searchColumns[] = $candidateColumn;
+            }
+        }
+
+        if ($queryText !== '' && !empty($searchColumns)) {
+            $propertiesQuery->where(function ($query) use ($searchColumns, $queryText) {
+                foreach ($searchColumns as $index => $column) {
+                    if ($index === 0) {
+                        $query->where($column, 'like', '%' . $queryText . '%');
+                    } else {
+                        $query->orWhere($column, 'like', '%' . $queryText . '%');
+                    }
+                }
+            });
+        }
+
+        if ($atollFilter !== '' && Schema::hasColumn('vendor_properties', 'atoll')) {
+            $propertiesQuery->whereRaw('LOWER(atoll) = ?', [strtolower($atollFilter)]);
+        }
+
+        if ($islandFilter !== '' && Schema::hasColumn('vendor_properties', 'island')) {
+            $propertiesQuery->whereRaw('LOWER(island) = ?', [strtolower($islandFilter)]);
+        }
+
+        if (Schema::hasColumn('vendor_properties', 'base_price')) {
+            if ($minPrice > 0) {
+                $propertiesQuery->where('base_price', '>=', $minPrice);
+            }
+            if ($maxPrice > 0) {
+                $propertiesQuery->where('base_price', '<=', $maxPrice);
+            }
+        }
+
+        $popularityColumns = ['bookings_count', 'total_bookings', 'wishlist_count', 'view_count'];
+        $bookedColumns = ['bookings_count', 'total_bookings'];
+        $reviewColumns = ['review_score', 'rating_average', 'average_rating', 'rating'];
+
+        $firstExistingColumn = static function (array $columns): ?string {
+            foreach ($columns as $column) {
+                if (Schema::hasColumn('vendor_properties', $column)) {
+                    return $column;
+                }
+            }
+
+            return null;
+        };
+
+        $popularityColumn = $firstExistingColumn($popularityColumns);
+        $bookedColumn = $firstExistingColumn($bookedColumns);
+        $reviewColumn = $firstExistingColumn($reviewColumns);
+
+        if ($sort === 'price_low_high' && Schema::hasColumn('vendor_properties', 'base_price')) {
+            $propertiesQuery->orderBy('base_price');
+        } elseif ($sort === 'price_high_low' && Schema::hasColumn('vendor_properties', 'base_price')) {
+            $propertiesQuery->orderByDesc('base_price');
+        } elseif ($sort === 'most_wanted' && $popularityColumn !== null) {
+            $propertiesQuery->orderByDesc($popularityColumn);
+        } elseif ($sort === 'most_booked' && $bookedColumn !== null) {
+            $propertiesQuery->orderByDesc($bookedColumn);
+        } elseif ($sort === 'highest_reviews' && $reviewColumn !== null) {
+            $propertiesQuery->orderByDesc($reviewColumn);
+        } else {
+            $propertiesQuery->orderByDesc('updated_at');
+        }
+
+        $catalogProperties = $propertiesQuery->limit(80)->get();
+        $propertyIds = $catalogProperties
+            ->pluck('id')
+            ->map(static fn ($id) => (int) $id)
+            ->filter(static fn (int $id) => $id > 0)
+            ->values();
+
+        if (Schema::hasTable('vendor_listing_media') && $propertyIds->isNotEmpty()) {
+            $mediaRows = DB::table('vendor_listing_media')
+                ->where('entity_type', 'property')
+                ->whereIn('entity_id', $propertyIds->all())
+                ->orderByDesc('is_primary')
+                ->orderByDesc('created_at')
+                ->limit(600)
+                ->get();
+
+            $catalogPropertyMediaByProperty = $mediaRows->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
+        }
+
+        if (Schema::hasColumn('vendor_properties', 'atoll')) {
+            $atollOptions = DB::table('vendor_properties')
+                ->where('status', 'active')
+                ->when(Schema::hasColumn('vendor_properties', 'listing_category'), function ($query) use ($categoryKey) {
+                    $query->whereRaw('LOWER(listing_category) = ?', [$categoryKey]);
+                })
+                ->whereNotNull('atoll')
+                ->where('atoll', '!=', '')
+                ->distinct()
+                ->orderBy('atoll')
+                ->limit(120)
+                ->pluck('atoll');
+        }
+
+        if (Schema::hasColumn('vendor_properties', 'island')) {
+            $islandOptions = DB::table('vendor_properties')
+                ->where('status', 'active')
+                ->when(Schema::hasColumn('vendor_properties', 'listing_category'), function ($query) use ($categoryKey) {
+                    $query->whereRaw('LOWER(listing_category) = ?', [$categoryKey]);
+                })
+                ->whereNotNull('island')
+                ->where('island', '!=', '')
+                ->distinct()
+                ->orderBy('island')
+                ->limit(120)
+                ->pluck('island');
+        }
+    }
+
+    return view('customer-category-catalog', [
+        'apiBase' => workationApiBase(),
+        'categoryKey' => $categoryKey,
+        'categoryMeta' => $categoryMap[$categoryKey],
+        'catalogProperties' => $catalogProperties,
+        'catalogPropertyMediaByProperty' => $catalogPropertyMediaByProperty,
+        'atollOptions' => $atollOptions,
+        'islandOptions' => $islandOptions,
+        'filters' => [
+            'q' => $queryText,
+            'atoll' => $atollFilter,
+            'island' => $islandFilter,
+            'min_price' => $minPrice,
+            'max_price' => $maxPrice,
+            'sort' => $sort,
+            'checkin' => trim((string) $request->query('checkin', '')),
+            'checkout' => trim((string) $request->query('checkout', '')),
+            'adults' => (int) $request->query('adults', 2),
+            'children' => (int) $request->query('children', 0),
+            'rooms' => (int) $request->query('rooms', 1),
+            'transport_mode' => trim((string) $request->query('transport_mode', 'marine')),
+            'from' => trim((string) $request->query('from', '')),
+            'to' => trim((string) $request->query('to', '')),
+            'travel_date' => trim((string) $request->query('travel_date', '')),
+            'return_date' => trim((string) $request->query('return_date', '')),
+            'vehicle_type' => trim((string) $request->query('vehicle_type', '')),
+        ],
+    ]);
 });
 
 Route::get('/customer', function () {

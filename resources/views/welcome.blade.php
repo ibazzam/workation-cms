@@ -110,9 +110,6 @@
         }
 
         .top-links {
-            position: sticky;
-            top: 72px;
-            z-index: 25;
             display: grid;
             grid-template-columns: repeat(7, minmax(0, 1fr));
             gap: 8px;
@@ -120,7 +117,6 @@
             border-radius: 14px;
             border: 1px solid var(--line);
             background: color-mix(in srgb, #ffffff 84%, #eef8fc 16%);
-            backdrop-filter: blur(6px);
         }
 
         .top-link {
@@ -176,13 +172,19 @@
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
             gap: 8px;
+            align-items: start;
         }
 
         .search-dynamic-fields {
             margin-top: 8px;
-            display: grid;
+            display: none;
+            grid-column: 1 / -1;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 8px;
+        }
+
+        .search-dynamic-fields.is-active {
+            display: grid;
         }
 
         .search-dynamic-fields .field {
@@ -494,7 +496,7 @@
                 <input type="search" name="q" placeholder="Atoll, island, property, or service name" aria-label="Search query">
                 <button type="submit">Search Now</button>
 
-                <div id="accommodationFields" class="search-dynamic-fields" data-fields-for="accommodation">
+                <div id="accommodationFields" class="search-dynamic-fields is-active" data-fields-for="accommodation" aria-hidden="false">
                     <div class="field"><label for="accommodationAtoll">Atoll</label><input id="accommodationAtoll" name="atoll" type="text" placeholder="Baa Atoll"></div>
                     <div class="field"><label for="accommodationIsland">Island</label><input id="accommodationIsland" name="island" type="text" placeholder="Maafushi"></div>
                     <div class="field"><label for="checkin">Check-in Date</label><input id="checkin" name="checkin" type="date"></div>
@@ -505,7 +507,7 @@
                     <div class="field"><label for="accommodationSort">Sort</label><select id="accommodationSort" name="sort"><option value="recommended">Recommended</option><option value="most_wanted">Most Wanted</option><option value="most_booked">Most Booked</option><option value="highest_reviews">Highest Reviews</option><option value="price_low_high">Price Low to High</option><option value="price_high_low">Price High to Low</option></select></div>
                 </div>
 
-                <div id="transportFields" class="search-dynamic-fields" data-fields-for="transport" hidden>
+                <div id="transportFields" class="search-dynamic-fields" data-fields-for="transport" hidden aria-hidden="true">
                     <div class="field"><label for="transportMode">Transport Mode</label><select id="transportMode" name="transport_mode"><option value="marine">Marine Transport</option><option value="land">Land Transport</option></select></div>
                     <div class="field"><label for="transportFrom">From</label><input id="transportFrom" name="from" type="text" placeholder="Island or city"></div>
                     <div class="field"><label for="transportTo">To</label><input id="transportTo" name="to" type="text" placeholder="Island or city"></div>
@@ -516,7 +518,7 @@
                     <div class="field"><label for="vehicleType">Vehicle Type</label><input id="vehicleType" name="vehicle_type" type="text" placeholder="Car, Van, Bike"></div>
                 </div>
 
-                <div id="serviceFields" class="search-dynamic-fields" data-fields-for="service" hidden>
+                <div id="serviceFields" class="search-dynamic-fields" data-fields-for="service" hidden aria-hidden="true">
                     <div class="field"><label for="serviceAtoll">Atoll</label><input id="serviceAtoll" name="atoll" type="text" placeholder="Baa Atoll"></div>
                     <div class="field"><label for="serviceIsland">Island</label><input id="serviceIsland" name="island" type="text" placeholder="Male"></div>
                     <div class="field"><label for="minPrice">Min Price</label><input id="minPrice" name="min_price" type="number" min="0" placeholder="0"></div>
@@ -632,11 +634,24 @@
             function toggleFields() {
                 const category = String(categorySelect.value || 'accommodation').toLowerCase();
                 const group = resolveGroup(category);
+                const groups = [
+                    { key: 'accommodation', el: accommodationFields },
+                    { key: 'transport', el: transportFields },
+                    { key: 'service', el: serviceFields }
+                ];
 
                 form.setAttribute('action', '/catalog/' + category);
-                accommodationFields.hidden = group !== 'accommodation';
-                transportFields.hidden = group !== 'transport';
-                serviceFields.hidden = group !== 'service';
+
+                groups.forEach(function (entry) {
+                    const isActive = entry.key === group;
+                    entry.el.hidden = !isActive;
+                    entry.el.classList.toggle('is-active', isActive);
+                    entry.el.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+
+                    entry.el.querySelectorAll('input, select, textarea').forEach(function (control) {
+                        control.disabled = !isActive;
+                    });
+                });
             }
 
             categorySelect.addEventListener('change', toggleFields);

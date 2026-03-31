@@ -114,7 +114,7 @@
             top: 72px;
             z-index: 25;
             display: grid;
-            grid-template-columns: repeat(6, minmax(0, 1fr));
+            grid-template-columns: repeat(7, minmax(0, 1fr));
             gap: 8px;
             padding: 10px;
             border-radius: 14px;
@@ -174,12 +174,43 @@
         .search-form {
             margin-top: 12px;
             display: grid;
-            grid-template-columns: 1fr 1.3fr auto;
+            grid-template-columns: 1fr 1fr 1fr;
             gap: 8px;
+        }
+
+        .search-dynamic-fields {
+            margin-top: 8px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .search-dynamic-fields .field {
+            display: grid;
+            gap: 4px;
+        }
+
+        .search-dynamic-fields .field label {
+            font-size: 0.74rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #cfeff4;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
         }
 
         .search-form select,
         .search-form input {
+            width: 100%;
+            border: 1px solid #b8d9e2;
+            border-radius: 10px;
+            padding: 11px 12px;
+            font: inherit;
+            color: #103247;
+            background: #f8fdff;
+        }
+
+        .search-dynamic-fields select,
+        .search-dynamic-fields input {
             width: 100%;
             border: 1px solid #b8d9e2;
             border-radius: 10px;
@@ -199,6 +230,24 @@
             font-weight: 700;
             cursor: pointer;
             min-width: 122px;
+        }
+
+        .search-actions {
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .search-actions a {
+            color: #dff7fb;
+            font-size: 0.8rem;
+            text-decoration: none;
+            border: 1px solid rgba(214, 244, 248, 0.45);
+            border-radius: 10px;
+            padding: 9px 12px;
+            background: rgba(4, 64, 83, 0.22);
         }
 
         .search-options {
@@ -325,7 +374,7 @@
 
         @media (max-width: 1040px) {
             .top-links {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
+                grid-template-columns: repeat(4, minmax(0, 1fr));
             }
 
             .browse-grid,
@@ -342,6 +391,10 @@
             .search-form button {
                 grid-column: 1 / -1;
                 min-height: 42px;
+            }
+
+            .search-dynamic-fields {
+                grid-template-columns: 1fr 1fr;
             }
         }
 
@@ -375,6 +428,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .search-dynamic-fields {
+                grid-template-columns: 1fr;
+            }
+
             .browse-grid,
             .trending-grid,
             .deal-grid,
@@ -388,6 +445,13 @@
     @php
         $customerLoggedIn = (bool) session('portal_customer_authenticated', false);
         $customerName = trim((string) session('portal_customer_user', 'Customer'));
+        $homeTopCategoryLinks = $homeTopCategoryLinks ?? collect();
+        $homePromoBanner = $homePromoBanner ?? ['message' => 'Promotions coming soon.', 'url' => '/catalog/accommodation', 'cta' => 'View Promotions'];
+        $homeTrendingChips = $homeTrendingChips ?? collect();
+        $homeBrowseCards = $homeBrowseCards ?? collect();
+        $homeTrendingCards = $homeTrendingCards ?? collect();
+        $homeWeekendDealCards = $homeWeekendDealCards ?? collect();
+        $homeLovedCards = $homeLovedCards ?? collect();
     @endphp
 
     <main class="page" data-api-base="{{ $apiBase }}">
@@ -409,39 +473,68 @@
         </header>
 
         <section class="top-links" aria-label="Top categories">
-            <a class="top-link" href="/customer?category=Accommodation">🏨 Stay Options<span>Hotels, villas, guesthouses</span></a>
-            <a class="top-link" href="/customer?category=Transport">🚤 Transport<span>Speedboat, ferry, airport pickup</span></a>
-            <a class="top-link" href="/customer?category=Experiences">🌊 Experiences<span>Diving, snorkel, island tours</span></a>
-            <a class="top-link" href="/customer?category=Workspace">💻 Work-Friendly<span>Wi-Fi, desks, quiet corners</span></a>
-            <a class="top-link" href="/customer?category=Family">👨‍👩‍👧 Family Picks<span>Kid-friendly places and services</span></a>
-            <a class="top-link" href="/customer?category=Deals">🔥 Deals Zone<span>Promotions and last-minute value</span></a>
+            @foreach ($homeTopCategoryLinks as $link)
+                <a class="top-link" href="{{ $link['url'] ?? '/catalog/accommodation' }}">{{ ($link['emoji'] ?? '📌') . ' ' . ($link['title'] ?? 'Category') }}<span>{{ $link['subtitle'] ?? '' }}</span></a>
+            @endforeach
         </section>
 
         <section class="search-section" aria-label="Smart category search">
             <p class="search-eyebrow">Find Anything Faster</p>
-            <h1 class="search-title">Search all categories with one flexible search bar.</h1>
-            <form class="search-form" action="/customer" method="get">
-                <select name="search_scope" aria-label="Search scope">
-                    <option value="all">All Categories</option>
-                    <option value="property">Property / Stays</option>
-                    <option value="service">Services / Experiences</option>
-                    <option value="destination">Destination / Island / City / Atoll</option>
+            <h1 class="search-title">Select category and search with category-specific filters.</h1>
+            <form id="homeCatalogSearchForm" class="search-form" action="/catalog/accommodation" method="get">
+                <select id="categorySelect" name="category" aria-label="Select category">
+                    <option value="accommodation">Accommodation</option>
+                    <option value="transport">Transport</option>
+                    <option value="excursion">Excursion</option>
+                    <option value="remote_workspace">Remote Workspace</option>
+                    <option value="resort_day_visit">Resort Day Visit</option>
+                    <option value="restaurant">Restaurant</option>
+                    <option value="vehicle_rental">Vehicle Rental</option>
                 </select>
-                <input type="search" name="q" placeholder="Try: Maafushi villa, airport transfer, diving in Baa Atoll" aria-label="Search query">
+                <input type="search" name="q" placeholder="Atoll, island, property, or service name" aria-label="Search query">
                 <button type="submit">Search Now</button>
+
+                <div id="accommodationFields" class="search-dynamic-fields" data-fields-for="accommodation">
+                    <div class="field"><label for="accommodationAtoll">Atoll</label><input id="accommodationAtoll" name="atoll" type="text" placeholder="Baa Atoll"></div>
+                    <div class="field"><label for="accommodationIsland">Island</label><input id="accommodationIsland" name="island" type="text" placeholder="Maafushi"></div>
+                    <div class="field"><label for="checkin">Check-in Date</label><input id="checkin" name="checkin" type="date"></div>
+                    <div class="field"><label for="checkout">Check-out Date</label><input id="checkout" name="checkout" type="date"></div>
+                    <div class="field"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="2"></div>
+                    <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="0"></div>
+                    <div class="field"><label for="rooms">Rooms</label><input id="rooms" name="rooms" type="number" min="1" value="1"></div>
+                    <div class="field"><label for="accommodationSort">Sort</label><select id="accommodationSort" name="sort"><option value="recommended">Recommended</option><option value="most_wanted">Most Wanted</option><option value="most_booked">Most Booked</option><option value="highest_reviews">Highest Reviews</option><option value="price_low_high">Price Low to High</option><option value="price_high_low">Price High to Low</option></select></div>
+                </div>
+
+                <div id="transportFields" class="search-dynamic-fields" data-fields-for="transport" hidden>
+                    <div class="field"><label for="transportMode">Transport Mode</label><select id="transportMode" name="transport_mode"><option value="marine">Marine Transport</option><option value="land">Land Transport</option></select></div>
+                    <div class="field"><label for="transportFrom">From</label><input id="transportFrom" name="from" type="text" placeholder="Island or city"></div>
+                    <div class="field"><label for="transportTo">To</label><input id="transportTo" name="to" type="text" placeholder="Island or city"></div>
+                    <div class="field"><label for="travelDate">Travel Date</label><input id="travelDate" name="travel_date" type="date"></div>
+                    <div class="field"><label for="returnDate">Return Date</label><input id="returnDate" name="return_date" type="date"></div>
+                    <div class="field"><label for="transportAdults">Adults / Pax</label><input id="transportAdults" name="adults" type="number" min="1" value="2"></div>
+                    <div class="field"><label for="transportChildren">Children</label><input id="transportChildren" name="children" type="number" min="0" value="0"></div>
+                    <div class="field"><label for="vehicleType">Vehicle Type</label><input id="vehicleType" name="vehicle_type" type="text" placeholder="Car, Van, Bike"></div>
+                </div>
+
+                <div id="serviceFields" class="search-dynamic-fields" data-fields-for="service" hidden>
+                    <div class="field"><label for="serviceAtoll">Atoll</label><input id="serviceAtoll" name="atoll" type="text" placeholder="Baa Atoll"></div>
+                    <div class="field"><label for="serviceIsland">Island</label><input id="serviceIsland" name="island" type="text" placeholder="Male"></div>
+                    <div class="field"><label for="minPrice">Min Price</label><input id="minPrice" name="min_price" type="number" min="0" placeholder="0"></div>
+                    <div class="field"><label for="maxPrice">Max Price</label><input id="maxPrice" name="max_price" type="number" min="0" placeholder="5000"></div>
+                    <div class="field"><label for="serviceSort">Sort</label><select id="serviceSort" name="sort"><option value="recommended">Recommended</option><option value="most_wanted">Most Wanted</option><option value="most_booked">Most Booked</option><option value="highest_reviews">Highest Reviews</option><option value="price_low_high">Price Low to High</option><option value="price_high_low">Price High to Low</option></select></div>
+                </div>
             </form>
-            <div class="search-options" aria-label="Quick search options">
-                <a href="/customer?search_scope=all&q=beachfront">Beachfront</a>
-                <a href="/customer?search_scope=destination&q=Male">Male City</a>
-                <a href="/customer?search_scope=destination&q=Baa+Atoll">Baa Atoll</a>
-                <a href="/customer?search_scope=service&q=snorkeling">Snorkeling</a>
-                <a href="/customer?search_scope=property&q=family+suite">Family Suite</a>
+            <div class="search-actions" aria-label="Quick category catalogue links">
+                <a href="/catalog/accommodation">Open Accommodation Catalogue</a>
+                <a href="/catalog/transport">Open Transport Catalogue</a>
+                <a href="/catalog/excursion">Open Excursion Catalogue</a>
+                <a href="/catalog/remote_workspace">Open Workspace Catalogue</a>
             </div>
         </section>
 
         <section class="promo-banner" aria-label="Offers and promotions">
-            <strong>🎉 Offers & Promotions: Save up to 25% on selected stays and transfer bundles this week.</strong>
-            <a href="/customer?category=Deals">View Promotions</a>
+            <strong>{{ $homePromoBanner['message'] ?? 'Promotions coming soon.' }}</strong>
+            <a href="{{ $homePromoBanner['url'] ?? '/catalog/accommodation' }}">{{ $homePromoBanner['cta'] ?? 'View Promotions' }}</a>
         </section>
 
         <section class="section" aria-label="Browse by category, property, or service">
@@ -450,22 +543,12 @@
                 <p class="section-sub">Quick entry points for what guests usually need first.</p>
             </div>
             <div class="browse-grid">
-                <a class="item-card" href="/customer?category=Accommodation">
-                    <strong>Beach Resorts</strong>
-                    <span>Premium rooms, ocean views, full amenities.</span>
-                </a>
-                <a class="item-card" href="/customer?category=Accommodation">
-                    <strong>Guesthouses</strong>
-                    <span>Local island stays with practical pricing.</span>
-                </a>
-                <a class="item-card" href="/customer?category=Transport">
-                    <strong>Airport Transfer</strong>
-                    <span>Coordinated speedboat and ferry options.</span>
-                </a>
-                <a class="item-card" href="/customer?category=Experiences">
-                    <strong>Water Activities</strong>
-                    <span>Dolphin cruise, snorkeling, and dives.</span>
-                </a>
+                @foreach ($homeBrowseCards as $card)
+                    <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
+                        <strong>{{ $card['title'] ?? 'Category' }}</strong>
+                        <span>{{ $card['subtitle'] ?? 'Explore listings in this category.' }}</span>
+                    </a>
+                @endforeach
             </div>
         </section>
 
@@ -475,28 +558,17 @@
                 <p class="section-sub">High-interest places guests are checking now.</p>
             </div>
             <div class="chip-row" aria-label="Trending filters">
-                <span class="chip">Top Islands</span>
-                <span class="chip">Top Cities</span>
-                <span class="chip">Top Atolls</span>
-                <span class="chip">Newly Rising</span>
+                @foreach ($homeTrendingChips as $chip)
+                    <span class="chip">{{ $chip }}</span>
+                @endforeach
             </div>
             <div class="trending-grid">
-                <a class="item-card" href="/customer?search_scope=destination&q=Maafushi">
-                    <strong>Maafushi Island</strong>
-                    <span>Most searched for affordable island escapes.</span>
-                </a>
-                <a class="item-card" href="/customer?search_scope=destination&q=Male">
-                    <strong>Male City</strong>
-                    <span>Convenient urban stays and transfer access.</span>
-                </a>
-                <a class="item-card" href="/customer?search_scope=destination&q=Baa+Atoll">
-                    <strong>Baa Atoll</strong>
-                    <span>Nature-rich stays and iconic snorkeling spots.</span>
-                </a>
-                <a class="item-card" href="/customer?search_scope=destination&q=Ari+Atoll">
-                    <strong>Ari Atoll</strong>
-                    <span>Popular for diving and premium island resorts.</span>
-                </a>
+                @foreach ($homeTrendingCards as $card)
+                    <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
+                        <strong>{{ $card['title'] ?? 'Trending Destination' }}</strong>
+                        <span>{{ $card['subtitle'] ?? 'Trending destination currently popular with guests.' }}</span>
+                    </a>
+                @endforeach
             </div>
         </section>
 
@@ -506,22 +578,12 @@
                 <p class="section-sub">Easy picks for short breaks and quick getaways.</p>
             </div>
             <div class="deal-grid">
-                <a class="item-card" href="/customer?category=Deals&q=weekend+beach">
-                    <strong>2-Night Beach Stay</strong>
-                    <span>Weekend promo with breakfast included.</span>
-                </a>
-                <a class="item-card" href="/customer?category=Deals&q=transfer+bundle">
-                    <strong>Stay + Transfer Bundle</strong>
-                    <span>Save when you combine stay and transport.</span>
-                </a>
-                <a class="item-card" href="/customer?category=Deals&q=family+weekend">
-                    <strong>Family Weekend Pack</strong>
-                    <span>Room upgrade and activity credits included.</span>
-                </a>
-                <a class="item-card" href="/customer?category=Deals&q=romantic+escape">
-                    <strong>Couple Escape Offer</strong>
-                    <span>Curated stay options for a quick retreat.</span>
-                </a>
+                @foreach ($homeWeekendDealCards as $card)
+                    <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
+                        <strong>{{ $card['title'] ?? 'Weekend Deal' }}</strong>
+                        <span>{{ $card['subtitle'] ?? 'Recommended weekend offer for quick getaways.' }}</span>
+                    </a>
+                @endforeach
             </div>
         </section>
 
@@ -531,26 +593,55 @@
                 <p class="section-sub">Based on repeat views and top user interest.</p>
             </div>
             <div class="loved-grid">
-                <a class="item-card" href="/customer?search_scope=destination&q=Hulhumale">
-                    <strong>Hulhumale Seafront</strong>
-                    <span>Consistently high ratings for convenience.</span>
-                </a>
-                <a class="item-card" href="/customer?search_scope=destination&q=Thulusdhoo">
-                    <strong>Thulusdhoo Island</strong>
-                    <span>Guest favorite for surf culture and charm.</span>
-                </a>
-                <a class="item-card" href="/customer?search_scope=destination&q=Ukulhas">
-                    <strong>Ukulhas Island</strong>
-                    <span>Loved for clean beaches and relaxed stays.</span>
-                </a>
-                <a class="item-card" href="/customer?search_scope=destination&q=Dhigurah">
-                    <strong>Dhigurah Island</strong>
-                    <span>Strong demand for reef and marine experiences.</span>
-                </a>
+                @foreach ($homeLovedCards as $card)
+                    <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
+                        <strong>{{ $card['title'] ?? 'Loved Place' }}</strong>
+                        <span>{{ $card['subtitle'] ?? 'Highly rated by guests and repeat visitors.' }}</span>
+                    </a>
+                @endforeach
             </div>
         </section>
 
         @include('partials.global-site-footer')
     </main>
+
+    <script>
+        (function () {
+            const form = document.getElementById('homeCatalogSearchForm');
+            const categorySelect = document.getElementById('categorySelect');
+            const accommodationFields = document.getElementById('accommodationFields');
+            const transportFields = document.getElementById('transportFields');
+            const serviceFields = document.getElementById('serviceFields');
+
+            if (!form || !categorySelect || !accommodationFields || !transportFields || !serviceFields) {
+                return;
+            }
+
+            function resolveGroup(category) {
+                if (category === 'accommodation') {
+                    return 'accommodation';
+                }
+
+                if (category === 'transport') {
+                    return 'transport';
+                }
+
+                return 'service';
+            }
+
+            function toggleFields() {
+                const category = String(categorySelect.value || 'accommodation').toLowerCase();
+                const group = resolveGroup(category);
+
+                form.setAttribute('action', '/catalog/' + category);
+                accommodationFields.hidden = group !== 'accommodation';
+                transportFields.hidden = group !== 'transport';
+                serviceFields.hidden = group !== 'service';
+            }
+
+            categorySelect.addEventListener('change', toggleFields);
+            toggleFields();
+        })();
+    </script>
 </body>
 </html>

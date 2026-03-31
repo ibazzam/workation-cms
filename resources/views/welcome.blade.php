@@ -339,22 +339,63 @@
         .item-card {
             border: 1px solid #dbe7f0;
             border-radius: 12px;
-            background: #fbfdff;
-            padding: 11px;
+            background: #f5fbff;
             text-decoration: none;
             color: #1b3f58;
             display: grid;
-            gap: 5px;
+            overflow: hidden;
+            min-height: 210px;
+            grid-template-rows: 128px auto;
+        }
+
+        .item-card-media {
+            position: relative;
+            width: 100%;
+            height: 128px;
+            background: linear-gradient(140deg, #d6edf1 0%, #bfdfeb 45%, #ffe3be 100%);
+            overflow: hidden;
+        }
+
+        .item-card-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .item-card-media::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(7, 35, 52, 0.35), rgba(7, 35, 52, 0.05));
+        }
+
+        .item-card-body {
+            padding: 10px;
+            display: grid;
+            gap: 4px;
+            align-content: start;
+            background: #fbfdff;
         }
 
         .item-card strong {
-            font-size: 0.92rem;
+            font-size: 0.95rem;
+            line-height: 1.28;
+            color: #133b55;
         }
 
         .item-card span {
-            color: #5a6f82;
-            font-size: 0.8rem;
-            line-height: 1.43;
+            color: #5b7185;
+            font-size: 0.79rem;
+            line-height: 1.35;
+        }
+
+        .item-card-meta {
+            color: #2b617e;
+            font-size: 0.74rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .chip-row {
@@ -497,33 +538,40 @@
                 <button type="submit">Search Now</button>
 
                 <div id="accommodationFields" class="search-dynamic-fields is-active" data-fields-for="accommodation" aria-hidden="false">
-                    <div class="field"><label for="accommodationAtoll">Atoll</label><input id="accommodationAtoll" name="atoll" type="text" placeholder="Baa Atoll"></div>
-                    <div class="field"><label for="accommodationIsland">Island</label><input id="accommodationIsland" name="island" type="text" placeholder="Maafushi"></div>
                     <div class="field"><label for="checkin">Check-in Date</label><input id="checkin" name="checkin" type="date"></div>
                     <div class="field"><label for="checkout">Check-out Date</label><input id="checkout" name="checkout" type="date"></div>
                     <div class="field"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="2"></div>
                     <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="0"></div>
                     <div class="field"><label for="rooms">Rooms</label><input id="rooms" name="rooms" type="number" min="1" value="1"></div>
-                    <div class="field"><label for="accommodationSort">Sort</label><select id="accommodationSort" name="sort"><option value="recommended">Recommended</option><option value="most_wanted">Most Wanted</option><option value="most_booked">Most Booked</option><option value="highest_reviews">Highest Reviews</option><option value="price_low_high">Price Low to High</option><option value="price_high_low">Price High to Low</option></select></div>
                 </div>
 
                 <div id="transportFields" class="search-dynamic-fields" data-fields-for="transport" hidden aria-hidden="true">
                     <div class="field"><label for="transportMode">Transport Mode</label><select id="transportMode" name="transport_mode"><option value="marine">Marine Transport</option><option value="land">Land Transport</option></select></div>
-                    <div class="field"><label for="transportFrom">From</label><input id="transportFrom" name="from" type="text" placeholder="Island or city"></div>
-                    <div class="field"><label for="transportTo">To</label><input id="transportTo" name="to" type="text" placeholder="Island or city"></div>
-                    <div class="field"><label for="travelDate">Travel Date</label><input id="travelDate" name="travel_date" type="date"></div>
-                    <div class="field"><label for="returnDate">Return Date</label><input id="returnDate" name="return_date" type="date"></div>
+                    <div class="field" id="transportTripTypeField"><label for="transportTripType">Trip Type</label><select id="transportTripType" name="trip_type"><option value="one_way">One Way</option><option value="round_trip">Round Trip</option></select></div>
+                    <div class="field"><label for="transportFrom">From (Atoll/Island)</label><input id="transportFrom" name="from" type="text" placeholder="Atoll or island"></div>
+                    <div class="field"><label for="transportTo">To (Atoll/Island)</label><input id="transportTo" name="to" type="text" placeholder="Atoll or island"></div>
+                    <div class="field" id="transportDepartureDateField"><label for="travelDate">Departure Date</label><input id="travelDate" name="travel_date" type="date"></div>
+                    <div class="field" id="transportReturnDateField"><label for="returnDate">Return Date</label><input id="returnDate" name="return_date" type="date"></div>
                     <div class="field"><label for="transportAdults">Adults / Pax</label><input id="transportAdults" name="adults" type="number" min="1" value="2"></div>
                     <div class="field"><label for="transportChildren">Children</label><input id="transportChildren" name="children" type="number" min="0" value="0"></div>
-                    <div class="field"><label for="vehicleType">Vehicle Type</label><input id="vehicleType" name="vehicle_type" type="text" placeholder="Car, Van, Bike"></div>
+                    <div class="field" id="transportVehicleTypeField"><label for="vehicleType">Vehicle Type</label><input id="vehicleType" name="vehicle_type" type="text" placeholder="Car, Van, Bike"></div>
                 </div>
 
                 <div id="serviceFields" class="search-dynamic-fields" data-fields-for="service" hidden aria-hidden="true">
-                    <div class="field"><label for="serviceAtoll">Atoll</label><input id="serviceAtoll" name="atoll" type="text" placeholder="Baa Atoll"></div>
-                    <div class="field"><label for="serviceIsland">Island</label><input id="serviceIsland" name="island" type="text" placeholder="Male"></div>
+                    <div class="field">
+                        <label for="serviceAtoll">Atoll</label>
+                        <select id="serviceAtoll" name="atoll">
+                            <option value="">All Atolls</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="serviceIsland">Island</label>
+                        <select id="serviceIsland" name="island">
+                            <option value="">All Islands</option>
+                        </select>
+                    </div>
                     <div class="field"><label for="minPrice">Min Price</label><input id="minPrice" name="min_price" type="number" min="0" placeholder="0"></div>
                     <div class="field"><label for="maxPrice">Max Price</label><input id="maxPrice" name="max_price" type="number" min="0" placeholder="5000"></div>
-                    <div class="field"><label for="serviceSort">Sort</label><select id="serviceSort" name="sort"><option value="recommended">Recommended</option><option value="most_wanted">Most Wanted</option><option value="most_booked">Most Booked</option><option value="highest_reviews">Highest Reviews</option><option value="price_low_high">Price Low to High</option><option value="price_high_low">Price High to Low</option></select></div>
                 </div>
             </form>
             <div class="search-actions" aria-label="Quick category catalogue links">
@@ -547,8 +595,15 @@
             <div class="browse-grid">
                 @foreach ($homeBrowseCards as $card)
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
-                        <strong>{{ $card['title'] ?? 'Category' }}</strong>
-                        <span>{{ $card['subtitle'] ?? 'Explore listings in this category.' }}</span>
+                        <div class="item-card-media">
+                            @if (!empty($card['image_url']))
+                                <img src="{{ $card['image_url'] }}" alt="{{ $card['title'] ?? 'Category' }} thumbnail" loading="lazy">
+                            @endif
+                        </div>
+                        <div class="item-card-body">
+                            <strong>{{ $card['title'] ?? 'Category' }}</strong>
+                            <span>{{ $card['subtitle'] ?? 'Explore listings in this category.' }}</span>
+                        </div>
                     </a>
                 @endforeach
             </div>
@@ -567,8 +622,15 @@
             <div class="trending-grid">
                 @foreach ($homeTrendingCards as $card)
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
-                        <strong>{{ $card['title'] ?? 'Trending Destination' }}</strong>
-                        <span>{{ $card['subtitle'] ?? 'Trending destination currently popular with guests.' }}</span>
+                        <div class="item-card-media">
+                            @if (!empty($card['image_url']))
+                                <img src="{{ $card['image_url'] }}" alt="{{ $card['title'] ?? 'Trending Destination' }} thumbnail" loading="lazy">
+                            @endif
+                        </div>
+                        <div class="item-card-body">
+                            <strong>{{ $card['title'] ?? 'Trending Destination' }}</strong>
+                            <span>{{ $card['subtitle'] ?? 'Trending destination currently popular with guests.' }}</span>
+                        </div>
                     </a>
                 @endforeach
             </div>
@@ -582,8 +644,18 @@
             <div class="deal-grid">
                 @foreach ($homeWeekendDealCards as $card)
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
-                        <strong>{{ $card['title'] ?? 'Weekend Deal' }}</strong>
-                        <span>{{ $card['subtitle'] ?? 'Recommended weekend offer for quick getaways.' }}</span>
+                        <div class="item-card-media">
+                            @if (!empty($card['image_url']))
+                                <img src="{{ $card['image_url'] }}" alt="{{ $card['title'] ?? 'Weekend Deal' }} thumbnail" loading="lazy">
+                            @endif
+                        </div>
+                        <div class="item-card-body">
+                            @if (!empty($card['meta']))
+                                <span class="item-card-meta">{{ $card['meta'] }}</span>
+                            @endif
+                            <strong>{{ $card['title'] ?? 'Weekend Deal' }}</strong>
+                            <span>{{ $card['subtitle'] ?? 'Recommended weekend offer for quick getaways.' }}</span>
+                        </div>
                     </a>
                 @endforeach
             </div>
@@ -597,8 +669,18 @@
             <div class="loved-grid">
                 @foreach ($homeLovedCards as $card)
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
-                        <strong>{{ $card['title'] ?? 'Loved Place' }}</strong>
-                        <span>{{ $card['subtitle'] ?? 'Highly rated by guests and repeat visitors.' }}</span>
+                        <div class="item-card-media">
+                            @if (!empty($card['image_url']))
+                                <img src="{{ $card['image_url'] }}" alt="{{ $card['title'] ?? 'Loved Place' }} thumbnail" loading="lazy">
+                            @endif
+                        </div>
+                        <div class="item-card-body">
+                            @if (!empty($card['meta']))
+                                <span class="item-card-meta">{{ $card['meta'] }}</span>
+                            @endif
+                            <strong>{{ $card['title'] ?? 'Loved Place' }}</strong>
+                            <span>{{ $card['subtitle'] ?? 'Highly rated by guests and repeat visitors.' }}</span>
+                        </div>
                     </a>
                 @endforeach
             </div>
@@ -614,9 +696,155 @@
             const accommodationFields = document.getElementById('accommodationFields');
             const transportFields = document.getElementById('transportFields');
             const serviceFields = document.getElementById('serviceFields');
+            const transportMode = document.getElementById('transportMode');
+            const transportTripType = document.getElementById('transportTripType');
+            const transportTripTypeField = document.getElementById('transportTripTypeField');
+            const transportReturnDateField = document.getElementById('transportReturnDateField');
+            const transportVehicleTypeField = document.getElementById('transportVehicleTypeField');
+            const transportReturnDateInput = document.getElementById('returnDate');
+            const transportVehicleTypeInput = document.getElementById('vehicleType');
+            const serviceAtollSelect = document.getElementById('serviceAtoll');
+            const serviceIslandSelect = document.getElementById('serviceIsland');
+            const apiBase = String(document.querySelector('.page')?.getAttribute('data-api-base') || '').replace(/\/$/, '');
 
             if (!form || !categorySelect || !accommodationFields || !transportFields || !serviceFields) {
                 return;
+            }
+
+            function setFieldActive(fieldWrapper, isActive) {
+                if (!fieldWrapper) {
+                    return;
+                }
+
+                fieldWrapper.hidden = !isActive;
+                fieldWrapper.querySelectorAll('input, select, textarea').forEach(function (control) {
+                    control.disabled = !isActive;
+                });
+            }
+
+            function fillSelect(select, options, emptyLabel) {
+                if (!select) {
+                    return;
+                }
+
+                const currentValue = String(select.value || '');
+                select.innerHTML = '';
+
+                const emptyOption = document.createElement('option');
+                emptyOption.value = '';
+                emptyOption.textContent = emptyLabel;
+                select.appendChild(emptyOption);
+
+                options.forEach(function (entry) {
+                    const option = document.createElement('option');
+                    option.value = String(entry.value ?? '');
+                    option.textContent = String(entry.label ?? entry.value ?? '');
+                    select.appendChild(option);
+                });
+
+                if (currentValue !== '') {
+                    const hasValue = Array.from(select.options).some(function (option) {
+                        return String(option.value) === currentValue;
+                    });
+
+                    if (hasValue) {
+                        select.value = currentValue;
+                    }
+                }
+            }
+
+            async function loadAtolls() {
+                if (!serviceAtollSelect || !apiBase) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(apiBase + '/atolls', { headers: { 'Accept': 'application/json' } });
+                    if (!response.ok) {
+                        return;
+                    }
+
+                    const rows = await response.json();
+                    const options = Array.isArray(rows)
+                        ? rows
+                            .map(function (row) {
+                                return {
+                                    value: String(row.id ?? ''),
+                                    label: String(row.name ?? '')
+                                };
+                            })
+                            .filter(function (row) {
+                                return row.value !== '' && row.label !== '';
+                            })
+                        : [];
+
+                    fillSelect(serviceAtollSelect, options, 'All Atolls');
+                } catch (error) {
+                    // Keep default empty options when API is unavailable.
+                }
+            }
+
+            async function loadIslandsByAtoll(atollId) {
+                if (!serviceIslandSelect || !apiBase) {
+                    return;
+                }
+
+                if (!atollId) {
+                    fillSelect(serviceIslandSelect, [], 'All Islands');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(apiBase + '/islands?atollId=' + encodeURIComponent(String(atollId)), {
+                        headers: { 'Accept': 'application/json' }
+                    });
+
+                    if (!response.ok) {
+                        fillSelect(serviceIslandSelect, [], 'All Islands');
+                        return;
+                    }
+
+                    const rows = await response.json();
+                    const options = Array.isArray(rows)
+                        ? rows
+                            .map(function (row) {
+                                return {
+                                    value: String(row.name ?? ''),
+                                    label: String(row.name ?? '')
+                                };
+                            })
+                            .filter(function (row) {
+                                return row.value !== '';
+                            })
+                        : [];
+
+                    fillSelect(serviceIslandSelect, options, 'All Islands');
+                } catch (error) {
+                    fillSelect(serviceIslandSelect, [], 'All Islands');
+                }
+            }
+
+            function toggleTransportModeFields() {
+                if (!transportMode || !transportTripType) {
+                    return;
+                }
+
+                const mode = String(transportMode.value || 'marine').toLowerCase();
+                const tripType = String(transportTripType.value || 'one_way').toLowerCase();
+                const isLand = mode === 'land';
+                const isMarineRoundTrip = mode === 'marine' && tripType === 'round_trip';
+
+                setFieldActive(transportTripTypeField, !isLand);
+                setFieldActive(transportVehicleTypeField, isLand);
+                setFieldActive(transportReturnDateField, isLand || isMarineRoundTrip);
+
+                if (!isLand && !isMarineRoundTrip && transportReturnDateInput) {
+                    transportReturnDateInput.value = '';
+                }
+
+                if (!isLand && transportVehicleTypeInput) {
+                    transportVehicleTypeInput.value = '';
+                }
             }
 
             function resolveGroup(category) {
@@ -652,9 +880,29 @@
                         control.disabled = !isActive;
                     });
                 });
+
+                if (group === 'transport') {
+                    toggleTransportModeFields();
+                }
+            }
+
+            if (transportMode) {
+                transportMode.addEventListener('change', toggleTransportModeFields);
+            }
+
+            if (transportTripType) {
+                transportTripType.addEventListener('change', toggleTransportModeFields);
+            }
+
+            if (serviceAtollSelect) {
+                serviceAtollSelect.addEventListener('change', function () {
+                    loadIslandsByAtoll(serviceAtollSelect.value || '');
+                });
             }
 
             categorySelect.addEventListener('change', toggleFields);
+            loadAtolls();
+            loadIslandsByAtoll('');
             toggleFields();
         })();
     </script>

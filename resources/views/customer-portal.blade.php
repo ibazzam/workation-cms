@@ -40,6 +40,65 @@
             margin: 12px auto 28px;
         }
 
+        .customer-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 12px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: color-mix(in srgb, #ffffff 90%, #eef7fd 10%);
+            margin-bottom: 10px;
+        }
+
+        .customer-topbar h2 {
+            margin: 0;
+            font-size: 0.92rem;
+            color: #1d435d;
+            letter-spacing: 0.02em;
+        }
+
+        .customer-topbar-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .customer-pill {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid #cadbeb;
+            border-radius: 999px;
+            padding: 6px 10px;
+            background: #f4fbff;
+            color: #1e4b69;
+            font-size: 0.79rem;
+            font-weight: 700;
+        }
+
+        .topbar-link,
+        .topbar-btn {
+            text-decoration: none;
+            border: 1px solid #cadbeb;
+            border-radius: 10px;
+            padding: 7px 11px;
+            background: #ffffff;
+            color: #1e4b69;
+            font-size: 0.8rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .topbar-link.primary {
+            color: #ffffff;
+            background: linear-gradient(135deg, #0f5f79 0%, #1f7f8f 100%);
+            border-color: #0f5f79;
+        }
+
         .hero {
             background: linear-gradient(130deg, var(--hero-1) 0%, var(--hero-2) 52%, var(--hero-3) 100%);
             border-radius: 18px;
@@ -483,6 +542,8 @@
 
         @media (max-width: 640px) {
             .page { width: calc(100% - 16px); }
+            .customer-topbar { flex-direction: column; align-items: flex-start; }
+            .customer-topbar-actions { width: 100%; justify-content: flex-start; }
             .hero { padding: 14px; }
             .portal-nav { grid-template-columns: 1fr; }
             .summary-grid { grid-template-columns: 1fr; }
@@ -495,6 +556,8 @@
         $customerRoomsByProperty = $customerRoomsByProperty ?? collect();
         $propertyMediaByProperty = $propertyMediaByProperty ?? collect();
         $roomMediaByRoom = $roomMediaByRoom ?? collect();
+        $customerLoggedIn = (bool) session('portal_customer_authenticated', false);
+        $customerName = trim((string) session('portal_customer_user', 'Customer'));
         $mediaVariantUrl = static function ($media, string $variant = 'banner'): ?string {
             $mediaId = (int) ($media->id ?? 0);
             if ($mediaId <= 0) {
@@ -511,6 +574,22 @@
     @endphp
 
     <main class="page">
+        <header class="customer-topbar" aria-label="Customer account status">
+            <h2>Customer Portal</h2>
+            <div class="customer-topbar-actions">
+                @if ($customerLoggedIn)
+                    <span class="customer-pill">Hi, {{ $customerName }}</span>
+                    <form method="POST" action="/portal/customer/logout" style="margin:0;">
+                        @csrf
+                        <button class="topbar-btn" type="submit">Logout</button>
+                    </form>
+                @else
+                    <a class="topbar-link" href="/portal/customer/login">Customer Login</a>
+                    <a class="topbar-link primary" href="/portal/customer/register">Customer Registration</a>
+                @endif
+            </div>
+        </header>
+
         <section class="hero">
             <span class="eyebrow">Customer Experience</span>
             <h1>Pick your island plan in a few taps.</h1>
@@ -743,6 +822,8 @@
                         </ul>
                     </article>
                 </section>
+
+                @include('partials.global-site-footer')
             </div>
         </div>
     </main>

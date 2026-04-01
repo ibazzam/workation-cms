@@ -435,9 +435,73 @@ Route::get('/', function () {
         ['title' => 'Dhigurah Island', 'subtitle' => 'Strong demand for reef and marine experiences.', 'url' => '/catalog/accommodation?q=Dhigurah'],
     ]);
 
+    $homeListingMediaByProperty = collect();
+
     if (Schema::hasTable('vendor_properties')) {
         $baseQuery = DB::table('vendor_properties')->where('status', 'active');
         $allProperties = $baseQuery->limit(300)->get();
+
+        $propertyIds = $allProperties
+            ->pluck('id')
+            ->map(static fn ($id) => (int) $id)
+            ->filter(static fn (int $id) => $id > 0)
+            ->values();
+
+        if (Schema::hasTable('vendor_listing_media') && $propertyIds->isNotEmpty()) {
+            $mediaRows = DB::table('vendor_listing_media')
+                ->where('entity_type', 'property')
+                ->whereIn('entity_id', $propertyIds->all())
+                ->orderByDesc('is_primary')
+                ->orderByDesc('created_at')
+                ->limit(1200)
+                ->get();
+
+            $homeListingMediaByProperty = $mediaRows->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
+        }
+
+        $resolvePropertyImage = static function (int $propertyId) use ($homeListingMediaByProperty): ?string {
+            if ($propertyId <= 0) {
+                return null;
+            }
+
+            $mediaItems = collect($homeListingMediaByProperty->get($propertyId, collect()));
+            $primaryMedia = $mediaItems->first();
+            if (!$primaryMedia) {
+                return null;
+            }
+
+            $mediaId = (int) ($primaryMedia->id ?? 0);
+            if ($mediaId > 0) {
+                return '/media/vendor/' . $mediaId . '/banner';
+            }
+
+            $filePath = trim((string) ($primaryMedia->file_path ?? ''));
+            if ($filePath === '') {
+                return null;
+            }
+
+            return '/storage/' . ltrim($filePath, '/');
+        };
+
+        $propertyLocationLabel = static function ($property): string {
+            $island = trim((string) ($property->island ?? ''));
+            $city = trim((string) ($property->city ?? ''));
+            $atoll = trim((string) ($property->atoll ?? ''));
+
+            if ($island !== '' && $atoll !== '') {
+                return $island . ', ' . $atoll;
+            }
+
+            if ($island !== '') {
+                return $island;
+            }
+
+            if ($city !== '') {
+                return $city;
+            }
+
+            return $atoll;
+        };
 
         if (Schema::hasColumn('vendor_properties', 'listing_category')) {
             $categoryCounts = DB::table('vendor_properties')
@@ -445,6 +509,11 @@ Route::get('/', function () {
                 ->selectRaw('LOWER(listing_category) as category_key, COUNT(*) as total')
                 ->groupBy('category_key')
                 ->pluck('total', 'category_key');
+
+            $categorySamples = $allProperties
+                ->filter(static fn ($property) => trim((string) ($property->listing_category ?? '')) !== '')
+                ->groupBy(static fn ($property) => strtolower(trim((string) ($property->listing_category ?? '')))
+                )->map(static fn ($group) => $group->first());
 
             $homeTopCategoryLinks = $homeTopCategoryLinks->map(function (array $card) use ($categoryCounts) {
                 $key = strtolower(trim((string) ($card['title'] ?? '')));
@@ -491,6 +560,35 @@ Route::get('/', function () {
 
                 return $card;
             });
+
+            $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categorySamples, $resolvePropertyImage, $propertyLocationLabel) {
+                $categoryHint = match ($card['title']) {
+                    'Stay Options' => 'accommodation',
+                    'Transport' => 'transport',
+                    'Experiences' => 'excursion',
+                    'Work-Friendly' => 'remote_workspace',
+                    'Family Picks' => 'accommodation',
+                    'Deals Zone' => 'accommodation',
+                    default => null,
+                };
+
+                if ($categoryHint === null) {
+                    return $card;
+                }
+
+                $sample = $categorySamples->get($categoryHint);
+                if (!$sample) {
+                    return $card;
+                }
+
+                $card['image_url'] = $resolvePropertyImage((int) ($sample->id ?? 0));
+                $location = $propertyLocationLabel($sample);
+                if ($location !== '') {
+                    $card['subtitle'] = $location;
+                }
+
+                return $card;
+            })->values();
         }
 
         $locationScores = [];
@@ -508,7 +606,7 @@ Route::get('/', function () {
 
             $key = strtolower($location);
             if (!array_key_exists($key, $locationScores)) {
-                $locationScores[$key] = ['title' => $location, 'count' => 0];
+                $locationScores[$key] = ['title' => $location, 'count' => 0, 'sample_property' => $property];
             }
             $locationScores[$key]['count']++;
         }
@@ -517,10 +615,16 @@ Route::get('/', function () {
             uasort($locationScores, static fn (array $a, array $b) => $b['count'] <=> $a['count']);
             $homeTrendingCards = collect(array_slice(array_values($locationScores), 0, 4))
                 ->map(function (array $row) {
+                    $sample = $row['sample_property'] ?? null;
+                    $sampleId = (int) ($sample->id ?? 0);
+                    $sampleCategory = strtolower(trim((string) ($sample->listing_category ?? 'accommodation')));
+
                     return [
                         'title' => $row['title'],
-                        'subtitle' => $row['count'] . ' active listings currently in this destination.',
-                        'url' => '/catalog/accommodation?q=' . urlencode($row['title']),
+                        'subtitle' => $row['count'] . ' listings',
+                        'url' => $sampleId > 0 ? ('/property/' . $sampleId) : ('/catalog/accommodation?q=' . urlencode($row['title'])),
+                        'image_url' => $resolvePropertyImage($sampleId),
+                        'category' => $sampleCategory,
                     ];
                 })
                 ->values();
@@ -543,8 +647,10 @@ Route::get('/', function () {
 
                 return [
                     'title' => $name,
-                    'subtitle' => 'From ' . $currency . ' ' . $price . ($place !== '' ? (' in ' . $place) : '') . '.',
-                    'url' => '/catalog/' . strtolower((string) ($property->listing_category ?? 'accommodation')) . '?q=' . urlencode($name),
+                    'subtitle' => 'From ' . $currency . ' ' . $price,
+                    'url' => '/property/' . (int) ($property->id ?? 0),
+                    'image_url' => $resolvePropertyImage((int) ($property->id ?? 0)),
+                    'meta' => $place,
                 ];
             })->values();
 
@@ -585,8 +691,10 @@ Route::get('/', function () {
 
                     return [
                         'title' => $name,
-                        'subtitle' => 'Top-performing listing' . ($loc !== '' ? (' in ' . $loc) : '') . ' | score ' . $score,
-                        'url' => '/catalog/' . strtolower((string) ($property->listing_category ?? 'accommodation')) . '?q=' . urlencode($name),
+                        'subtitle' => 'Score ' . $score,
+                        'url' => '/property/' . (int) ($property->id ?? 0),
+                        'image_url' => $resolvePropertyImage((int) ($property->id ?? 0)),
+                        'meta' => $loc,
                     ];
                 })->values();
             }
@@ -817,6 +925,326 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             'travel_date' => trim((string) $request->query('travel_date', '')),
             'return_date' => trim((string) $request->query('return_date', '')),
             'vehicle_type' => trim((string) $request->query('vehicle_type', '')),
+        ],
+    ]);
+});
+
+Route::get('/property/{property}', function (Request $request, int $property) {
+    if (!Schema::hasTable('vendor_properties')) {
+        abort(404);
+    }
+
+    $propertyRow = DB::table('vendor_properties')
+        ->where('id', $property)
+        ->where('status', 'active')
+        ->first();
+
+    if (!$propertyRow) {
+        abort(404);
+    }
+
+    $rooms = collect();
+    if (Schema::hasTable('vendor_property_room_categories')) {
+        $rooms = DB::table('vendor_property_room_categories')
+            ->where('vendor_property_id', (int) $propertyRow->id)
+            ->orderByDesc('updated_at')
+            ->limit(60)
+            ->get();
+    }
+
+    $roomIds = $rooms->pluck('id')->map(static fn ($id) => (int) $id)->filter(static fn (int $id) => $id > 0)->values();
+    $propertyMedia = collect();
+    $roomMediaByRoom = collect();
+
+    if (Schema::hasTable('vendor_listing_media')) {
+        $mediaQuery = DB::table('vendor_listing_media');
+        $mediaQuery->where(function ($query) use ($propertyRow, $roomIds) {
+            $query->orWhere(function ($inner) use ($propertyRow) {
+                $inner->where('entity_type', 'property')->where('entity_id', (int) $propertyRow->id);
+            });
+
+            if ($roomIds->isNotEmpty()) {
+                $query->orWhere(function ($inner) use ($roomIds) {
+                    $inner->where('entity_type', 'room')->whereIn('entity_id', $roomIds->all());
+                });
+            }
+        });
+
+        $mediaRows = $mediaQuery->orderByDesc('is_primary')->orderByDesc('created_at')->limit(500)->get();
+        $propertyMedia = $mediaRows->filter(static fn ($m) => strtolower((string) ($m->entity_type ?? '')) === 'property')->values();
+        $roomMediaByRoom = $mediaRows
+            ->filter(static fn ($m) => strtolower((string) ($m->entity_type ?? '')) === 'room')
+            ->groupBy(static fn ($m) => (int) ($m->entity_id ?? 0));
+    }
+
+    $mediaUrl = static function ($media, string $variant = 'banner'): ?string {
+        $mediaId = (int) ($media->id ?? 0);
+        if ($mediaId > 0) {
+            return '/media/vendor/' . $mediaId . '/' . $variant;
+        }
+
+        $path = trim((string) ($media->file_path ?? ''));
+        return $path !== '' ? ('/storage/' . ltrim($path, '/')) : null;
+    };
+
+    $details = json_decode((string) ($propertyRow->listing_details ?? ''), true);
+    if (!is_array($details)) {
+        $details = [];
+    }
+
+    $facilityCandidates = [];
+    foreach (['facilities', 'amenities', 'accommodation_facilities'] as $key) {
+        if (!array_key_exists($key, $details)) {
+            continue;
+        }
+
+        $value = $details[$key];
+        if (is_array($value)) {
+            $facilityCandidates = array_merge($facilityCandidates, $value);
+        } elseif (is_string($value)) {
+            $facilityCandidates = array_merge($facilityCandidates, preg_split('/[,\n]+/', $value) ?: []);
+        }
+    }
+
+    $propertyFacilities = collect($facilityCandidates)
+        ->map(static fn ($item) => trim((string) $item))
+        ->filter(static fn ($item) => $item !== '')
+        ->unique()
+        ->values();
+
+    $reviewColumn = collect(['review_score', 'rating_average', 'average_rating', 'rating'])
+        ->first(static fn ($column) => Schema::hasColumn('vendor_properties', $column));
+    $reviewCountColumn = collect(['review_count', 'rating_count', 'total_reviews'])
+        ->first(static fn ($column) => Schema::hasColumn('vendor_properties', $column));
+
+    $locationLine = trim(implode(', ', array_filter([
+        trim((string) ($propertyRow->location ?? '')),
+        trim((string) ($propertyRow->island ?? '')),
+        trim((string) ($propertyRow->atoll ?? '')),
+        trim((string) ($propertyRow->city ?? '')),
+    ], static fn ($v) => $v !== '')));
+
+    return view('property-profile', [
+        'property' => $propertyRow,
+        'propertyMedia' => $propertyMedia,
+        'roomMediaByRoom' => $roomMediaByRoom,
+        'rooms' => $rooms,
+        'propertyFacilities' => $propertyFacilities,
+        'locationLine' => $locationLine,
+        'ratingValue' => $reviewColumn ? (float) ($propertyRow->{$reviewColumn} ?? 0) : 0,
+        'ratingUsers' => $reviewCountColumn ? (int) ($propertyRow->{$reviewCountColumn} ?? 0) : 0,
+        'mediaUrl' => $mediaUrl,
+        'prefill' => [
+            'checkin' => trim((string) $request->query('checkin', '')),
+            'checkout' => trim((string) $request->query('checkout', '')),
+            'adults' => max(1, (int) $request->query('adults', 2)),
+            'children' => max(0, (int) $request->query('children', 0)),
+        ],
+    ]);
+});
+
+Route::get('/room/{room}', function (Request $request, int $room) {
+    if (!Schema::hasTable('vendor_property_room_categories')) {
+        abort(404);
+    }
+
+    $roomRow = DB::table('vendor_property_room_categories')->where('id', $room)->first();
+    if (!$roomRow) {
+        abort(404);
+    }
+
+    $propertyRow = Schema::hasTable('vendor_properties')
+        ? DB::table('vendor_properties')->where('id', (int) ($roomRow->vendor_property_id ?? 0))->first()
+        : null;
+
+    if (!$propertyRow) {
+        abort(404);
+    }
+
+    $roomMedia = collect();
+    if (Schema::hasTable('vendor_listing_media')) {
+        $roomMedia = DB::table('vendor_listing_media')
+            ->where('entity_type', 'room')
+            ->where('entity_id', (int) $roomRow->id)
+            ->orderByDesc('is_primary')
+            ->orderByDesc('created_at')
+            ->limit(40)
+            ->get();
+    }
+
+    $roomFeatures = collect(preg_split('/[,\n]+/', (string) ($roomRow->amenities ?? '')) ?: [])
+        ->merge(collect(preg_split('/[,\n]+/', (string) ($roomRow->bathroom_amenities ?? '')) ?: []))
+        ->map(static fn ($v) => trim((string) $v))
+        ->filter(static fn ($v) => $v !== '')
+        ->unique()
+        ->values();
+
+    $propertyDetails = json_decode((string) ($propertyRow->listing_details ?? ''), true);
+    if (!is_array($propertyDetails)) {
+        $propertyDetails = [];
+    }
+
+    $transferOptions = collect($propertyDetails['transfer_options'] ?? [])->values();
+    if ($transferOptions->isEmpty()) {
+        $transferOptions = collect([
+            ['code' => 'shared_speedboat', 'label' => 'Shared Speedboat', 'charge' => 35],
+            ['code' => 'private_speedboat', 'label' => 'Private Speedboat', 'charge' => 120],
+            ['code' => 'seaplane', 'label' => 'Seaplane', 'charge' => 420],
+        ]);
+    }
+
+    $transferOptions = $transferOptions->map(function ($option) {
+        $code = trim((string) ($option['code'] ?? Str::slug((string) ($option['label'] ?? 'transfer'))));
+        $label = trim((string) ($option['label'] ?? 'Transfer Option'));
+        $charge = (float) ($option['charge'] ?? 0);
+
+        return ['code' => $code, 'label' => $label, 'charge' => $charge];
+    })->values();
+
+    $mediaUrl = static function ($media, string $variant = 'banner'): ?string {
+        $mediaId = (int) ($media->id ?? 0);
+        if ($mediaId > 0) {
+            return '/media/vendor/' . $mediaId . '/' . $variant;
+        }
+
+        $path = trim((string) ($media->file_path ?? ''));
+        return $path !== '' ? ('/storage/' . ltrim($path, '/')) : null;
+    };
+
+    return view('room-profile', [
+        'room' => $roomRow,
+        'property' => $propertyRow,
+        'roomMedia' => $roomMedia,
+        'roomFeatures' => $roomFeatures,
+        'transferOptions' => $transferOptions,
+        'mediaUrl' => $mediaUrl,
+        'prefill' => [
+            'checkin' => trim((string) $request->query('checkin', '')),
+            'checkout' => trim((string) $request->query('checkout', '')),
+            'adults' => max(1, (int) $request->query('adults', 2)),
+            'children' => max(0, (int) $request->query('children', 0)),
+        ],
+    ]);
+});
+
+Route::post('/booking/reserve', function (Request $request) {
+    $payload = $request->validate([
+        'property_id' => ['required', 'integer', 'min:1'],
+        'room_id' => ['required', 'integer', 'min:1'],
+        'checkin' => ['required', 'date'],
+        'checkout' => ['required', 'date', 'after:checkin'],
+        'adults' => ['required', 'integer', 'min:1', 'max:20'],
+        'children' => ['nullable', 'integer', 'min:0', 'max:20'],
+        'transfer_option' => ['nullable', 'string', 'max:80'],
+        'transfer_charge' => ['nullable', 'numeric', 'min:0'],
+    ]);
+
+    $propertyRow = Schema::hasTable('vendor_properties')
+        ? DB::table('vendor_properties')->where('id', (int) $payload['property_id'])->first()
+        : null;
+    $roomRow = Schema::hasTable('vendor_property_room_categories')
+        ? DB::table('vendor_property_room_categories')->where('id', (int) $payload['room_id'])->first()
+        : null;
+
+    if (!$propertyRow || !$roomRow) {
+        abort(404);
+    }
+
+    $checkin = Carbon::parse((string) $payload['checkin']);
+    $checkout = Carbon::parse((string) $payload['checkout']);
+    $nights = max(1, $checkin->diffInDays($checkout));
+    $guestCount = (int) $payload['adults'] + (int) ($payload['children'] ?? 0);
+    $transferCharge = (float) ($payload['transfer_charge'] ?? 0);
+    $nightlyRate = (float) ($roomRow->base_price ?? $propertyRow->base_price ?? 0);
+    $totalAmount = ($nightlyRate * $nights) + $transferCharge;
+
+    $reservationId = null;
+    if (Schema::hasTable('vendor_reservations')) {
+        $reservationId = (int) DB::table('vendor_reservations')->insertGetId([
+            'vendor_user_id' => (int) ($propertyRow->vendor_user_id ?? 0),
+            'vendor_property_id' => (int) $propertyRow->id,
+            'vendor_service_id' => null,
+            'customer_name' => trim((string) session('portal_customer_user', 'Guest Customer')),
+            'customer_email' => trim((string) session('portal_customer_email', 'guest@workation.local')),
+            'start_at' => $checkin->copy()->startOfDay(),
+            'end_at' => $checkout->copy()->startOfDay(),
+            'guests' => max(1, $guestCount),
+            'total_amount' => $totalAmount,
+            'currency' => strtoupper(trim((string) ($roomRow->currency ?? $propertyRow->currency ?? 'MVR'))),
+            'status' => 'pending',
+            'payment_status' => 'unpaid',
+            'notes' => json_encode([
+                'room_id' => (int) $roomRow->id,
+                'room_name' => (string) ($roomRow->name ?? 'Room'),
+                'adults' => (int) $payload['adults'],
+                'children' => (int) ($payload['children'] ?? 0),
+                'transfer_option' => (string) ($payload['transfer_option'] ?? ''),
+                'transfer_charge' => $transferCharge,
+                'nightly_rate' => $nightlyRate,
+                'nights' => $nights,
+            ]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    $checkoutUrl = '/booking/checkout'
+        . ($reservationId ? ('/' . $reservationId) : '')
+        . '?property_id=' . (int) $propertyRow->id
+        . '&room_id=' . (int) $roomRow->id
+        . '&checkin=' . urlencode((string) $payload['checkin'])
+        . '&checkout=' . urlencode((string) $payload['checkout'])
+        . '&adults=' . (int) $payload['adults']
+        . '&children=' . (int) ($payload['children'] ?? 0)
+        . '&transfer_option=' . urlencode((string) ($payload['transfer_option'] ?? ''))
+        . '&transfer_charge=' . urlencode((string) $transferCharge)
+        . '&total=' . urlencode((string) $totalAmount);
+
+    return redirect($checkoutUrl);
+});
+
+Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int $reservation = null) {
+    $reservationRow = null;
+    if ($reservation !== null && Schema::hasTable('vendor_reservations')) {
+        $reservationRow = DB::table('vendor_reservations')->where('id', $reservation)->first();
+    }
+
+    $propertyId = (int) $request->query('property_id', (int) ($reservationRow->vendor_property_id ?? 0));
+    $propertyRow = Schema::hasTable('vendor_properties')
+        ? DB::table('vendor_properties')->where('id', $propertyId)->first()
+        : null;
+
+    $roomId = (int) $request->query('room_id', 0);
+    $roomName = '';
+    if ($reservationRow && !empty($reservationRow->notes)) {
+        $notes = json_decode((string) $reservationRow->notes, true);
+        if (is_array($notes)) {
+            $roomId = (int) ($notes['room_id'] ?? $roomId);
+            $roomName = trim((string) ($notes['room_name'] ?? ''));
+        }
+    }
+
+    $roomRow = Schema::hasTable('vendor_property_room_categories') && $roomId > 0
+        ? DB::table('vendor_property_room_categories')->where('id', $roomId)->first()
+        : null;
+
+    if ($roomName === '' && $roomRow) {
+        $roomName = trim((string) ($roomRow->name ?? 'Room'));
+    }
+
+    return view('booking-checkout', [
+        'reservation' => $reservationRow,
+        'property' => $propertyRow,
+        'room' => $roomRow,
+        'roomName' => $roomName,
+        'summary' => [
+            'checkin' => trim((string) $request->query('checkin', '')),
+            'checkout' => trim((string) $request->query('checkout', '')),
+            'adults' => max(1, (int) $request->query('adults', 1)),
+            'children' => max(0, (int) $request->query('children', 0)),
+            'transfer_option' => trim((string) $request->query('transfer_option', '')),
+            'transfer_charge' => (float) $request->query('transfer_charge', 0),
+            'total' => (float) $request->query('total', (float) ($reservationRow->total_amount ?? 0)),
         ],
     ]);
 });

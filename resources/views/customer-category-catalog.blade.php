@@ -146,6 +146,12 @@
             overflow: hidden;
         }
 
+        .card-link {
+            display: block;
+            color: inherit;
+            text-decoration: none;
+        }
+
         .card img {
             width: 100%;
             height: 160px;
@@ -334,18 +340,20 @@
                         $price = (float) ($property->base_price ?? 0);
                     @endphp
                     <article class="card">
-                        @if ($bannerUrl)
-                            <img src="{{ $bannerUrl }}" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $fallbackImage }}';}" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
-                        @else
-                            <img src="" alt="No image" loading="lazy">
-                        @endif
-                        <div class="card-body">
-                            <h3>{{ (string) ($property->name ?? 'Listing') }}</h3>
-                            <div class="meta">{{ trim((string) (($property->atoll ?? '') . ' ' . ($property->island ?? ''))) !== '' ? trim((string) (($property->atoll ?? '') . ' · ' . ($property->island ?? ''))) : 'Location will be updated soon.' }}</div>
-                            <div class="meta">{{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}</div>
-                            <div class="meta">{{ strtoupper(str_replace('_', ' ', (string) ($property->listing_category ?? $categoryKey))) }}</div>
-                            <div class="actions"><a href="/customer">Open in Customer Portal</a></div>
-                        </div>
+                        <a class="card-link" href="/property/{{ $propertyId }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
+                            @if ($bannerUrl)
+                                <img src="{{ $bannerUrl }}" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $fallbackImage }}';}" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
+                            @else
+                                <img src="" alt="No image" loading="lazy">
+                            @endif
+                            <div class="card-body">
+                                <h3>{{ (string) ($property->name ?? 'Listing') }}</h3>
+                                <div class="meta">{{ trim((string) (($property->atoll ?? '') . ' ' . ($property->island ?? ''))) !== '' ? trim((string) (($property->atoll ?? '') . ' · ' . ($property->island ?? ''))) : 'Location will be updated soon.' }}</div>
+                                <div class="meta">{{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}</div>
+                                <div class="meta">{{ strtoupper(str_replace('_', ' ', (string) ($property->listing_category ?? $categoryKey))) }}</div>
+                                <div class="actions"><span>Open Listing Profile</span></div>
+                            </div>
+                        </a>
                     </article>
                 @endforeach
             </section>

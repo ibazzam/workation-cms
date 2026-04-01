@@ -108,6 +108,31 @@
             align-items: center;
         }
 
+        .social-auth {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 0 0 12px;
+        }
+
+        .social-btn {
+            text-decoration: none;
+            border: 1px solid #c8d3df;
+            border-radius: 10px;
+            background: #fff;
+            color: #20415d;
+            padding: 9px 10px;
+            font-weight: 700;
+            font-size: 0.82rem;
+            text-align: center;
+        }
+
+        .social-btn.disabled {
+            opacity: 0.55;
+            pointer-events: none;
+            cursor: not-allowed;
+        }
+
         button {
             border: 0;
             background: #0f6288;
@@ -127,6 +152,9 @@
     </style>
 </head>
 <body>
+    @php
+        $socialProviders = is_array($socialProviders ?? null) ? $socialProviders : [];
+    @endphp
     <section class="card">
         <span class="eyebrow">Customer Access</span>
         <h1>Create Customer Account</h1>
@@ -138,6 +166,18 @@
 
         @if (session('status'))
             <div class="status" role="status" aria-live="polite">{{ session('status') }}</div>
+        @endif
+
+        @if (!empty($socialProviders))
+            <div class="social-auth" aria-label="Social registration and sign in options">
+                @foreach ($socialProviders as $provider => $meta)
+                    @php
+                        $isConfigured = (bool) ($meta['configured'] ?? false);
+                        $redirectUrl = (string) ($meta['redirect'] ?? '#');
+                    @endphp
+                    <a class="social-btn {{ $isConfigured ? '' : 'disabled' }}" href="{{ $redirectUrl }}" aria-label="Continue with {{ ucfirst((string) $provider) }}">Continue with {{ ucfirst((string) $provider) }}</a>
+                @endforeach
+            </div>
         @endif
 
         <form method="POST" action="/portal/customer/register">

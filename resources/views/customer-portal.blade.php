@@ -23,6 +23,28 @@
             --warn-bg: #ffeccd;
         }
 
+        body[data-theme='sunset'] {
+            --bg: #fff6ee;
+            --ink: #2a2024;
+            --muted: #6a5861;
+            --card: #fffdf9;
+            --line: #ead7cf;
+            --hero-1: #8f3b3b;
+            --hero-2: #bf6b3f;
+            --hero-3: #e49e5a;
+        }
+
+        body[data-theme='lagoon'] {
+            --bg: #eefaf9;
+            --ink: #12292f;
+            --muted: #4e6a72;
+            --card: #faffff;
+            --line: #cfe5e5;
+            --hero-1: #0b4f68;
+            --hero-2: #0b7f7f;
+            --hero-3: #55b89a;
+        }
+
         * { box-sizing: border-box; }
 
         body {
@@ -57,6 +79,14 @@
             font-size: 0.92rem;
             color: #1d435d;
             letter-spacing: 0.02em;
+        }
+
+        .icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 6px;
+            font-size: 0.95em;
         }
 
         .customer-topbar-actions {
@@ -137,6 +167,30 @@
             gap: 8px;
         }
 
+        .theme-row {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .theme-chip {
+            border: 1px solid rgba(215, 244, 246, 0.45);
+            border-radius: 999px;
+            padding: 6px 10px;
+            background: rgba(9, 61, 79, 0.35);
+            color: #e7fbff;
+            font-size: 0.76rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .theme-chip.is-active {
+            border-color: #f6d9a7;
+            background: rgba(246, 165, 62, 0.25);
+            color: #fff4de;
+        }
+
         .hero-btn {
             border: 1px solid rgba(219, 247, 248, 0.5);
             border-radius: 10px;
@@ -155,6 +209,52 @@
             gap: 12px;
             align-items: start;
             min-height: calc(100vh - 96px);
+        }
+
+        .profile-dashboard {
+            margin-top: 12px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: #ffffff;
+            padding: 12px;
+            display: grid;
+            grid-template-columns: 88px minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .profile-avatar {
+            width: 88px;
+            height: 88px;
+            border-radius: 14px;
+            border: 1px solid #cddce8;
+            background: linear-gradient(135deg, #e2f3ff 0%, #ecfff4 100%);
+            display: grid;
+            place-items: center;
+            font-weight: 800;
+            color: #1d5671;
+            font-size: 1.3rem;
+            letter-spacing: 0.04em;
+        }
+
+        .profile-title {
+            margin: 0;
+            font-size: 1.08rem;
+            color: #1c3d54;
+        }
+
+        .profile-meta {
+            margin: 6px 0 0;
+            color: #4b6275;
+            font-size: 0.84rem;
+            display: grid;
+            gap: 4px;
+        }
+
+        .profile-actions {
+            display: grid;
+            gap: 8px;
+            justify-items: end;
         }
 
         .side-panel {
@@ -330,6 +430,56 @@
             border: 1px solid var(--line);
             border-radius: 14px;
             padding: 14px;
+        }
+
+        .applied-filter-badge {
+            margin-top: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #c8def0;
+            border-radius: 999px;
+            background: #eef7ff;
+            color: #1d4969;
+            padding: 6px 10px;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .applied-filter-badge.is-visible {
+            animation: appliedFilterIn 220ms ease-out;
+        }
+
+        .applied-filter-badge[hidden] {
+            display: none;
+        }
+
+        @keyframes appliedFilterIn {
+            from {
+                opacity: 0;
+                transform: translateY(-4px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .applied-filter-badge.is-visible {
+                animation: none;
+            }
+        }
+
+        .applied-filter-badge button {
+            border: 1px solid #b6d2e8;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #1f4b6b;
+            font-size: 0.74rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            cursor: pointer;
         }
 
         .label {
@@ -522,6 +672,86 @@
             font-size: 0.88rem;
         }
 
+        .booking-categories {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .booking-category-btn {
+            border: 1px solid #d3e0ec;
+            border-radius: 999px;
+            padding: 7px 11px;
+            background: #f8fcff;
+            color: #244a65;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .booking-category-btn.is-active {
+            border-color: #5d97bd;
+            background: #eaf4ff;
+            color: #123f63;
+        }
+
+        .booking-panel {
+            margin-top: 10px;
+            border: 1px solid #d9e5ef;
+            border-radius: 12px;
+            background: #fbfdff;
+            padding: 10px;
+        }
+
+        .booking-panel[hidden] {
+            display: none;
+        }
+
+        .booking-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .booking-item {
+            border: 1px solid #d9e5ef;
+            border-radius: 10px;
+            background: #fff;
+            padding: 9px 10px;
+            display: grid;
+            gap: 5px;
+        }
+
+        .booking-item-title {
+            margin: 0;
+            font-size: 0.88rem;
+            color: #1b3e58;
+            font-weight: 700;
+        }
+
+        .booking-item-meta {
+            font-size: 0.79rem;
+            color: #4e667b;
+        }
+
+        .booking-item-actions {
+            margin-top: 4px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .booking-item-link {
+            text-decoration: none;
+            border: 1px solid #d2e1ec;
+            border-radius: 10px;
+            background: #f6fbff;
+            color: #1f4a69;
+            font-size: 0.76rem;
+            font-weight: 700;
+            padding: 6px 9px;
+        }
+
         .easy-mode .listing-title { font-size: 1.24rem; }
         .easy-mode .listing-meta,
         .easy-mode .room-item span,
@@ -556,8 +786,15 @@
         $customerRoomsByProperty = $customerRoomsByProperty ?? collect();
         $propertyMediaByProperty = $propertyMediaByProperty ?? collect();
         $roomMediaByRoom = $roomMediaByRoom ?? collect();
+        $bookingCategoryMeta = collect($bookingCategoryMeta ?? []);
+        $customerBookingsByCategory = collect($customerBookingsByCategory ?? []);
+        $customerProfile = is_array($customerProfile ?? null) ? $customerProfile : [];
         $customerLoggedIn = (bool) session('portal_customer_authenticated', false);
         $customerName = trim((string) session('portal_customer_user', 'Customer'));
+        $profileName = trim((string) ($customerProfile['name'] ?? $customerName));
+        $profileEmail = trim((string) ($customerProfile['email'] ?? ''));
+        $profileMemberSince = trim((string) ($customerProfile['member_since'] ?? '-'));
+        $profileInitials = strtoupper(substr(preg_replace('/[^a-z0-9]/i', '', $profileName), 0, 2) ?: 'CU');
         $mediaVariantUrl = static function ($media, string $variant = 'banner'): ?string {
             $mediaId = (int) ($media->id ?? 0);
             if ($mediaId <= 0) {
@@ -575,17 +812,17 @@
 
     <main class="page">
         <header class="customer-topbar" aria-label="Customer account status">
-            <h2>Customer Portal</h2>
+            <h2><span class="icon" aria-hidden="true">👤</span>Customer Portal</h2>
             <div class="customer-topbar-actions">
                 @if ($customerLoggedIn)
-                    <span class="customer-pill">Hi, {{ $customerName }}</span>
+                    <span class="customer-pill"><span class="icon" aria-hidden="true">✨</span>Hi, {{ $customerName }}</span>
                     <form method="POST" action="/portal/customer/logout" style="margin:0;">
                         @csrf
                         <button class="topbar-btn" type="submit">Logout</button>
                     </form>
                 @else
-                    <a class="topbar-link" href="/portal/customer/login">Customer Login</a>
-                    <a class="topbar-link primary" href="/portal/customer/register">Customer Registration</a>
+                    <a class="topbar-link" href="/portal/customer/login"><span class="icon" aria-hidden="true">🔐</span>Customer Login</a>
+                    <a class="topbar-link primary" href="/portal/customer/register"><span class="icon" aria-hidden="true">📝</span>Customer Registration</a>
                 @endif
             </div>
         </header>
@@ -595,60 +832,83 @@
             <h1>Pick your island plan in a few taps.</h1>
             <p>Search, compare, and choose your ideal stay or experience with clear photos, simple language, and no confusion.</p>
             <div class="hero-actions">
-                <a class="hero-btn" href="/">Back to Home</a>
-                <a class="hero-btn" href="#discoverListings">Start browsing</a>
-                <a class="hero-btn" href="mailto:support@workation.mv">Need help?</a>
+                <a class="hero-btn" href="/"><span class="icon" aria-hidden="true">🏠</span>Back to Home</a>
+                <a class="hero-btn" href="#discoverListings"><span class="icon" aria-hidden="true">🧭</span>Start browsing</a>
+                <a class="hero-btn" href="mailto:support@workation.mv"><span class="icon" aria-hidden="true">💬</span>Need help?</a>
+            </div>
+            <div class="theme-row" aria-label="Theme switcher">
+                <button class="theme-chip is-active" type="button" data-theme-choice="ocean">🌊 Ocean</button>
+                <button class="theme-chip" type="button" data-theme-choice="sunset">🌇 Sunset</button>
+                <button class="theme-chip" type="button" data-theme-choice="lagoon">🏝️ Lagoon</button>
+            </div>
+        </section>
+
+        <section class="profile-dashboard" aria-label="Customer profile dashboard">
+            <div class="profile-avatar" aria-hidden="true">{{ $profileInitials }}</div>
+            <div>
+                <h2 class="profile-title">{{ $profileName !== '' ? $profileName : 'Customer Profile' }}</h2>
+                <div class="profile-meta">
+                    <span>Email: {{ $profileEmail !== '' ? $profileEmail : 'Not available' }}</span>
+                    <span>Member Since: {{ $profileMemberSince !== '' ? $profileMemberSince : '-' }}</span>
+                    <span>Account: {{ $customerLoggedIn ? 'Signed In' : 'Guest' }}</span>
+                </div>
+            </div>
+            <div class="profile-actions">
+                <a class="topbar-link" href="/portal/customer/forgot-password">Reset Password</a>
+                @if (!$customerLoggedIn)
+                    <a class="topbar-link primary" href="/portal/customer/login">Sign In</a>
+                @endif
             </div>
         </section>
 
         <div class="portal-shell">
             <aside class="side-panel" aria-label="Customer shortcuts">
                 <div class="hero-links">
-                    <a class="hero-link" href="/">Home</a>
-                    <a class="hero-link" href="/vendor">Vendor Portal</a>
-                    <a class="hero-link" href="/admin">Admin Portal</a>
+                    <a class="hero-link" href="/"><span class="icon" aria-hidden="true">🏠</span>Home</a>
+                    <a class="hero-link" href="/vendor"><span class="icon" aria-hidden="true">🏪</span>Vendor Portal</a>
+                    <a class="hero-link" href="/admin"><span class="icon" aria-hidden="true">🛡️</span>Admin Portal</a>
                 </div>
                 <nav class="portal-nav" aria-label="Customer navigation">
-                    <a href="#customerSummary">Summary</a>
-                    <a href="#discoverListings">Listings</a>
-                    <a href="#bookingsCard">Bookings</a>
-                    <a href="#paymentsCard">Payments</a>
-                    <a href="#notificationsCard">Notifications</a>
+                    <a href="#customerSummary"><span class="icon" aria-hidden="true">📊</span>Summary</a>
+                    <a href="#discoverListings"><span class="icon" aria-hidden="true">🏡</span>Listings</a>
+                    <a href="#bookingsCard"><span class="icon" aria-hidden="true">📅</span>Bookings</a>
+                    <a href="#paymentsCard"><span class="icon" aria-hidden="true">💳</span>Payments</a>
+                    <a href="#notificationsCard"><span class="icon" aria-hidden="true">🔔</span>Notifications</a>
                 </nav>
                 <div class="quick-filters">
-                    <strong style="font-size:0.82rem; color:#2a4862;">Quick Picks</strong>
-                    <button class="quick-filter-btn" type="button" data-quick-category="all">All listings</button>
-                    <button class="quick-filter-btn" type="button" data-quick-category="accommodation">Stays</button>
-                    <button class="quick-filter-btn" type="button" data-quick-category="remote_workspace">Workspaces</button>
-                    <button class="quick-filter-btn" type="button" data-quick-category="transport">Transport</button>
-                    <button class="quick-filter-btn" type="button" data-quick-category="excursion">Excursions</button>
+                    <strong style="font-size:0.82rem; color:#2a4862;"><span class="icon" aria-hidden="true">⚡</span>Quick Picks</strong>
+                    <button class="quick-filter-btn" type="button" data-quick-category="all">🔎 All listings</button>
+                    <button class="quick-filter-btn" type="button" data-quick-category="accommodation">🏨 Stays</button>
+                    <button class="quick-filter-btn" type="button" data-quick-category="remote_workspace">💻 Workspaces</button>
+                    <button class="quick-filter-btn" type="button" data-quick-category="transport">🚤 Transport</button>
+                    <button class="quick-filter-btn" type="button" data-quick-category="excursion">🌊 Excursions</button>
                 </div>
             </aside>
 
             <div class="portal-content">
                 <section id="customerSummary" class="summary-grid" aria-label="Customer dashboard summary">
                     <article class="summary-card">
-                        <p class="summary-label">Upcoming Trips</p>
+                        <p class="summary-label"><span class="icon" aria-hidden="true">🧳</span>Upcoming Trips</p>
                         <p class="summary-value">{{ $summary['upcoming_bookings'] }}</p>
                         <p class="summary-meta">Confirmed future bookings</p>
                     </article>
                     <article class="summary-card">
-                        <p class="summary-label">Completed Trips</p>
+                        <p class="summary-label"><span class="icon" aria-hidden="true">✅</span>Completed Trips</p>
                         <p class="summary-value">{{ $summary['completed_bookings'] }}</p>
                         <p class="summary-meta">Booking history completed</p>
                     </article>
                     <article class="summary-card">
-                        <p class="summary-label">Payment Receipts</p>
+                        <p class="summary-label"><span class="icon" aria-hidden="true">🧾</span>Payment Receipts</p>
                         <p class="summary-value">{{ $summary['receipts_available'] }}</p>
                         <p class="summary-meta">Downloadable receipts available</p>
                     </article>
                     <article class="summary-card">
-                        <p class="summary-label">Notification Status</p>
+                        <p class="summary-label"><span class="icon" aria-hidden="true">🔔</span>Notification Status</p>
                         <p class="summary-value"><span class="status-pill {{ $summary['notification_state'] === 'ACTIVE' ? 'ok' : 'warn' }}">{{ $summary['notification_state'] }}</span></p>
                         <p class="summary-meta">Messages and booking updates</p>
                     </article>
                     <article class="summary-card accent">
-                        <p class="summary-label">Simple Mode</p>
+                        <p class="summary-label"><span class="icon" aria-hidden="true">👓</span>Simple Mode</p>
                         <p class="summary-value" style="font-size:1rem; margin-top:8px;">
                             <label class="easy-toggle" for="easyModeToggle">
                                 <input id="easyModeToggle" type="checkbox">
@@ -698,8 +958,13 @@
                     </div>
                 </section>
 
+                <div id="appliedFilterBadge" class="applied-filter-badge" hidden>
+                    <span id="appliedFilterText">Filters applied from booking.</span>
+                    <button id="clearAppliedFilterBtn" type="button">Clear</button>
+                </div>
+
                 <section id="discoverListings" class="card listing-feed" aria-label="Customer listing feed">
-                    <p class="label">Discover Properties and Rooms</p>
+                    <p class="label">🏝️ Discover Properties and Rooms</p>
                     <div class="results-row">
                         <strong id="listingCountLabel">Showing 0 listings</strong>
                         <span>Tip: use quick picks for one-tap browsing</span>
@@ -798,11 +1063,52 @@
 
                 <section class="layout">
                     <article id="bookingsCard" class="card">
-                        <p class="label">Bookings</p>
-                        <div class="empty">Bookings layout is ready. Connect this panel to customer booking API payloads for live itinerary cards and detail links.</div>
+                        <p class="label">📅 Bookings</p>
+                        <div class="booking-categories" aria-label="Booking categories">
+                            @foreach ($bookingCategoryMeta as $categoryKey => $category)
+                                @php
+                                    $bookingCount = collect($customerBookingsByCategory->get($categoryKey, collect()))->count();
+                                @endphp
+                                <button
+                                    class="booking-category-btn {{ $loop->first ? 'is-active' : '' }}"
+                                    type="button"
+                                    data-booking-category-btn="{{ $categoryKey }}"
+                                >
+                                    {{ (string) ($category['label'] ?? strtoupper((string) $categoryKey)) }} ({{ $bookingCount }})
+                                </button>
+                            @endforeach
+                        </div>
+
+                        @foreach ($bookingCategoryMeta as $categoryKey => $category)
+                            @php
+                                $bookings = collect($customerBookingsByCategory->get($categoryKey, collect()));
+                            @endphp
+                            <section class="booking-panel" data-booking-panel="{{ $categoryKey }}" {{ $loop->first ? '' : 'hidden' }}>
+                                @if ($bookings->isEmpty())
+                                    <div class="empty">No bookings available under {{ (string) ($category['label'] ?? 'this category') }} yet.</div>
+                                @else
+                                    <div class="booking-list">
+                                        @foreach ($bookings as $booking)
+                                            <article class="booking-item">
+                                                <p class="booking-item-title">{{ (string) ($booking['property_name'] ?? 'Property') }} • {{ (string) ($booking['service_label'] ?? 'Service') }}</p>
+                                                <div class="booking-item-meta">Trip: {{ (string) ($booking['start_at'] ?? '-') }} to {{ (string) ($booking['end_at'] ?? '-') }}</div>
+                                                <div class="booking-item-meta">Status: {{ (string) ($booking['status'] ?? 'PENDING') }} | Payment: {{ (string) ($booking['payment_status'] ?? 'UNPAID') }}</div>
+                                                <div class="booking-item-meta">Total: {{ (string) ($booking['currency'] ?? 'MVR') }} {{ number_format((float) ($booking['total_amount'] ?? 0), 2) }} | Booking #{{ (int) ($booking['id'] ?? 0) }}</div>
+                                                <div class="booking-item-actions">
+                                                    @if ((int) ($booking['id'] ?? 0) > 0)
+                                                        <a class="booking-item-link" href="/booking/checkout/{{ (int) $booking['id'] }}">🔎 View Booking Summary</a>
+                                                    @endif
+                                                    <a class="booking-item-link" href="#discoverListings" data-browse-category="{{ (string) ($booking['category_key'] ?? 'all') }}" data-browse-price="{{ number_format((float) ($booking['total_amount'] ?? 0), 2, '.', '') }}">🏝️ Browse Similar Services</a>
+                                                </div>
+                                            </article>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </section>
+                        @endforeach
                     </article>
                     <article id="paymentsCard" class="card">
-                        <p class="label">Payments and Receipts</p>
+                        <p class="label">💳 Payments and Receipts</p>
                         <ul class="list">
                             <li>Recent payment timeline with status badges</li>
                             <li>Receipt download links for settled invoices</li>
@@ -810,11 +1116,11 @@
                         </ul>
                     </article>
                     <article id="notificationsCard" class="card">
-                        <p class="label">Notifications Center</p>
+                        <p class="label">🔔 Notifications Center</p>
                         <div class="empty">No new notifications. This section is ready for booking updates, reminders, and support responses.</div>
                     </article>
                     <article class="card">
-                        <p class="label">Account and Support</p>
+                        <p class="label">🛟 Account and Support</p>
                         <ul class="list">
                             <li><a href="/terms-of-service">Terms of Service</a></li>
                             <li><a href="/privacy-policy">Privacy Policy</a></li>
@@ -839,12 +1145,119 @@
             const noResultsState = document.getElementById('noResultsState');
             const easyModeToggle = document.getElementById('easyModeToggle');
             const quickButtons = Array.from(document.querySelectorAll('[data-quick-category]'));
+            const themeButtons = Array.from(document.querySelectorAll('[data-theme-choice]'));
+            const bookingCategoryButtons = Array.from(document.querySelectorAll('[data-booking-category-btn]'));
+            const bookingPanels = Array.from(document.querySelectorAll('[data-booking-panel]'));
+            const bookingBrowseLinks = Array.from(document.querySelectorAll('[data-browse-category]'));
+            const appliedFilterBadge = document.getElementById('appliedFilterBadge');
+            const appliedFilterText = document.getElementById('appliedFilterText');
+            const clearAppliedFilterBtn = document.getElementById('clearAppliedFilterBtn');
+
+            const THEME_STORAGE_KEY = 'workation-customer-theme';
+            const applyTheme = function (themeName) {
+                const normalized = String(themeName || 'ocean').toLowerCase();
+                const effectiveTheme = ['ocean', 'sunset', 'lagoon'].includes(normalized) ? normalized : 'ocean';
+
+                if (effectiveTheme === 'ocean') {
+                    document.body.removeAttribute('data-theme');
+                } else {
+                    document.body.setAttribute('data-theme', effectiveTheme);
+                }
+
+                themeButtons.forEach(function (btn) {
+                    const btnTheme = String(btn.getAttribute('data-theme-choice') || 'ocean').toLowerCase();
+                    btn.classList.toggle('is-active', btnTheme === effectiveTheme);
+                });
+
+                try {
+                    window.localStorage.setItem(THEME_STORAGE_KEY, effectiveTheme);
+                } catch (error) {
+                    // Ignore storage errors.
+                }
+            };
+
+            themeButtons.forEach(function (button) {
+                button.addEventListener('click', function () {
+                    applyTheme(button.getAttribute('data-theme-choice'));
+                });
+            });
+
+            try {
+                applyTheme(window.localStorage.getItem(THEME_STORAGE_KEY) || 'ocean');
+            } catch (error) {
+                applyTheme('ocean');
+            }
+
+            const activateBookingCategory = function (categoryKey) {
+                const normalized = String(categoryKey || '').toLowerCase();
+
+                bookingCategoryButtons.forEach(function (button) {
+                    button.classList.toggle('is-active', String(button.getAttribute('data-booking-category-btn') || '').toLowerCase() === normalized);
+                });
+
+                bookingPanels.forEach(function (panel) {
+                    const panelKey = String(panel.getAttribute('data-booking-panel') || '').toLowerCase();
+                    panel.hidden = panelKey !== normalized;
+                });
+            };
+
+            bookingCategoryButtons.forEach(function (button) {
+                button.addEventListener('click', function () {
+                    activateBookingCategory(button.getAttribute('data-booking-category-btn'));
+                });
+            });
+
+            if (bookingCategoryButtons.length > 0) {
+                activateBookingCategory(bookingCategoryButtons[0].getAttribute('data-booking-category-btn'));
+            }
 
             if (!listingGrid) {
                 return;
             }
 
             const cards = Array.from(listingGrid.querySelectorAll('[data-listing-card]'));
+
+            const categoryLabelMap = {
+                all: 'All categories',
+                accommodation: 'Accommodation',
+                transport: 'Transport',
+                excursion: 'Excursion',
+                remote_workspace: 'Remote Workspace',
+                resort_day_visit: 'Resort Day Visit',
+                restaurant: 'Restaurant',
+                vehicle_rental: 'Vehicle Rental'
+            };
+
+            const priceLabelMap = {
+                all: 'Any price',
+                '0-500': 'Up to 500',
+                '501-1000': '501 to 1000',
+                '1001-2500': '1001 to 2500',
+                '2501-9999999': '2500+'
+            };
+
+            function setAppliedFilterBadge(categoryValue, priceValue) {
+                if (!appliedFilterBadge || !appliedFilterText) {
+                    return;
+                }
+
+                const categoryLabel = categoryLabelMap[String(categoryValue || 'all')] || 'Category';
+                const priceLabel = priceLabelMap[String(priceValue || 'all')] || 'Any price';
+                appliedFilterText.textContent = 'Applied from booking: ' + categoryLabel + ' + ' + priceLabel + '.';
+                appliedFilterBadge.hidden = false;
+                appliedFilterBadge.classList.remove('is-visible');
+                window.requestAnimationFrame(function () {
+                    appliedFilterBadge.classList.add('is-visible');
+                });
+            }
+
+            function clearAppliedFilterBadge() {
+                if (!appliedFilterBadge) {
+                    return;
+                }
+                appliedFilterBadge.classList.remove('is-visible');
+                appliedFilterBadge.hidden = true;
+            }
 
             function parsePriceBand(value) {
                 if (!value || value === 'all') {
@@ -939,6 +1352,61 @@
                     render();
                 });
             });
+
+            bookingBrowseLinks.forEach(function (link) {
+                link.addEventListener('click', function () {
+                    const category = String(link.getAttribute('data-browse-category') || 'all').toLowerCase();
+                    const bookingPrice = Number(link.getAttribute('data-browse-price') || 0);
+                    const validCategories = ['all', 'accommodation', 'transport', 'excursion', 'remote_workspace', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
+                    const targetCategory = validCategories.includes(category) ? category : 'all';
+                    let targetPriceBand = 'all';
+
+                    if (categoryFilter) {
+                        categoryFilter.value = targetCategory;
+                    }
+
+                    if (priceFilter) {
+                        if (!Number.isFinite(bookingPrice) || bookingPrice <= 0) {
+                            targetPriceBand = 'all';
+                        } else if (bookingPrice <= 500) {
+                            targetPriceBand = '0-500';
+                        } else if (bookingPrice <= 1000) {
+                            targetPriceBand = '501-1000';
+                        } else if (bookingPrice <= 2500) {
+                            targetPriceBand = '1001-2500';
+                        } else {
+                            targetPriceBand = '2501-9999999';
+                        }
+
+                        priceFilter.value = targetPriceBand;
+                    }
+
+                    quickButtons.forEach(function (item) {
+                        const quickCategory = String(item.getAttribute('data-quick-category') || 'all').toLowerCase();
+                        item.classList.toggle('is-active', quickCategory === targetCategory);
+                    });
+
+                    render();
+                    setAppliedFilterBadge(targetCategory, targetPriceBand);
+                });
+            });
+
+            if (clearAppliedFilterBtn) {
+                clearAppliedFilterBtn.addEventListener('click', function () {
+                    if (categoryFilter) {
+                        categoryFilter.value = 'all';
+                    }
+                    if (priceFilter) {
+                        priceFilter.value = 'all';
+                    }
+                    quickButtons.forEach(function (item) {
+                        const quickCategory = String(item.getAttribute('data-quick-category') || 'all').toLowerCase();
+                        item.classList.toggle('is-active', quickCategory === 'all');
+                    });
+                    render();
+                    clearAppliedFilterBadge();
+                });
+            }
 
             if (easyModeToggle) {
                 easyModeToggle.addEventListener('change', function () {

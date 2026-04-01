@@ -614,7 +614,7 @@ Route::get('/', function () {
         if (!empty($locationScores)) {
             uasort($locationScores, static fn (array $a, array $b) => $b['count'] <=> $a['count']);
             $homeTrendingCards = collect(array_slice(array_values($locationScores), 0, 4))
-                ->map(function (array $row) {
+                ->map(function (array $row) use ($resolvePropertyImage) {
                     $sample = $row['sample_property'] ?? null;
                     $sampleId = (int) ($sample->id ?? 0);
                     $sampleCategory = strtolower(trim((string) ($sample->listing_category ?? 'accommodation')));
@@ -636,7 +636,7 @@ Route::get('/', function () {
             ->values();
 
         if ($priceSorted->isNotEmpty()) {
-            $homeWeekendDealCards = $priceSorted->take(4)->map(function ($property) {
+            $homeWeekendDealCards = $priceSorted->take(4)->map(function ($property) use ($resolvePropertyImage) {
                 $name = trim((string) ($property->name ?? 'Weekend Offer'));
                 $currency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
                 $price = number_format((float) ($property->base_price ?? 0), 2);
@@ -681,7 +681,7 @@ Route::get('/', function () {
                 ->get();
 
             if ($lovedRows->isNotEmpty()) {
-                $homeLovedCards = $lovedRows->map(function ($property) use ($sortColumn) {
+                $homeLovedCards = $lovedRows->map(function ($property) use ($sortColumn, $resolvePropertyImage) {
                     $name = trim((string) ($property->name ?? 'Loved Listing'));
                     $score = (string) ($property->{$sortColumn} ?? '0');
                     $loc = trim((string) ($property->island ?? ''));

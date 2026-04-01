@@ -113,6 +113,31 @@
             align-items: center;
         }
 
+        .social-auth {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 10px 0 12px;
+        }
+
+        .social-btn {
+            text-decoration: none;
+            border: 1px solid #c8d3df;
+            border-radius: 10px;
+            background: #fff;
+            color: #20415d;
+            padding: 9px 10px;
+            font-weight: 700;
+            font-size: 0.82rem;
+            text-align: center;
+        }
+
+        .social-btn.disabled {
+            opacity: 0.55;
+            pointer-events: none;
+            cursor: not-allowed;
+        }
+
         button {
             border: 0;
             background: #0f6288;
@@ -163,6 +188,9 @@
     </style>
 </head>
 <body>
+    @php
+        $socialProviders = is_array($socialProviders ?? null) ? $socialProviders : [];
+    @endphp
     <main class="frame">
     <section class="card">
         <span class="eyebrow">Secure Access</span>
@@ -183,6 +211,18 @@
 
         @if (session('status'))
             <div class="error" role="status" aria-live="polite" style="color:#0d5a2a;border-color:#a6d8b6;background:#e8f8ee;">{{ session('status') }}</div>
+        @endif
+
+        @if (in_array($portal, ['customer', 'vendor'], true) && !empty($socialProviders))
+            <div class="social-auth" aria-label="Social sign in options">
+                @foreach ($socialProviders as $provider => $meta)
+                    @php
+                        $isConfigured = (bool) ($meta['configured'] ?? false);
+                        $redirectUrl = (string) ($meta['redirect'] ?? '#');
+                    @endphp
+                    <a class="social-btn {{ $isConfigured ? '' : 'disabled' }}" href="{{ $redirectUrl }}" aria-label="Continue with {{ ucfirst((string) $provider) }}">Continue with {{ ucfirst((string) $provider) }}</a>
+                @endforeach
+            </div>
         @endif
 
         <form method="POST" action="/portal/{{ $portal }}/login" aria-describedby="portal-login-hint">

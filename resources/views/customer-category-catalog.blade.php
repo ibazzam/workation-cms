@@ -338,9 +338,13 @@
                         $bannerUrl = $primaryMedia ? $mediaVariantUrl($primaryMedia, 'banner') : null;
                         $fallbackImage = $primaryMedia ? ('/storage/' . ltrim((string) ($primaryMedia->file_path ?? ''), '/')) : '';
                         $price = (float) ($property->base_price ?? 0);
+                        $detailUrl = $categoryKey === 'accommodation'
+                            ? ('/property/' . $propertyId)
+                            : ('/category-booking/' . $categoryKey . '/' . $propertyId);
+                        $actionLabel = $categoryKey === 'accommodation' ? 'Open Listing Profile' : 'Proceed to Booking';
                     @endphp
                     <article class="card">
-                        <a class="card-link" href="/property/{{ $propertyId }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
+                        <a class="card-link" href="{{ $detailUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
                             @if ($bannerUrl)
                                 <img src="{{ $bannerUrl }}" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $fallbackImage }}';}" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                             @else
@@ -351,7 +355,7 @@
                                 <div class="meta">{{ trim((string) (($property->atoll ?? '') . ' ' . ($property->island ?? ''))) !== '' ? trim((string) (($property->atoll ?? '') . ' · ' . ($property->island ?? ''))) : 'Location will be updated soon.' }}</div>
                                 <div class="meta">{{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}</div>
                                 <div class="meta">{{ strtoupper(str_replace('_', ' ', (string) ($property->listing_category ?? $categoryKey))) }}</div>
-                                <div class="actions"><span>Open Listing Profile</span></div>
+                                <div class="actions"><span>{{ $actionLabel }}</span></div>
                             </div>
                         </a>
                     </article>
@@ -362,5 +366,4 @@
         @include('partials.global-site-footer')
     </main>
 </body>
-</html>
 </html>

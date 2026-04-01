@@ -137,6 +137,33 @@ if (!function_exists('supportedVendorSocialProviders')) {
     }
 }
 
+if (!function_exists('supportedCustomerSocialProviders')) {
+    function supportedCustomerSocialProviders(): array
+    {
+        return ['google', 'facebook'];
+    }
+}
+
+if (!function_exists('customerSocialRedirectUrl')) {
+    function customerSocialRedirectUrl(string $provider): string
+    {
+        return url('/portal/customer/oauth/' . strtolower(trim($provider)) . '/callback');
+    }
+}
+
+if (!function_exists('isCustomerSocialProviderConfigured')) {
+    function isCustomerSocialProviderConfigured(string $provider): bool
+    {
+        return match ($provider) {
+            'google' => trim((string) config('services.google.client_id', '')) !== ''
+                && trim((string) config('services.google.client_secret', '')) !== '',
+            'facebook' => trim((string) config('services.facebook.client_id', '')) !== ''
+                && trim((string) config('services.facebook.client_secret', '')) !== '',
+            default => false,
+        };
+    }
+}
+
 if (!function_exists('vendorSocialRedirectUrl')) {
     function vendorSocialRedirectUrl(string $provider): string
     {
@@ -1087,19 +1114,37 @@ Route::get('/room/{room}', function (Request $request, int $room) {
     $transferOptions = collect($propertyDetails['transfer_options'] ?? [])->values();
     if ($transferOptions->isEmpty()) {
         $transferOptions = collect([
-            ['code' => 'shared_speedboat', 'label' => 'Shared Speedboat', 'charge' => 35],
-            ['code' => 'private_speedboat', 'label' => 'Private Speedboat', 'charge' => 120],
-            ['code' => 'seaplane', 'label' => 'Seaplane', 'charge' => 420],
+            ['code' => 'shared_speedboat', 'label' => 'Shared Speedboat', 'adult_charge' => 35, 'child_charge' => 20],
+            ['code' => 'private_speedboat', 'label' => 'Private Speedboat', 'adult_charge' => 120, 'child_charge' => 80],
+            ['code' => 'seaplane', 'label' => 'Seaplane', 'adult_charge' => 420, 'child_charge' => 280],
         ]);
     }
 
     $transferOptions = $transferOptions->map(function ($option) {
         $code = trim((string) ($option['code'] ?? Str::slug((string) ($option['label'] ?? 'transfer'))));
         $label = trim((string) ($option['label'] ?? 'Transfer Option'));
-        $charge = (float) ($option['charge'] ?? 0);
+        $baseCharge = (float) ($option['base_charge'] ?? 0);
+        $adultCharge = (float) ($option['adult_charge'] ?? ($option['charge'] ?? 0));
+        $childCharge = (float) ($option['child_charge'] ?? 0);
 
-        return ['code' => $code, 'label' => $label, 'charge' => $charge];
+        return [
+            'code' => $code,
+            'label' => $label,
+            'base_charge' => $baseCharge,
+            'adult_charge' => $adultCharge,
+            'child_charge' => $childCharge,
+        ];
     })->values();
+
+    $pricingConfig = [
+        'tax_rate' => (float) ($propertyDetails['tax_rate'] ?? 16),
+        'discount_percent' => (float) ($propertyDetails['promotion_discount_percent'] ?? 0),
+    ];
+
+    $bookingPolicies = [
+        'inclusives' => collect($propertyDetails['inclusives'] ?? [])->map(static fn ($v) => trim((string) $v))->filter()->values()->all(),
+        'cancellation_policy' => trim((string) ($propertyDetails['cancellation_policy'] ?? 'Free cancellation up to 72 hours before check-in.')),
+    ];
 
     $mediaUrl = static function ($media, string $variant = 'banner'): ?string {
         $mediaId = (int) ($media->id ?? 0);
@@ -1111,18 +1156,30 @@ Route::get('/room/{room}', function (Request $request, int $room) {
         return $path !== '' ? ('/storage/' . ltrim($path, '/')) : null;
     };
 
+    $sessionGuestName = trim((string) session('portal_customer_user', ''));
+    $nameParts = preg_split('/\s+/', $sessionGuestName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    $prefillFirstName = (string) ($nameParts[0] ?? '');
+    $prefillLastName = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
+
     return view('room-profile', [
         'room' => $roomRow,
         'property' => $propertyRow,
         'roomMedia' => $roomMedia,
         'roomFeatures' => $roomFeatures,
         'transferOptions' => $transferOptions,
+        'pricingConfig' => $pricingConfig,
+        'bookingPolicies' => $bookingPolicies,
         'mediaUrl' => $mediaUrl,
         'prefill' => [
             'checkin' => trim((string) $request->query('checkin', '')),
             'checkout' => trim((string) $request->query('checkout', '')),
             'adults' => max(1, (int) $request->query('adults', 2)),
             'children' => max(0, (int) $request->query('children', 0)),
+            'primary_first_name' => $prefillFirstName,
+            'primary_last_name' => $prefillLastName,
+            'primary_nationality' => '',
+            'primary_email' => trim((string) session('portal_customer_email', '')),
+            'primary_mobile' => '',
         ],
     ]);
 });
@@ -1135,8 +1192,33 @@ Route::post('/booking/reserve', function (Request $request) {
         'checkout' => ['required', 'date', 'after:checkin'],
         'adults' => ['required', 'integer', 'min:1', 'max:20'],
         'children' => ['nullable', 'integer', 'min:0', 'max:20'],
+        'primary_first_name' => ['required', 'string', 'max:80'],
+        'primary_last_name' => ['required', 'string', 'max:80'],
+        'primary_nationality' => ['required', 'string', 'max:120'],
+        'primary_email' => ['required', 'email', 'max:190'],
+        'primary_mobile' => ['required', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s\-()]{5,39}$/'],
+        'additional_guest_details' => ['nullable', 'string', 'max:4000'],
         'transfer_option' => ['nullable', 'string', 'max:80'],
         'transfer_charge' => ['nullable', 'numeric', 'min:0'],
+        'room_subtotal' => ['nullable', 'numeric', 'min:0'],
+        'discount_amount' => ['nullable', 'numeric', 'min:0'],
+        'tax_amount' => ['nullable', 'numeric', 'min:0'],
+        'total_amount' => ['nullable', 'numeric', 'min:0'],
+    ], [
+        'primary_first_name.required' => 'Primary guest first name is required.',
+        'primary_last_name.required' => 'Primary guest last name is required.',
+        'primary_nationality.required' => 'Primary guest nationality is required.',
+        'primary_email.required' => 'Primary guest email is required.',
+        'primary_email.email' => 'Please enter a valid email address for the primary guest.',
+        'primary_mobile.required' => 'Primary guest mobile is required.',
+        'primary_mobile.regex' => 'Please enter a valid primary guest mobile number.',
+        'checkout.after' => 'Checkout date must be after check-in date.',
+    ], [
+        'primary_first_name' => 'primary guest first name',
+        'primary_last_name' => 'primary guest last name',
+        'primary_nationality' => 'primary guest nationality',
+        'primary_email' => 'primary guest email',
+        'primary_mobile' => 'primary guest mobile',
     ]);
 
     $propertyRow = Schema::hasTable('vendor_properties')
@@ -1153,10 +1235,53 @@ Route::post('/booking/reserve', function (Request $request) {
     $checkin = Carbon::parse((string) $payload['checkin']);
     $checkout = Carbon::parse((string) $payload['checkout']);
     $nights = max(1, $checkin->diffInDays($checkout));
-    $guestCount = (int) $payload['adults'] + (int) ($payload['children'] ?? 0);
-    $transferCharge = (float) ($payload['transfer_charge'] ?? 0);
+    $adults = (int) $payload['adults'];
+    $children = (int) ($payload['children'] ?? 0);
+    $guestCount = $adults + $children;
     $nightlyRate = (float) ($roomRow->base_price ?? $propertyRow->base_price ?? 0);
-    $totalAmount = ($nightlyRate * $nights) + $transferCharge;
+    $roomSubtotal = $nightlyRate * $nights;
+
+    $propertyDetails = json_decode((string) ($propertyRow->listing_details ?? ''), true);
+    if (!is_array($propertyDetails)) {
+        $propertyDetails = [];
+    }
+
+    $taxRate = (float) ($propertyDetails['tax_rate'] ?? 16);
+    $discountPercent = (float) ($propertyDetails['promotion_discount_percent'] ?? 0);
+
+    $transferCharge = (float) ($payload['transfer_charge'] ?? 0);
+    $transferOptionCode = trim((string) ($payload['transfer_option'] ?? ''));
+    $transferOptions = collect($propertyDetails['transfer_options'] ?? [])->values();
+
+    if ($transferOptions->isNotEmpty() && $transferOptionCode !== '') {
+        $selectedTransfer = $transferOptions->first(function ($option) use ($transferOptionCode) {
+            $code = trim((string) ($option['code'] ?? Str::slug((string) ($option['label'] ?? 'transfer'))));
+            return $code === $transferOptionCode;
+        });
+
+        if (is_array($selectedTransfer)) {
+            $baseCharge = (float) ($selectedTransfer['base_charge'] ?? 0);
+            $adultCharge = (float) ($selectedTransfer['adult_charge'] ?? ($selectedTransfer['charge'] ?? 0));
+            $childCharge = (float) ($selectedTransfer['child_charge'] ?? 0);
+            $transferCharge = $baseCharge + ($adultCharge * $adults) + ($childCharge * $children);
+        }
+    }
+
+    $discountAmount = round(($roomSubtotal * $discountPercent) / 100, 2);
+    $taxableAmount = max(0, $roomSubtotal - $discountAmount);
+    $taxAmount = round(($taxableAmount * $taxRate) / 100, 2);
+    $totalAmount = round($taxableAmount + $taxAmount + $transferCharge, 2);
+
+    $primaryFirstName = Str::title(trim((string) preg_replace('/\s+/', ' ', (string) $payload['primary_first_name'])));
+    $primaryLastName = Str::title(trim((string) preg_replace('/\s+/', ' ', (string) $payload['primary_last_name'])));
+    $primaryNationality = Str::title(trim((string) preg_replace('/\s+/', ' ', (string) $payload['primary_nationality'])));
+    $primaryEmail = Str::lower(trim((string) $payload['primary_email']));
+    $mobileRaw = trim((string) $payload['primary_mobile']);
+    $primaryMobile = preg_replace('/[^0-9+]/', '', $mobileRaw) ?? $mobileRaw;
+    $primaryMobile = preg_replace('/^\++/', '+', $primaryMobile) ?? $primaryMobile;
+    $customerName = trim($primaryFirstName . ' ' . $primaryLastName);
+    $customerEmail = $primaryEmail;
+    $additionalGuestDetails = trim((string) ($payload['additional_guest_details'] ?? ''));
 
     $reservationId = null;
     if (Schema::hasTable('vendor_reservations')) {
@@ -1164,8 +1289,8 @@ Route::post('/booking/reserve', function (Request $request) {
             'vendor_user_id' => (int) ($propertyRow->vendor_user_id ?? 0),
             'vendor_property_id' => (int) $propertyRow->id,
             'vendor_service_id' => null,
-            'customer_name' => trim((string) session('portal_customer_user', 'Guest Customer')),
-            'customer_email' => trim((string) session('portal_customer_email', 'guest@workation.local')),
+            'customer_name' => $customerName !== '' ? $customerName : 'Guest Customer',
+            'customer_email' => $customerEmail !== '' ? $customerEmail : 'guest@workation.local',
             'start_at' => $checkin->copy()->startOfDay(),
             'end_at' => $checkout->copy()->startOfDay(),
             'guests' => max(1, $guestCount),
@@ -1176,12 +1301,25 @@ Route::post('/booking/reserve', function (Request $request) {
             'notes' => json_encode([
                 'room_id' => (int) $roomRow->id,
                 'room_name' => (string) ($roomRow->name ?? 'Room'),
-                'adults' => (int) $payload['adults'],
-                'children' => (int) ($payload['children'] ?? 0),
+                'adults' => $adults,
+                'children' => $children,
+                'primary_first_name' => $primaryFirstName,
+                'primary_last_name' => $primaryLastName,
+                'primary_nationality' => $primaryNationality,
+                'primary_email' => $primaryEmail,
+                'primary_mobile' => $primaryMobile,
+                'additional_guest_details' => $additionalGuestDetails,
                 'transfer_option' => (string) ($payload['transfer_option'] ?? ''),
                 'transfer_charge' => $transferCharge,
                 'nightly_rate' => $nightlyRate,
                 'nights' => $nights,
+                'room_subtotal' => $roomSubtotal,
+                'discount_percent' => $discountPercent,
+                'discount_amount' => $discountAmount,
+                'tax_rate' => $taxRate,
+                'tax_amount' => $taxAmount,
+                'inclusives' => $propertyDetails['inclusives'] ?? [],
+                'cancellation_policy' => (string) ($propertyDetails['cancellation_policy'] ?? ''),
             ]),
             'created_at' => now(),
             'updated_at' => now(),
@@ -1194,16 +1332,390 @@ Route::post('/booking/reserve', function (Request $request) {
         . '&room_id=' . (int) $roomRow->id
         . '&checkin=' . urlencode((string) $payload['checkin'])
         . '&checkout=' . urlencode((string) $payload['checkout'])
-        . '&adults=' . (int) $payload['adults']
-        . '&children=' . (int) ($payload['children'] ?? 0)
-        . '&transfer_option=' . urlencode((string) ($payload['transfer_option'] ?? ''))
+        . '&adults=' . $adults
+        . '&children=' . $children
+        . '&primary_first_name=' . urlencode($primaryFirstName)
+        . '&primary_last_name=' . urlencode($primaryLastName)
+        . '&primary_nationality=' . urlencode($primaryNationality)
+        . '&primary_email=' . urlencode($primaryEmail)
+        . '&primary_mobile=' . urlencode($primaryMobile)
+        . '&additional_guest_details=' . urlencode($additionalGuestDetails)
+        . '&transfer_option=' . urlencode($transferOptionCode)
         . '&transfer_charge=' . urlencode((string) $transferCharge)
-        . '&total=' . urlencode((string) $totalAmount);
+        . '&room_subtotal=' . urlencode((string) $roomSubtotal)
+        . '&discount_amount=' . urlencode((string) $discountAmount)
+        . '&tax_amount=' . urlencode((string) $taxAmount)
+        . '&discount_percent=' . urlencode((string) $discountPercent)
+        . '&tax_rate=' . urlencode((string) $taxRate)
+        . '&total=' . urlencode((string) $totalAmount)
+        . '&inclusives=' . urlencode(json_encode($propertyDetails['inclusives'] ?? []))
+        . '&cancellation_policy=' . urlencode((string) ($propertyDetails['cancellation_policy'] ?? ''));
+
+    return redirect($checkoutUrl);
+});
+
+Route::get('/category-booking/{category}/{property}', function (Request $request, string $category, int $property) {
+    $categoryMap = [
+        'accommodation' => ['label' => 'Accommodation', 'start_label' => 'Check-in Date', 'end_label' => 'Check-out Date'],
+        'transport' => ['label' => 'Transport', 'start_label' => 'Travel Date', 'end_label' => 'Return Date'],
+        'excursion' => ['label' => 'Excursion', 'start_label' => 'Excursion Date', 'end_label' => 'Return Date'],
+        'remote_workspace' => ['label' => 'Remote Workspace', 'start_label' => 'Start Date', 'end_label' => 'End Date'],
+        'resort_day_visit' => ['label' => 'Resort Day Visit', 'start_label' => 'Visit Date', 'end_label' => 'Return Date'],
+        'restaurant' => ['label' => 'Restaurant', 'start_label' => 'Reservation Date', 'end_label' => 'End Date'],
+        'vehicle_rental' => ['label' => 'Vehicle Rental', 'start_label' => 'Pickup Date', 'end_label' => 'Return Date'],
+    ];
+
+    $categoryFieldMap = [
+        'accommodation' => [
+            ['key' => 'rooms', 'label' => 'Rooms', 'type' => 'number', 'required' => true, 'min' => 1],
+        ],
+        'transport' => [
+            ['key' => 'transport_mode', 'label' => 'Transport Mode', 'type' => 'select', 'required' => true, 'options' => ['marine' => 'Marine', 'land' => 'Land']],
+            ['key' => 'origin_point', 'label' => 'From', 'type' => 'text', 'required' => true],
+            ['key' => 'destination_point', 'label' => 'To', 'type' => 'text', 'required' => true],
+        ],
+        'excursion' => [
+            ['key' => 'excursion_type', 'label' => 'Excursion Type', 'type' => 'text', 'required' => true],
+        ],
+        'remote_workspace' => [
+            ['key' => 'workspace_type', 'label' => 'Workspace Type', 'type' => 'text', 'required' => true],
+        ],
+        'resort_day_visit' => [
+            ['key' => 'visit_package', 'label' => 'Visit Package', 'type' => 'text', 'required' => true],
+        ],
+        'restaurant' => [
+            ['key' => 'meal_plan', 'label' => 'Meal Plan', 'type' => 'text', 'required' => true],
+        ],
+        'vehicle_rental' => [
+            ['key' => 'vehicle_type', 'label' => 'Vehicle Type', 'type' => 'text', 'required' => true],
+            ['key' => 'pickup_location', 'label' => 'Pickup Location', 'type' => 'text', 'required' => true],
+            ['key' => 'dropoff_location', 'label' => 'Drop-off Location', 'type' => 'text', 'required' => true],
+        ],
+    ];
+
+    $categoryKey = strtolower(trim($category));
+    if (!array_key_exists($categoryKey, $categoryMap)) {
+        abort(404);
+    }
+
+    $categoryFields = collect($categoryFieldMap[$categoryKey] ?? [])->values();
+
+    if (!Schema::hasTable('vendor_properties')) {
+        abort(404);
+    }
+
+    $propertyQuery = DB::table('vendor_properties')
+        ->where('id', $property)
+        ->where('status', 'active');
+
+    if (Schema::hasColumn('vendor_properties', 'listing_category')) {
+        $propertyQuery->whereRaw('LOWER(listing_category) = ?', [$categoryKey]);
+    }
+
+    $propertyRow = $propertyQuery->first();
+    if (!$propertyRow) {
+        abort(404);
+    }
+
+    $listingDetails = json_decode((string) ($propertyRow->listing_details ?? ''), true);
+    if (!is_array($listingDetails)) {
+        $listingDetails = [];
+    }
+
+    $taxRate = (float) ($listingDetails['tax_rate'] ?? 16);
+    $discountPercent = (float) ($listingDetails['promotion_discount_percent'] ?? 0);
+
+    $sessionGuestName = trim((string) session('portal_customer_user', ''));
+    $nameParts = preg_split('/\s+/', $sessionGuestName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    $prefillFirstName = (string) ($nameParts[0] ?? '');
+    $prefillLastName = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
+
+    return view('category-booking', [
+        'categoryKey' => $categoryKey,
+        'categoryLabel' => (string) ($categoryMap[$categoryKey]['label'] ?? 'Category'),
+        'categoryFields' => $categoryFields,
+        'dateLabels' => [
+            'start' => (string) ($categoryMap[$categoryKey]['start_label'] ?? 'Service Start Date'),
+            'end' => (string) ($categoryMap[$categoryKey]['end_label'] ?? 'Service End Date'),
+        ],
+        'property' => $propertyRow,
+        'pricingConfig' => [
+            'tax_rate' => $taxRate,
+            'discount_percent' => $discountPercent,
+        ],
+        'prefill' => [
+            'service_start_date' => trim((string) $request->query('service_start_date', '')),
+            'service_end_date' => trim((string) $request->query('service_end_date', '')),
+            'adults' => max(1, (int) $request->query('adults', 2)),
+            'children' => max(0, (int) $request->query('children', 0)),
+            'primary_first_name' => $prefillFirstName,
+            'primary_last_name' => $prefillLastName,
+            'primary_nationality' => '',
+            'primary_email' => trim((string) session('portal_customer_email', '')),
+            'primary_mobile' => '',
+            'rooms' => max(1, (int) $request->query('rooms', 1)),
+            'transport_mode' => trim((string) $request->query('transport_mode', 'marine')),
+            'origin_point' => trim((string) $request->query('origin_point', '')),
+            'destination_point' => trim((string) $request->query('destination_point', '')),
+            'excursion_type' => trim((string) $request->query('excursion_type', '')),
+            'workspace_type' => trim((string) $request->query('workspace_type', '')),
+            'visit_package' => trim((string) $request->query('visit_package', '')),
+            'meal_plan' => trim((string) $request->query('meal_plan', '')),
+            'vehicle_type' => trim((string) $request->query('vehicle_type', '')),
+            'pickup_location' => trim((string) $request->query('pickup_location', '')),
+            'dropoff_location' => trim((string) $request->query('dropoff_location', '')),
+            'service_notes' => trim((string) $request->query('service_notes', '')),
+        ],
+    ]);
+});
+
+Route::post('/booking/reserve-category', function (Request $request) {
+    $categoryMap = [
+        'accommodation' => ['label' => 'Accommodation', 'start_label' => 'Check-in', 'end_label' => 'Check-out'],
+        'transport' => ['label' => 'Transport', 'start_label' => 'Travel Date', 'end_label' => 'Return Date'],
+        'excursion' => ['label' => 'Excursion', 'start_label' => 'Excursion Date', 'end_label' => 'Return Date'],
+        'remote_workspace' => ['label' => 'Remote Workspace', 'start_label' => 'Start Date', 'end_label' => 'End Date'],
+        'resort_day_visit' => ['label' => 'Resort Day Visit', 'start_label' => 'Visit Date', 'end_label' => 'Return Date'],
+        'restaurant' => ['label' => 'Restaurant', 'start_label' => 'Reservation Date', 'end_label' => 'End Date'],
+        'vehicle_rental' => ['label' => 'Vehicle Rental', 'start_label' => 'Pickup Date', 'end_label' => 'Return Date'],
+    ];
+
+    $categoryFieldRules = [
+        'accommodation' => [
+            'rooms' => ['required', 'integer', 'min:1', 'max:20'],
+        ],
+        'transport' => [
+            'transport_mode' => ['required', 'string', 'in:marine,land'],
+            'origin_point' => ['required', 'string', 'max:120'],
+            'destination_point' => ['required', 'string', 'max:120'],
+        ],
+        'excursion' => [
+            'excursion_type' => ['required', 'string', 'max:120'],
+        ],
+        'remote_workspace' => [
+            'workspace_type' => ['required', 'string', 'max:120'],
+        ],
+        'resort_day_visit' => [
+            'visit_package' => ['required', 'string', 'max:120'],
+        ],
+        'restaurant' => [
+            'meal_plan' => ['required', 'string', 'max:120'],
+        ],
+        'vehicle_rental' => [
+            'vehicle_type' => ['required', 'string', 'max:120'],
+            'pickup_location' => ['required', 'string', 'max:120'],
+            'dropoff_location' => ['required', 'string', 'max:120'],
+        ],
+    ];
+
+    $categoryFieldLabels = [
+        'rooms' => 'rooms',
+        'transport_mode' => 'transport mode',
+        'origin_point' => 'from location',
+        'destination_point' => 'to location',
+        'excursion_type' => 'excursion type',
+        'workspace_type' => 'workspace type',
+        'visit_package' => 'visit package',
+        'meal_plan' => 'meal plan',
+        'vehicle_type' => 'vehicle type',
+        'pickup_location' => 'pickup location',
+        'dropoff_location' => 'drop-off location',
+    ];
+
+    $requestedCategoryKey = strtolower(trim((string) $request->input('category_key', '')));
+    $requestedCategoryMeta = $categoryMap[$requestedCategoryKey] ?? null;
+    $startDateLabel = (string) ($requestedCategoryMeta['start_label'] ?? 'Service start date');
+    $endDateLabel = (string) ($requestedCategoryMeta['end_label'] ?? 'Service end date');
+
+    $baseRules = [
+        'category_key' => ['required', 'string', 'in:' . implode(',', array_keys($categoryMap))],
+        'property_id' => ['required', 'integer', 'min:1'],
+        'service_start_date' => ['required', 'date'],
+        'service_end_date' => ['nullable', 'date', 'after_or_equal:service_start_date'],
+        'adults' => ['required', 'integer', 'min:1', 'max:20'],
+        'children' => ['nullable', 'integer', 'min:0', 'max:20'],
+        'primary_first_name' => ['required', 'string', 'max:80'],
+        'primary_last_name' => ['required', 'string', 'max:80'],
+        'primary_nationality' => ['required', 'string', 'max:120'],
+        'primary_email' => ['required', 'email', 'max:190'],
+        'primary_mobile' => ['required', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s\-()]{5,39}$/'],
+        'additional_guest_details' => ['nullable', 'string', 'max:4000'],
+        'service_notes' => ['nullable', 'string', 'max:4000'],
+    ];
+
+    $payload = $request->validate(array_merge($baseRules, $categoryFieldRules[$requestedCategoryKey] ?? []), [
+        'primary_first_name.required' => 'Primary guest first name is required.',
+        'primary_last_name.required' => 'Primary guest last name is required.',
+        'primary_nationality.required' => 'Primary guest nationality is required.',
+        'primary_email.required' => 'Primary guest email is required.',
+        'primary_email.email' => 'Please enter a valid email address for the primary guest.',
+        'primary_mobile.required' => 'Primary guest mobile is required.',
+        'primary_mobile.regex' => 'Please enter a valid primary guest mobile number.',
+        'service_start_date.required' => $startDateLabel . ' is required.',
+        'service_end_date.after_or_equal' => $endDateLabel . ' must be after or equal to ' . strtolower($startDateLabel) . '.',
+    ], array_merge([
+        'primary_first_name' => 'primary guest first name',
+        'primary_last_name' => 'primary guest last name',
+        'primary_nationality' => 'primary guest nationality',
+        'primary_email' => 'primary guest email',
+        'primary_mobile' => 'primary guest mobile',
+    ], $categoryFieldLabels));
+
+    if (!Schema::hasTable('vendor_properties')) {
+        abort(404);
+    }
+
+    $categoryKey = strtolower(trim((string) $payload['category_key']));
+    $propertyQuery = DB::table('vendor_properties')
+        ->where('id', (int) $payload['property_id'])
+        ->where('status', 'active');
+
+    if (Schema::hasColumn('vendor_properties', 'listing_category')) {
+        $propertyQuery->whereRaw('LOWER(listing_category) = ?', [$categoryKey]);
+    }
+
+    $propertyRow = $propertyQuery->first();
+    if (!$propertyRow) {
+        abort(404);
+    }
+
+    $listingDetails = json_decode((string) ($propertyRow->listing_details ?? ''), true);
+    if (!is_array($listingDetails)) {
+        $listingDetails = [];
+    }
+
+    $serviceStart = Carbon::parse((string) $payload['service_start_date'])->startOfDay();
+    $serviceEndInput = trim((string) ($payload['service_end_date'] ?? ''));
+    $serviceEnd = $serviceEndInput !== ''
+        ? Carbon::parse($serviceEndInput)->startOfDay()
+        : $serviceStart->copy();
+
+    $units = max(1, $serviceStart->diffInDays($serviceEnd) + 1);
+    $adults = (int) $payload['adults'];
+    $children = (int) ($payload['children'] ?? 0);
+    $guestCount = $adults + $children;
+
+    $basePrice = (float) ($propertyRow->base_price ?? 0);
+    $serviceSubtotal = $basePrice * $units;
+    $taxRate = (float) ($listingDetails['tax_rate'] ?? 16);
+    $discountPercent = (float) ($listingDetails['promotion_discount_percent'] ?? 0);
+    $discountAmount = round(($serviceSubtotal * $discountPercent) / 100, 2);
+    $taxableAmount = max(0, $serviceSubtotal - $discountAmount);
+    $taxAmount = round(($taxableAmount * $taxRate) / 100, 2);
+    $transferCharge = 0.0;
+    $totalAmount = round($taxableAmount + $taxAmount + $transferCharge, 2);
+
+    $primaryFirstName = Str::title(trim((string) preg_replace('/\s+/', ' ', (string) $payload['primary_first_name'])));
+    $primaryLastName = Str::title(trim((string) preg_replace('/\s+/', ' ', (string) $payload['primary_last_name'])));
+    $primaryNationality = Str::title(trim((string) preg_replace('/\s+/', ' ', (string) $payload['primary_nationality'])));
+    $primaryEmail = Str::lower(trim((string) $payload['primary_email']));
+    $mobileRaw = trim((string) $payload['primary_mobile']);
+    $primaryMobile = preg_replace('/[^0-9+]/', '', $mobileRaw) ?? $mobileRaw;
+    $primaryMobile = preg_replace('/^\++/', '+', $primaryMobile) ?? $primaryMobile;
+    $additionalGuestDetails = trim((string) ($payload['additional_guest_details'] ?? ''));
+    $serviceNotes = trim((string) ($payload['service_notes'] ?? ''));
+
+    $customerName = trim($primaryFirstName . ' ' . $primaryLastName);
+    $customerEmail = $primaryEmail;
+    $categoryLabel = (string) ($categoryMap[$categoryKey]['label'] ?? 'Category');
+
+    $categoryDetails = [];
+    foreach (array_keys($categoryFieldRules[$categoryKey] ?? []) as $fieldKey) {
+        $value = $payload[$fieldKey] ?? null;
+        if (is_string($value)) {
+            $value = trim($value);
+        }
+        if ($value !== null && $value !== '') {
+            $categoryDetails[$fieldKey] = $value;
+        }
+    }
+
+    $reservationId = null;
+    if (Schema::hasTable('vendor_reservations')) {
+        $reservationId = (int) DB::table('vendor_reservations')->insertGetId([
+            'vendor_user_id' => (int) ($propertyRow->vendor_user_id ?? 0),
+            'vendor_property_id' => (int) $propertyRow->id,
+            'vendor_service_id' => null,
+            'customer_name' => $customerName !== '' ? $customerName : 'Guest Customer',
+            'customer_email' => $customerEmail !== '' ? $customerEmail : 'guest@workation.local',
+            'start_at' => $serviceStart,
+            'end_at' => $serviceEnd,
+            'guests' => max(1, $guestCount),
+            'total_amount' => $totalAmount,
+            'currency' => strtoupper(trim((string) ($propertyRow->currency ?? 'MVR'))),
+            'status' => 'pending',
+            'payment_status' => 'unpaid',
+            'notes' => json_encode([
+                'category_key' => $categoryKey,
+                'category_label' => $categoryLabel,
+                'service_label' => $categoryLabel,
+                'service_start_date' => $serviceStart->toDateString(),
+                'service_end_date' => $serviceEnd->toDateString(),
+                'adults' => $adults,
+                'children' => $children,
+                'primary_first_name' => $primaryFirstName,
+                'primary_last_name' => $primaryLastName,
+                'primary_nationality' => $primaryNationality,
+                'primary_email' => $primaryEmail,
+                'primary_mobile' => $primaryMobile,
+                'additional_guest_details' => $additionalGuestDetails,
+                'service_notes' => $serviceNotes,
+                'category_details' => $categoryDetails,
+                'room_subtotal' => $serviceSubtotal,
+                'discount_percent' => $discountPercent,
+                'discount_amount' => $discountAmount,
+                'tax_rate' => $taxRate,
+                'tax_amount' => $taxAmount,
+                'transfer_option' => '',
+                'transfer_charge' => $transferCharge,
+                'inclusives' => $listingDetails['inclusives'] ?? [],
+                'cancellation_policy' => (string) ($listingDetails['cancellation_policy'] ?? ''),
+            ]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    $checkoutUrl = '/booking/checkout'
+        . ($reservationId ? ('/' . $reservationId) : '')
+        . '?property_id=' . (int) $propertyRow->id
+        . '&category_key=' . urlencode($categoryKey)
+        . '&room_id=0'
+        . '&checkin=' . urlencode($serviceStart->toDateString())
+        . '&checkout=' . urlencode($serviceEnd->toDateString())
+        . '&adults=' . $adults
+        . '&children=' . $children
+        . '&primary_first_name=' . urlencode($primaryFirstName)
+        . '&primary_last_name=' . urlencode($primaryLastName)
+        . '&primary_nationality=' . urlencode($primaryNationality)
+        . '&primary_email=' . urlencode($primaryEmail)
+        . '&primary_mobile=' . urlencode($primaryMobile)
+        . '&additional_guest_details=' . urlencode($additionalGuestDetails)
+        . '&transfer_option='
+        . '&transfer_charge=' . urlencode((string) $transferCharge)
+        . '&room_subtotal=' . urlencode((string) $serviceSubtotal)
+        . '&discount_amount=' . urlencode((string) $discountAmount)
+        . '&tax_amount=' . urlencode((string) $taxAmount)
+        . '&discount_percent=' . urlencode((string) $discountPercent)
+        . '&tax_rate=' . urlencode((string) $taxRate)
+        . '&total=' . urlencode((string) $totalAmount)
+        . '&inclusives=' . urlencode(json_encode($listingDetails['inclusives'] ?? []))
+        . '&cancellation_policy=' . urlencode((string) ($listingDetails['cancellation_policy'] ?? ''));
 
     return redirect($checkoutUrl);
 });
 
 Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int $reservation = null) {
+    $categoryLabelMap = [
+        'accommodation' => ['start' => 'Check-in', 'end' => 'Check-out'],
+        'transport' => ['start' => 'Travel Date', 'end' => 'Return Date'],
+        'excursion' => ['start' => 'Excursion Date', 'end' => 'Return Date'],
+        'remote_workspace' => ['start' => 'Start Date', 'end' => 'End Date'],
+        'resort_day_visit' => ['start' => 'Visit Date', 'end' => 'Return Date'],
+        'restaurant' => ['start' => 'Reservation Date', 'end' => 'End Date'],
+        'vehicle_rental' => ['start' => 'Pickup Date', 'end' => 'Return Date'],
+    ];
+
     $reservationRow = null;
     if ($reservation !== null && Schema::hasTable('vendor_reservations')) {
         $reservationRow = DB::table('vendor_reservations')->where('id', $reservation)->first();
@@ -1232,18 +1744,108 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
         $roomName = trim((string) ($roomRow->name ?? 'Room'));
     }
 
+    $reservationNotes = [];
+    if ($reservationRow && !empty($reservationRow->notes)) {
+        $decoded = json_decode((string) $reservationRow->notes, true);
+        if (is_array($decoded)) {
+            $reservationNotes = $decoded;
+        }
+    }
+
+    $inclusivesQuery = trim((string) $request->query('inclusives', ''));
+    $inclusives = [];
+    if ($inclusivesQuery !== '') {
+        $decodedInclusives = json_decode($inclusivesQuery, true);
+        if (is_array($decodedInclusives)) {
+            $inclusives = collect($decodedInclusives)->map(static fn ($v) => trim((string) $v))->filter()->values()->all();
+        }
+    }
+
+    if (empty($inclusives) && !empty($reservationNotes['inclusives']) && is_array($reservationNotes['inclusives'])) {
+        $inclusives = collect($reservationNotes['inclusives'])->map(static fn ($v) => trim((string) $v))->filter()->values()->all();
+    }
+
+    if ($roomName === '') {
+        $roomName = trim((string) ($reservationNotes['service_label'] ?? 'Service'));
+    }
+
+    $categoryKey = strtolower(trim((string) $request->query('category_key', (string) ($reservationNotes['category_key'] ?? ''))));
+    $dateLabels = ['start' => 'Check-in', 'end' => 'Check-out'];
+    if ($categoryKey !== '' && array_key_exists($categoryKey, $categoryLabelMap)) {
+        $dateLabels = $categoryLabelMap[$categoryKey];
+    }
+
+    $cancellationPolicy = trim((string) $request->query('cancellation_policy', ''));
+    if ($cancellationPolicy === '') {
+        $cancellationPolicy = trim((string) ($reservationNotes['cancellation_policy'] ?? 'Standard cancellation terms apply as per property policy.'));
+    }
+
+    $categoryDetailLabels = [
+        'rooms' => 'Rooms',
+        'transport_mode' => 'Transport Mode',
+        'origin_point' => 'From',
+        'destination_point' => 'To',
+        'excursion_type' => 'Excursion Type',
+        'workspace_type' => 'Workspace Type',
+        'visit_package' => 'Visit Package',
+        'meal_plan' => 'Meal Plan',
+        'vehicle_type' => 'Vehicle Type',
+        'pickup_location' => 'Pickup Location',
+        'dropoff_location' => 'Drop-off Location',
+    ];
+
+    $categoryDetails = [];
+    if (!empty($reservationNotes['category_details']) && is_array($reservationNotes['category_details'])) {
+        foreach ($reservationNotes['category_details'] as $detailKey => $detailValue) {
+            $normalizedKey = trim((string) $detailKey);
+            $normalizedValue = trim((string) $detailValue);
+            if ($normalizedKey === '' || $normalizedValue === '') {
+                continue;
+            }
+
+            $categoryDetails[] = [
+                'label' => (string) ($categoryDetailLabels[$normalizedKey] ?? Str::headline(str_replace('_', ' ', $normalizedKey))),
+                'value' => $normalizedValue,
+            ];
+        }
+    }
+
+    $backUrl = '/customer';
+    if ($roomRow) {
+        $backUrl = '/room/' . (int) ($roomRow->id ?? 0);
+    } elseif ($propertyRow && !empty($reservationNotes['category_key'])) {
+        $backUrl = '/category-booking/' . urlencode((string) $reservationNotes['category_key']) . '/' . (int) ($propertyRow->id ?? 0);
+    }
+
     return view('booking-checkout', [
         'reservation' => $reservationRow,
         'property' => $propertyRow,
         'room' => $roomRow,
         'roomName' => $roomName,
+        'reservationNotes' => $reservationNotes,
+        'inclusives' => $inclusives,
+        'cancellationPolicy' => $cancellationPolicy,
+        'categoryDetails' => $categoryDetails,
+        'backUrl' => $backUrl,
+        'dateLabels' => $dateLabels,
         'summary' => [
-            'checkin' => trim((string) $request->query('checkin', '')),
-            'checkout' => trim((string) $request->query('checkout', '')),
-            'adults' => max(1, (int) $request->query('adults', 1)),
-            'children' => max(0, (int) $request->query('children', 0)),
-            'transfer_option' => trim((string) $request->query('transfer_option', '')),
-            'transfer_charge' => (float) $request->query('transfer_charge', 0),
+            'checkin' => trim((string) $request->query('checkin', (string) ($reservationNotes['service_start_date'] ?? ''))),
+            'checkout' => trim((string) $request->query('checkout', (string) ($reservationNotes['service_end_date'] ?? ''))),
+            'adults' => max(1, (int) $request->query('adults', (int) ($reservationNotes['adults'] ?? 1))),
+            'children' => max(0, (int) $request->query('children', (int) ($reservationNotes['children'] ?? 0))),
+            'primary_first_name' => trim((string) $request->query('primary_first_name', (string) ($reservationNotes['primary_first_name'] ?? ''))),
+            'primary_last_name' => trim((string) $request->query('primary_last_name', (string) ($reservationNotes['primary_last_name'] ?? ''))),
+            'primary_nationality' => trim((string) $request->query('primary_nationality', (string) ($reservationNotes['primary_nationality'] ?? ''))),
+            'primary_email' => trim((string) $request->query('primary_email', (string) ($reservationNotes['primary_email'] ?? (string) ($reservationRow->customer_email ?? '')))),
+            'primary_mobile' => trim((string) $request->query('primary_mobile', (string) ($reservationNotes['primary_mobile'] ?? ''))),
+            'additional_guest_details' => trim((string) $request->query('additional_guest_details', (string) ($reservationNotes['additional_guest_details'] ?? ''))),
+            'transfer_option' => trim((string) $request->query('transfer_option', (string) ($reservationNotes['transfer_option'] ?? ''))),
+            'transfer_charge' => (float) $request->query('transfer_charge', (float) ($reservationNotes['transfer_charge'] ?? 0)),
+            'room_subtotal' => (float) $request->query('room_subtotal', (float) ($reservationNotes['room_subtotal'] ?? 0)),
+            'discount_amount' => (float) $request->query('discount_amount', (float) ($reservationNotes['discount_amount'] ?? 0)),
+            'tax_amount' => (float) $request->query('tax_amount', (float) ($reservationNotes['tax_amount'] ?? 0)),
+            'discount_percent' => (float) $request->query('discount_percent', (float) ($reservationNotes['discount_percent'] ?? 0)),
+            'tax_rate' => (float) $request->query('tax_rate', (float) ($reservationNotes['tax_rate'] ?? 0)),
             'total' => (float) $request->query('total', (float) ($reservationRow->total_amount ?? 0)),
         ],
     ]);
@@ -1318,13 +1920,141 @@ Route::get('/customer', function () {
             ->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
     }
 
+    $customerProfile = [
+        'name' => trim((string) session('portal_customer_user', 'Customer')),
+        'email' => '',
+        'member_since' => '-',
+    ];
+
+    $customerUserId = session('portal_customer_user_id');
+    if (is_numeric($customerUserId)) {
+        try {
+            $customerRecord = \App\Models\Customer::query()->where('id', (int) $customerUserId)->first();
+            if ($customerRecord) {
+                $customerProfile['name'] = trim((string) ($customerRecord->name ?? $customerProfile['name']));
+                $customerProfile['email'] = strtolower(trim((string) ($customerRecord->email ?? '')));
+
+                $createdAtRaw = $customerRecord->createdAt ?? $customerRecord->created_at ?? null;
+                if ($createdAtRaw) {
+                    $customerProfile['member_since'] = Carbon::parse((string) $createdAtRaw)->format('M Y');
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Unable to load customer profile context for customer portal.', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    $summary = [
+        'upcoming_bookings' => 0,
+        'completed_bookings' => 0,
+        'receipts_available' => 0,
+        'notification_state' => 'ACTIVE',
+    ];
+
+    $categoryMeta = [
+        'accommodation' => ['label' => 'Accommodation'],
+        'transport' => ['label' => 'Transport'],
+        'excursion' => ['label' => 'Excursion'],
+        'remote_workspace' => ['label' => 'Remote Workspace'],
+        'resort_day_visit' => ['label' => 'Resort Day Visit'],
+        'restaurant' => ['label' => 'Restaurant'],
+        'vehicle_rental' => ['label' => 'Vehicle Rental'],
+    ];
+
+    $customerBookingsByCategory = collect(array_fill_keys(array_keys($categoryMeta), collect()));
+
+    if (Schema::hasTable('vendor_reservations') && $customerProfile['email'] !== '') {
+        $reservationRows = DB::table('vendor_reservations')
+            ->whereRaw('LOWER(customer_email) = ?', [strtolower($customerProfile['email'])])
+            ->orderByDesc('created_at')
+            ->get(['id', 'vendor_property_id', 'start_at', 'end_at', 'status', 'payment_status', 'total_amount', 'currency', 'notes', 'created_at']);
+
+        $propertyNamesById = collect();
+        if (Schema::hasTable('vendor_properties')) {
+            $reservationPropertyIds = $reservationRows
+                ->pluck('vendor_property_id')
+                ->map(static fn ($id) => (int) $id)
+                ->filter(static fn (int $id) => $id > 0)
+                ->unique()
+                ->values();
+
+            if ($reservationPropertyIds->isNotEmpty()) {
+                $propertyNamesById = DB::table('vendor_properties')
+                    ->whereIn('id', $reservationPropertyIds->all())
+                    ->get(['id', 'name', 'listing_category'])
+                    ->keyBy('id');
+            }
+        }
+
+        $today = now()->startOfDay();
+        $summary['upcoming_bookings'] = $reservationRows->filter(function ($row) use ($today) {
+            $startAt = $row->start_at ? Carbon::parse((string) $row->start_at)->startOfDay() : null;
+            return $startAt && $startAt->greaterThanOrEqualTo($today);
+        })->count();
+
+        $summary['completed_bookings'] = $reservationRows->filter(function ($row) use ($today) {
+            $endAt = $row->end_at ? Carbon::parse((string) $row->end_at)->startOfDay() : null;
+            return $endAt && $endAt->lessThan($today);
+        })->count();
+
+        $summary['receipts_available'] = $reservationRows->filter(function ($row) {
+            return strtolower((string) ($row->payment_status ?? '')) === 'paid';
+        })->count();
+
+        $categorized = $reservationRows->map(function ($row) use ($propertyNamesById, $categoryMeta) {
+            $notes = json_decode((string) ($row->notes ?? ''), true);
+            if (!is_array($notes)) {
+                $notes = [];
+            }
+
+            $propertyId = (int) ($row->vendor_property_id ?? 0);
+            $propertyRow = $propertyNamesById->get($propertyId);
+
+            $categoryKey = strtolower(trim((string) ($notes['category_key'] ?? '')));
+            if ($categoryKey === '' && $propertyRow) {
+                $categoryKey = strtolower(trim((string) ($propertyRow->listing_category ?? '')));
+            }
+            if ($categoryKey === '' && !empty($notes['room_id'])) {
+                $categoryKey = 'accommodation';
+            }
+            if (!array_key_exists($categoryKey, $categoryMeta)) {
+                $categoryKey = 'accommodation';
+            }
+
+            $serviceLabel = trim((string) ($notes['service_label'] ?? $notes['room_name'] ?? ''));
+            if ($serviceLabel === '') {
+                $serviceLabel = (string) ($categoryMeta[$categoryKey]['label'] ?? 'Service');
+            }
+
+            return [
+                'id' => (int) ($row->id ?? 0),
+                'category_key' => $categoryKey,
+                'category_label' => (string) ($categoryMeta[$categoryKey]['label'] ?? 'Category'),
+                'property_name' => trim((string) ($propertyRow->name ?? 'Property')),
+                'service_label' => $serviceLabel,
+                'start_at' => $row->start_at ? Carbon::parse((string) $row->start_at)->format('Y-m-d') : '-',
+                'end_at' => $row->end_at ? Carbon::parse((string) $row->end_at)->format('Y-m-d') : '-',
+                'status' => strtoupper(trim((string) ($row->status ?? 'pending'))),
+                'payment_status' => strtoupper(trim((string) ($row->payment_status ?? 'unpaid'))),
+                'total_amount' => (float) ($row->total_amount ?? 0),
+                'currency' => strtoupper(trim((string) ($row->currency ?? 'MVR'))),
+                'created_at' => $row->created_at ? Carbon::parse((string) $row->created_at)->format('Y-m-d') : '-',
+            ];
+        });
+
+        $customerBookingsByCategory = collect(array_keys($categoryMeta))
+            ->mapWithKeys(function (string $categoryKey) use ($categorized) {
+                return [$categoryKey => $categorized->where('category_key', $categoryKey)->values()];
+            });
+    }
+
     return view('customer-portal', [
-        'summary' => [
-            'upcoming_bookings' => 0,
-            'completed_bookings' => 0,
-            'receipts_available' => 0,
-            'notification_state' => 'ACTIVE',
-        ],
+        'summary' => $summary,
+        'customerProfile' => $customerProfile,
+        'customerBookingsByCategory' => $customerBookingsByCategory,
+        'bookingCategoryMeta' => $categoryMeta,
         'customerProperties' => $customerProperties,
         'customerRoomsByProperty' => $customerRoomsByProperty,
         'propertyMediaByProperty' => $propertyMediaByProperty,
@@ -2404,18 +3134,37 @@ Route::get('/portal/{portal}/login', function (Request $request, string $portal)
         abort(404);
     }
 
-    if ($portal === 'vendor') {
-        return redirect('/portal/vendor/register?mode=email');
-    }
-
     $config = portalConfig($portal);
     if (session()->get($config['session_key'], false)) {
         return redirect(portalRoutePath($portal));
     }
 
+    $socialProviders = [];
+    if ($portal === 'customer') {
+        $socialProviders = collect(supportedCustomerSocialProviders())
+            ->mapWithKeys(static fn (string $provider) => [
+                $provider => [
+                    'configured' => isCustomerSocialProviderConfigured($provider),
+                    'redirect' => '/portal/customer/oauth/' . $provider . '/redirect',
+                ],
+            ])
+            ->all();
+    } elseif ($portal === 'vendor') {
+        $socialProviders = collect(supportedVendorSocialProviders())
+            ->filter(static fn (string $provider) => in_array($provider, ['google', 'facebook'], true))
+            ->mapWithKeys(static fn (string $provider) => [
+                $provider => [
+                    'configured' => isVendorSocialProviderConfigured($provider),
+                    'redirect' => '/portal/vendor/oauth/' . $provider . '/redirect',
+                ],
+            ])
+            ->all();
+    }
+
     return view('portal-login', [
         'portal' => $portal,
         'portalName' => $config['name'],
+        'socialProviders' => $socialProviders,
     ]);
 });
 
@@ -3114,7 +3863,202 @@ Route::get('/portal/customer/register', function (Request $request) {
         return redirect('/customer');
     }
 
-    return view('portal-customer-register');
+    $socialProviders = collect(supportedCustomerSocialProviders())
+        ->mapWithKeys(static fn (string $provider) => [
+            $provider => [
+                'configured' => isCustomerSocialProviderConfigured($provider),
+                'redirect' => '/portal/customer/oauth/' . $provider . '/redirect',
+            ],
+        ])
+        ->all();
+
+    return view('portal-customer-register', [
+        'socialProviders' => $socialProviders,
+    ]);
+});
+
+Route::get('/portal/customer/oauth/{provider}/redirect', function (Request $request, string $provider) {
+    $canonicalRedirect = portalCanonicalHostRedirect($request);
+    if ($canonicalRedirect) {
+        return $canonicalRedirect;
+    }
+
+    $provider = strtolower(trim($provider));
+    if (!in_array($provider, supportedCustomerSocialProviders(), true)) {
+        abort(404);
+    }
+
+    if (!isCustomerSocialProviderConfigured($provider)) {
+        return redirect('/portal/customer/register')->withErrors([
+            'registration' => ucfirst($provider) . ' sign-in is not configured yet. Please use email registration for now.',
+        ]);
+    }
+
+    if ($provider === 'facebook') {
+        $facebookRedirect = Socialite::driver('facebook')
+            ->redirectUrl(customerSocialRedirectUrl('facebook'))
+            ->setScopes(['public_profile'])
+            ->stateless()
+            ->redirect();
+
+        $targetUrl = (string) $facebookRedirect->getTargetUrl();
+        $targetUrl = preg_replace('/([?&]scope=)[^&]*/', '$1public_profile', $targetUrl) ?: $targetUrl;
+
+        return redirect()->away($targetUrl);
+    }
+
+    return Socialite::driver($provider)
+        ->redirectUrl(customerSocialRedirectUrl($provider))
+        ->stateless()
+        ->redirect();
+});
+
+Route::get('/portal/customer/oauth/{provider}/callback', function (Request $request, string $provider) {
+    $canonicalRedirect = portalCanonicalHostRedirect($request);
+    if ($canonicalRedirect) {
+        return $canonicalRedirect;
+    }
+
+    $provider = strtolower(trim($provider));
+    if (!in_array($provider, supportedCustomerSocialProviders(), true)) {
+        abort(404);
+    }
+
+    try {
+        if ($provider === 'facebook' && trim((string) $request->query('error', '')) !== '') {
+            return redirect('/portal/customer/register')->withErrors([
+                'registration' => 'Facebook sign-in was denied. Please retry or use email registration.',
+            ]);
+        }
+
+        if (!isCustomerSocialProviderConfigured($provider)) {
+            return redirect('/portal/customer/register')->withErrors([
+                'registration' => ucfirst($provider) . ' sign-in is not configured yet. Please use email registration for now.',
+            ]);
+        }
+
+        $oauthId = '';
+        $email = '';
+        $name = '';
+
+        try {
+            $oauthUser = Socialite::driver($provider)
+                ->redirectUrl(customerSocialRedirectUrl($provider))
+                ->stateless()
+                ->user();
+
+            $oauthId = trim((string) $oauthUser->getId());
+            $email = strtolower(trim((string) $oauthUser->getEmail()));
+            $name = trim((string) ($oauthUser->getName() ?: ''));
+        } catch (\Throwable $socialiteError) {
+            if ($provider !== 'facebook') {
+                throw $socialiteError;
+            }
+
+            $authorizationCode = trim((string) $request->query('code', ''));
+            if ($authorizationCode === '') {
+                throw $socialiteError;
+            }
+
+            $tokenResponse = Http::retry(2, 200)->timeout(10)->get('https://graph.facebook.com/v19.0/oauth/access_token', [
+                'client_id' => (string) config('services.facebook.client_id'),
+                'client_secret' => (string) config('services.facebook.client_secret'),
+                'redirect_uri' => customerSocialRedirectUrl('facebook'),
+                'code' => $authorizationCode,
+            ]);
+
+            $accessToken = trim((string) $tokenResponse->json('access_token', ''));
+            if (!$tokenResponse->ok() || $accessToken === '') {
+                throw $socialiteError;
+            }
+
+            $profileResponse = Http::retry(2, 200)->timeout(10)->get('https://graph.facebook.com/me', [
+                'fields' => 'id,name,email',
+                'access_token' => $accessToken,
+            ]);
+
+            if (!$profileResponse->ok()) {
+                throw $socialiteError;
+            }
+
+            $oauthId = trim((string) $profileResponse->json('id', ''));
+            $email = strtolower(trim((string) $profileResponse->json('email', '')));
+            $name = trim((string) $profileResponse->json('name', ''));
+        }
+
+        if ($oauthId === '') {
+            throw new \RuntimeException('Unable to resolve social account identity.');
+        }
+
+        if ($email === '') {
+            $email = $provider . '_' . substr(md5($oauthId), 0, 20) . '@relay.workation.local';
+        }
+
+        if ($name === '') {
+            $name = trim((string) Str::of(Str::before($email, '@'))->replace(['.', '_', '-'], ' ')->title());
+        }
+        if ($name === '') {
+            $name = 'Customer';
+        }
+
+        $customerUser = \App\Models\Customer::query()
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->first();
+
+        if (!$customerUser) {
+            $now = now();
+            $payload = [
+                'name' => $name,
+                'email' => $email,
+                'password' => Hash::make(Str::random(40)),
+            ];
+
+            if (Schema::hasColumn('User', 'createdAt')) {
+                $payload['createdAt'] = $now;
+            }
+            if (Schema::hasColumn('User', 'updatedAt')) {
+                $payload['updatedAt'] = $now;
+            }
+            if (Schema::hasColumn('User', 'created_at')) {
+                $payload['created_at'] = $now;
+            }
+            if (Schema::hasColumn('User', 'updated_at')) {
+                $payload['updated_at'] = $now;
+            }
+
+            DB::table('User')->insert($payload);
+
+            $customerUser = \App\Models\Customer::query()
+                ->whereRaw('LOWER(email) = ?', [$email])
+                ->first();
+        }
+
+        if (!$customerUser) {
+            throw new \RuntimeException('Unable to initialize customer account from social identity.');
+        }
+
+        $request->session()->regenerate();
+        session([
+            'portal_customer_authenticated' => true,
+            'portal_customer_user' => (string) ($customerUser->name ?? 'Customer'),
+            'portal_customer_user_id' => (int) $customerUser->id,
+            'portal_customer_role' => 'CUSTOMER',
+            'portal_customer_email' => strtolower(trim((string) ($customerUser->email ?? ''))),
+        ]);
+
+        Auth::login($customerUser);
+
+        return redirect('/customer')->with('status', 'Signed in successfully with ' . ucfirst($provider) . '.');
+    } catch (\Throwable $e) {
+        Log::warning('Customer social login failed.', [
+            'provider' => $provider,
+            'error' => $e->getMessage(),
+        ]);
+
+        return redirect('/portal/customer/register')->withErrors([
+            'registration' => 'Unable to sign in with ' . ucfirst($provider) . '. Please use email registration or try again.',
+        ]);
+    }
 });
 
 Route::post('/portal/customer/register', function (Request $request) {
@@ -3460,6 +4404,12 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
             'portal_' . $portal . '_user_id' => $sessionUserId,
             'portal_' . $portal . '_role' => $sessionRole,
         ]);
+
+        if ($portal === 'customer' && $portalUser) {
+            session([
+                'portal_customer_email' => strtolower(trim((string) ($portalUser->email ?? ''))),
+            ]);
+        }
 
         // Log in the user using Laravel Auth if found
         if ($portalUser) {

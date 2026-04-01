@@ -12,11 +12,12 @@ class VendorEmailOtpAuthTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_vendor_login_route_redirects_to_unified_vendor_auth_page(): void
+    public function test_vendor_login_route_renders_unified_vendor_auth_page(): void
     {
         $this->get('/portal/vendor/login')
-            ->assertStatus(302)
-            ->assertRedirect('/portal/vendor/register?mode=email');
+            ->assertOk()
+            ->assertSee('Vendor Portal Login')
+            ->assertSee('Register as Vendor');
     }
 
     public function test_existing_vendor_can_login_with_email_otp(): void

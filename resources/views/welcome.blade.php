@@ -44,19 +44,50 @@
             align-items: center;
             justify-content: space-between;
             gap: 10px;
-            padding: 10px 12px;
-            border: 1px solid var(--line);
-            border-radius: 14px;
-            background: color-mix(in srgb, #ffffff 88%, #eef8fc 12%);
-            margin-bottom: 10px;
+            padding: 12px 14px;
+            border: 1px solid #c7d9e7;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #ffffff 0%, #f2f9ff 55%, #eef8fb 100%);
+            box-shadow: 0 12px 26px rgba(22, 64, 93, 0.1);
+            margin-bottom: 12px;
         }
 
         .header-brand {
             margin: 0;
-            font-size: 0.9rem;
-            font-weight: 700;
-            color: #20455f;
+            font-size: 1rem;
+            font-weight: 800;
+            color: #163f5a;
             letter-spacing: 0.02em;
+        }
+
+        .header-subline {
+            margin: 2px 0 0;
+            font-size: 0.76rem;
+            color: #587186;
+        }
+
+        .hero-layout {
+            display: grid;
+            grid-template-columns: minmax(220px, 250px) minmax(0, 1fr);
+            gap: 12px;
+            align-items: start;
+        }
+
+        .sidebar-shell {
+            border: 1px solid #c9ddeb;
+            border-radius: 16px;
+            background: linear-gradient(160deg, #f8fcff 0%, #eef6fb 100%);
+            padding: 10px;
+            box-shadow: inset 0 1px 0 #ffffff;
+        }
+
+        .sidebar-title {
+            margin: 0 0 8px;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+            color: #4e6d83;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
         }
 
         .customer-auth {
@@ -111,12 +142,11 @@
 
         .top-links {
             display: grid;
-            grid-template-columns: repeat(7, minmax(0, 1fr));
+            grid-template-columns: 1fr;
             gap: 8px;
-            padding: 10px;
-            border-radius: 14px;
-            border: 1px solid var(--line);
-            background: color-mix(in srgb, #ffffff 84%, #eef8fc 16%);
+            padding: 0;
+            border: 0;
+            background: transparent;
         }
 
         .top-link {
@@ -129,11 +159,18 @@
             font-size: 0.8rem;
             line-height: 1.28;
             font-weight: 600;
-            text-align: center;
+            text-align: left;
             display: grid;
             gap: 2px;
-            min-height: 62px;
+            min-height: 56px;
             align-content: center;
+            transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .top-link:hover {
+            border-color: #8db5cf;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(34, 86, 120, 0.16);
         }
 
         .top-link span {
@@ -143,7 +180,7 @@
         }
 
         .search-section {
-            margin-top: 12px;
+            margin-top: 0;
             border: 1px solid #cbe0ea;
             border-radius: 18px;
             background: linear-gradient(132deg, #0f6179 0%, #1d848c 58%, #2f9891 100%);
@@ -170,7 +207,7 @@
         .search-form {
             margin-top: 12px;
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr;
             gap: 8px;
             align-items: start;
         }
@@ -227,11 +264,20 @@
             background: linear-gradient(135deg, #ffc76f 0%, var(--accent) 100%);
             color: #57350b;
             border-radius: 10px;
-            padding: 0 16px;
+            padding: 11px 20px;
             font: inherit;
             font-weight: 700;
             cursor: pointer;
-            min-width: 122px;
+            min-width: 180px;
+            justify-self: end;
+            box-shadow: 0 8px 18px rgba(243, 163, 55, 0.28);
+        }
+
+        .search-submit-row {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 2px;
         }
 
         .search-actions {
@@ -398,6 +444,31 @@
             letter-spacing: 0.05em;
         }
 
+        .home-footer-skin {
+            margin-top: 8px;
+            border-radius: 16px;
+            background: linear-gradient(165deg, #f1f8fc 0%, #f9fcff 100%);
+            border: 1px solid #d2e2ee;
+            padding: 12px;
+        }
+
+        .home-footer-skin .wf-site-footer {
+            margin-top: 0;
+            border-top: 0;
+            padding-top: 0;
+        }
+
+        .home-footer-skin .wf-footer-col {
+            background: #ffffff;
+            border-color: #d2e2ee;
+        }
+
+        .home-footer-skin .wf-footer-note {
+            margin: 10px 2px 0;
+            font-size: 0.75rem;
+            color: #597286;
+        }
+
         .chip-row {
             margin-top: 8px;
             display: flex;
@@ -416,8 +487,16 @@
 
 
         @media (max-width: 1040px) {
+            .hero-layout {
+                grid-template-columns: 1fr;
+            }
+
             .top-links {
-                grid-template-columns: repeat(4, minmax(0, 1fr));
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .top-link {
+                text-align: center;
             }
 
             .browse-grid,
@@ -431,9 +510,12 @@
                 grid-template-columns: 1fr 1fr;
             }
 
-            .search-form button {
-                grid-column: 1 / -1;
-                min-height: 42px;
+            .search-submit-row {
+                justify-content: stretch;
+            }
+
+            .search-submit-row button {
+                width: 100%;
             }
 
             .search-dynamic-fields {
@@ -458,17 +540,26 @@
             }
 
             .top-links {
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: 1fr;
                 position: static;
             }
 
             .top-link {
                 min-height: 56px;
                 font-size: 0.76rem;
+                text-align: left;
             }
 
             .search-form {
                 grid-template-columns: 1fr;
+            }
+
+            .search-submit-row {
+                justify-content: stretch;
+            }
+
+            .search-submit-row button {
+                width: 100%;
             }
 
             .search-dynamic-fields {
@@ -499,7 +590,10 @@
 
     <main class="page" data-api-base="{{ $apiBase }}">
         <header class="header-bar" aria-label="Customer account actions">
-            <p class="header-brand">Workation Maldives</p>
+            <div>
+                <p class="header-brand">Workation Maldives</p>
+                <p class="header-subline">Discover stays, services, and transfers with smarter search.</p>
+            </div>
             <div class="customer-auth">
                 @if ($customerLoggedIn)
                     <span class="auth-welcome">Hi, {{ $customerName }}</span>
@@ -515,13 +609,21 @@
             </div>
         </header>
 
-        <section class="top-links" aria-label="Top categories">
-            @foreach ($homeTopCategoryLinks as $link)
-                <a class="top-link" href="{{ $link['url'] ?? '/catalog/accommodation' }}">{{ ($link['emoji'] ?? '📌') . ' ' . ($link['title'] ?? 'Category') }}<span>{{ $link['subtitle'] ?? '' }}</span></a>
-            @endforeach
-        </section>
+        <div class="hero-layout">
+            <aside class="sidebar-shell" aria-label="Category sidebar">
+                <p class="sidebar-title">Browse Categories</p>
+                <section class="top-links" aria-label="Top categories">
+                    @foreach ($homeTopCategoryLinks as $link)
+                        @php
+                            $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
+                            $categoryKeyFromUrl = preg_match('#/catalog/([a-z_]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
+                        @endphp
+                        <a class="top-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}">{{ ($link['emoji'] ?? '📌') . ' ' . ($link['title'] ?? 'Category') }}<span>{{ $link['subtitle'] ?? '' }}</span></a>
+                    @endforeach
+                </section>
+            </aside>
 
-        <section class="search-section" aria-label="Smart category search">
+            <section class="search-section" aria-label="Smart category search">
             <p class="search-eyebrow">Find Anything Faster</p>
             <h1 class="search-title">Select category and search with category-specific filters.</h1>
             <form id="homeCatalogSearchForm" class="search-form" action="/catalog/accommodation" method="get">
@@ -535,7 +637,6 @@
                     <option value="vehicle_rental">Vehicle Rental</option>
                 </select>
                 <input type="search" name="q" placeholder="Atoll, island, property, or service name" aria-label="Search query">
-                <button type="submit">Search Now</button>
 
                 <div id="accommodationFields" class="search-dynamic-fields is-active" data-fields-for="accommodation" aria-hidden="false">
                     <div class="field"><label for="checkin">Check-in Date</label><input id="checkin" name="checkin" type="date"></div>
@@ -573,6 +674,10 @@
                     <div class="field"><label for="minPrice">Min Price</label><input id="minPrice" name="min_price" type="number" min="0" placeholder="0"></div>
                     <div class="field"><label for="maxPrice">Max Price</label><input id="maxPrice" name="max_price" type="number" min="0" placeholder="5000"></div>
                 </div>
+
+                <div class="search-submit-row">
+                    <button type="submit">Search Now</button>
+                </div>
             </form>
             <div class="search-actions" aria-label="Quick category catalogue links">
                 <a href="/catalog/accommodation">Open Accommodation Catalogue</a>
@@ -580,7 +685,8 @@
                 <a href="/catalog/excursion">Open Excursion Catalogue</a>
                 <a href="/catalog/remote_workspace">Open Workspace Catalogue</a>
             </div>
-        </section>
+            </section>
+        </div>
 
         <section class="promo-banner" aria-label="Offers and promotions">
             <strong>{{ $homePromoBanner['message'] ?? 'Promotions coming soon.' }}</strong>
@@ -686,7 +792,9 @@
             </div>
         </section>
 
-        @include('partials.global-site-footer')
+        <div class="home-footer-skin">
+            @include('partials.global-site-footer')
+        </div>
     </main>
 
     <script>
@@ -706,6 +814,7 @@
             const serviceAtollSelect = document.getElementById('serviceAtoll');
             const serviceIslandSelect = document.getElementById('serviceIsland');
             const apiBase = String(document.querySelector('.page')?.getAttribute('data-api-base') || '').replace(/\/$/, '');
+            const topCategoryLinks = Array.from(document.querySelectorAll('.top-link[data-category-key]'));
 
             if (!form || !categorySelect || !accommodationFields || !transportFields || !serviceFields) {
                 return;
@@ -897,6 +1006,22 @@
             if (serviceAtollSelect) {
                 serviceAtollSelect.addEventListener('change', function () {
                     loadIslandsByAtoll(serviceAtollSelect.value || '');
+                });
+            }
+
+            if (topCategoryLinks.length > 0) {
+                topCategoryLinks.forEach(function (link) {
+                    link.addEventListener('click', function (event) {
+                        const categoryKey = String(link.getAttribute('data-category-key') || '').toLowerCase();
+                        if (!categoryKey || !categorySelect.querySelector('option[value="' + categoryKey + '"]')) {
+                            return;
+                        }
+
+                        event.preventDefault();
+                        categorySelect.value = categoryKey;
+                        toggleFields();
+                        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
                 });
             }
 

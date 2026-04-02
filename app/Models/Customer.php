@@ -11,6 +11,11 @@ class Customer extends Authenticatable
     use HasFactory, Notifiable;
 
     protected $table = 'User'; // Explicitly map to the User table (case-sensitive)
+    protected $primaryKey = 'id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+    public const CREATED_AT = 'createdAt';
+    public const UPDATED_AT = 'updatedAt';
 
     protected $fillable = [
         'name',

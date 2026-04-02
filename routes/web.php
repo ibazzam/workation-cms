@@ -1044,6 +1044,77 @@ Route::get('/property/{property}', function (Request $request, int $property) {
     $reviewCountColumn = collect(['review_count', 'rating_count', 'total_reviews'])
         ->first(static fn ($column) => Schema::hasColumn('vendor_properties', $column));
 
+    $guestReviews = collect();
+    $reviewTableCandidates = [
+        'vendor_property_reviews',
+        'property_reviews',
+        'customer_reviews',
+        'vendor_reviews',
+    ];
+
+    foreach ($reviewTableCandidates as $reviewTable) {
+        if (!Schema::hasTable($reviewTable)) {
+            continue;
+        }
+
+        $columns = Schema::getColumnListing($reviewTable);
+        $propertyKey = collect(['vendor_property_id', 'property_id', 'listing_id', 'entity_id'])
+            ->first(static fn ($column) => in_array($column, $columns, true));
+        $commentKey = collect(['review_comment', 'comment', 'review_text', 'feedback', 'notes'])
+            ->first(static fn ($column) => in_array($column, $columns, true));
+
+        if ($propertyKey === null || $commentKey === null) {
+            continue;
+        }
+
+        $ratingKey = collect(['rating', 'rating_value', 'review_score', 'score'])
+            ->first(static fn ($column) => in_array($column, $columns, true));
+        $nameKey = collect(['customer_name', 'guest_name', 'reviewer_name', 'name'])
+            ->first(static fn ($column) => in_array($column, $columns, true));
+        $dateKey = collect(['created_at', 'reviewed_at', 'submitted_at', 'updated_at'])
+            ->first(static fn ($column) => in_array($column, $columns, true));
+        $statusKey = collect(['status', 'review_status'])
+            ->first(static fn ($column) => in_array($column, $columns, true));
+
+        $reviewQuery = DB::table($reviewTable)->where($propertyKey, (int) $propertyRow->id);
+
+        if ($statusKey !== null) {
+            $reviewQuery->whereIn($statusKey, ['approved', 'published', 'active']);
+        }
+
+        if ($dateKey !== null) {
+            $reviewQuery->orderByDesc($dateKey);
+        } else {
+            $reviewQuery->orderByDesc('id');
+        }
+
+        $rows = $reviewQuery->limit(8)->get();
+        if ($rows->isEmpty()) {
+            continue;
+        }
+
+        $guestReviews = $rows
+            ->map(function ($row) use ($commentKey, $ratingKey, $nameKey, $dateKey) {
+                $comment = trim((string) ($row->{$commentKey} ?? ''));
+                if ($comment === '') {
+                    return null;
+                }
+
+                return [
+                    'name' => trim((string) ($nameKey ? ($row->{$nameKey} ?? '') : '')),
+                    'comment' => $comment,
+                    'rating' => $ratingKey ? (float) ($row->{$ratingKey} ?? 0) : 0.0,
+                    'date' => $dateKey ? (string) ($row->{$dateKey} ?? '') : '',
+                ];
+            })
+            ->filter()
+            ->values();
+
+        if ($guestReviews->isNotEmpty()) {
+            break;
+        }
+    }
+
     $locationLine = trim(implode(', ', array_filter([
         trim((string) ($propertyRow->location ?? '')),
         trim((string) ($propertyRow->island ?? '')),
@@ -1060,6 +1131,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
         'locationLine' => $locationLine,
         'ratingValue' => $reviewColumn ? (float) ($propertyRow->{$reviewColumn} ?? 0) : 0,
         'ratingUsers' => $reviewCountColumn ? (int) ($propertyRow->{$reviewCountColumn} ?? 0) : 0,
+        'guestReviews' => $guestReviews,
         'mediaUrl' => $mediaUrl,
         'prefill' => [
             'checkin' => trim((string) $request->query('checkin', '')),
@@ -1927,9 +1999,9 @@ Route::get('/customer', function () {
     ];
 
     $customerUserId = session('portal_customer_user_id');
-    if (is_numeric($customerUserId)) {
+    if (is_string($customerUserId) || is_numeric($customerUserId)) {
         try {
-            $customerRecord = \App\Models\Customer::query()->where('id', (int) $customerUserId)->first();
+            $customerRecord = \App\Models\Customer::query()->where('id', (string) $customerUserId)->first();
             if ($customerRecord) {
                 $customerProfile['name'] = trim((string) ($customerRecord->name ?? $customerProfile['name']));
                 $customerProfile['email'] = strtolower(trim((string) ($customerRecord->email ?? '')));
@@ -4013,6 +4085,10 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
                 'password' => Hash::make(Str::random(40)),
             ];
 
+            if (Schema::hasColumn('User', 'id')) {
+                $payload['id'] = (string) Str::uuid();
+            }
+
             if (Schema::hasColumn('User', 'createdAt')) {
                 $payload['createdAt'] = $now;
             }
@@ -4041,7 +4117,7 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
         session([
             'portal_customer_authenticated' => true,
             'portal_customer_user' => (string) ($customerUser->name ?? 'Customer'),
-            'portal_customer_user_id' => (int) $customerUser->id,
+            'portal_customer_user_id' => (string) ($customerUser->id ?? ''),
             'portal_customer_role' => 'CUSTOMER',
             'portal_customer_email' => strtolower(trim((string) ($customerUser->email ?? ''))),
         ]);
@@ -4086,6 +4162,10 @@ Route::post('/portal/customer/register', function (Request $request) {
         'email' => $email,
         'password' => Hash::make((string) $validated['password']),
     ];
+
+    if (Schema::hasColumn('User', 'id')) {
+        $payload['id'] = (string) Str::uuid();
+    }
 
     if (Schema::hasColumn('User', 'createdAt')) {
         $payload['createdAt'] = $now;
@@ -4432,17 +4512,38 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
     }
 });
 
-Route::post('/portal/{portal}/logout', function (Request $request, string $portal) {
+$handlePortalLogout = function (Request $request, string $portal) {
     if (!in_array($portal, ['admin', 'vendor', 'customer'], true)) {
         abort(404);
     }
 
     $config = portalConfig($portal);
+    Auth::logout();
     session()->forget([$config['session_key'], 'portal_' . $portal . '_user', 'portal_' . $portal . '_user_id', 'portal_' . $portal . '_role']);
     $request->session()->invalidate();
     $request->session()->regenerateToken();
 
+    if ($portal === 'vendor') {
+        return redirect('/portal/vendor/register?mode=email');
+    }
+
     return redirect('/portal/' . $portal . '/login');
+};
+
+Route::match(['GET', 'POST'], '/portal/admin/logout', function (Request $request) use ($handlePortalLogout) {
+    return $handlePortalLogout($request, 'admin');
+});
+
+Route::match(['GET', 'POST'], '/portal/vendor/logout', function (Request $request) use ($handlePortalLogout) {
+    return $handlePortalLogout($request, 'vendor');
+});
+
+Route::match(['GET', 'POST'], '/portal/customer/logout', function (Request $request) use ($handlePortalLogout) {
+    return $handlePortalLogout($request, 'customer');
+});
+
+Route::post('/portal/{portal}/logout', function (Request $request, string $portal) use ($handlePortalLogout) {
+    return $handlePortalLogout($request, $portal);
 });
 
 Route::post('/portal/admin/users/{user}/manage', function (Request $request, User $user) {

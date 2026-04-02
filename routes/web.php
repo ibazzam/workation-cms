@@ -1020,7 +1020,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
     }
 
     $facilityCandidates = [];
-    foreach (['facilities', 'amenities', 'accommodation_facilities'] as $key) {
+    foreach (['facilities', 'amenities', 'accommodation_facilities', 'property_amenities', 'property_features'] as $key) {
         if (!array_key_exists($key, $details)) {
             continue;
         }

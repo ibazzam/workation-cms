@@ -154,7 +154,7 @@
         .layout {
             margin-top: 12px;
             display: grid;
-            grid-template-columns: minmax(0, 1.6fr) minmax(270px, 0.9fr);
+            grid-template-columns: 1fr;
             gap: 12px;
             align-items: start;
         }
@@ -232,20 +232,6 @@
         .gallery-thumb.is-active {
             border-color: #1d848c;
             box-shadow: 0 0 0 2px rgba(29, 132, 140, 0.25);
-        }
-
-        .about {
-            display: grid;
-            gap: 12px;
-            position: sticky;
-            top: 10px;
-        }
-
-        .summary-card {
-            border: 1px solid #d4e5ef;
-            border-radius: 14px;
-            background: #f8fcff;
-            padding: 12px;
         }
 
         .info-section {
@@ -1199,7 +1185,6 @@
 
         @media (max-width: 1080px) {
             .layout { grid-template-columns: 1fr; }
-            .about { position: static; }
             .info-section { grid-template-columns: 1fr; }
             .guest-reviews-layout { grid-template-columns: 1fr; }
             .highlights-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1424,7 +1409,6 @@
         </section>
 
         <div class="layout">
-            <div>
                 <section class="section" aria-label="Property gallery">
                     <h2>Property Gallery</h2>
                     @php
@@ -1434,7 +1418,7 @@
                     <div class="gallery-shell" data-property-gallery>
                         @if ($galleryItems->isNotEmpty())
                             <div class="gallery-banner-wrap">
-                                <img id="propertyGalleryBanner" class="gallery-banner" src="{{ $initialBanner }}" alt="Property image 1" loading="lazy">
+                                <img id="propertyGalleryBanner" class="gallery-banner" src="{{ $initialBanner }}" alt="Property image 1" loading="lazy" onerror="this.onerror=null; this.style.display='none';">
                             </div>
                             <div class="gallery-thumbs" role="list" aria-label="Property image thumbnails">
                                 @foreach ($galleryItems as $index => $media)
@@ -1449,7 +1433,7 @@
                                         data-banner-alt="Property image {{ $index + 1 }}"
                                         aria-label="Show image {{ $index + 1 }}"
                                     >
-                                        <img src="{{ $thumbUrl }}" alt="Property thumbnail {{ $index + 1 }}" loading="lazy">
+                                        <img src="{{ $thumbUrl }}" alt="Property thumbnail {{ $index + 1 }}" loading="lazy" onerror="this.onerror=null; this.src='{{ $bannerUrl }}';">
                                     </button>
                                 @endforeach
                             </div>
@@ -1573,18 +1557,6 @@
                         </section>
                     </aside>
                 </section>
-            </div>
-
-            <aside class="about" aria-label="Property details">
-                <section class="summary-card">
-                    <h2 style="margin:0 0 8px; font-size:0.98rem;">Property Snapshot</h2>
-                    <div class="summary-row"><span>Location</span><strong>{{ $locationLine !== '' ? $locationLine : 'To be updated' }}</strong></div>
-                    <div class="summary-row"><span>Price From</span><strong>{{ $currency }} {{ $basePrice }}</strong></div>
-                    <div class="summary-row"><span>Rooms</span><strong>{{ $rooms->count() }}</strong></div>
-                    <div class="summary-row"><span>Rating</span><strong>{{ $ratingValue > 0 ? number_format($ratingValue, 1) . ' / 5' : 'N/A' }}</strong></div>
-                </section>
-
-            </aside>
         </div>
 
         <nav class="section-tabs" aria-label="Property content navigation">
@@ -1685,7 +1657,11 @@
                                                 <div class="room-price-old">{{ $roomCurrency }} {{ $roomOldPrice }}</div>
                                                 <div class="room-price-now">{{ $roomCurrency }} {{ $roomPrice }}</div>
                                                 @php
-                                                    $discountPercent = round(((floatval($roomOldPrice) - floatval($roomPrice)) / floatval($roomOldPrice)) * 100);
+                                                    $roomOldPriceValue = floatval($roomOldPrice);
+                                                    $roomPriceValue = floatval($roomPrice);
+                                                    $discountPercent = $roomOldPriceValue > 0
+                                                        ? round((($roomOldPriceValue - $roomPriceValue) / $roomOldPriceValue) * 100)
+                                                        : 0;
                                                 @endphp
                                                 @if ($discountPercent > 0)
                                                     <span class="discount-badge">{{ $discountPercent }}% off</span>
@@ -1716,7 +1692,11 @@
                                                 <div class="room-price-old">{{ $roomCurrency }} {{ $alternateOldPrice }}</div>
                                                 <div class="room-price-now">{{ $roomCurrency }} {{ $alternatePrice }}</div>
                                                 @php
-                                                    $altDiscountPercent = round(((floatval($alternateOldPrice) - floatval($alternatePrice)) / floatval($alternateOldPrice)) * 100);
+                                                    $alternateOldPriceValue = floatval($alternateOldPrice);
+                                                    $alternatePriceValue = floatval($alternatePrice);
+                                                    $altDiscountPercent = $alternateOldPriceValue > 0
+                                                        ? round((($alternateOldPriceValue - $alternatePriceValue) / $alternateOldPriceValue) * 100)
+                                                        : 0;
                                                 @endphp
                                                 @if ($altDiscountPercent > 0)
                                                     <span class="discount-badge">{{ $altDiscountPercent }}% off</span>

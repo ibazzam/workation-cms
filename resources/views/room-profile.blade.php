@@ -22,6 +22,23 @@
         .chip { border:1px solid #cfe0eb; background:#edf6f3; color:#24516b; border-radius:999px; font-size:0.77rem; padding:6px 10px; }
         .booking-layout { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(280px,0.8fr); gap:12px; align-items:start; }
         .booking-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+        .guest-form-stack { display:grid; gap:12px; }
+        .booking-subsection { border:1px solid #dbe7f0; border-radius:12px; background:#fcfeff; padding:12px; display:grid; gap:10px; }
+        .booking-subtitle { margin:0; font-size:0.98rem; color:#163f59; font-weight:700; }
+        .booking-subnote { margin:0; color:#4f6a7f; font-size:0.8rem; line-height:1.45; }
+        .helper { margin:0; color:#5c7488; font-size:0.76rem; }
+        .add-guest-btn { border:1px dashed #9eb9ca; background:#f5fbff; color:#295571; border-radius:9px; padding:8px 10px; font-size:0.8rem; font-weight:600; width:max-content; }
+        .inline-choices { display:flex; flex-wrap:wrap; gap:8px; }
+        .choice-pill { border:1px solid #c9dceb; background:#fff; border-radius:999px; padding:6px 10px; font-size:0.78rem; color:#35586f; }
+        .choice-pill input { margin-right:6px; }
+        .promo-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+        .promo-apply { border:1px solid #2f6ed8; background:#2f6ed8; color:#fff; border-radius:9px; padding:0 12px; font-weight:700; }
+        .promo-chip { display:inline-block; border:1px solid #cfe0eb; background:#edf6f3; color:#24516b; border-radius:999px; font-size:0.74rem; padding:4px 8px; }
+        .pay-icons { display:flex; gap:8px; flex-wrap:wrap; }
+        .pay-icon { border:1px solid #d3e2ec; border-radius:8px; background:#fff; padding:6px 10px; font-size:0.78rem; color:#254e67; }
+        .card-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+        .card-grid .field.full { grid-column:1/-1; }
+        .legal-note { margin:0; color:#5a7184; font-size:0.75rem; line-height:1.45; }
         .field { display:grid; gap:5px; }
         .field label { font-size:0.78rem; text-transform:uppercase; letter-spacing:0.07em; color:#3c5f76; }
         .field input, .field select { width:100%; border:1px solid #b8d9e2; border-radius:10px; padding:10px 11px; font:inherit; background:#f8fdff; }
@@ -61,24 +78,43 @@
         $discountPercent = (float) ($pricingConfig['discount_percent'] ?? 0);
         $inclusives = collect($bookingPolicies['inclusives'] ?? [])->map(static fn ($v) => trim((string) $v))->filter()->values();
         $cancellationPolicy = trim((string) ($bookingPolicies['cancellation_policy'] ?? 'Standard cancellation terms apply.'));
+        $roomHeroImage = $roomMedia->isNotEmpty() ? ($mediaUrl($roomMedia->first(), 'banner') ?? $mediaUrl($roomMedia->first(), 'thumb')) : null;
+        $roomBedLabel = trim((string) ($room->bed_type ?? '1 bed'));
+        $roomSize = (int) ($room->room_size_sqm ?? 0);
+        $roomFloor = trim((string) ($room->floor_info ?? ''));
+        $roomNonSmoking = (int) ($room->non_smoking ?? 1) === 1;
+        $roomHasWindow = (int) ($room->has_window ?? 1) === 1;
+        $roomHasWifi = $roomFeatures->contains(static fn ($feature) => str_contains(strtolower((string) $feature), 'wifi') || str_contains(strtolower((string) $feature), 'wi-fi'));
+        $roomCheckinStart = '15:00';
+        $roomCheckinEnd = '06:00';
+        $roomCheckoutBefore = '12:00';
+        $checkinDate = trim((string) ($prefill['checkin'] ?? ''));
+        $checkoutDate = trim((string) ($prefill['checkout'] ?? ''));
+        $parsedCheckin = $checkinDate !== '' ? \Carbon\Carbon::parse($checkinDate) : null;
+        $parsedCheckout = $checkoutDate !== '' ? \Carbon\Carbon::parse($checkoutDate) : null;
+        $stayNights = ($parsedCheckin && $parsedCheckout) ? max(1, $parsedCheckin->diffInDays($parsedCheckout)) : 1;
+        $stayDateRange = ($parsedCheckin && $parsedCheckout)
+            ? ($parsedCheckin->format('D, M j') . ' - ' . $parsedCheckout->format('D, M j'))
+            : 'Select check-in and check-out dates';
+        $cancelDeadlineLabel = $parsedCheckin
+            ? $parsedCheckin->copy()->subDay()->format('H:i, M j, Y')
+            : '23:59, one day before check-in';
+        $ratingValue = collect(['review_score', 'rating_average', 'average_rating', 'rating'])
+            ->map(static fn ($column) => (float) ($property->{$column} ?? 0))
+            ->first(static fn ($value) => $value > 0) ?: 9.3;
+        $ratingOutOfTen = min(10, $ratingValue > 5 ? $ratingValue : ($ratingValue * 2));
+        $ratingLabel = $ratingOutOfTen >= 9 ? 'Great' : ($ratingOutOfTen >= 8 ? 'Very Good' : 'Good');
+        $ratingCount = (int) (collect(['review_count', 'rating_count', 'total_reviews'])
+            ->map(static fn ($column) => (int) ($property->{$column} ?? 0))
+            ->first(static fn ($value) => $value > 0) ?: 2508);
+        $roomChildPolicy = trim((string) ($room->child_policy ?? 'Children of all ages can stay in this room. Additional fees may be charged for children using existing beds.'));
+        $roomExtraBedPolicy = trim((string) ($room->extra_bed_policy ?? 'Extra beds and cots are not available for this room type.'));
     @endphp
 
     <main class="page">
         <section class="hero" aria-label="Room summary">
             <h1>{{ (string) ($room->name ?? 'Room') }}</h1>
             <p>{{ (string) ($property->name ?? 'Property') }} • Base rate {{ $currency }} {{ $basePrice }}</p>
-        </section>
-
-        <section class="section" aria-label="Room gallery">
-            <h2>Room Gallery</h2>
-            <div class="gallery">
-                @forelse ($roomMedia->take(9) as $media)
-                    @php $img = $mediaUrl($media, 'banner'); @endphp
-                    <img src="{{ $img }}" alt="Room image" loading="lazy">
-                @empty
-                    <img src="" alt="No image" loading="lazy">
-                @endforelse
-            </div>
         </section>
 
         <section class="section" aria-label="Room features">
@@ -114,32 +150,97 @@
                         </div>
                     @endif
 
-                    <div class="booking-grid">
-                        <div class="field"><label for="primaryFirstName">Primary Guest First Name</label><input id="primaryFirstName" name="primary_first_name" type="text" value="{{ old('primary_first_name', (string) ($prefill['primary_first_name'] ?? '')) }}" placeholder="First name" class="{{ $errors->has('primary_first_name') ? 'input-error' : '' }}" required>@error('primary_first_name')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="primaryLastName">Primary Guest Last Name</label><input id="primaryLastName" name="primary_last_name" type="text" value="{{ old('primary_last_name', (string) ($prefill['primary_last_name'] ?? '')) }}" placeholder="Last name" class="{{ $errors->has('primary_last_name') ? 'input-error' : '' }}" required>@error('primary_last_name')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="primaryNationality">Primary Guest Nationality</label><input id="primaryNationality" name="primary_nationality" type="text" value="{{ old('primary_nationality', (string) ($prefill['primary_nationality'] ?? '')) }}" placeholder="Nationality" class="{{ $errors->has('primary_nationality') ? 'input-error' : '' }}" required>@error('primary_nationality')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="primaryEmail">Primary Guest Email</label><input id="primaryEmail" name="primary_email" type="email" value="{{ old('primary_email', (string) ($prefill['primary_email'] ?? '')) }}" placeholder="guest@example.com" class="{{ $errors->has('primary_email') ? 'input-error' : '' }}" required>@error('primary_email')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="primaryMobile">Primary Guest Mobile</label><input id="primaryMobile" name="primary_mobile" type="text" value="{{ old('primary_mobile', (string) ($prefill['primary_mobile'] ?? '')) }}" placeholder="+960 ..." class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required>@error('primary_mobile')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field full"><label for="additionalGuestDetails">Additional Guest Details (Optional)</label><textarea id="additionalGuestDetails" name="additional_guest_details" placeholder="Add optional details for additional guests: names, age group, notes, special requests.">{{ old('additional_guest_details', '') }}</textarea></div>
-                        <div class="field"><label for="checkin">Check-in</label><input id="checkin" name="checkin" type="date" required value="{{ old('checkin', (string) ($prefill['checkin'] ?? '')) }}" class="{{ $errors->has('checkin') ? 'input-error' : '' }}">@error('checkin')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="checkout">Check-out</label><input id="checkout" name="checkout" type="date" required value="{{ old('checkout', (string) ($prefill['checkout'] ?? '')) }}" class="{{ $errors->has('checkout') ? 'input-error' : '' }}">@error('checkout')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}" class="{{ $errors->has('adults') ? 'input-error' : '' }}" required>@error('adults')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}" class="{{ $errors->has('children') ? 'input-error' : '' }}">@error('children')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="transferOption">Prepared Transfer Option</label>
-                            <select id="transferOption" name="transfer_option">
-                                @foreach ($transferOptions as $option)
-                                    <option
-                                        value="{{ (string) ($option['code'] ?? '') }}"
-                                        data-base-charge="{{ (float) ($option['base_charge'] ?? 0) }}"
-                                        data-adult-charge="{{ (float) ($option['adult_charge'] ?? 0) }}"
-                                        data-child-charge="{{ (float) ($option['child_charge'] ?? 0) }}"
-                                    >
-                                        {{ (string) ($option['label'] ?? 'Transfer') }} (Adult {{ $currency }} {{ number_format((float) ($option['adult_charge'] ?? 0), 2) }}{{ (float) ($option['child_charge'] ?? 0) > 0 ? (', Child ' . $currency . ' ' . number_format((float) ($option['child_charge'] ?? 0), 2)) : '' }})
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="field"><label for="transferCharge">Transfer Charge</label><input id="transferCharge" name="transfer_charge" type="number" min="0" step="0.01" readonly></div>
+                    <div class="guest-form-stack">
+                        <section class="booking-subsection" aria-label="Guest details">
+                            <h3 class="booking-subtitle">Who's staying?</h3>
+                            <p class="booking-subnote">Guest names must match the valid ID which will be used at check-in.</p>
+                            <button type="button" class="add-guest-btn">+ Add New Guest (Optional)</button>
+                            <div class="booking-grid">
+                                <div class="field"><label for="primaryFirstName">Given names*</label><input id="primaryFirstName" name="primary_first_name" type="text" value="{{ old('primary_first_name', (string) ($prefill['primary_first_name'] ?? '')) }}" placeholder="Given names" class="{{ $errors->has('primary_first_name') ? 'input-error' : '' }}" required>@error('primary_first_name')<p class="error-text">{{ $message }}</p>@enderror</div>
+                                <div class="field"><label for="primaryLastName">Surname*</label><input id="primaryLastName" name="primary_last_name" type="text" value="{{ old('primary_last_name', (string) ($prefill['primary_last_name'] ?? '')) }}" placeholder="Surname" class="{{ $errors->has('primary_last_name') ? 'input-error' : '' }}" required>@error('primary_last_name')<p class="error-text">{{ $message }}</p>@enderror</div>
+                                <div class="field"><label for="primaryNationality">Nationality*</label><input id="primaryNationality" name="primary_nationality" type="text" value="{{ old('primary_nationality', (string) ($prefill['primary_nationality'] ?? '')) }}" placeholder="Nationality" class="{{ $errors->has('primary_nationality') ? 'input-error' : '' }}" required>@error('primary_nationality')<p class="error-text">{{ $message }}</p>@enderror</div>
+                                <div class="field"><label for="primaryEmail">Email*</label><input id="primaryEmail" name="primary_email" type="email" value="{{ old('primary_email', (string) ($prefill['primary_email'] ?? '')) }}" placeholder="guest@example.com" class="{{ $errors->has('primary_email') ? 'input-error' : '' }}" required>@error('primary_email')<p class="error-text">{{ $message }}</p>@enderror<p class="helper">Booking confirmation will be sent to this email</p></div>
+                                <div class="field"><label for="primaryMobile">Phone number*</label><input id="primaryMobile" name="primary_mobile" type="text" value="{{ old('primary_mobile', (string) ($prefill['primary_mobile'] ?? '')) }}" placeholder="(+60) 1123103013" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required>@error('primary_mobile')<p class="error-text">{{ $message }}</p>@enderror</div>
+                                <div class="field full">
+                                    <p class="booking-subnote">In accordance with local regulations, guests who are not nationals or permanent residents may be required to pay tourism tax per room per night (included in total).</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="booking-subsection" aria-label="Stay details">
+                            <h3 class="booking-subtitle">Stay details</h3>
+                            <div class="booking-grid">
+                                <div class="field"><label for="checkin">Check-in</label><input id="checkin" name="checkin" type="date" required value="{{ old('checkin', (string) ($prefill['checkin'] ?? '')) }}" class="{{ $errors->has('checkin') ? 'input-error' : '' }}">@error('checkin')<p class="error-text">{{ $message }}</p>@enderror</div>
+                                <div class="field"><label for="checkout">Check-out</label><input id="checkout" name="checkout" type="date" required value="{{ old('checkout', (string) ($prefill['checkout'] ?? '')) }}" class="{{ $errors->has('checkout') ? 'input-error' : '' }}">@error('checkout')<p class="error-text">{{ $message }}</p>@enderror</div>
+                                <div class="field"><label for="adults">Adults</label><input id="adults" name="adults" type="number" min="1" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}" class="{{ $errors->has('adults') ? 'input-error' : '' }}" required>@error('adults')<p class="error-text">{{ $message }}</p>@enderror</div>
+                                <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}" class="{{ $errors->has('children') ? 'input-error' : '' }}">@error('children')<p class="error-text">{{ $message }}</p>@enderror</div>
+                                <div class="field"><label for="transferOption">Transfer Option</label>
+                                    <select id="transferOption" name="transfer_option">
+                                        @foreach ($transferOptions as $option)
+                                            <option
+                                                value="{{ (string) ($option['code'] ?? '') }}"
+                                                data-base-charge="{{ (float) ($option['base_charge'] ?? 0) }}"
+                                                data-adult-charge="{{ (float) ($option['adult_charge'] ?? 0) }}"
+                                                data-child-charge="{{ (float) ($option['child_charge'] ?? 0) }}"
+                                            >
+                                                {{ (string) ($option['label'] ?? 'Transfer') }} (Adult {{ $currency }} {{ number_format((float) ($option['adult_charge'] ?? 0), 2) }}{{ (float) ($option['child_charge'] ?? 0) > 0 ? (', Child ' . $currency . ' ' . number_format((float) ($option['child_charge'] ?? 0), 2)) : '' }})
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="field"><label for="transferCharge">Transfer Charge</label><input id="transferCharge" name="transfer_charge" type="number" min="0" step="0.01" readonly></div>
+                            </div>
+                        </section>
+
+                        <section class="booking-subsection" aria-label="Special requests">
+                            <h3 class="booking-subtitle">Special Requests (Optional)</h3>
+                            <p class="booking-subnote">The property will do its best, but cannot guarantee to fulfil all requests.</p>
+                            <div class="inline-choices">
+                                <label class="choice-pill"><input type="radio" name="lift_proximity" value="near">Near lift</label>
+                                <label class="choice-pill"><input type="radio" name="lift_proximity" value="away">Away from lift</label>
+                            </div>
+                            <div class="field full"><label for="additionalGuestDetails">Other requests</label><textarea id="additionalGuestDetails" name="additional_guest_details" placeholder="Special request notes...">{{ old('additional_guest_details', '') }}</textarea></div>
+                        </section>
+
+                        <section class="booking-subsection" aria-label="Promo code">
+                            <h3 class="booking-subtitle">Available for This Booking</h3>
+                            <label class="field" for="promoCode"><span>Enter promo code</span></label>
+                            <div class="promo-row">
+                                <input id="promoCode" type="text" placeholder="promoCode">
+                                <button type="button" class="promo-apply">Apply</button>
+                            </div>
+                            <span class="promo-chip">10% off max discount {{ $currency }} 25.00</span>
+                            <p class="helper">New user promo code (1st booking) • Valid until 23:59, Apr 15, 2026</p>
+                            <p class="legal-note">Terms and Conditions apply.</p>
+                        </section>
+
+                        <section class="booking-subsection" aria-label="Payment options">
+                            <h3 class="booking-subtitle">When would you like to pay?</h3>
+                            <div class="pay-icons">
+                                <span class="pay-icon">Pay now</span>
+                                <span class="pay-icon">Pay at property</span>
+                            </div>
+                            <h3 class="booking-subtitle">How would you like to pay?</h3>
+                            <div class="pay-icons">
+                                <span class="pay-icon">Credit/Debit Card</span>
+                                <span class="pay-icon">Apple Pay</span>
+                                <span class="pay-icon">Google Pay</span>
+                                <span class="pay-icon">Touch'n Go</span>
+                            </div>
+                            <div class="card-grid">
+                                <div class="field full"><label for="cardNumber">Bank card no.</label><input id="cardNumber" type="text" placeholder="Card number"></div>
+                                <div class="field full"><label for="cardHolder">Name (as registered for related account)</label><input id="cardHolder" type="text" placeholder="Cardholder name"></div>
+                                <div class="field"><label for="cardExpiry">MM/YY</label><input id="cardExpiry" type="text" placeholder="Expiry date"></div>
+                                <div class="field"><label for="cardCvv">CVV/CVC</label><input id="cardCvv" type="text" placeholder="CVV"></div>
+                            </div>
+                            <p class="helper">Other payment methods are available on next page.</p>
+                        </section>
+
+                        <section class="booking-subsection" aria-label="Booking terms">
+                            <p class="booking-subnote">Free Cancellation before {{ $cancelDeadlineLabel }}</p>
+                            <p class="booking-subnote">We price match • Secure payment</p>
+                            <p class="legal-note">By submitting this booking, you acknowledge that you have read and agree to the Terms of Use and Privacy Statement.</p>
+                        </section>
                     </div>
 
                     <p class="summary">Proceeding will prepare your reservation and take you to checkout confirmation.</p>

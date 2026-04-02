@@ -28,6 +28,19 @@
         .policy h3 { margin:0 0 6px; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.07em; color:#4a677d; }
         .policy ul { margin:0; padding-left:18px; color:#4a687e; font-size:0.82rem; }
         .policy p { margin:0; color:#4a687e; font-size:0.82rem; line-height:1.4; }
+        .mini-panel { display:grid; gap:10px; }
+        .mini-section { border:1px solid #dbe7f0; border-radius:10px; background:#fbfdff; padding:10px; display:grid; gap:8px; }
+        .mini-title { margin:0; font-size:0.82rem; text-transform:uppercase; letter-spacing:0.06em; color:#49657c; }
+        .hotel-thumb { width:100%; height:120px; object-fit:cover; border-radius:9px; border:1px solid #d9e7f0; background:#eef6fb; }
+        .hotel-name { font-size:0.92rem; font-weight:700; color:#1a4159; }
+        .score-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        .score-chip { background:#1b6ed8; color:#fff; border-radius:8px; padding:3px 8px; font-size:0.8rem; font-weight:700; }
+        .room-meta { display:grid; gap:3px; color:#3c6077; font-size:0.78rem; }
+        .price-muted { color:#6a8294; font-size:0.78rem; text-decoration:line-through; }
+        .price-save { color:#1a8f58; font-size:0.78rem; font-weight:700; }
+        .fine-print { color:#4c6a7f; font-size:0.78rem; line-height:1.45; }
+        .compact-line { display:flex; justify-content:space-between; gap:10px; font-size:0.8rem; color:#3b5c73; }
+        .compact-line strong { color:#1f465f; }
         .actions { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
         .btn { text-decoration:none; border:1px solid #d9b06f; background:linear-gradient(135deg,#ffc76f 0%,var(--accent) 100%); color:#603b0c; border-radius:10px; padding:10px 13px; font-weight:700; font-size:0.86rem; }
         .btn.alt { border-color:#c5d8e6; background:#f7fbff; color:#244a65; }
@@ -42,6 +55,23 @@
         $roomName = trim((string) ($roomName ?? ''));
         $currency = strtoupper(trim((string) ($reservation->currency ?? $room->currency ?? $property->currency ?? 'MVR')));
         $total = number_format((float) ($summary['total'] ?? 0), 2);
+        $checkoutMediaUrl = trim((string) ($checkoutMediaUrl ?? ''));
+        $adults = max(1, (int) ($summary['adults'] ?? 1));
+        $children = max(0, (int) ($summary['children'] ?? 0));
+        $guests = $adults + $children;
+        $roomSubtotal = (float) ($summary['room_subtotal'] ?? 0);
+        $discountAmount = max(0, (float) ($summary['discount_amount'] ?? 0));
+        $taxAmount = max(0, (float) ($summary['tax_amount'] ?? 0));
+        $transferAmount = max(0, (float) ($summary['transfer_charge'] ?? 0));
+        $priceBeforeDiscount = $roomSubtotal + $discountAmount;
+        $savedAmount = number_format($discountAmount, 2);
+        $guestResidency = strtolower(trim((string) ($summary['guest_residency'] ?? '')));
+        $isForeigner = $guestResidency === 'foreign_national';
+        $taxLines = collect($summary['tax_lines'] ?? [])->filter(static fn ($line) => is_array($line))->values();
+        $serviceChargeTotal = max(0, (float) ($summary['service_charge_total'] ?? 0));
+        $totalTaxAmount = max(0, (float) ($summary['total_tax_amount'] ?? $taxAmount));
+        $transferAppliedAdultRate = max(0, (float) ($summary['transfer_applied_adult_rate'] ?? 0));
+        $transferAppliedChildRate = max(0, (float) ($summary['transfer_applied_child_rate'] ?? 0));
         $inclusives = collect($inclusives ?? [])->map(static fn ($v) => trim((string) $v))->filter()->values();
         $cancellationPolicy = trim((string) ($cancellationPolicy ?? 'Standard cancellation terms apply.'));
         $dateLabels = $dateLabels ?? ['start' => 'Check-in', 'end' => 'Check-out'];
@@ -71,31 +101,80 @@
                     @endif
                 </div>
 
-                <aside class="invoice" aria-label="Invoice summary">
-                    <h2>Invoice Summary</h2>
-                    <div class="invoice-row"><span>Subtotal</span><strong>{{ $currency }} {{ number_format((float) ($summary['room_subtotal'] ?? 0), 2) }}</strong></div>
-                    <div class="invoice-row"><span>Promotion / Discount ({{ number_format((float) ($summary['discount_percent'] ?? 0), 2) }}%)</span><strong>- {{ $currency }} {{ number_format((float) ($summary['discount_amount'] ?? 0), 2) }}</strong></div>
-                    <div class="invoice-row"><span>Tax ({{ number_format((float) ($summary['tax_rate'] ?? 0), 2) }}%)</span><strong>{{ $currency }} {{ number_format((float) ($summary['tax_amount'] ?? 0), 2) }}</strong></div>
-                    <div class="invoice-row"><span>Transfer Charges</span><strong>{{ $currency }} {{ number_format((float) ($summary['transfer_charge'] ?? 0), 2) }}</strong></div>
-                    <div class="total"><span>Total</span><span>{{ $currency }} {{ $total }}</span></div>
+                <aside class="mini-panel" aria-label="Reservation compact summary">
+                    <section class="mini-section" aria-label="Hotel and room summary">
+                        <h2 class="mini-title">1. Hotel detail</h2>
+                        @if ($checkoutMediaUrl !== '')
+                            <img class="hotel-thumb" src="{{ $checkoutMediaUrl }}" alt="Hotel image" loading="lazy">
+                        @endif
+                        <div class="hotel-name">{{ (string) ($property->name ?? 'Property') }}</div>
+                        <div class="score-row">
+                            <span class="score-chip">{{ number_format(min(10, max(0, (float) (($property->rating_average ?? 9.3)))), 1) }}/10</span>
+                            <span>{{ (float) (($property->rating_average ?? 9.3)) >= 8.5 ? 'Great' : 'Good' }}</span>
+                            <span>{{ number_format((int) (($property->review_count ?? 2508))) }} reviews</span>
+                        </div>
+                        <div class="room-meta">
+                            <strong>{{ $roomName !== '' ? $roomName : 'Room' }}</strong>
+                            <span>x{{ $guests }} guests</span>
+                            <span>{{ trim((string) ($room->bed_type ?? '1 bed')) }}</span>
+                            <span>{{ str_contains(strtolower((string) ($room->amenities ?? '')), 'wifi') ? 'Free Wi-Fi' : 'Wi-Fi available' }}</span>
+                            <span>{{ (int) ($room->non_smoking ?? 1) === 1 ? 'Non-smoking' : 'Smoking allowed' }}</span>
+                            <span>{{ (int) ($room->has_window ?? 1) === 1 ? 'Has window(s)' : 'No window(s)' }}</span>
+                            <span>{{ (int) ($room->room_size_sqm ?? 0) > 0 ? ((int) ($room->room_size_sqm ?? 0) . '㎡') : 'Room size not specified' }}</span>
+                            <span>{{ trim((string) ($room->floor_info ?? '')) !== '' ? ('Floor: ' . (string) ($room->floor_info ?? '')) : 'Floor not specified' }}</span>
+                            <span>Free cancellation before 23:59, one day before check-in</span>
+                        </div>
+                    </section>
 
-                    <div class="policy" aria-label="Inclusions">
-                        <h3>Inclusives</h3>
+                    <section class="mini-section" aria-label="Stay dates">
+                        <h2 class="mini-title">2. Stay dates</h2>
+                        <div class="compact-line"><span>{{ (string) ($summary['checkin'] ?? '-') }} - {{ (string) ($summary['checkout'] ?? '-') }}</span><strong>{{ max(1, (int) ((strtotime((string) ($summary['checkout'] ?? '')) > strtotime((string) ($summary['checkin'] ?? ''))) ? ceil((strtotime((string) ($summary['checkout'] ?? '')) - strtotime((string) ($summary['checkin'] ?? ''))) / 86400) : 1)) }} night</strong></div>
+                        <div class="fine-print">Check-in: 15:00-06:00</div>
+                        <div class="fine-print">Check-out: Before 12:00</div>
+                    </section>
+
+                    <section class="mini-section" aria-label="Price details">
+                        <h2 class="mini-title">3. Price details</h2>
+                        <div class="invoice-row"><span>1 room x 1 night</span><strong>{{ $currency }} {{ number_format($roomSubtotal, 2) }}</strong></div>
+                        <div class="invoice-row"><span>Price before discount</span><span class="price-muted">{{ $currency }} {{ number_format($priceBeforeDiscount, 2) }}</span></div>
+                        <div class="invoice-row"><span>Limited Time Offer</span><strong>- {{ $currency }} {{ number_format($limitedTimeOffer, 2) }}</strong></div>
+                        <div class="invoice-row"><span>First Booking Deal</span><strong>- {{ $currency }} {{ number_format($firstBookingDeal, 2) }}</strong></div>
+                        <div class="invoice-row"><span>New user promo code</span><strong>- {{ $currency }} {{ number_format($promoCodeDiscount, 2) }}</strong></div>
+                        <div class="invoice-row"><span>Special Discount</span><strong>- {{ $currency }} {{ number_format($specialDiscount, 2) }}</strong></div>
+                        <div class="invoice-row"><span>Taxes & fees</span><strong>{{ $currency }} {{ number_format($taxAmount, 2) }}</strong></div>
+                        <div class="invoice-row"><span>Tourism tax</span><strong>{{ $currency }} {{ number_format($tourismTax, 2) }}</strong></div>
+                        <div class="invoice-row"><span>Sales service tax</span><strong>{{ $currency }} {{ number_format($salesServiceTax, 2) }}</strong></div>
+                        <div class="invoice-row"><span>Transfer charges</span><strong>{{ $currency }} {{ number_format($transferAmount, 2) }}</strong></div>
+                        <div class="total"><span>Total</span><span>{{ $currency }} {{ $total }}</span></div>
+                        <div class="price-save">You've saved {{ $currency }} {{ $savedAmount }} on this booking!</div>
+                        <div class="fine-print">We Price Match</div>
+                    </section>
+
+                    <section class="mini-section" aria-label="Cancellation policy">
+                        <h2 class="mini-title">4. Cancellation policy</h2>
+                        <div class="fine-print">Free cancellation before 23:59, one day before check-in.</div>
+                        <div class="fine-print">Cancellation fee may apply after cutoff. If you apply a discount, cancellation fee is based on total paid.</div>
+                        <div class="fine-print">All times are in the hotel's local time.</div>
+                        <div class="fine-print">{{ $cancellationPolicy }}</div>
+                    </section>
+
+                    <section class="mini-section" aria-label="Rewards">
+                        <h2 class="mini-title">5. Rewards</h2>
+                        <div class="fine-print">Earn {{ max(1, (int) round(($roomSubtotal + $taxAmount) * 0.125)) }} Trip Coins (≈{{ $currency }} {{ number_format((($roomSubtotal + $taxAmount) * 0.005), 2) }}) after your stay.</div>
+                    </section>
+
+                    <section class="mini-section" aria-label="Fine print">
+                        <h2 class="mini-title">6. Fine print</h2>
+                        <div class="fine-print">This property may require a deposit at check-in. Deposit hold release times vary by payment method.</div>
                         @if ($inclusives->isNotEmpty())
+                            <div class="fine-print">Inclusions:</div>
                             <ul>
-                                @foreach ($inclusives->take(8) as $inclusive)
-                                    <li>{{ $inclusive }}</li>
+                                @foreach ($inclusives->take(6) as $inclusive)
+                                    <li class="fine-print">{{ $inclusive }}</li>
                                 @endforeach
                             </ul>
-                        @else
-                            <p>Inclusion details are available on request from the property host.</p>
                         @endif
-                    </div>
-
-                    <div class="policy" aria-label="Cancellation policy">
-                        <h3>Cancellation Policy</h3>
-                        <p>{{ $cancellationPolicy }}</p>
-                    </div>
+                    </section>
                 </aside>
             </div>
 

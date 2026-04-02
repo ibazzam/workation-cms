@@ -1817,6 +1817,7 @@
         $vendorRoomCategories = $vendorRoomCategories ?? collect();
         $vendorRooms = $vendorRooms ?? $vendorRoomCategories;
         $vendorMediaAssets = $vendorMediaAssets ?? collect();
+        $vendorTaxComponents = $vendorTaxComponents ?? collect();
         $categorySet = collect($selectedVendorCategories)->flip();
         $supportsAccommodation = $categorySet->has('accommodation');
         $hasSelectedCategories = count($selectedVendorCategories) > 0;
@@ -2450,7 +2451,7 @@
                             </div>
                             <div class="ops-field ops-field-wide" data-category-scope="stay">
                                 <label>Transfer Options and Charges (Per Pax)</label>
-                                <p class="small" style="margin-bottom:8px;">Select transfer options you provide and set the per-pax charge for each selected option.</p>
+                                <p class="small" style="margin-bottom:8px;">Configure local and foreign transfer rates separately. If only one rate is set, it is treated as foreign adult default.</p>
                                 <div class="ops-form-grid">
                                     @foreach ($transferOptionCatalog as $transferOptionKey => $transferOptionLabel)
                                         @php
@@ -2458,14 +2459,39 @@
                                             if (is_array($oldTransferRatesInput) && array_key_exists($transferOptionKey, $oldTransferRatesInput)) {
                                                 $transferRateValue = (string) $oldTransferRatesInput[$transferOptionKey];
                                             }
+                                            $transferRateLocalAdult = old('transfer_rates_local_adult.' . $transferOptionKey, '');
+                                            $transferRateLocalChild = old('transfer_rates_local_child.' . $transferOptionKey, '');
+                                            $transferRateForeignAdult = old('transfer_rates_foreign_adult.' . $transferOptionKey, $transferRateValue);
+                                            $transferRateForeignChild = old('transfer_rates_foreign_child.' . $transferOptionKey, '');
                                         @endphp
                                         <label class="feature-item" style="display:flex; align-items:center; gap:8px;">
                                             <input type="checkbox" name="transfer_options[]" value="{{ $transferOptionKey }}" @checked(in_array($transferOptionKey, $oldTransferOptions, true))>
                                             <span>{{ $transferOptionLabel }}</span>
                                         </label>
-                                        <input name="transfer_rates[{{ $transferOptionKey }}]" class="ops-input" type="number" min="0" step="0.01" value="{{ $transferRateValue }}" placeholder="{{ $transferOptionLabel }} per pax (MVR)">
+                                        <input name="transfer_rates[{{ $transferOptionKey }}]" class="ops-input" type="number" min="0" step="0.01" value="{{ $transferRateValue }}" placeholder="Legacy per pax rate (MVR)">
+                                        <input name="transfer_rates_local_adult[{{ $transferOptionKey }}]" class="ops-input" type="number" min="0" step="0.01" value="{{ $transferRateLocalAdult }}" placeholder="Local adult rate (MVR)">
+                                        <input name="transfer_rates_local_child[{{ $transferOptionKey }}]" class="ops-input" type="number" min="0" step="0.01" value="{{ $transferRateLocalChild }}" placeholder="Local child rate (MVR)">
+                                        <input name="transfer_rates_foreign_adult[{{ $transferOptionKey }}]" class="ops-input" type="number" min="0" step="0.01" value="{{ $transferRateForeignAdult }}" placeholder="Foreign adult rate (MVR)">
+                                        <input name="transfer_rates_foreign_child[{{ $transferOptionKey }}]" class="ops-input" type="number" min="0" step="0.01" value="{{ $transferRateForeignChild }}" placeholder="Foreign child rate (MVR)">
                                     @endforeach
+                                    <input name="transfer_base_local" class="ops-input" type="number" min="0" step="0.01" value="{{ old('transfer_base_local', '0') }}" placeholder="Transfer base local (MVR)">
+                                    <input name="transfer_base_foreign" class="ops-input" type="number" min="0" step="0.01" value="{{ old('transfer_base_foreign', '0') }}" placeholder="Transfer base foreign (MVR)">
                                 </div>
+                                @if ($vendorTaxComponents->isNotEmpty())
+                                    <p class="small" style="margin:8px 0;">Vendor tax rate overrides (admin-moderated tax types)</p>
+                                    <div class="ops-form-grid">
+                                        @foreach ($vendorTaxComponents as $taxComponent)
+                                            @php
+                                                $taxCode = strtolower(trim((string) ($taxComponent['code'] ?? '')));
+                                                $taxLabel = trim((string) ($taxComponent['label'] ?? $taxCode));
+                                                $taxDefaultRate = (float) ($taxComponent['default_rate'] ?? 0);
+                                            @endphp
+                                            @if ($taxCode !== '')
+                                                <input name="vendor_tax_rates[{{ $taxCode }}]" class="ops-input" type="number" min="0" step="0.0001" value="{{ old('vendor_tax_rates.' . $taxCode, (string) $taxDefaultRate) }}" placeholder="{{ $taxLabel }}">
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                @endif
                             </div>
                             <div class="ops-field" data-category-scope="day_visit">
                                 <label for="property_day_visit_start_time">Day Visit Start Time</label>
@@ -2851,18 +2877,44 @@
                                                                 </div>
                                                                 <div class="ops-form-grid" data-property-edit-scope="stay">
                                                                     <p class="small" style="margin:0;">Transfer Options and Charges (Per Pax)</p>
+                                                                    @php
+                                                                        $transferRateMatrix = is_array($propertyDetails['transfer_rate_matrix'] ?? null) ? $propertyDetails['transfer_rate_matrix'] : [];
+                                                                    @endphp
                                                                     @foreach ($transferOptionCatalog as $transferOptionKey => $transferOptionLabel)
                                                                         @php
                                                                             $transferEditRate = '';
                                                                             if (array_key_exists($transferOptionKey, $transferRates)) {
                                                                                 $transferEditRate = (string) $transferRates[$transferOptionKey];
                                                                             }
+                                                                            $transferMatrixRow = is_array($transferRateMatrix[$transferOptionKey] ?? null) ? $transferRateMatrix[$transferOptionKey] : [];
                                                                         @endphp
                                                                         <label class="feature-item" style="display:flex; align-items:center; gap:8px;">
                                                                             <input type="checkbox" name="transfer_options[]" value="{{ $transferOptionKey }}" @checked(in_array($transferOptionKey, $transferOptionValues, true))>
                                                                             <span>{{ $transferOptionLabel }}</span>
                                                                         </label>
-                                                                        <input class="ops-input" name="transfer_rates[{{ $transferOptionKey }}]" type="number" min="0" step="0.01" value="{{ $transferEditRate }}" placeholder="{{ $transferOptionLabel }} per pax (MVR)">
+                                                                        <input class="ops-input" name="transfer_rates[{{ $transferOptionKey }}]" type="number" min="0" step="0.01" value="{{ $transferEditRate }}" placeholder="Legacy per pax rate (MVR)">
+                                                                        <input class="ops-input" name="transfer_rates_local_adult[{{ $transferOptionKey }}]" type="number" min="0" step="0.01" value="{{ (string) ($transferMatrixRow['local_adult_charge'] ?? '') }}" placeholder="Local adult rate (MVR)">
+                                                                        <input class="ops-input" name="transfer_rates_local_child[{{ $transferOptionKey }}]" type="number" min="0" step="0.01" value="{{ (string) ($transferMatrixRow['local_child_charge'] ?? '') }}" placeholder="Local child rate (MVR)">
+                                                                        <input class="ops-input" name="transfer_rates_foreign_adult[{{ $transferOptionKey }}]" type="number" min="0" step="0.01" value="{{ (string) ($transferMatrixRow['foreign_adult_charge'] ?? $transferEditRate) }}" placeholder="Foreign adult rate (MVR)">
+                                                                        <input class="ops-input" name="transfer_rates_foreign_child[{{ $transferOptionKey }}]" type="number" min="0" step="0.01" value="{{ (string) ($transferMatrixRow['foreign_child_charge'] ?? '') }}" placeholder="Foreign child rate (MVR)">
+                                                                    @endforeach
+                                                                    <input class="ops-input" name="transfer_base_local" type="number" min="0" step="0.01" value="{{ (string) ($propertyDetails['transfer_base_local'] ?? 0) }}" placeholder="Transfer base local (MVR)">
+                                                                    <input class="ops-input" name="transfer_base_foreign" type="number" min="0" step="0.01" value="{{ (string) ($propertyDetails['transfer_base_foreign'] ?? 0) }}" placeholder="Transfer base foreign (MVR)">
+                                                                    @php
+                                                                        $vendorTaxRateOverrides = is_array($propertyDetails['vendor_tax_overrides'] ?? null) ? $propertyDetails['vendor_tax_overrides'] : [];
+                                                                    @endphp
+                                                                    @foreach ($vendorTaxComponents as $taxComponent)
+                                                                        @php
+                                                                            $taxCode = strtolower(trim((string) ($taxComponent['code'] ?? '')));
+                                                                            $taxLabel = trim((string) ($taxComponent['label'] ?? $taxCode));
+                                                                            $taxDefaultRate = (float) ($taxComponent['default_rate'] ?? 0);
+                                                                            $taxCurrentRate = array_key_exists($taxCode, $vendorTaxRateOverrides)
+                                                                                ? (float) $vendorTaxRateOverrides[$taxCode]
+                                                                                : $taxDefaultRate;
+                                                                        @endphp
+                                                                        @if ($taxCode !== '')
+                                                                            <input class="ops-input" name="vendor_tax_rates[{{ $taxCode }}]" type="number" min="0" step="0.0001" value="{{ (string) $taxCurrentRate }}" placeholder="{{ $taxLabel }}">
+                                                                        @endif
                                                                     @endforeach
                                                                 </div>
                                                                 <input class="ops-input" name="day_visit_start_time" type="time" value="{{ (string) ($propertyDetails['day_visit_start_time'] ?? '') }}" data-property-edit-scope="day_visit">

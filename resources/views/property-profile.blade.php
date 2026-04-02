@@ -426,6 +426,8 @@
             justify-content: center;
             flex: 0 0 19px;
             margin-top: 1px;
+            font-size: 0.9rem;
+            line-height: 1;
         }
 
         .facility-icon svg {
@@ -436,6 +438,13 @@
             stroke-width: 1.7;
             stroke-linecap: round;
             stroke-linejoin: round;
+        }
+        
+        .facility-icon span {
+            display: inline-block;
+            font-size: 1rem;
+            line-height: 1;
+            margin: 0;
         }
 
         .facility-text {
@@ -1222,6 +1231,33 @@
             .room-price-box { grid-template-columns: 1fr; }
             .facility-grid { grid-template-columns: 1fr; }
         }
+
+        /* Uniform Icon System Styles - Consistent across all pages */
+        .uniform-icon {
+            display: inline-block;
+            font-size: 1em;
+            line-height: 1;
+            margin: 0;
+            padding: 0;
+            vertical-align: middle;
+        }
+
+        .uniform-icon-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: inherit;
+        }
+
+        .uniform-icon-label .uniform-icon {
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+
+        .uniform-label {
+            display: inline;
+            font-size: inherit;
+        }
     </style>
 </head>
 <body>
@@ -1354,24 +1390,11 @@
 
             return $value;
         };
+        
+        // Use uniform icon system for consistency across the application
         $facilitySvg = static function (string $facility): string {
-            $f = strtolower($facility);
-            if (str_contains($f, 'restaurant') || str_contains($f, 'dining') || str_contains($f, 'bar')) {
-                return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v7"/><path d="M10 3v7"/><path d="M6 7h4"/><path d="M8 10v11"/><path d="M16 3v8"/><path d="M18 3v18"/><path d="M16 11h2"/></svg>';
-            }
-            if (str_contains($f, 'pool') || str_contains($f, 'swim') || str_contains($f, 'water')) {
-                return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16c1.3 0 1.7-.9 3-1s1.7 1 3 1 1.7-1 3-1 1.7 1 3 1 1.7-1 3-1 1.7 1 3 1"/><path d="M7 12l3-3 4 4 3-3"/></svg>';
-            }
-            if (str_contains($f, 'spa') || str_contains($f, 'massage') || str_contains($f, 'wellness')) {
-                return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21c-2.8-2.2-5-4.7-5-8 0-2.1 1.2-4 3-5"/><path d="M12 21c2.8-2.2 5-4.7 5-8 0-2.1-1.2-4-3-5"/><path d="M12 8V3"/></svg>';
-            }
-            if (str_contains($f, 'park')) {
-                return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 17V7h3.3a2.4 2.4 0 0 1 0 4.8H10"/></svg>';
-            }
-            if (str_contains($f, 'fitness') || str_contains($f, 'gym')) {
-                return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10v4"/><path d="M7 8v8"/><path d="M17 8v8"/><path d="M21 10v4"/><path d="M7 12h10"/></svg>';
-            }
-            return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>';
+            $icon = \App\Support\UniformIconSystem::getAmenityIcon($facility);
+            return '<span role="img" aria-hidden="true">' . htmlspecialchars($icon, ENT_QUOTES, 'UTF-8') . '</span>';
         };
     @endphp
 
@@ -1626,14 +1649,14 @@
                         data-room-amenities='@json($roomAmenitiesRaw->all())'
                         data-bathroom-amenities='@json($bathAmenitiesRaw->all())'
                     >
-                        <a class="room-media-link" href="{{ $roomLink }}">
+                        <a class="room-media-link" href="#" data-open-room-modal="{{ $roomId }}">
                             <div class="room-media">
                                 <img src="{{ $roomThumb ?? '' }}" alt="{{ (string) ($room->name ?? 'Room') }}" loading="lazy">
                                 <span class="room-tag">{{ $breakfastLabel }}</span>
                             </div>
                         </a>
                         <div class="room-body">
-                            <h3><a class="room-name-link" href="{{ $roomLink }}">{{ (string) ($room->name ?? 'Room') }}</a></h3>
+                            <h3><a class="room-name-link" href="#" data-open-room-modal="{{ $roomId }}">{{ (string) ($room->name ?? 'Room') }}</a></h3>
                             @php
                                 $roomOldPrice = number_format(((float) ($room->base_price ?? 0)) * 1.08, 2);
                             @endphp

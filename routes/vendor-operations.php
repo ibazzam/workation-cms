@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Support\ReservationPricingPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -537,12 +538,55 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
         $submittedTransferRates = is_array($validated['transfer_rates'] ?? null)
             ? $validated['transfer_rates']
             : [];
+        $submittedTransferRatesLocalAdult = is_array($validated['transfer_rates_local_adult'] ?? null)
+            ? $validated['transfer_rates_local_adult']
+            : [];
+        $submittedTransferRatesLocalChild = is_array($validated['transfer_rates_local_child'] ?? null)
+            ? $validated['transfer_rates_local_child']
+            : [];
+        $submittedTransferRatesForeignAdult = is_array($validated['transfer_rates_foreign_adult'] ?? null)
+            ? $validated['transfer_rates_foreign_adult']
+            : [];
+        $submittedTransferRatesForeignChild = is_array($validated['transfer_rates_foreign_child'] ?? null)
+            ? $validated['transfer_rates_foreign_child']
+            : [];
+
         $transferRates = [];
+        $transferRateMatrix = [];
         foreach ($transferOptionCatalog as $transferOptionKey) {
             $normalizedRate = vendorPortalNormalizedNumeric($submittedTransferRates[$transferOptionKey] ?? null);
             if ($normalizedRate !== null && $normalizedRate >= 0) {
                 $transferRates[$transferOptionKey] = $normalizedRate;
             }
+
+            $localAdultRate = vendorPortalNormalizedNumeric($submittedTransferRatesLocalAdult[$transferOptionKey] ?? null);
+            $localChildRate = vendorPortalNormalizedNumeric($submittedTransferRatesLocalChild[$transferOptionKey] ?? null);
+            $foreignAdultRate = vendorPortalNormalizedNumeric($submittedTransferRatesForeignAdult[$transferOptionKey] ?? null);
+            $foreignChildRate = vendorPortalNormalizedNumeric($submittedTransferRatesForeignChild[$transferOptionKey] ?? null);
+
+            if ($localAdultRate !== null || $localChildRate !== null || $foreignAdultRate !== null || $foreignChildRate !== null) {
+                $transferRateMatrix[$transferOptionKey] = [
+                    'local_adult_charge' => max(0, (float) ($localAdultRate ?? 0)),
+                    'local_child_charge' => max(0, (float) ($localChildRate ?? 0)),
+                    'foreign_adult_charge' => max(0, (float) ($foreignAdultRate ?? ($normalizedRate ?? 0))),
+                    'foreign_child_charge' => max(0, (float) ($foreignChildRate ?? 0)),
+                ];
+            }
+        }
+
+        $vendorTaxOverrides = [];
+        $submittedVendorTaxRates = is_array($validated['vendor_tax_rates'] ?? null)
+            ? $validated['vendor_tax_rates']
+            : [];
+        foreach ($submittedVendorTaxRates as $taxCode => $taxRate) {
+            $normalizedCode = strtolower(trim((string) $taxCode));
+            $normalizedCode = preg_replace('/[^a-z0-9_]+/', '_', $normalizedCode) ?? $normalizedCode;
+            $normalizedCode = trim((string) preg_replace('/_+/', '_', $normalizedCode), '_');
+            if ($normalizedCode === '' || !is_numeric($taxRate)) {
+                continue;
+            }
+
+            $vendorTaxOverrides[$normalizedCode] = round(max(0, (float) $taxRate), 4);
         }
 
         $details = [
@@ -573,6 +617,10 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['transfer_pricing_basis'] = 'per_pax';
             $details['transfer_options'] = $transferOptions;
             $details['transfer_rates'] = $transferRates;
+            $details['transfer_rate_matrix'] = $transferRateMatrix;
+            $details['transfer_base_local'] = max(0, (float) ($validated['transfer_base_local'] ?? 0));
+            $details['transfer_base_foreign'] = max(0, (float) ($validated['transfer_base_foreign'] ?? 0));
+            $details['vendor_tax_overrides'] = $vendorTaxOverrides;
         }
 
         if (in_array($listingCategory, ['transport', 'excursion', 'remote_workspace', 'resort_day_visit', 'restaurant', 'vehicle_rental'], true)) {
@@ -672,6 +720,10 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['transfer_pricing_basis'] = 'per_pax';
             $details['transfer_options'] = $transferOptions;
             $details['transfer_rates'] = $transferRates;
+            $details['transfer_rate_matrix'] = $transferRateMatrix;
+            $details['transfer_base_local'] = max(0, (float) ($validated['transfer_base_local'] ?? 0));
+            $details['transfer_base_foreign'] = max(0, (float) ($validated['transfer_base_foreign'] ?? 0));
+            $details['vendor_tax_overrides'] = $vendorTaxOverrides;
         }
 
         if ($listingCategory === 'resort_day_visit') {
@@ -1171,7 +1223,6 @@ if (!function_exists('vendorPortalReservationInvoiceTaxes')) {
     ): array {
         $subtotalAmount = round(max(0, $baseAmount), 2);
         $transferChargeAmount = round(max(0, $transferChargeTotal), 2);
-        $guestCount = max(1, $guests);
 
         $breakdown = [
             'applied' => false,
@@ -1190,6 +1241,7 @@ if (!function_exists('vendorPortalReservationInvoiceTaxes')) {
             'transfer_charge_total' => $transferChargeAmount,
             'total_tax_amount' => 0.0,
             'invoice_total_amount' => round($subtotalAmount + $transferChargeAmount, 2),
+            'tax_lines' => [],
         ];
 
         if ($propertyId === null || $propertyId <= 0 || !Schema::hasTable('vendor_properties')) {
@@ -1199,7 +1251,7 @@ if (!function_exists('vendorPortalReservationInvoiceTaxes')) {
         $property = DB::table('vendor_properties')
             ->where('id', $propertyId)
             ->where('vendor_user_id', $vendorUserId)
-            ->first(['listing_category']);
+            ->first(['listing_category', 'listing_details']);
 
         if (!$property) {
             return $breakdown;
@@ -1207,47 +1259,45 @@ if (!function_exists('vendorPortalReservationInvoiceTaxes')) {
 
         $listingCategory = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
         $breakdown['listing_category'] = $listingCategory;
-        if ($listingCategory !== 'accommodation') {
-            return $breakdown;
+
+        $details = [];
+        if (is_string($property->listing_details ?? null) && trim((string) $property->listing_details) !== '') {
+            $decoded = json_decode((string) $property->listing_details, true);
+            if (is_array($decoded)) {
+                $details = $decoded;
+            }
         }
 
-        $breakdown['applied'] = true;
-        $serviceChargeRatePercent = 10.0;
-        $serviceChargeTotal = round($subtotalAmount * ($serviceChargeRatePercent / 100), 2);
-        $breakdown['service_charge_rate_percent'] = $serviceChargeRatePercent;
-        $breakdown['service_charge_total'] = $serviceChargeTotal;
-
+        $vendorTaxOverrides = is_array($details['vendor_tax_overrides'] ?? null) ? $details['vendor_tax_overrides'] : [];
         $roomsCount = vendorPortalAccommodationRoomCount($vendorUserId, $propertyId);
         $breakdown['rooms_count'] = $roomsCount;
 
-        if ($isForeigner) {
-            $greenTaxRatePerPerson = $roomsCount >= 50 ? 12.0 : 6.0;
-            $greenTaxTotal = round($greenTaxRatePerPerson * $guestCount, 2);
-            $tgstRatePercent = 17.0;
-            $tgstTotal = round($subtotalAmount * ($tgstRatePercent / 100), 2);
+        $pricing = ReservationPricingPolicy::calculate([
+            'listing_category' => (string) ($listingCategory ?? 'accommodation'),
+            'subtotal_amount' => $subtotalAmount,
+            'discount_percent' => 0,
+            'adults' => max(1, (int) $guests),
+            'children' => 0,
+            'nights' => 1,
+            'room_count' => $roomsCount,
+            'guest_residency' => $isForeigner ? 'foreign_national' : 'local_resident',
+            'transfer_option' => '',
+            'transfer_charge_override' => $transferChargeAmount,
+            'vendor_tax_overrides' => $vendorTaxOverrides,
+        ]);
 
-            $breakdown['green_tax_rate_per_person'] = $greenTaxRatePerPerson;
-            $breakdown['green_tax_total'] = $greenTaxTotal;
-            $breakdown['tgst_rate_percent'] = $tgstRatePercent;
-            $breakdown['tgst_total'] = $tgstTotal;
-        } else {
-            $cgstRatePercent = 8.0;
-            $cgstTotal = round($subtotalAmount * ($cgstRatePercent / 100), 2);
-
-            $breakdown['cgst_rate_percent'] = $cgstRatePercent;
-            $breakdown['cgst_total'] = $cgstTotal;
-        }
-
-        $totalTaxAmount = round(
-            $breakdown['green_tax_total'] + $breakdown['tgst_total'] + $breakdown['cgst_total'],
-            2
-        );
-
-        $breakdown['total_tax_amount'] = $totalTaxAmount;
-        $breakdown['invoice_total_amount'] = round(
-            $subtotalAmount + $breakdown['service_charge_total'] + $totalTaxAmount + $transferChargeAmount,
-            2
-        );
+        $breakdown['applied'] = true;
+        $breakdown['service_charge_rate_percent'] = (float) ($pricing['service_charge_rate_percent'] ?? 0);
+        $breakdown['service_charge_total'] = (float) ($pricing['service_charge_total'] ?? 0);
+        $breakdown['green_tax_rate_per_person'] = (float) ($pricing['green_tax_rate_per_person_per_night'] ?? 0);
+        $breakdown['green_tax_total'] = (float) ($pricing['green_tax_total'] ?? 0);
+        $breakdown['tgst_rate_percent'] = (float) ($pricing['tgst_rate_percent'] ?? 0);
+        $breakdown['tgst_total'] = (float) ($pricing['tgst_total'] ?? 0);
+        $breakdown['cgst_rate_percent'] = (float) ($pricing['gst_rate_percent'] ?? 0);
+        $breakdown['cgst_total'] = (float) ($pricing['gst_total'] ?? 0);
+        $breakdown['total_tax_amount'] = (float) ($pricing['total_tax_amount'] ?? 0);
+        $breakdown['invoice_total_amount'] = (float) ($pricing['invoice_total_amount'] ?? 0);
+        $breakdown['tax_lines'] = is_array($pricing['tax_lines'] ?? null) ? $pricing['tax_lines'] : [];
 
         return $breakdown;
     }
@@ -1278,6 +1328,9 @@ Route::get('/vendor', function () {
     $vendorBilling = null;
     $vendorRoomCategories = collect();
     $vendorMediaAssets = collect();
+
+    $vendorReservationPolicy = ReservationPricingPolicy::loadPolicy();
+    $vendorTaxComponents = collect($vendorReservationPolicy['tax_components'] ?? []);
 
     if ($vendorUserId > 0) {
         if (Schema::hasTable('vendor_properties')) {
@@ -1392,6 +1445,8 @@ Route::get('/vendor', function () {
         'excursionTypeOptions' => vendorPortalListingOptions('excursion_type'),
         'restaurantMealServiceOptions' => vendorPortalListingOptions('restaurant_meal_service'),
         'vehicleRentalTypeOptions' => vendorPortalListingOptions('vehicle_rental_type'),
+        'vendorReservationPolicy' => $vendorReservationPolicy,
+        'vendorTaxComponents' => $vendorTaxComponents,
     ]);
 });
 
@@ -2266,6 +2321,18 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'transfer_options.*' => ['required', 'string', 'max:80'],
         'transfer_rates' => ['nullable', 'array'],
         'transfer_rates.*' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+        'transfer_rates_local_adult' => ['nullable', 'array'],
+        'transfer_rates_local_adult.*' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+        'transfer_rates_local_child' => ['nullable', 'array'],
+        'transfer_rates_local_child.*' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+        'transfer_rates_foreign_adult' => ['nullable', 'array'],
+        'transfer_rates_foreign_adult.*' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+        'transfer_rates_foreign_child' => ['nullable', 'array'],
+        'transfer_rates_foreign_child.*' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+        'transfer_base_local' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+        'transfer_base_foreign' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+        'vendor_tax_rates' => ['nullable', 'array'],
+        'vendor_tax_rates.*' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
         'day_visit_start_time' => ['nullable', 'date_format:H:i'],
         'day_visit_end_time' => ['nullable', 'date_format:H:i'],
         'included_access' => ['nullable', 'string', 'max:2000'],
@@ -2506,6 +2573,18 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'transfer_options.*' => ['required', 'string', 'max:80'],
         'transfer_rates' => ['nullable', 'array'],
         'transfer_rates.*' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+        'transfer_rates_local_adult' => ['nullable', 'array'],
+        'transfer_rates_local_adult.*' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+        'transfer_rates_local_child' => ['nullable', 'array'],
+        'transfer_rates_local_child.*' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+        'transfer_rates_foreign_adult' => ['nullable', 'array'],
+        'transfer_rates_foreign_adult.*' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+        'transfer_rates_foreign_child' => ['nullable', 'array'],
+        'transfer_rates_foreign_child.*' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+        'transfer_base_local' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+        'transfer_base_foreign' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+        'vendor_tax_rates' => ['nullable', 'array'],
+        'vendor_tax_rates.*' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
         'day_visit_start_time' => ['nullable', 'date_format:H:i'],
         'day_visit_end_time' => ['nullable', 'date_format:H:i'],
         'included_access' => ['nullable', 'string', 'max:2000'],

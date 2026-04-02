@@ -1893,6 +1893,10 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         'name' => ['required', 'string', 'max:160'],
         'quantity' => ['nullable', 'integer', 'min:1', 'max:10000'],
         'max_occupancy' => ['nullable', 'integer', 'min:1', 'max:50'],
+        'room_size_sqm' => ['nullable', 'integer', 'min:5', 'max:2000'],
+        'floor_info' => ['nullable', 'string', 'max:80'],
+        'has_window' => ['nullable', 'in:0,1'],
+        'non_smoking' => ['nullable', 'in:0,1'],
         'extra_person_capacity' => ['nullable', 'integer', 'min:0', 'max:20'],
         'child_capacity' => ['nullable', 'integer', 'min:0', 'max:20'],
         'bed_type' => ['nullable', 'string', 'max:80'],
@@ -1907,6 +1911,8 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         'base_price' => ['nullable', 'numeric', 'min:0'],
         'extra_person_price' => ['nullable', 'numeric', 'min:0'],
         'child_price' => ['nullable', 'numeric', 'min:0'],
+        'child_policy' => ['nullable', 'string', 'max:3000'],
+        'extra_bed_policy' => ['nullable', 'string', 'max:3000'],
     ]);
 
     $roomAmenities = vendorPortalNormalizedStringList($validated['room_amenities'] ?? []);
@@ -1972,6 +1978,20 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         'updated_at' => now(),
     ];
 
+    if (Schema::hasColumn('vendor_property_room_categories', 'room_size_sqm')) {
+        $insertPayload['room_size_sqm'] = isset($validated['room_size_sqm']) ? (int) $validated['room_size_sqm'] : null;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'floor_info')) {
+        $floorInfo = trim((string) ($validated['floor_info'] ?? ''));
+        $insertPayload['floor_info'] = $floorInfo !== '' ? $floorInfo : null;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'has_window')) {
+        $insertPayload['has_window'] = (int) ($validated['has_window'] ?? 1) === 1;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'non_smoking')) {
+        $insertPayload['non_smoking'] = (int) ($validated['non_smoking'] ?? 1) === 1;
+    }
+
     if (Schema::hasColumn('vendor_property_room_categories', 'extra_person_capacity')) {
         $insertPayload['extra_person_capacity'] = (int) ($validated['extra_person_capacity'] ?? 0);
     }
@@ -1992,6 +2012,14 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'bathroom_amenities')) {
         $insertPayload['bathroom_amenities'] = implode(', ', $bathroomAmenityTokens);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'child_policy')) {
+        $childPolicy = trim((string) ($validated['child_policy'] ?? ''));
+        $insertPayload['child_policy'] = $childPolicy !== '' ? $childPolicy : null;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'extra_bed_policy')) {
+        $extraBedPolicy = trim((string) ($validated['extra_bed_policy'] ?? ''));
+        $insertPayload['extra_bed_policy'] = $extraBedPolicy !== '' ? $extraBedPolicy : null;
     }
 
     DB::table('vendor_property_room_categories')->insert($insertPayload);
@@ -2022,6 +2050,10 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
         'name' => ['required', 'string', 'max:160'],
         'quantity' => ['nullable', 'integer', 'min:1', 'max:10000'],
         'max_occupancy' => ['nullable', 'integer', 'min:1', 'max:50'],
+        'room_size_sqm' => ['nullable', 'integer', 'min:5', 'max:2000'],
+        'floor_info' => ['nullable', 'string', 'max:80'],
+        'has_window' => ['nullable', 'in:0,1'],
+        'non_smoking' => ['nullable', 'in:0,1'],
         'extra_person_capacity' => ['nullable', 'integer', 'min:0', 'max:20'],
         'child_capacity' => ['nullable', 'integer', 'min:0', 'max:20'],
         'bed_type' => ['nullable', 'string', 'max:80'],
@@ -2034,6 +2066,8 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
         'base_price' => ['nullable', 'numeric', 'min:0'],
         'extra_person_price' => ['nullable', 'numeric', 'min:0'],
         'child_price' => ['nullable', 'numeric', 'min:0'],
+        'child_policy' => ['nullable', 'string', 'max:3000'],
+        'extra_bed_policy' => ['nullable', 'string', 'max:3000'],
     ]);
 
     $roomAmenities = vendorPortalNormalizedStringList($validated['room_amenities'] ?? []);
@@ -2088,6 +2122,20 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
         'updated_at' => now(),
     ];
 
+    if (Schema::hasColumn('vendor_property_room_categories', 'room_size_sqm')) {
+        $updatePayload['room_size_sqm'] = isset($validated['room_size_sqm']) ? (int) $validated['room_size_sqm'] : null;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'floor_info')) {
+        $floorInfo = trim((string) ($validated['floor_info'] ?? ''));
+        $updatePayload['floor_info'] = $floorInfo !== '' ? $floorInfo : null;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'has_window')) {
+        $updatePayload['has_window'] = (int) ($validated['has_window'] ?? 1) === 1;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'non_smoking')) {
+        $updatePayload['non_smoking'] = (int) ($validated['non_smoking'] ?? 1) === 1;
+    }
+
     if (Schema::hasColumn('vendor_property_room_categories', 'extra_person_capacity')) {
         $updatePayload['extra_person_capacity'] = (int) ($validated['extra_person_capacity'] ?? 0);
     }
@@ -2108,6 +2156,14 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'bathroom_amenities')) {
         $updatePayload['bathroom_amenities'] = implode(', ', $bathroomAmenityTokens);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'child_policy')) {
+        $childPolicy = trim((string) ($validated['child_policy'] ?? ''));
+        $updatePayload['child_policy'] = $childPolicy !== '' ? $childPolicy : null;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'extra_bed_policy')) {
+        $extraBedPolicy = trim((string) ($validated['extra_bed_policy'] ?? ''));
+        $updatePayload['extra_bed_policy'] = $extraBedPolicy !== '' ? $extraBedPolicy : null;
     }
 
     DB::table('vendor_property_room_categories')

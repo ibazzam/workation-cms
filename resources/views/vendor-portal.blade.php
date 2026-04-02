@@ -2568,8 +2568,9 @@
                             </div>
                             <div class="ops-field ops-field-wide" data-category-scope="accommodation">
                                 <label>Property Amenities (tick all available)</label>
+                                <p class="small" style="margin:0 0 8px;">Amenities are managed by admin. Vendors can only select from this list.</p>
                                 <div class="feature-checklist">
-                                    @foreach ($propertyAmenityOptionsCollection as $facilityOption)
+                                    @forelse ($propertyAmenityOptionsCollection as $facilityOption)
                                         @php
                                             $facilityValue = trim((string) ($facilityOption['value'] ?? ''));
                                             $facilityLabel = trim((string) ($facilityOption['label'] ?? $facilityValue));
@@ -2577,13 +2578,16 @@
                                         @if ($facilityValue !== '' && $facilityLabel !== '')
                                             <label class="feature-item"><input type="checkbox" name="property_amenities[]" value="{{ $facilityValue }}" @checked(in_array($facilityValue, $oldPropertyAmenities, true))> {{ $facilityLabel }}</label>
                                         @endif
-                                    @endforeach
+                                    @empty
+                                        <p class="small" style="margin:0;">No amenities configured by admin yet.</p>
+                                    @endforelse
                                 </div>
                             </div>
                             <div class="ops-field ops-field-wide" data-category-scope="accommodation">
                                 <label>Property Features (tick all available)</label>
+                                <p class="small" style="margin:0 0 8px;">Features are managed by admin. Vendors can only select from this list.</p>
                                 <div class="feature-checklist">
-                                    @foreach ($propertyFeatureOptionsCollection as $featureOption)
+                                    @forelse ($propertyFeatureOptionsCollection as $featureOption)
                                         @php
                                             $featureValue = trim((string) ($featureOption['value'] ?? ''));
                                             $featureLabel = trim((string) ($featureOption['label'] ?? $featureValue));
@@ -2591,7 +2595,9 @@
                                         @if ($featureValue !== '' && $featureLabel !== '')
                                             <label class="feature-item"><input type="checkbox" name="property_features[]" value="{{ $featureValue }}" @checked(in_array($featureValue, $oldPropertyFeatures, true))> {{ $featureLabel }}</label>
                                         @endif
-                                    @endforeach
+                                    @empty
+                                        <p class="small" style="margin:0;">No property features configured by admin yet.</p>
+                                    @endforelse
                                 </div>
                             </div>
                             <div class="ops-field ops-field-wide" data-category-scope="geo">
@@ -3012,7 +3018,7 @@
                                                                                             </div>
                                                                                         </td>
                                                                                         <td>
-                                                                                            <span class="room-summary-line">Qty: {{ (int) ($room->quantity ?? 0) }} | Max: {{ (int) ($room->max_occupancy ?? 0) }} | Base: {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->base_price ?? 0), 2) }}</span>
+                                                                                            <span class="room-summary-line">Qty: {{ (int) ($room->quantity ?? 0) }} | Max: {{ (int) ($room->max_occupancy ?? 0) }} | {{ (int) ($room->room_size_sqm ?? 0) > 0 ? ((int) ($room->room_size_sqm ?? 0) . 'sqm') : 'Size n/a' }} | Floor: {{ trim((string) ($room->floor_info ?? '')) !== '' ? (string) ($room->floor_info ?? '') : 'n/a' }} | Base: {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->base_price ?? 0), 2) }}</span>
                                                                                         </td>
                                                                                         <td>
                                                                                             <div class="inline-actions listing-actions-inline">
@@ -3028,6 +3034,16 @@
                                                                                                 <input class="ops-input" name="name" type="text" maxlength="160" value="{{ (string) ($room->name ?? '') }}" required>
                                                                                                 <input class="ops-input" name="quantity" type="number" min="1" max="10000" value="{{ (int) ($room->quantity ?? 1) }}" required>
                                                                                                 <input class="ops-input" name="max_occupancy" type="number" min="1" max="50" value="{{ (int) ($room->max_occupancy ?? 1) }}" required>
+                                                                                                <input class="ops-input" name="room_size_sqm" type="number" min="5" max="2000" value="{{ (int) ($room->room_size_sqm ?? 0) > 0 ? (int) ($room->room_size_sqm ?? 0) : '' }}" placeholder="Room size (sqm)">
+                                                                                                <input class="ops-input" name="floor_info" type="text" maxlength="80" value="{{ trim((string) ($room->floor_info ?? '')) }}" placeholder="Floor info (e.g. 1-3)">
+                                                                                                <select class="ops-select" name="has_window">
+                                                                                                    <option value="1" @selected((int) ($room->has_window ?? 1) === 1)>Has window(s)</option>
+                                                                                                    <option value="0" @selected((int) ($room->has_window ?? 1) === 0)>No windows</option>
+                                                                                                </select>
+                                                                                                <select class="ops-select" name="non_smoking">
+                                                                                                    <option value="1" @selected((int) ($room->non_smoking ?? 1) === 1)>Non-smoking</option>
+                                                                                                    <option value="0" @selected((int) ($room->non_smoking ?? 1) === 0)>Smoking allowed</option>
+                                                                                                </select>
                                                                                                 <input class="ops-input" name="extra_person_capacity" type="number" min="0" max="20" value="{{ (int) ($room->extra_person_capacity ?? 0) > 0 ? (int) ($room->extra_person_capacity ?? 0) : '' }}" placeholder="Extra adult capacity">
                                                                                                 <input class="ops-input" name="child_capacity" type="number" min="0" max="20" value="{{ (int) ($room->child_capacity ?? 0) > 0 ? (int) ($room->child_capacity ?? 0) : '' }}" placeholder="Child capacity">
                                                                                                 <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($room->base_price ?? 0) > 0 ? (float) ($room->base_price ?? 0) : '' }}" placeholder="Base room price">
@@ -3085,6 +3101,8 @@
                                                                                                         @endif
                                                                                                     @endforeach
                                                                                                 </div>
+                                                                                                <textarea class="ops-textarea" name="child_policy" rows="3" maxlength="3000" placeholder="Child policy">{{ trim((string) ($room->child_policy ?? '')) }}</textarea>
+                                                                                                <textarea class="ops-textarea" name="extra_bed_policy" rows="3" maxlength="3000" placeholder="Extra bed policy">{{ trim((string) ($room->extra_bed_policy ?? '')) }}</textarea>
                                                                                                 <div class="inline-actions">
                                                                                                     <button class="btn btn-secondary js-row-update" type="submit">Update Room</button>
                                                                                                     <button class="btn btn-secondary" type="button" data-close-room-edit data-room-edit-id="{{ $roomId }}">Cancel Edit</button>
@@ -3181,6 +3199,28 @@
                                                                         <input class="ops-input" name="max_occupancy" type="number" min="1" max="50" value="{{ $showInlineRoomRow ? old('max_occupancy', 1) : 1 }}" required>
                                                                     </div>
                                                                     <div class="ops-field">
+                                                                        <label>Room Size (sqm)</label>
+                                                                        <input class="ops-input" name="room_size_sqm" type="number" min="5" max="2000" value="{{ $showInlineRoomRow ? old('room_size_sqm', '') : '' }}" placeholder="e.g. 28">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Floor Info</label>
+                                                                        <input class="ops-input" name="floor_info" type="text" maxlength="80" value="{{ $showInlineRoomRow ? old('floor_info', '') : '' }}" placeholder="e.g. 1-3">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Has Window</label>
+                                                                        <select class="ops-select" name="has_window">
+                                                                            <option value="1" @selected((string) ($showInlineRoomRow ? old('has_window', '1') : '1') === '1')>Yes</option>
+                                                                            <option value="0" @selected((string) ($showInlineRoomRow ? old('has_window') : '') === '0')>No</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Smoking Policy</label>
+                                                                        <select class="ops-select" name="non_smoking">
+                                                                            <option value="1" @selected((string) ($showInlineRoomRow ? old('non_smoking', '1') : '1') === '1')>Non-smoking</option>
+                                                                            <option value="0" @selected((string) ($showInlineRoomRow ? old('non_smoking') : '') === '0')>Smoking allowed</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="ops-field">
                                                                         <label>Extra Adult Capacity</label>
                                                                         <input class="ops-input" name="extra_person_capacity" type="number" min="0" max="20" value="{{ $showInlineRoomRow ? old('extra_person_capacity', '') : '' }}">
                                                                     </div>
@@ -3266,6 +3306,14 @@
                                                                                 @endif
                                                                             @endforeach
                                                                         </div>
+                                                                    </div>
+                                                                    <div class="ops-field ops-field-wide">
+                                                                        <label>Child Policy</label>
+                                                                        <textarea class="ops-textarea" name="child_policy" rows="3" maxlength="3000" placeholder="Children of all ages can stay in this room...">{{ $showInlineRoomRow ? old('child_policy', '') : '' }}</textarea>
+                                                                    </div>
+                                                                    <div class="ops-field ops-field-wide">
+                                                                        <label>Cots and Extra Beds Policy</label>
+                                                                        <textarea class="ops-textarea" name="extra_bed_policy" rows="3" maxlength="3000" placeholder="Extra beds and cots availability...">{{ $showInlineRoomRow ? old('extra_bed_policy', '') : '' }}</textarea>
                                                                     </div>
                                                                 </div>
                                                                 <div class="inline-actions" style="margin-top:10px;">

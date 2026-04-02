@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\User;
+use App\Support\ReservationPricingPolicy;
+use App\Support\UniformIconSystem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -341,6 +343,107 @@ if (!function_exists('canModeratePortalFinance')) {
     }
 }
 
+if (!function_exists('portalFinancePolicySettingKey')) {
+    function portalFinancePolicySettingKey(): string
+    {
+        return 'reservation_tax_transfer_policy';
+    }
+}
+
+if (!function_exists('portalFinanceLoadReservationPolicy')) {
+    function portalFinanceLoadReservationPolicy(): array
+    {
+        return ReservationPricingPolicy::loadPolicy();
+    }
+}
+
+if (!function_exists('portalFinanceSaveReservationPolicy')) {
+    function portalFinanceSaveReservationPolicy(array $policy, ?int $actorUserId = null): void
+    {
+        if (!Schema::hasTable('portal_finance_settings')) {
+            return;
+        }
+
+        DB::table('portal_finance_settings')->updateOrInsert(
+            ['setting_key' => portalFinancePolicySettingKey()],
+            [
+                'value_decimal' => null,
+                'value_string' => null,
+                'value_json' => json_encode(ReservationPricingPolicy::normalizePolicy($policy)),
+                'updated_by_user_id' => $actorUserId,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+    }
+}
+
+if (!function_exists('portalFinanceTaxComponents')) {
+    function portalFinanceTaxComponents(?array $policy = null): array
+    {
+        $effectivePolicy = ReservationPricingPolicy::normalizePolicy($policy ?? portalFinanceLoadReservationPolicy());
+        $components = $effectivePolicy['tax_components'] ?? [];
+
+        return is_array($components) ? array_values($components) : [];
+    }
+}
+
+if (!function_exists('portalFinanceUpsertTaxComponent')) {
+    function portalFinanceUpsertTaxComponent(array $component, ?int $actorUserId = null): array
+    {
+        $policy = portalFinanceLoadReservationPolicy();
+        $existing = portalFinanceTaxComponents($policy);
+        $normalized = ReservationPricingPolicy::normalizeTaxComponents([$component]);
+        if ($normalized === []) {
+            return $policy;
+        }
+
+        $candidate = $normalized[0];
+        $code = (string) ($candidate['code'] ?? '');
+
+        $updated = [];
+        $replaced = false;
+        foreach ($existing as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            if ((string) ($row['code'] ?? '') === $code) {
+                $updated[] = $candidate;
+                $replaced = true;
+            } else {
+                $updated[] = $row;
+            }
+        }
+
+        if (!$replaced) {
+            $updated[] = $candidate;
+        }
+
+        $policy['tax_components'] = array_values($updated);
+        portalFinanceSaveReservationPolicy($policy, $actorUserId);
+
+        return $policy;
+    }
+}
+
+if (!function_exists('portalFinanceDeleteTaxComponent')) {
+    function portalFinanceDeleteTaxComponent(string $code, ?int $actorUserId = null): array
+    {
+        $policy = portalFinanceLoadReservationPolicy();
+        $existing = portalFinanceTaxComponents($policy);
+        $code = strtolower(trim($code));
+
+        $policy['tax_components'] = array_values(array_filter($existing, static function ($row) use ($code): bool {
+            return is_array($row) && strtolower(trim((string) ($row['code'] ?? ''))) !== $code;
+        }));
+
+        portalFinanceSaveReservationPolicy($policy, $actorUserId);
+
+        return $policy;
+    }
+}
+
 if (!function_exists('portalActionRequestsEnabled')) {
     function portalActionRequestsEnabled(): bool
     {
@@ -411,18 +514,71 @@ if (!function_exists('portalAdminAuditLog')) {
     }
 }
 
+if (!function_exists('getAvailableCategories')) {
+    function getAvailableCategories(): array
+    {
+        $defaultCategories = [];
+        
+        // Get all categories from the uniform icon system
+        $allCategoryIcons = UniformIconSystem::getAllCategoryIcons();
+        foreach ($allCategoryIcons as $key => $info) {
+            $defaultCategories[$key] = [
+                'label' => $info['label'] ?? ucfirst(str_replace('_', ' ', $key)),
+                'emoji' => $info['emoji'] ?? '📌',
+                'subtitle' => match ($key) {
+                    'accommodation' => 'Hotels, villas, guesthouses',
+                    'transport' => 'Marine and land transfers',
+                    'excursion' => 'Diving, snorkel, island tours',
+                    'remote_workspace' => 'Wi-Fi, desks, quiet corners',
+                    'resort_day_visit' => 'Day access and passes',
+                    'restaurant' => 'Dining and local cuisine',
+                    'vehicle_rental' => 'Cars, bikes, vans and more',
+                    default => '',
+                },
+                'color' => $info['color'] ?? '#0f6179',
+            ];
+        }
+
+        if (!Schema::hasTable('vendor_properties') || !Schema::hasColumn('vendor_properties', 'listing_category')) {
+            return $defaultCategories;
+        }
+
+        try {
+            $dbCategories = DB::table('vendor_properties')
+                ->where('status', 'active')
+                ->whereNotNull('listing_category')
+                ->distinct()
+                ->pluck('listing_category')
+                ->filter(static fn ($cat) => !empty(trim((string) $cat)))
+                ->map(static fn ($cat) => strtolower(trim((string) $cat)))
+                ->unique()
+                ->values();
+
+            if ($dbCategories->isEmpty()) {
+                return $defaultCategories;
+            }
+
+            return collect($defaultCategories)
+                ->filter(static fn ($_, $key) => $dbCategories->contains($key))
+                ->toArray();
+        } catch (\Throwable $e) {
+            Log::warning('Failed to fetch available categories', ['error' => $e->getMessage()]);
+            return $defaultCategories;
+        }
+    }
+}
+
 Route::get('/', function () {
     $apiBase = workationApiBase();
 
-    $homeTopCategoryLinks = collect([
-        ['emoji' => '🏨', 'title' => 'Accommodation', 'subtitle' => 'Hotels, villas, guesthouses', 'url' => '/catalog/accommodation'],
-        ['emoji' => '🚤', 'title' => 'Transport', 'subtitle' => 'Marine and land transfers', 'url' => '/catalog/transport'],
-        ['emoji' => '🌊', 'title' => 'Excursions', 'subtitle' => 'Diving, snorkel, island tours', 'url' => '/catalog/excursion'],
-        ['emoji' => '💻', 'title' => 'Remote Workspace', 'subtitle' => 'Wi-Fi, desks, quiet corners', 'url' => '/catalog/remote_workspace'],
-        ['emoji' => '🏝️', 'title' => 'Resort Day Visit', 'subtitle' => 'Day access and passes', 'url' => '/catalog/resort_day_visit'],
-        ['emoji' => '🍽️', 'title' => 'Restaurants', 'subtitle' => 'Dining and local cuisine', 'url' => '/catalog/restaurant'],
-        ['emoji' => '🚗', 'title' => 'Vehicle Rental', 'subtitle' => 'Cars, bikes, vans and more', 'url' => '/catalog/vehicle_rental'],
-    ]);
+    $availableCategories = getAvailableCategories();
+    
+    $homeTopCategoryLinks = collect($availableCategories)->map(static fn (array $cat, $key) => [
+        'emoji' => $cat['emoji'] ?? '📌',
+        'title' => $cat['label'] ?? ucfirst(str_replace('_', ' ', $key)),
+        'subtitle' => $cat['subtitle'] ?? '',
+        'url' => '/catalog/' . $key,
+    ])->values();
 
     $homePromoBanner = [
         'message' => '🎉 Offers & Promotions: Save up to 25% on selected stays and transfer bundles this week.',
@@ -1267,6 +1423,7 @@ Route::post('/booking/reserve', function (Request $request) {
         'primary_first_name' => ['required', 'string', 'max:80'],
         'primary_last_name' => ['required', 'string', 'max:80'],
         'primary_nationality' => ['required', 'string', 'max:120'],
+        'guest_residency' => ['nullable', Rule::in(['local_resident', 'foreign_national'])],
         'primary_email' => ['required', 'email', 'max:190'],
         'primary_mobile' => ['required', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s\-()]{5,39}$/'],
         'additional_guest_details' => ['nullable', 'string', 'max:4000'],
@@ -1318,31 +1475,73 @@ Route::post('/booking/reserve', function (Request $request) {
         $propertyDetails = [];
     }
 
-    $taxRate = (float) ($propertyDetails['tax_rate'] ?? 16);
     $discountPercent = (float) ($propertyDetails['promotion_discount_percent'] ?? 0);
-
-    $transferCharge = (float) ($payload['transfer_charge'] ?? 0);
     $transferOptionCode = trim((string) ($payload['transfer_option'] ?? ''));
-    $transferOptions = collect($propertyDetails['transfer_options'] ?? [])->values();
-
-    if ($transferOptions->isNotEmpty() && $transferOptionCode !== '') {
-        $selectedTransfer = $transferOptions->first(function ($option) use ($transferOptionCode) {
-            $code = trim((string) ($option['code'] ?? Str::slug((string) ($option['label'] ?? 'transfer'))));
-            return $code === $transferOptionCode;
-        });
-
-        if (is_array($selectedTransfer)) {
-            $baseCharge = (float) ($selectedTransfer['base_charge'] ?? 0);
-            $adultCharge = (float) ($selectedTransfer['adult_charge'] ?? ($selectedTransfer['charge'] ?? 0));
-            $childCharge = (float) ($selectedTransfer['child_charge'] ?? 0);
-            $transferCharge = $baseCharge + ($adultCharge * $adults) + ($childCharge * $children);
+    $transferRateMatrix = is_array($propertyDetails['transfer_rate_matrix'] ?? null)
+        ? $propertyDetails['transfer_rate_matrix']
+        : [];
+    $legacyTransferRates = is_array($propertyDetails['transfer_rates'] ?? null)
+        ? $propertyDetails['transfer_rates']
+        : [];
+    $transferOptions = collect($propertyDetails['transfer_options'] ?? [])->map(function ($option) use ($transferRateMatrix, $legacyTransferRates, $propertyDetails) {
+        if (is_array($option)) {
+            $code = strtolower(trim((string) ($option['code'] ?? '')));
+            return $option + ['code' => $code];
         }
+
+        $code = strtolower(trim((string) $option));
+        $matrix = is_array($transferRateMatrix[$code] ?? null) ? $transferRateMatrix[$code] : [];
+        $legacyRate = is_numeric($legacyTransferRates[$code] ?? null) ? (float) $legacyTransferRates[$code] : 0;
+
+        return [
+            'code' => $code,
+            'label' => Str::headline(str_replace('_', ' ', $code)),
+            'local_adult_charge' => (float) ($matrix['local_adult_charge'] ?? 0),
+            'local_child_charge' => (float) ($matrix['local_child_charge'] ?? 0),
+            'foreign_adult_charge' => (float) ($matrix['foreign_adult_charge'] ?? $legacyRate),
+            'foreign_child_charge' => (float) ($matrix['foreign_child_charge'] ?? 0),
+            'base_charge_local' => (float) ($propertyDetails['transfer_base_local'] ?? 0),
+            'base_charge_foreign' => (float) ($propertyDetails['transfer_base_foreign'] ?? 0),
+            'adult_charge' => $legacyRate,
+            'child_charge' => 0,
+        ];
+    })->values()->all();
+    $guestResidency = strtolower(trim((string) ($payload['guest_residency'] ?? '')));
+    if (!in_array($guestResidency, ['local_resident', 'foreign_national'], true)) {
+        $guestResidency = ReservationPricingPolicy::isForeigner((string) ($payload['primary_nationality'] ?? ''), null)
+            ? 'foreign_national'
+            : 'local_resident';
     }
 
-    $discountAmount = round(($roomSubtotal * $discountPercent) / 100, 2);
-    $taxableAmount = max(0, $roomSubtotal - $discountAmount);
-    $taxAmount = round(($taxableAmount * $taxRate) / 100, 2);
-    $totalAmount = round($taxableAmount + $taxAmount + $transferCharge, 2);
+    $vendorTaxOverrides = [];
+    if (isset($propertyDetails['vendor_tax_overrides']) && is_array($propertyDetails['vendor_tax_overrides'])) {
+        $vendorTaxOverrides = $propertyDetails['vendor_tax_overrides'];
+    }
+
+    $roomCount = Schema::hasTable('vendor_property_room_categories')
+        ? (int) DB::table('vendor_property_room_categories')->where('vendor_property_id', (int) $propertyRow->id)->count()
+        : 0;
+
+    $pricing = ReservationPricingPolicy::calculate([
+        'listing_category' => 'accommodation',
+        'subtotal_amount' => $roomSubtotal,
+        'discount_percent' => $discountPercent,
+        'adults' => $adults,
+        'children' => $children,
+        'nights' => $nights,
+        'room_count' => $roomCount,
+        'primary_nationality' => (string) ($payload['primary_nationality'] ?? ''),
+        'guest_residency' => $guestResidency,
+        'transfer_option' => $transferOptionCode,
+        'property_transfer_options' => $transferOptions,
+        'transfer_charge_override' => $payload['transfer_charge'] ?? null,
+        'vendor_tax_overrides' => $vendorTaxOverrides,
+    ]);
+
+    $discountAmount = (float) ($pricing['discount_amount'] ?? 0);
+    $taxAmount = (float) ($pricing['total_tax_amount'] ?? 0);
+    $transferCharge = (float) ($pricing['transfer_charge_total'] ?? 0);
+    $totalAmount = (float) ($pricing['invoice_total_amount'] ?? 0);
 
     $primaryFirstName = Str::title(trim((string) preg_replace('/\s+/', ' ', (string) $payload['primary_first_name'])));
     $primaryLastName = Str::title(trim((string) preg_replace('/\s+/', ' ', (string) $payload['primary_last_name'])));
@@ -1378,18 +1577,41 @@ Route::post('/booking/reserve', function (Request $request) {
                 'primary_first_name' => $primaryFirstName,
                 'primary_last_name' => $primaryLastName,
                 'primary_nationality' => $primaryNationality,
+                'guest_residency' => $guestResidency,
                 'primary_email' => $primaryEmail,
                 'primary_mobile' => $primaryMobile,
                 'additional_guest_details' => $additionalGuestDetails,
-                'transfer_option' => (string) ($payload['transfer_option'] ?? ''),
+                'transfer_option' => (string) ($pricing['transfer_option'] ?? $transferOptionCode),
+                'transfer_option_label' => (string) ($pricing['transfer_option_label'] ?? ''),
                 'transfer_charge' => $transferCharge,
+                'transfer_charge_total' => $transferCharge,
+                'transfer_local_adult_rate' => (float) ($pricing['transfer_local_adult_rate'] ?? 0),
+                'transfer_local_child_rate' => (float) ($pricing['transfer_local_child_rate'] ?? 0),
+                'transfer_foreign_adult_rate' => (float) ($pricing['transfer_foreign_adult_rate'] ?? 0),
+                'transfer_foreign_child_rate' => (float) ($pricing['transfer_foreign_child_rate'] ?? 0),
+                'transfer_applied_adult_rate' => (float) ($pricing['transfer_applied_adult_rate'] ?? 0),
+                'transfer_applied_child_rate' => (float) ($pricing['transfer_applied_child_rate'] ?? 0),
                 'nightly_rate' => $nightlyRate,
                 'nights' => $nights,
                 'room_subtotal' => $roomSubtotal,
-                'discount_percent' => $discountPercent,
-                'discount_amount' => $discountAmount,
-                'tax_rate' => $taxRate,
-                'tax_amount' => $taxAmount,
+                'subtotal_amount' => (float) ($pricing['subtotal_amount'] ?? $roomSubtotal),
+                'discount_percent' => (float) ($pricing['discount_percent'] ?? $discountPercent),
+                'discount_amount' => (float) ($pricing['discount_amount'] ?? $discountAmount),
+                'discounted_subtotal' => (float) ($pricing['discounted_subtotal'] ?? max(0, $roomSubtotal - $discountAmount)),
+                'service_charge_rate_percent' => (float) ($pricing['service_charge_rate_percent'] ?? 0),
+                'service_charge_total' => (float) ($pricing['service_charge_total'] ?? 0),
+                'green_tax_rate_per_person_per_night' => (float) ($pricing['green_tax_rate_per_person_per_night'] ?? 0),
+                'green_tax_total' => (float) ($pricing['green_tax_total'] ?? 0),
+                'tgst_rate_percent' => (float) ($pricing['tgst_rate_percent'] ?? 0),
+                'tgst_total' => (float) ($pricing['tgst_total'] ?? 0),
+                'gst_rate_percent' => (float) ($pricing['gst_rate_percent'] ?? 0),
+                'gst_total' => (float) ($pricing['gst_total'] ?? 0),
+                'total_tax_amount' => (float) ($pricing['total_tax_amount'] ?? $taxAmount),
+                'tax_amount' => (float) ($pricing['total_tax_amount'] ?? $taxAmount),
+                'tax_lines' => $pricing['tax_lines'] ?? [],
+                'invoice_total_amount' => (float) ($pricing['invoice_total_amount'] ?? $totalAmount),
+                'vendor_tax_overrides' => $vendorTaxOverrides,
+                'policy_snapshot' => $pricing['policy_snapshot'] ?? [],
                 'inclusives' => $propertyDetails['inclusives'] ?? [],
                 'cancellation_policy' => (string) ($propertyDetails['cancellation_policy'] ?? ''),
             ]),
@@ -1409,6 +1631,7 @@ Route::post('/booking/reserve', function (Request $request) {
         . '&primary_first_name=' . urlencode($primaryFirstName)
         . '&primary_last_name=' . urlencode($primaryLastName)
         . '&primary_nationality=' . urlencode($primaryNationality)
+        . '&guest_residency=' . urlencode($guestResidency)
         . '&primary_email=' . urlencode($primaryEmail)
         . '&primary_mobile=' . urlencode($primaryMobile)
         . '&additional_guest_details=' . urlencode($additionalGuestDetails)
@@ -1418,7 +1641,8 @@ Route::post('/booking/reserve', function (Request $request) {
         . '&discount_amount=' . urlencode((string) $discountAmount)
         . '&tax_amount=' . urlencode((string) $taxAmount)
         . '&discount_percent=' . urlencode((string) $discountPercent)
-        . '&tax_rate=' . urlencode((string) $taxRate)
+        . '&tax_rate=' . urlencode((string) (($pricing['gst_rate_percent'] ?? 0) + ($pricing['tgst_rate_percent'] ?? 0)))
+        . '&tax_lines=' . urlencode(json_encode($pricing['tax_lines'] ?? []))
         . '&total=' . urlencode((string) $totalAmount)
         . '&inclusives=' . urlencode(json_encode($propertyDetails['inclusives'] ?? []))
         . '&cancellation_policy=' . urlencode((string) ($propertyDetails['cancellation_policy'] ?? ''));
@@ -1523,6 +1747,7 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             'primary_first_name' => $prefillFirstName,
             'primary_last_name' => $prefillLastName,
             'primary_nationality' => '',
+            'guest_residency' => trim((string) $request->query('guest_residency', 'foreign_national')),
             'primary_email' => trim((string) session('portal_customer_email', '')),
             'primary_mobile' => '',
             'rooms' => max(1, (int) $request->query('rooms', 1)),
@@ -1609,6 +1834,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'primary_first_name' => ['required', 'string', 'max:80'],
         'primary_last_name' => ['required', 'string', 'max:80'],
         'primary_nationality' => ['required', 'string', 'max:120'],
+        'guest_residency' => ['nullable', Rule::in(['local_resident', 'foreign_national'])],
         'primary_email' => ['required', 'email', 'max:190'],
         'primary_mobile' => ['required', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s\-()]{5,39}$/'],
         'additional_guest_details' => ['nullable', 'string', 'max:4000'],
@@ -1669,13 +1895,42 @@ Route::post('/booking/reserve-category', function (Request $request) {
 
     $basePrice = (float) ($propertyRow->base_price ?? 0);
     $serviceSubtotal = $basePrice * $units;
-    $taxRate = (float) ($listingDetails['tax_rate'] ?? 16);
     $discountPercent = (float) ($listingDetails['promotion_discount_percent'] ?? 0);
-    $discountAmount = round(($serviceSubtotal * $discountPercent) / 100, 2);
-    $taxableAmount = max(0, $serviceSubtotal - $discountAmount);
-    $taxAmount = round(($taxableAmount * $taxRate) / 100, 2);
-    $transferCharge = 0.0;
-    $totalAmount = round($taxableAmount + $taxAmount + $transferCharge, 2);
+    $guestResidency = strtolower(trim((string) ($payload['guest_residency'] ?? '')));
+    if (!in_array($guestResidency, ['local_resident', 'foreign_national'], true)) {
+        $guestResidency = ReservationPricingPolicy::isForeigner((string) ($payload['primary_nationality'] ?? ''), null)
+            ? 'foreign_national'
+            : 'local_resident';
+    }
+
+    $vendorTaxOverrides = [];
+    if (isset($listingDetails['vendor_tax_overrides']) && is_array($listingDetails['vendor_tax_overrides'])) {
+        $vendorTaxOverrides = $listingDetails['vendor_tax_overrides'];
+    }
+
+    $roomCount = Schema::hasTable('vendor_property_room_categories')
+        ? (int) DB::table('vendor_property_room_categories')->where('vendor_property_id', (int) $propertyRow->id)->count()
+        : 0;
+
+    $pricing = ReservationPricingPolicy::calculate([
+        'listing_category' => $categoryKey,
+        'subtotal_amount' => $serviceSubtotal,
+        'discount_percent' => $discountPercent,
+        'adults' => $adults,
+        'children' => $children,
+        'nights' => $units,
+        'room_count' => $roomCount,
+        'primary_nationality' => (string) ($payload['primary_nationality'] ?? ''),
+        'guest_residency' => $guestResidency,
+        'transfer_option' => '',
+        'property_transfer_options' => $listingDetails['transfer_options'] ?? [],
+        'vendor_tax_overrides' => $vendorTaxOverrides,
+    ]);
+
+    $discountAmount = (float) ($pricing['discount_amount'] ?? 0);
+    $taxAmount = (float) ($pricing['total_tax_amount'] ?? 0);
+    $transferCharge = (float) ($pricing['transfer_charge_total'] ?? 0);
+    $totalAmount = (float) ($pricing['invoice_total_amount'] ?? 0);
 
     $primaryFirstName = Str::title(trim((string) preg_replace('/\s+/', ' ', (string) $payload['primary_first_name'])));
     $primaryLastName = Str::title(trim((string) preg_replace('/\s+/', ' ', (string) $payload['primary_last_name'])));
@@ -1728,18 +1983,34 @@ Route::post('/booking/reserve-category', function (Request $request) {
                 'primary_first_name' => $primaryFirstName,
                 'primary_last_name' => $primaryLastName,
                 'primary_nationality' => $primaryNationality,
+                'guest_residency' => $guestResidency,
                 'primary_email' => $primaryEmail,
                 'primary_mobile' => $primaryMobile,
                 'additional_guest_details' => $additionalGuestDetails,
                 'service_notes' => $serviceNotes,
                 'category_details' => $categoryDetails,
                 'room_subtotal' => $serviceSubtotal,
-                'discount_percent' => $discountPercent,
-                'discount_amount' => $discountAmount,
-                'tax_rate' => $taxRate,
-                'tax_amount' => $taxAmount,
+                'subtotal_amount' => (float) ($pricing['subtotal_amount'] ?? $serviceSubtotal),
+                'discount_percent' => (float) ($pricing['discount_percent'] ?? $discountPercent),
+                'discount_amount' => (float) ($pricing['discount_amount'] ?? $discountAmount),
+                'discounted_subtotal' => (float) ($pricing['discounted_subtotal'] ?? max(0, $serviceSubtotal - $discountAmount)),
+                'service_charge_rate_percent' => (float) ($pricing['service_charge_rate_percent'] ?? 0),
+                'service_charge_total' => (float) ($pricing['service_charge_total'] ?? 0),
+                'green_tax_rate_per_person_per_night' => (float) ($pricing['green_tax_rate_per_person_per_night'] ?? 0),
+                'green_tax_total' => (float) ($pricing['green_tax_total'] ?? 0),
+                'tgst_rate_percent' => (float) ($pricing['tgst_rate_percent'] ?? 0),
+                'tgst_total' => (float) ($pricing['tgst_total'] ?? 0),
+                'gst_rate_percent' => (float) ($pricing['gst_rate_percent'] ?? 0),
+                'gst_total' => (float) ($pricing['gst_total'] ?? 0),
+                'total_tax_amount' => (float) ($pricing['total_tax_amount'] ?? $taxAmount),
+                'tax_amount' => (float) ($pricing['total_tax_amount'] ?? $taxAmount),
+                'tax_lines' => $pricing['tax_lines'] ?? [],
                 'transfer_option' => '',
                 'transfer_charge' => $transferCharge,
+                'transfer_charge_total' => $transferCharge,
+                'invoice_total_amount' => (float) ($pricing['invoice_total_amount'] ?? $totalAmount),
+                'vendor_tax_overrides' => $vendorTaxOverrides,
+                'policy_snapshot' => $pricing['policy_snapshot'] ?? [],
                 'inclusives' => $listingDetails['inclusives'] ?? [],
                 'cancellation_policy' => (string) ($listingDetails['cancellation_policy'] ?? ''),
             ]),
@@ -1760,6 +2031,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
         . '&primary_first_name=' . urlencode($primaryFirstName)
         . '&primary_last_name=' . urlencode($primaryLastName)
         . '&primary_nationality=' . urlencode($primaryNationality)
+        . '&guest_residency=' . urlencode($guestResidency)
         . '&primary_email=' . urlencode($primaryEmail)
         . '&primary_mobile=' . urlencode($primaryMobile)
         . '&additional_guest_details=' . urlencode($additionalGuestDetails)
@@ -1769,7 +2041,8 @@ Route::post('/booking/reserve-category', function (Request $request) {
         . '&discount_amount=' . urlencode((string) $discountAmount)
         . '&tax_amount=' . urlencode((string) $taxAmount)
         . '&discount_percent=' . urlencode((string) $discountPercent)
-        . '&tax_rate=' . urlencode((string) $taxRate)
+        . '&tax_rate=' . urlencode((string) (($pricing['gst_rate_percent'] ?? 0) + ($pricing['tgst_rate_percent'] ?? 0)))
+        . '&tax_lines=' . urlencode(json_encode($pricing['tax_lines'] ?? []))
         . '&total=' . urlencode((string) $totalAmount)
         . '&inclusives=' . urlencode(json_encode($listingDetails['inclusives'] ?? []))
         . '&cancellation_policy=' . urlencode((string) ($listingDetails['cancellation_policy'] ?? ''));
@@ -1889,6 +2162,39 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
         $backUrl = '/category-booking/' . urlencode((string) $reservationNotes['category_key']) . '/' . (int) ($propertyRow->id ?? 0);
     }
 
+    $checkoutMediaUrl = null;
+    if (Schema::hasTable('vendor_listing_media')) {
+        $mediaRow = null;
+
+        if ($roomId > 0) {
+            $mediaRow = DB::table('vendor_listing_media')
+                ->where('entity_type', 'room')
+                ->where('entity_id', $roomId)
+                ->orderByDesc('is_primary')
+                ->orderByDesc('created_at')
+                ->first(['id', 'file_path']);
+        }
+
+        if (!$mediaRow && $propertyId > 0) {
+            $mediaRow = DB::table('vendor_listing_media')
+                ->where('entity_type', 'property')
+                ->where('entity_id', $propertyId)
+                ->orderByDesc('is_primary')
+                ->orderByDesc('created_at')
+                ->first(['id', 'file_path']);
+        }
+
+        if ($mediaRow) {
+            $mediaId = (int) ($mediaRow->id ?? 0);
+            if ($mediaId > 0) {
+                $checkoutMediaUrl = '/media/vendor/' . $mediaId . '/banner';
+            } else {
+                $path = trim((string) ($mediaRow->file_path ?? ''));
+                $checkoutMediaUrl = $path !== '' ? ('/storage/' . ltrim($path, '/')) : null;
+            }
+        }
+    }
+
     return view('booking-checkout', [
         'reservation' => $reservationRow,
         'property' => $propertyRow,
@@ -1899,6 +2205,7 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
         'cancellationPolicy' => $cancellationPolicy,
         'categoryDetails' => $categoryDetails,
         'backUrl' => $backUrl,
+        'checkoutMediaUrl' => $checkoutMediaUrl,
         'dateLabels' => $dateLabels,
         'summary' => [
             'checkin' => trim((string) $request->query('checkin', (string) ($reservationNotes['service_start_date'] ?? ''))),
@@ -1908,17 +2215,40 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
             'primary_first_name' => trim((string) $request->query('primary_first_name', (string) ($reservationNotes['primary_first_name'] ?? ''))),
             'primary_last_name' => trim((string) $request->query('primary_last_name', (string) ($reservationNotes['primary_last_name'] ?? ''))),
             'primary_nationality' => trim((string) $request->query('primary_nationality', (string) ($reservationNotes['primary_nationality'] ?? ''))),
+            'guest_residency' => trim((string) $request->query('guest_residency', (string) ($reservationNotes['guest_residency'] ?? ''))),
             'primary_email' => trim((string) $request->query('primary_email', (string) ($reservationNotes['primary_email'] ?? (string) ($reservationRow->customer_email ?? '')))),
             'primary_mobile' => trim((string) $request->query('primary_mobile', (string) ($reservationNotes['primary_mobile'] ?? ''))),
             'additional_guest_details' => trim((string) $request->query('additional_guest_details', (string) ($reservationNotes['additional_guest_details'] ?? ''))),
             'transfer_option' => trim((string) $request->query('transfer_option', (string) ($reservationNotes['transfer_option'] ?? ''))),
+            'transfer_option_label' => trim((string) $request->query('transfer_option_label', (string) ($reservationNotes['transfer_option_label'] ?? ''))),
             'transfer_charge' => (float) $request->query('transfer_charge', (float) ($reservationNotes['transfer_charge'] ?? 0)),
-            'room_subtotal' => (float) $request->query('room_subtotal', (float) ($reservationNotes['room_subtotal'] ?? 0)),
+            'transfer_charge_total' => (float) $request->query('transfer_charge_total', (float) ($reservationNotes['transfer_charge_total'] ?? ($reservationNotes['transfer_charge'] ?? 0))),
+            'transfer_local_adult_rate' => (float) $request->query('transfer_local_adult_rate', (float) ($reservationNotes['transfer_local_adult_rate'] ?? 0)),
+            'transfer_local_child_rate' => (float) $request->query('transfer_local_child_rate', (float) ($reservationNotes['transfer_local_child_rate'] ?? 0)),
+            'transfer_foreign_adult_rate' => (float) $request->query('transfer_foreign_adult_rate', (float) ($reservationNotes['transfer_foreign_adult_rate'] ?? 0)),
+            'transfer_foreign_child_rate' => (float) $request->query('transfer_foreign_child_rate', (float) ($reservationNotes['transfer_foreign_child_rate'] ?? 0)),
+            'transfer_applied_adult_rate' => (float) $request->query('transfer_applied_adult_rate', (float) ($reservationNotes['transfer_applied_adult_rate'] ?? 0)),
+            'transfer_applied_child_rate' => (float) $request->query('transfer_applied_child_rate', (float) ($reservationNotes['transfer_applied_child_rate'] ?? 0)),
+            'room_subtotal' => (float) $request->query('room_subtotal', (float) ($reservationNotes['room_subtotal'] ?? ($reservationNotes['subtotal_amount'] ?? 0))),
+            'subtotal_amount' => (float) $request->query('subtotal_amount', (float) ($reservationNotes['subtotal_amount'] ?? 0)),
             'discount_amount' => (float) $request->query('discount_amount', (float) ($reservationNotes['discount_amount'] ?? 0)),
-            'tax_amount' => (float) $request->query('tax_amount', (float) ($reservationNotes['tax_amount'] ?? 0)),
+            'discounted_subtotal' => (float) $request->query('discounted_subtotal', (float) ($reservationNotes['discounted_subtotal'] ?? 0)),
+            'service_charge_rate_percent' => (float) $request->query('service_charge_rate_percent', (float) ($reservationNotes['service_charge_rate_percent'] ?? 0)),
+            'service_charge_total' => (float) $request->query('service_charge_total', (float) ($reservationNotes['service_charge_total'] ?? 0)),
+            'green_tax_rate_per_person_per_night' => (float) $request->query('green_tax_rate_per_person_per_night', (float) ($reservationNotes['green_tax_rate_per_person_per_night'] ?? 0)),
+            'green_tax_total' => (float) $request->query('green_tax_total', (float) ($reservationNotes['green_tax_total'] ?? 0)),
+            'tgst_rate_percent' => (float) $request->query('tgst_rate_percent', (float) ($reservationNotes['tgst_rate_percent'] ?? 0)),
+            'tgst_total' => (float) $request->query('tgst_total', (float) ($reservationNotes['tgst_total'] ?? 0)),
+            'gst_rate_percent' => (float) $request->query('gst_rate_percent', (float) ($reservationNotes['gst_rate_percent'] ?? 0)),
+            'gst_total' => (float) $request->query('gst_total', (float) ($reservationNotes['gst_total'] ?? 0)),
+            'tax_amount' => (float) $request->query('tax_amount', (float) ($reservationNotes['tax_amount'] ?? ($reservationNotes['total_tax_amount'] ?? 0))),
+            'total_tax_amount' => (float) $request->query('total_tax_amount', (float) ($reservationNotes['total_tax_amount'] ?? 0)),
+            'tax_lines' => is_array($reservationNotes['tax_lines'] ?? null)
+                ? $reservationNotes['tax_lines']
+                : (json_decode((string) $request->query('tax_lines', '[]'), true) ?: []),
             'discount_percent' => (float) $request->query('discount_percent', (float) ($reservationNotes['discount_percent'] ?? 0)),
             'tax_rate' => (float) $request->query('tax_rate', (float) ($reservationNotes['tax_rate'] ?? 0)),
-            'total' => (float) $request->query('total', (float) ($reservationRow->total_amount ?? 0)),
+            'total' => (float) $request->query('total', (float) ($reservationNotes['invoice_total_amount'] ?? ($reservationRow->total_amount ?? 0))),
         ],
     ]);
 });
@@ -2498,6 +2828,8 @@ Route::get('/admin', function () {
     $financeCurrency = 'MVR';
     $financeDailyRows = collect();
     $financeAdjustments = collect();
+    $financeReservationPolicy = portalFinanceLoadReservationPolicy();
+    $financeTaxComponents = collect(portalFinanceTaxComponents($financeReservationPolicy));
 
     if (Schema::hasTable('portal_finance_settings')) {
         $commissionRateSetting = DB::table('portal_finance_settings')
@@ -2716,6 +3048,8 @@ Route::get('/admin', function () {
         'financeSummary' => $financeSummary,
         'financeDailyRows' => $financeDailyRows,
         'financeAdjustments' => $financeAdjustments,
+        'financeReservationPolicy' => $financeReservationPolicy,
+        'financeTaxComponents' => $financeTaxComponents,
         'listingOptionCatalog' => $listingOptionCatalog,
     ]);
 });
@@ -2772,6 +3106,76 @@ Route::post('/portal/admin/finance/commission/update', function (Request $reques
     ]);
 
     return back()->with('portal_notice', 'Finance commission settings updated.');
+});
+
+Route::post('/portal/admin/finance/tax-components/upsert', function (Request $request) {
+    if (!canModeratePortalFinance()) {
+        return back()->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_FINANCE can update tax components.']);
+    }
+
+    if (!Schema::hasTable('portal_finance_settings')) {
+        return back()->withErrors(['auth' => 'Finance settings table is not ready. Run migrations first.']);
+    }
+
+    $validated = $request->validate([
+        'code' => ['required', 'string', 'max:80'],
+        'label' => ['required', 'string', 'max:190'],
+        'calculation_mode' => ['required', Rule::in(['percent_subtotal', 'per_guest_per_night', 'flat_booking'])],
+        'default_rate' => ['required', 'numeric', 'min:0', 'max:1000000'],
+        'applies_to' => ['required', Rule::in(['all', 'local_resident', 'foreign_national'])],
+        'active' => ['nullable', Rule::in(['0', '1'])],
+        'is_service_charge' => ['nullable', Rule::in(['0', '1'])],
+        'min_room_count' => ['nullable', 'integer', 'min:0', 'max:10000'],
+        'max_room_count' => ['nullable', 'integer', 'min:0', 'max:10000'],
+    ]);
+
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+
+    portalFinanceUpsertTaxComponent([
+        'code' => (string) $validated['code'],
+        'label' => (string) $validated['label'],
+        'calculation_mode' => (string) $validated['calculation_mode'],
+        'default_rate' => (float) $validated['default_rate'],
+        'applies_to' => (string) $validated['applies_to'],
+        'active' => (string) ($validated['active'] ?? '1') === '1',
+        'is_service_charge' => (string) ($validated['is_service_charge'] ?? '0') === '1',
+        'min_room_count' => $validated['min_room_count'] ?? null,
+        'max_room_count' => $validated['max_room_count'] ?? null,
+    ], $actorUserId);
+
+    portalAdminAuditLog('finance_tax_component_upserted', [
+        'target_role' => 'ADMIN_FINANCE',
+        'tax_code' => (string) $validated['code'],
+        'calculation_mode' => (string) $validated['calculation_mode'],
+        'default_rate' => round((float) $validated['default_rate'], 4),
+        'applies_to' => (string) $validated['applies_to'],
+    ]);
+
+    return back()->with('portal_notice', 'Tax component saved.');
+});
+
+Route::post('/portal/admin/finance/tax-components/delete', function (Request $request) {
+    if (!canModeratePortalFinance()) {
+        return back()->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_FINANCE can delete tax components.']);
+    }
+
+    if (!Schema::hasTable('portal_finance_settings')) {
+        return back()->withErrors(['auth' => 'Finance settings table is not ready. Run migrations first.']);
+    }
+
+    $validated = $request->validate([
+        'code' => ['required', 'string', 'max:80'],
+    ]);
+
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+    portalFinanceDeleteTaxComponent((string) $validated['code'], $actorUserId);
+
+    portalAdminAuditLog('finance_tax_component_deleted', [
+        'target_role' => 'ADMIN_FINANCE',
+        'tax_code' => (string) $validated['code'],
+    ]);
+
+    return back()->with('portal_notice', 'Tax component deleted.');
 });
 
 Route::post('/portal/admin/finance/adjustments/create', function (Request $request) {

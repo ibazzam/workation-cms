@@ -73,6 +73,19 @@
             align-items: start;
         }
 
+        .page-with-sidebar {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .sidebar-fixed {
+            position: sticky;
+            top: 12px;
+            width: 250px;
+            flex-shrink: 0;
+        }
+
         .sidebar-shell {
             border: 1px solid #c9ddeb;
             border-radius: 16px;
@@ -187,6 +200,22 @@
             color: #ecfcff;
             padding: clamp(16px, 3vw, 24px);
             box-shadow: 0 20px 38px rgba(14, 65, 85, 0.22);
+        }
+
+        .search-section-full-width {
+            margin-top: 0;
+            margin-bottom: 12px;
+            border: 1px solid #cbe0ea;
+            border-radius: 18px;
+            background: linear-gradient(132deg, #0f6179 0%, #1d848c 58%, #2f9891 100%);
+            color: #ecfcff;
+            padding: clamp(16px, 3vw, 24px);
+            box-shadow: 0 20px 38px rgba(14, 65, 85, 0.22);
+            width: 100%;
+        }
+
+        .search-section-hidden {
+            display: none;
         }
 
         .search-eyebrow {
@@ -485,14 +514,46 @@
             padding: 5px 10px;
         }
 
+        /* Uniform Icon System Styles */
+        .uniform-icon {
+            display: inline-block;
+            font-size: 1em;
+            line-height: 1;
+            margin: 0;
+            padding: 0;
+        }
+
+        .uniform-icon-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: inherit;
+        }
+
+        .uniform-icon-label .uniform-icon {
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+
+        .uniform-label {
+            display: inline;
+            font-size: inherit;
+        }
+
 
         @media (max-width: 1040px) {
-            .hero-layout {
-                grid-template-columns: 1fr;
+            .page-with-sidebar {
+                flex-direction: column;
+            }
+
+            .sidebar-fixed {
+                position: static;
+                width: 100%;
+                flex-shrink: auto;
             }
 
             .top-links {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             }
 
             .top-link {
@@ -537,6 +598,15 @@
             .customer-auth {
                 width: 100%;
                 justify-content: flex-start;
+            }
+
+            .page-with-sidebar {
+                flex-direction: column;
+            }
+
+            .sidebar-fixed {
+                position: static;
+                width: 100%;
             }
 
             .top-links {
@@ -609,32 +679,18 @@
             </div>
         </header>
 
-        <div class="hero-layout">
-            <aside class="sidebar-shell" aria-label="Category sidebar">
-                <p class="sidebar-title">Browse Categories</p>
-                <section class="top-links" aria-label="Top categories">
+        <div class="search-section-full-width" aria-label="Smart category search">
+            <p class="search-eyebrow">Find Anything Faster</p>
+            <h1 class="search-title">Select category and search with category-specific filters.</h1>
+            <form id="homeCatalogSearchForm" class="search-form" action="/catalog/accommodation" method="get">
+                <select id="categorySelect" name="category" aria-label="Select category">
                     @foreach ($homeTopCategoryLinks as $link)
                         @php
                             $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
                             $categoryKeyFromUrl = preg_match('#/catalog/([a-z_]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
                         @endphp
-                        <a class="top-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}">{{ ($link['emoji'] ?? '📌') . ' ' . ($link['title'] ?? 'Category') }}<span>{{ $link['subtitle'] ?? '' }}</span></a>
+                        <option value="{{ $categoryKeyFromUrl }}">{{ $link['title'] ?? 'Category' }}</option>
                     @endforeach
-                </section>
-            </aside>
-
-            <section class="search-section" aria-label="Smart category search">
-            <p class="search-eyebrow">Find Anything Faster</p>
-            <h1 class="search-title">Select category and search with category-specific filters.</h1>
-            <form id="homeCatalogSearchForm" class="search-form" action="/catalog/accommodation" method="get">
-                <select id="categorySelect" name="category" aria-label="Select category">
-                    <option value="accommodation">Accommodation</option>
-                    <option value="transport">Transport</option>
-                    <option value="excursion">Excursion</option>
-                    <option value="remote_workspace">Remote Workspace</option>
-                    <option value="resort_day_visit">Resort Day Visit</option>
-                    <option value="restaurant">Restaurant</option>
-                    <option value="vehicle_rental">Vehicle Rental</option>
                 </select>
                 <input type="search" name="q" placeholder="Atoll, island, property, or service name" aria-label="Search query">
 
@@ -680,10 +736,92 @@
                 </div>
             </form>
             <div class="search-actions" aria-label="Quick category catalogue links">
-                <a href="/catalog/accommodation">Open Accommodation Catalogue</a>
-                <a href="/catalog/transport">Open Transport Catalogue</a>
-                <a href="/catalog/excursion">Open Excursion Catalogue</a>
-                <a href="/catalog/remote_workspace">Open Workspace Catalogue</a>
+                @foreach ($homeTopCategoryLinks as $link)
+                    @php
+                        $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
+                    @endphp
+                    <a href="{{ $linkUrl }}">Open {{ $link['title'] ?? 'Category' }} Catalogue</a>
+                @endforeach
+            </div>
+        </div>
+
+        <div class="page-with-sidebar">
+            <aside class="sidebar-fixed sidebar-shell" aria-label="Category sidebar">
+                <p class="sidebar-title">Browse Categories</p>
+                <section class="top-links" aria-label="Top categories">
+                    @foreach ($homeTopCategoryLinks as $link)
+                        @php
+                            $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
+                            $categoryKeyFromUrl = preg_match('#/catalog/([a-z_]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
+                        @endphp
+                        <a class="top-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}">{{ ($link['emoji'] ?? '📌') . ' ' . ($link['title'] ?? 'Category') }}<span>{{ $link['subtitle'] ?? '' }}</span></a>
+                    @endforeach
+                </section>
+            </aside>
+
+            <section class="search-section-hidden" aria-label="Smart category search">
+            <p class="search-eyebrow">Find Anything Faster</p>
+            <h1 class="search-title">Select category and search with category-specific filters.</h1>
+            <form id="homeCatalogSearchForm" class="search-form" action="/catalog/accommodation" method="get">
+                <select id="categorySelect" name="category" aria-label="Select category">
+                    @foreach ($homeTopCategoryLinks as $link)
+                        @php
+                            $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
+                            $categoryKeyFromUrl = preg_match('#/catalog/([a-z_]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
+                        @endphp
+                        <option value="{{ $categoryKeyFromUrl }}">{{ $link['title'] ?? 'Category' }}</option>
+                    @endforeach
+                </select>
+                <input type="search" name="q" placeholder="Atoll, island, property, or service name" aria-label="Search query">
+
+                <div id="accommodationFields" class="search-dynamic-fields is-active" data-fields-for="accommodation" aria-hidden="false">
+                    <div class="field"><label for="checkin">Check-in Date</label><input id="checkin" name="checkin" type="date"></div>
+                    <div class="field"><label for="checkout">Check-out Date</label><input id="checkout" name="checkout" type="date"></div>
+                    <div class="field"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="2"></div>
+                    <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="0"></div>
+                    <div class="field"><label for="rooms">Rooms</label><input id="rooms" name="rooms" type="number" min="1" value="1"></div>
+                </div>
+
+                <div id="transportFields" class="search-dynamic-fields" data-fields-for="transport" hidden aria-hidden="true">
+                    <div class="field"><label for="transportMode">Transport Mode</label><select id="transportMode" name="transport_mode"><option value="marine">Marine Transport</option><option value="land">Land Transport</option></select></div>
+                    <div class="field" id="transportTripTypeField"><label for="transportTripType">Trip Type</label><select id="transportTripType" name="trip_type"><option value="one_way">One Way</option><option value="round_trip">Round Trip</option></select></div>
+                    <div class="field"><label for="transportFrom">From (Atoll/Island)</label><input id="transportFrom" name="from" type="text" placeholder="Atoll or island"></div>
+                    <div class="field"><label for="transportTo">To (Atoll/Island)</label><input id="transportTo" name="to" type="text" placeholder="Atoll or island"></div>
+                    <div class="field" id="transportDepartureDateField"><label for="travelDate">Departure Date</label><input id="travelDate" name="travel_date" type="date"></div>
+                    <div class="field" id="transportReturnDateField"><label for="returnDate">Return Date</label><input id="returnDate" name="return_date" type="date"></div>
+                    <div class="field"><label for="transportAdults">Adults / Pax</label><input id="transportAdults" name="adults" type="number" min="1" value="2"></div>
+                    <div class="field"><label for="transportChildren">Children</label><input id="transportChildren" name="children" type="number" min="0" value="0"></div>
+                    <div class="field" id="transportVehicleTypeField"><label for="vehicleType">Vehicle Type</label><input id="vehicleType" name="vehicle_type" type="text" placeholder="Car, Van, Bike"></div>
+                </div>
+
+                <div id="serviceFields" class="search-dynamic-fields" data-fields-for="service" hidden aria-hidden="true">
+                    <div class="field">
+                        <label for="serviceAtoll">Atoll</label>
+                        <select id="serviceAtoll" name="atoll">
+                            <option value="">All Atolls</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="serviceIsland">Island</label>
+                        <select id="serviceIsland" name="island">
+                            <option value="">All Islands</option>
+                        </select>
+                    </div>
+                    <div class="field"><label for="minPrice">Min Price</label><input id="minPrice" name="min_price" type="number" min="0" placeholder="0"></div>
+                    <div class="field"><label for="maxPrice">Max Price</label><input id="maxPrice" name="max_price" type="number" min="0" placeholder="5000"></div>
+                </div>
+
+                <div class="search-submit-row">
+                    <button type="submit">Search Now</button>
+                </div>
+            </form>
+            <div class="search-actions" aria-label="Quick category catalogue links">
+                @foreach ($homeTopCategoryLinks as $link)
+                    @php
+                        $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
+                    @endphp
+                    <a href="{{ $linkUrl }}">Open {{ $link['title'] ?? 'Category' }} Catalogue</a>
+                @endforeach
             </div>
             </section>
         </div>

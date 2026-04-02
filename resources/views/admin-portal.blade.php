@@ -1047,6 +1047,64 @@
                         <button class="btn btn-primary" type="submit">Update Commission Settings</button>
                     </form>
 
+                    <form class="finance-form" method="POST" action="/portal/admin/finance/tax-components/upsert">
+                        @csrf
+                        <p class="label">Tax Components (Admin Moderation)</p>
+                        <div class="finance-form-grid">
+                            <div class="finance-field">
+                                <label for="tax_component_code">Tax Code</label>
+                                <input id="tax_component_code" name="code" type="text" maxlength="80" placeholder="example: climate_levy" required>
+                            </div>
+                            <div class="finance-field">
+                                <label for="tax_component_label">Tax Label</label>
+                                <input id="tax_component_label" name="label" type="text" maxlength="190" placeholder="Climate Levy" required>
+                            </div>
+                            <div class="finance-field">
+                                <label for="tax_component_mode">Calculation</label>
+                                <select id="tax_component_mode" name="calculation_mode" required>
+                                    <option value="percent_subtotal">Percent of Subtotal</option>
+                                    <option value="per_guest_per_night">Per Guest Per Night</option>
+                                    <option value="flat_booking">Flat Per Booking</option>
+                                </select>
+                            </div>
+                            <div class="finance-field">
+                                <label for="tax_component_rate">Default Rate</label>
+                                <input id="tax_component_rate" name="default_rate" type="number" step="0.0001" min="0" max="1000000" required>
+                            </div>
+                            <div class="finance-field">
+                                <label for="tax_component_applies_to">Applies To</label>
+                                <select id="tax_component_applies_to" name="applies_to" required>
+                                    <option value="all">All Guests</option>
+                                    <option value="local_resident">Local Resident</option>
+                                    <option value="foreign_national">Foreign National</option>
+                                </select>
+                            </div>
+                            <div class="finance-field">
+                                <label for="tax_component_active">Active</label>
+                                <select id="tax_component_active" name="active" required>
+                                    <option value="1">Active</option>
+                                    <option value="0">Inactive</option>
+                                </select>
+                            </div>
+                            <div class="finance-field">
+                                <label for="tax_component_service_flag">Service Charge Flag</label>
+                                <select id="tax_component_service_flag" name="is_service_charge" required>
+                                    <option value="0">Tax</option>
+                                    <option value="1">Service Charge</option>
+                                </select>
+                            </div>
+                            <div class="finance-field">
+                                <label for="tax_component_min_rooms">Min Room Count (optional)</label>
+                                <input id="tax_component_min_rooms" name="min_room_count" type="number" min="0" max="10000">
+                            </div>
+                            <div class="finance-field">
+                                <label for="tax_component_max_rooms">Max Room Count (optional)</label>
+                                <input id="tax_component_max_rooms" name="max_room_count" type="number" min="0" max="10000">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" type="submit">Save Tax Component</button>
+                    </form>
+
                     <form class="finance-form" method="POST" action="/portal/admin/finance/adjustments/create">
                         @csrf
                         <p class="label">Create Finance Adjustment</p>
@@ -1096,6 +1154,50 @@
                     </form>
                 </div>
             @endif
+
+            <div class="finance-table-wrap">
+                <table class="finance-table" aria-label="Tax components moderation table">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Label</th>
+                            <th>Calculation</th>
+                            <th>Default Rate</th>
+                            <th>Applies To</th>
+                            <th>Status</th>
+                            <th>Type</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse (($financeTaxComponents ?? collect())->take(120) as $taxComponent)
+                            @php
+                                $taxCode = strtolower(trim((string) ($taxComponent['code'] ?? '')));
+                            @endphp
+                            <tr>
+                                <td>{{ $taxCode }}</td>
+                                <td>{{ (string) ($taxComponent['label'] ?? '-') }}</td>
+                                <td>{{ strtoupper((string) ($taxComponent['calculation_mode'] ?? '-')) }}</td>
+                                <td>{{ number_format((float) ($taxComponent['default_rate'] ?? 0), 4) }}</td>
+                                <td>{{ strtoupper((string) ($taxComponent['applies_to'] ?? 'all')) }}</td>
+                                <td>{{ ((bool) ($taxComponent['active'] ?? false)) ? 'ACTIVE' : 'INACTIVE' }}</td>
+                                <td>{{ ((bool) ($taxComponent['is_service_charge'] ?? false)) ? 'SERVICE' : 'TAX' }}</td>
+                                <td>
+                                    <form method="POST" action="/portal/admin/finance/tax-components/delete" onsubmit="return confirm('Delete this tax component?');">
+                                        @csrf
+                                        <input type="hidden" name="code" value="{{ $taxCode }}">
+                                        <button class="btn btn-secondary" type="submit">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="finance-empty">No tax components configured.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
 
             <div class="finance-table-wrap">
                 <table class="finance-table" aria-label="Daily payout moderation ledger">

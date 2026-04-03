@@ -1263,6 +1263,7 @@
             .hero-avail-form { grid-template-columns: 1fr 1fr; }
             .hero-avail-btn { grid-column: 1 / -1; width: 100%; }
         }
+            .layout { grid-template-columns: 1fr; }
             .info-section { grid-template-columns: 1fr; }
             .guest-reviews-layout { grid-template-columns: 1fr; }
             .highlights-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

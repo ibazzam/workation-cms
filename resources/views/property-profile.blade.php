@@ -1264,12 +1264,6 @@
 
         @media (max-width: 1080px) {
             .hero-avail-form { grid-template-columns: 1fr 120px 120px 65px 65px auto; }
-        }
-
-        @media (max-width: 680px) {
-            .hero-avail-form { grid-template-columns: 1fr 1fr; }
-            .hero-avail-btn { grid-column: 1 / -1; width: 100%; }
-        }
             .layout { grid-template-columns: 1fr; }
             .info-section { grid-template-columns: 1fr; }
             .guest-reviews-layout { grid-template-columns: 1fr; }
@@ -1288,6 +1282,8 @@
         }
 
         @media (max-width: 680px) {
+            .hero-avail-form { grid-template-columns: 1fr; }
+            .hero-avail-btn { grid-column: 1 / -1; width: 100%; }
             .hero-stats { grid-template-columns: 1fr; }
             .address-bar { flex-direction: column; align-items: flex-start; }
             .hero-cta-wrap { width: 100%; justify-content: space-between; }
@@ -1301,11 +1297,13 @@
             .amenities-columns { grid-template-columns: 1fr; }
             .room-card { grid-template-columns: 1fr; }
             .room-media { min-height: 210px; }
+            .room-body { padding: 10px; }
             .room-offer-head,
             .room-offer-row { grid-template-columns: 1fr; }
             .room-offer-head span,
             .room-offer-row > div { border-right: 0; }
             .room-price-box { grid-template-columns: 1fr; }
+            .room-side-details li { align-items: flex-start; }
             .facility-grid { grid-template-columns: 1fr; }
         }
 

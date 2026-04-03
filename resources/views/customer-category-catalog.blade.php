@@ -113,6 +113,49 @@
                 flex: 0 0 16px;
             }
 
+            .mobile-category-nav {
+                display: none;
+                margin-bottom: 10px;
+                border: 1px solid #c9ddeb;
+                border-radius: 14px;
+                background: linear-gradient(160deg, #f8fcff 0%, #eef6fb 100%);
+                padding: 9px;
+            }
+
+            .mobile-category-title {
+                margin: 0 0 7px;
+                font-size: 0.7rem;
+                text-transform: uppercase;
+                letter-spacing: 0.09em;
+                color: #4e6d83;
+                font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            }
+
+            .mobile-category-row {
+                display: flex;
+                gap: 7px;
+                overflow-x: auto;
+                padding-bottom: 2px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: thin;
+            }
+
+            .mobile-category-link {
+                text-decoration: none;
+                border: 1px solid #d4e3ee;
+                border-radius: 999px;
+                background: #f8fcff;
+                color: #19405b;
+                padding: 7px 10px;
+                font-size: 0.75rem;
+                font-weight: 700;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                white-space: nowrap;
+                flex: 0 0 auto;
+            }
+
         .hero {
             border: 1px solid #cbe0ea;
             border-radius: 16px;
@@ -298,8 +341,11 @@
             }
 
             .floating-sidebar {
-                width: calc(100% - 18px);
-                margin: 10px auto 12px;
+                display: none;
+            }
+
+            .mobile-category-nav {
+                display: block;
             }
 
             .top-links {
@@ -321,7 +367,7 @@
         $catalogCategoryLinks = collect([
             ['key' => 'accommodation',    'icon' => 'fa-solid fa-hotel',          'title' => 'Accommodation',   'subtitle' => 'Hotels, resorts, villas'],
             ['key' => 'transport',        'icon' => 'fa-solid fa-ship',           'title' => 'Transport',       'subtitle' => 'Marine and land transfers'],
-            ['key' => 'excursion',        'icon' => 'fa-solid fa-water',          'title' => 'Excursion',       'subtitle' => 'Tours and activities'],
+            ['key' => 'excursion',        'icon' => 'fa-solid fa-compass',       'title' => 'Excursion',       'subtitle' => 'Tours and activities'],
             ['key' => 'remote_workspace', 'icon' => 'fa-solid fa-laptop',         'title' => 'Remote Workspace','subtitle' => 'Work-friendly spaces'],
             ['key' => 'resort_day_visit', 'icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit','subtitle' => 'Day-use resort offers'],
             ['key' => 'restaurant',       'icon' => 'fa-solid fa-utensils',       'title' => 'Restaurant',      'subtitle' => 'Dining experiences'],
@@ -360,6 +406,15 @@
     </aside>
 
     <main class="page" data-api-base="{{ $apiBase }}">
+        <nav class="mobile-category-nav" aria-label="Mobile category quick links">
+            <p class="mobile-category-title">Browse Categories</p>
+            <div class="mobile-category-row">
+                @foreach ($catalogCategoryLinks as $item)
+                    <a class="mobile-category-link" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}"><i class="{{ $item['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i><span>{{ $item['title'] ?? 'Category' }}</span></a>
+                @endforeach
+            </div>
+        </nav>
+
         <section class="hero">
             <p>Category Portfolio</p>
             <h1>{{ $categoryMeta['label'] }} Catalogue</h1>

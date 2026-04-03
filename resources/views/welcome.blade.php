@@ -222,6 +222,49 @@
                 flex: 0 0 16px;
             }
 
+            .mobile-category-nav {
+                display: none;
+                margin: 0 0 12px;
+                border: 1px solid #c9ddeb;
+                border-radius: 14px;
+                background: linear-gradient(160deg, #f8fcff 0%, #eef6fb 100%);
+                padding: 9px;
+            }
+
+            .mobile-category-title {
+                margin: 0 0 7px;
+                font-size: 0.7rem;
+                text-transform: uppercase;
+                letter-spacing: 0.09em;
+                color: #4e6d83;
+                font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            }
+
+            .mobile-category-row {
+                display: flex;
+                gap: 7px;
+                overflow-x: auto;
+                padding-bottom: 2px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: thin;
+            }
+
+            .mobile-category-link {
+                text-decoration: none;
+                border: 1px solid #d4e3ee;
+                border-radius: 999px;
+                background: #f8fcff;
+                color: #19405b;
+                padding: 7px 10px;
+                font-size: 0.75rem;
+                font-weight: 700;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                white-space: nowrap;
+                flex: 0 0 auto;
+            }
+
         .search-section {
             margin-top: 0;
             border: 1px solid #cbe0ea;
@@ -286,6 +329,7 @@
         .search-dynamic-fields .field {
             display: grid;
             gap: 4px;
+            min-width: 0;
         }
 
         .search-dynamic-fields .field label {
@@ -316,6 +360,12 @@
             font: inherit;
             color: #103247;
             background: #f8fdff;
+        }
+
+        .search-dynamic-fields input[type="date"] {
+            min-height: 44px;
+            font-size: 16px;
+            line-height: 1.2;
         }
 
         .search-form button {
@@ -635,21 +685,11 @@
             }
 
             .floating-sidebar {
-                position: static;
-                width: 100%;
-                height: auto;
+                display: none;
             }
 
-            .floating-sidebar {
-                position: static;
-                width: 100%;
-                height: auto;
-            }
-
-            .floating-sidebar {
-                position: static;
-                width: 100%;
-                height: auto;
+            .mobile-category-nav {
+                display: block;
             }
 
             .header-bar {
@@ -695,6 +735,10 @@
             }
 
             .search-dynamic-fields {
+                grid-template-columns: 1fr;
+            }
+
+            #accommodationFields {
                 grid-template-columns: 1fr;
             }
 
@@ -754,6 +798,18 @@
                 @endif
             </div>
         </header>
+
+        <nav class="mobile-category-nav" aria-label="Mobile category quick links">
+            <p class="mobile-category-title">Browse Categories</p>
+            <div class="mobile-category-row">
+                @foreach ($homeTopCategoryLinks as $link)
+                    @php
+                        $mobileLinkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
+                    @endphp
+                    <a class="mobile-category-link" href="{{ $mobileLinkUrl }}"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i><span>{{ $link['title'] ?? 'Category' }}</span></a>
+                @endforeach
+            </div>
+        </nav>
 
         <div class="search-section-full-width" aria-label="Smart category search">
             <p class="search-eyebrow">Find Anything Faster</p>

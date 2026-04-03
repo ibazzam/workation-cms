@@ -36,14 +36,9 @@
         }
 
         .page {
-            margin: 14px 14px 30px 270px;
-            width: calc(100% - 294px);
-            max-width: none;
-            margin: 14px 14px 30px 270px;
-            width: min(1180px, calc(100% - 28px));
-            margin: 14px auto 30px;
-            margin-left: 270px;
-            position: relative;
+              margin: 14px 12px 30px 270px;
+              width: calc(100% - 282px);
+              position: relative;
         }
 
         .floating-sidebar {
@@ -185,10 +180,11 @@
             line-height: 1.28;
             font-weight: 600;
             text-align: left;
-            display: grid;
+            display: flex;
+            flex-direction: column;
             gap: 2px;
             min-height: 56px;
-            align-content: center;
+            justify-content: center;
             transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
         }
 
@@ -203,6 +199,20 @@
             font-size: 0.73rem;
             font-weight: 500;
         }
+
+            .top-link-head {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .top-link-head i {
+                font-size: 0.9rem;
+                color: #0f6179;
+                width: 16px;
+                text-align: center;
+                flex: 0 0 16px;
+            }
 
         .search-section {
             margin-top: 0;
@@ -710,7 +720,7 @@
                     $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
                     $categoryKeyFromUrl = preg_match('#/catalog/([a-z_]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
                 @endphp
-                <a class="top-link floating-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}"></i> {{ $link['title'] ?? 'Category' }}<span>{{ $link['subtitle'] ?? '' }}</span></a>
+                <a class="top-link floating-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}"><span class="top-link-head"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}"></i>{{ $link['title'] ?? 'Category' }}</span><span>{{ $link['subtitle'] ?? '' }}</span></a>
             @endforeach
         </section>
     </aside>

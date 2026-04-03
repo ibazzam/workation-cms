@@ -73,10 +73,11 @@
             line-height: 1.28;
             font-weight: 600;
             text-align: left;
-            display: grid;
+            display: flex;
+            flex-direction: column;
             gap: 2px;
             min-height: 56px;
-            align-content: center;
+            justify-content: center;
             transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
         }
 
@@ -97,6 +98,20 @@
             font-size: 0.73rem;
             font-weight: 500;
         }
+
+            .top-link-head {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .top-link-head i {
+                font-size: 0.9rem;
+                color: #0f6179;
+                width: 16px;
+                text-align: center;
+                flex: 0 0 16px;
+            }
 
         .hero {
             border: 1px solid #cbe0ea;
@@ -336,7 +351,7 @@
         <section class="top-links" aria-label="Top categories">
             @foreach ($catalogCategoryLinks as $item)
                 <a class="top-link{{ $categoryKey === ($item['key'] ?? '') ? ' is-active' : '' }}" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">
-                    <i class="{{ $item['icon'] ?? 'fa-solid fa-location-dot' }}"></i> {{ $item['title'] ?? 'Category' }}
+                    <span class="top-link-head"><i class="{{ $item['icon'] ?? 'fa-solid fa-location-dot' }}"></i>{{ $item['title'] ?? 'Category' }}</span>
                     <span>{{ $item['subtitle'] ?? '' }}</span>
                 </a>
             @endforeach

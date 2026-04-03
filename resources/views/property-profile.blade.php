@@ -417,24 +417,22 @@
         }
 
         .facility-icon {
-            width: 19px;
-            height: 19px;
-            border-radius: 6px;
-            border: 1px solid #9cc2d6;
-            background: linear-gradient(135deg, #0f6179 0%, #2e8e8f 100%);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            flex: 0 0 19px;
-            margin-top: 1px;
-            font-size: 0.9rem;
-            line-height: 1;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              flex: 0 0 18px;
+              width: 18px;
+              height: 18px;
+              font-size: 0.85rem;
+              color: #0f6179;
+              margin-top: 1px;
+              line-height: 1;
         }
 
         .facility-icon svg {
             width: 12px;
             height: 12px;
-            stroke: #e9faff;
+            stroke: #0f6179;
             fill: none;
             stroke-width: 1.7;
             stroke-linecap: round;
@@ -654,11 +652,14 @@
         }
 
         .room-amenity-icon {
-            display: inline-block;
-            width: 14px;
-            height: 14px;
-            flex: 0 0 14px;
-            margin-right: 6px;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              width: 16px;
+              height: 16px;
+              flex: 0 0 16px;
+              margin-right: 4px;
+              color: #3a82aa;
         }
 
         .room-amenity-icon svg {
@@ -669,6 +670,11 @@
             fill: none;
             vertical-align: middle;
         }
+
+            .room-amenity-icon i {
+                font-size: 0.72rem;
+                color: currentColor;
+            }
 
         .room-offer-row.is-hidden {
             display: none;
@@ -1543,7 +1549,10 @@
                     <div class="gallery-shell" data-property-gallery>
                         @if ($galleryItems->isNotEmpty())
                             <div class="gallery-banner-wrap">
-                                <img id="propertyGalleryBanner" class="gallery-banner" src="{{ $initialBanner }}" alt="Property image 1" loading="lazy" onerror="this.onerror=null; this.style.display='none';">
+                                @php
+                                    $gallerySvgFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22420%22 viewBox=%220 0 900 420%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22420%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2228%22%3EProperty%20Image%3C%2Ftext%3E%3C%2Fsvg%3E";
+                                @endphp
+                                <img id="propertyGalleryBanner" class="gallery-banner" src="{{ $initialBanner ?: $gallerySvgFallback }}" alt="Property image 1" loading="lazy" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $gallerySvgFallback }}';}">
                             </div>
                             <div class="gallery-thumbs" role="list" aria-label="Property image thumbnails">
                                 @foreach ($galleryItems as $index => $media)

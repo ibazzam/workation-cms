@@ -27,8 +27,74 @@
         }
 
         .page {
-            width: min(1200px, calc(100% - 24px));
-            margin: 14px auto 30px;
+            width: calc(100% - 294px);
+            margin: 14px 14px 30px 270px;
+        }
+
+        .floating-sidebar {
+            position: fixed;
+            left: 12px;
+            top: 12px;
+            width: 250px;
+            height: calc(100vh - 24px);
+            overflow-y: auto;
+            z-index: 900;
+            border: 1px solid #c9ddeb;
+            border-radius: 16px;
+            background: linear-gradient(160deg, #f8fcff 0%, #eef6fb 100%);
+            padding: 10px;
+            box-shadow: inset 0 1px 0 #ffffff;
+        }
+
+        .sidebar-title {
+            margin: 0 0 8px;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+            color: #4e6d83;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .top-links {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+
+        .top-link {
+            text-decoration: none;
+            border: 1px solid #d4e3ee;
+            border-radius: 10px;
+            background: #f8fcff;
+            color: #19405b;
+            padding: 9px 10px;
+            font-size: 0.8rem;
+            line-height: 1.28;
+            font-weight: 600;
+            text-align: left;
+            display: grid;
+            gap: 2px;
+            min-height: 56px;
+            align-content: center;
+            transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .top-link:hover {
+            border-color: #8db5cf;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(34, 86, 120, 0.16);
+        }
+
+        .top-link.is-active {
+            border-color: #6ca6c3;
+            background: #ebf6ff;
+            box-shadow: 0 4px 10px rgba(22, 70, 102, 0.12);
+        }
+
+        .top-link span {
+            color: #5e7388;
+            font-size: 0.73rem;
+            font-weight: 500;
         }
 
         .hero {
@@ -187,6 +253,22 @@
         }
 
         @media (max-width: 1040px) {
+            .page {
+                width: calc(100% - 28px);
+                margin: 14px auto 30px;
+            }
+
+            .floating-sidebar {
+                position: static;
+                width: calc(100% - 28px);
+                height: auto;
+                margin: 14px auto 12px;
+            }
+
+            .top-links {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+
             .grid,
             .catalog-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -196,6 +278,16 @@
         @media (max-width: 680px) {
             .page {
                 width: calc(100% - 18px);
+                margin: 10px auto 22px;
+            }
+
+            .floating-sidebar {
+                width: calc(100% - 18px);
+                margin: 10px auto 12px;
+            }
+
+            .top-links {
+                grid-template-columns: 1fr;
             }
 
             .grid,
@@ -210,6 +302,15 @@
         $filters = $filters ?? [];
         $categoryKey = $categoryKey ?? 'accommodation';
         $categoryMeta = $categoryMeta ?? ['label' => 'Catalogue', 'subtitle' => ''];
+        $catalogCategoryLinks = collect([
+            ['key' => 'accommodation', 'emoji' => '[Stay]', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas'],
+            ['key' => 'transport', 'emoji' => '[Move]', 'title' => 'Transport', 'subtitle' => 'Marine and land transfers'],
+            ['key' => 'excursion', 'emoji' => '[Tour]', 'title' => 'Excursion', 'subtitle' => 'Tours and activities'],
+            ['key' => 'remote_workspace', 'emoji' => '[Work]', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces'],
+            ['key' => 'resort_day_visit', 'emoji' => '[Day]', 'title' => 'Resort Day Visit', 'subtitle' => 'Day-use resort offers'],
+            ['key' => 'restaurant', 'emoji' => '[Food]', 'title' => 'Restaurant', 'subtitle' => 'Dining experiences'],
+            ['key' => 'vehicle_rental', 'emoji' => '[Ride]', 'title' => 'Vehicle Rental', 'subtitle' => 'Cars and local rentals'],
+        ]);
         $catalogProperties = $catalogProperties ?? collect();
         $catalogPropertyMediaByProperty = $catalogPropertyMediaByProperty ?? collect();
         $atollOptions = $atollOptions ?? collect();
@@ -228,6 +329,18 @@
             return '/media/vendor/' . $mediaId . '/' . $normalizedVariant;
         };
     @endphp
+
+    <aside class="floating-sidebar" aria-label="Category sidebar">
+        <p class="sidebar-title">Browse Categories</p>
+        <section class="top-links" aria-label="Top categories">
+            @foreach ($catalogCategoryLinks as $item)
+                <a class="top-link{{ $categoryKey === ($item['key'] ?? '') ? ' is-active' : '' }}" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">
+                    {{ ($item['emoji'] ?? '📌') . ' ' . ($item['title'] ?? 'Category') }}
+                    <span>{{ $item['subtitle'] ?? '' }}</span>
+                </a>
+            @endforeach
+        </section>
+    </aside>
 
     <main class="page" data-api-base="{{ $apiBase }}">
         <section class="hero">
@@ -336,7 +449,15 @@
                         $mediaItems = collect($catalogPropertyMediaByProperty->get($propertyId, collect()));
                         $primaryMedia = $mediaItems->first();
                         $bannerUrl = $primaryMedia ? $mediaVariantUrl($primaryMedia, 'banner') : null;
-                        $fallbackImage = $primaryMedia ? ('/storage/' . ltrim((string) ($primaryMedia->file_path ?? ''), '/')) : '';
+                        $fallbackPath = trim((string) ($primaryMedia->file_path ?? ''));
+                        $fallbackImage = '';
+                        if ($fallbackPath !== '') {
+                            if (str_starts_with($fallbackPath, 'http://') || str_starts_with($fallbackPath, 'https://')) {
+                                $fallbackImage = $fallbackPath;
+                            } else {
+                                $fallbackImage = '/storage/' . ltrim(str_replace('public/', '', str_replace('storage/', '', str_replace('\\', '/', $fallbackPath))), '/');
+                            }
+                        }
                         $price = (float) ($property->base_price ?? 0);
                         $detailUrl = $categoryKey === 'accommodation'
                             ? ('/property/' . $propertyId)
@@ -345,11 +466,10 @@
                     @endphp
                     <article class="card">
                         <a class="card-link" href="{{ $detailUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
-                            @if ($bannerUrl)
-                                <img src="{{ $bannerUrl }}" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $fallbackImage }}';}" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
-                            @else
-                                <img src="" alt="No image" loading="lazy">
-                            @endif
+                            @php
+                                $resolvedImage = $bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : '');
+                            @endphp
+                            <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fallbackTried && '{{ $fallbackImage }}' !== ''){this.dataset.fallbackTried='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2234%22%3EImage unavailable%3C/text%3E%3C/svg%3E';}" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                             <div class="card-body">
                                 <h3>{{ (string) ($property->name ?? 'Listing') }}</h3>
                                 <div class="meta">{{ trim((string) (($property->atoll ?? '') . ' ' . ($property->island ?? ''))) !== '' ? trim((string) (($property->atoll ?? '') . ' · ' . ($property->island ?? ''))) : 'Location will be updated soon.' }}</div>

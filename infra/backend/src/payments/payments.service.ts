@@ -1102,7 +1102,7 @@ export class PaymentsService {
     const paymentId = this.parseOptionalId(payload.paymentId);
     const idempotencyKey = this.parseOptionalKey(payload.idempotencyKey, 100);
     const taxRate = this.parseOptionalRate(payload.taxRate, 'taxRate') ?? this.readRateEnv('PAYMENTS_TAX_RATE', 0.08);
-    const issuerName = this.parseOptionalText(payload.issuerName, 120) ?? process.env.PAYMENTS_TAX_INVOICE_ISSUER_NAME ?? 'Workation Maldives';
+    const issuerName = this.parseOptionalText(payload.issuerName, 120) ?? process.env.PAYMENTS_TAX_INVOICE_ISSUER_NAME ?? 'Workation';
     const issuerTaxId = this.parseOptionalText(payload.issuerTaxId, 120) ?? process.env.PAYMENTS_TAX_INVOICE_ISSUER_TAX_ID ?? 'MV-TAX-UNREGISTERED';
     const notes = this.parseOptionalText(payload.notes, 1000);
 

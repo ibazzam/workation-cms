@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Workation Maldives</title>
+    <title>Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
     <style>
@@ -35,9 +35,9 @@
         }
 
         .page {
-            width: min(1180px, calc(100% - 28px));
-            margin: 14px auto 30px;
-            margin-left: 270px;
+            width: calc(100% - 294px);
+            max-width: none;
+            margin: 14px 14px 30px 270px;
             position: relative;
         }
 
@@ -550,6 +550,8 @@
 
         @media (max-width: 1040px) {
             .page {
+                width: calc(100% - 28px);
+                margin: 14px auto 30px;
                 margin-left: 14px;
             }
 
@@ -606,7 +608,6 @@
             .page {
                 width: calc(100% - 18px);
                 margin: 10px auto 22px;
-                margin-left: 15px;
             }
 
             .floating-sidebar {
@@ -699,8 +700,8 @@
     <main class="page" data-api-base="{{ $apiBase }}">
         <header class="header-bar" aria-label="Customer account actions">
             <div>
-                <p class="header-brand">Workation Maldives</p>
-                <p class="header-subline">Discover stays, services, and transfers with smarter search.</p>
+                <p class="header-brand">Workation</p>
+                <p class="header-subline">Discover stays, services, and transfers across the Maldives.</p>
             </div>
             <div class="customer-auth">
                 @if ($customerLoggedIn)
@@ -790,7 +791,7 @@
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
                         <div class="item-card-media">
                             @if (!empty($card['image_url']))
-                                <img src="{{ $card['image_url'] }}" alt="{{ $card['title'] ?? 'Category' }} thumbnail" loading="lazy">
+                                <img src="{{ $card['image_url'] }}" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2234%22%3EImage unavailable%3C/text%3E%3C/svg%3E';" alt="{{ $card['title'] ?? 'Category' }} thumbnail" loading="lazy">
                             @endif
                         </div>
                         <div class="item-card-body">
@@ -817,7 +818,7 @@
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
                         <div class="item-card-media">
                             @if (!empty($card['image_url']))
-                                <img src="{{ $card['image_url'] }}" alt="{{ $card['title'] ?? 'Trending Destination' }} thumbnail" loading="lazy">
+                                <img src="{{ $card['image_url'] }}" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2234%22%3EImage unavailable%3C/text%3E%3C/svg%3E';" alt="{{ $card['title'] ?? 'Trending Destination' }} thumbnail" loading="lazy">
                             @endif
                         </div>
                         <div class="item-card-body">
@@ -839,7 +840,7 @@
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
                         <div class="item-card-media">
                             @if (!empty($card['image_url']))
-                                <img src="{{ $card['image_url'] }}" alt="{{ $card['title'] ?? 'Weekend Deal' }} thumbnail" loading="lazy">
+                                <img src="{{ $card['image_url'] }}" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2234%22%3EImage unavailable%3C/text%3E%3C/svg%3E';" alt="{{ $card['title'] ?? 'Weekend Deal' }} thumbnail" loading="lazy">
                             @endif
                         </div>
                         <div class="item-card-body">
@@ -864,7 +865,7 @@
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
                         <div class="item-card-media">
                             @if (!empty($card['image_url']))
-                                <img src="{{ $card['image_url'] }}" alt="{{ $card['title'] ?? 'Loved Place' }} thumbnail" loading="lazy">
+                                <img src="{{ $card['image_url'] }}" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2234%22%3EImage unavailable%3C/text%3E%3C/svg%3E';" alt="{{ $card['title'] ?? 'Loved Place' }} thumbnail" loading="lazy">
                             @endif
                         </div>
                         <div class="item-card-body">

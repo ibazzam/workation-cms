@@ -39,6 +39,14 @@
               margin: 14px 12px 30px 270px;
               width: calc(100% - 282px);
               position: relative;
+            margin: 14px 14px 30px 270px;
+            width: calc(100% - 294px);
+            max-width: none;
+            margin: 14px 14px 30px 270px;
+            width: min(1180px, calc(100% - 28px));
+            margin: 14px auto 30px;
+            margin-left: 270px;
+            position: relative;
         }
 
         .floating-sidebar {
@@ -721,6 +729,7 @@
                     $categoryKeyFromUrl = preg_match('#/catalog/([a-z_]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
                 @endphp
                 <a class="top-link floating-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}"><span class="top-link-head"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}"></i>{{ $link['title'] ?? 'Category' }}</span><span>{{ $link['subtitle'] ?? '' }}</span></a>
+                <a class="top-link floating-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}"></i> {{ $link['title'] ?? 'Category' }}<span>{{ $link['subtitle'] ?? '' }}</span></a>
             @endforeach
         </section>
     </aside>

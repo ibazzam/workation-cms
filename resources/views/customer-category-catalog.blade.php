@@ -352,6 +352,7 @@
             @foreach ($catalogCategoryLinks as $item)
                 <a class="top-link{{ $categoryKey === ($item['key'] ?? '') ? ' is-active' : '' }}" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">
                     <span class="top-link-head"><i class="{{ $item['icon'] ?? 'fa-solid fa-location-dot' }}"></i>{{ $item['title'] ?? 'Category' }}</span>
+                    <i class="{{ $item['icon'] ?? 'fa-solid fa-location-dot' }}"></i> {{ $item['title'] ?? 'Category' }}
                     <span>{{ $item['subtitle'] ?? '' }}</span>
                 </a>
             @endforeach

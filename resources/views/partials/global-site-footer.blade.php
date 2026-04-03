@@ -108,5 +108,5 @@
             </ul>
         </section>
     </div>
-    <p class="wf-footer-note">&copy; WORKATION &trade; &mdash; All rights reserved.</p>
+    <p class="wf-footer-note"> WORKATION &trade; &mdash; &copy; All rights reserved.</p>
 </footer>

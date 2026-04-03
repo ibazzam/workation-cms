@@ -250,8 +250,17 @@
             width: 100%;
             border: 1px solid #c8d8e5;
             border-radius: 10px;
-            padding: 10px;
+            padding: 10px 12px;
             font: inherit;
+            font-size: 0.9rem;
+            height: 42px;
+            line-height: 1.4;
+            display: flex;
+            align-items: center;
+        }
+        
+        .field select {
+            padding: 8px 12px;
         }
 
         .actions {
@@ -259,25 +268,6 @@
             flex-wrap: wrap;
             gap: 8px;
             align-items: center;
-        }
-
-        .actions button,
-        .actions a {
-            text-decoration: none;
-            border: 1px solid #c8d8e5;
-            border-radius: 10px;
-            padding: 8px 12px;
-            font: inherit;
-            font-weight: 700;
-            cursor: pointer;
-            background: #fff;
-            color: #20415d;
-        }
-
-        .actions button.primary {
-            border-color: #f6d19a;
-            background: linear-gradient(135deg, #ffc76f 0%, var(--accent) 100%);
-            color: #57350b;
         }
 
         .section-title {
@@ -339,6 +329,26 @@
             font-size: 0.88rem;
         }
 
+        .island-context-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            border: 1px solid #b6daea;
+            border-radius: 10px;
+            background: #eaf6fb;
+            color: #1a4b62;
+            padding: 9px 12px;
+            font-size: 0.8rem;
+            line-height: 1.45;
+        }
+
+        .island-context-note i {
+            color: #0f6179;
+            margin-top: 2px;
+            flex: 0 0 14px;
+            text-align: center;
+        }
+
         @media (max-width: 1040px) {
             .page {
                 width: calc(100% - 28px);
@@ -376,6 +386,18 @@
                 display: block;
             }
 
+            .mobile-category-row {
+                flex-direction: column;
+                gap: 8px;
+                overflow-x: visible;
+                overflow-y: visible;
+            }
+
+            .mobile-category-link {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
             .top-links {
                 grid-template-columns: 1fr;
             }
@@ -386,6 +408,7 @@
             }
         }
     </style>
+    @include('partials.uniform-buttons')
 </head>
 <body>
     @php
@@ -394,9 +417,11 @@
         $categoryMeta = $categoryMeta ?? ['label' => 'Catalogue', 'subtitle' => ''];
         $catalogCategoryLinks = collect([
             ['key' => 'accommodation',    'icon' => 'fa-solid fa-hotel',          'title' => 'Accommodation',   'subtitle' => 'Hotels, resorts, villas'],
-            ['key' => 'transport',        'icon' => 'fa-solid fa-ship',           'title' => 'Transport',       'subtitle' => 'Marine and land transfers'],
+            ['key' => 'marine-transport',  'icon' => 'fa-solid fa-water',          'title' => 'Marine Transport','subtitle' => 'Speedboats & water transfers'],
+            ['key' => 'land-transport',    'icon' => 'fa-solid fa-van-shuttle',    'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers'],
             ['key' => 'excursion',        'icon' => 'fa-solid fa-compass',       'title' => 'Excursion',       'subtitle' => 'Tours and activities'],
             ['key' => 'remote_workspace', 'icon' => 'fa-solid fa-laptop',         'title' => 'Remote Workspace','subtitle' => 'Work-friendly spaces'],
+            ['key' => 'conference_room',  'icon' => 'fa-solid fa-object-group',   'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces'],
             ['key' => 'resort_day_visit', 'icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit','subtitle' => 'Day-use resort offers'],
             ['key' => 'restaurant',       'icon' => 'fa-solid fa-utensils',       'title' => 'Restaurant',      'subtitle' => 'Dining experiences'],
             ['key' => 'vehicle_rental',   'icon' => 'fa-solid fa-car',            'title' => 'Vehicle Rental',  'subtitle' => 'Cars and local rentals'],
@@ -450,9 +475,11 @@
                 <a href="/">Back Home</a>
                 <a href="/customer">Customer Portal</a>
                 <a href="/catalog/accommodation">Accommodation</a>
-                <a href="/catalog/transport">Transport</a>
+                <a href="/catalog/marine-transport">Marine Transfer</a>
+                <a href="/catalog/land-transport">Land Transfer</a>
                 <a href="/catalog/excursion">Excursion</a>
                 <a href="/catalog/remote_workspace">Remote Workspace</a>
+                <a href="/catalog/conference_room">Conference Rooms</a>
                 <a href="/catalog/resort_day_visit">Resort Day Visit</a>
                 <a href="/catalog/restaurant">Restaurant</a>
                 <a href="/catalog/vehicle_rental">Vehicle Rental</a>
@@ -512,22 +539,204 @@
                     <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ $filters['children'] ?? 0 }}"></div>
                     <div class="field"><label for="rooms">Rooms</label><input id="rooms" name="rooms" type="number" min="1" value="{{ $filters['rooms'] ?? 1 }}"></div>
                 </div>
-            @elseif ($categoryKey === 'transport')
+            @elseif ($categoryKey === 'marine-transport' || $categoryKey === 'land-transport')
                 <div class="grid">
-                    <div class="field">
-                        <label for="transport_mode">Mode</label>
-                        <select id="transport_mode" name="transport_mode">
-                            <option value="marine" {{ ($filters['transport_mode'] ?? 'marine') === 'marine' ? 'selected' : '' }}>Marine Transport</option>
-                            <option value="land" {{ ($filters['transport_mode'] ?? '') === 'land' ? 'selected' : '' }}>Land Transport</option>
-                        </select>
-                    </div>
-                    <div class="field"><label for="from">From</label><input id="from" name="from" type="text" value="{{ $filters['from'] ?? '' }}"></div>
-                    <div class="field"><label for="to">To</label><input id="to" name="to" type="text" value="{{ $filters['to'] ?? '' }}"></div>
+                    <div class="field"><label for="origin_point">From (Island/Location)</label><input id="origin_point" name="origin_point" type="text" value="{{ $filters['origin_point'] ?? '' }}"></div>
+                    <div class="field"><label for="destination_point">To (Island/Location)</label><input id="destination_point" name="destination_point" type="text" value="{{ $filters['destination_point'] ?? '' }}"></div>
                     <div class="field"><label for="travel_date">Travel Date</label><input id="travel_date" name="travel_date" type="date" value="{{ $filters['travel_date'] ?? '' }}"></div>
                     <div class="field"><label for="return_date">Return Date</label><input id="return_date" name="return_date" type="date" value="{{ $filters['return_date'] ?? '' }}"></div>
                     <div class="field"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ $filters['adults'] ?? 2 }}"></div>
                     <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ $filters['children'] ?? 0 }}"></div>
-                    <div class="field"><label for="vehicle_type">Vehicle Type</label><input id="vehicle_type" name="vehicle_type" type="text" value="{{ $filters['vehicle_type'] ?? '' }}" placeholder="Car, Van, Bike"></div>
+                </div>
+            @elseif ($categoryKey === 'restaurant')
+                <div class="island-context-note" style="margin-bottom:8px;">
+                    <i class="fa-solid fa-water" aria-hidden="true"></i>
+                    <span>Restaurants in the Maldives are <strong>island-specific</strong>. Select the island where you are currently staying or planning to visit to see what’s available at that location.</span>
+                </div>
+                <div class="grid">
+                    <div class="field">
+                        <label for="current_island">Your Current Island / Stay Location</label>
+                        <select id="current_island" name="current_island">
+                            <option value="">All Islands</option>
+                            @foreach ($islandOptions as $island)
+                                <option value="{{ $island }}" {{ ($filters['current_island'] ?? '') === $island ? 'selected' : '' }}>{{ $island }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="atoll_restaurant">Atoll (Optional)</label>
+                        <select id="atoll_restaurant" name="atoll">
+                            <option value="">All Atolls</option>
+                            @foreach ($atollOptions as $atoll)
+                                <option value="{{ $atoll }}" {{ ($filters['atoll'] ?? '') === $atoll ? 'selected' : '' }}>{{ $atoll }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="reservation_datetime">Reservation Date &amp; Time</label>
+                        <input id="reservation_datetime" name="reservation_datetime" type="datetime-local" value="{{ $filters['reservation_datetime'] ?? '' }}">
+                    </div>
+                    <div class="field">
+                        <label for="party_size">Party Size</label>
+                        <input id="party_size" name="party_size" type="number" min="1" value="{{ $filters['party_size'] ?? 2 }}">
+                    </div>
+                </div>
+            @elseif ($categoryKey === 'excursion')
+                <div class="grid">
+                    <div class="field">
+                        <label for="activity_type">Activity Type</label>
+                        <select id="activity_type" name="activity_type">
+                            <option value="">All Activities</option>
+                            <option value="water_sports" {{ ($filters['activity_type'] ?? '') === 'water_sports' ? 'selected' : '' }}>Water Sports</option>
+                            <option value="cultural" {{ ($filters['activity_type'] ?? '') === 'cultural' ? 'selected' : '' }}>Cultural</option>
+                            <option value="adventure" {{ ($filters['activity_type'] ?? '') === 'adventure' ? 'selected' : '' }}>Adventure</option>
+                            <option value="relaxation" {{ ($filters['activity_type'] ?? '') === 'relaxation' ? 'selected' : '' }}>Relaxation</option>
+                            <option value="wildlife" {{ ($filters['activity_type'] ?? '') === 'wildlife' ? 'selected' : '' }}>Wildlife</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="difficulty">Difficulty Level</label>
+                        <select id="difficulty" name="difficulty">
+                            <option value="">All Levels</option>
+                            <option value="easy" {{ ($filters['difficulty'] ?? '') === 'easy' ? 'selected' : '' }}>Easy</option>
+                            <option value="moderate" {{ ($filters['difficulty'] ?? '') === 'moderate' ? 'selected' : '' }}>Moderate</option>
+                            <option value="challenging" {{ ($filters['difficulty'] ?? '') === 'challenging' ? 'selected' : '' }}>Challenging</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="excursion_date">Excursion Date</label>
+                        <input id="excursion_date" name="excursion_date" type="date" value="{{ $filters['excursion_date'] ?? '' }}">
+                    </div>
+                </div>
+            @elseif ($categoryKey === 'remote_workspace')
+                <div class="grid">
+                    <div class="field">
+                        <label for="workspace_type_filter">Workspace Type</label>
+                        <select id="workspace_type_filter" name="workspace_type_filter">
+                            <option value="">All Types</option>
+                            <option value="coworking" {{ ($filters['workspace_type_filter'] ?? '') === 'coworking' ? 'selected' : '' }}>Co-working Space</option>
+                            <option value="cafe" {{ ($filters['workspace_type_filter'] ?? '') === 'cafe' ? 'selected' : '' }}>Cafe / Coffee Shop</option>
+                            <option value="library" {{ ($filters['workspace_type_filter'] ?? '') === 'library' ? 'selected' : '' }}>Library</option>
+                            <option value="private" {{ ($filters['workspace_type_filter'] ?? '') === 'private' ? 'selected' : '' }}>Private Office</option>
+                            <option value="resort" {{ ($filters['workspace_type_filter'] ?? '') === 'resort' ? 'selected' : '' }}>Resort Workspace</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="internet_speed">Internet Speed</label>
+                        <select id="internet_speed" name="internet_speed">
+                            <option value="">Any Speed</option>
+                            <option value="high" {{ ($filters['internet_speed'] ?? '') === 'high' ? 'selected' : '' }}>High Speed (100+ Mbps)</option>
+                            <option value="standard" {{ ($filters['internet_speed'] ?? '') === 'standard' ? 'selected' : '' }}>Standard (50+ Mbps)</option>
+                            <option value="basic" {{ ($filters['internet_speed'] ?? '') === 'basic' ? 'selected' : '' }}>Basic (20+ Mbps)</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="workspace_start">Start Date</label>
+                        <input id="workspace_start" name="workspace_start" type="date" value="{{ $filters['workspace_start'] ?? '' }}">
+                    </div>
+                    <div class="field">
+                        <label for="workspace_end">End Date</label>
+                        <input id="workspace_end" name="workspace_end" type="date" value="{{ $filters['workspace_end'] ?? '' }}">
+                    </div>
+                </div>
+            @elseif ($categoryKey === 'conference_room')
+                <div class="grid">
+                    <div class="field">
+                        <label for="conference_event_type">Event Type</label>
+                        <select id="conference_event_type" name="conference_event_type">
+                            <option value="">All Event Types</option>
+                            <option value="meeting" {{ ($filters['conference_event_type'] ?? '') === 'meeting' ? 'selected' : '' }}>Meeting</option>
+                            <option value="training" {{ ($filters['conference_event_type'] ?? '') === 'training' ? 'selected' : '' }}>Training</option>
+                            <option value="seminar" {{ ($filters['conference_event_type'] ?? '') === 'seminar' ? 'selected' : '' }}>Seminar</option>
+                            <option value="conference" {{ ($filters['conference_event_type'] ?? '') === 'conference' ? 'selected' : '' }}>Conference</option>
+                            <option value="workshop" {{ ($filters['conference_event_type'] ?? '') === 'workshop' ? 'selected' : '' }}>Workshop</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="conference_capacity">Minimum Capacity (Attendees)</label>
+                        <input id="conference_capacity" name="conference_capacity" type="number" min="1" value="{{ $filters['conference_capacity'] ?? 0 }}">
+                    </div>
+                    <div class="field">
+                        <label for="conference_date">Event Date</label>
+                        <input id="conference_date" name="conference_date" type="date" value="{{ $filters['conference_date'] ?? '' }}">
+                    </div>
+                </div>
+            @elseif ($categoryKey === 'resort_day_visit')
+                <div class="grid">
+                    <div class="field">
+                        <label for="time_slot">Time Slot</label>
+                        <select id="time_slot" name="time_slot">
+                            <option value="">Any Time</option>
+                            <option value="morning" {{ ($filters['time_slot'] ?? '') === 'morning' ? 'selected' : '' }}>Morning Half-day (6am-12pm)</option>
+                            <option value="afternoon" {{ ($filters['time_slot'] ?? '') === 'afternoon' ? 'selected' : '' }}>Afternoon Half-day (12pm-6pm)</option>
+                            <option value="evening" {{ ($filters['time_slot'] ?? '') === 'evening' ? 'selected' : '' }}>Evening (3pm-9pm)</option>
+                            <option value="fullday" {{ ($filters['time_slot'] ?? '') === 'fullday' ? 'selected' : '' }}>Full Day</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="facility_type">Facility Type</label>
+                        <select id="facility_type" name="facility_type">
+                            <option value="">All Facilities</option>
+                            <option value="beach" {{ ($filters['facility_type'] ?? '') === 'beach' ? 'selected' : '' }}>Beach Access</option>
+                            <option value="pool" {{ ($filters['facility_type'] ?? '') === 'pool' ? 'selected' : '' }}>Swimming Pool</option>
+                            <option value="spa" {{ ($filters['facility_type'] ?? '') === 'spa' ? 'selected' : '' }}>Spa & Wellness</option>
+                            <option value="water_sports" {{ ($filters['facility_type'] ?? '') === 'water_sports' ? 'selected' : '' }}>Water Sports</option>
+                            <option value="dining" {{ ($filters['facility_type'] ?? '') === 'dining' ? 'selected' : '' }}>Dining Experience</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="visit_date">Visit Date</label>
+                        <input id="visit_date" name="visit_date" type="date" value="{{ $filters['visit_date'] ?? '' }}">
+                    </div>
+                </div>
+            @elseif ($categoryKey === 'vehicle_rental')
+                <div class="island-context-note" style="margin-bottom:8px;">
+                    <i class="fa-solid fa-water" aria-hidden="true"></i>
+                    <span>Vehicle and vessel hire in the Maldives is <strong>island-specific</strong>. Select your pickup island to find available cars, motorcycles, speedboats, and private vessel hire at that location.</span>
+                </div>
+                <div class="grid">
+                    <div class="field">
+                        <label for="pickup_island">Pickup Island</label>
+                        <select id="pickup_island" name="pickup_island">
+                            <option value="">All Islands</option>
+                            @foreach ($islandOptions as $island)
+                                <option value="{{ $island }}" {{ ($filters['pickup_island'] ?? '') === $island ? 'selected' : '' }}>{{ $island }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="atoll_rental">Atoll (Optional)</label>
+                        <select id="atoll_rental" name="atoll">
+                            <option value="">All Atolls</option>
+                            @foreach ($atollOptions as $atoll)
+                                <option value="{{ $atoll }}" {{ ($filters['atoll'] ?? '') === $atoll ? 'selected' : '' }}>{{ $atoll }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="vehicle_kind">Vehicle / Vessel Type</label>
+                        <select id="vehicle_kind" name="vehicle_kind">
+                            <option value="">All Types</option>
+                            <option value="car" {{ ($filters['vehicle_kind'] ?? '') === 'car' ? 'selected' : '' }}>Car / 4x4</option>
+                            <option value="motorcycle" {{ ($filters['vehicle_kind'] ?? '') === 'motorcycle' ? 'selected' : '' }}>Motorcycle / Scooter</option>
+                            <option value="bicycle" {{ ($filters['vehicle_kind'] ?? '') === 'bicycle' ? 'selected' : '' }}>Bicycle</option>
+                            <option value="speedboat" {{ ($filters['vehicle_kind'] ?? '') === 'speedboat' ? 'selected' : '' }}>Speedboat</option>
+                            <option value="vessel" {{ ($filters['vehicle_kind'] ?? '') === 'vessel' ? 'selected' : '' }}>Private Vessel / Dhoni</option>
+                            <option value="yacht" {{ ($filters['vehicle_kind'] ?? '') === 'yacht' ? 'selected' : '' }}>Yacht / Charter</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="pickup_date">Pickup Date</label>
+                        <input id="pickup_date" name="pickup_date" type="date" value="{{ $filters['pickup_date'] ?? '' }}">
+                    </div>
+                    <div class="field">
+                        <label for="return_date_rental">Return Date</label>
+                        <input id="return_date_rental" name="return_date" type="date" value="{{ $filters['return_date'] ?? '' }}">
+                    </div>
+                    <div class="field">
+                        <label for="adults_rental">Passengers / Pax</label>
+                        <input id="adults_rental" name="adults" type="number" min="1" value="{{ $filters['adults'] ?? 2 }}">
+                    </div>
                 </div>
             @endif
 
@@ -562,12 +771,23 @@
                         $detailUrl = $categoryKey === 'accommodation'
                             ? ('/property/' . $propertyId)
                             : ('/category-booking/' . $categoryKey . '/' . $propertyId);
-                        $actionLabel = $categoryKey === 'accommodation' ? 'Open Listing Profile' : 'Proceed to Booking';
+                        $actionLabel = match ($categoryKey) {
+                            'accommodation'     => 'Open Listing Profile',
+                            'restaurant'        => 'Reserve a Table',
+                            'vehicle_rental'    => 'Hire Vehicle / Vessel',
+                            'marine-transport'  => 'Book Marine Transfer',
+                            'land-transport'    => 'Book Land Transfer',
+                            'excursion'         => 'Book Excursion',
+                            'conference_room'   => 'Book Conference Room',
+                            'resort_day_visit'  => 'Book Day Visit',
+                            'remote_workspace'  => 'Book Workspace',
+                            default             => 'Proceed to Booking',
+                        };
                     @endphp
                     <article class="card">
                         <a class="card-link" href="{{ $detailUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
                             @php
-                                $resolvedImage = $fallbackImage !== '' ? $fallbackImage : ($bannerUrl ?: $svgFallback);
+                                $resolvedImage = $bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback);
                             @endphp
                             <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                             <div class="card-body">

@@ -653,6 +653,11 @@ Route::get('/', function () {
                 return null;
             }
 
+            $mediaId = (int) ($primaryMedia->id ?? 0);
+            if ($mediaId > 0) {
+                return '/media/vendor/' . $mediaId . '/banner';
+            }
+
             $filePath = trim((string) ($primaryMedia->file_path ?? ''));
             if ($filePath !== '') {
                 if (str_starts_with($filePath, 'http://') || str_starts_with($filePath, 'https://')) {
@@ -663,11 +668,6 @@ Route::get('/', function () {
                 if ($normalizedPath !== '') {
                     return '/storage/' . $normalizedPath;
                 }
-            }
-
-            $mediaId = (int) ($primaryMedia->id ?? 0);
-            if ($mediaId > 0) {
-                return '/media/vendor/' . $mediaId . '/banner';
             }
 
             return null;
@@ -942,12 +942,14 @@ Route::get('/terms-of-service', function () {
 Route::get('/catalog/{category}', function (Request $request, string $category) {
     $categoryMap = [
         'accommodation' => ['label' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas, and guesthouses.'],
-        'transport' => ['label' => 'Transport', 'subtitle' => 'Marine and land transport services.'],
+        'marine-transport' => ['label' => 'Marine Transport', 'subtitle' => 'Speedboats, dhonis, and water transfers between islands.'],
+        'land-transport' => ['label' => 'Land Transport', 'subtitle' => 'Cars, vans, and local ground transfers.'],
         'excursion' => ['label' => 'Excursion', 'subtitle' => 'Experiences, tours, and activity packages.'],
         'remote_workspace' => ['label' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces and productivity stays.'],
+        'conference_room' => ['label' => 'Conference & Meeting Spaces', 'subtitle' => 'Hotel conference rooms, halls, and meeting spaces for events, training, seminars.'],
         'resort_day_visit' => ['label' => 'Resort Day Visit', 'subtitle' => 'Day access offers for top resort properties.'],
-        'restaurant' => ['label' => 'Restaurant', 'subtitle' => 'Dining and culinary service listings.'],
-        'vehicle_rental' => ['label' => 'Vehicle Rental', 'subtitle' => 'Cars, bikes, and local mobility rentals.'],
+        'restaurant' => ['label' => 'Restaurant', 'subtitle' => 'Island-specific dining — find restaurants on your island.'],
+        'vehicle_rental' => ['label' => 'Vehicle Rental', 'subtitle' => 'Cars, bikes, speedboats, and private vessel hire by island.'],
     ];
 
     $categoryKey = strtolower(trim($category));
@@ -958,9 +960,38 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     $queryText = trim((string) $request->query('q', ''));
     $atollFilter = trim((string) $request->query('atoll', ''));
     $islandFilter = trim((string) $request->query('island', ''));
+    $currentIsland = trim((string) $request->query('current_island', ''));
+    $pickupIsland = trim((string) $request->query('pickup_island', ''));
+    $reservationDatetime = trim((string) $request->query('reservation_datetime', ''));
+    $partySize = max(1, (int) $request->query('party_size', 2));
+    $vehicleKind = trim((string) $request->query('vehicle_kind', ''));
+    $activityType = trim((string) $request->query('activity_type', ''));
+    $difficulty = trim((string) $request->query('difficulty', ''));
+    $excursionDate = trim((string) $request->query('excursion_date', ''));
+    $workspaceTypeFilter = trim((string) $request->query('workspace_type_filter', ''));
+    $internetSpeed = trim((string) $request->query('internet_speed', ''));
+    $workspaceStart = trim((string) $request->query('workspace_start', ''));
+    $workspaceEnd = trim((string) $request->query('workspace_end', ''));
+    $timeSlot = trim((string) $request->query('time_slot', ''));
+    $facilityType = trim((string) $request->query('facility_type', ''));
+    $visitDate = trim((string) $request->query('visit_date', ''));
+    $conferenceEventType = trim((string) $request->query('conference_event_type', ''));
+    $conferenceCapacity = (int) $request->query('conference_capacity', 0);
+    $conferenceDate = trim((string) $request->query('conference_date', ''));
     $minPrice = (float) $request->query('min_price', 0);
     $maxPrice = (float) $request->query('max_price', 0);
     $sort = strtolower(trim((string) $request->query('sort', 'recommended')));
+
+    // For island-specific categories (restaurant, vehicle_rental), fall back to
+    // current_island or pickup_island when the generic island filter is not set.
+    $effectiveIslandFilter = $islandFilter;
+    if ($effectiveIslandFilter === '' && in_array($categoryKey, ['restaurant', 'vehicle_rental'], true)) {
+        if ($currentIsland !== '') {
+            $effectiveIslandFilter = $currentIsland;
+        } elseif ($pickupIsland !== '') {
+            $effectiveIslandFilter = $pickupIsland;
+        }
+    }
 
     $catalogProperties = collect();
     $catalogPropertyMediaByProperty = collect();
@@ -996,8 +1027,8 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             $propertiesQuery->whereRaw('LOWER(atoll) = ?', [strtolower($atollFilter)]);
         }
 
-        if ($islandFilter !== '' && Schema::hasColumn('vendor_properties', 'island')) {
-            $propertiesQuery->whereRaw('LOWER(island) = ?', [strtolower($islandFilter)]);
+        if ($effectiveIslandFilter !== '' && Schema::hasColumn('vendor_properties', 'island')) {
+            $propertiesQuery->whereRaw('LOWER(island) = ?', [strtolower($effectiveIslandFilter)]);
         }
 
         if (Schema::hasColumn('vendor_properties', 'base_price')) {
@@ -1101,6 +1132,24 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             'q' => $queryText,
             'atoll' => $atollFilter,
             'island' => $islandFilter,
+            'current_island' => $currentIsland,
+            'pickup_island' => $pickupIsland,
+            'reservation_datetime' => $reservationDatetime,
+            'party_size' => $partySize,
+            'vehicle_kind' => $vehicleKind,
+            'activity_type' => $activityType,
+            'difficulty' => $difficulty,
+            'excursion_date' => $excursionDate,
+            'workspace_type_filter' => $workspaceTypeFilter,
+            'internet_speed' => $internetSpeed,
+            'workspace_start' => $workspaceStart,
+            'workspace_end' => $workspaceEnd,
+            'time_slot' => $timeSlot,
+            'facility_type' => $facilityType,
+            'visit_date' => $visitDate,
+            'conference_event_type' => $conferenceEventType,
+            'conference_capacity' => $conferenceCapacity,
+            'conference_date' => $conferenceDate,
             'min_price' => $minPrice,
             'max_price' => $maxPrice,
             'sort' => $sort,
@@ -1109,12 +1158,12 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             'adults' => (int) $request->query('adults', 2),
             'children' => (int) $request->query('children', 0),
             'rooms' => (int) $request->query('rooms', 1),
-            'transport_mode' => trim((string) $request->query('transport_mode', 'marine')),
-            'from' => trim((string) $request->query('from', '')),
-            'to' => trim((string) $request->query('to', '')),
+            'origin_point' => trim((string) $request->query('origin_point', '')),
+            'destination_point' => trim((string) $request->query('destination_point', '')),
             'travel_date' => trim((string) $request->query('travel_date', '')),
             'return_date' => trim((string) $request->query('return_date', '')),
-            'vehicle_type' => trim((string) $request->query('vehicle_type', '')),
+            'pickup_date' => trim((string) $request->query('pickup_date', '')),
+            'vehicle_type' => trim((string) $request->query('vehicle_type', '')), 
         ],
     ]);
 });
@@ -1661,11 +1710,13 @@ Route::post('/booking/reserve', function (Request $request) {
 Route::get('/category-booking/{category}/{property}', function (Request $request, string $category, int $property) {
     $categoryMap = [
         'accommodation' => ['label' => 'Accommodation', 'start_label' => 'Check-in Date', 'end_label' => 'Check-out Date'],
-        'transport' => ['label' => 'Transport', 'start_label' => 'Travel Date', 'end_label' => 'Return Date'],
+        'marine-transport' => ['label' => 'Marine Transport', 'start_label' => 'Travel Date', 'end_label' => 'Return Date'],
+        'land-transport' => ['label' => 'Land Transport', 'start_label' => 'Travel Date', 'end_label' => 'Return Date'],
         'excursion' => ['label' => 'Excursion', 'start_label' => 'Excursion Date', 'end_label' => 'Return Date'],
         'remote_workspace' => ['label' => 'Remote Workspace', 'start_label' => 'Start Date', 'end_label' => 'End Date'],
+        'conference_room' => ['label' => 'Conference & Meeting Spaces', 'start_label' => 'Event Date', 'end_label' => 'Event End Date'],
         'resort_day_visit' => ['label' => 'Resort Day Visit', 'start_label' => 'Visit Date', 'end_label' => 'Return Date'],
-        'restaurant' => ['label' => 'Restaurant', 'start_label' => 'Reservation Date', 'end_label' => 'End Date'],
+        'restaurant' => ['label' => 'Restaurant', 'start_label' => 'Reservation Date & Time', 'end_label' => 'Expected Departure Date & Time'],
         'vehicle_rental' => ['label' => 'Vehicle Rental', 'start_label' => 'Pickup Date', 'end_label' => 'Return Date'],
     ];
 
@@ -1673,8 +1724,11 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         'accommodation' => [
             ['key' => 'rooms', 'label' => 'Rooms', 'type' => 'number', 'required' => true, 'min' => 1],
         ],
-        'transport' => [
-            ['key' => 'transport_mode', 'label' => 'Transport Mode', 'type' => 'select', 'required' => true, 'options' => ['marine' => 'Marine', 'land' => 'Land']],
+        'marine-transport' => [
+            ['key' => 'origin_point', 'label' => 'From', 'type' => 'text', 'required' => true],
+            ['key' => 'destination_point', 'label' => 'To', 'type' => 'text', 'required' => true],
+        ],
+        'land-transport' => [
             ['key' => 'origin_point', 'label' => 'From', 'type' => 'text', 'required' => true],
             ['key' => 'destination_point', 'label' => 'To', 'type' => 'text', 'required' => true],
         ],
@@ -1684,12 +1738,14 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         'remote_workspace' => [
             ['key' => 'workspace_type', 'label' => 'Workspace Type', 'type' => 'text', 'required' => true],
         ],
+        'conference_room' => [
+            ['key' => 'event_type', 'label' => 'Event Type', 'type' => 'select', 'required' => true, 'options' => ['meeting' => 'Meeting', 'training' => 'Training', 'seminar' => 'Seminar', 'conference' => 'Conference', 'workshop' => 'Workshop']],
+            ['key' => 'expected_capacity', 'label' => 'Expected Attendees', 'type' => 'number', 'required' => true, 'min' => 1],
+        ],
         'resort_day_visit' => [
             ['key' => 'visit_package', 'label' => 'Visit Package', 'type' => 'text', 'required' => true],
         ],
-        'restaurant' => [
-            ['key' => 'meal_plan', 'label' => 'Meal Plan', 'type' => 'text', 'required' => true],
-        ],
+        'restaurant' => [],
         'vehicle_rental' => [
             ['key' => 'vehicle_type', 'label' => 'Vehicle Type', 'type' => 'text', 'required' => true],
             ['key' => 'pickup_location', 'label' => 'Pickup Location', 'type' => 'text', 'required' => true],
@@ -1726,6 +1782,120 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         $listingDetails = [];
     }
 
+    $propertyMedia = collect();
+    if (Schema::hasTable('vendor_listing_media')) {
+        $propertyMedia = DB::table('vendor_listing_media')
+            ->where('entity_type', 'property')
+            ->where('entity_id', (int) ($propertyRow->id ?? 0))
+            ->orderByDesc('is_primary')
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get();
+    }
+
+    $extractStringList = static function ($value): array {
+        if (is_array($value)) {
+            return collect($value)
+                ->map(static fn ($item) => trim((string) $item))
+                ->filter(static fn ($item) => $item !== '')
+                ->values()
+                ->all();
+        }
+
+        if (!is_string($value)) {
+            return [];
+        }
+
+        return collect(preg_split('/[,\n]+/', $value) ?: [])
+            ->map(static fn ($item) => trim((string) $item))
+            ->filter(static fn ($item) => $item !== '')
+            ->values()
+            ->all();
+    };
+
+    $firstNonEmptyList = static function (array $sources, callable $extractor): array {
+        foreach ($sources as $source) {
+            $items = $extractor($source);
+            if (!empty($items)) {
+                return $items;
+            }
+        }
+
+        return [];
+    };
+
+    $highlights = $firstNonEmptyList([
+        $listingDetails['highlights'] ?? null,
+        $listingDetails['key_highlights'] ?? null,
+        $listingDetails['features'] ?? null,
+    ], $extractStringList);
+
+    if (empty($highlights)) {
+        $highlights = match ($categoryKey) {
+            'transport' => ['Fast booking confirmation', 'Flexible route support', 'Local operator coordination'],
+            'excursion' => ['Curated local experiences', 'Safety-first operators', 'Flexible trip planning'],
+            'remote_workspace' => ['Work-friendly environment', 'Reliable utility setup', 'Quiet productivity zones'],
+            'resort_day_visit' => ['Day access convenience', 'Resort facilities included', 'Family-friendly options'],
+            'restaurant' => ['Island-inspired dining', 'Reservation support', 'Group-friendly seating'],
+            'vehicle_rental' => ['Clean and ready vehicles', 'Flexible pickup points', 'Simple booking flow'],
+            default => ['Guest-focused service', 'Verified local operator', 'Easy booking process'],
+        };
+    }
+
+    $servicesAndAmenities = $firstNonEmptyList([
+        $listingDetails['amenities'] ?? null,
+        $listingDetails['facilities'] ?? null,
+        $listingDetails['services'] ?? null,
+        $listingDetails['service_features'] ?? null,
+    ], $extractStringList);
+
+    $restaurantMenuItems = $firstNonEmptyList([
+        $listingDetails['menu_items'] ?? null,
+        $listingDetails['menu'] ?? null,
+        $listingDetails['restaurant_menu'] ?? null,
+        $listingDetails['dishes'] ?? null,
+    ], $extractStringList);
+
+    $descriptionText = trim((string) (
+        $listingDetails['description']
+        ?? $listingDetails['overview']
+        ?? $propertyRow->description
+        ?? ''
+    ));
+
+    if ($descriptionText === '') {
+        $descriptionText = 'This listing is managed by a verified local operator and includes practical service details for straightforward planning. Availability, guest preferences, and service notes can be finalized during checkout.';
+    }
+
+    $vendorPolicy = [
+        'opening_hours' => trim((string) (
+            $listingDetails['opening_hours']
+            ?? $listingDetails['operating_hours']
+            ?? $listingDetails['business_hours']
+            ?? ''
+        )),
+        'closing_hours' => trim((string) (
+            $listingDetails['closing_hours']
+            ?? $listingDetails['close_time']
+            ?? $listingDetails['closing_time']
+            ?? ''
+        )),
+        'cancellation_policy' => trim((string) (
+            $listingDetails['cancellation_policy']
+            ?? $listingDetails['cancellation_terms']
+            ?? $listingDetails['cancellation']
+            ?? ''
+        )),
+        'other_rules' => $extractStringList(
+            $listingDetails['rules']
+            ?? $listingDetails['house_rules']
+            ?? $listingDetails['policies']
+            ?? $listingDetails['terms']
+            ?? $listingDetails['additional_rules']
+            ?? null
+        ),
+    ];
+
     $taxRate = (float) ($listingDetails['tax_rate'] ?? 16);
     $discountPercent = (float) ($listingDetails['promotion_discount_percent'] ?? 0);
 
@@ -1743,6 +1913,12 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             'end' => (string) ($categoryMap[$categoryKey]['end_label'] ?? 'Service End Date'),
         ],
         'property' => $propertyRow,
+        'propertyMedia' => $propertyMedia,
+        'highlights' => $highlights,
+        'servicesAndAmenities' => $servicesAndAmenities,
+        'restaurantMenuItems' => $restaurantMenuItems,
+        'descriptionText' => $descriptionText,
+        'vendorPolicy' => $vendorPolicy,
         'pricingConfig' => [
             'tax_rate' => $taxRate,
             'discount_percent' => $discountPercent,
@@ -1759,7 +1935,6 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             'primary_email' => trim((string) session('portal_customer_email', '')),
             'primary_mobile' => '',
             'rooms' => max(1, (int) $request->query('rooms', 1)),
-            'transport_mode' => trim((string) $request->query('transport_mode', 'marine')),
             'origin_point' => trim((string) $request->query('origin_point', '')),
             'destination_point' => trim((string) $request->query('destination_point', '')),
             'excursion_type' => trim((string) $request->query('excursion_type', '')),
@@ -1777,11 +1952,12 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
 Route::post('/booking/reserve-category', function (Request $request) {
     $categoryMap = [
         'accommodation' => ['label' => 'Accommodation', 'start_label' => 'Check-in', 'end_label' => 'Check-out'],
-        'transport' => ['label' => 'Transport', 'start_label' => 'Travel Date', 'end_label' => 'Return Date'],
+        'marine-transport' => ['label' => 'Marine Transport', 'start_label' => 'Travel Date', 'end_label' => 'Return Date'],
+        'land-transport' => ['label' => 'Land Transport', 'start_label' => 'Travel Date', 'end_label' => 'Return Date'],
         'excursion' => ['label' => 'Excursion', 'start_label' => 'Excursion Date', 'end_label' => 'Return Date'],
         'remote_workspace' => ['label' => 'Remote Workspace', 'start_label' => 'Start Date', 'end_label' => 'End Date'],
         'resort_day_visit' => ['label' => 'Resort Day Visit', 'start_label' => 'Visit Date', 'end_label' => 'Return Date'],
-        'restaurant' => ['label' => 'Restaurant', 'start_label' => 'Reservation Date', 'end_label' => 'End Date'],
+        'restaurant' => ['label' => 'Restaurant', 'start_label' => 'Reservation Date & Time', 'end_label' => 'Expected Departure Date & Time'],
         'vehicle_rental' => ['label' => 'Vehicle Rental', 'start_label' => 'Pickup Date', 'end_label' => 'Return Date'],
     ];
 
@@ -1789,8 +1965,11 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'accommodation' => [
             'rooms' => ['required', 'integer', 'min:1', 'max:20'],
         ],
-        'transport' => [
-            'transport_mode' => ['required', 'string', 'in:marine,land'],
+        'marine-transport' => [
+            'origin_point' => ['required', 'string', 'max:120'],
+            'destination_point' => ['required', 'string', 'max:120'],
+        ],
+        'land-transport' => [
             'origin_point' => ['required', 'string', 'max:120'],
             'destination_point' => ['required', 'string', 'max:120'],
         ],
@@ -1800,12 +1979,16 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'remote_workspace' => [
             'workspace_type' => ['required', 'string', 'max:120'],
         ],
+        'conference_room' => [
+            'event_type' => ['required', 'string', 'in:meeting,training,seminar,conference,workshop'],
+            'expected_capacity' => ['required', 'integer', 'min:1', 'max:5000'],
+            'required_facilities' => ['nullable', 'array'],
+            'required_facilities.*' => ['string', 'max:60'],
+        ],
         'resort_day_visit' => [
             'visit_package' => ['required', 'string', 'max:120'],
         ],
-        'restaurant' => [
-            'meal_plan' => ['required', 'string', 'max:120'],
-        ],
+        'restaurant' => [],
         'vehicle_rental' => [
             'vehicle_type' => ['required', 'string', 'max:120'],
             'pickup_location' => ['required', 'string', 'max:120'],
@@ -1815,11 +1998,13 @@ Route::post('/booking/reserve-category', function (Request $request) {
 
     $categoryFieldLabels = [
         'rooms' => 'rooms',
-        'transport_mode' => 'transport mode',
         'origin_point' => 'from location',
         'destination_point' => 'to location',
         'excursion_type' => 'excursion type',
         'workspace_type' => 'workspace type',
+        'event_type' => 'event type',
+        'expected_capacity' => 'expected capacity',
+        'required_facilities' => 'required facilities',
         'visit_package' => 'visit package',
         'meal_plan' => 'meal plan',
         'vehicle_type' => 'vehicle type',

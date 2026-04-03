@@ -42,11 +42,10 @@
         .compact-line { display:flex; justify-content:space-between; gap:10px; font-size:0.8rem; color:#3b5c73; }
         .compact-line strong { color:#1f465f; }
         .actions { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
-        .btn { text-decoration:none; border:1px solid #d9b06f; background:linear-gradient(135deg,#ffc76f 0%,var(--accent) 100%); color:#603b0c; border-radius:10px; padding:10px 13px; font-weight:700; font-size:0.86rem; }
-        .btn.alt { border-color:#c5d8e6; background:#f7fbff; color:#244a65; }
         @media (max-width: 980px) { .layout { grid-template-columns:1fr; } }
         @media (max-width: 760px) { .grid { grid-template-columns:1fr; } }
     </style>
+    @include('partials.uniform-buttons')
 </head>
 <body>
     @php

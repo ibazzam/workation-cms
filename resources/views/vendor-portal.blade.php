@@ -1585,21 +1585,9 @@
 
         .btn {
             margin-top: 10px;
-            border: 0;
-            border-radius: 10px;
-            padding: 9px 12px;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        .btn-primary {
-            background: #0f6d5f;
-            color: #fff;
         }
 
         .btn-secondary {
-            background: #edf2f8;
-            color: #183452;
             margin-left: 8px;
         }
 
@@ -1619,16 +1607,6 @@
             font-size: 0.83rem;
             color: #233247;
             word-break: break-all;
-        }
-
-        .endpoint button {
-            border: 0;
-            border-radius: 8px;
-            background: #0e6b5f;
-            color: #fff;
-            font-weight: 700;
-            padding: 7px 10px;
-            cursor: pointer;
         }
 
         .endpoint button[disabled] {
@@ -1795,6 +1773,7 @@
             }
         }
     </style>
+    @include('partials.uniform-buttons')
 </head>
 <body>
     @php

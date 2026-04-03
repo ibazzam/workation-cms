@@ -333,6 +333,7 @@
             grid-template-columns: 1fr 1fr;
             gap: 8px;
             align-items: start;
+            min-width: 0;
         }
 
         .search-dynamic-fields {
@@ -341,6 +342,7 @@
             grid-column: 1 / -1;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 8px;
+            min-width: 0;
         }
 
         .search-dynamic-fields.is-active {
@@ -364,6 +366,8 @@
         .search-form select,
         .search-form input {
             width: 100%;
+            min-width: 0;
+            max-width: 100%;
             border: 1px solid #b8d9e2;
             border-radius: 10px;
             padding: 11px 12px;
@@ -375,6 +379,8 @@
         .search-dynamic-fields select,
         .search-dynamic-fields input {
             width: 100%;
+            min-width: 0;
+            max-width: 100%;
             border: 1px solid #b8d9e2;
             border-radius: 10px;
             padding: 11px 12px;
@@ -393,17 +399,10 @@
         .search-dynamic-fields input[type="date"] {
             min-height: 48px;
             padding-right: 10px;
+            overflow: hidden;
         }
 
         .search-form button {
-            border: 1px solid #f6d19a;
-            background: linear-gradient(135deg, #ffc76f 0%, var(--accent) 100%);
-            color: #57350b;
-            border-radius: 10px;
-            padding: 11px 20px;
-            font: inherit;
-            font-weight: 700;
-            cursor: pointer;
             min-width: 180px;
             justify-self: end;
             box-shadow: 0 8px 18px rgba(243, 163, 55, 0.28);
@@ -751,6 +750,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .search-section-full-width {
+                overflow: hidden;
+            }
+
             .search-submit-row {
                 justify-content: stretch;
             }
@@ -767,6 +770,18 @@
                 grid-template-columns: 1fr;
             }
 
+            .mobile-category-row {
+                flex-direction: column;
+                gap: 8px;
+                overflow-x: visible;
+                overflow-y: visible;
+            }
+
+            .mobile-category-link {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
             .browse-grid,
             .trending-grid,
             .deal-grid,
@@ -775,6 +790,7 @@
             }
         }
     </style>
+    @include('partials.uniform-buttons')
 </head>
 <body>
     @php

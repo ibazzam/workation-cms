@@ -288,19 +288,8 @@
         }
 
         button {
-            border: 0;
-            background: var(--brand);
-            color: #fff;
-            border-radius: 10px;
-            padding: 10px 14px;
-            font-weight: 700;
-            cursor: pointer;
             width: 100%;
             font-size: 1rem;
-        }
-
-        button:hover {
-            background: var(--brand-dark);
         }
 
         a {
@@ -314,6 +303,7 @@
             .wrap { padding: 20px 12px; }
         }
     </style>
+    @include('partials.uniform-buttons')
 </head>
 <body>
     <main class="wrap">

@@ -527,9 +527,11 @@ if (!function_exists('getAvailableCategories')) {
                 'icon' => $info['icon'] ?? 'fa-solid fa-location-dot',
                 'subtitle' => match ($key) {
                     'accommodation' => 'Hotels, villas, guesthouses',
-                    'transport' => 'Marine and land transfers',
+                    'marine-transport' => 'Speedboats, ferries, and water transfers',
+                    'land-transport' => 'Cars, vans, and local ground transfers',
                     'excursion' => 'Diving, snorkel, island tours',
                     'remote_workspace' => 'Wi-Fi, desks, quiet corners',
+                    'conference_room' => 'Meeting and event spaces',
                     'resort_day_visit' => 'Day access and passes',
                     'restaurant' => 'Dining and local cuisine',
                     'vehicle_rental' => 'Cars, bikes, vans and more',
@@ -558,9 +560,19 @@ if (!function_exists('getAvailableCategories')) {
                 return $defaultCategories;
             }
 
-            return collect($defaultCategories)
-                ->filter(static fn ($_, $key) => $dbCategories->contains($key))
+            $extraCategories = $dbCategories
+                ->reject(static fn ($key) => array_key_exists($key, $defaultCategories))
+                ->mapWithKeys(static fn ($key) => [
+                    $key => [
+                        'label' => ucfirst(str_replace(['_', '-'], ' ', $key)),
+                        'icon' => 'fa-solid fa-location-dot',
+                        'subtitle' => '',
+                        'color' => '#0f6179',
+                    ],
+                ])
                 ->toArray();
+
+            return array_merge($defaultCategories, $extraCategories);
         } catch (\Throwable $e) {
             Log::warning('Failed to fetch available categories', ['error' => $e->getMessage()]);
             return $defaultCategories;
@@ -590,10 +602,11 @@ Route::get('/', function () {
 
     $homeBrowseCards = collect([
         ['title' => 'Stay Options', 'subtitle' => 'Hotels, villas, guesthouses', 'url' => '/catalog/accommodation'],
-        ['title' => 'Transport', 'subtitle' => 'Speedboat, ferry, airport pickup', 'url' => '/catalog/transport'],
+        ['title' => 'Marine Transport', 'subtitle' => 'Speedboat, ferry, water transfer', 'url' => '/catalog/marine-transport'],
+        ['title' => 'Land Transport', 'subtitle' => 'Car, van, and island transfers', 'url' => '/catalog/land-transport'],
         ['title' => 'Experiences', 'subtitle' => 'Diving, snorkel, island tours', 'url' => '/catalog/excursion'],
         ['title' => 'Work-Friendly', 'subtitle' => 'Wi-Fi, desks, quiet corners', 'url' => '/catalog/remote_workspace'],
-        ['title' => 'Family Picks', 'subtitle' => 'Kid-friendly places and services', 'url' => '/catalog/accommodation?q=family'],
+        ['title' => 'Conference Rooms', 'subtitle' => 'Meeting and event-ready spaces', 'url' => '/catalog/conference_room'],
         ['title' => 'Deals Zone', 'subtitle' => 'Promotions and last-minute value', 'url' => '/catalog/accommodation?sort=price_low_high'],
     ]);
 
@@ -606,7 +619,7 @@ Route::get('/', function () {
 
     $homeWeekendDealCards = collect([
         ['title' => '2-Night Beach Stay', 'subtitle' => 'Weekend promo with breakfast included.', 'url' => '/catalog/accommodation?q=beach&sort=price_low_high'],
-        ['title' => 'Stay + Transfer Bundle', 'subtitle' => 'Save when you combine stay and transport.', 'url' => '/catalog/transport?sort=price_low_high'],
+        ['title' => 'Stay + Transfer Bundle', 'subtitle' => 'Save when you combine stay and transport.', 'url' => '/catalog/marine-transport?sort=price_low_high'],
         ['title' => 'Family Weekend Pack', 'subtitle' => 'Room upgrade and activity credits included.', 'url' => '/catalog/accommodation?q=family&sort=most_wanted'],
         ['title' => 'Couple Escape Offer', 'subtitle' => 'Curated stay options for a quick retreat.', 'url' => '/catalog/accommodation?q=couple&sort=highest_reviews'],
     ]);
@@ -651,6 +664,11 @@ Route::get('/', function () {
             $primaryMedia = $mediaItems->first();
             if (!$primaryMedia) {
                 return null;
+            }
+
+            $mediaId = (int) ($primaryMedia->id ?? 0);
+            if ($mediaId > 0) {
+                return '/media/vendor/' . $mediaId . '/banner';
             }
 
             $filePath = trim((string) ($primaryMedia->file_path ?? ''));
@@ -721,11 +739,13 @@ Route::get('/', function () {
                 $key = strtolower(trim((string) ($card['title'] ?? '')));
                 $categoryHint = match ($key) {
                     'accommodation' => 'accommodation',
-                    'transport' => 'transport',
+                    'marine transport' => 'marine-transport',
+                    'land transport' => 'land-transport',
                     'excursions' => 'excursion',
                     'remote workspace' => 'remote_workspace',
+                    'conference rooms' => 'conference_room',
                     'resort day visit' => 'resort_day_visit',
-                    'restaurants' => 'restaurant',
+                    'restaurant' => 'restaurant',
                     'vehicle rental' => 'vehicle_rental',
                     default => null,
                 };
@@ -745,9 +765,11 @@ Route::get('/', function () {
             $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categoryCounts) {
                 $categoryHint = match ($card['title']) {
                     'Stay Options' => 'accommodation',
-                    'Transport' => 'transport',
+                    'Marine Transport' => 'marine-transport',
+                    'Land Transport' => 'land-transport',
                     'Experiences' => 'excursion',
                     'Work-Friendly' => 'remote_workspace',
+                    'Conference Rooms' => 'conference_room',
                     default => null,
                 };
 
@@ -766,10 +788,11 @@ Route::get('/', function () {
             $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categorySamples, $resolvePropertyImage, $propertyLocationLabel) {
                 $categoryHint = match ($card['title']) {
                     'Stay Options' => 'accommodation',
-                    'Transport' => 'transport',
+                    'Marine Transport' => 'marine-transport',
+                    'Land Transport' => 'land-transport',
                     'Experiences' => 'excursion',
                     'Work-Friendly' => 'remote_workspace',
-                    'Family Picks' => 'accommodation',
+                    'Conference Rooms' => 'conference_room',
                     'Deals Zone' => 'accommodation',
                     default => null,
                 };

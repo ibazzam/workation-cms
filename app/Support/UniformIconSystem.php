@@ -23,9 +23,11 @@ class UniformIconSystem
     {
         $categories = [
             'accommodation'    => ['icon' => 'fa-solid fa-hotel',           'label' => 'Accommodation',    'color' => '#0f6179'],
-            'transport'        => ['icon' => 'fa-solid fa-ship',            'label' => 'Transport',         'color' => '#1d7a8f'],
+            'marine-transport' => ['icon' => 'fa-solid fa-water',           'label' => 'Marine Transport',  'color' => '#1d7a8f'],
+            'land-transport'   => ['icon' => 'fa-solid fa-van-shuttle',     'label' => 'Land Transport',    'color' => '#1d7a8f'],
             'excursion'        => ['icon' => 'fa-solid fa-compass',         'label' => 'Excursion',         'color' => '#2a8a95'],
             'remote_workspace' => ['icon' => 'fa-solid fa-laptop',          'label' => 'Remote Workspace',  'color' => '#1a6f7f'],
+            'conference_room'  => ['icon' => 'fa-solid fa-object-group',    'label' => 'Conference Rooms',  'color' => '#1a6f7f'],
             'resort_day_visit' => ['icon' => 'fa-solid fa-umbrella-beach',  'label' => 'Resort Day Visit',  'color' => '#0f6179'],
             'restaurant'       => ['icon' => 'fa-solid fa-utensils',        'label' => 'Restaurant',        'color' => '#2d7f8a'],
             'vehicle_rental'   => ['icon' => 'fa-solid fa-car',             'label' => 'Vehicle Rental',    'color' => '#1b7885'],
@@ -223,9 +225,11 @@ class UniformIconSystem
     {
         return [
             'accommodation' => self::getCategoryIcon('accommodation'),
-            'transport' => self::getCategoryIcon('transport'),
+            'marine-transport' => self::getCategoryIcon('marine-transport'),
+            'land-transport' => self::getCategoryIcon('land-transport'),
             'excursion' => self::getCategoryIcon('excursion'),
             'remote_workspace' => self::getCategoryIcon('remote_workspace'),
+            'conference_room' => self::getCategoryIcon('conference_room'),
             'resort_day_visit' => self::getCategoryIcon('resort_day_visit'),
             'restaurant' => self::getCategoryIcon('restaurant'),
             'vehicle_rental' => self::getCategoryIcon('vehicle_rental'),

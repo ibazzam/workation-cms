@@ -25,7 +25,6 @@ class UniformIconSystem
             'accommodation'    => ['icon' => 'fa-solid fa-hotel',           'label' => 'Accommodation',    'color' => '#0f6179'],
             'transport'        => ['icon' => 'fa-solid fa-ship',            'label' => 'Transport',         'color' => '#1d7a8f'],
             'excursion'        => ['icon' => 'fa-solid fa-compass',         'label' => 'Excursion',         'color' => '#2a8a95'],
-            'excursion'        => ['icon' => 'fa-solid fa-water',           'label' => 'Excursion',         'color' => '#2a8a95'],
             'remote_workspace' => ['icon' => 'fa-solid fa-laptop',          'label' => 'Remote Workspace',  'color' => '#1a6f7f'],
             'resort_day_visit' => ['icon' => 'fa-solid fa-umbrella-beach',  'label' => 'Resort Day Visit',  'color' => '#0f6179'],
             'restaurant'       => ['icon' => 'fa-solid fa-utensils',        'label' => 'Restaurant',        'color' => '#2d7f8a'],
@@ -111,7 +110,6 @@ class UniformIconSystem
 
         // View
         if (preg_match('/(view|vista|ocean|sea|landscape|scenic)/i', $amenityLower)) {
-        if (preg_match('/(view|vista|ocean|sea|garden|landscape|scenic)/i', $amenityLower)) {
             return 'fa-solid fa-binoculars';
         }
 

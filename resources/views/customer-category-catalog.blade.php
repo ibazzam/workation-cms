@@ -227,12 +227,34 @@
             padding: 12px;
             display: grid;
             gap: 8px;
+            overflow: hidden;
         }
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(12, minmax(0, 1fr));
             gap: 8px;
+            min-width: 0;
+        }
+
+        .field {
+            min-width: 0;
+        }
+
+        .field.field-short {
+            grid-column: span 2;
+        }
+
+        .field.field-medium {
+            grid-column: span 3;
+        }
+
+        .field.field-date {
+            grid-column: span 3;
+        }
+
+        .field.field-long {
+            grid-column: span 4;
         }
 
         .field label {
@@ -248,6 +270,8 @@
         .field input,
         .field select {
             width: 100%;
+            min-width: 0;
+            max-width: 100%;
             border: 1px solid #c8d8e5;
             border-radius: 10px;
             padding: 10px 12px;
@@ -257,6 +281,18 @@
             line-height: 1.4;
             display: flex;
             align-items: center;
+            box-sizing: border-box;
+        }
+
+        .field input[type="date"],
+        .field input[type="datetime-local"] {
+            appearance: none;
+            -webkit-appearance: none;
+            display: block;
+            min-height: 48px;
+            padding-right: 8px;
+            font-size: 16px;
+            overflow: hidden;
         }
         
         .field select {
@@ -366,9 +402,25 @@
                 grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             }
 
-            .grid,
             .catalog-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .grid {
+                grid-template-columns: repeat(6, minmax(0, 1fr));
+            }
+
+            .field.field-short {
+                grid-column: span 2;
+            }
+
+            .field.field-medium,
+            .field.field-date {
+                grid-column: span 3;
+            }
+
+            .field.field-long {
+                grid-column: span 6;
             }
         }
 
@@ -402,9 +454,19 @@
                 grid-template-columns: 1fr;
             }
 
-            .grid,
             .catalog-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .field.field-short,
+            .field.field-medium,
+            .field.field-date,
+            .field.field-long {
+                grid-column: auto;
             }
         }
     </style>
@@ -488,11 +550,11 @@
 
         <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}">
             <div class="grid">
-                <div class="field">
+                <div class="field field-long">
                     <label for="q">Search</label>
                     <input id="q" name="q" type="text" value="{{ $filters['q'] ?? '' }}" placeholder="Atoll, island, place, or property name">
                 </div>
-                <div class="field">
+                <div class="field field-medium">
                     <label for="atoll">Atoll</label>
                     <select id="atoll" name="atoll">
                         <option value="">All Atolls</option>
@@ -501,7 +563,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="field">
+                <div class="field field-medium">
                     <label for="island">Island / City</label>
                     <select id="island" name="island">
                         <option value="">All Islands/Cities</option>
@@ -510,7 +572,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="field">
+                <div class="field field-medium">
                     <label for="sort">Sort</label>
                     <select id="sort" name="sort">
                         <option value="recommended" {{ ($filters['sort'] ?? '') === 'recommended' ? 'selected' : '' }}>Recommended</option>
@@ -521,11 +583,11 @@
                         <option value="price_high_low" {{ ($filters['sort'] ?? '') === 'price_high_low' ? 'selected' : '' }}>Price High to Low</option>
                     </select>
                 </div>
-                <div class="field">
+                <div class="field field-short">
                     <label for="min_price">Min Price</label>
                     <input id="min_price" name="min_price" type="number" min="0" value="{{ $filters['min_price'] ?? 0 }}">
                 </div>
-                <div class="field">
+                <div class="field field-short">
                     <label for="max_price">Max Price</label>
                     <input id="max_price" name="max_price" type="number" min="0" value="{{ $filters['max_price'] ?? 0 }}">
                 </div>
@@ -533,20 +595,20 @@
 
             @if ($categoryKey === 'accommodation')
                 <div class="grid">
-                    <div class="field"><label for="checkin">Check-in Date</label><input id="checkin" name="checkin" type="date" value="{{ $filters['checkin'] ?? '' }}"></div>
-                    <div class="field"><label for="checkout">Check-out Date</label><input id="checkout" name="checkout" type="date" value="{{ $filters['checkout'] ?? '' }}"></div>
-                    <div class="field"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ $filters['adults'] ?? 2 }}"></div>
-                    <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ $filters['children'] ?? 0 }}"></div>
-                    <div class="field"><label for="rooms">Rooms</label><input id="rooms" name="rooms" type="number" min="1" value="{{ $filters['rooms'] ?? 1 }}"></div>
+                    <div class="field field-date"><label for="checkin">Check-in Date</label><input id="checkin" name="checkin" type="date" value="{{ $filters['checkin'] ?? '' }}"></div>
+                    <div class="field field-date"><label for="checkout">Check-out Date</label><input id="checkout" name="checkout" type="date" value="{{ $filters['checkout'] ?? '' }}"></div>
+                    <div class="field field-short"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ $filters['adults'] ?? 2 }}"></div>
+                    <div class="field field-short"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ $filters['children'] ?? 0 }}"></div>
+                    <div class="field field-short"><label for="rooms">Rooms</label><input id="rooms" name="rooms" type="number" min="1" value="{{ $filters['rooms'] ?? 1 }}"></div>
                 </div>
             @elseif ($categoryKey === 'marine-transport' || $categoryKey === 'land-transport')
                 <div class="grid">
-                    <div class="field"><label for="origin_point">From (Island/Location)</label><input id="origin_point" name="origin_point" type="text" value="{{ $filters['origin_point'] ?? '' }}"></div>
-                    <div class="field"><label for="destination_point">To (Island/Location)</label><input id="destination_point" name="destination_point" type="text" value="{{ $filters['destination_point'] ?? '' }}"></div>
-                    <div class="field"><label for="travel_date">Travel Date</label><input id="travel_date" name="travel_date" type="date" value="{{ $filters['travel_date'] ?? '' }}"></div>
-                    <div class="field"><label for="return_date">Return Date</label><input id="return_date" name="return_date" type="date" value="{{ $filters['return_date'] ?? '' }}"></div>
-                    <div class="field"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ $filters['adults'] ?? 2 }}"></div>
-                    <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ $filters['children'] ?? 0 }}"></div>
+                    <div class="field field-long"><label for="origin_point">From (Island/Location)</label><input id="origin_point" name="origin_point" type="text" value="{{ $filters['origin_point'] ?? '' }}"></div>
+                    <div class="field field-long"><label for="destination_point">To (Island/Location)</label><input id="destination_point" name="destination_point" type="text" value="{{ $filters['destination_point'] ?? '' }}"></div>
+                    <div class="field field-date"><label for="travel_date">Travel Date</label><input id="travel_date" name="travel_date" type="date" value="{{ $filters['travel_date'] ?? '' }}"></div>
+                    <div class="field field-date"><label for="return_date">Return Date</label><input id="return_date" name="return_date" type="date" value="{{ $filters['return_date'] ?? '' }}"></div>
+                    <div class="field field-short"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ $filters['adults'] ?? 2 }}"></div>
+                    <div class="field field-short"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ $filters['children'] ?? 0 }}"></div>
                 </div>
             @elseif ($categoryKey === 'restaurant')
                 <div class="island-context-note" style="margin-bottom:8px;">
@@ -554,7 +616,7 @@
                     <span>Restaurants in the Maldives are <strong>island-specific</strong>. Select the island where you are currently staying or planning to visit to see what’s available at that location.</span>
                 </div>
                 <div class="grid">
-                    <div class="field">
+                    <div class="field field-medium">
                         <label for="current_island">Your Current Island / Stay Location</label>
                         <select id="current_island" name="current_island">
                             <option value="">All Islands</option>
@@ -563,7 +625,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="field">
+                    <div class="field field-medium">
                         <label for="atoll_restaurant">Atoll (Optional)</label>
                         <select id="atoll_restaurant" name="atoll">
                             <option value="">All Atolls</option>
@@ -572,18 +634,18 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="field">
+                    <div class="field field-date">
                         <label for="reservation_datetime">Reservation Date &amp; Time</label>
                         <input id="reservation_datetime" name="reservation_datetime" type="datetime-local" value="{{ $filters['reservation_datetime'] ?? '' }}">
                     </div>
-                    <div class="field">
+                    <div class="field field-short">
                         <label for="party_size">Party Size</label>
                         <input id="party_size" name="party_size" type="number" min="1" value="{{ $filters['party_size'] ?? 2 }}">
                     </div>
                 </div>
             @elseif ($categoryKey === 'excursion')
                 <div class="grid">
-                    <div class="field">
+                    <div class="field field-medium">
                         <label for="activity_type">Activity Type</label>
                         <select id="activity_type" name="activity_type">
                             <option value="">All Activities</option>
@@ -594,7 +656,7 @@
                             <option value="wildlife" {{ ($filters['activity_type'] ?? '') === 'wildlife' ? 'selected' : '' }}>Wildlife</option>
                         </select>
                     </div>
-                    <div class="field">
+                    <div class="field field-medium">
                         <label for="difficulty">Difficulty Level</label>
                         <select id="difficulty" name="difficulty">
                             <option value="">All Levels</option>
@@ -603,14 +665,14 @@
                             <option value="challenging" {{ ($filters['difficulty'] ?? '') === 'challenging' ? 'selected' : '' }}>Challenging</option>
                         </select>
                     </div>
-                    <div class="field">
+                    <div class="field field-date">
                         <label for="excursion_date">Excursion Date</label>
                         <input id="excursion_date" name="excursion_date" type="date" value="{{ $filters['excursion_date'] ?? '' }}">
                     </div>
                 </div>
             @elseif ($categoryKey === 'remote_workspace')
                 <div class="grid">
-                    <div class="field">
+                    <div class="field field-medium">
                         <label for="workspace_type_filter">Workspace Type</label>
                         <select id="workspace_type_filter" name="workspace_type_filter">
                             <option value="">All Types</option>
@@ -621,7 +683,7 @@
                             <option value="resort" {{ ($filters['workspace_type_filter'] ?? '') === 'resort' ? 'selected' : '' }}>Resort Workspace</option>
                         </select>
                     </div>
-                    <div class="field">
+                    <div class="field field-medium">
                         <label for="internet_speed">Internet Speed</label>
                         <select id="internet_speed" name="internet_speed">
                             <option value="">Any Speed</option>
@@ -630,18 +692,18 @@
                             <option value="basic" {{ ($filters['internet_speed'] ?? '') === 'basic' ? 'selected' : '' }}>Basic (20+ Mbps)</option>
                         </select>
                     </div>
-                    <div class="field">
+                    <div class="field field-date">
                         <label for="workspace_start">Start Date</label>
                         <input id="workspace_start" name="workspace_start" type="date" value="{{ $filters['workspace_start'] ?? '' }}">
                     </div>
-                    <div class="field">
+                    <div class="field field-date">
                         <label for="workspace_end">End Date</label>
                         <input id="workspace_end" name="workspace_end" type="date" value="{{ $filters['workspace_end'] ?? '' }}">
                     </div>
                 </div>
             @elseif ($categoryKey === 'conference_room')
                 <div class="grid">
-                    <div class="field">
+                    <div class="field field-medium">
                         <label for="conference_event_type">Event Type</label>
                         <select id="conference_event_type" name="conference_event_type">
                             <option value="">All Event Types</option>
@@ -652,18 +714,18 @@
                             <option value="workshop" {{ ($filters['conference_event_type'] ?? '') === 'workshop' ? 'selected' : '' }}>Workshop</option>
                         </select>
                     </div>
-                    <div class="field">
+                    <div class="field field-short">
                         <label for="conference_capacity">Minimum Capacity (Attendees)</label>
                         <input id="conference_capacity" name="conference_capacity" type="number" min="1" value="{{ $filters['conference_capacity'] ?? 0 }}">
                     </div>
-                    <div class="field">
+                    <div class="field field-date">
                         <label for="conference_date">Event Date</label>
                         <input id="conference_date" name="conference_date" type="date" value="{{ $filters['conference_date'] ?? '' }}">
                     </div>
                 </div>
             @elseif ($categoryKey === 'resort_day_visit')
                 <div class="grid">
-                    <div class="field">
+                    <div class="field field-medium">
                         <label for="time_slot">Time Slot</label>
                         <select id="time_slot" name="time_slot">
                             <option value="">Any Time</option>
@@ -673,7 +735,7 @@
                             <option value="fullday" {{ ($filters['time_slot'] ?? '') === 'fullday' ? 'selected' : '' }}>Full Day</option>
                         </select>
                     </div>
-                    <div class="field">
+                    <div class="field field-medium">
                         <label for="facility_type">Facility Type</label>
                         <select id="facility_type" name="facility_type">
                             <option value="">All Facilities</option>
@@ -684,7 +746,7 @@
                             <option value="dining" {{ ($filters['facility_type'] ?? '') === 'dining' ? 'selected' : '' }}>Dining Experience</option>
                         </select>
                     </div>
-                    <div class="field">
+                    <div class="field field-date">
                         <label for="visit_date">Visit Date</label>
                         <input id="visit_date" name="visit_date" type="date" value="{{ $filters['visit_date'] ?? '' }}">
                     </div>
@@ -695,7 +757,7 @@
                     <span>Vehicle and vessel hire in the Maldives is <strong>island-specific</strong>. Select your pickup island to find available cars, motorcycles, speedboats, and private vessel hire at that location.</span>
                 </div>
                 <div class="grid">
-                    <div class="field">
+                    <div class="field field-medium">
                         <label for="pickup_island">Pickup Island</label>
                         <select id="pickup_island" name="pickup_island">
                             <option value="">All Islands</option>
@@ -704,7 +766,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="field">
+                    <div class="field field-medium">
                         <label for="atoll_rental">Atoll (Optional)</label>
                         <select id="atoll_rental" name="atoll">
                             <option value="">All Atolls</option>
@@ -713,7 +775,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="field">
+                    <div class="field field-medium">
                         <label for="vehicle_kind">Vehicle / Vessel Type</label>
                         <select id="vehicle_kind" name="vehicle_kind">
                             <option value="">All Types</option>
@@ -725,15 +787,15 @@
                             <option value="yacht" {{ ($filters['vehicle_kind'] ?? '') === 'yacht' ? 'selected' : '' }}>Yacht / Charter</option>
                         </select>
                     </div>
-                    <div class="field">
+                    <div class="field field-date">
                         <label for="pickup_date">Pickup Date</label>
                         <input id="pickup_date" name="pickup_date" type="date" value="{{ $filters['pickup_date'] ?? '' }}">
                     </div>
-                    <div class="field">
+                    <div class="field field-date">
                         <label for="return_date_rental">Return Date</label>
                         <input id="return_date_rental" name="return_date" type="date" value="{{ $filters['return_date'] ?? '' }}">
                     </div>
-                    <div class="field">
+                    <div class="field field-short">
                         <label for="adults_rental">Passengers / Pax</label>
                         <input id="adults_rental" name="adults" type="number" min="1" value="{{ $filters['adults'] ?? 2 }}">
                     </div>

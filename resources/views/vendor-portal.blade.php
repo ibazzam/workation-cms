@@ -1803,13 +1803,20 @@
         $listingWizardStep = (int) session('listing_wizard_step', 1);
         $listingWizardStep = max(1, min(4, $listingWizardStep));
         $forcedPanelKey = (string) session('portal_active_panel', '');
+        $forcedListingMode = strtolower(trim((string) session('portal_listing_mode', '')));
+        $forcedListingCategory = strtolower(trim((string) session('portal_listing_category', '')));
         $propertyMediaAssets = $vendorMediaAssets->filter(static function ($media): bool {
             return strtolower((string) ($media->entity_type ?? '')) === 'property';
         });
         $roomMediaAssets = $vendorMediaAssets->filter(static function ($media): bool {
             return strtolower((string) ($media->entity_type ?? '')) === 'room';
         });
-        $listingCategoryViewOrder = ['accommodation', 'transport', 'excursion', 'remote_workspace', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
+        $listingCategoryViewOrder = ['accommodation', 'marine_transport', 'land_transport', 'excursion', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
+        $listingCategoryLabelMap = array_merge($vendorCategoryMap, [
+            'marine_transport' => 'Marine Transport',
+            'land_transport' => 'Land Transport',
+            'conference_room' => 'Conference Rooms',
+        ]);
         $roomsByPropertyId = $vendorRooms->groupBy(static function ($room) {
             return (int) ($room->vendor_property_id ?? 0);
         });
@@ -1820,11 +1827,27 @@
             return (int) ($media->entity_id ?? 0);
         });
         $propertiesByCategory = $vendorProperties->groupBy(static function ($property) {
-            return strtolower((string) ($property->listing_category ?? ''));
+            $rawCategory = strtolower(trim((string) ($property->listing_category ?? '')));
+            if ($rawCategory !== 'transport') {
+                return $rawCategory;
+            }
+
+            $details = [];
+            if (isset($property->listing_details) && is_string($property->listing_details) && trim((string) $property->listing_details) !== '') {
+                $decoded = json_decode((string) $property->listing_details, true);
+                if (is_array($decoded)) {
+                    $details = $decoded;
+                }
+            }
+
+            $transportMode = strtolower(trim((string) ($details['transport_mode'] ?? '')));
+            return preg_match('/(^|\s)(speed\s?boat|ferry|boat|safari|dhoni|launch|catamaran|yacht)(\s|$)/', $transportMode)
+                ? 'marine_transport'
+                : 'land_transport';
         });
         $propertyLookupById = $vendorProperties->keyBy('id');
         $roomLookupById = $vendorRoomCategories->keyBy('id');
-        $showCreatePropertyForm = old('property_form_intent') === '1';
+        $showCreatePropertyForm = old('property_form_intent') === '1' || $forcedListingMode === 'create';
         $showCreateRoomForm = old('room_form_intent') === '1';
         $commissionRate = 0.12;
         $billingLedgerRows = $vendorReservations->take(50)->map(function ($reservation) use ($commissionRate) {
@@ -2124,6 +2147,11 @@
                             @php
                                 $defaultCreateCategory = old('listing_category');
                                 if (!is_string($defaultCreateCategory) || trim($defaultCreateCategory) === '') {
+                                    $defaultCreateCategory = in_array($forcedListingCategory, ['marine_transport', 'land_transport'], true)
+                                        ? 'transport'
+                                        : ($forcedListingCategory !== '' ? $forcedListingCategory : null);
+                                }
+                                if (!is_string($defaultCreateCategory) || trim($defaultCreateCategory) === '') {
                                     $defaultCreateCategory = in_array('accommodation', $selectedVendorCategories, true)
                                         ? 'accommodation'
                                         : ((string) ($selectedVendorCategories[0] ?? 'accommodation'));
@@ -2133,7 +2161,7 @@
                                 <select id="property_listing_category" name="listing_category" class="ops-select" data-default-category="{{ $defaultCreateCategory }}">
                                     @foreach ($selectedVendorCategories as $categoryKey)
                                         @php
-                                            $categoryLabel = $vendorCategoryMap[$categoryKey] ?? strtoupper(str_replace('_', ' ', (string) $categoryKey));
+                                            $categoryLabel = $listingCategoryLabelMap[$categoryKey] ?? strtoupper(str_replace('_', ' ', (string) $categoryKey));
                                         @endphp
                                         <option value="{{ $categoryKey }}" @selected($defaultCreateCategory === $categoryKey)>{{ $categoryLabel }}</option>
                                     @endforeach
@@ -2625,9 +2653,9 @@
                     @foreach ($listingCategoryViewOrder as $categoryKey)
                         @php
                             $categoryProperties = $propertiesByCategory->get($categoryKey, collect());
-                            $categoryLabel = $vendorCategoryMap[$categoryKey] ?? strtoupper(str_replace('_', ' ', $categoryKey));
+                            $categoryLabel = $listingCategoryLabelMap[$categoryKey] ?? strtoupper(str_replace('_', ' ', $categoryKey));
                         @endphp
-                        <article class="category-listing-section" id="category-view-{{ $categoryKey }}">
+                        <article class="category-listing-section" id="category-view-{{ $categoryKey }}" data-category-view="{{ $categoryKey }}">
                             <div class="category-listing-header">
                                 <h4>{{ $categoryLabel }} Listings</h4>
                                 <div class="inline-actions">
@@ -2709,7 +2737,7 @@
                                                         $listingStatusClass = 'is-inactive';
                                                     }
                                                 @endphp
-                                                <tr data-property-row="{{ $propertyId }}">
+                                                <tr data-property-row="{{ $propertyId }}" data-listing-category="{{ $categoryKey }}">
                                                     <td class="listing-cell-main">
                                                         <div class="listing-summary-line">
                                                             <strong>{{ $property->name }}</strong>
@@ -2974,7 +3002,7 @@
                                                                         @foreach ($propertyMediaItems as $media)
                                                                             @php
                                                                                 $mediaUrl = '/media/vendor/' . (int) ($media->id ?? 0) . '/banner';
-                                                                                $mediaFallbackUrl = '/storage/' . ltrim((string) ($media->file_path ?? ''), '/');
+                                                                                $mediaFallbackUrl = vendorMediaStorageUrlFromPath((string) ($media->file_path ?? '')) ?? '';
                                                                             @endphp
                                                                             <article class="gallery-card">
                                                                                 <img src="{{ $mediaUrl }}" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $mediaFallbackUrl }}';}" alt="{{ (string) ($media->alt_text ?? $property->name) }}" loading="lazy">
@@ -3160,7 +3188,7 @@
                                                                                                         @foreach ($roomMediaItems as $media)
                                                                                                             @php
                                                                                                                 $roomMediaUrl = '/media/vendor/' . (int) ($media->id ?? 0) . '/banner';
-                                                                                                                $roomMediaFallbackUrl = '/storage/' . ltrim((string) ($media->file_path ?? ''), '/');
+                                                                                                                $roomMediaFallbackUrl = vendorMediaStorageUrlFromPath((string) ($media->file_path ?? '')) ?? '';
                                                                                                             @endphp
                                                                                                             <article class="gallery-card">
                                                                                                                 <img src="{{ $roomMediaUrl }}" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $roomMediaFallbackUrl }}';}" alt="{{ (string) ($media->alt_text ?? $room->name) }}" loading="lazy">
@@ -3435,6 +3463,8 @@
             const panelGroups = Array.from(document.querySelectorAll('[data-panel-group]'));
             const listingStepPanels = Array.from(document.querySelectorAll('[data-listing-step]'));
             const validPanelKeys = new Set(navLinks.map((link) => String(link.dataset.panelKey || "")).filter(Boolean));
+            const forcedListingMode = "{{ $forcedListingMode }}";
+            const forcedListingCategory = "{{ $forcedListingCategory }}";
             const locationCountry = document.getElementById("location_country");
             const locationState = document.getElementById("location_state");
             const locationCity = document.getElementById("location_city");
@@ -4391,7 +4421,7 @@
                     return ["stay", "accommodation", "geo"];
                 }
 
-                if (normalized === "transport") {
+                if (normalized === "transport" || normalized === "marine_transport" || normalized === "land_transport") {
                     return ["capacity", "transport", "geo"];
                 }
 
@@ -4401,6 +4431,10 @@
 
                 if (normalized === "remote_workspace") {
                     return ["stay", "capacity", "workspace", "geo"];
+                }
+
+                if (normalized === "conference_room") {
+                    return ["capacity", "geo"];
                 }
 
                 if (normalized === "resort_day_visit") {
@@ -4429,9 +4463,10 @@
                 }
 
                 const normalizedCategory = normalizeCategoryKey(propertyCategorySelect.value);
-                const isTransportCategory = normalizedCategory === "transport";
+                const isTransportCategory = normalizedCategory === "transport" || normalizedCategory === "marine_transport" || normalizedCategory === "land_transport";
                 const isRemoteWorkspaceCategory = normalizedCategory === "remote_workspace";
-                const isMarine = isMarineTransportMode(transportModeInput ? transportModeInput.value : "");
+                const isMarine = normalizedCategory === "marine_transport"
+                    || (normalizedCategory !== "land_transport" && isMarineTransportMode(transportModeInput ? transportModeInput.value : ""));
                 const selectedPricingModel = transportPricingModelSelect ? String(transportPricingModelSelect.value || "per_trip") : "per_trip";
 
                 if (propertyBasePriceLabel) {
@@ -4509,6 +4544,18 @@
                 });
             }
 
+            function applyCategorySectionFilter(categoryKey) {
+                const normalizedCategory = normalizeCategoryKey(categoryKey || 'all');
+                if (categoryViewPanels.length === 0) {
+                    return;
+                }
+
+                categoryViewPanels.forEach((panel) => {
+                    const panelCategory = normalizeCategoryKey(panel.getAttribute('data-category-view') || '');
+                    panel.hidden = normalizedCategory !== 'all' && panelCategory !== normalizedCategory;
+                });
+            }
+
             function categoryMetaFor(category) {
                 const normalized = normalizeCategoryKey(category);
                 const fallbackLabel = propertyCategorySelect
@@ -4524,10 +4571,24 @@
                         propertyType: 'property',
                     },
                     transport: {
-                        title: 'Transport Enlisting',
-                        subtitle: 'Fill required fields and save.',
+                        title: 'Marine or Land Transport Enlisting',
+                        subtitle: 'Choose the transport mode and save the listing.',
                         submit: 'Save Transport Listing',
-                        note: 'Fill required fields and save.',
+                        note: 'Use marine mode for boats and ferries, or land mode for cars and vans.',
+                        propertyType: 'service',
+                    },
+                    marine_transport: {
+                        title: 'Marine Transport Enlisting',
+                        subtitle: 'Capture water transfer details and save.',
+                        submit: 'Save Marine Transport Listing',
+                        note: 'Use marine transport fields for speedboats, ferries, and vessel transfers.',
+                        propertyType: 'service',
+                    },
+                    land_transport: {
+                        title: 'Land Transport Enlisting',
+                        subtitle: 'Capture vehicle transfer details and save.',
+                        submit: 'Save Land Transport Listing',
+                        note: 'Use land transport fields for cars, vans, and local ground transfers.',
                         propertyType: 'service',
                     },
                     excursion: {
@@ -4542,6 +4603,13 @@
                         subtitle: 'Fill required fields and save.',
                         submit: 'Save Remote Workspace Listing',
                         note: 'Fill required fields and save.',
+                        propertyType: 'service',
+                    },
+                    conference_room: {
+                        title: 'Conference Room Enlisting',
+                        subtitle: 'Capture venue basics, capacity, and save.',
+                        submit: 'Save Conference Room Listing',
+                        note: 'Use this for meeting rooms, halls, and event spaces.',
                         propertyType: 'service',
                     },
                     resort_day_visit: {
@@ -4602,8 +4670,12 @@
                 }
                 const preferred = normalizeCategoryKey(preferredCategory || propertyCategorySelect.getAttribute('data-default-category') || 'accommodation');
                 if (preferred !== '') {
-                    const matched = Array.from(propertyCategorySelect.options)
+                    let matched = Array.from(propertyCategorySelect.options)
                         .find((option) => normalizeCategoryKey(option.value) === preferred);
+                    if (!matched && (preferred === 'marine_transport' || preferred === 'land_transport')) {
+                        matched = Array.from(propertyCategorySelect.options)
+                            .find((option) => normalizeCategoryKey(option.value) === 'transport');
+                    }
                     if (matched) {
                         propertyCategorySelect.value = matched.value;
                     }
@@ -4664,6 +4736,9 @@
                 }
                 if (propertyCategorySelect) {
                     const selectedCategory = ensureAutoCategorySelected(normalizedCategory);
+                    if (transportModeInput && (normalizedCategory === 'marine_transport' || normalizedCategory === 'land_transport')) {
+                        transportModeInput.value = normalizedCategory === 'marine_transport' ? 'speedboat' : 'car';
+                    }
                     propertyCategorySelect.dispatchEvent(new Event('change'));
                     applyCategoryFormMeta(selectedCategory, true);
                 }
@@ -4674,6 +4749,7 @@
                 refreshLocationMapViewport();
 
                 applyPropertyCategoryFilter(normalizedCategory || 'all');
+                applyCategorySectionFilter(normalizedCategory || 'all');
             }
 
             function isFieldVisibleForValidation(field) {
@@ -4987,6 +5063,10 @@
 
             navLinks.forEach((link) => {
                 link.addEventListener("click", function (event) {
+                    const href = String(link.getAttribute("href") || "").trim();
+                    if (href !== "" && !href.startsWith("#")) {
+                        return;
+                    }
                     event.preventDefault();
                     const panelKey = String(link.dataset.panelKey || "").trim().toLowerCase();
                     if (!panelKey) return;
@@ -5577,6 +5657,16 @@
             restoreGuidedWizardState();
             renderGuidedWizard();
             applyPropertyCategoryFilter('all');
+            applyCategorySectionFilter('all');
+
+            if (forcedPanelKey === 'listings') {
+                if (forcedListingMode === 'create') {
+                    openPropertyFlowWithCategory(forcedListingCategory || 'accommodation');
+                } else if (forcedListingMode === 'manage') {
+                    applyPropertyCategoryFilter(forcedListingCategory || 'all');
+                    applyCategorySectionFilter(forcedListingCategory || 'all');
+                }
+            }
         })();
     </script>
     <script>
@@ -5662,6 +5752,10 @@
 
                 navLinks.forEach((link) => {
                     link.addEventListener('click', function (event) {
+                        const href = String(link.getAttribute('href') || '').trim();
+                        if (href !== '' && !href.startsWith('#')) {
+                            return;
+                        }
                         event.preventDefault();
                         const panelKey = String(link.dataset.panelKey || "").trim().toLowerCase();
                         if (!panelKey) {
@@ -5717,9 +5811,10 @@
                 function categoryScopesFor(category) {
                     const normalized = normalizeCategoryKey(category);
                     if (normalized === 'accommodation') return ['stay', 'accommodation', 'geo'];
-                    if (normalized === 'transport') return ['capacity', 'transport', 'geo'];
+                    if (normalized === 'transport' || normalized === 'marine_transport' || normalized === 'land_transport') return ['capacity', 'transport', 'geo'];
                     if (normalized === 'excursion') return ['capacity', 'service', 'excursion', 'geo'];
                     if (normalized === 'remote_workspace') return ['stay', 'capacity', 'workspace', 'geo'];
+                    if (normalized === 'conference_room') return ['capacity', 'geo'];
                     if (normalized === 'resort_day_visit') return ['capacity', 'day_visit', 'geo'];
                     if (normalized === 'restaurant') return ['capacity', 'restaurant', 'geo'];
                     if (normalized === 'vehicle_rental') return ['vehicle', 'capacity', 'rental', 'geo'];
@@ -5730,9 +5825,12 @@
                     const normalized = normalizeCategoryKey(category);
                     const metaMap = {
                         accommodation: ['Accommodation Enlisting', 'Fill required fields and save.', 'Save Accommodation Listing', 'Fill required fields and save.', 'property'],
-                        transport: ['Transport Enlisting', 'Fill required fields and save.', 'Save Transport Listing', 'Fill required fields and save.', 'service'],
+                        transport: ['Marine or Land Transport Enlisting', 'Choose the transport mode and save the listing.', 'Save Transport Listing', 'Use marine mode for boats and ferries, or land mode for cars and vans.', 'service'],
+                        marine_transport: ['Marine Transport Enlisting', 'Capture water transfer details and save.', 'Save Marine Transport Listing', 'Use marine transport fields for speedboats, ferries, and vessel transfers.', 'service'],
+                        land_transport: ['Land Transport Enlisting', 'Capture vehicle transfer details and save.', 'Save Land Transport Listing', 'Use land transport fields for cars, vans, and local ground transfers.', 'service'],
                         excursion: ['Excursion Enlisting', 'Fill required fields and save.', 'Save Excursion Listing', 'Fill required fields and save.', 'service'],
                         remote_workspace: ['Remote Workspace Enlisting', 'Fill required fields and save.', 'Save Remote Workspace Listing', 'Fill required fields and save.', 'service'],
+                        conference_room: ['Conference Room Enlisting', 'Capture venue basics, capacity, and save.', 'Save Conference Room Listing', 'Use this for meeting rooms, halls, and event spaces.', 'service'],
                         resort_day_visit: ['Resort Day Visit Enlisting', 'Fill required fields and save.', 'Save Resort Day Visit Listing', 'Fill required fields and save.', 'service'],
                         restaurant: ['Restaurant Enlisting', 'Fill required fields and save.', 'Save Restaurant Listing', 'Fill required fields and save.', 'service'],
                         vehicle_rental: ['Vehicle Rental Enlisting', 'Fill required fields and save.', 'Save Vehicle Rental Listing', 'Fill required fields and save.', 'service']
@@ -5744,7 +5842,10 @@
                     if (!propertyCategorySelect) return '';
                     const preferred = normalizeCategoryKey(preferredCategory || propertyCategorySelect.getAttribute('data-default-category') || 'accommodation');
                     if (preferred !== '') {
-                        const matched = Array.from(propertyCategorySelect.options).find((item) => normalizeCategoryKey(item.value) === preferred);
+                        let matched = Array.from(propertyCategorySelect.options).find((item) => normalizeCategoryKey(item.value) === preferred);
+                        if (!matched && (preferred === 'marine_transport' || preferred === 'land_transport')) {
+                            matched = Array.from(propertyCategorySelect.options).find((item) => normalizeCategoryKey(item.value) === 'transport');
+                        }
                         if (matched) {
                             propertyCategorySelect.value = matched.value;
                         }
@@ -5760,15 +5861,24 @@
                     return /(^|\s)(speed\s?boat|ferry|boat|safari|dhoni|launch|catamaran|yacht)(\s|$)/.test(mode);
                 }
 
+                function applyCategorySectionFilter(categoryKey) {
+                    const normalized = normalizeCategoryKey(categoryKey || 'all');
+                    categoryViewPanels.forEach((panel) => {
+                        const panelCategory = normalizeCategoryKey(panel.getAttribute('data-category-view') || '');
+                        panel.hidden = normalized !== 'all' && panelCategory !== normalized;
+                    });
+                }
+
                 function refreshTransportFieldLabels() {
                     if (!propertyCategorySelect) {
                         return;
                     }
 
                     const normalizedCategory = normalizeCategoryKey(propertyCategorySelect.value);
-                    const isTransportCategory = normalizedCategory === 'transport';
+                    const isTransportCategory = normalizedCategory === 'transport' || normalizedCategory === 'marine_transport' || normalizedCategory === 'land_transport';
                     const isRemoteWorkspaceCategory = normalizedCategory === 'remote_workspace';
-                    const isMarine = isMarineTransportMode(transportModeInput ? transportModeInput.value : '');
+                    const isMarine = normalizedCategory === 'marine_transport'
+                        || (normalizedCategory !== 'land_transport' && isMarineTransportMode(transportModeInput ? transportModeInput.value : ''));
                     const selectedPricingModel = transportPricingModelSelect ? String(transportPricingModelSelect.value || 'per_trip') : 'per_trip';
 
                     if (propertyBasePriceLabel) {

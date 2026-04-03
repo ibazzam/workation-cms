@@ -35,8 +35,6 @@
         }
 
         .page {
-            width: calc(100% - 294px);
-            max-width: none;
             margin: 14px 14px 30px 270px;
             position: relative;
         }

@@ -51,6 +51,7 @@
         margin-top: 10px;
         font-size: 0.78rem;
         color: #567086;
+        text-align: center;
     }
 
     @media (max-width: 980px) {
@@ -107,5 +108,5 @@
             </ul>
         </section>
     </div>
-    <p class="wf-footer-note">All rights reserved by WORKATION &trade;</p>
+    <p class="wf-footer-note">&copy; WORKATION &trade; &mdash; All rights reserved.</p>
 </footer>

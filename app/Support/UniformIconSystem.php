@@ -81,7 +81,7 @@ class UniformIconSystem
         }
 
         // Air Conditioning
-        if (preg_match('/(^|\b)(a\/c|ac|air\s*condition(?:ing)?|aircon|cooling)(\b|$)/i', $amenityNormalized)) {
+        if (preg_match('/\b(a\/c|ac|air\s*condition(?:ing)?|aircon|cooling)\b/i', $amenityNormalized)) {
             return 'fa-solid fa-snowflake';
         }
 

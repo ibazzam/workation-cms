@@ -6,6 +6,7 @@
     <title>Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         :root {
             --bg: #f3f8f5;
@@ -35,6 +36,7 @@
         }
 
         .page {
+            margin: 14px 14px 30px 270px;
             width: calc(100% - 294px);
             max-width: none;
             margin: 14px 14px 30px 270px;
@@ -626,6 +628,12 @@
                 height: auto;
             }
 
+            .floating-sidebar {
+                position: static;
+                width: 100%;
+                height: auto;
+            }
+
             .header-bar {
                 flex-direction: column;
                 align-items: flex-start;
@@ -702,7 +710,7 @@
                     $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
                     $categoryKeyFromUrl = preg_match('#/catalog/([a-z_]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
                 @endphp
-                <a class="top-link floating-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}">{{ ($link['emoji'] ?? '📌') . ' ' . ($link['title'] ?? 'Category') }}<span>{{ $link['subtitle'] ?? '' }}</span></a>
+                <a class="top-link floating-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}"></i> {{ $link['title'] ?? 'Category' }}<span>{{ $link['subtitle'] ?? '' }}</span></a>
             @endforeach
         </section>
     </aside>

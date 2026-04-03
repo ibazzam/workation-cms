@@ -22,17 +22,17 @@ class UniformIconSystem
     public static function getCategoryIcon(string $category): array
     {
         $categories = [
-            'accommodation' => ['emoji' => '🏨', 'label' => 'Accommodation', 'color' => '#0f6179'],
-            'transport' => ['emoji' => '🚤', 'label' => 'Transport', 'color' => '#1d7a8f'],
-            'excursion' => ['emoji' => '🌊', 'label' => 'Excursion', 'color' => '#2a8a95'],
-            'remote_workspace' => ['emoji' => '💻', 'label' => 'Remote Workspace', 'color' => '#1a6f7f'],
-            'resort_day_visit' => ['emoji' => '🏝️', 'label' => 'Resort Day Visit', 'color' => '#0f6179'],
-            'restaurant' => ['emoji' => '🍽️', 'label' => 'Restaurant', 'color' => '#2d7f8a'],
-            'vehicle_rental' => ['emoji' => '🚗', 'label' => 'Vehicle Rental', 'color' => '#1b7885'],
+            'accommodation'    => ['icon' => 'fa-solid fa-hotel',           'label' => 'Accommodation',    'color' => '#0f6179'],
+            'transport'        => ['icon' => 'fa-solid fa-ship',            'label' => 'Transport',         'color' => '#1d7a8f'],
+            'excursion'        => ['icon' => 'fa-solid fa-water',           'label' => 'Excursion',         'color' => '#2a8a95'],
+            'remote_workspace' => ['icon' => 'fa-solid fa-laptop',          'label' => 'Remote Workspace',  'color' => '#1a6f7f'],
+            'resort_day_visit' => ['icon' => 'fa-solid fa-umbrella-beach',  'label' => 'Resort Day Visit',  'color' => '#0f6179'],
+            'restaurant'       => ['icon' => 'fa-solid fa-utensils',        'label' => 'Restaurant',        'color' => '#2d7f8a'],
+            'vehicle_rental'   => ['icon' => 'fa-solid fa-car',             'label' => 'Vehicle Rental',    'color' => '#1b7885'],
         ];
 
         $key = strtolower(trim($category));
-        return $categories[$key] ?? ['emoji' => '📌', 'label' => ucfirst($key), 'color' => '#0f6179'];
+        return $categories[$key] ?? ['icon' => 'fa-solid fa-location-dot', 'label' => ucfirst($key), 'color' => '#0f6179'];
     }
 
     /**
@@ -45,116 +45,116 @@ class UniformIconSystem
 
         // Food & Dining
         if (preg_match('/(restaurant|dining|bar|cafe|kitchen|breakfast)/i', $amenityLower)) {
-            return '🍽️';
+            return 'fa-solid fa-utensils';
         }
-        
+
         // Pool & Water
         if (preg_match('/(pool|swim|water|jacuzzi|spa|sauna|steam)/i', $amenityLower)) {
-            return '🏊';
+            return 'fa-solid fa-person-swimming';
         }
-        
+
         // Fitness & Health
         if (preg_match('/(gym|fitness|yoga|wellness|massage|health)/i', $amenityLower)) {
-            return '💪';
+            return 'fa-solid fa-dumbbell';
         }
         
         // WiFi & Technology
         if (preg_match('/(wifi|wi-fi|internet|broadband|connection)/i', $amenityLower)) {
-            return '📶';
+            return 'fa-solid fa-wifi';
         }
-        
+
         // Parking
         if (preg_match('/(parking|car|vehicle|garage)/i', $amenityLower)) {
-            return '🅿️';
+            return 'fa-solid fa-square-parking';
         }
-        
+
         // Family & Kids
         if (preg_match('/(kids|family|children|toy|playground)/i', $amenityLower)) {
-            return '👨‍👩‍👧‍👦';
+            return 'fa-solid fa-children';
         }
-        
+
         // Air Conditioning
         if (preg_match('/(ac|air condition|cooling)/i', $amenityLower)) {
-            return '❄️';
+            return 'fa-solid fa-snowflake';
         }
-        
+
         // Heating
         if (preg_match('/(heating|warm|hot water)/i', $amenityLower)) {
-            return '🔥';
+            return 'fa-solid fa-fire';
         }
-        
+
         // Laundry
         if (preg_match('/(laundry|wash|iron|clothes)/i', $amenityLower)) {
-            return '👕';
+            return 'fa-solid fa-shirt';
         }
-        
+
         // TV & Entertainment
         if (preg_match('/(tv|television|entertainment|movie|streaming)/i', $amenityLower)) {
-            return '📺';
+            return 'fa-solid fa-tv';
         }
-        
+
         // Workspace
         if (preg_match('/(desk|workspace|office|work|table|chair|work space)/i', $amenityLower)) {
-            return '🖥️';
+            return 'fa-solid fa-desktop';
         }
-        
+
         // Bedroom & Bedding
         if (preg_match('/(bed|bedroom|sleep|mattress)/i', $amenityLower)) {
-            return '🛏️';
+            return 'fa-solid fa-bed';
         }
-        
+
         // Bathroom
         if (preg_match('/(bathroom|shower|bath|toilet|sink)/i', $amenityLower)) {
-            return '🚿';
+            return 'fa-solid fa-shower';
         }
-        
+
         // View
         if (preg_match('/(view|vista|ocean|sea|garden|landscape|scenic)/i', $amenityLower)) {
-            return '🌅';
+            return 'fa-solid fa-binoculars';
         }
-        
+
         // Security & Safety
-        if (preg_match('/(safe|security|lock|cctv|alarm|security)/i', $amenityLower)) {
-            return '🔒';
+        if (preg_match('/(safe|security|lock|cctv|alarm)/i', $amenityLower)) {
+            return 'fa-solid fa-lock';
         }
-        
+
         // Outdoor & Garden
         if (preg_match('/(garden|outdoor|patio|balcony|terrace|deck)/i', $amenityLower)) {
-            return '🌿';
+            return 'fa-solid fa-leaf';
         }
-        
+
         // Beach & Water Access
         if (preg_match('/(beach|sand|ocean|water access)/i', $amenityLower)) {
-            return '🏖️';
+            return 'fa-solid fa-umbrella-beach';
         }
-        
+
         // Transportation
         if (preg_match('/(airport|transfer|transport|shuttle|pickup)/i', $amenityLower)) {
-            return '🚕';
+            return 'fa-solid fa-taxi';
         }
-        
+
         // Pets
         if (preg_match('/(pet|dog|cat|animal)/i', $amenityLower)) {
-            return '🐕';
+            return 'fa-solid fa-paw';
         }
-        
+
         // Smoking & Non-smoking
         if (preg_match('/(smoking|non-smoking|smoke-free)/i', $amenityLower)) {
-            return '🚭';
+            return 'fa-solid fa-ban';
         }
-        
+
         // Accessibility
         if (preg_match('/(wheelchair|accessible|ada|disabled)/i', $amenityLower)) {
-            return '♿';
+            return 'fa-solid fa-wheelchair';
         }
-        
+
         // Outdoor Activities
         if (preg_match('/(diving|snorkel|surf|watersport|adventure|activity)/i', $amenityLower)) {
-            return '🏄';
+            return 'fa-solid fa-person-surfing';
         }
-        
+
         // Default icon
-        return '✨';
+        return 'fa-solid fa-star';
     }
 
     /**
@@ -181,29 +181,29 @@ class UniformIconSystem
         $modeLower = strtolower(trim($mode));
         
         $transports = [
-            'speedboat' => '🚤',
-            'ferry' => '⛴️',
-            'dhoni' => '🛥️',
-            'seaplane' => '✈️',
-            'helicopter' => '🚁',
-            'car' => '🚗',
-            'van' => '🚐',
-            'taxi' => '🚕',
-            'bike' => '🏍️',
-            'motorcycle' => '🏍️',
-            'scooter' => '🛵',
-            'domestic_flight' => '✈️',
-            'flight' => '✈️',
-            'air' => '✈️',
+            'speedboat'       => 'fa-solid fa-ship',
+            'ferry'           => 'fa-solid fa-ferry',
+            'dhoni'           => 'fa-solid fa-ship',
+            'seaplane'        => 'fa-solid fa-plane',
+            'helicopter'      => 'fa-solid fa-helicopter',
+            'car'             => 'fa-solid fa-car',
+            'van'             => 'fa-solid fa-van-shuttle',
+            'taxi'            => 'fa-solid fa-taxi',
+            'bike'            => 'fa-solid fa-motorcycle',
+            'motorcycle'      => 'fa-solid fa-motorcycle',
+            'scooter'         => 'fa-solid fa-motorcycle',
+            'domestic_flight' => 'fa-solid fa-plane',
+            'flight'          => 'fa-solid fa-plane',
+            'air'             => 'fa-solid fa-plane',
         ];
 
-        foreach ($transports as $key => $emoji) {
+        foreach ($transports as $key => $iconClass) {
             if (strpos($modeLower, $key) !== false) {
-                return $emoji;
+                return $iconClass;
             }
         }
 
-        return '🚗';
+        return 'fa-solid fa-car';
     }
 
     /**
@@ -233,28 +233,28 @@ class UniformIconSystem
     /**
      * Render emoji icon with styling
      */
-    public static function renderIcon(string $emoji, string $class = ''): string
+    public static function renderIcon(string $icon, string $class = ''): string
     {
-        $class = trim($class);
-        $classList = 'uniform-icon' . ($class ? ' ' . $class : '');
+        $extra = trim($class);
+        $classList = 'uniform-icon' . ($extra ? ' ' . htmlspecialchars($extra, ENT_QUOTES, 'UTF-8') : '');
         return sprintf(
-            '<span class="%s" role="img" aria-hidden="true">%s</span>',
-            htmlspecialchars($classList, ENT_QUOTES, 'UTF-8'),
-            htmlspecialchars($emoji, ENT_QUOTES, 'UTF-8')
+            '<i class="%s %s" aria-hidden="true"></i>',
+            htmlspecialchars($icon, ENT_QUOTES, 'UTF-8'),
+            $classList
         );
     }
 
     /**
-     * Render emoji with label wrapper
+     * Render icon with label wrapper
      */
-    public static function renderIconWithLabel(string $emoji, string $label, string $class = ''): string
+    public static function renderIconWithLabel(string $icon, string $label, string $class = ''): string
     {
-        $class = trim($class);
-        $classList = 'uniform-icon-label' . ($class ? ' ' . $class : '');
+        $extra = trim($class);
+        $classList = 'uniform-icon-label' . ($extra ? ' ' . htmlspecialchars($extra, ENT_QUOTES, 'UTF-8') : '');
         return sprintf(
-            '<span class="%s"><span class="uniform-icon" role="img" aria-hidden="true">%s</span><span class="uniform-label">%s</span></span>',
-            htmlspecialchars($classList, ENT_QUOTES, 'UTF-8'),
-            htmlspecialchars($emoji, ENT_QUOTES, 'UTF-8'),
+            '<span class="%s"><i class="%s uniform-icon" aria-hidden="true"></i><span class="uniform-label">%s</span></span>',
+            $classList,
+            htmlspecialchars($icon, ENT_QUOTES, 'UTF-8'),
             htmlspecialchars($label, ENT_QUOTES, 'UTF-8')
         );
     }

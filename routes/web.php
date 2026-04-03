@@ -574,7 +574,7 @@ Route::get('/', function () {
     $availableCategories = getAvailableCategories();
     
     $homeTopCategoryLinks = collect($availableCategories)->map(static fn (array $cat, $key) => [
-        'emoji' => $cat['emoji'] ?? '📌',
+        'icon' => $cat['icon'] ?? 'fa-solid fa-location-dot',
         'title' => $cat['label'] ?? ucfirst(str_replace('_', ' ', $key)),
         'subtitle' => $cat['subtitle'] ?? '',
         'url' => '/catalog/' . $key,

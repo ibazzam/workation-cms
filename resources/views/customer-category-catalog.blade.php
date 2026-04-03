@@ -6,6 +6,7 @@
     <title>{{ $categoryMeta['label'] }} Catalogue | Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         :root {
             --bg: #f3f8f5;
@@ -303,13 +304,13 @@
         $categoryKey = $categoryKey ?? 'accommodation';
         $categoryMeta = $categoryMeta ?? ['label' => 'Catalogue', 'subtitle' => ''];
         $catalogCategoryLinks = collect([
-            ['key' => 'accommodation', 'emoji' => '[Stay]', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas'],
-            ['key' => 'transport', 'emoji' => '[Move]', 'title' => 'Transport', 'subtitle' => 'Marine and land transfers'],
-            ['key' => 'excursion', 'emoji' => '[Tour]', 'title' => 'Excursion', 'subtitle' => 'Tours and activities'],
-            ['key' => 'remote_workspace', 'emoji' => '[Work]', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces'],
-            ['key' => 'resort_day_visit', 'emoji' => '[Day]', 'title' => 'Resort Day Visit', 'subtitle' => 'Day-use resort offers'],
-            ['key' => 'restaurant', 'emoji' => '[Food]', 'title' => 'Restaurant', 'subtitle' => 'Dining experiences'],
-            ['key' => 'vehicle_rental', 'emoji' => '[Ride]', 'title' => 'Vehicle Rental', 'subtitle' => 'Cars and local rentals'],
+            ['key' => 'accommodation',    'icon' => 'fa-solid fa-hotel',          'title' => 'Accommodation',   'subtitle' => 'Hotels, resorts, villas'],
+            ['key' => 'transport',        'icon' => 'fa-solid fa-ship',           'title' => 'Transport',       'subtitle' => 'Marine and land transfers'],
+            ['key' => 'excursion',        'icon' => 'fa-solid fa-water',          'title' => 'Excursion',       'subtitle' => 'Tours and activities'],
+            ['key' => 'remote_workspace', 'icon' => 'fa-solid fa-laptop',         'title' => 'Remote Workspace','subtitle' => 'Work-friendly spaces'],
+            ['key' => 'resort_day_visit', 'icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit','subtitle' => 'Day-use resort offers'],
+            ['key' => 'restaurant',       'icon' => 'fa-solid fa-utensils',       'title' => 'Restaurant',      'subtitle' => 'Dining experiences'],
+            ['key' => 'vehicle_rental',   'icon' => 'fa-solid fa-car',            'title' => 'Vehicle Rental',  'subtitle' => 'Cars and local rentals'],
         ]);
         $catalogProperties = $catalogProperties ?? collect();
         $catalogPropertyMediaByProperty = $catalogPropertyMediaByProperty ?? collect();
@@ -335,7 +336,7 @@
         <section class="top-links" aria-label="Top categories">
             @foreach ($catalogCategoryLinks as $item)
                 <a class="top-link{{ $categoryKey === ($item['key'] ?? '') ? ' is-active' : '' }}" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">
-                    {{ ($item['emoji'] ?? '📌') . ' ' . ($item['title'] ?? 'Category') }}
+                    <i class="{{ $item['icon'] ?? 'fa-solid fa-location-dot' }}"></i> {{ $item['title'] ?? 'Category' }}
                     <span>{{ $item['subtitle'] ?? '' }}</span>
                 </a>
             @endforeach
@@ -458,6 +459,7 @@
                                 $fallbackImage = '/storage/' . ltrim(str_replace('public/', '', str_replace('storage/', '', str_replace('\\', '/', $fallbackPath))), '/');
                             }
                         }
+                        $svgFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2234%22%3ENo%20image%3C%2Ftext%3E%3C%2Fsvg%3E";
                         $price = (float) ($property->base_price ?? 0);
                         $detailUrl = $categoryKey === 'accommodation'
                             ? ('/property/' . $propertyId)
@@ -467,9 +469,9 @@
                     <article class="card">
                         <a class="card-link" href="{{ $detailUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
                             @php
-                                $resolvedImage = $bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : '');
+                                $resolvedImage = $bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback);
                             @endphp
-                            <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fallbackTried && '{{ $fallbackImage }}' !== ''){this.dataset.fallbackTried='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2234%22%3EImage unavailable%3C/text%3E%3C/svg%3E';}" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
+                            <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                             <div class="card-body">
                                 <h3>{{ (string) ($property->name ?? 'Listing') }}</h3>
                                 <div class="meta">{{ trim((string) (($property->atoll ?? '') . ' ' . ($property->island ?? ''))) !== '' ? trim((string) (($property->atoll ?? '') . ' · ' . ($property->island ?? ''))) : 'Location will be updated soon.' }}</div>

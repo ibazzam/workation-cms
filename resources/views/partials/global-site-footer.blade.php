@@ -107,5 +107,5 @@
             </ul>
         </section>
     </div>
-    <p class="wf-footer-note">Workation Maldives keeps all guest, vendor, and operations links organized in one shared footer across portals.</p>
+    <p class="wf-footer-note">All rights reserved by WORKATION &trade;</p>
 </footer>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ (string) ($property->name ?? 'Property') }} | Workation Maldives</title>
+    <title>{{ (string) ($property->name ?? 'Property') }} | Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
     <style>
@@ -1365,7 +1365,7 @@
         $starString = str_repeat('★', $starCount) . str_repeat('☆', 5 - $starCount);
         $ratingOutOfTen = $ratingValue > 0 ? min(10, $ratingValue * 2) : 0;
         $reviewLabel = $ratingOutOfTen >= 9.0 ? 'Excellent' : ($ratingOutOfTen >= 8.0 ? 'Great' : ($ratingOutOfTen > 0 ? 'Good' : 'No rating yet'));
-        $mapQuery = $locationLine !== '' ? $locationLine : ((string) ($property->name ?? 'Workation Maldives'));
+        $mapQuery = $locationLine !== '' ? $locationLine : ((string) ($property->name ?? 'Workation'));
         $mapUrl = 'https://www.google.com/maps/search/?api=1&query=' . urlencode($mapQuery);
         $cheapestRoom = $rooms->sortBy(static fn ($room) => (float) ($room->base_price ?? INF))->first();
         $cheapestRoomId = $cheapestRoom ? (int) ($cheapestRoom->id ?? 0) : 0;

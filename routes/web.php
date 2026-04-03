@@ -2505,6 +2505,10 @@ Route::get('/media/vendor/{media}/{variant?}', function (int $media, ?string $va
             return '';
         }
 
+        if (preg_match('#/storage/app/public/(.+)$#i', $normalized, $matches) === 1) {
+            $normalized = (string) ($matches[1] ?? '');
+        }
+
         $normalized = ltrim($normalized, '/');
         if (str_starts_with($normalized, 'public/')) {
             $normalized = substr($normalized, 7);
@@ -2553,6 +2557,29 @@ Route::get('/media/vendor/{media}/{variant?}', function (int $media, ?string $va
                 $resolvedMimeType = (string) ($localDisk->mimeType($localPath) ?: '');
                 break 2;
             }
+        }
+    }
+
+    if ($resolvedBinary === null) {
+        foreach ($candidatePaths as $path) {
+            $absolutePath = str_replace('\\', '/', (string) $path);
+            if (preg_match('#^[A-Za-z]:/#', $absolutePath) !== 1 && !str_starts_with($absolutePath, '/')) {
+                continue;
+            }
+
+            if (!is_file($absolutePath) || !is_readable($absolutePath)) {
+                continue;
+            }
+
+            $absoluteBinary = @file_get_contents($absolutePath);
+            if ($absoluteBinary === false) {
+                continue;
+            }
+
+            $resolvedBinary = $absoluteBinary;
+            $absoluteMime = @mime_content_type($absolutePath);
+            $resolvedMimeType = is_string($absoluteMime) ? $absoluteMime : '';
+            break;
         }
     }
 

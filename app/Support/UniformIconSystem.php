@@ -116,7 +116,10 @@ class UniformIconSystem
         }
 
         // View
+
         if (preg_match('/(view|vista|ocean|sea|landscape|scenic)/i', $amenityNormalized)) {
+
+        if (preg_match('/(view|vista|ocean|sea|landscape|scenic)/i', $amenityLower)) {
             return 'fa-solid fa-binoculars';
         }
 

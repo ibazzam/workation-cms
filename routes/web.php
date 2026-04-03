@@ -653,6 +653,18 @@ Route::get('/', function () {
                 return null;
             }
 
+            $filePath = trim((string) ($primaryMedia->file_path ?? ''));
+            if ($filePath !== '') {
+                if (str_starts_with($filePath, 'http://') || str_starts_with($filePath, 'https://')) {
+                    return $filePath;
+                }
+
+                $normalizedPath = ltrim(str_replace('public/', '', str_replace('storage/', '', str_replace('\\', '/', $filePath))), '/');
+                if ($normalizedPath !== '') {
+                    return '/storage/' . $normalizedPath;
+                }
+            }
+
             $mediaId = (int) ($primaryMedia->id ?? 0);
             if ($mediaId > 0) {
                 return '/media/vendor/' . $mediaId . '/banner';

@@ -781,7 +781,7 @@
                 width: 100%;
                 justify-content: flex-start;
             }
-
+            
             .browse-grid,
             .trending-grid,
             .deal-grid,

@@ -419,6 +419,7 @@
             ['key' => 'accommodation',    'icon' => 'fa-solid fa-hotel',          'title' => 'Accommodation',   'subtitle' => 'Hotels, resorts, villas'],
             ['key' => 'marine-transport',  'icon' => 'fa-solid fa-water',          'title' => 'Marine Transport','subtitle' => 'Speedboats & water transfers'],
             ['key' => 'land-transport',    'icon' => 'fa-solid fa-van-shuttle',    'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers'],
+            ['key' => 'transport',        'icon' => 'fa-solid fa-ship',           'title' => 'Transport',       'subtitle' => 'Marine and land transfers'],
             ['key' => 'excursion',        'icon' => 'fa-solid fa-compass',       'title' => 'Excursion',       'subtitle' => 'Tours and activities'],
             ['key' => 'remote_workspace', 'icon' => 'fa-solid fa-laptop',         'title' => 'Remote Workspace','subtitle' => 'Work-friendly spaces'],
             ['key' => 'conference_room',  'icon' => 'fa-solid fa-object-group',   'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces'],

@@ -6,6 +6,7 @@
     <title>{{ $categoryMeta['label'] }} Catalogue | Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         :root {
             --bg: #f3f8f5;
@@ -303,13 +304,13 @@
         $categoryKey = $categoryKey ?? 'accommodation';
         $categoryMeta = $categoryMeta ?? ['label' => 'Catalogue', 'subtitle' => ''];
         $catalogCategoryLinks = collect([
-            ['key' => 'accommodation', 'emoji' => '🏨', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas'],
-            ['key' => 'transport', 'emoji' => '🚤', 'title' => 'Transport', 'subtitle' => 'Marine and land transfers'],
-            ['key' => 'excursion', 'emoji' => '🌊', 'title' => 'Excursion', 'subtitle' => 'Tours and activities'],
-            ['key' => 'remote_workspace', 'emoji' => '💻', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces'],
-            ['key' => 'resort_day_visit', 'emoji' => '🏝️', 'title' => 'Resort Day Visit', 'subtitle' => 'Day-use resort offers'],
-            ['key' => 'restaurant', 'emoji' => '🍽️', 'title' => 'Restaurant', 'subtitle' => 'Dining experiences'],
-            ['key' => 'vehicle_rental', 'emoji' => '🚗', 'title' => 'Vehicle Rental', 'subtitle' => 'Cars and local rentals'],
+            ['key' => 'accommodation',    'icon' => 'fa-solid fa-hotel',          'title' => 'Accommodation',   'subtitle' => 'Hotels, resorts, villas'],
+            ['key' => 'transport',        'icon' => 'fa-solid fa-ship',           'title' => 'Transport',       'subtitle' => 'Marine and land transfers'],
+            ['key' => 'excursion',        'icon' => 'fa-solid fa-water',          'title' => 'Excursion',       'subtitle' => 'Tours and activities'],
+            ['key' => 'remote_workspace', 'icon' => 'fa-solid fa-laptop',         'title' => 'Remote Workspace','subtitle' => 'Work-friendly spaces'],
+            ['key' => 'resort_day_visit', 'icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit','subtitle' => 'Day-use resort offers'],
+            ['key' => 'restaurant',       'icon' => 'fa-solid fa-utensils',       'title' => 'Restaurant',      'subtitle' => 'Dining experiences'],
+            ['key' => 'vehicle_rental',   'icon' => 'fa-solid fa-car',            'title' => 'Vehicle Rental',  'subtitle' => 'Cars and local rentals'],
         ]);
         $catalogProperties = $catalogProperties ?? collect();
         $catalogPropertyMediaByProperty = $catalogPropertyMediaByProperty ?? collect();
@@ -335,7 +336,7 @@
         <section class="top-links" aria-label="Top categories">
             @foreach ($catalogCategoryLinks as $item)
                 <a class="top-link{{ $categoryKey === ($item['key'] ?? '') ? ' is-active' : '' }}" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">
-                    {{ ($item['emoji'] ?? '📌') . ' ' . ($item['title'] ?? 'Category') }}
+                    <i class="{{ $item['icon'] ?? 'fa-solid fa-location-dot' }}"></i> {{ $item['title'] ?? 'Category' }}
                     <span>{{ $item['subtitle'] ?? '' }}</span>
                 </a>
             @endforeach

@@ -36,16 +36,9 @@
         }
 
         .page {
-              margin: 14px 12px 30px 270px;
-              width: calc(100% - 282px);
-              position: relative;
-            margin: 14px 14px 30px 270px;
-            width: calc(100% - 294px);
+            margin: 14px 12px 30px 270px;
+            width: calc(100% - 282px);
             max-width: none;
-            margin: 14px 14px 30px 270px;
-            width: min(1180px, calc(100% - 28px));
-            margin: 14px auto 30px;
-            margin-left: 270px;
             position: relative;
         }
 
@@ -231,22 +224,50 @@
                 padding: 9px;
             }
 
-            .mobile-category-title {
-                margin: 0 0 7px;
+            .mobile-category-toggle {
+                list-style: none;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
                 font-size: 0.7rem;
+                font-weight: 700;
                 text-transform: uppercase;
                 letter-spacing: 0.09em;
                 color: #4e6d83;
                 font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
             }
 
+            .mobile-category-toggle::-webkit-details-marker {
+                display: none;
+            }
+
+            .mobile-category-toggle::after {
+                content: '+';
+                font-size: 1rem;
+                line-height: 1;
+                color: #0f6179;
+            }
+
+            .mobile-category-nav[open] .mobile-category-toggle::after {
+                content: '-';
+            }
+
             .mobile-category-row {
-                display: flex;
+                display: none;
+                flex-wrap: nowrap;
                 gap: 7px;
                 overflow-x: auto;
+                overflow-y: hidden;
+                padding-top: 8px;
                 padding-bottom: 2px;
                 -webkit-overflow-scrolling: touch;
                 scrollbar-width: thin;
+            }
+
+            .mobile-category-nav[open] .mobile-category-row {
+                display: flex;
             }
 
             .mobile-category-link {
@@ -366,6 +387,12 @@
             min-height: 44px;
             font-size: 16px;
             line-height: 1.2;
+        }
+
+        .search-form input[type="date"],
+        .search-dynamic-fields input[type="date"] {
+            min-height: 48px;
+            padding-right: 10px;
         }
 
         .search-form button {
@@ -625,7 +652,6 @@
             .page {
                 width: calc(100% - 28px);
                 margin: 14px auto 30px;
-                margin-left: 14px;
             }
 
             .floating-sidebar {
@@ -681,7 +707,6 @@
             .page {
                 width: calc(100% - 18px);
                 margin: 10px auto 22px;
-                margin-left: 15px;
             }
 
             .floating-sidebar {
@@ -773,7 +798,6 @@
                     $categoryKeyFromUrl = preg_match('#/catalog/([a-z_]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
                 @endphp
                 <a class="top-link floating-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}"><span class="top-link-head"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}"></i>{{ $link['title'] ?? 'Category' }}</span><span>{{ $link['subtitle'] ?? '' }}</span></a>
-                <a class="top-link floating-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}"></i> {{ $link['title'] ?? 'Category' }}<span>{{ $link['subtitle'] ?? '' }}</span></a>
             @endforeach
         </section>
     </aside>
@@ -799,8 +823,8 @@
             </div>
         </header>
 
-        <nav class="mobile-category-nav" aria-label="Mobile category quick links">
-            <p class="mobile-category-title">Browse Categories</p>
+        <details class="mobile-category-nav" aria-label="Mobile category quick links">
+            <summary class="mobile-category-toggle">Browse Categories</summary>
             <div class="mobile-category-row">
                 @foreach ($homeTopCategoryLinks as $link)
                     @php
@@ -809,7 +833,7 @@
                     <a class="mobile-category-link" href="{{ $mobileLinkUrl }}"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i><span>{{ $link['title'] ?? 'Category' }}</span></a>
                 @endforeach
             </div>
-        </nav>
+        </details>
 
         <div class="search-section-full-width" aria-label="Smart category search">
             <p class="search-eyebrow">Find Anything Faster</p>

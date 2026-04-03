@@ -122,22 +122,50 @@
                 padding: 9px;
             }
 
-            .mobile-category-title {
-                margin: 0 0 7px;
+            .mobile-category-toggle {
+                list-style: none;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
                 font-size: 0.7rem;
+                font-weight: 700;
                 text-transform: uppercase;
                 letter-spacing: 0.09em;
                 color: #4e6d83;
                 font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
             }
 
+            .mobile-category-toggle::-webkit-details-marker {
+                display: none;
+            }
+
+            .mobile-category-toggle::after {
+                content: '+';
+                font-size: 1rem;
+                line-height: 1;
+                color: #0f6179;
+            }
+
+            .mobile-category-nav[open] .mobile-category-toggle::after {
+                content: '-';
+            }
+
             .mobile-category-row {
-                display: flex;
+                display: none;
+                flex-wrap: nowrap;
                 gap: 7px;
                 overflow-x: auto;
+                overflow-y: hidden;
+                padding-top: 8px;
                 padding-bottom: 2px;
                 -webkit-overflow-scrolling: touch;
                 scrollbar-width: thin;
+            }
+
+            .mobile-category-nav[open] .mobile-category-row {
+                display: flex;
             }
 
             .mobile-category-link {
@@ -398,7 +426,6 @@
             @foreach ($catalogCategoryLinks as $item)
                 <a class="top-link{{ $categoryKey === ($item['key'] ?? '') ? ' is-active' : '' }}" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">
                     <span class="top-link-head"><i class="{{ $item['icon'] ?? 'fa-solid fa-location-dot' }}"></i>{{ $item['title'] ?? 'Category' }}</span>
-                    <i class="{{ $item['icon'] ?? 'fa-solid fa-location-dot' }}"></i> {{ $item['title'] ?? 'Category' }}
                     <span>{{ $item['subtitle'] ?? '' }}</span>
                 </a>
             @endforeach
@@ -406,14 +433,14 @@
     </aside>
 
     <main class="page" data-api-base="{{ $apiBase }}">
-        <nav class="mobile-category-nav" aria-label="Mobile category quick links">
-            <p class="mobile-category-title">Browse Categories</p>
+        <details class="mobile-category-nav" aria-label="Mobile category quick links">
+            <summary class="mobile-category-toggle">Browse Categories</summary>
             <div class="mobile-category-row">
                 @foreach ($catalogCategoryLinks as $item)
                     <a class="mobile-category-link" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}"><i class="{{ $item['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i><span>{{ $item['title'] ?? 'Category' }}</span></a>
                 @endforeach
             </div>
-        </nav>
+        </details>
 
         <section class="hero">
             <p>Category Portfolio</p>
@@ -540,7 +567,7 @@
                     <article class="card">
                         <a class="card-link" href="{{ $detailUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
                             @php
-                                $resolvedImage = $bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback);
+                                $resolvedImage = $fallbackImage !== '' ? $fallbackImage : ($bannerUrl ?: $svgFallback);
                             @endphp
                             <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                             <div class="card-body">

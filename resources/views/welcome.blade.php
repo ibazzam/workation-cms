@@ -38,6 +38,9 @@
             width: calc(100% - 294px);
             max-width: none;
             margin: 14px 14px 30px 270px;
+            width: min(1180px, calc(100% - 28px));
+            margin: 14px auto 30px;
+            margin-left: 270px;
             position: relative;
         }
 
@@ -608,6 +611,13 @@
             .page {
                 width: calc(100% - 18px);
                 margin: 10px auto 22px;
+                margin-left: 15px;
+            }
+
+            .floating-sidebar {
+                position: static;
+                width: 100%;
+                height: auto;
             }
 
             .floating-sidebar {

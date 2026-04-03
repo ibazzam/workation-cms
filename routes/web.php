@@ -524,7 +524,7 @@ if (!function_exists('getAvailableCategories')) {
         foreach ($allCategoryIcons as $key => $info) {
             $defaultCategories[$key] = [
                 'label' => $info['label'] ?? ucfirst(str_replace('_', ' ', $key)),
-                'emoji' => $info['emoji'] ?? '📌',
+                'icon' => $info['icon'] ?? 'fa-solid fa-location-dot',
                 'subtitle' => match ($key) {
                     'accommodation' => 'Hotels, villas, guesthouses',
                     'transport' => 'Marine and land transfers',

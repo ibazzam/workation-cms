@@ -1292,6 +1292,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
         'prefill' => [
             'checkin' => trim((string) $request->query('checkin', '')),
             'checkout' => trim((string) $request->query('checkout', '')),
+            'rooms' => max(1, (int) $request->query('rooms', 1)),
             'adults' => max(1, (int) $request->query('adults', 2)),
             'children' => max(0, (int) $request->query('children', 0)),
         ],

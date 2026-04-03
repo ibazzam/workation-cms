@@ -625,19 +625,8 @@
         }
 
         .reviews-load-btn {
-            text-decoration: none;
-            border: 1px solid #3a82aa;
-            border-radius: 8px;
-            background: #ffffff;
-            color: #3a82aa;
             font-size: 0.82rem;
-            font-weight: 700;
             padding: 8px 16px;
-            cursor: pointer;
-        }
-
-        .reviews-load-btn:hover {
-            background: #f0f7fc;
         }
 
         .discount-badge {
@@ -687,18 +676,8 @@
         }
 
         .room-offer-expand-btn {
-            border: 1px solid #d8e7f1;
-            background: #f8fcff;
-            color: #3a82aa;
-            border-radius: 8px;
             padding: 6px 12px;
             font-size: 0.75rem;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        .room-offer-expand-btn:hover {
-            background: #f3f8fc;
         }
 
         .room-details-modal-overlay {
@@ -867,6 +846,20 @@
             gap: 6px;
             cursor: pointer;
             flex: 1;
+        }
+
+        .room-amenity-icon {
+            width: 18px;
+            height: 18px;
+            border-radius: 999px;
+            border: 1px solid #d2e3ee;
+            background: #f3f9fd;
+            color: #1f5a79;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            flex: 0 0 18px;
         }
 
         .room-amenity-badge {
@@ -1334,6 +1327,7 @@
             font-size: inherit;
         }
     </style>
+    @include('partials.uniform-buttons')
 </head>
 <body>
     @php
@@ -2106,6 +2100,34 @@
                     .replace(/\bTv\b/g, 'TV');
             }
 
+            function amenityIconClass(token) {
+                const value = String(token || '').toLowerCase().replace(/[_-]+/g, ' ').trim();
+
+                if (/(wheelchair|accessible|ada|disabled|accessibility)/.test(value)) {
+                    return 'fa-solid fa-wheelchair';
+                }
+                if (/(^|\b)(a\/c|ac|air\s*condition(?:ing)?|aircon|cooling)(\b|$)/.test(value)) {
+                    return 'fa-solid fa-snowflake';
+                }
+                if (/(wifi|wi-fi|internet|broadband|connection)/.test(value)) {
+                    return 'fa-solid fa-wifi';
+                }
+                if (/(bathroom|shower|bath|toilet|sink|bidet)/.test(value)) {
+                    return 'fa-solid fa-shower';
+                }
+                if (/(coffee|tea|kettle|water|minibar|bar)/.test(value)) {
+                    return 'fa-solid fa-mug-hot';
+                }
+                if (/(tv|television|entertainment|movie|streaming)/.test(value)) {
+                    return 'fa-solid fa-tv';
+                }
+                if (/(desk|workspace|office|work|table|chair)/.test(value)) {
+                    return 'fa-solid fa-desktop';
+                }
+
+                return 'fa-solid fa-star';
+            }
+
             function categorizeRoomAmenity(token) {
                 const value = String(token || '').toLowerCase();
                 if (value.includes('tooth') || value.includes('shampoo') || value.includes('soap') || value.includes('razor') || value.includes('dryer') || value.includes('slipper') || value.includes('toiletr')) {
@@ -2135,10 +2157,11 @@
                             ${items.map((item, idx) => {
                                 const safeItem = titleCaseToken(item);
                                 const badge = /\bfree\b/i.test(safeItem) ? '<span class="room-amenity-badge">Free</span>' : '';
+                                const iconClass = amenityIconClass(item);
                                 return `
                                     <li class="room-amenity-item">
                                         <input type="checkbox" id="amenity-${roomId}-${categoryTitle.replace(/\s+/g, '-').toLowerCase()}-${idx}" checked disabled>
-                                        <label for="amenity-${roomId}-${categoryTitle.replace(/\s+/g, '-').toLowerCase()}-${idx}">${safeItem}${badge}</label>
+                                        <label for="amenity-${roomId}-${categoryTitle.replace(/\s+/g, '-').toLowerCase()}-${idx}"><span class="room-amenity-icon" aria-hidden="true"><i class="${iconClass}"></i></span>${safeItem}${badge}</label>
                                     </li>
                                 `;
                             }).join('')}

@@ -60,15 +60,6 @@
             font-size: 0.86rem;
         }
         .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-        button {
-            border: 0;
-            background: #0f6288;
-            color: #fff;
-            border-radius: 10px;
-            padding: 10px 14px;
-            font-weight: 700;
-            cursor: pointer;
-        }
         a { text-decoration: none; color: #18466e; font-weight: 600; font-size: 0.9rem; }
 
         .footer-links {
@@ -90,6 +81,7 @@
             text-align: center;
         }
     </style>
+    @include('partials.uniform-buttons')
 </head>
 <body>
     <main class="frame">

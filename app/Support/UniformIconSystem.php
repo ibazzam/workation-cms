@@ -42,114 +42,116 @@ class UniformIconSystem
     public static function getAmenityIcon(string $amenity): string
     {
         $amenityLower = strtolower(trim($amenity));
+        $amenityNormalized = preg_replace('/[_-]+/', ' ', $amenityLower) ?? $amenityLower;
+        $amenityNormalized = preg_replace('/\s+/', ' ', $amenityNormalized) ?? $amenityNormalized;
 
         // Food & Dining
-        if (preg_match('/(restaurant|dining|bar|cafe|kitchen|breakfast)/i', $amenityLower)) {
+        if (preg_match('/(restaurant|dining|bar|cafe|kitchen|breakfast)/i', $amenityNormalized)) {
             return 'fa-solid fa-utensils';
         }
 
         // Pool & Water
-        if (preg_match('/(pool|swim|water|jacuzzi|spa|sauna|steam)/i', $amenityLower)) {
+        if (preg_match('/(pool|swim|water|jacuzzi|spa|sauna|steam)/i', $amenityNormalized)) {
             return 'fa-solid fa-person-swimming';
         }
 
         // Fitness & Health
-        if (preg_match('/(gym|fitness|yoga|wellness|massage|health)/i', $amenityLower)) {
+        if (preg_match('/(gym|fitness|yoga|wellness|massage|health)/i', $amenityNormalized)) {
             return 'fa-solid fa-dumbbell';
         }
         
         // WiFi & Technology
-        if (preg_match('/(wifi|wi-fi|internet|broadband|connection)/i', $amenityLower)) {
+        if (preg_match('/(wifi|wi-fi|internet|broadband|connection)/i', $amenityNormalized)) {
             return 'fa-solid fa-wifi';
         }
 
         // Parking
-        if (preg_match('/(parking|car|vehicle|garage)/i', $amenityLower)) {
+        if (preg_match('/(parking|car|vehicle|garage)/i', $amenityNormalized)) {
             return 'fa-solid fa-square-parking';
         }
 
         // Family & Kids
-        if (preg_match('/(kids|family|children|toy|playground)/i', $amenityLower)) {
+        if (preg_match('/(kids|family|children|toy|playground)/i', $amenityNormalized)) {
             return 'fa-solid fa-children';
         }
 
+        // Accessibility (must run before AC checks to avoid false positives like "wheelchair_access")
+        if (preg_match('/(wheelchair|accessible|ada|disabled|accessibility)/i', $amenityNormalized)) {
+            return 'fa-solid fa-wheelchair';
+        }
+
         // Air Conditioning
-        if (preg_match('/(ac|air condition|cooling)/i', $amenityLower)) {
+        if (preg_match('/\b(a\/c|ac|air\s*condition(?:ing)?|aircon|cooling)\b/i', $amenityNormalized)) {
             return 'fa-solid fa-snowflake';
         }
 
         // Heating
-        if (preg_match('/(heating|warm|hot water)/i', $amenityLower)) {
+        if (preg_match('/(heating|warm|hot water)/i', $amenityNormalized)) {
             return 'fa-solid fa-fire';
         }
 
         // Laundry
-        if (preg_match('/(laundry|wash|iron|clothes)/i', $amenityLower)) {
+        if (preg_match('/(laundry|wash|iron|clothes)/i', $amenityNormalized)) {
             return 'fa-solid fa-shirt';
         }
 
         // TV & Entertainment
-        if (preg_match('/(tv|television|entertainment|movie|streaming)/i', $amenityLower)) {
+        if (preg_match('/(tv|television|entertainment|movie|streaming)/i', $amenityNormalized)) {
             return 'fa-solid fa-tv';
         }
 
         // Workspace
-        if (preg_match('/(desk|workspace|office|work|table|chair|work space)/i', $amenityLower)) {
+        if (preg_match('/(desk|workspace|office|work|table|chair|work space)/i', $amenityNormalized)) {
             return 'fa-solid fa-desktop';
         }
 
         // Bedroom & Bedding
-        if (preg_match('/(bed|bedroom|sleep|mattress)/i', $amenityLower)) {
+        if (preg_match('/(bed|bedroom|sleep|mattress)/i', $amenityNormalized)) {
             return 'fa-solid fa-bed';
         }
 
         // Bathroom
-        if (preg_match('/(bathroom|shower|bath|toilet|sink)/i', $amenityLower)) {
+        if (preg_match('/(bathroom|shower|bath|toilet|sink)/i', $amenityNormalized)) {
             return 'fa-solid fa-shower';
         }
 
         // View
-        if (preg_match('/(view|vista|ocean|sea|landscape|scenic)/i', $amenityLower)) {
+        if (preg_match('/(view|vista|ocean|sea|landscape|scenic)/i', $amenityNormalized)) {
             return 'fa-solid fa-binoculars';
         }
 
         // Security & Safety
-        if (preg_match('/(safe|security|lock|cctv|alarm)/i', $amenityLower)) {
+        if (preg_match('/(safe|security|lock|cctv|alarm)/i', $amenityNormalized)) {
             return 'fa-solid fa-lock';
         }
 
         // Outdoor & Garden
-        if (preg_match('/(garden|outdoor|patio|balcony|terrace|deck)/i', $amenityLower)) {
+        if (preg_match('/(garden|outdoor|patio|balcony|terrace|deck)/i', $amenityNormalized)) {
             return 'fa-solid fa-leaf';
         }
 
         // Beach & Water Access
-        if (preg_match('/(beach|sand|ocean|water access)/i', $amenityLower)) {
+        if (preg_match('/(beach|sand|ocean|water access)/i', $amenityNormalized)) {
             return 'fa-solid fa-umbrella-beach';
         }
 
         // Transportation
-        if (preg_match('/(airport|transfer|transport|shuttle|pickup)/i', $amenityLower)) {
+        if (preg_match('/(airport|transfer|transport|shuttle|pickup)/i', $amenityNormalized)) {
             return 'fa-solid fa-taxi';
         }
 
         // Pets
-        if (preg_match('/(pet|dog|cat|animal)/i', $amenityLower)) {
+        if (preg_match('/(pet|dog|cat|animal)/i', $amenityNormalized)) {
             return 'fa-solid fa-paw';
         }
 
         // Smoking & Non-smoking
-        if (preg_match('/(smoking|non-smoking|smoke-free)/i', $amenityLower)) {
+        if (preg_match('/(smoking|non-smoking|smoke-free)/i', $amenityNormalized)) {
             return 'fa-solid fa-ban';
         }
 
-        // Accessibility
-        if (preg_match('/(wheelchair|accessible|ada|disabled)/i', $amenityLower)) {
-            return 'fa-solid fa-wheelchair';
-        }
-
         // Outdoor Activities
-        if (preg_match('/(diving|snorkel|surf|watersport|adventure|activity)/i', $amenityLower)) {
+        if (preg_match('/(diving|snorkel|surf|watersport|adventure|activity)/i', $amenityNormalized)) {
             return 'fa-solid fa-person-surfing';
         }
 

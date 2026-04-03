@@ -138,16 +138,6 @@
             cursor: not-allowed;
         }
 
-        button {
-            border: 0;
-            background: #0f6288;
-            color: #fff;
-            border-radius: 10px;
-            padding: 10px 14px;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
         a {
             text-decoration: none;
             color: #18466e;
@@ -186,6 +176,7 @@
             text-align: center;
         }
     </style>
+    @include('partials.uniform-buttons')
 </head>
 <body>
     @php

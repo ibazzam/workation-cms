@@ -136,16 +136,6 @@
             font-family: "Outfit", "Trebuchet MS", sans-serif;
         }
 
-        .filters button {
-            border: 0;
-            border-radius: 8px;
-            background: #145f84;
-            color: #fff;
-            font-weight: 700;
-            padding: 9px 12px;
-            cursor: pointer;
-        }
-
         .grid {
             margin-top: 14px;
             display: grid;
@@ -206,6 +196,7 @@
             table { display: block; overflow-x: auto; white-space: nowrap; }
         }
     </style>
+    @include('partials.uniform-buttons')
 </head>
 <body>
     <main class="page">

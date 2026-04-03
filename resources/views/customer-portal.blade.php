@@ -779,6 +779,7 @@
             .summary-grid { grid-template-columns: 1fr; }
         }
     </style>
+    @include('partials.uniform-buttons')
 </head>
 <body>
     @php

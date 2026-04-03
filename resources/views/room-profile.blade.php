@@ -76,7 +76,7 @@
         .form-errors { margin:0 0 10px; border:1px solid #e6b2b2; background:#fff5f5; color:#8f2323; border-radius:10px; padding:10px 12px; }
         .form-errors ul { margin:0; padding-left:18px; }
         .summary { margin-top:8px; color:#3f5a72; font-size:0.86rem; }
-        .submit { margin-top:10px; border:1px solid #d9b06f; background:linear-gradient(135deg,#ffc76f 0%,var(--accent) 100%); color:#603b0c; border-radius:10px; padding:10px 14px; font:inherit; font-weight:700; cursor:pointer; }
+        .submit { margin-top:10px; }
         .invoice { border:1px solid #dbe7f0; border-radius:14px; background:#fbfdff; padding:12px; }
         .invoice h3 { margin:0 0 8px; font-size:0.96rem; }
         .invoice-row { display:flex; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:1px dashed #d6e4ee; font-size:0.83rem; color:#36586f; }
@@ -89,6 +89,7 @@
         @media (max-width: 960px) { .booking-layout { grid-template-columns:260px minmax(0,1fr); } }
         @media (max-width: 900px) { .gallery, .booking-grid { grid-template-columns:1fr; } .booking-layout { grid-template-columns:1fr; } .sidebar-summary { position:static; max-height:none; } }
     </style>
+    @include('partials.uniform-buttons')
 </head>
 <body>
     @php

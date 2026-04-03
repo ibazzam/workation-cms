@@ -37,6 +37,18 @@
         .page {
             width: min(1180px, calc(100% - 28px));
             margin: 14px auto 30px;
+            margin-left: 270px;
+            position: relative;
+        }
+
+        .floating-sidebar {
+            position: fixed;
+            left: 12px;
+            top: 12px;
+            width: 250px;
+            height: calc(100vh - 24px);
+            overflow-y: auto;
+            z-index: 900;
         }
 
         .header-bar {
@@ -74,16 +86,11 @@
         }
 
         .page-with-sidebar {
-            display: flex;
-            gap: 12px;
-            align-items: flex-start;
+            display: contents;
         }
 
         .sidebar-fixed {
-            position: sticky;
-            top: 12px;
-            width: 250px;
-            flex-shrink: 0;
+            display: none;
         }
 
         .sidebar-shell {
@@ -542,8 +549,19 @@
 
 
         @media (max-width: 1040px) {
+            .page {
+                margin-left: 14px;
+            }
+
+            .floating-sidebar {
+                position: static;
+                width: 100%;
+                height: auto;
+                margin-bottom: 12px;
+            }
+
             .page-with-sidebar {
-                flex-direction: column;
+                display: contents;
             }
 
             .sidebar-fixed {
@@ -588,6 +606,13 @@
             .page {
                 width: calc(100% - 18px);
                 margin: 10px auto 22px;
+                margin-left: 15px;
+            }
+
+            .floating-sidebar {
+                position: static;
+                width: 100%;
+                height: auto;
             }
 
             .header-bar {
@@ -657,6 +682,19 @@
         $homeWeekendDealCards = $homeWeekendDealCards ?? collect();
         $homeLovedCards = $homeLovedCards ?? collect();
     @endphp
+
+    <aside class="floating-sidebar sidebar-shell" aria-label="Category sidebar">
+        <p class="sidebar-title">Browse Categories</p>
+        <section class="top-links" aria-label="Top categories">
+            @foreach ($homeTopCategoryLinks as $link)
+                @php
+                    $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
+                    $categoryKeyFromUrl = preg_match('#/catalog/([a-z_]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
+                @endphp
+                <a class="top-link floating-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}">{{ ($link['emoji'] ?? '📌') . ' ' . ($link['title'] ?? 'Category') }}<span>{{ $link['subtitle'] ?? '' }}</span></a>
+            @endforeach
+        </section>
+    </aside>
 
     <main class="page" data-api-base="{{ $apiBase }}">
         <header class="header-bar" aria-label="Customer account actions">
@@ -735,95 +773,6 @@
                     <button type="submit">Search Now</button>
                 </div>
             </form>
-            <div class="search-actions" aria-label="Quick category catalogue links">
-                @foreach ($homeTopCategoryLinks as $link)
-                    @php
-                        $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
-                    @endphp
-                    <a href="{{ $linkUrl }}">Open {{ $link['title'] ?? 'Category' }} Catalogue</a>
-                @endforeach
-            </div>
-        </div>
-
-        <div class="page-with-sidebar">
-            <aside class="sidebar-fixed sidebar-shell" aria-label="Category sidebar">
-                <p class="sidebar-title">Browse Categories</p>
-                <section class="top-links" aria-label="Top categories">
-                    @foreach ($homeTopCategoryLinks as $link)
-                        @php
-                            $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
-                            $categoryKeyFromUrl = preg_match('#/catalog/([a-z_]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
-                        @endphp
-                        <a class="top-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}">{{ ($link['emoji'] ?? '📌') . ' ' . ($link['title'] ?? 'Category') }}<span>{{ $link['subtitle'] ?? '' }}</span></a>
-                    @endforeach
-                </section>
-            </aside>
-
-            <section class="search-section-hidden" aria-label="Smart category search">
-            <p class="search-eyebrow">Find Anything Faster</p>
-            <h1 class="search-title">Select category and search with category-specific filters.</h1>
-            <form id="homeCatalogSearchForm" class="search-form" action="/catalog/accommodation" method="get">
-                <select id="categorySelect" name="category" aria-label="Select category">
-                    @foreach ($homeTopCategoryLinks as $link)
-                        @php
-                            $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
-                            $categoryKeyFromUrl = preg_match('#/catalog/([a-z_]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
-                        @endphp
-                        <option value="{{ $categoryKeyFromUrl }}">{{ $link['title'] ?? 'Category' }}</option>
-                    @endforeach
-                </select>
-                <input type="search" name="q" placeholder="Atoll, island, property, or service name" aria-label="Search query">
-
-                <div id="accommodationFields" class="search-dynamic-fields is-active" data-fields-for="accommodation" aria-hidden="false">
-                    <div class="field"><label for="checkin">Check-in Date</label><input id="checkin" name="checkin" type="date"></div>
-                    <div class="field"><label for="checkout">Check-out Date</label><input id="checkout" name="checkout" type="date"></div>
-                    <div class="field"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="2"></div>
-                    <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="0"></div>
-                    <div class="field"><label for="rooms">Rooms</label><input id="rooms" name="rooms" type="number" min="1" value="1"></div>
-                </div>
-
-                <div id="transportFields" class="search-dynamic-fields" data-fields-for="transport" hidden aria-hidden="true">
-                    <div class="field"><label for="transportMode">Transport Mode</label><select id="transportMode" name="transport_mode"><option value="marine">Marine Transport</option><option value="land">Land Transport</option></select></div>
-                    <div class="field" id="transportTripTypeField"><label for="transportTripType">Trip Type</label><select id="transportTripType" name="trip_type"><option value="one_way">One Way</option><option value="round_trip">Round Trip</option></select></div>
-                    <div class="field"><label for="transportFrom">From (Atoll/Island)</label><input id="transportFrom" name="from" type="text" placeholder="Atoll or island"></div>
-                    <div class="field"><label for="transportTo">To (Atoll/Island)</label><input id="transportTo" name="to" type="text" placeholder="Atoll or island"></div>
-                    <div class="field" id="transportDepartureDateField"><label for="travelDate">Departure Date</label><input id="travelDate" name="travel_date" type="date"></div>
-                    <div class="field" id="transportReturnDateField"><label for="returnDate">Return Date</label><input id="returnDate" name="return_date" type="date"></div>
-                    <div class="field"><label for="transportAdults">Adults / Pax</label><input id="transportAdults" name="adults" type="number" min="1" value="2"></div>
-                    <div class="field"><label for="transportChildren">Children</label><input id="transportChildren" name="children" type="number" min="0" value="0"></div>
-                    <div class="field" id="transportVehicleTypeField"><label for="vehicleType">Vehicle Type</label><input id="vehicleType" name="vehicle_type" type="text" placeholder="Car, Van, Bike"></div>
-                </div>
-
-                <div id="serviceFields" class="search-dynamic-fields" data-fields-for="service" hidden aria-hidden="true">
-                    <div class="field">
-                        <label for="serviceAtoll">Atoll</label>
-                        <select id="serviceAtoll" name="atoll">
-                            <option value="">All Atolls</option>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label for="serviceIsland">Island</label>
-                        <select id="serviceIsland" name="island">
-                            <option value="">All Islands</option>
-                        </select>
-                    </div>
-                    <div class="field"><label for="minPrice">Min Price</label><input id="minPrice" name="min_price" type="number" min="0" placeholder="0"></div>
-                    <div class="field"><label for="maxPrice">Max Price</label><input id="maxPrice" name="max_price" type="number" min="0" placeholder="5000"></div>
-                </div>
-
-                <div class="search-submit-row">
-                    <button type="submit">Search Now</button>
-                </div>
-            </form>
-            <div class="search-actions" aria-label="Quick category catalogue links">
-                @foreach ($homeTopCategoryLinks as $link)
-                    @php
-                        $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
-                    @endphp
-                    <a href="{{ $linkUrl }}">Open {{ $link['title'] ?? 'Category' }} Catalogue</a>
-                @endforeach
-            </div>
-            </section>
         </div>
 
         <section class="promo-banner" aria-label="Offers and promotions">
@@ -1149,6 +1098,11 @@
 
             if (topCategoryLinks.length > 0) {
                 topCategoryLinks.forEach(function (link) {
+                    // Skip floating sidebar links - let them navigate naturally
+                    if (link.classList.contains('floating-link')) {
+                        return;
+                    }
+
                     link.addEventListener('click', function (event) {
                         const categoryKey = String(link.getAttribute('data-category-key') || '').toLowerCase();
                         if (!categoryKey || !categorySelect.querySelector('option[value="' + categoryKey + '"]')) {

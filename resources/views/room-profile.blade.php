@@ -20,8 +20,35 @@
         .gallery img { width:100%; height:190px; object-fit:cover; border-radius:12px; border:1px solid #cfe1ec; background:#eff7fb; }
         .chips { display:flex; flex-wrap:wrap; gap:7px; }
         .chip { border:1px solid #cfe0eb; background:#edf6f3; color:#24516b; border-radius:999px; font-size:0.77rem; padding:6px 10px; }
-        .booking-layout { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(280px,0.8fr); gap:12px; align-items:start; }
+        .booking-layout { display:grid; grid-template-columns:300px minmax(0,1fr); gap:12px; align-items:start; }
         .booking-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+        .booking-page-header { padding:12px 16px; border:1px solid #cbe0ea; border-radius:16px; background:linear-gradient(132deg,#0f6179 0%,#1d848c 58%,#2f9891 100%); color:#ecfcff; margin-bottom:12px; }
+        .bph-back { font-size:0.76rem; color:#cfeff4; text-decoration:none; }
+        .bph-back:hover { text-decoration:underline; }
+        .bph-name { font-size:0.78rem; color:#cfeff4; text-transform:uppercase; letter-spacing:0.07em; margin-top:4px; }
+        .bph-room { font-size:1.35rem; font-weight:800; margin-top:3px; }
+        .sidebar-summary { border:1px solid #d0e4ef; border-radius:16px; background:#f7fbff; overflow:hidden; display:grid; gap:0; align-content:start; position:sticky; top:12px; max-height:calc(100vh - 24px); overflow-y:auto; }
+        .sum-section { border-bottom:1px solid #dde9f2; padding:12px 14px; display:grid; gap:6px; }
+        .sum-section:last-child { border-bottom:0; }
+        .sum-title { margin:0; font-size:0.69rem; text-transform:uppercase; letter-spacing:0.09em; color:#3c6480; font-family:"Space Grotesk","Trebuchet MS",sans-serif; display:flex; align-items:center; gap:6px; }
+        .sum-title-number { width:18px; height:18px; border-radius:999px; background:#1a6d8a; color:#fff; font-size:0.64rem; font-weight:700; display:inline-flex; align-items:center; justify-content:center; flex:0 0 18px; }
+        .sum-prop-name { font-size:0.9rem; font-weight:700; color:#1b3f58; }
+        .sum-room-name { font-size:0.82rem; color:#336077; font-weight:600; }
+        .sum-room-meta { font-size:0.74rem; color:#5c7488; }
+        .sum-compact-line { display:flex; justify-content:space-between; gap:8px; font-size:0.79rem; color:#3b5c73; padding:2px 0; }
+        .sum-compact-line strong { color:#1f465f; font-weight:600; }
+        .sum-total { margin-top:6px; border:1px solid #cfe0eb; border-radius:10px; background:#edf6f3; padding:9px 10px; display:flex; justify-content:space-between; font-weight:700; color:#21475f; font-size:0.88rem; }
+        .sum-date-line { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .sum-date-box { border:1px solid #dbe9f2; border-radius:8px; background:#f0f7fc; padding:8px 10px; }
+        .sum-date-label { font-size:0.66rem; text-transform:uppercase; letter-spacing:0.07em; color:#5c7488; }
+        .sum-date-value { font-size:0.86rem; font-weight:700; color:#1b3f58; margin-top:2px; }
+        .sum-date-time { font-size:0.72rem; color:#4d6e84; margin-top:1px; }
+        .sum-nights-badge { font-size:0.77rem; color:#336077; font-weight:600; text-align:center; padding:4px 0; background:#e8f3fa; border-radius:6px; }
+        .sum-policy-ul { margin:0; padding-left:16px; color:#4a687e; font-size:0.78rem; line-height:1.55; }
+        .sum-policy-text { margin:0 0 4px; color:#4a687e; font-size:0.78rem; line-height:1.5; }
+        .sum-policy-text:last-child { margin-bottom:0; }
+        .booking-form-wrap { display:grid; gap:12px; }
+        .booking-form-title { margin:0; border:1px solid #dbe7f0; border-radius:14px; background:linear-gradient(135deg,#f3f8fc 0%,#edf5fb 100%); padding:12px 16px; font-size:1.04rem; font-weight:700; color:#153f59; display:flex; align-items:center; gap:10px; }
         .guest-form-stack { display:grid; gap:12px; }
         .booking-subsection { border:1px solid #dbe7f0; border-radius:12px; background:#fcfeff; padding:12px; display:grid; gap:10px; }
         .booking-subtitle { margin:0; font-size:0.98rem; color:#163f59; font-weight:700; }
@@ -59,7 +86,8 @@
         .policy-box h4 { margin:0 0 6px; font-size:0.79rem; text-transform:uppercase; letter-spacing:0.07em; color:#47647a; }
         .policy-box ul { margin:0; padding-left:18px; color:#48677f; font-size:0.8rem; }
         .policy-box p { margin:0; color:#48677f; font-size:0.8rem; line-height:1.4; }
-        @media (max-width: 900px) { .gallery, .booking-grid { grid-template-columns:1fr; } .booking-layout { grid-template-columns:1fr; } }
+        @media (max-width: 960px) { .booking-layout { grid-template-columns:260px minmax(0,1fr); } }
+        @media (max-width: 900px) { .gallery, .booking-grid { grid-template-columns:1fr; } .booking-layout { grid-template-columns:1fr; } .sidebar-summary { position:static; max-height:none; } }
     </style>
 </head>
 <body>
@@ -112,25 +140,83 @@
     @endphp
 
     <main class="page">
-        <section class="hero" aria-label="Room summary">
-            <h1>{{ (string) ($room->name ?? 'Room') }}</h1>
-            <p>{{ (string) ($property->name ?? 'Property') }} • Base rate {{ $currency }} {{ $basePrice }}</p>
-        </section>
+        <header class="booking-page-header" aria-label="Property and room">
+            <a class="bph-back" href="{{ url()->previous('/') }}">&larr; Back to property</a>
+            <p class="bph-name">{{ (string) ($property->name ?? 'Property') }}</p>
+            <p class="bph-room">{{ (string) ($room->name ?? 'Room') }} &middot; {{ $roomBedLabel }}{{ $roomSize > 0 ? ' &middot; ' . $roomSize . '&#13217;' : '' }}</p>
+        </header>
 
-        <section class="section" aria-label="Room features">
-            <h2>Room Features & Amenities</h2>
-            <div class="chips">
-                @forelse ($roomFeatures->take(24) as $feature)
-                    <span class="chip">{{ $feature }}</span>
-                @empty
-                    <span class="chip">Amenities will be updated soon.</span>
-                @endforelse
-            </div>
-        </section>
-
-        <section class="section" aria-label="Booking options">
-            <h2>Book This Room</h2>
+        <section class="section" aria-label="Booking">
             <div class="booking-layout">
+
+                <aside class="sidebar-summary" aria-label="Booking summary">
+
+                    <section class="sum-section" aria-label="Property and room">
+                        <h2 class="sum-title"><span class="sum-title-number">1</span> Property &amp; Room</h2>
+                        <p class="sum-prop-name">{{ (string) ($property->name ?? 'Property') }}</p>
+                        <p class="sum-room-name">{{ (string) ($room->name ?? 'Room') }}</p>
+                        <p class="sum-room-meta">{{ $roomBedLabel }}{{ $roomSize > 0 ? ' · ' . $roomSize . '㎡' : '' }}{{ $roomNonSmoking ? ' · Non-smoking' : '' }}</p>
+                        <p class="sum-room-meta">Rate: <strong style="color:#1b3f58">{{ $currency }} {{ number_format($basePriceRaw, 2) }}</strong> / night</p>
+                    </section>
+
+                    <section class="sum-section" aria-label="Stay dates">
+                        <h2 class="sum-title"><span class="sum-title-number">2</span> Stay Dates</h2>
+                        <div class="sum-date-line">
+                            <div class="sum-date-box">
+                                <div class="sum-date-label">Check-in</div>
+                                <div class="sum-date-value" id="sumCheckinDate">{{ $checkinDate !== '' ? date('D, M j', strtotime($checkinDate)) : '—' }}</div>
+                                <div class="sum-date-time">From {{ $roomCheckinStart }}</div>
+                            </div>
+                            <div class="sum-date-box">
+                                <div class="sum-date-label">Check-out</div>
+                                <div class="sum-date-value" id="sumCheckoutDate">{{ $checkoutDate !== '' ? date('D, M j', strtotime($checkoutDate)) : '—' }}</div>
+                                <div class="sum-date-time">Before {{ $roomCheckoutBefore }}</div>
+                            </div>
+                        </div>
+                        <div class="sum-nights-badge" id="sumNightsBadge">{{ $stayNights }} night{{ $stayNights !== 1 ? 's' : '' }}</div>
+                    </section>
+
+                    <section class="sum-section" aria-label="Price summary">
+                        <h2 class="sum-title"><span class="sum-title-number">3</span> Price Summary</h2>
+                        <div class="sum-compact-line"><span>Nightly rate</span><strong id="invoiceNightly">{{ $currency }} {{ number_format($basePriceRaw, 2) }}</strong></div>
+                        <div class="sum-compact-line"><span>Stay (nights)</span><strong id="invoiceNights">{{ $stayNights }}</strong></div>
+                        <div class="sum-compact-line"><span>Room subtotal</span><strong id="invoiceRoomSubtotal">{{ $currency }} 0.00</strong></div>
+                        <div class="sum-compact-line"><span>Discount</span><strong id="invoiceDiscount">- {{ $currency }} 0.00</strong></div>
+                        <div class="sum-compact-line"><span>Tax ({{ number_format($taxRate, 2) }}%)</span><strong id="invoiceTax">{{ $currency }} 0.00</strong></div>
+                        <div class="sum-compact-line"><span>Transfer charges</span><strong id="invoiceTransfer">{{ $currency }} 0.00</strong></div>
+                        <div class="sum-compact-line"><span>Guests</span><strong id="invoiceGuests">{{ (int) ($prefill['adults'] ?? 2) }} Adults, {{ (int) ($prefill['children'] ?? 0) }} Children</strong></div>
+                        <div class="sum-total"><span>Total</span><span id="invoiceTotal">{{ $currency }} 0.00</span></div>
+                    </section>
+
+                    <section class="sum-section" aria-label="Inclusives">
+                        <h2 class="sum-title"><span class="sum-title-number">4</span> Inclusives</h2>
+                        @if ($inclusives->isNotEmpty())
+                            <ul class="sum-policy-ul">
+                                @foreach ($inclusives->take(8) as $inclusive)
+                                    <li>{{ $inclusive }}</li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <p class="sum-policy-text">Inclusives will be confirmed at reservation time.</p>
+                        @endif
+                    </section>
+
+                    <section class="sum-section" aria-label="Cancellation policy">
+                        <h2 class="sum-title"><span class="sum-title-number">5</span> Cancellation Policy</h2>
+                        <p class="sum-policy-text">Free cancellation before {{ $cancelDeadlineLabel }}.</p>
+                        <p class="sum-policy-text">{{ $cancellationPolicy }}</p>
+                    </section>
+
+                    <section class="sum-section" aria-label="Guest policy">
+                        <h2 class="sum-title"><span class="sum-title-number">6</span> Guest Policy</h2>
+                        <p class="sum-policy-text">{{ $roomChildPolicy }}</p>
+                        <p class="sum-policy-text">{{ $roomExtraBedPolicy }}</p>
+                    </section>
+
+                </aside>
+
+                <div class="booking-form-wrap">
+                <h2 class="booking-form-title">Reserve This Room</h2>
                 <form method="POST" action="/booking/reserve" id="roomBookingForm">
                     @csrf
                     <input type="hidden" name="property_id" value="{{ (int) ($property->id ?? 0) }}">
@@ -244,38 +330,9 @@
                     </div>
 
                     <p class="summary">Proceeding will prepare your reservation and take you to checkout confirmation.</p>
-                    <button class="submit" type="submit">Proceed to Booking & Reservation</button>
+                    <button class="submit" type="submit">Proceed to Booking &amp; Reservation</button>
                 </form>
-
-                <aside class="invoice" aria-label="Invoice summary">
-                    <h3>Invoice / Billing Summary</h3>
-                    <div class="invoice-row"><span>Nightly Rate</span><strong id="invoiceNightly">{{ $currency }} {{ number_format($basePriceRaw, 2) }}</strong></div>
-                    <div class="invoice-row"><span>Stay (nights)</span><strong id="invoiceNights">1</strong></div>
-                    <div class="invoice-row"><span>Room Subtotal</span><strong id="invoiceRoomSubtotal">{{ $currency }} 0.00</strong></div>
-                    <div class="invoice-row"><span>Promotion / Discount</span><strong id="invoiceDiscount">- {{ $currency }} 0.00</strong></div>
-                    <div class="invoice-row"><span>Tax ({{ number_format($taxRate, 2) }}%)</span><strong id="invoiceTax">{{ $currency }} 0.00</strong></div>
-                    <div class="invoice-row"><span>Transfer Charges</span><strong id="invoiceTransfer">{{ $currency }} 0.00</strong></div>
-                    <div class="invoice-row"><span>Guests</span><strong id="invoiceGuests">{{ (int) ($prefill['adults'] ?? 2) }} Adults, {{ (int) ($prefill['children'] ?? 0) }} Children</strong></div>
-                    <div class="invoice-total"><span>Total</span><span id="invoiceTotal">{{ $currency }} 0.00</span></div>
-
-                    <div class="policy-box" aria-label="Inclusions">
-                        <h4>Inclusives</h4>
-                        @if ($inclusives->isNotEmpty())
-                            <ul>
-                                @foreach ($inclusives->take(8) as $inclusive)
-                                    <li>{{ $inclusive }}</li>
-                                @endforeach
-                            </ul>
-                        @else
-                            <p>Room stay inclusives will be confirmed at reservation time.</p>
-                        @endif
-                    </div>
-
-                    <div class="policy-box" aria-label="Cancellation policy">
-                        <h4>Cancellation Policy</h4>
-                        <p>{{ $cancellationPolicy }}</p>
-                    </div>
-                </aside>
+                </div>{{-- /.booking-form-wrap --}}
             </div>
         </section>
 
@@ -351,6 +408,22 @@
                 if (invoiceTax) invoiceTax.textContent = toCurrency(taxAmount);
                 if (invoiceTransfer) invoiceTransfer.textContent = toCurrency(transferTotal);
                 if (invoiceTotal) invoiceTotal.textContent = toCurrency(total);
+
+                // Update date display in sidebar
+                const sumCheckinDate = document.getElementById('sumCheckinDate');
+                const sumCheckoutDate = document.getElementById('sumCheckoutDate');
+                const sumNightsBadge = document.getElementById('sumNightsBadge');
+                if (sumCheckinDate && checkin.value) {
+                    const d = new Date(checkin.value + 'T00:00:00');
+                    sumCheckinDate.textContent = d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+                }
+                if (sumCheckoutDate && checkout.value) {
+                    const d = new Date(checkout.value + 'T00:00:00');
+                    sumCheckoutDate.textContent = d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+                }
+                if (sumNightsBadge) {
+                    sumNightsBadge.textContent = nights + ' night' + (nights !== 1 ? 's' : '');
+                }
 
                 if (roomSubtotalInput) roomSubtotalInput.value = roomSubtotal.toFixed(2);
                 if (discountAmountInput) discountAmountInput.value = discountAmount.toFixed(2);

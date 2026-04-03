@@ -925,6 +925,69 @@
 
         .policies-section { margin-top: 12px; }
 
+        .hero-availability {
+            margin-top: 12px;
+            border: 1px solid rgba(225, 248, 252, 0.45);
+            border-radius: 14px;
+            background: rgba(6, 70, 87, 0.28);
+            padding: 12px 14px;
+        }
+
+        .hero-avail-label {
+            margin: 0 0 8px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #cfeff4;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .hero-avail-form {
+            display: grid;
+            grid-template-columns: 1.4fr 130px 130px 70px 70px 70px auto;
+            gap: 8px;
+            align-items: end;
+        }
+
+        .hero-avail-field {
+            display: grid;
+            gap: 4px;
+        }
+
+        .hero-avail-field label {
+            font-size: 0.66rem;
+            color: #d4f0f6;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+        }
+
+        .hero-avail-field input {
+            width: 100%;
+            border: 1px solid rgba(150, 210, 230, 0.6);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font: inherit;
+            color: #103247;
+            background: #f8fdff;
+            font-size: 0.82rem;
+        }
+
+        .hero-avail-btn {
+            border: 1px solid #f6d19a;
+            background: linear-gradient(135deg, #ffc76f 0%, #f3a337 100%);
+            color: #57350b;
+            border-radius: 8px;
+            padding: 9px 14px;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 0.82rem;
+            align-self: end;
+        }
+
+        .hero-avail-btn:hover { filter: brightness(1.04); }
+
         .policies-grid {
             margin-top: 10px;
             display: grid;
@@ -1193,6 +1256,13 @@
         .muted { color: var(--muted); font-size: 0.8rem; line-height: 1.35; }
 
         @media (max-width: 1080px) {
+            .hero-avail-form { grid-template-columns: 1fr 120px 120px 65px 65px auto; }
+        }
+
+        @media (max-width: 680px) {
+            .hero-avail-form { grid-template-columns: 1fr 1fr; }
+            .hero-avail-btn { grid-column: 1 / -1; width: 100%; }
+        }
             .layout { grid-template-columns: 1fr; }
             .info-section { grid-template-columns: 1fr; }
             .guest-reviews-layout { grid-template-columns: 1fr; }
@@ -1285,7 +1355,7 @@
         $locationLine = trim((string) ($locationLine ?? ''));
         $ratingValue = (float) ($ratingValue ?? 0);
         $ratingUsers = (int) ($ratingUsers ?? 0);
-        $prefill = $prefill ?? ['checkin' => '', 'checkout' => '', 'adults' => 2, 'children' => 0];
+        $prefill = $prefill ?? ['checkin' => '', 'checkout' => '', 'rooms' => 1, 'adults' => 2, 'children' => 0];
         $mediaUrl = $mediaUrl ?? static fn () => null;
         $currency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
         $basePrice = number_format((float) ($property->base_price ?? 0), 2);
@@ -1428,6 +1498,37 @@
                 <div class="hero-stat"><div class="k">Category</div><div class="v">{{ $listingCategory }}</div></div>
                 <div class="hero-stat"><div class="k">Starting Price</div><div class="v">{{ $currency }} {{ $basePrice }}</div></div>
                 <div class="hero-stat"><div class="k">Available Rooms</div><div class="v">{{ $rooms->count() }}</div></div>
+            </div>
+
+            <div class="hero-availability" aria-label="Check availability">
+                <p class="hero-avail-label">Check Availability</p>
+                <form method="GET" action="" class="hero-avail-form" id="propertyAvailabilityForm">
+                    <div class="hero-avail-field">
+                        <label for="availProperty">Property</label>
+                        <input id="availProperty" type="text" name="property_name" value="{{ (string) ($property->name ?? '') }}" readonly style="cursor:default;">
+                    </div>
+                    <div class="hero-avail-field">
+                        <label for="availCheckin">Check-in</label>
+                        <input id="availCheckin" type="date" name="checkin" value="{{ (string) ($prefill['checkin'] ?? '') }}">
+                    </div>
+                    <div class="hero-avail-field">
+                        <label for="availCheckout">Check-out</label>
+                        <input id="availCheckout" type="date" name="checkout" value="{{ (string) ($prefill['checkout'] ?? '') }}">
+                    </div>
+                    <div class="hero-avail-field">
+                        <label for="availRooms">Rooms</label>
+                        <input id="availRooms" type="number" name="rooms" min="1" value="{{ (int) ($prefill['rooms'] ?? 1) }}">
+                    </div>
+                    <div class="hero-avail-field">
+                        <label for="availAdults">Adults</label>
+                        <input id="availAdults" type="number" name="adults" min="1" value="{{ (int) ($prefill['adults'] ?? 2) }}">
+                    </div>
+                    <div class="hero-avail-field">
+                        <label for="availChildren">Children</label>
+                        <input id="availChildren" type="number" name="children" min="0" value="{{ (int) ($prefill['children'] ?? 0) }}">
+                    </div>
+                    <button type="submit" class="hero-avail-btn">Search</button>
+                </form>
             </div>
         </section>
 
@@ -1620,7 +1721,7 @@
                         $extraBedPolicy = trim((string) ($room->extra_bed_policy ?? ''));
                         $roomAmenitiesRaw = collect(preg_split('/[,\n]+/', (string) ($room->amenities ?? '')) ?: [])->map(static fn ($item) => trim((string) $item))->filter()->values();
                         $bathAmenitiesRaw = collect(preg_split('/[,\n]+/', (string) ($room->bathroom_amenities ?? '')) ?: [])->map(static fn ($item) => trim((string) $item))->filter()->values();
-                        $roomLink = '/room/' . $roomId . '?checkin=' . urlencode((string) ($prefill['checkin'] ?? '')) . '&checkout=' . urlencode((string) ($prefill['checkout'] ?? '')) . '&adults=' . (int) ($prefill['adults'] ?? 2) . '&children=' . (int) ($prefill['children'] ?? 0);
+                        $roomLink = '/room/' . $roomId . '?checkin=' . urlencode((string) ($prefill['checkin'] ?? '')) . '&checkout=' . urlencode((string) ($prefill['checkout'] ?? '')) . '&rooms=' . (int) ($prefill['rooms'] ?? 1) . '&adults=' . (int) ($prefill['adults'] ?? 2) . '&children=' . (int) ($prefill['children'] ?? 0);
                         $amenities = collect([
                                 (string) ($room->bed_type ?? ''),
                                 ...(preg_split('/[,\n]+/', (string) ($room->amenities ?? '')) ?: []),

@@ -109,4 +109,5 @@
         </section>
     </div>
     <p class="wf-footer-note">&copy; WORKATION &trade; &mdash; All rights reserved.</p>
+    <p class="wf-footer-note">All rights reserved by WORKATION &trade;</p>
 </footer>

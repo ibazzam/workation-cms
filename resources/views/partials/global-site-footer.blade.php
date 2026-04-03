@@ -75,7 +75,8 @@
                 <li><a href="/">Home</a></li>
                 <li><a href="/customer">Customer Portal</a></li>
                 <li><a href="/customer?category=Accommodation">Stays and Properties</a></li>
-                <li><a href="/customer?category=Transport">Transport Services</a></li>
+                <li><a href="/catalog/marine-transport">Marine Transport</a></li>
+                <li><a href="/catalog/land-transport">Land Transport</a></li>
                 <li><a href="/customer?category=Experiences">Experiences and Tours</a></li>
             </ul>
         </section>

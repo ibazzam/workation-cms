@@ -92,7 +92,7 @@
                 <article class="ops-form">
                     <p class="label">Step-by-step checklist</p>
                     <ol class="step-list">
-                        <li>Select categories from schema domains: Accommodation, excursions, remoteWorkSpaces, resortDayVisits, restaurants, transports, vehicleRentals.</li>
+                        <li>Select categories from schema domains: Accommodation, marine transport, land transport, excursions, remote workspaces, conference rooms, resort day visits, restaurants, and vehicle rentals.</li>
                         <li>Complete account profile and billing details.</li>
                         <li>Create listings, room categories (accommodation), availability, and pricing.</li>
                         <li>Upload photos and finalize publish-ready inventory.</li>

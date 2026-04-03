@@ -14,9 +14,10 @@ if (!function_exists('vendorPortalCategoryMap')) {
     {
         return [
             'accommodation' => 'Accommodation',
-            'transport' => 'Transports',
+            'transport' => 'Marine + Land Transport',
             'excursion' => 'Excursions',
             'remote_workspace' => 'Remote Workspaces',
+            'conference_room' => 'Conference Rooms',
             'resort_day_visit' => 'Resort Day Visits',
             'restaurant' => 'Restaurants',
             'vehicle_rental' => 'Vehicle Rentals',
@@ -38,6 +39,10 @@ if (!function_exists('vendorPortalCategoryAliases')) {
             'remote_workspaces' => 'remote_workspace',
             'remoteworkspace' => 'remote_workspace',
             'remoteworkspaces' => 'remote_workspace',
+            'conference_room' => 'conference_room',
+            'conference_rooms' => 'conference_room',
+            'conferenceroom' => 'conference_room',
+            'conferencerooms' => 'conference_room',
             'resort_day_visit' => 'resort_day_visit',
             'resort_day_visits' => 'resort_day_visit',
             'resortdayvisit' => 'resort_day_visit',
@@ -623,7 +628,7 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['vendor_tax_overrides'] = $vendorTaxOverrides;
         }
 
-        if (in_array($listingCategory, ['transport', 'excursion', 'remote_workspace', 'resort_day_visit', 'restaurant', 'vehicle_rental'], true)) {
+        if (in_array($listingCategory, ['transport', 'excursion', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'], true)) {
             $details['capacity_value'] = isset($validated['capacity_value']) ? (int) $validated['capacity_value'] : null;
         }
 
@@ -763,7 +768,7 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
             }
         }
 
-        if (in_array($listingCategory, ['transport', 'excursion', 'resort_day_visit', 'restaurant', 'vehicle_rental'], true)) {
+        if (in_array($listingCategory, ['transport', 'excursion', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'], true)) {
             if (!isset($details['capacity_value']) || $details['capacity_value'] < 1 || $details['capacity_value'] > 20000) {
                 $errors[] = 'Capacity must be between 1 and 20000 for this category.';
             }
@@ -1466,6 +1471,68 @@ Route::get('/vendor/listings', function () {
     return redirect('/vendor')
         ->with('portal_active_panel', 'listings')
         ->with('listing_wizard_step', 1);
+});
+
+Route::get('/vendor/listings/create', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    return redirect('/vendor')
+        ->with('portal_active_panel', 'listings')
+        ->with('listing_wizard_step', 1)
+        ->with('portal_listing_mode', 'create');
+});
+
+Route::get('/vendor/listings/create/{category}', function (string $category) {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $normalizedCategory = vendorPortalNormalizeCategoryToken($category);
+    $allowedCategories = array_merge(array_keys(vendorPortalCategoryMap()), ['marine_transport', 'land_transport']);
+    if (!in_array($normalizedCategory, $allowedCategories, true)) {
+        return redirect('/vendor/listings/create')->withErrors([
+            'profile' => 'Unsupported listing category route.',
+        ]);
+    }
+
+    return redirect('/vendor')
+        ->with('portal_active_panel', 'listings')
+        ->with('listing_wizard_step', 1)
+        ->with('portal_listing_mode', 'create')
+        ->with('portal_listing_category', $normalizedCategory);
+});
+
+Route::get('/vendor/listings/manage', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    return redirect('/vendor')
+        ->with('portal_active_panel', 'listings')
+        ->with('listing_wizard_step', 1)
+        ->with('portal_listing_mode', 'manage');
+});
+
+Route::get('/vendor/listings/manage/{category}', function (string $category) {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $normalizedCategory = vendorPortalNormalizeCategoryToken($category);
+    $allowedCategories = array_merge(array_keys(vendorPortalCategoryMap()), ['marine_transport', 'land_transport']);
+    if (!in_array($normalizedCategory, $allowedCategories, true)) {
+        return redirect('/vendor/listings/manage')->withErrors([
+            'profile' => 'Unsupported listing category route.',
+        ]);
+    }
+
+    return redirect('/vendor')
+        ->with('portal_active_panel', 'listings')
+        ->with('listing_wizard_step', 1)
+        ->with('portal_listing_mode', 'manage')
+        ->with('portal_listing_category', $normalizedCategory);
 });
 
 Route::get('/vendor/operations', function () {

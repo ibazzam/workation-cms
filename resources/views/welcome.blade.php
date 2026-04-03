@@ -330,19 +330,21 @@
         .search-form {
             margin-top: 12px;
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: minmax(14ch, 20ch) minmax(0, 1fr);
             gap: 8px;
             align-items: start;
             min-width: 0;
+            overflow: hidden;
         }
 
         .search-dynamic-fields {
             margin-top: 8px;
             display: none;
             grid-column: 1 / -1;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(12, minmax(0, 1fr));
             gap: 8px;
             min-width: 0;
+            overflow: hidden;
         }
 
         .search-dynamic-fields.is-active {
@@ -353,6 +355,23 @@
             display: grid;
             gap: 4px;
             min-width: 0;
+            overflow: hidden;
+        }
+
+        .search-dynamic-fields .field.field-short {
+            grid-column: span 2;
+        }
+
+        .search-dynamic-fields .field.field-medium {
+            grid-column: span 3;
+        }
+
+        .search-dynamic-fields .field.field-date {
+            grid-column: span 3;
+        }
+
+        .search-dynamic-fields .field.field-long {
+            grid-column: span 4;
         }
 
         .search-dynamic-fields .field label {
@@ -374,6 +393,7 @@
             font: inherit;
             color: #103247;
             background: #f8fdff;
+            box-sizing: border-box;
         }
 
         .search-dynamic-fields select,
@@ -387,6 +407,19 @@
             font: inherit;
             color: #103247;
             background: #f8fdff;
+            box-sizing: border-box;
+        }
+
+        .search-form input[type="date"],
+        .search-dynamic-fields input[type="date"] {
+            appearance: none;
+            -webkit-appearance: none;
+            display: block;
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+            padding-right: 8px;
+            overflow: hidden;
         }
 
         .search-dynamic-fields input[type="date"] {
@@ -403,7 +436,8 @@
         }
 
         .search-form button {
-            min-width: 180px;
+            min-width: 0;
+            width: auto;
             justify-self: end;
             box-shadow: 0 8px 18px rgba(243, 163, 55, 0.28);
         }
@@ -698,7 +732,20 @@
             }
 
             .search-dynamic-fields {
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: repeat(6, minmax(0, 1fr));
+            }
+
+            .search-dynamic-fields .field.field-short {
+                grid-column: span 2;
+            }
+
+            .search-dynamic-fields .field.field-medium,
+            .search-dynamic-fields .field.field-date {
+                grid-column: span 3;
+            }
+
+            .search-dynamic-fields .field.field-long {
+                grid-column: span 6;
             }
         }
 
@@ -764,6 +811,13 @@
 
             .search-dynamic-fields {
                 grid-template-columns: 1fr;
+            }
+
+            .search-dynamic-fields .field.field-short,
+            .search-dynamic-fields .field.field-medium,
+            .search-dynamic-fields .field.field-date,
+            .search-dynamic-fields .field.field-long {
+                grid-column: auto;
             }
 
             #accommodationFields {
@@ -867,40 +921,40 @@
                 <input type="search" name="q" placeholder="Atoll, island, property, or service name" aria-label="Search query">
 
                 <div id="accommodationFields" class="search-dynamic-fields is-active" data-fields-for="accommodation" aria-hidden="false">
-                    <div class="field"><label for="checkin">Check-in Date</label><input id="checkin" name="checkin" type="date"></div>
-                    <div class="field"><label for="checkout">Check-out Date</label><input id="checkout" name="checkout" type="date"></div>
-                    <div class="field"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="2"></div>
-                    <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="0"></div>
-                    <div class="field"><label for="rooms">Rooms</label><input id="rooms" name="rooms" type="number" min="1" value="1"></div>
+                    <div class="field field-date"><label for="checkin">Check-in Date</label><input id="checkin" name="checkin" type="date"></div>
+                    <div class="field field-date"><label for="checkout">Check-out Date</label><input id="checkout" name="checkout" type="date"></div>
+                    <div class="field field-short"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="2"></div>
+                    <div class="field field-short"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="0"></div>
+                    <div class="field field-short"><label for="rooms">Rooms</label><input id="rooms" name="rooms" type="number" min="1" value="1"></div>
                 </div>
 
                 <div id="transportFields" class="search-dynamic-fields" data-fields-for="transport" hidden aria-hidden="true">
-                    <div class="field"><label for="transportMode">Transport Mode</label><select id="transportMode" name="transport_mode"><option value="marine">Marine Transport</option><option value="land">Land Transport</option></select></div>
-                    <div class="field" id="transportTripTypeField"><label for="transportTripType">Trip Type</label><select id="transportTripType" name="trip_type"><option value="one_way">One Way</option><option value="round_trip">Round Trip</option></select></div>
-                    <div class="field"><label for="transportFrom">From (Atoll/Island)</label><input id="transportFrom" name="from" type="text" placeholder="Atoll or island"></div>
-                    <div class="field"><label for="transportTo">To (Atoll/Island)</label><input id="transportTo" name="to" type="text" placeholder="Atoll or island"></div>
-                    <div class="field" id="transportDepartureDateField"><label for="travelDate">Departure Date</label><input id="travelDate" name="travel_date" type="date"></div>
-                    <div class="field" id="transportReturnDateField"><label for="returnDate">Return Date</label><input id="returnDate" name="return_date" type="date"></div>
-                    <div class="field"><label for="transportAdults">Adults / Pax</label><input id="transportAdults" name="adults" type="number" min="1" value="2"></div>
-                    <div class="field"><label for="transportChildren">Children</label><input id="transportChildren" name="children" type="number" min="0" value="0"></div>
-                    <div class="field" id="transportVehicleTypeField"><label for="vehicleType">Vehicle Type</label><input id="vehicleType" name="vehicle_type" type="text" placeholder="Car, Van, Bike"></div>
+                    <div class="field field-medium"><label for="transportMode">Transport Mode</label><select id="transportMode" name="transport_mode"><option value="marine">Marine Transport</option><option value="land">Land Transport</option></select></div>
+                    <div class="field field-medium" id="transportTripTypeField"><label for="transportTripType">Trip Type</label><select id="transportTripType" name="trip_type"><option value="one_way">One Way</option><option value="round_trip">Round Trip</option></select></div>
+                    <div class="field field-long"><label for="transportFrom">From (Atoll/Island)</label><input id="transportFrom" name="from" type="text" placeholder="Atoll or island"></div>
+                    <div class="field field-long"><label for="transportTo">To (Atoll/Island)</label><input id="transportTo" name="to" type="text" placeholder="Atoll or island"></div>
+                    <div class="field field-date" id="transportDepartureDateField"><label for="travelDate">Departure Date</label><input id="travelDate" name="travel_date" type="date"></div>
+                    <div class="field field-date" id="transportReturnDateField"><label for="returnDate">Return Date</label><input id="returnDate" name="return_date" type="date"></div>
+                    <div class="field field-short"><label for="transportAdults">Adults / Pax</label><input id="transportAdults" name="adults" type="number" min="1" value="2"></div>
+                    <div class="field field-short"><label for="transportChildren">Children</label><input id="transportChildren" name="children" type="number" min="0" value="0"></div>
+                    <div class="field field-medium" id="transportVehicleTypeField"><label for="vehicleType">Vehicle Type</label><input id="vehicleType" name="vehicle_type" type="text" placeholder="Car, Van, Bike"></div>
                 </div>
 
                 <div id="serviceFields" class="search-dynamic-fields" data-fields-for="service" hidden aria-hidden="true">
-                    <div class="field">
+                    <div class="field field-medium">
                         <label for="serviceAtoll">Atoll</label>
                         <select id="serviceAtoll" name="atoll">
                             <option value="">All Atolls</option>
                         </select>
                     </div>
-                    <div class="field">
+                    <div class="field field-medium">
                         <label for="serviceIsland">Island</label>
                         <select id="serviceIsland" name="island">
                             <option value="">All Islands</option>
                         </select>
                     </div>
-                    <div class="field"><label for="minPrice">Min Price</label><input id="minPrice" name="min_price" type="number" min="0" placeholder="0"></div>
-                    <div class="field"><label for="maxPrice">Max Price</label><input id="maxPrice" name="max_price" type="number" min="0" placeholder="5000"></div>
+                    <div class="field field-short"><label for="minPrice">Min Price</label><input id="minPrice" name="min_price" type="number" min="0" placeholder="0"></div>
+                    <div class="field field-short"><label for="maxPrice">Max Price</label><input id="maxPrice" name="max_price" type="number" min="0" placeholder="5000"></div>
                 </div>
 
                 <div class="search-submit-row">

@@ -881,7 +881,8 @@
                     <button class="quick-filter-btn" type="button" data-quick-category="all">🔎 All listings</button>
                     <button class="quick-filter-btn" type="button" data-quick-category="accommodation">🏨 Stays</button>
                     <button class="quick-filter-btn" type="button" data-quick-category="remote_workspace">💻 Workspaces</button>
-                    <button class="quick-filter-btn" type="button" data-quick-category="transport">🚤 Transport</button>
+                    <button class="quick-filter-btn" type="button" data-quick-category="marine-transport">🚤 Marine Transport</button>
+                    <button class="quick-filter-btn" type="button" data-quick-category="land-transport">🚐 Land Transport</button>
                     <button class="quick-filter-btn" type="button" data-quick-category="excursion">🌊 Excursions</button>
                 </div>
             </aside>
@@ -931,7 +932,8 @@
                             <option value="all">All categories</option>
                             <option value="accommodation">Accommodation</option>
                             <option value="remote_workspace">Remote Workspace</option>
-                            <option value="transport">Transport</option>
+                            <option value="marine-transport">Marine Transport</option>
+                            <option value="land-transport">Land Transport</option>
                             <option value="excursion">Excursion</option>
                             <option value="restaurant">Restaurant</option>
                             <option value="vehicle_rental">Vehicle Rental</option>
@@ -1222,6 +1224,8 @@
                 all: 'All categories',
                 accommodation: 'Accommodation',
                 transport: 'Transport',
+                'marine-transport': 'Marine Transport',
+                'land-transport': 'Land Transport',
                 excursion: 'Excursion',
                 remote_workspace: 'Remote Workspace',
                 resort_day_visit: 'Resort Day Visit',
@@ -1279,6 +1283,11 @@
                 return { minValue, maxValue };
             }
 
+            function isTransportFamilyCategory(value) {
+                const normalized = String(value || '').toLowerCase();
+                return normalized === 'transport' || normalized === 'marine-transport' || normalized === 'land-transport';
+            }
+
             function render() {
                 const searchTerm = (searchInput ? searchInput.value : '').trim().toLowerCase();
                 const categoryValue = categoryFilter ? categoryFilter.value : 'all';
@@ -1290,7 +1299,9 @@
                     const price = Number(card.getAttribute('data-price') || 0);
 
                     const searchMatch = searchTerm === '' || searchable.includes(searchTerm);
-                    const categoryMatch = categoryValue === 'all' || category === categoryValue;
+                    const categoryMatch = categoryValue === 'all'
+                        || category === categoryValue
+                        || (categoryValue === 'transport' && isTransportFamilyCategory(category));
                     const priceMatch = priceBand === null || (price >= priceBand.minValue && price <= priceBand.maxValue);
 
                     const visible = searchMatch && categoryMatch && priceMatch;
@@ -1358,7 +1369,7 @@
                 link.addEventListener('click', function () {
                     const category = String(link.getAttribute('data-browse-category') || 'all').toLowerCase();
                     const bookingPrice = Number(link.getAttribute('data-browse-price') || 0);
-                    const validCategories = ['all', 'accommodation', 'transport', 'excursion', 'remote_workspace', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
+                    const validCategories = ['all', 'accommodation', 'transport', 'marine-transport', 'land-transport', 'excursion', 'remote_workspace', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
                     const targetCategory = validCategories.includes(category) ? category : 'all';
                     let targetPriceBand = 'all';
 
@@ -1384,7 +1395,7 @@
 
                     quickButtons.forEach(function (item) {
                         const quickCategory = String(item.getAttribute('data-quick-category') || 'all').toLowerCase();
-                        item.classList.toggle('is-active', quickCategory === targetCategory);
+                        item.classList.toggle('is-active', quickCategory === targetCategory || (targetCategory === 'transport' && isTransportFamilyCategory(quickCategory) && quickCategory !== 'transport'));
                     });
 
                     render();

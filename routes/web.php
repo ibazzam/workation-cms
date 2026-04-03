@@ -514,6 +514,38 @@ if (!function_exists('portalAdminAuditLog')) {
     }
 }
 
+if (!function_exists('vendorMediaStorageUrlFromPath')) {
+    function vendorMediaStorageUrlFromPath(?string $path): ?string
+    {
+        $normalized = trim(str_replace('\\', '/', (string) $path));
+        if ($normalized === '') {
+            return null;
+        }
+
+        if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
+            return $normalized;
+        }
+
+        if (preg_match('#/storage/app/public/(.+)$#i', $normalized, $matches) === 1) {
+            $normalized = (string) ($matches[1] ?? '');
+        } elseif (preg_match('#/public/storage/(.+)$#i', $normalized, $matches) === 1) {
+            $normalized = (string) ($matches[1] ?? '');
+        }
+
+        $normalized = ltrim($normalized, '/');
+        if (str_starts_with($normalized, 'public/')) {
+            $normalized = substr($normalized, 7);
+        }
+        if (str_starts_with($normalized, 'storage/')) {
+            $normalized = substr($normalized, 8);
+        }
+
+        $normalized = ltrim($normalized, '/');
+
+        return $normalized !== '' ? ('/storage/' . $normalized) : null;
+    }
+}
+
 if (!function_exists('getAvailableCategories')) {
     function getAvailableCategories(): array
     {
@@ -672,35 +704,7 @@ Route::get('/', function () {
             }
 
             $filePath = trim((string) ($primaryMedia->file_path ?? ''));
-            if ($filePath !== '') {
-                if (str_starts_with($filePath, 'http://') || str_starts_with($filePath, 'https://')) {
-                    return $filePath;
-                }
-
-                $normalizedPath = ltrim(str_replace('public/', '', str_replace('storage/', '', str_replace('\\', '/', $filePath))), '/');
-                if ($normalizedPath !== '') {
-                    return '/storage/' . $normalizedPath;
-                }
-            }
-
-            $mediaId = (int) ($primaryMedia->id ?? 0);
-            if ($mediaId > 0) {
-                return '/media/vendor/' . $mediaId . '/banner';
-            }
-
-            $filePath = trim((string) ($primaryMedia->file_path ?? ''));
-            if ($filePath !== '') {
-                if (str_starts_with($filePath, 'http://') || str_starts_with($filePath, 'https://')) {
-                    return $filePath;
-                }
-
-                $normalizedPath = ltrim(str_replace('public/', '', str_replace('storage/', '', str_replace('\\', '/', $filePath))), '/');
-                if ($normalizedPath !== '') {
-                    return '/storage/' . $normalizedPath;
-                }
-            }
-
-            return null;
+            return vendorMediaStorageUrlFromPath($filePath);
         };
 
         $propertyLocationLabel = static function ($property): string {
@@ -1257,8 +1261,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
             return '/media/vendor/' . $mediaId . '/' . $variant;
         }
 
-        $path = trim((string) ($media->file_path ?? ''));
-        return $path !== '' ? ('/storage/' . ltrim($path, '/')) : null;
+        return vendorMediaStorageUrlFromPath((string) ($media->file_path ?? ''));
     };
 
     $details = json_decode((string) ($propertyRow->listing_details ?? ''), true);
@@ -1472,8 +1475,7 @@ Route::get('/room/{room}', function (Request $request, int $room) {
             return '/media/vendor/' . $mediaId . '/' . $variant;
         }
 
-        $path = trim((string) ($media->file_path ?? ''));
-        return $path !== '' ? ('/storage/' . ltrim($path, '/')) : null;
+        return vendorMediaStorageUrlFromPath((string) ($media->file_path ?? ''));
     };
 
     $sessionGuestName = trim((string) session('portal_customer_user', ''));
@@ -2417,8 +2419,7 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
             if ($mediaId > 0) {
                 $checkoutMediaUrl = '/media/vendor/' . $mediaId . '/banner';
             } else {
-                $path = trim((string) ($mediaRow->file_path ?? ''));
-                $checkoutMediaUrl = $path !== '' ? ('/storage/' . ltrim($path, '/')) : null;
+                $checkoutMediaUrl = vendorMediaStorageUrlFromPath((string) ($mediaRow->file_path ?? ''));
             }
         }
     }
@@ -2733,6 +2734,8 @@ Route::get('/media/vendor/{media}/{variant?}', function (int $media, ?string $va
         }
 
         if (preg_match('#/storage/app/public/(.+)$#i', $normalized, $matches) === 1) {
+            $normalized = (string) ($matches[1] ?? '');
+        } elseif (preg_match('#/public/storage/(.+)$#i', $normalized, $matches) === 1) {
             $normalized = (string) ($matches[1] ?? '');
         }
 

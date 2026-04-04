@@ -1219,10 +1219,10 @@
 
         .reserve-btn {
             text-decoration: none;
-            border: 1px solid #2f6ed8;
+            border: 1px solid #0f6179;
             border-radius: 8px;
-            background: linear-gradient(135deg, #3a7af2 0%, #1f63d0 100%);
-            color: #f4f8ff;
+            background: linear-gradient(135deg, #0f6179 0%, #1d848c 100%);
+            color: #ecfcff;
             font-size: 0.82rem;
             font-weight: 700;
             padding: 9px 15px;

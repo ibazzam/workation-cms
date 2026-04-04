@@ -36,7 +36,7 @@
         .hotel-thumb { width:100%; height:120px; object-fit:cover; border-radius:9px; border:1px solid #d9e7f0; background:#eef6fb; }
         .hotel-name { font-size:0.92rem; font-weight:700; color:#1a4159; }
         .score-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-        .score-chip { background:#1b6ed8; color:#fff; border-radius:8px; padding:3px 8px; font-size:0.8rem; font-weight:700; }
+        .score-chip { background:#0f6179; color:#ecfcff; border-radius:8px; padding:3px 8px; font-size:0.8rem; font-weight:700; }
         .room-meta { display:grid; gap:3px; color:#3c6077; font-size:0.78rem; }
         .price-muted { color:#6a8294; font-size:0.78rem; text-decoration:line-through; }
         .price-save { color:#1a8f58; font-size:0.78rem; font-weight:700; }

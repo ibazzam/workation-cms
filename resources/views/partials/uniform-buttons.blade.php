@@ -1,8 +1,8 @@
 <style>
     :root {
-        --btn-primary-border: #f6d19a;
-        --btn-primary-bg: linear-gradient(135deg, #ffc76f 0%, #f3a337 100%);
-        --btn-primary-text: #57350b;
+        --btn-primary-border: #0d566b;
+        --btn-primary-bg: linear-gradient(135deg, #0f6179 0%, #1d848c 100%);
+        --btn-primary-text: #ecfcff;
         --btn-secondary-border: #c8d8e5;
         --btn-secondary-bg: #ffffff;
         --btn-secondary-text: #20415d;

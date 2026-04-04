@@ -924,11 +924,6 @@ Route::get('/', function () {
         ['icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas', 'url' => '/catalog/accommodation'],
         ['icon' => 'fa-solid fa-water', 'title' => 'Marine Transport', 'subtitle' => 'Speedboats & water transfers', 'url' => '/catalog/marine-transport'],
         ['icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers', 'url' => '/catalog/land-transport'],
-
-    // Home page sidebar shows only core browsing categories, not transport
-    // Transport is featured in the "Browse Cards" section separately
-    $homeTopCategoryLinks = collect([
-        ['icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas', 'url' => '/catalog/accommodation'],
         ['icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'subtitle' => 'Tours and activities', 'url' => '/catalog/excursion'],
         ['icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces', 'url' => '/catalog/remote_workspace'],
         ['icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces', 'url' => '/catalog/conference_room'],

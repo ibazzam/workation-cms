@@ -303,6 +303,120 @@ if (!function_exists('sendCustomerPortalRegistrationNotification')) {
     }
 }
 
+if (!function_exists('findCustomerByEmail')) {
+    function findCustomerByEmail(string $email): ?\App\Models\Customer
+    {
+        $normalized = strtolower(trim($email));
+        if ($normalized === '') {
+            return null;
+        }
+
+        return \App\Models\Customer::query()
+            ->whereRaw('LOWER(email) = ?', [$normalized])
+            ->first();
+    }
+}
+
+if (!function_exists('findActiveVendorByEmail')) {
+    function findActiveVendorByEmail(string $email): ?\App\Models\User
+    {
+        $normalized = strtolower(trim($email));
+        if ($normalized === '') {
+            return null;
+        }
+
+        return \App\Models\User::query()
+            ->whereRaw('LOWER(email) = ?', [$normalized])
+            ->where('portal_enabled', true)
+            ->whereRaw('UPPER(portal_role) = ?', ['VENDOR'])
+            ->first();
+    }
+}
+
+if (!function_exists('upsertCustomerFromVendorIdentity')) {
+    function upsertCustomerFromVendorIdentity(\App\Models\User $vendorUser, string $password): ?\App\Models\Customer
+    {
+        $email = strtolower(trim((string) $vendorUser->email));
+        if ($email === '') {
+            return null;
+        }
+
+        $customer = findCustomerByEmail($email);
+
+        if (!$customer) {
+            $now = now();
+            $payload = [
+                'email' => $email,
+                'name' => trim((string) $vendorUser->name) !== '' ? trim((string) $vendorUser->name) : 'Customer',
+                'password' => Hash::make($password),
+            ];
+
+            if (Schema::hasColumn('User', 'id')) {
+                $payload['id'] = (string) Str::uuid();
+            }
+            if (Schema::hasColumn('User', 'createdAt')) {
+                $payload['createdAt'] = $now;
+            }
+            if (Schema::hasColumn('User', 'updatedAt')) {
+                $payload['updatedAt'] = $now;
+            }
+            if (Schema::hasColumn('User', 'created_at')) {
+                $payload['created_at'] = $now;
+            }
+            if (Schema::hasColumn('User', 'updated_at')) {
+                $payload['updated_at'] = $now;
+            }
+
+            if (Schema::hasColumn('User', 'email_verified_at')) {
+                $payload['email_verified_at'] = $now;
+            }
+            if (Schema::hasColumn('User', 'emailVerifiedAt')) {
+                $payload['emailVerifiedAt'] = $now;
+            }
+            if (Schema::hasColumn('User', 'emailVerified')) {
+                $payload['emailVerified'] = true;
+            }
+
+            DB::table('User')->insert($payload);
+            $customer = findCustomerByEmail($email);
+        }
+
+        if (!$customer) {
+            return null;
+        }
+
+        $needsSave = false;
+        if (!Hash::check($password, (string) $customer->password)) {
+            $customer->password = Hash::make($password);
+            $needsSave = true;
+        }
+        if (trim((string) $customer->name) === '' && trim((string) $vendorUser->name) !== '') {
+            $customer->name = trim((string) $vendorUser->name);
+            $needsSave = true;
+        }
+
+        if ($needsSave) {
+            $customer->save();
+        }
+
+        customerMarkEmailVerified($customer);
+
+        return $customer;
+    }
+}
+
+if (!function_exists('syncVendorPasswordFromCustomer')) {
+    function syncVendorPasswordFromCustomer(\App\Models\User $vendorUser, string $password): void
+    {
+        if (Hash::check($password, (string) $vendorUser->password)) {
+            return;
+        }
+
+        $vendorUser->password = Hash::make($password);
+        $vendorUser->save();
+    }
+}
+
 if (!function_exists('vendorSocialRedirectUrl')) {
     function vendorSocialRedirectUrl(string $provider): string
     {
@@ -5336,7 +5450,7 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
 
         $portalUser = null;
 
-        // Admin/vendor login: users table; customer login: User table
+        // Admin/vendor login: users table; customer login: User table with vendor bridge.
         if (in_array('ADMIN', $config['allowed_roles'], true) || in_array('VENDOR', $config['allowed_roles'], true)) {
             if (Schema::hasColumns('users', ['username', 'portal_enabled', 'portal_role'])) {
                 $portalUser = \App\Models\User::query()
@@ -5347,13 +5461,46 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
                     ->where('portal_enabled', true)
                     ->whereIn('portal_role', $config['allowed_roles'])
                     ->first();
+
+                if (
+                    $portal === 'vendor'
+                    && !$portalUser
+                    && str_contains($usernameLower, '@')
+                ) {
+                    // Allow vendors to sign in with customer password if both identities share email.
+                    $candidateVendor = findActiveVendorByEmail($usernameLower);
+                    $candidateCustomer = findCustomerByEmail($usernameLower);
+
+                    if (
+                        $candidateVendor instanceof \App\Models\User
+                        && $candidateCustomer instanceof \App\Models\Customer
+                        && Hash::check($password, (string) $candidateCustomer->password)
+                    ) {
+                        syncVendorPasswordFromCustomer($candidateVendor, $password);
+                        $portalUser = $candidateVendor;
+                    }
+                }
             }
         } else {
-            $portalUser = \App\Models\Customer::query()
-                ->where(function ($query) use ($usernameLower) {
-                    $query->whereRaw('LOWER(email) = ?', [$usernameLower]);
-                })
-                ->first();
+            $directCustomer = findCustomerByEmail($usernameLower);
+
+            if ($directCustomer instanceof \App\Models\Customer && Hash::check($password, (string) $directCustomer->password)) {
+                $portalUser = $directCustomer;
+
+                // If this customer is also an active vendor, keep vendor password aligned for single credential use.
+                $linkedVendor = findActiveVendorByEmail($usernameLower);
+                if ($linkedVendor instanceof \App\Models\User) {
+                    syncVendorPasswordFromCustomer($linkedVendor, $password);
+                }
+            } else {
+                // Active vendors can always access customer portal with the same credentials.
+                $linkedVendor = findActiveVendorByEmail($usernameLower);
+                if ($linkedVendor instanceof \App\Models\User && Hash::check($password, (string) $linkedVendor->password)) {
+                    $portalUser = upsertCustomerFromVendorIdentity($linkedVendor, $password);
+                } else {
+                    $portalUser = $directCustomer;
+                }
+            }
         }
 
         $isBootstrapAdmin = false;
@@ -5399,7 +5546,12 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
             ])->withInput($request->only('username'));
         }
 
-        if ($portal === 'customer' && $portalUser instanceof \App\Models\Customer && !customerEmailIsVerified($portalUser)) {
+        if (
+            $portal === 'customer'
+            && $portalUser instanceof \App\Models\Customer
+            && !customerEmailIsVerified($portalUser)
+            && !findActiveVendorByEmail((string) ($portalUser->email ?? ''))
+        ) {
             RateLimiter::hit($throttleKey, $decaySeconds);
 
             return back()->withErrors([

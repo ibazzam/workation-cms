@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
@@ -12,26 +11,38 @@ use Tests\TestCase;
 
 class CustomerEmailVerificationFlowTest extends TestCase
 {
-    use RefreshDatabase;
-
     protected function setUp(): void
     {
         parent::setUp();
 
-        Schema::dropIfExists('users');
-        Schema::dropIfExists('User');
+        // Ensure the User table exists for testing
+        if (!Schema::hasTable('User')) {
+            Schema::create('User', function (Blueprint $table) {
+                $table->string('id')->primary();
+                $table->string('name')->nullable();
+                $table->string('email')->unique();
+                $table->string('password')->nullable();
+                $table->timestamp('email_verified_at')->nullable();
+                $table->string('google_oauth_id')->nullable();
+                $table->string('facebook_oauth_id')->nullable();
+                $table->timestamp('createdAt')->nullable();
+                $table->timestamp('updatedAt')->nullable();
+            });
+        } else {
+            // Clear the table between tests
+            DB::table('User')->truncate();
+        }
+    }
 
-        Schema::create('User', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->string('name')->nullable();
-            $table->string('email')->unique();
-            $table->string('password')->nullable();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('google_oauth_id')->nullable();
-            $table->string('facebook_oauth_id')->nullable();
-            $table->timestamp('createdAt')->nullable();
-            $table->timestamp('updatedAt')->nullable();
-        });
+    protected function tearDown(): void
+    {
+        // Clean up after test
+        try {
+            DB::table('User')->truncate();
+        } catch (\Exception $e) {
+            // Ignore errors during cleanup
+        }
+        parent::tearDown();
     }
 
     public function test_customer_registration_issues_verification_token_and_creates_customer(): void

@@ -919,10 +919,11 @@ if (!function_exists('getAvailableCategories')) {
 Route::get('/', function () {
     $apiBase = workationApiBase();
 
-    // Home page sidebar shows only core browsing categories, not transport
-    // Transport is featured in the "Browse Cards" section separately
+    // Keep home sidebar identical to category pages for uniform navigation.
     $homeTopCategoryLinks = collect([
         ['icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas', 'url' => '/catalog/accommodation'],
+        ['icon' => 'fa-solid fa-water', 'title' => 'Marine Transport', 'subtitle' => 'Speedboats & water transfers', 'url' => '/catalog/marine-transport'],
+        ['icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers', 'url' => '/catalog/land-transport'],
         ['icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'subtitle' => 'Tours and activities', 'url' => '/catalog/excursion'],
         ['icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces', 'url' => '/catalog/remote_workspace'],
         ['icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces', 'url' => '/catalog/conference_room'],
@@ -5429,15 +5430,38 @@ Route::post('/portal/{portal}/forgot-password', function (Request $request, stri
     }
 
 
+    $response = back()->with('status', 'If the email is registered for a ' . strtolower($config['name']) . ' account, a reset link has been sent.');
+
     if ($portalUser) {
-        $broker = ($portalUser instanceof \App\Models\User)
-            ? Password::broker('backend_users')
-            : Password::broker('customer_users');
-        $token = $broker->createToken($portalUser);
-        $portalUser->sendPasswordResetNotification($token);
+        $brokerName = ($portalUser instanceof \App\Models\User) ? 'backend_users' : 'customer_users';
+        $broker = Password::broker($brokerName);
+
+        try {
+            $token = $broker->createToken($portalUser);
+            $portalUser->sendPasswordResetNotification($token);
+
+            // Local/test fallback to unblock manual verification when mail transport is not configured.
+            if (app()->environment(['local', 'testing'])) {
+                $debugLink = url('/portal/' . $portal . '/reset-password/' . $token . '?email=' . rawurlencode($email));
+                $response->with('password_reset_debug_link', $debugLink);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Portal forgot-password notification failed.', [
+                'portal' => $portal,
+                'broker' => $brokerName,
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
+
+            if (app()->environment(['local', 'testing'])) {
+                $response->withErrors([
+                    'email' => 'Mail delivery failed locally. Use the debug reset link below while mail settings are being fixed.',
+                ]);
+            }
+        }
     }
 
-    return back()->with('status', 'If the email is registered for a ' . strtolower($config['name']) . ' account, a reset link has been sent.');
+    return $response;
 });
 
 Route::get('/portal/{portal}/reset-password/{token}', function (Request $request, string $portal, string $token) {
@@ -5514,10 +5538,9 @@ Route::post('/portal/{portal}/reset-password', function (Request $request, strin
             ? 'backend_users'
             : 'customer_users';
         $tokenTable = (string) config("auth.passwords.$broker.table", 'password_reset_tokens');
-        $tokenConnection = $portalUser->getConnectionName();
-        $tokenQuery = $tokenConnection
-            ? DB::connection($tokenConnection)->table($tokenTable)
-            : DB::table($tokenTable);
+        // Password brokers store reset tokens in their configured token table/connection.
+        // Do not force user-model connection here; it can differ in split-db setups.
+        $tokenQuery = DB::table($tokenTable);
 
         $resetRow = $tokenQuery
             ->whereRaw('LOWER(email) = ?', [$email])

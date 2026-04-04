@@ -103,6 +103,13 @@
             <div class="msg">{{ session('status') }}</div>
         @endif
 
+        @if (session('password_reset_debug_link'))
+            <div class="msg" role="status" aria-live="polite">
+                Local reset link:
+                <a href="{{ session('password_reset_debug_link') }}" style="font-weight:700;word-break:break-all;">Open Reset Password Link</a>
+            </div>
+        @endif
+
         @if ($errors->any())
             <div class="error">{{ $errors->first() }}</div>
         @endif

@@ -166,6 +166,143 @@ if (!function_exists('isCustomerSocialProviderConfigured')) {
     }
 }
 
+if (!function_exists('customerSocialProviderColumn')) {
+    function customerSocialProviderColumn(string $provider): string
+    {
+        return match (strtolower(trim($provider))) {
+            'google' => 'google_oauth_id',
+            'facebook' => 'facebook_oauth_id',
+            default => '',
+        };
+    }
+}
+
+if (!function_exists('customerVerificationStateCacheKey')) {
+    function customerVerificationStateCacheKey(string $email): string
+    {
+        return 'customer_email_verified:' . sha1(strtolower(trim($email)));
+    }
+}
+
+if (!function_exists('customerVerificationTokenCacheKey')) {
+    function customerVerificationTokenCacheKey(string $email): string
+    {
+        return 'customer_email_verify_token:' . sha1(strtolower(trim($email)));
+    }
+}
+
+if (!function_exists('customerEmailIsVerified')) {
+    function customerEmailIsVerified(\App\Models\Customer $customer): bool
+    {
+        if (Schema::hasColumn('User', 'email_verified_at') && !empty($customer->email_verified_at)) {
+            return true;
+        }
+
+        if (Schema::hasColumn('User', 'emailVerifiedAt') && !empty($customer->emailVerifiedAt)) {
+            return true;
+        }
+
+        if (Schema::hasColumn('User', 'emailVerified') && (bool) ($customer->emailVerified ?? false)) {
+            return true;
+        }
+
+        $email = strtolower(trim((string) ($customer->email ?? '')));
+        if ($email === '') {
+            return false;
+        }
+
+        return (bool) cache()->get(customerVerificationStateCacheKey($email), false);
+    }
+}
+
+if (!function_exists('customerMarkEmailVerified')) {
+    function customerMarkEmailVerified(\App\Models\Customer $customer): void
+    {
+        $email = strtolower(trim((string) ($customer->email ?? '')));
+        if ($email === '') {
+            return;
+        }
+
+        $now = now();
+        $dirty = false;
+
+        if (Schema::hasColumn('User', 'email_verified_at') && empty($customer->email_verified_at)) {
+            $customer->email_verified_at = $now;
+            $dirty = true;
+        }
+        if (Schema::hasColumn('User', 'emailVerifiedAt') && empty($customer->emailVerifiedAt)) {
+            $customer->emailVerifiedAt = $now;
+            $dirty = true;
+        }
+        if (Schema::hasColumn('User', 'emailVerified') && !(bool) ($customer->emailVerified ?? false)) {
+            $customer->emailVerified = true;
+            $dirty = true;
+        }
+
+        if ($dirty) {
+            $customer->save();
+        }
+
+        cache()->forever(customerVerificationStateCacheKey($email), true);
+        cache()->forget(customerVerificationTokenCacheKey($email));
+    }
+}
+
+if (!function_exists('customerIssueEmailVerificationToken')) {
+    function customerIssueEmailVerificationToken(string $email): string
+    {
+        $normalizedEmail = strtolower(trim($email));
+        $token = Str::random(64);
+
+        cache()->put(customerVerificationTokenCacheKey($normalizedEmail), [
+            'hash' => Hash::make($token),
+            'created_at' => now()->toIso8601String(),
+        ], now()->addHours(24));
+
+        return $token;
+    }
+}
+
+if (!function_exists('sendCustomerPortalRegistrationNotification')) {
+    function sendCustomerPortalRegistrationNotification(string $email, string $name, bool $requireVerification = false): ?string
+    {
+        $recipient = strtolower(trim($email));
+        if ($recipient === '') {
+            return null;
+        }
+
+        $displayName = trim($name) !== '' ? trim($name) : 'Customer';
+        $verificationToken = $requireVerification ? customerIssueEmailVerificationToken($recipient) : '';
+        $verificationUrl = $verificationToken !== ''
+            ? url('/portal/customer/verify-email?email=' . rawurlencode($recipient) . '&token=' . rawurlencode($verificationToken))
+            : '';
+
+        $body = "Hi {$displayName},\n\nYour Workation customer account has been created successfully.";
+        if ($verificationUrl !== '') {
+            $body .= "\n\nBefore signing in, verify your email address using this secure link:\n{$verificationUrl}\n\nThis link expires in 24 hours.";
+        } else {
+            $body .= "\n\nYou can now sign in to your customer portal and start booking experiences.";
+        }
+        $body .= "\n\nIf you did not create this account, please contact support immediately.";
+
+        try {
+            Mail::raw(
+                $body,
+                static function ($message) use ($recipient) {
+                    $message->to($recipient)->subject('Workation Customer Account Verification');
+                }
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send customer portal registration email.', [
+                'email' => $recipient,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $verificationToken !== '' ? $verificationToken : null;
+    }
+}
+
 if (!function_exists('vendorSocialRedirectUrl')) {
     function vendorSocialRedirectUrl(string $provider): string
     {
@@ -2727,6 +2864,11 @@ Route::get('/media/vendor/{media}/{variant?}', function (int $media, ?string $va
         $candidatePath = preg_replace('/-thumb(\.[a-z0-9]+)$/i', '-banner$1', $originalPath) ?? $originalPath;
     }
 
+    // Some legacy rows have only one generated variant. Try the opposite variant as a fallback.
+    $alternateVariantPath = $normalizedVariant === 'thumb'
+        ? (preg_replace('/-thumb(\.[a-z0-9]+)$/i', '-banner$1', $originalPath) ?? $originalPath)
+        : (preg_replace('/-banner(\.[a-z0-9]+)$/i', '-thumb$1', $originalPath) ?? $originalPath);
+
     $normalizeDiskPath = static function (string $path): string {
         $normalized = trim(str_replace('\\', '/', $path));
         if ($normalized === '') {
@@ -2752,8 +2894,10 @@ Route::get('/media/vendor/{media}/{variant?}', function (int $media, ?string $va
 
     $candidatePaths = collect([
         $candidatePath,
+        $alternateVariantPath,
         $originalPath,
         $normalizeDiskPath($candidatePath),
+        $normalizeDiskPath($alternateVariantPath),
         $normalizeDiskPath($originalPath),
     ])->map(static fn ($path) => trim((string) $path))
       ->filter(static fn ($path) => $path !== '')
@@ -4671,6 +4815,9 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
             ]);
         }
 
+        $providerColumn = customerSocialProviderColumn($provider);
+        $supportsProviderColumn = $providerColumn !== '' && Schema::hasColumn('User', $providerColumn);
+
         $oauthId = '';
         $email = '';
         $name = '';
@@ -4736,8 +4883,16 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
         }
 
         $customerUser = \App\Models\Customer::query()
-            ->whereRaw('LOWER(email) = ?', [$email])
+            ->where(function ($query) use ($supportsProviderColumn, $providerColumn, $oauthId, $email) {
+                if ($supportsProviderColumn) {
+                    $query->where($providerColumn, $oauthId);
+                }
+
+                $query->orWhereRaw('LOWER(email) = ?', [$email]);
+            })
             ->first();
+
+        $createdCustomer = false;
 
         if (!$customerUser) {
             $now = now();
@@ -4747,8 +4902,22 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
                 'password' => Hash::make(Str::random(40)),
             ];
 
+            if ($supportsProviderColumn) {
+                $payload[$providerColumn] = $oauthId;
+            }
+
             if (Schema::hasColumn('User', 'id')) {
                 $payload['id'] = (string) Str::uuid();
+            }
+
+            if (Schema::hasColumn('User', 'email_verified_at')) {
+                $payload['email_verified_at'] = $now;
+            }
+            if (Schema::hasColumn('User', 'emailVerifiedAt')) {
+                $payload['emailVerifiedAt'] = $now;
+            }
+            if (Schema::hasColumn('User', 'emailVerified')) {
+                $payload['emailVerified'] = true;
             }
 
             if (Schema::hasColumn('User', 'createdAt')) {
@@ -4765,6 +4934,7 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
             }
 
             DB::table('User')->insert($payload);
+            $createdCustomer = true;
 
             $customerUser = \App\Models\Customer::query()
                 ->whereRaw('LOWER(email) = ?', [$email])
@@ -4773,6 +4943,23 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
 
         if (!$customerUser) {
             throw new \RuntimeException('Unable to initialize customer account from social identity.');
+        }
+
+        $needsSave = false;
+        if ($supportsProviderColumn && trim((string) ($customerUser->{$providerColumn} ?? '')) !== $oauthId) {
+            $customerUser->{$providerColumn} = $oauthId;
+            $needsSave = true;
+        }
+        if (trim((string) ($customerUser->name ?? '')) === '' && $name !== '') {
+            $customerUser->name = $name;
+            $needsSave = true;
+        }
+        if ($needsSave) {
+            $customerUser->save();
+        }
+
+        if ($createdCustomer) {
+            sendCustomerPortalRegistrationNotification($email, $name);
         }
 
         $request->session()->regenerate();
@@ -4784,7 +4971,7 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
             'portal_customer_email' => strtolower(trim((string) ($customerUser->email ?? ''))),
         ]);
 
-        Auth::login($customerUser);
+        Auth::guard('customer')->login($customerUser);
 
         return redirect('/customer')->with('status', 'Signed in successfully with ' . ucfirst($provider) . '.');
     } catch (\Throwable $e) {
@@ -4844,7 +5031,84 @@ Route::post('/portal/customer/register', function (Request $request) {
 
     DB::table('User')->insert($payload);
 
-    return redirect('/portal/customer/login')->with('status', 'Customer registration successful. Please sign in.');
+    $verificationToken = sendCustomerPortalRegistrationNotification($email, (string) $payload['name'], true);
+
+    $response = redirect('/portal/customer/login')->with('status', 'Customer registration successful. Please verify your email before signing in.');
+
+    if (app()->environment('testing') && is_string($verificationToken) && $verificationToken !== '') {
+        $response->with('customer_verification_test_token', $verificationToken)
+            ->with('customer_verification_test_email', $email);
+    }
+
+    return $response;
+});
+
+Route::get('/portal/customer/verify-email', function (Request $request) {
+    $canonicalRedirect = portalCanonicalHostRedirect($request);
+    if ($canonicalRedirect) {
+        return $canonicalRedirect;
+    }
+
+    $email = strtolower(trim((string) $request->query('email', '')));
+    $token = trim((string) $request->query('token', ''));
+
+    if ($email === '' || $token === '') {
+        return redirect('/portal/customer/login')->withErrors([
+            'username' => 'Email verification link is invalid. Request a new verification email.',
+        ]);
+    }
+
+    $cachedToken = cache()->get(customerVerificationTokenCacheKey($email));
+    if (!is_array($cachedToken) || empty($cachedToken['hash']) || !Hash::check($token, (string) $cachedToken['hash'])) {
+        return redirect('/portal/customer/login')->withErrors([
+            'username' => 'Email verification link is invalid or expired. Request a new verification email.',
+        ])->with('pending_verification_email', $email);
+    }
+
+    $customerUser = \App\Models\Customer::query()
+        ->whereRaw('LOWER(email) = ?', [$email])
+        ->first();
+
+    if (!$customerUser) {
+        return redirect('/portal/customer/register')->withErrors([
+            'registration' => 'Customer account was not found for this verification link. Please register again.',
+        ]);
+    }
+
+    customerMarkEmailVerified($customerUser);
+
+    return redirect('/portal/customer/login')->with('status', 'Email verified successfully. You can now sign in.');
+});
+
+Route::post('/portal/customer/verify-email/resend', function (Request $request) {
+    $validated = $request->validate([
+        'email' => ['required', 'email', 'max:160'],
+    ]);
+
+    $email = strtolower(trim((string) $validated['email']));
+    $customerUser = \App\Models\Customer::query()
+        ->whereRaw('LOWER(email) = ?', [$email])
+        ->first();
+
+    if (!$customerUser) {
+        return back()->withErrors([
+            'username' => 'No customer account was found for this email address.',
+        ]);
+    }
+
+    if (customerEmailIsVerified($customerUser)) {
+        return back()->with('status', 'This customer email is already verified. You can sign in now.');
+    }
+
+    $verificationToken = sendCustomerPortalRegistrationNotification($email, (string) ($customerUser->name ?? 'Customer'), true);
+
+    $response = back()->with('status', 'A new verification email has been sent. Please check your inbox.');
+    if (app()->environment('testing') && is_string($verificationToken) && $verificationToken !== '') {
+        $response->with('customer_verification_test_token', $verificationToken)
+            ->with('customer_verification_test_email', $email);
+    }
+
+    return $response;
 });
 
 Route::get('/portal/{portal}/forgot-password', function (Request $request, string $portal) {
@@ -5015,7 +5279,9 @@ Route::post('/portal/{portal}/reset-password', function (Request $request, strin
         }
 
         $updates = [
-            'password' => (string) $validated['password'],
+            'password' => $portalUser instanceof \App\Models\User
+                ? (string) $validated['password']
+                : Hash::make((string) $validated['password']),
         ];
 
         $rememberTokenTable = $portalUser instanceof \App\Models\User ? 'users' : 'User';
@@ -5133,6 +5399,15 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
             ])->withInput($request->only('username'));
         }
 
+        if ($portal === 'customer' && $portalUser instanceof \App\Models\Customer && !customerEmailIsVerified($portalUser)) {
+            RateLimiter::hit($throttleKey, $decaySeconds);
+
+            return back()->withErrors([
+                'username' => 'Please verify your customer email before signing in.',
+            ])->withInput($request->only('username'))
+                ->with('pending_verification_email', strtolower(trim((string) ($portalUser->email ?? ''))));
+        }
+
         RateLimiter::clear($throttleKey);
 
         $request->session()->regenerate();
@@ -5153,9 +5428,13 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
             ]);
         }
 
-        // Log in the user using Laravel Auth if found
+        // Log in with the guard that matches the current portal.
         if ($portalUser) {
-            Auth::login($portalUser);
+            if ($portal === 'customer') {
+                Auth::guard('customer')->login($portalUser);
+            } else {
+                Auth::guard('backend')->login($portalUser);
+            }
         }
 
         return redirect(portalRoutePath($portal));
@@ -5180,7 +5459,11 @@ $handlePortalLogout = function (Request $request, string $portal) {
     }
 
     $config = portalConfig($portal);
-    Auth::logout();
+    if ($portal === 'customer') {
+        Auth::guard('customer')->logout();
+    } else {
+        Auth::guard('backend')->logout();
+    }
     session()->forget([$config['session_key'], 'portal_' . $portal . '_user', 'portal_' . $portal . '_user_id', 'portal_' . $portal . '_role']);
     $request->session()->invalidate();
     $request->session()->regenerateToken();

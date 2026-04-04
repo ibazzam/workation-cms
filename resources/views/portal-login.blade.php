@@ -204,6 +204,17 @@
             <div class="error" role="status" aria-live="polite" style="color:#0d5a2a;border-color:#a6d8b6;background:#e8f8ee;">{{ session('status') }}</div>
         @endif
 
+        @if ($portal === 'customer' && session('pending_verification_email'))
+            <div class="hint" role="status" aria-live="polite">
+                Email verification is required before customer login.
+                <form method="POST" action="/portal/customer/verify-email/resend" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    @csrf
+                    <input type="hidden" name="email" value="{{ session('pending_verification_email') }}">
+                    <button type="submit">Resend Verification Email</button>
+                </form>
+            </div>
+        @endif
+
         @if (in_array($portal, ['customer', 'vendor'], true) && !empty($socialProviders))
             <div class="social-auth" aria-label="Social sign in options">
                 @foreach ($socialProviders as $provider => $meta)

@@ -15,6 +15,8 @@
         .title { margin:0; font-size:1.25rem; }
         .sub { margin:6px 0 0; color:#45667d; }
         .layout { margin-top:12px; display:grid; grid-template-columns:minmax(0,1.2fr) minmax(300px,0.8fr); gap:12px; align-items:start; }
+        .checkout-details { grid-column: 1; }
+        .checkout-summary { grid-column: 2; }
         .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
         .cell { border:1px solid #dbe7f0; border-radius:12px; padding:10px; background:#fbfdff; }
         .label { display:block; font-size:0.74rem; text-transform:uppercase; letter-spacing:0.06em; color:#58708a; }
@@ -42,7 +44,11 @@
         .compact-line { display:flex; justify-content:space-between; gap:10px; font-size:0.8rem; color:#3b5c73; }
         .compact-line strong { color:#1f465f; }
         .actions { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
-        @media (max-width: 980px) { .layout { grid-template-columns:1fr; } }
+        @media (max-width: 980px) {
+            .layout { grid-template-columns:1fr; }
+            .checkout-details,
+            .checkout-summary { grid-column: auto; }
+        }
         @media (max-width: 760px) { .grid { grid-template-columns:1fr; } }
     </style>
     @include('partials.uniform-buttons')
@@ -83,7 +89,7 @@
             <p class="sub">Review your prepared reservation and proceed with payment confirmation.</p>
 
             <div class="layout">
-                <div class="grid">
+                <div class="grid checkout-details">
                     <div class="cell"><span class="label">Property</span><div class="value">{{ (string) ($property->name ?? 'Property') }}</div></div>
                     <div class="cell"><span class="label">Room / Service</span><div class="value">{{ $roomName !== '' ? $roomName : 'Service' }}</div></div>
                     <div class="cell"><span class="label">{{ (string) ($dateLabels['start'] ?? 'Check-in') }}</span><div class="value">{{ (string) ($summary['checkin'] ?? '-') }}</div></div>
@@ -100,7 +106,7 @@
                     @endif
                 </div>
 
-                <aside class="mini-panel" aria-label="Reservation compact summary">
+                <aside class="mini-panel checkout-summary" aria-label="Reservation compact summary">
                     <section class="mini-section" aria-label="Hotel and room summary">
                         <h2 class="mini-title">1. Hotel detail</h2>
                         @if ($checkoutMediaUrl !== '')

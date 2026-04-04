@@ -50,8 +50,8 @@
 
         .layout { margin-top:12px; display:grid; grid-template-columns:minmax(320px,0.75fr) minmax(0,1.25fr); gap:12px; align-items:start; }
 
-        .reservation-form { grid-column: 1; }
-        .service-content { grid-column: 2; }
+        .reservation-form { grid-column: 1; grid-row: 1; }
+        .service-content { grid-column: 2; grid-row: 1; }
 
         .block {
             border:1px solid var(--line);
@@ -196,7 +196,7 @@
         @media (max-width: 980px) {
             .layout { grid-template-columns:1fr; }
             .reservation-form,
-            .service-content { grid-column: auto; }
+            .service-content { grid-column: auto; grid-row: auto; }
             .booking-card { position:static; }
             .service-intel { grid-template-columns:1fr 1fr; }
             .gallery-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }

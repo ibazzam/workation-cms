@@ -470,6 +470,74 @@ if (!function_exists('syncVendorPasswordFromCustomer')) {
     }
 }
 
+if (!function_exists('provisionCustomerAccountFromBooking')) {
+    function provisionCustomerAccountFromBooking(string $email, string $name): ?\App\Models\Customer
+    {
+        $normalizedEmail = strtolower(trim($email));
+        if ($normalizedEmail === '') {
+            return null;
+        }
+
+        $displayName = trim($name) !== '' ? trim($name) : 'Customer';
+        $customer = findCustomerByEmail($normalizedEmail);
+        $created = false;
+
+        if (!$customer) {
+            $now = now();
+            $payload = [
+                'email' => $normalizedEmail,
+                'name' => $displayName,
+                'password' => Hash::make(Str::random(40)),
+            ];
+
+            if (customerSchemaHasColumn('id')) {
+                $payload['id'] = (string) Str::uuid();
+            }
+            if (customerSchemaHasColumn('createdAt')) {
+                $payload['createdAt'] = $now;
+            }
+            if (customerSchemaHasColumn('updatedAt')) {
+                $payload['updatedAt'] = $now;
+            }
+            if (customerSchemaHasColumn('created_at')) {
+                $payload['created_at'] = $now;
+            }
+            if (customerSchemaHasColumn('updated_at')) {
+                $payload['updated_at'] = $now;
+            }
+
+            customerTableInsert($payload);
+            $customer = findCustomerByEmail($normalizedEmail);
+            $created = true;
+        }
+
+        if (!$customer) {
+            return null;
+        }
+
+        if (trim((string) ($customer->name ?? '')) === '' && $displayName !== '') {
+            $customer->name = $displayName;
+            $customer->save();
+        }
+
+        if ($created) {
+            sendCustomerPortalRegistrationNotification($normalizedEmail, $displayName, true);
+
+            try {
+                $token = Password::broker('customer_users')->createToken($customer);
+                $customer->sendPasswordResetNotification($token);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to send customer password setup link after booking.', [
+                    'email' => $normalizedEmail,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $customer;
+    }
+}
+
 if (!function_exists('vendorSocialRedirectUrl')) {
     function vendorSocialRedirectUrl(string $provider): string
     {
@@ -1982,6 +2050,8 @@ Route::post('/booking/reserve', function (Request $request) {
     $customerEmail = $primaryEmail;
     $additionalGuestDetails = trim((string) ($payload['additional_guest_details'] ?? ''));
 
+    provisionCustomerAccountFromBooking($customerEmail, $customerName);
+
     $reservationId = null;
     if (Schema::hasTable('vendor_reservations')) {
         $reservationId = (int) DB::table('vendor_reservations')->insertGetId([
@@ -2509,6 +2579,8 @@ Route::post('/booking/reserve-category', function (Request $request) {
     $customerName = trim($primaryFirstName . ' ' . $primaryLastName);
     $customerEmail = $primaryEmail;
     $categoryLabel = (string) ($categoryMap[$categoryKey]['label'] ?? 'Category');
+
+    provisionCustomerAccountFromBooking($customerEmail, $customerName);
 
     $categoryDetails = [];
     foreach (array_keys($categoryFieldRules[$categoryKey] ?? []) as $fieldKey) {
@@ -4211,7 +4283,9 @@ Route::get('/portal/{portal}/login', function (Request $request, string $portal)
 
     $config = portalConfig($portal);
     if (session()->get($config['session_key'], false)) {
-        return redirect(portalRoutePath($portal));
+        return $portal === 'customer'
+            ? redirect('/')
+            : redirect(portalRoutePath($portal));
     }
 
     $socialProviders = [];
@@ -4951,7 +5025,7 @@ Route::get('/portal/customer/register', function (Request $request) {
     }
 
     if (session()->get('portal_customer_authenticated', false)) {
-        return redirect('/customer');
+        return redirect('/');
     }
 
     $socialProviders = collect(supportedCustomerSocialProviders())
@@ -5192,7 +5266,7 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
 
         $request->session()->forget($intentKey);
 
-        return redirect('/customer')->with('status', 'Signed in successfully with ' . ucfirst($provider) . '.');
+        return redirect('/')->with('status', 'Signed in successfully with ' . ucfirst($provider) . '. You can continue browsing and book normally.');
     } catch (\Throwable $e) {
         $request->session()->forget($intentKey);
 
@@ -5797,6 +5871,10 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
             } else {
                 Auth::guard('backend')->login($portalUser);
             }
+        }
+
+        if ($portal === 'customer') {
+            return redirect('/')->with('status', 'Signed in successfully. You can keep browsing and book as a customer.');
         }
 
         return redirect(portalRoutePath($portal));

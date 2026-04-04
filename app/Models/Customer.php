@@ -10,6 +10,8 @@ class Customer extends Authenticatable
 {
     use HasFactory, Notifiable;
 
+    protected $connection = null;
+
     protected $table = 'User'; // Explicitly map to the User table (case-sensitive)
     protected $primaryKey = 'id';
     public $incrementing = false;
@@ -31,4 +33,14 @@ class Customer extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    public function __construct(array $attributes = [])
+    {
+        parent::__construct($attributes);
+
+        $configuredConnection = trim((string) env('CUSTOMER_DB_CONNECTION', ''));
+        if ($configuredConnection !== '') {
+            $this->setConnection($configuredConnection);
+        }
+    }
 }

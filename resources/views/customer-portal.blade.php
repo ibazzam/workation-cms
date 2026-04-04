@@ -983,7 +983,7 @@
                                     $primaryPropertyMedia = $propertyMedia->first();
                                     $propertyImageThumbUrl = $primaryPropertyMedia ? $mediaVariantUrl($primaryPropertyMedia, 'thumb') : null;
                                     $propertyImageBannerUrl = $primaryPropertyMedia ? $mediaVariantUrl($primaryPropertyMedia, 'banner') : null;
-                                    $propertyImageFallback = $primaryPropertyMedia ? ('/storage/' . ltrim((string) ($primaryPropertyMedia->file_path ?? ''), '/')) : '';
+                                    $propertyImageFallback = $primaryPropertyMedia ? (vendorMediaStorageUrlFromPath((string) ($primaryPropertyMedia->file_path ?? '')) ?? '') : '';
                                     $allRoomsForProperty = collect($customerRoomsByProperty->get($propertyId, collect()));
                                     $roomsForProperty = $allRoomsForProperty->take(4);
                                     $lowestPricedRoom = $allRoomsForProperty
@@ -1035,7 +1035,7 @@
                                                     $primaryRoomMedia = $roomMediaItems->first();
                                                     $roomImageThumbUrl = $primaryRoomMedia ? $mediaVariantUrl($primaryRoomMedia, 'thumb') : null;
                                                     $roomImageBannerUrl = $primaryRoomMedia ? $mediaVariantUrl($primaryRoomMedia, 'banner') : null;
-                                                    $roomImageFallback = $primaryRoomMedia ? ('/storage/' . ltrim((string) ($primaryRoomMedia->file_path ?? ''), '/')) : '';
+                                                    $roomImageFallback = $primaryRoomMedia ? (vendorMediaStorageUrlFromPath((string) ($primaryRoomMedia->file_path ?? '')) ?? '') : '';
                                                 @endphp
                                                 <article class="room-item">
                                                     @if ($roomImageThumbUrl)

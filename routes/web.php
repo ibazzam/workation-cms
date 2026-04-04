@@ -5296,6 +5296,75 @@ Route::post('/portal/customer/verify-email/resend', function (Request $request) 
 
     $verificationToken = sendCustomerPortalRegistrationNotification($email, (string) ($customerUser->name ?? 'Customer'), true);
 
+    $response = redirect('/portal/customer/login')->with('status', 'Customer registration successful. Please verify your email before signing in.');
+
+    if (app()->environment('testing') && is_string($verificationToken) && $verificationToken !== '') {
+        $response->with('customer_verification_test_token', $verificationToken)
+            ->with('customer_verification_test_email', $email);
+    }
+
+    return $response;
+});
+
+Route::get('/portal/customer/verify-email', function (Request $request) {
+    $canonicalRedirect = portalCanonicalHostRedirect($request);
+    if ($canonicalRedirect) {
+        return $canonicalRedirect;
+    }
+
+    $email = strtolower(trim((string) $request->query('email', '')));
+    $token = trim((string) $request->query('token', ''));
+
+    if ($email === '' || $token === '') {
+        return redirect('/portal/customer/login')->withErrors([
+            'username' => 'Email verification link is invalid. Request a new verification email.',
+        ]);
+    }
+
+    $cachedToken = cache()->get(customerVerificationTokenCacheKey($email));
+    if (!is_array($cachedToken) || empty($cachedToken['hash']) || !Hash::check($token, (string) $cachedToken['hash'])) {
+        return redirect('/portal/customer/login')->withErrors([
+            'username' => 'Email verification link is invalid or expired. Request a new verification email.',
+        ])->with('pending_verification_email', $email);
+    }
+
+    $customerUser = \App\Models\Customer::query()
+        ->whereRaw('LOWER(email) = ?', [$email])
+        ->first();
+
+    if (!$customerUser) {
+        return redirect('/portal/customer/register')->withErrors([
+            'registration' => 'Customer account was not found for this verification link. Please register again.',
+        ]);
+    }
+
+    customerMarkEmailVerified($customerUser);
+
+    return redirect('/portal/customer/login')->with('status', 'Email verified successfully. You can now sign in.');
+});
+
+Route::post('/portal/customer/verify-email/resend', function (Request $request) {
+    $validated = $request->validate([
+        'email' => ['required', 'email', 'max:160'],
+    ]);
+
+    $email = strtolower(trim((string) $validated['email']));
+    $customerUser = \App\Models\Customer::query()
+        ->whereRaw('LOWER(email) = ?', [$email])
+        ->first();
+
+    if (!$customerUser) {
+        return back()->withErrors([
+            'username' => 'No customer account was found for this email address.',
+        ]);
+    }
+
+    if (customerEmailIsVerified($customerUser)) {
+        return back()->with('status', 'This customer email is already verified. You can sign in now.');
+    }
+
+    $verificationToken = sendCustomerPortalRegistrationNotification($email, (string) ($customerUser->name ?? 'Customer'), true);
+
     $response = back()->with('status', 'A new verification email has been sent. Please check your inbox.');
     if (app()->environment('testing') && is_string($verificationToken) && $verificationToken !== '') {
         $response->with('customer_verification_test_token', $verificationToken)

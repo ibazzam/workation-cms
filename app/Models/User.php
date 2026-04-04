@@ -12,6 +12,18 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
+    protected $connection = null;
+
+    public function __construct(array $attributes = [])
+    {
+        parent::__construct($attributes);
+
+        $configuredConnection = trim((string) env('BACKEND_DB_CONNECTION', ''));
+        if ($configuredConnection !== '') {
+            $this->setConnection($configuredConnection);
+        }
+    }
+
     /**
      * The attributes that are mass assignable.
      *

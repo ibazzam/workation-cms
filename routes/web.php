@@ -184,6 +184,47 @@ if (!function_exists('customerVerificationStateCacheKey')) {
     }
 }
 
+if (!function_exists('customerTableName')) {
+    function customerTableName(): string
+    {
+        return (new \App\Models\Customer())->getTable();
+    }
+}
+
+if (!function_exists('customerConnectionName')) {
+    function customerConnectionName(): ?string
+    {
+        return (new \App\Models\Customer())->getConnectionName();
+    }
+}
+
+if (!function_exists('customerSchemaHasColumn')) {
+    function customerSchemaHasColumn(string $column): bool
+    {
+        $connection = customerConnectionName();
+        $table = customerTableName();
+
+        return $connection
+            ? Schema::connection($connection)->hasColumn($table, $column)
+            : Schema::hasColumn($table, $column);
+    }
+}
+
+if (!function_exists('customerTableInsert')) {
+    function customerTableInsert(array $payload): void
+    {
+        $connection = customerConnectionName();
+        $table = customerTableName();
+
+        if ($connection) {
+            DB::connection($connection)->table($table)->insert($payload);
+            return;
+        }
+
+        DB::table($table)->insert($payload);
+    }
+}
+
 if (!function_exists('customerVerificationTokenCacheKey')) {
     function customerVerificationTokenCacheKey(string $email): string
     {
@@ -194,15 +235,15 @@ if (!function_exists('customerVerificationTokenCacheKey')) {
 if (!function_exists('customerEmailIsVerified')) {
     function customerEmailIsVerified(\App\Models\Customer $customer): bool
     {
-        if (Schema::hasColumn('User', 'email_verified_at') && !empty($customer->email_verified_at)) {
+        if (customerSchemaHasColumn('email_verified_at') && !empty($customer->email_verified_at)) {
             return true;
         }
 
-        if (Schema::hasColumn('User', 'emailVerifiedAt') && !empty($customer->emailVerifiedAt)) {
+        if (customerSchemaHasColumn('emailVerifiedAt') && !empty($customer->emailVerifiedAt)) {
             return true;
         }
 
-        if (Schema::hasColumn('User', 'emailVerified') && (bool) ($customer->emailVerified ?? false)) {
+        if (customerSchemaHasColumn('emailVerified') && (bool) ($customer->emailVerified ?? false)) {
             return true;
         }
 
@@ -226,15 +267,15 @@ if (!function_exists('customerMarkEmailVerified')) {
         $now = now();
         $dirty = false;
 
-        if (Schema::hasColumn('User', 'email_verified_at') && empty($customer->email_verified_at)) {
+        if (customerSchemaHasColumn('email_verified_at') && empty($customer->email_verified_at)) {
             $customer->email_verified_at = $now;
             $dirty = true;
         }
-        if (Schema::hasColumn('User', 'emailVerifiedAt') && empty($customer->emailVerifiedAt)) {
+        if (customerSchemaHasColumn('emailVerifiedAt') && empty($customer->emailVerifiedAt)) {
             $customer->emailVerifiedAt = $now;
             $dirty = true;
         }
-        if (Schema::hasColumn('User', 'emailVerified') && !(bool) ($customer->emailVerified ?? false)) {
+        if (customerSchemaHasColumn('emailVerified') && !(bool) ($customer->emailVerified ?? false)) {
             $customer->emailVerified = true;
             $dirty = true;
         }
@@ -351,33 +392,33 @@ if (!function_exists('upsertCustomerFromVendorIdentity')) {
                 'password' => Hash::make($password),
             ];
 
-            if (Schema::hasColumn('User', 'id')) {
+            if (customerSchemaHasColumn('id')) {
                 $payload['id'] = (string) Str::uuid();
             }
-            if (Schema::hasColumn('User', 'createdAt')) {
+            if (customerSchemaHasColumn('createdAt')) {
                 $payload['createdAt'] = $now;
             }
-            if (Schema::hasColumn('User', 'updatedAt')) {
+            if (customerSchemaHasColumn('updatedAt')) {
                 $payload['updatedAt'] = $now;
             }
-            if (Schema::hasColumn('User', 'created_at')) {
+            if (customerSchemaHasColumn('created_at')) {
                 $payload['created_at'] = $now;
             }
-            if (Schema::hasColumn('User', 'updated_at')) {
+            if (customerSchemaHasColumn('updated_at')) {
                 $payload['updated_at'] = $now;
             }
 
-            if (Schema::hasColumn('User', 'email_verified_at')) {
+            if (customerSchemaHasColumn('email_verified_at')) {
                 $payload['email_verified_at'] = $now;
             }
-            if (Schema::hasColumn('User', 'emailVerifiedAt')) {
+            if (customerSchemaHasColumn('emailVerifiedAt')) {
                 $payload['emailVerifiedAt'] = $now;
             }
-            if (Schema::hasColumn('User', 'emailVerified')) {
+            if (customerSchemaHasColumn('emailVerified')) {
                 $payload['emailVerified'] = true;
             }
 
-            DB::table('User')->insert($payload);
+            customerTableInsert($payload);
             $customer = findCustomerByEmail($email);
         }
 
@@ -4930,7 +4971,7 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
         }
 
         $providerColumn = customerSocialProviderColumn($provider);
-        $supportsProviderColumn = $providerColumn !== '' && Schema::hasColumn('User', $providerColumn);
+        $supportsProviderColumn = $providerColumn !== '' && customerSchemaHasColumn($providerColumn);
 
         $oauthId = '';
         $email = '';
@@ -5020,34 +5061,34 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
                 $payload[$providerColumn] = $oauthId;
             }
 
-            if (Schema::hasColumn('User', 'id')) {
+            if (customerSchemaHasColumn('id')) {
                 $payload['id'] = (string) Str::uuid();
             }
 
-            if (Schema::hasColumn('User', 'email_verified_at')) {
+            if (customerSchemaHasColumn('email_verified_at')) {
                 $payload['email_verified_at'] = $now;
             }
-            if (Schema::hasColumn('User', 'emailVerifiedAt')) {
+            if (customerSchemaHasColumn('emailVerifiedAt')) {
                 $payload['emailVerifiedAt'] = $now;
             }
-            if (Schema::hasColumn('User', 'emailVerified')) {
+            if (customerSchemaHasColumn('emailVerified')) {
                 $payload['emailVerified'] = true;
             }
 
-            if (Schema::hasColumn('User', 'createdAt')) {
+            if (customerSchemaHasColumn('createdAt')) {
                 $payload['createdAt'] = $now;
             }
-            if (Schema::hasColumn('User', 'updatedAt')) {
+            if (customerSchemaHasColumn('updatedAt')) {
                 $payload['updatedAt'] = $now;
             }
-            if (Schema::hasColumn('User', 'created_at')) {
+            if (customerSchemaHasColumn('created_at')) {
                 $payload['created_at'] = $now;
             }
-            if (Schema::hasColumn('User', 'updated_at')) {
+            if (customerSchemaHasColumn('updated_at')) {
                 $payload['updated_at'] = $now;
             }
 
-            DB::table('User')->insert($payload);
+            customerTableInsert($payload);
             $createdCustomer = true;
 
             $customerUser = \App\Models\Customer::query()
@@ -5126,24 +5167,24 @@ Route::post('/portal/customer/register', function (Request $request) {
         'password' => Hash::make((string) $validated['password']),
     ];
 
-    if (Schema::hasColumn('User', 'id')) {
+    if (customerSchemaHasColumn('id')) {
         $payload['id'] = (string) Str::uuid();
     }
 
-    if (Schema::hasColumn('User', 'createdAt')) {
+    if (customerSchemaHasColumn('createdAt')) {
         $payload['createdAt'] = $now;
     }
-    if (Schema::hasColumn('User', 'updatedAt')) {
+    if (customerSchemaHasColumn('updatedAt')) {
         $payload['updatedAt'] = $now;
     }
-    if (Schema::hasColumn('User', 'created_at')) {
+    if (customerSchemaHasColumn('created_at')) {
         $payload['created_at'] = $now;
     }
-    if (Schema::hasColumn('User', 'updated_at')) {
+    if (customerSchemaHasColumn('updated_at')) {
         $payload['updated_at'] = $now;
     }
 
-    DB::table('User')->insert($payload);
+    customerTableInsert($payload);
 
     $verificationToken = sendCustomerPortalRegistrationNotification($email, (string) $payload['name'], true);
 
@@ -5365,7 +5406,12 @@ Route::post('/portal/{portal}/reset-password', function (Request $request, strin
             ? 'backend_users'
             : 'customer_users';
         $tokenTable = (string) config("auth.passwords.$broker.table", 'password_reset_tokens');
-        $resetRow = DB::table($tokenTable)
+        $tokenConnection = $portalUser->getConnectionName();
+        $tokenQuery = $tokenConnection
+            ? DB::connection($tokenConnection)->table($tokenTable)
+            : DB::table($tokenTable);
+
+        $resetRow = $tokenQuery
             ->whereRaw('LOWER(email) = ?', [$email])
             ->first();
 
@@ -5398,13 +5444,20 @@ Route::post('/portal/{portal}/reset-password', function (Request $request, strin
                 : Hash::make((string) $validated['password']),
         ];
 
-        $rememberTokenTable = $portalUser instanceof \App\Models\User ? 'users' : 'User';
-        if (Schema::hasColumn($rememberTokenTable, 'remember_token')) {
+        $rememberTokenTable = $portalUser->getTable();
+        $rememberTokenConnection = $portalUser->getConnectionName();
+        $hasRememberTokenColumn = $rememberTokenConnection
+            ? Schema::connection($rememberTokenConnection)->hasColumn($rememberTokenTable, 'remember_token')
+            : Schema::hasColumn($rememberTokenTable, 'remember_token');
+        if ($hasRememberTokenColumn) {
             $updates['remember_token'] = Str::random(60);
         }
 
         $portalUser->forceFill($updates)->save();
-        DB::table($tokenTable)->whereRaw('LOWER(email) = ?', [$email])->delete();
+        $deleteQuery = $tokenConnection
+            ? DB::connection($tokenConnection)->table($tokenTable)
+            : DB::table($tokenTable);
+        $deleteQuery->whereRaw('LOWER(email) = ?', [$email])->delete();
 
         return redirect('/portal/' . $portal . '/login')->with('status', __('passwords.reset'));
     } catch (\Throwable $e) {

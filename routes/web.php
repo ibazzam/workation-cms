@@ -146,10 +146,22 @@ if (!function_exists('supportedCustomerSocialProviders')) {
     }
 }
 
+if (!function_exists('portalOAuthIntentSessionKey')) {
+    function portalOAuthIntentSessionKey(string $provider): string
+    {
+        return 'portal_oauth_intent_' . strtolower(trim($provider));
+    }
+}
+
 if (!function_exists('customerSocialRedirectUrl')) {
     function customerSocialRedirectUrl(string $provider): string
     {
-        return url('/portal/customer/oauth/' . strtolower(trim($provider)) . '/callback');
+        $provider = strtolower(trim($provider));
+
+        return (string) config(
+            'services.' . $provider . '.customer_redirect',
+            (string) config('services.' . $provider . '.redirect', url('/portal/customer/oauth/' . $provider . '/callback'))
+        );
     }
 }
 
@@ -4523,6 +4535,8 @@ Route::get('/portal/vendor/oauth/{provider}/redirect', function (Request $reques
         abort(404);
     }
 
+    $request->session()->put(portalOAuthIntentSessionKey($provider), 'vendor');
+
     if (!isVendorSocialProviderConfigured($provider)) {
         return redirect('/portal/vendor/register')->withErrors([
             'registration' => ucfirst($provider) . ' sign-in is not configured yet. Please use email signup for now.',
@@ -4580,6 +4594,20 @@ Route::get('/portal/vendor/oauth/{provider}/callback', function (Request $reques
     $provider = strtolower(trim($provider));
     if (!in_array($provider, supportedVendorSocialProviders(), true)) {
         abort(404);
+    }
+
+    $intentKey = portalOAuthIntentSessionKey($provider);
+    $oauthIntent = strtolower(trim((string) $request->session()->get($intentKey, '')));
+    if ($oauthIntent === 'customer' && in_array($provider, supportedCustomerSocialProviders(), true)) {
+        $request->session()->forget($intentKey);
+
+        $queryString = (string) $request->getQueryString();
+        $target = '/portal/customer/oauth/' . $provider . '/callback';
+        if ($queryString !== '') {
+            $target .= '?' . $queryString;
+        }
+
+        return redirect($target);
     }
 
     try {
@@ -4924,6 +4952,8 @@ Route::get('/portal/customer/oauth/{provider}/redirect', function (Request $requ
         abort(404);
     }
 
+    $request->session()->put(portalOAuthIntentSessionKey($provider), 'customer');
+
     if (!isCustomerSocialProviderConfigured($provider)) {
         return redirect('/portal/customer/register')->withErrors([
             'registration' => ucfirst($provider) . ' sign-in is not configured yet. Please use email registration for now.',
@@ -4959,6 +4989,8 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
     if (!in_array($provider, supportedCustomerSocialProviders(), true)) {
         abort(404);
     }
+
+    $intentKey = portalOAuthIntentSessionKey($provider);
 
     try {
         if ($provider === 'facebook' && trim((string) $request->query('error', '')) !== '') {
@@ -5131,8 +5163,12 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
 
         Auth::guard('customer')->login($customerUser);
 
+        $request->session()->forget($intentKey);
+
         return redirect('/customer')->with('status', 'Signed in successfully with ' . ucfirst($provider) . '.');
     } catch (\Throwable $e) {
+        $request->session()->forget($intentKey);
+
         Log::warning('Customer social login failed.', [
             'provider' => $provider,
             'error' => $e->getMessage(),

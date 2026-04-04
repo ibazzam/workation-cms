@@ -39,12 +39,14 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL') . '/portal/vendor/oauth/google/callback'),
+        'customer_redirect' => env('GOOGLE_CUSTOMER_REDIRECT_URI', env('GOOGLE_REDIRECT_URI', env('APP_URL') . '/portal/customer/oauth/google/callback')),
     ],
 
     'facebook' => [
         'client_id' => env('FACEBOOK_CLIENT_ID'),
         'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
         'redirect' => env('FACEBOOK_REDIRECT_URI', env('APP_URL') . '/portal/vendor/oauth/facebook/callback'),
+        'customer_redirect' => env('FACEBOOK_CUSTOMER_REDIRECT_URI', env('FACEBOOK_REDIRECT_URI', env('APP_URL') . '/portal/customer/oauth/facebook/callback')),
     ],
 
     'apple' => [

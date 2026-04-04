@@ -146,10 +146,22 @@ if (!function_exists('supportedCustomerSocialProviders')) {
     }
 }
 
+if (!function_exists('portalOAuthIntentSessionKey')) {
+    function portalOAuthIntentSessionKey(string $provider): string
+    {
+        return 'portal_oauth_intent_' . strtolower(trim($provider));
+    }
+}
+
 if (!function_exists('customerSocialRedirectUrl')) {
     function customerSocialRedirectUrl(string $provider): string
     {
-        return url('/portal/customer/oauth/' . strtolower(trim($provider)) . '/callback');
+        $provider = strtolower(trim($provider));
+
+        return (string) config(
+            'services.' . $provider . '.customer_redirect',
+            (string) config('services.' . $provider . '.redirect', url('/portal/customer/oauth/' . $provider . '/callback'))
+        );
     }
 }
 
@@ -907,14 +919,17 @@ if (!function_exists('getAvailableCategories')) {
 Route::get('/', function () {
     $apiBase = workationApiBase();
 
-    $availableCategories = getAvailableCategories();
-    
-    $homeTopCategoryLinks = collect($availableCategories)->map(static fn (array $cat, $key) => [
-        'icon' => $cat['icon'] ?? 'fa-solid fa-location-dot',
-        'title' => $cat['label'] ?? ucfirst(str_replace('_', ' ', $key)),
-        'subtitle' => $cat['subtitle'] ?? '',
-        'url' => '/catalog/' . $key,
-    ])->values();
+    // Home page sidebar shows only core browsing categories, not transport
+    // Transport is featured in the "Browse Cards" section separately
+    $homeTopCategoryLinks = collect([
+        ['icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas', 'url' => '/catalog/accommodation'],
+        ['icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'subtitle' => 'Tours and activities', 'url' => '/catalog/excursion'],
+        ['icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces', 'url' => '/catalog/remote_workspace'],
+        ['icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces', 'url' => '/catalog/conference_room'],
+        ['icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'subtitle' => 'Day-use resort offers', 'url' => '/catalog/resort_day_visit'],
+        ['icon' => 'fa-solid fa-utensils', 'title' => 'Restaurant', 'subtitle' => 'Dining experiences', 'url' => '/catalog/restaurant'],
+        ['icon' => 'fa-solid fa-car', 'title' => 'Vehicle Rental', 'subtitle' => 'Cars and local rentals', 'url' => '/catalog/vehicle_rental'],
+    ]);
 
     $homePromoBanner = [
         'message' => '🎉 Offers & Promotions: Save up to 25% on selected stays and transfer bundles this week.',
@@ -4520,6 +4535,8 @@ Route::get('/portal/vendor/oauth/{provider}/redirect', function (Request $reques
         abort(404);
     }
 
+    $request->session()->put(portalOAuthIntentSessionKey($provider), 'vendor');
+
     if (!isVendorSocialProviderConfigured($provider)) {
         return redirect('/portal/vendor/register')->withErrors([
             'registration' => ucfirst($provider) . ' sign-in is not configured yet. Please use email signup for now.',
@@ -4577,6 +4594,20 @@ Route::get('/portal/vendor/oauth/{provider}/callback', function (Request $reques
     $provider = strtolower(trim($provider));
     if (!in_array($provider, supportedVendorSocialProviders(), true)) {
         abort(404);
+    }
+
+    $intentKey = portalOAuthIntentSessionKey($provider);
+    $oauthIntent = strtolower(trim((string) $request->session()->get($intentKey, '')));
+    if ($oauthIntent === 'customer' && in_array($provider, supportedCustomerSocialProviders(), true)) {
+        $request->session()->forget($intentKey);
+
+        $queryString = (string) $request->getQueryString();
+        $target = '/portal/customer/oauth/' . $provider . '/callback';
+        if ($queryString !== '') {
+            $target .= '?' . $queryString;
+        }
+
+        return redirect($target);
     }
 
     try {
@@ -4921,6 +4952,8 @@ Route::get('/portal/customer/oauth/{provider}/redirect', function (Request $requ
         abort(404);
     }
 
+    $request->session()->put(portalOAuthIntentSessionKey($provider), 'customer');
+
     if (!isCustomerSocialProviderConfigured($provider)) {
         return redirect('/portal/customer/register')->withErrors([
             'registration' => ucfirst($provider) . ' sign-in is not configured yet. Please use email registration for now.',
@@ -4956,6 +4989,8 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
     if (!in_array($provider, supportedCustomerSocialProviders(), true)) {
         abort(404);
     }
+
+    $intentKey = portalOAuthIntentSessionKey($provider);
 
     try {
         if ($provider === 'facebook' && trim((string) $request->query('error', '')) !== '') {
@@ -5128,8 +5163,12 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
 
         Auth::guard('customer')->login($customerUser);
 
+        $request->session()->forget($intentKey);
+
         return redirect('/customer')->with('status', 'Signed in successfully with ' . ucfirst($provider) . '.');
     } catch (\Throwable $e) {
+        $request->session()->forget($intentKey);
+
         Log::warning('Customer social login failed.', [
             'provider' => $provider,
             'error' => $e->getMessage(),
@@ -5187,6 +5226,75 @@ Route::post('/portal/customer/register', function (Request $request) {
     customerTableInsert($payload);
 
     $verificationToken = sendCustomerPortalRegistrationNotification($email, (string) $payload['name'], true);
+
+    $response = redirect('/portal/customer/login')->with('status', 'Customer registration successful. Please verify your email before signing in.');
+
+    if (app()->environment('testing') && is_string($verificationToken) && $verificationToken !== '') {
+        $response->with('customer_verification_test_token', $verificationToken)
+            ->with('customer_verification_test_email', $email);
+    }
+
+    return $response;
+});
+
+Route::get('/portal/customer/verify-email', function (Request $request) {
+    $canonicalRedirect = portalCanonicalHostRedirect($request);
+    if ($canonicalRedirect) {
+        return $canonicalRedirect;
+    }
+
+    $email = strtolower(trim((string) $request->query('email', '')));
+    $token = trim((string) $request->query('token', ''));
+
+    if ($email === '' || $token === '') {
+        return redirect('/portal/customer/login')->withErrors([
+            'username' => 'Email verification link is invalid. Request a new verification email.',
+        ]);
+    }
+
+    $cachedToken = cache()->get(customerVerificationTokenCacheKey($email));
+    if (!is_array($cachedToken) || empty($cachedToken['hash']) || !Hash::check($token, (string) $cachedToken['hash'])) {
+        return redirect('/portal/customer/login')->withErrors([
+            'username' => 'Email verification link is invalid or expired. Request a new verification email.',
+        ])->with('pending_verification_email', $email);
+    }
+
+    $customerUser = \App\Models\Customer::query()
+        ->whereRaw('LOWER(email) = ?', [$email])
+        ->first();
+
+    if (!$customerUser) {
+        return redirect('/portal/customer/register')->withErrors([
+            'registration' => 'Customer account was not found for this verification link. Please register again.',
+        ]);
+    }
+
+    customerMarkEmailVerified($customerUser);
+
+    return redirect('/portal/customer/login')->with('status', 'Email verified successfully. You can now sign in.');
+});
+
+Route::post('/portal/customer/verify-email/resend', function (Request $request) {
+    $validated = $request->validate([
+        'email' => ['required', 'email', 'max:160'],
+    ]);
+
+    $email = strtolower(trim((string) $validated['email']));
+    $customerUser = \App\Models\Customer::query()
+        ->whereRaw('LOWER(email) = ?', [$email])
+        ->first();
+
+    if (!$customerUser) {
+        return back()->withErrors([
+            'username' => 'No customer account was found for this email address.',
+        ]);
+    }
+
+    if (customerEmailIsVerified($customerUser)) {
+        return back()->with('status', 'This customer email is already verified. You can sign in now.');
+    }
+
+    $verificationToken = sendCustomerPortalRegistrationNotification($email, (string) ($customerUser->name ?? 'Customer'), true);
 
     $response = redirect('/portal/customer/login')->with('status', 'Customer registration successful. Please verify your email before signing in.');
 

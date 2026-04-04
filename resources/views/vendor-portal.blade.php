@@ -134,13 +134,103 @@
             top: 8px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            padding: 12px;
+            gap: 4px;
+            padding: 10px;
             border: 1px solid var(--line);
             border-radius: 12px;
-            background: #f7fbff;
+            background: #ffffff;
             max-height: calc(100vh - 16px);
             overflow-y: auto;
+        }
+
+        .vendor-nav-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 4px 10px;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #e5edf3;
+        }
+
+        .vendor-nav-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #d5ecf5 0%, #b9deea 100%);
+            color: #0e4a64;
+            font-size: 0.82rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .vendor-nav-user-meta {
+            min-width: 0;
+            display: grid;
+            gap: 2px;
+        }
+
+        .vendor-nav-user-name {
+            margin: 0;
+            font-size: 0.84rem;
+            font-weight: 700;
+            color: #163042;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .vendor-nav-user-email {
+            margin: 0;
+            font-size: 0.72rem;
+            color: #6f8598;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .nav-group-header {
+            width: 100%;
+            border: none;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 6px;
+            color: #1a3247;
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .nav-group-header:hover {
+            background: #f3f8fc;
+            border-radius: 8px;
+        }
+
+        .nav-chevron {
+            font-size: 0.72rem;
+            color: #7990a5;
+            transition: transform 0.2s ease;
+        }
+
+        .nav-group-header[aria-expanded="false"] .nav-chevron {
+            transform: rotate(-90deg);
+        }
+
+        .nav-group-body {
+            display: grid;
+            gap: 3px;
+            padding: 0 0 4px 0;
+        }
+
+        .nav-group-body:not(.is-open) {
+            display: none;
         }
 
         .portal-content {
@@ -153,43 +243,48 @@
             width: 100%;
         }
 
-        .portal-nav a {
+        .portal-nav a,
+        .nav-item-link,
+        .nav-sub-link {
             text-decoration: none;
-            border: 1px solid #c8d4df;
-            border-radius: 10px;
+            border: 1px solid transparent;
+            border-radius: 8px;
             padding: 8px 10px;
             font-size: 0.82rem;
             font-weight: 700;
-            color: #1f4a53;
-            background: #ffffff;
+            color: #1e4456;
+            background: #f7fbff;
+            transition: all 0.15s ease;
         }
 
-        .portal-nav a.is-active {
+        .nav-sub-link {
+            margin-left: 12px;
+            font-size: 0.79rem;
+            font-weight: 600;
+            color: #35566f;
+            background: #fbfdff;
+        }
+
+        .portal-nav a:hover,
+        .nav-item-link:hover,
+        .nav-sub-link:hover {
+            border-color: #cddce8;
+            background: #eef7fd;
+            color: #124967;
+        }
+
+        .portal-nav a.is-active,
+        .nav-item-link.is-active,
+        .nav-sub-link.is-active {
             border-color: #0f6b74;
             background: #e8f7f8;
             color: #0d4f56;
         }
 
-        .menu-title {
-            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
-            font-size: 0.72rem;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: #5b6778;
-            margin-top: 4px;
-        }
-
-        .menu-title:first-child {
-            margin-top: 0;
-        }
-
-        .portal-nav a.menu-sub {
-            margin-left: 10px;
-            font-weight: 600;
-            font-size: 0.8rem;
-            color: #33566f;
-            background: #f8fbff;
+        .nav-divider {
+            height: 1px;
+            margin: 5px 4px;
+            background: #e4ebf1;
         }
 
         .portal-content section {
@@ -1797,6 +1892,15 @@
         $vendorRooms = $vendorRooms ?? $vendorRoomCategories;
         $vendorMediaAssets = $vendorMediaAssets ?? collect();
         $vendorTaxComponents = $vendorTaxComponents ?? collect();
+        $vendorEngagement = is_array($vendorEngagement ?? null) ? $vendorEngagement : [];
+        $engagementInquiriesTable = (string) ($vendorEngagement['inquiries_table'] ?? '');
+        $engagementInquiries = collect($vendorEngagement['inquiries'] ?? []);
+        $engagementReviewsTable = (string) ($vendorEngagement['reviews_table'] ?? '');
+        $engagementReviews = collect($vendorEngagement['reviews'] ?? []);
+        $engagementPromotions = collect($vendorEngagement['promotions'] ?? []);
+        $engagementLoyaltyTable = (string) ($vendorEngagement['loyalty_table'] ?? '');
+        $engagementLoyaltyPrograms = collect($vendorEngagement['loyalty_programs'] ?? []);
+        $engagementLoyalCustomers = collect($vendorEngagement['loyal_customers'] ?? []);
         $categorySet = collect($selectedVendorCategories)->flip();
         $supportsAccommodation = $categorySet->has('accommodation');
         $hasSelectedCategories = count($selectedVendorCategories) > 0;
@@ -1919,6 +2023,33 @@
             </div>
         </section>
 
+        <section class="card" data-panel-group="overview" aria-label="Vendor operating scope" style="margin-top:10px;">
+            <p class="label">Vendor Operating Scope</p>
+            <p class="small" style="margin-top:0;">Vendors do not create customer bookings. Vendors manage listings and operations for customer-generated reservations.</p>
+            <div class="ops-metrics" style="margin-top:10px;">
+                <article class="ops-metric">
+                    <p class="metric-label">Listings</p>
+                    <p class="metric-value">Create / Edit / Archive</p>
+                </article>
+                <article class="ops-metric">
+                    <p class="metric-label">Reservations</p>
+                    <p class="metric-value">Receive / Confirm / Update</p>
+                </article>
+                <article class="ops-metric">
+                    <p class="metric-label">Availability</p>
+                    <p class="metric-value">Category-wise calendar</p>
+                </article>
+                <article class="ops-metric">
+                    <p class="metric-label">Pricing &amp; Tariffs</p>
+                    <p class="metric-value">Structures / rules / offers</p>
+                </article>
+                <article class="ops-metric">
+                    <p class="metric-label">Customer Ops</p>
+                    <p class="metric-value">Inquiries / Reviews / Loyalty</p>
+                </article>
+            </div>
+        </section>
+
         <div class="portal-shell">
         @include('vendor-portal.partials.sidebar')
 
@@ -1926,9 +2057,9 @@
 
         <section id="vendorSummary" class="summary-grid" aria-label="Vendor dashboard summary" data-panel-group="overview">
             <article class="summary-card">
-                <p class="summary-label">Bookings</p>
+                <p class="summary-label">Reservations Received</p>
                 <p id="summaryBookings" class="summary-value">-</p>
-                <p class="summary-meta">Total bookings visible with current token</p>
+                <p class="summary-meta">Customer-generated reservations visible with current token</p>
             </article>
 
             <article class="summary-card">
@@ -1961,7 +2092,7 @@
             </div>
             <div class="progress-grid">
                 <article class="progress-card">
-                    <p class="progress-label">Total Bookings</p>
+                    <p class="progress-label">Total Reservations</p>
                     <p class="progress-value">{{ $vendorReservations->count() }}</p>
                     <p class="progress-meta">Reservation entries in this vendor account</p>
                 </article>
@@ -3419,7 +3550,7 @@
                     <button type="button" data-path="/api/v1/auth/me">Run</button>
                 </div>
                 <div class="endpoint">
-                    <code>GET /api/v1/bookings</code>
+                    <code>GET /api/v1/bookings (customer reservations)</code>
                     <button type="button" data-path="/api/v1/bookings">Run</button>
                 </div>
                 <div class="endpoint">
@@ -3432,6 +3563,205 @@
                 </div>
                 <pre id="output">Ready. Save token, then run an endpoint.</pre>
             </article>
+        </section>
+
+        <section id="vendorEngagement" class="card ops-section" data-panel-group="engagement" aria-label="Vendor customer engagement tools">
+            <div class="ops-header">
+                <p class="ops-title">Customer Engagement</p>
+                <span class="ops-chip">Operations</span>
+            </div>
+            <div class="ops-metrics" style="margin-bottom:10px;">
+                <article class="ops-metric">
+                    <p class="metric-label">Promotions &amp; Offers</p>
+                    <p class="metric-value">{{ $engagementPromotions->count() }}</p>
+                </article>
+                <article class="ops-metric">
+                    <p class="metric-label">Loyal Customers</p>
+                    <p class="metric-value">{{ $engagementLoyalCustomers->count() }}</p>
+                </article>
+                <article class="ops-metric">
+                    <p class="metric-label">Open Inquiries</p>
+                    <p class="metric-value">{{ $engagementInquiries->whereNotIn('status', ['resolved', 'closed', 'replied'])->count() }}</p>
+                </article>
+                <article class="ops-metric">
+                    <p class="metric-label">Reviews Pending Response</p>
+                    <p class="metric-value">{{ $engagementReviews->filter(fn ($row) => trim((string) ($row['response'] ?? '')) === '')->count() }}</p>
+                </article>
+            </div>
+
+            <div class="ops-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom:10px;">
+                <article class="ops-metric" style="text-align:left;">
+                    <p class="metric-label">Promotions &amp; Offers</p>
+                    <p class="small">Offer execution uses pricing rules and tariff structures. Create promo or demand discount rules, then monitor uptake.</p>
+                    <p style="margin-top:8px;"><a class="btn btn-secondary" href="#reservations">Open Pricing &amp; Tariffs</a></p>
+                </article>
+                <article class="ops-metric" style="text-align:left;">
+                    <p class="metric-label">Loyalty Programs</p>
+                    <p class="small">Loyalty is handled via API integration and repeat-customer tracking from reservations.</p>
+                    <p style="margin-top:8px;"><a class="btn btn-secondary" href="#api">Open Loyalty API Tools</a></p>
+                </article>
+            </div>
+
+            <div class="ops-table-wrap" style="margin-bottom:10px;">
+                <p class="label">Active Promotion Rules</p>
+                <table class="ops-table" aria-label="Promotion rules table">
+                    <thead>
+                        <tr>
+                            <th>Rule</th>
+                            <th>Type</th>
+                            <th>Value</th>
+                            <th>Window</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($engagementPromotions->take(10) as $promotion)
+                            <tr>
+                                <td>{{ (string) ($promotion['name'] ?? 'Promotion') }}</td>
+                                <td>{{ strtoupper(str_replace('_', ' ', (string) ($promotion['rule_type'] ?? 'promo_discount'))) }}</td>
+                                <td>{{ number_format((float) ($promotion['value'] ?? 0), 2) }}</td>
+                                <td>{{ (string) (($promotion['starts_on'] ?? '') ?: '-') }} - {{ (string) (($promotion['ends_on'] ?? '') ?: '-') }}</td>
+                                <td>{{ (bool) ($promotion['is_active'] ?? false) ? 'ACTIVE' : 'INACTIVE' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="ops-empty">No promotion rules yet. Create pricing rules using Promo Discount or Demand Discount.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="ops-table-wrap" style="margin-bottom:10px;">
+                <p class="label">Repeat Customers (Loyalty Signals)</p>
+                <table class="ops-table" aria-label="Loyal customer signals table">
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Email</th>
+                            <th>Reservations</th>
+                            <th>Total Spend</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($engagementLoyalCustomers->take(10) as $customer)
+                            <tr>
+                                <td>{{ (string) ($customer['customer_name'] ?? 'Returning Guest') }}</td>
+                                <td>{{ (string) ($customer['customer_email'] ?? '-') }}</td>
+                                <td>{{ (int) ($customer['reservations_count'] ?? 0) }}</td>
+                                <td>MVR {{ number_format((float) ($customer['total_spend'] ?? 0), 2) }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="ops-empty">No repeat-customer pattern detected yet.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+                @if ($engagementLoyaltyTable !== '' && $engagementLoyaltyPrograms->isNotEmpty())
+                    <p class="small" style="margin-top:8px;">Detected loyalty source: {{ $engagementLoyaltyTable }}</p>
+                @endif
+            </div>
+
+            <div class="ops-table-wrap" style="margin-bottom:10px;">
+                <p class="label">Customer Inquiries</p>
+                @if ($engagementInquiriesTable === '')
+                    <p class="small">No inquiry table detected. Supported tables: vendor_customer_inquiries, vendor_inquiries, customer_inquiries, vendor_messages.</p>
+                @endif
+                <table class="ops-table" aria-label="Customer inquiries table">
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Subject / Message</th>
+                            <th>Status</th>
+                            <th>Response</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($engagementInquiries->take(12) as $inquiry)
+                            <tr>
+                                <td>{{ (string) ($inquiry['customer_name'] ?? 'Guest') }}<br>{{ (string) ($inquiry['customer_email'] ?? '') }}</td>
+                                <td><strong>{{ (string) (($inquiry['subject'] ?? '') ?: 'General inquiry') }}</strong><br>{{ (string) (($inquiry['message'] ?? '') ?: '-') }}</td>
+                                <td>{{ strtoupper((string) ($inquiry['status'] ?? 'open')) }}</td>
+                                <td>
+                                    @if ($engagementInquiriesTable !== '' && (int) ($inquiry['id'] ?? 0) > 0)
+                                        <form method="POST" action="/portal/vendor/inquiries/{{ (int) ($inquiry['id'] ?? 0) }}/status">
+                                            @csrf
+                                            <input type="hidden" name="table" value="{{ $engagementInquiriesTable }}">
+                                            <select class="ops-select" name="status" style="margin-bottom:6px;">
+                                                <option value="open" @selected(($inquiry['status'] ?? '') === 'open')>Open</option>
+                                                <option value="pending" @selected(($inquiry['status'] ?? '') === 'pending')>Pending</option>
+                                                <option value="in_progress" @selected(($inquiry['status'] ?? '') === 'in_progress')>In Progress</option>
+                                                <option value="replied" @selected(($inquiry['status'] ?? '') === 'replied')>Replied</option>
+                                                <option value="resolved" @selected(($inquiry['status'] ?? '') === 'resolved')>Resolved</option>
+                                                <option value="closed" @selected(($inquiry['status'] ?? '') === 'closed')>Closed</option>
+                                            </select>
+                                            <textarea class="ops-textarea" name="response" rows="2" maxlength="3000" placeholder="Write response...">{{ (string) ($inquiry['response'] ?? '') }}</textarea>
+                                            <button class="btn btn-secondary" type="submit" style="margin-top:6px;">Save</button>
+                                        </form>
+                                    @else
+                                        <span class="small">{{ (string) (($inquiry['response'] ?? '') ?: 'No response yet') }}</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="ops-empty">No customer inquiries found.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="ops-table-wrap">
+                <p class="label">Customer Reviews</p>
+                @if ($engagementReviewsTable === '')
+                    <p class="small">No review table detected. Supported tables: vendor_property_reviews, vendor_reviews, customer_reviews, property_reviews.</p>
+                @endif
+                <table class="ops-table" aria-label="Customer reviews table">
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Rating / Review</th>
+                            <th>Status</th>
+                            <th>Vendor Response</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($engagementReviews->take(12) as $review)
+                            <tr>
+                                <td>{{ (string) ($review['customer_name'] ?? 'Guest') }}<br>{{ (string) ($review['customer_email'] ?? '') }}</td>
+                                <td>{{ number_format((float) ($review['rating'] ?? 0), 1) }}/5<br>{{ (string) (($review['comment'] ?? '') ?: '-') }}</td>
+                                <td>{{ strtoupper((string) ($review['status'] ?? 'pending')) }}</td>
+                                <td>
+                                    @if ($engagementReviewsTable !== '' && (int) ($review['id'] ?? 0) > 0)
+                                        <form method="POST" action="/portal/vendor/reviews/{{ (int) ($review['id'] ?? 0) }}/respond">
+                                            @csrf
+                                            <input type="hidden" name="table" value="{{ $engagementReviewsTable }}">
+                                            <select class="ops-select" name="status" style="margin-bottom:6px;">
+                                                <option value="pending" @selected(($review['status'] ?? '') === 'pending')>Pending</option>
+                                                <option value="approved" @selected(($review['status'] ?? '') === 'approved')>Approved</option>
+                                                <option value="published" @selected(($review['status'] ?? '') === 'published')>Published</option>
+                                                <option value="responded" @selected(($review['status'] ?? '') === 'responded')>Responded</option>
+                                                <option value="hidden" @selected(($review['status'] ?? '') === 'hidden')>Hidden</option>
+                                                <option value="rejected" @selected(($review['status'] ?? '') === 'rejected')>Rejected</option>
+                                            </select>
+                                            <textarea class="ops-textarea" name="response" rows="2" maxlength="3000" placeholder="Reply to customer review...">{{ (string) ($review['response'] ?? '') }}</textarea>
+                                            <button class="btn btn-secondary" type="submit" style="margin-top:6px;">Save</button>
+                                        </form>
+                                    @else
+                                        <span class="small">{{ (string) (($review['response'] ?? '') ?: 'No response yet') }}</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="ops-empty">No customer reviews found.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         @include('partials.global-site-footer')
@@ -3460,8 +3790,10 @@
             const payoutNextEstimate = document.getElementById("payoutNextEstimate");
             const payoutRows = document.getElementById("payoutRows");
             const navLinks = Array.from(document.querySelectorAll('.portal-nav a[data-panel-key]'));
+            const vendorNavGroupToggles = Array.from(document.querySelectorAll('[data-vendor-nav-toggle]'));
             const panelGroups = Array.from(document.querySelectorAll('[data-panel-group]'));
             const listingStepPanels = Array.from(document.querySelectorAll('[data-listing-step]'));
+            const categoryOpsCards = Array.from(document.querySelectorAll('[data-ops-category-section]'));
             const validPanelKeys = new Set(navLinks.map((link) => String(link.dataset.panelKey || "")).filter(Boolean));
             const forcedListingMode = "{{ $forcedListingMode }}";
             const forcedListingCategory = "{{ $forcedListingCategory }}";
@@ -3518,7 +3850,7 @@
             const guidedWizardPrev = document.getElementById("guidedWizardPrev");
             const guidedWizardResume = document.getElementById("guidedWizardResume");
             const guidedWizardNext = document.getElementById("guidedWizardNext");
-            const serverPanelKey = "{{ in_array($forcedPanelKey, ['overview', 'profile', 'listings', 'billing', 'reservations', 'api'], true) ? $forcedPanelKey : '' }}";
+            const serverPanelKey = "{{ in_array($forcedPanelKey, ['overview', 'profile', 'listings', 'billing', 'reservations', 'engagement', 'api'], true) ? $forcedPanelKey : '' }}";
             const listingWizardStep = Number("{{ $listingWizardStep }}") || 1;
             let listingWizardStarted = serverPanelKey === "listings";
             let listingWizardPanelStep = 1;
@@ -3903,6 +4235,12 @@
                 });
             }
 
+            function setExactActiveNavLink(activeLink) {
+                navLinks.forEach((link) => {
+                    link.classList.toggle("is-active", link === activeLink);
+                });
+            }
+
             function showPanelGroup(panelKey) {
                 panelGroups.forEach((panel) => {
                     panel.hidden = (panel.getAttribute("data-panel-group") || "") !== panelKey;
@@ -3923,6 +4261,46 @@
             function resolvePanelFromHash(hashValue) {
                 const panelKey = String(hashValue || "").replace(/^#/, "").trim().toLowerCase();
                 return validPanelKeys.has(panelKey) ? panelKey : "overview";
+            }
+
+            function normalizeVendorOpsCategoryKey(categoryKey) {
+                const normalized = normalizeCategoryKey(categoryKey || '');
+                if (normalized === 'transport') {
+                    return 'marine_transport';
+                }
+                return normalized;
+            }
+
+            function applyVendorCategoryOperationsFilter(categoryKey) {
+                const normalized = normalizeVendorOpsCategoryKey(categoryKey || 'all');
+                if (categoryOpsCards.length === 0) {
+                    return;
+                }
+
+                categoryOpsCards.forEach((card) => {
+                    const sectionKey = String(card.getAttribute('data-ops-category-section') || '');
+                    const cardCategory = normalizeVendorOpsCategoryKey(sectionKey.replace('category-operations-', ''));
+                    card.hidden = normalized !== 'all' && cardCategory !== normalized;
+                });
+
+                if (normalized === 'all') {
+                    return;
+                }
+
+                const activeCard = categoryOpsCards.find((card) => {
+                    const sectionKey = String(card.getAttribute('data-ops-category-section') || '');
+                    return normalizeVendorOpsCategoryKey(sectionKey.replace('category-operations-', '')) === normalized;
+                });
+
+                if (!activeCard) {
+                    return;
+                }
+
+                const toggle = activeCard.querySelector('[data-ops-category-toggle]');
+                if (toggle && toggle.getAttribute('aria-expanded') !== 'true') {
+                    toggle.click();
+                }
+                activeCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
 
             function focusListingsWizardStep(step) {
@@ -5070,14 +5448,52 @@
                     event.preventDefault();
                     const panelKey = String(link.dataset.panelKey || "").trim().toLowerCase();
                     if (!panelKey) return;
+
+                    const categoryTarget = normalizeVendorOpsCategoryKey(String(link.getAttribute('data-vendor-category-target') || ''));
+                    const listingAction = String(link.getAttribute('data-vendor-listing-action') || '').trim().toLowerCase();
+
                     window.location.hash = panelKey;
                     showPanelGroup(panelKey);
+
+                    if (panelKey === 'listings') {
+                        if (categoryTarget !== '') {
+                            openPropertyFlowWithCategory(categoryTarget);
+                        } else if (listingAction === 'create' && openPropertyCreateForm) {
+                            openPropertyCreateForm.click();
+                        } else {
+                            applyPropertyCategoryFilter('all');
+                            applyCategorySectionFilter('all');
+                        }
+                    }
+
+                    if (panelKey === 'reservations') {
+                        applyVendorCategoryOperationsFilter(categoryTarget !== '' ? categoryTarget : 'all');
+                    }
+
+                    setExactActiveNavLink(link);
+                });
+            });
+
+            vendorNavGroupToggles.forEach((toggle) => {
+                toggle.addEventListener('click', function () {
+                    const groupKey = String(toggle.getAttribute('data-vendor-nav-toggle') || '').trim();
+                    if (groupKey === '') {
+                        return;
+                    }
+                    const body = document.querySelector('[data-vendor-nav-group="' + groupKey + '"]');
+                    if (!body) {
+                        return;
+                    }
+                    const isOpen = body.classList.toggle('is-open');
+                    toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
                 });
             });
 
             window.addEventListener("hashchange", function () {
                 showPanelGroup(resolvePanelFromHash(window.location.hash));
             });
+
+            applyVendorCategoryOperationsFilter('all');
 
             if (guidedTrackProperty) {
                 guidedTrackProperty.addEventListener("click", function () {

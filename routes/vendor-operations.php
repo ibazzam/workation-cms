@@ -14,13 +14,15 @@ if (!function_exists('vendorPortalCategoryMap')) {
     {
         return [
             'accommodation' => 'Accommodation',
-            'transport' => 'Marine + Land Transport',
+            'marine_transport' => 'Marine Transport',
+            'land_transport' => 'Land Transport',
             'excursion' => 'Excursions',
             'remote_workspace' => 'Remote Workspaces',
-            'conference_room' => 'Conference Rooms',
             'resort_day_visit' => 'Resort Day Visits',
             'restaurant' => 'Restaurants',
             'vehicle_rental' => 'Vehicle Rentals',
+            'water_sports' => 'Water Sports',
+            'conference_room' => 'Conference Rooms',
         ];
     }
 }
@@ -31,8 +33,21 @@ if (!function_exists('vendorPortalCategoryAliases')) {
         return [
             'accommodation' => 'accommodation',
             'accommodations' => 'accommodation',
-            'transport' => 'transport',
-            'transports' => 'transport',
+            // Legacy transport values remain valid and default to marine transport.
+            'transport' => 'marine_transport',
+            'transports' => 'marine_transport',
+            'marine_transport' => 'marine_transport',
+            'marine_transports' => 'marine_transport',
+            'marine_transportation' => 'marine_transport',
+            'marine-transport' => 'marine_transport',
+            'marinetransport' => 'marine_transport',
+            'marinetransports' => 'marine_transport',
+            'land_transport' => 'land_transport',
+            'land_transports' => 'land_transport',
+            'land_transportation' => 'land_transport',
+            'land-transport' => 'land_transport',
+            'landtransport' => 'land_transport',
+            'landtransports' => 'land_transport',
             'excursion' => 'excursion',
             'excursions' => 'excursion',
             'remote_workspace' => 'remote_workspace',
@@ -53,6 +68,11 @@ if (!function_exists('vendorPortalCategoryAliases')) {
             'vehicle_rentals' => 'vehicle_rental',
             'vehiclerental' => 'vehicle_rental',
             'vehiclerentals' => 'vehicle_rental',
+            'water_sport' => 'water_sports',
+            'water_sports' => 'water_sports',
+            'water-sports' => 'water_sports',
+            'watersport' => 'water_sports',
+            'watersports' => 'water_sports',
         ];
     }
 }
@@ -1333,6 +1353,16 @@ Route::get('/vendor', function () {
     $vendorBilling = null;
     $vendorRoomCategories = collect();
     $vendorMediaAssets = collect();
+    $vendorEngagement = [
+        'inquiries_table' => null,
+        'inquiries' => collect(),
+        'reviews_table' => null,
+        'reviews' => collect(),
+        'promotions' => collect(),
+        'loyalty_table' => null,
+        'loyalty_programs' => collect(),
+        'loyal_customers' => collect(),
+    ];
 
     $vendorReservationPolicy = ReservationPricingPolicy::loadPolicy();
     $vendorTaxComponents = collect($vendorReservationPolicy['tax_components'] ?? []);
@@ -1417,6 +1447,221 @@ Route::get('/vendor', function () {
                 ->limit(200)
                 ->get();
         }
+
+        $vendorPropertyIds = $vendorProperties
+            ->pluck('id')
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->values();
+
+        $reviewTableCandidates = ['vendor_property_reviews', 'vendor_reviews', 'customer_reviews', 'property_reviews'];
+        foreach ($reviewTableCandidates as $reviewTable) {
+            if (!Schema::hasTable($reviewTable)) {
+                continue;
+            }
+
+            $columns = Schema::getColumnListing($reviewTable);
+            $idColumn = collect(['id', 'review_id'])->first(static fn ($column) => in_array($column, $columns, true));
+            if ($idColumn === null) {
+                continue;
+            }
+
+            $vendorColumn = collect(['vendor_user_id', 'vendor_id', 'owner_user_id'])->first(static fn ($column) => in_array($column, $columns, true));
+            $propertyColumn = collect(['vendor_property_id', 'property_id', 'listing_id', 'entity_id'])->first(static fn ($column) => in_array($column, $columns, true));
+            $dateColumn = collect(['created_at', 'reviewed_at', 'submitted_at', 'updated_at'])->first(static fn ($column) => in_array($column, $columns, true));
+
+            $query = DB::table($reviewTable);
+            if ($vendorColumn !== null) {
+                $query->where($vendorColumn, $vendorUserId);
+            } elseif ($propertyColumn !== null && $vendorPropertyIds->isNotEmpty()) {
+                $query->whereIn($propertyColumn, $vendorPropertyIds->all());
+            } else {
+                continue;
+            }
+
+            if ($dateColumn !== null) {
+                $query->orderByDesc($dateColumn);
+            }
+
+            $ratingColumn = collect(['rating', 'rating_value', 'review_score', 'score'])->first(static fn ($column) => in_array($column, $columns, true));
+            $commentColumn = collect(['review_comment', 'comment', 'review_text', 'feedback', 'notes'])->first(static fn ($column) => in_array($column, $columns, true));
+            $statusColumn = collect(['status', 'review_status', 'moderation_status'])->first(static fn ($column) => in_array($column, $columns, true));
+            $nameColumn = collect(['customer_name', 'guest_name', 'reviewer_name', 'name'])->first(static fn ($column) => in_array($column, $columns, true));
+            $emailColumn = collect(['customer_email', 'guest_email', 'reviewer_email', 'email'])->first(static fn ($column) => in_array($column, $columns, true));
+            $responseColumn = collect(['vendor_response', 'response_text', 'reply_text', 'response'])->first(static fn ($column) => in_array($column, $columns, true));
+            $respondedAtColumn = collect(['responded_at', 'replied_at', 'response_at'])->first(static fn ($column) => in_array($column, $columns, true));
+
+            $selectColumns = collect([$idColumn, $propertyColumn, $ratingColumn, $commentColumn, $statusColumn, $nameColumn, $emailColumn, $responseColumn, $respondedAtColumn, $dateColumn])
+                ->filter(static fn ($column) => is_string($column) && $column !== '')
+                ->unique()
+                ->values()
+                ->all();
+
+            $rows = $query->limit(80)->get($selectColumns);
+            if ($rows->isEmpty()) {
+                continue;
+            }
+
+            $vendorEngagement['reviews_table'] = $reviewTable;
+            $vendorEngagement['reviews'] = $rows->map(static function ($row) use ($idColumn, $propertyColumn, $ratingColumn, $commentColumn, $statusColumn, $nameColumn, $emailColumn, $responseColumn, $respondedAtColumn, $dateColumn) {
+                return [
+                    'id' => (int) (($row->{$idColumn} ?? 0) ?: 0),
+                    'vendor_property_id' => $propertyColumn ? (int) (($row->{$propertyColumn} ?? 0) ?: 0) : 0,
+                    'rating' => $ratingColumn ? (float) (($row->{$ratingColumn} ?? 0) ?: 0) : 0,
+                    'comment' => trim((string) ($commentColumn ? ($row->{$commentColumn} ?? '') : '')),
+                    'status' => strtolower(trim((string) ($statusColumn ? ($row->{$statusColumn} ?? 'pending') : 'pending'))),
+                    'customer_name' => trim((string) ($nameColumn ? ($row->{$nameColumn} ?? 'Guest') : 'Guest')),
+                    'customer_email' => trim((string) ($emailColumn ? ($row->{$emailColumn} ?? '') : '')),
+                    'response' => trim((string) ($responseColumn ? ($row->{$responseColumn} ?? '') : '')),
+                    'responded_at' => trim((string) ($respondedAtColumn ? ($row->{$respondedAtColumn} ?? '') : '')),
+                    'created_at' => trim((string) ($dateColumn ? ($row->{$dateColumn} ?? '') : '')),
+                ];
+            })->values();
+
+            break;
+        }
+
+        $inquiryTableCandidates = ['vendor_customer_inquiries', 'vendor_inquiries', 'customer_inquiries', 'vendor_messages'];
+        foreach ($inquiryTableCandidates as $inquiryTable) {
+            if (!Schema::hasTable($inquiryTable)) {
+                continue;
+            }
+
+            $columns = Schema::getColumnListing($inquiryTable);
+            $idColumn = collect(['id', 'inquiry_id', 'message_id'])->first(static fn ($column) => in_array($column, $columns, true));
+            if ($idColumn === null) {
+                continue;
+            }
+
+            $vendorColumn = collect(['vendor_user_id', 'vendor_id', 'owner_user_id'])->first(static fn ($column) => in_array($column, $columns, true));
+            $propertyColumn = collect(['vendor_property_id', 'property_id', 'listing_id', 'entity_id'])->first(static fn ($column) => in_array($column, $columns, true));
+            $dateColumn = collect(['created_at', 'submitted_at', 'sent_at', 'updated_at'])->first(static fn ($column) => in_array($column, $columns, true));
+
+            $query = DB::table($inquiryTable);
+            if ($vendorColumn !== null) {
+                $query->where($vendorColumn, $vendorUserId);
+            } elseif ($propertyColumn !== null && $vendorPropertyIds->isNotEmpty()) {
+                $query->whereIn($propertyColumn, $vendorPropertyIds->all());
+            } else {
+                continue;
+            }
+
+            if ($dateColumn !== null) {
+                $query->orderByDesc($dateColumn);
+            }
+
+            $subjectColumn = collect(['subject', 'topic', 'title'])->first(static fn ($column) => in_array($column, $columns, true));
+            $messageColumn = collect(['message', 'body', 'content', 'inquiry_text'])->first(static fn ($column) => in_array($column, $columns, true));
+            $statusColumn = collect(['status', 'inquiry_status', 'state'])->first(static fn ($column) => in_array($column, $columns, true));
+            $nameColumn = collect(['customer_name', 'guest_name', 'sender_name', 'name'])->first(static fn ($column) => in_array($column, $columns, true));
+            $emailColumn = collect(['customer_email', 'guest_email', 'sender_email', 'email'])->first(static fn ($column) => in_array($column, $columns, true));
+            $responseColumn = collect(['vendor_response', 'response_text', 'reply_text', 'response', 'resolution_note'])->first(static fn ($column) => in_array($column, $columns, true));
+            $respondedAtColumn = collect(['responded_at', 'replied_at', 'response_at'])->first(static fn ($column) => in_array($column, $columns, true));
+
+            $selectColumns = collect([$idColumn, $propertyColumn, $subjectColumn, $messageColumn, $statusColumn, $nameColumn, $emailColumn, $responseColumn, $respondedAtColumn, $dateColumn])
+                ->filter(static fn ($column) => is_string($column) && $column !== '')
+                ->unique()
+                ->values()
+                ->all();
+
+            $rows = $query->limit(100)->get($selectColumns);
+            if ($rows->isEmpty()) {
+                continue;
+            }
+
+            $vendorEngagement['inquiries_table'] = $inquiryTable;
+            $vendorEngagement['inquiries'] = $rows->map(static function ($row) use ($idColumn, $propertyColumn, $subjectColumn, $messageColumn, $statusColumn, $nameColumn, $emailColumn, $responseColumn, $respondedAtColumn, $dateColumn) {
+                return [
+                    'id' => (int) (($row->{$idColumn} ?? 0) ?: 0),
+                    'vendor_property_id' => $propertyColumn ? (int) (($row->{$propertyColumn} ?? 0) ?: 0) : 0,
+                    'subject' => trim((string) ($subjectColumn ? ($row->{$subjectColumn} ?? '') : '')),
+                    'message' => trim((string) ($messageColumn ? ($row->{$messageColumn} ?? '') : '')),
+                    'status' => strtolower(trim((string) ($statusColumn ? ($row->{$statusColumn} ?? 'open') : 'open'))),
+                    'customer_name' => trim((string) ($nameColumn ? ($row->{$nameColumn} ?? 'Guest') : 'Guest')),
+                    'customer_email' => trim((string) ($emailColumn ? ($row->{$emailColumn} ?? '') : '')),
+                    'response' => trim((string) ($responseColumn ? ($row->{$responseColumn} ?? '') : '')),
+                    'responded_at' => trim((string) ($respondedAtColumn ? ($row->{$respondedAtColumn} ?? '') : '')),
+                    'created_at' => trim((string) ($dateColumn ? ($row->{$dateColumn} ?? '') : '')),
+                ];
+            })->values();
+
+            break;
+        }
+
+        $vendorEngagement['promotions'] = $vendorPricingRules
+            ->filter(static fn ($rule) => in_array(strtolower(trim((string) ($rule->rule_type ?? ''))), ['promo_discount', 'demand_discount', 'weekend_markup'], true))
+            ->map(static function ($rule) {
+                return [
+                    'id' => (int) ($rule->id ?? 0),
+                    'name' => trim((string) ($rule->name ?? 'Promotion Rule')),
+                    'rule_type' => strtolower(trim((string) ($rule->rule_type ?? 'promo_discount'))),
+                    'value' => (float) ($rule->value ?? 0),
+                    'is_active' => (bool) ($rule->is_active ?? true),
+                    'starts_on' => (string) ($rule->starts_on ?? ''),
+                    'ends_on' => (string) ($rule->ends_on ?? ''),
+                ];
+            })
+            ->sortByDesc('id')
+            ->take(20)
+            ->values();
+
+        $loyaltyTableCandidates = ['vendor_loyalty_programs', 'vendor_loyalty_tiers', 'vendor_loyalty_configs'];
+        foreach ($loyaltyTableCandidates as $loyaltyTable) {
+            if (!Schema::hasTable($loyaltyTable)) {
+                continue;
+            }
+
+            $columns = Schema::getColumnListing($loyaltyTable);
+            $vendorColumn = collect(['vendor_user_id', 'vendor_id', 'owner_user_id'])->first(static fn ($column) => in_array($column, $columns, true));
+            if ($vendorColumn === null) {
+                continue;
+            }
+
+            $nameColumn = collect(['name', 'program_name', 'tier_name', 'title'])->first(static fn ($column) => in_array($column, $columns, true));
+            $pointsColumn = collect(['points_per_booking', 'points_rate', 'points_multiplier'])->first(static fn ($column) => in_array($column, $columns, true));
+            $statusColumn = collect(['status', 'is_active'])->first(static fn ($column) => in_array($column, $columns, true));
+            $dateColumn = collect(['updated_at', 'created_at'])->first(static fn ($column) => in_array($column, $columns, true));
+
+            $query = DB::table($loyaltyTable)->where($vendorColumn, $vendorUserId);
+            if ($dateColumn !== null) {
+                $query->orderByDesc($dateColumn);
+            }
+
+            $selectColumns = collect([$nameColumn, $pointsColumn, $statusColumn, $dateColumn])
+                ->filter(static fn ($column) => is_string($column) && $column !== '')
+                ->unique()
+                ->values()
+                ->all();
+
+            $rows = $query->limit(20)->get($selectColumns);
+            $vendorEngagement['loyalty_table'] = $loyaltyTable;
+            $vendorEngagement['loyalty_programs'] = $rows->map(static function ($row) use ($nameColumn, $pointsColumn, $statusColumn, $dateColumn) {
+                return [
+                    'name' => trim((string) ($nameColumn ? ($row->{$nameColumn} ?? 'Loyalty Program') : 'Loyalty Program')),
+                    'points_rate' => $pointsColumn ? (float) (($row->{$pointsColumn} ?? 0) ?: 0) : 0,
+                    'status' => strtolower(trim((string) ($statusColumn ? ($row->{$statusColumn} ?? 'active') : 'active'))),
+                    'updated_at' => trim((string) ($dateColumn ? ($row->{$dateColumn} ?? '') : '')),
+                ];
+            })->values();
+            break;
+        }
+
+        $vendorEngagement['loyal_customers'] = $vendorReservations
+            ->filter(static fn ($reservation) => trim((string) ($reservation->customer_email ?? '')) !== '')
+            ->groupBy(static fn ($reservation) => strtolower(trim((string) ($reservation->customer_email ?? ''))))
+            ->map(static function ($rows, $email) {
+                $rows = collect($rows);
+                $latest = $rows->sortByDesc(static fn ($row) => (string) ($row->start_at ?? $row->created_at ?? ''))->first();
+                return [
+                    'customer_email' => (string) $email,
+                    'customer_name' => trim((string) ($latest->customer_name ?? 'Returning Guest')),
+                    'reservations_count' => (int) $rows->count(),
+                    'total_spend' => (float) $rows->sum(static fn ($row) => (float) ($row->invoice_total_amount ?? $row->total_amount ?? 0)),
+                ];
+            })
+            ->sortByDesc('reservations_count')
+            ->take(20)
+            ->values();
     }
 
     return view('vendor-portal', [
@@ -1440,6 +1685,7 @@ Route::get('/vendor', function () {
         'vendorRoomCategories' => $vendorRoomCategories,
         'vendorRooms' => $vendorRoomCategories,
         'vendorMediaAssets' => $vendorMediaAssets,
+        'vendorEngagement' => $vendorEngagement,
         'transportModeOptions' => vendorPortalListingOptions('transport_mode'),
         'accommodationFacilityOptions' => vendorPortalListingOptions('accommodation_facility'),
         'roomAmenityOptions' => vendorPortalListingOptions('room_amenity'),
@@ -1541,6 +1787,14 @@ Route::get('/vendor/operations', function () {
     }
 
     return redirect('/vendor#vendorAvailabilitySection')->with('portal_active_panel', 'reservations');
+});
+
+Route::get('/vendor/engagement', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    return redirect('/vendor#engagement')->with('portal_active_panel', 'engagement');
 });
 
 Route::get('/vendor/pricing', function () {
@@ -3313,6 +3567,166 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
         ]);
 
     return back()->with('portal_notice', 'Reservation status updated.');
+});
+
+Route::post('/portal/vendor/inquiries/{inquiry}/status', function (Request $request, int $inquiry) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $validated = $request->validate([
+        'table' => ['required', Rule::in(['vendor_customer_inquiries', 'vendor_inquiries', 'customer_inquiries', 'vendor_messages'])],
+        'status' => ['nullable', Rule::in(['open', 'pending', 'in_progress', 'replied', 'resolved', 'closed'])],
+        'response' => ['nullable', 'string', 'max:3000'],
+    ]);
+
+    $table = (string) $validated['table'];
+    if (!Schema::hasTable($table)) {
+        return back()->withErrors(['profile' => 'Inquiry source table is not available.']);
+    }
+
+    $columns = Schema::getColumnListing($table);
+    $idColumn = collect(['id', 'inquiry_id', 'message_id'])->first(static fn ($column) => in_array($column, $columns, true));
+    if ($idColumn === null) {
+        return back()->withErrors(['profile' => 'Inquiry source table has no supported identifier column.']);
+    }
+
+    $query = DB::table($table)->where($idColumn, $inquiry);
+
+    $vendorColumn = collect(['vendor_user_id', 'vendor_id', 'owner_user_id'])->first(static fn ($column) => in_array($column, $columns, true));
+    if ($vendorColumn !== null) {
+        $query->where($vendorColumn, $vendorUserId);
+    } else {
+        $propertyColumn = collect(['vendor_property_id', 'property_id', 'listing_id', 'entity_id'])->first(static fn ($column) => in_array($column, $columns, true));
+        if ($propertyColumn === null || !Schema::hasTable('vendor_properties')) {
+            return back()->withErrors(['profile' => 'Unable to verify inquiry ownership for this account.']);
+        }
+
+        $vendorPropertyIds = DB::table('vendor_properties')
+            ->where('vendor_user_id', $vendorUserId)
+            ->pluck('id')
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->values();
+
+        if ($vendorPropertyIds->isEmpty()) {
+            return back()->withErrors(['profile' => 'No vendor listings available to validate inquiry access.']);
+        }
+
+        $query->whereIn($propertyColumn, $vendorPropertyIds->all());
+    }
+
+    $updates = [];
+    $statusColumn = collect(['status', 'inquiry_status', 'state'])->first(static fn ($column) => in_array($column, $columns, true));
+    if ($statusColumn !== null && filled($validated['status'] ?? null)) {
+        $updates[$statusColumn] = (string) $validated['status'];
+    }
+
+    $responseColumn = collect(['vendor_response', 'response_text', 'reply_text', 'response', 'resolution_note'])->first(static fn ($column) => in_array($column, $columns, true));
+    if ($responseColumn !== null && filled($validated['response'] ?? null)) {
+        $updates[$responseColumn] = trim((string) $validated['response']);
+    }
+
+    $respondedAtColumn = collect(['responded_at', 'replied_at', 'response_at'])->first(static fn ($column) => in_array($column, $columns, true));
+    if ($respondedAtColumn !== null && filled($validated['response'] ?? null)) {
+        $updates[$respondedAtColumn] = now();
+    }
+
+    if (in_array('updated_at', $columns, true)) {
+        $updates['updated_at'] = now();
+    }
+
+    if ($updates === []) {
+        return back()->withErrors(['profile' => 'No compatible inquiry fields found to update.']);
+    }
+
+    $updated = $query->update($updates);
+    if ($updated < 1) {
+        return back()->withErrors(['profile' => 'Inquiry update did not apply. Verify access and try again.']);
+    }
+
+    return back()->with('portal_notice', 'Inquiry updated successfully.');
+});
+
+Route::post('/portal/vendor/reviews/{review}/respond', function (Request $request, int $review) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $validated = $request->validate([
+        'table' => ['required', Rule::in(['vendor_property_reviews', 'vendor_reviews', 'customer_reviews', 'property_reviews'])],
+        'status' => ['nullable', Rule::in(['pending', 'approved', 'published', 'hidden', 'rejected', 'responded'])],
+        'response' => ['nullable', 'string', 'max:3000'],
+    ]);
+
+    $table = (string) $validated['table'];
+    if (!Schema::hasTable($table)) {
+        return back()->withErrors(['profile' => 'Review source table is not available.']);
+    }
+
+    $columns = Schema::getColumnListing($table);
+    $idColumn = collect(['id', 'review_id'])->first(static fn ($column) => in_array($column, $columns, true));
+    if ($idColumn === null) {
+        return back()->withErrors(['profile' => 'Review source table has no supported identifier column.']);
+    }
+
+    $query = DB::table($table)->where($idColumn, $review);
+
+    $vendorColumn = collect(['vendor_user_id', 'vendor_id', 'owner_user_id'])->first(static fn ($column) => in_array($column, $columns, true));
+    if ($vendorColumn !== null) {
+        $query->where($vendorColumn, $vendorUserId);
+    } else {
+        $propertyColumn = collect(['vendor_property_id', 'property_id', 'listing_id', 'entity_id'])->first(static fn ($column) => in_array($column, $columns, true));
+        if ($propertyColumn === null || !Schema::hasTable('vendor_properties')) {
+            return back()->withErrors(['profile' => 'Unable to verify review ownership for this account.']);
+        }
+
+        $vendorPropertyIds = DB::table('vendor_properties')
+            ->where('vendor_user_id', $vendorUserId)
+            ->pluck('id')
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->values();
+
+        if ($vendorPropertyIds->isEmpty()) {
+            return back()->withErrors(['profile' => 'No vendor listings available to validate review access.']);
+        }
+
+        $query->whereIn($propertyColumn, $vendorPropertyIds->all());
+    }
+
+    $updates = [];
+    $statusColumn = collect(['status', 'review_status', 'moderation_status'])->first(static fn ($column) => in_array($column, $columns, true));
+    if ($statusColumn !== null && filled($validated['status'] ?? null)) {
+        $updates[$statusColumn] = (string) $validated['status'];
+    }
+
+    $responseColumn = collect(['vendor_response', 'response_text', 'reply_text', 'response'])->first(static fn ($column) => in_array($column, $columns, true));
+    if ($responseColumn !== null && filled($validated['response'] ?? null)) {
+        $updates[$responseColumn] = trim((string) $validated['response']);
+    }
+
+    $respondedAtColumn = collect(['responded_at', 'replied_at', 'response_at'])->first(static fn ($column) => in_array($column, $columns, true));
+    if ($respondedAtColumn !== null && filled($validated['response'] ?? null)) {
+        $updates[$respondedAtColumn] = now();
+    }
+
+    if (in_array('updated_at', $columns, true)) {
+        $updates['updated_at'] = now();
+    }
+
+    if ($updates === []) {
+        return back()->withErrors(['profile' => 'No compatible review fields found to update.']);
+    }
+
+    $updated = $query->update($updates);
+    if ($updated < 1) {
+        return back()->withErrors(['profile' => 'Review update did not apply. Verify access and try again.']);
+    }
+
+    return back()->with('portal_notice', 'Review response saved.');
 });
 
 Route::post('/portal/vendor/pricing/create', function (Request $request) {

@@ -151,7 +151,7 @@
                             <input id="pricing_room_id" name="vendor_room_category_id" class="ops-input" type="number" min="1">
                         </div>
                     </div>
-                    <p class="standards-note">Use Weekend Markup for peak days. Use Demand/Promo Discount when bookings soften to auto-run promotions across properties, services, and rooms.</p>
+                    <p class="standards-note">Use Weekend Markup for peak days. Use Demand/Promo Discount when reservations soften to auto-run promotions across properties, services, and rooms.</p>
                     <button class="btn btn-primary" type="submit">Save Pricing Rule</button>
                 </form>
 
@@ -174,7 +174,7 @@
                                         {{ strtoupper((string) ($suggestion['target_type'] ?? '')) }} #{{ (int) ($suggestion['target_id'] ?? 0) }}<br>
                                         {{ (string) ($suggestion['target_label'] ?? 'N/A') }}
                                     </td>
-                                    <td>{{ (int) ($suggestion['recent_bookings'] ?? 0) }} bookings</td>
+                                    <td>{{ (int) ($suggestion['recent_bookings'] ?? 0) }} reservations</td>
                                     <td>{{ (string) ($suggestion['currency'] ?? 'MVR') }} {{ number_format((float) ($suggestion['base_price'] ?? 0), 2) }}</td>
                                     <td>{{ strtoupper(str_replace('_', ' ', (string) ($suggestion['rule_type'] ?? ''))) }} {{ number_format((float) ($suggestion['rule_value'] ?? 0), 2) }}%</td>
                                     <td>{{ (string) ($suggestion['currency'] ?? 'MVR') }} {{ number_format((float) ($suggestion['suggested_price'] ?? 0), 2) }}</td>

@@ -119,16 +119,8 @@
             justify-content: flex-end;
         }
 
-        .auth-welcome {
-            display: inline-flex;
-            align-items: center;
-            border: 1px solid #c9dbea;
-            border-radius: 999px;
-            padding: 6px 11px;
-            background: #f6fbff;
-            color: #1a4968;
-            font-size: 0.78rem;
-            font-weight: 700;
+        .account-menu {
+            position: relative;
         }
 
         .auth-link {
@@ -159,6 +151,124 @@
             font-weight: 700;
             font-family: inherit;
             cursor: pointer;
+        }
+
+        .account-menu-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #c9dbea;
+            border-radius: 11px;
+            padding: 6px 10px;
+            background: #ffffff;
+            color: #173e5b;
+            font-size: 0.8rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(20, 63, 90, 0.08);
+        }
+
+        .account-menu-toggle:hover {
+            border-color: #9fbcd0;
+        }
+
+        .account-avatar {
+            width: 22px;
+            height: 22px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #e8f5fb 0%, #d4ebf7 100%);
+            color: #1e5a7e;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+        }
+
+        .account-chevron {
+            color: #65829a;
+            font-size: 0.68rem;
+            transition: transform 0.2s ease;
+        }
+
+        .account-menu.is-open .account-chevron {
+            transform: rotate(180deg);
+        }
+
+        .account-menu-panel {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            width: min(290px, calc(100vw - 24px));
+            border: 1px solid #c9ddeb;
+            border-radius: 14px;
+            background: #ffffff;
+            box-shadow: 0 20px 34px rgba(15, 50, 77, 0.2);
+            overflow: hidden;
+            z-index: 950;
+        }
+
+        .account-panel-head {
+            padding: 12px 14px;
+            border-bottom: 1px solid #d8e6f0;
+            background: linear-gradient(140deg, #f7fbff 0%, #edf6fb 100%);
+        }
+
+        .account-panel-greet {
+            margin: 0;
+            color: #1f4d6f;
+            font-size: 0.9rem;
+            font-weight: 800;
+        }
+
+        .account-panel-note {
+            margin: 3px 0 0;
+            color: #5d778d;
+            font-size: 0.75rem;
+        }
+
+        .account-panel-links {
+            display: grid;
+            padding: 8px;
+            gap: 2px;
+        }
+
+        .account-panel-link {
+            text-decoration: none;
+            border-radius: 9px;
+            padding: 9px 10px;
+            color: #264c66;
+            font-size: 0.81rem;
+            font-weight: 600;
+        }
+
+        .account-panel-link:hover {
+            background: #eff7fc;
+        }
+
+        .account-panel-foot {
+            border-top: 1px solid #d8e6f0;
+            padding: 8px;
+            background: #fbfdff;
+        }
+
+        .account-panel-logout {
+            width: 100%;
+            border: 1px solid #d4e0ea;
+            border-radius: 9px;
+            padding: 9px 10px;
+            background: #ffffff;
+            color: #37516a;
+            font-size: 0.8rem;
+            font-weight: 700;
+            font-family: inherit;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .account-panel-logout:hover {
+            border-color: #b5ccdd;
+            background: #f4f9fd;
         }
 
         .top-links {
@@ -773,6 +883,12 @@
                 justify-content: flex-start;
             }
 
+            .account-menu-panel {
+                left: 0;
+                right: auto;
+                width: min(340px, calc(100vw - 36px));
+            }
+
             .page-with-sidebar {
                 flex-direction: column;
             }
@@ -850,6 +966,7 @@
     @php
         $customerLoggedIn = (bool) session('portal_customer_authenticated', false);
         $customerName = trim((string) session('portal_customer_user', 'Customer'));
+        $customerContinueUrl = request()->fullUrl();
         $homeTopCategoryLinks = $homeTopCategoryLinks ?? collect();
         $homePromoBanner = $homePromoBanner ?? ['message' => 'Promotions coming soon.', 'url' => '/catalog/accommodation', 'cta' => 'View Promotions'];
         $homeTrendingChips = $homeTrendingChips ?? collect();
@@ -881,15 +998,36 @@
             </div>
             <div class="customer-auth">
                 @if ($customerLoggedIn)
-                    <span class="auth-welcome">Hi, {{ $customerName }}</span>
-                    <a class="auth-link" href="/customer">Manage My Account</a>
-                    <form method="POST" action="/portal/customer/logout" style="margin:0;">
-                        @csrf
-                        <button class="auth-btn" type="submit">Logout</button>
-                    </form>
+                    <div class="account-menu" data-customer-menu>
+                        <button class="account-menu-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="customerMenuPanel">
+                            <span class="account-avatar" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
+                            <span>Welcome, {{ $customerName }}</span>
+                            <i class="fa-solid fa-chevron-down account-chevron" aria-hidden="true"></i>
+                        </button>
+                        <div id="customerMenuPanel" class="account-menu-panel" role="menu" hidden>
+                            <div class="account-panel-head">
+                                <p class="account-panel-greet">Hi, {{ $customerName }}</p>
+                                <p class="account-panel-note">Great to see you again.</p>
+                            </div>
+                            <div class="account-panel-links">
+                                <a class="account-panel-link" href="/customer#bookings" role="menuitem">My Bookings</a>
+                                <a class="account-panel-link" href="/customer" role="menuitem">Manage my account</a>
+                                <a class="account-panel-link" href="/customer#promos" role="menuitem">Promo codes</a>
+                                <a class="account-panel-link" href="/customer#favourites" role="menuitem">Favourites</a>
+                                <a class="account-panel-link" href="/customer#posts" role="menuitem">My posts</a>
+                                <a class="account-panel-link" href="/customer#alerts" role="menuitem">Flight price alerts</a>
+                            </div>
+                            <div class="account-panel-foot">
+                                <form method="POST" action="/portal/customer/logout" style="margin:0;">
+                                    @csrf
+                                    <button class="account-panel-logout" type="submit">Sign out</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 @else
-                    <a class="auth-link" href="/portal/customer/login">Customer Login</a>
-                    <a class="auth-link primary" href="/portal/customer/register">Customer Registration</a>
+                    <a class="auth-link" href="{{ '/portal/customer/login?continue=' . urlencode($customerContinueUrl) }}">Customer Login</a>
+                    <a class="auth-link primary" href="{{ '/portal/customer/register?continue=' . urlencode($customerContinueUrl) }}">Customer Registration</a>
                 @endif
             </div>
         </header>
@@ -1080,6 +1218,44 @@
             @include('partials.global-site-footer')
         </div>
     </main>
+
+    <script>
+        (function () {
+            const menuRoot = document.querySelector('[data-customer-menu]');
+            if (!menuRoot) {
+                return;
+            }
+
+            const menuToggle = menuRoot.querySelector('.account-menu-toggle');
+            const menuPanel = menuRoot.querySelector('.account-menu-panel');
+            if (!menuToggle || !menuPanel) {
+                return;
+            }
+
+            function setMenuOpen(isOpen) {
+                menuRoot.classList.toggle('is-open', isOpen);
+                menuPanel.hidden = !isOpen;
+                menuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            }
+
+            menuToggle.addEventListener('click', function (event) {
+                event.preventDefault();
+                setMenuOpen(menuPanel.hidden);
+            });
+
+            document.addEventListener('click', function (event) {
+                if (!menuRoot.contains(event.target)) {
+                    setMenuOpen(false);
+                }
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    setMenuOpen(false);
+                }
+            });
+        })();
+    </script>
 
     <script>
         (function () {

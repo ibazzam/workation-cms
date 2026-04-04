@@ -153,6 +153,69 @@ if (!function_exists('portalOAuthIntentSessionKey')) {
     }
 }
 
+if (!function_exists('customerPostAuthRedirectSessionKey')) {
+    function customerPostAuthRedirectSessionKey(): string
+    {
+        return 'customer_post_auth_redirect';
+    }
+}
+
+if (!function_exists('normalizeCustomerPostAuthRedirect')) {
+    function normalizeCustomerPostAuthRedirect(?string $target): ?string
+    {
+        $value = trim((string) $target);
+        if ($value === '') {
+            return null;
+        }
+
+        // Allow in-app relative URLs only.
+        if (str_starts_with($value, '/')) {
+            if (str_starts_with($value, '//') || str_starts_with($value, '/portal/')) {
+                return null;
+            }
+            return $value;
+        }
+
+        // Allow absolute URLs only when host matches APP_URL.
+        $host = strtolower((string) parse_url($value, PHP_URL_HOST));
+        $appHost = strtolower((string) parse_url((string) config('app.url', ''), PHP_URL_HOST));
+        if ($host === '' || $appHost === '' || $host !== $appHost) {
+            return null;
+        }
+
+        $path = (string) parse_url($value, PHP_URL_PATH);
+        if ($path === '' || str_starts_with($path, '/portal/')) {
+            return null;
+        }
+
+        $query = (string) parse_url($value, PHP_URL_QUERY);
+        return $query !== '' ? ($path . '?' . $query) : $path;
+    }
+}
+
+if (!function_exists('rememberCustomerPostAuthRedirect')) {
+    function rememberCustomerPostAuthRedirect(Request $request): void
+    {
+        $candidate = normalizeCustomerPostAuthRedirect((string) $request->query('continue', ''));
+
+        if ($candidate === null) {
+            $candidate = normalizeCustomerPostAuthRedirect((string) $request->headers->get('referer', ''));
+        }
+
+        if ($candidate !== null) {
+            $request->session()->put(customerPostAuthRedirectSessionKey(), $candidate);
+        }
+    }
+}
+
+if (!function_exists('consumeCustomerPostAuthRedirect')) {
+    function consumeCustomerPostAuthRedirect(Request $request, string $fallback = '/'): string
+    {
+        $stored = normalizeCustomerPostAuthRedirect((string) $request->session()->pull(customerPostAuthRedirectSessionKey(), ''));
+        return $stored ?: $fallback;
+    }
+}
+
 if (!function_exists('customerSocialRedirectUrl')) {
     function customerSocialRedirectUrl(string $provider): string
     {
@@ -2991,13 +3054,15 @@ Route::get('/customer', function () {
     ];
 
     $categoryMeta = [
-        'accommodation' => ['label' => 'Accommodation'],
-        'transport' => ['label' => 'Transport'],
-        'excursion' => ['label' => 'Excursion'],
+        'accommodation'    => ['label' => 'Accommodation'],
+        'marine_transport' => ['label' => 'Marine Transport'],
+        'land_transport'   => ['label' => 'Land Transport'],
+        'excursion'        => ['label' => 'Excursions'],
         'remote_workspace' => ['label' => 'Remote Workspace'],
         'resort_day_visit' => ['label' => 'Resort Day Visit'],
-        'restaurant' => ['label' => 'Restaurant'],
-        'vehicle_rental' => ['label' => 'Vehicle Rental'],
+        'restaurant'       => ['label' => 'Restaurant'],
+        'vehicle_rental'   => ['label' => 'Vehicle Rental'],
+        'water_sports'     => ['label' => 'Water Sports'],
     ];
 
     $customerBookingsByCategory = collect(array_fill_keys(array_keys($categoryMeta), collect()));
@@ -3056,6 +3121,12 @@ Route::get('/customer', function () {
             if ($categoryKey === '' && !empty($notes['room_id'])) {
                 $categoryKey = 'accommodation';
             }
+            // Normalise transport variants from search form / legacy data
+            if ($categoryKey === 'transport' || $categoryKey === 'marine-transport' || $categoryKey === 'marine_transport') {
+                $categoryKey = 'marine_transport';
+            } elseif ($categoryKey === 'land-transport') {
+                $categoryKey = 'land_transport';
+            }
             if (!array_key_exists($categoryKey, $categoryMeta)) {
                 $categoryKey = 'accommodation';
             }
@@ -3087,10 +3158,21 @@ Route::get('/customer', function () {
             });
     }
 
+    $allBookings = $customerBookingsByCategory->flatten(1)->sortByDesc('created_at')->values();
+    $today = now()->startOfDay();
+    $bookingStatusCounts = [
+        'all'              => $allBookings->count(),
+        'awaiting_payment' => $allBookings->filter(fn ($b) => strtolower((string) ($b['payment_status'] ?? '')) === 'unpaid' && !in_array(strtolower((string) ($b['status'] ?? '')), ['cancelled', 'canceled']))->count(),
+        'upcoming'         => $allBookings->filter(fn ($b) => $b['start_at'] !== '-' && \Carbon\Carbon::parse((string) $b['start_at'])->startOfDay()->greaterThanOrEqualTo($today))->count(),
+        'awaiting_review'  => $allBookings->filter(fn ($b) => !in_array(strtolower((string) ($b['status'] ?? '')), ['pending', 'cancelled', 'canceled']) && ($b['end_at'] === '-' || \Carbon\Carbon::parse((string) $b['end_at'])->isPast()))->count(),
+    ];
+
     return view('customer-portal', [
         'summary' => $summary,
         'customerProfile' => $customerProfile,
         'customerBookingsByCategory' => $customerBookingsByCategory,
+        'allBookings' => $allBookings,
+        'bookingStatusCounts' => $bookingStatusCounts,
         'bookingCategoryMeta' => $categoryMeta,
         'customerProperties' => $customerProperties,
         'customerRoomsByProperty' => $customerRoomsByProperty,
@@ -4281,6 +4363,10 @@ Route::get('/portal/{portal}/login', function (Request $request, string $portal)
         abort(404);
     }
 
+    if ($portal === 'customer') {
+        rememberCustomerPostAuthRedirect($request);
+    }
+
     $config = portalConfig($portal);
     if (session()->get($config['session_key'], false)) {
         return $portal === 'customer'
@@ -5024,6 +5110,8 @@ Route::get('/portal/customer/register', function (Request $request) {
         return $canonicalRedirect;
     }
 
+    rememberCustomerPostAuthRedirect($request);
+
     if (session()->get('portal_customer_authenticated', false)) {
         return redirect('/');
     }
@@ -5052,6 +5140,8 @@ Route::get('/portal/customer/oauth/{provider}/redirect', function (Request $requ
     if (!in_array($provider, supportedCustomerSocialProviders(), true)) {
         abort(404);
     }
+
+    rememberCustomerPostAuthRedirect($request);
 
     $request->session()->put(portalOAuthIntentSessionKey($provider), 'customer');
 
@@ -5266,7 +5356,8 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
 
         $request->session()->forget($intentKey);
 
-        return redirect('/')->with('status', 'Signed in successfully with ' . ucfirst($provider) . '. You can continue browsing and book normally.');
+        $postAuthRedirect = consumeCustomerPostAuthRedirect($request, '/');
+        return redirect($postAuthRedirect)->with('status', 'Signed in successfully with ' . ucfirst($provider) . '. You can continue browsing and book normally.');
     } catch (\Throwable $e) {
         $request->session()->forget($intentKey);
 
@@ -5874,7 +5965,8 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
         }
 
         if ($portal === 'customer') {
-            return redirect('/')->with('status', 'Signed in successfully. You can keep browsing and book as a customer.');
+            $postAuthRedirect = consumeCustomerPostAuthRedirect($request, '/');
+            return redirect($postAuthRedirect)->with('status', 'Signed in successfully. You can keep browsing and book as a customer.');
         }
 
         return redirect(portalRoutePath($portal));

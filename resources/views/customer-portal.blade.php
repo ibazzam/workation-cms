@@ -3,1425 +3,1313 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Customer Portal | Workation</title>
+    <title>My Account | Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         :root {
-            --bg: #f6f8fc;
+            --bg: #f0f2f5;
             --ink: #16212e;
-            --muted: #5b6778;
+            --muted: #6b7a8a;
             --card: #ffffff;
-            --line: #d7e0e6;
-            --hero-1: #0f4f7f;
-            --hero-2: #0b7880;
-            --hero-3: #47a89f;
-            --accent: #f6a53e;
-            --ok: #0b5c2a;
-            --ok-bg: #d8f7e2;
-            --warn: #7a4606;
-            --warn-bg: #ffeccd;
+            --line: #e0e6ed;
+            --brand: #0f6179;
+            --brand-soft: #e8f4f9;
         }
 
-        body[data-theme='sunset'] {
-            --bg: #fff6ee;
-            --ink: #2a2024;
-            --muted: #6a5861;
-            --card: #fffdf9;
-            --line: #ead7cf;
-            --hero-1: #8f3b3b;
-            --hero-2: #bf6b3f;
-            --hero-3: #e49e5a;
-        }
-
-        body[data-theme='lagoon'] {
-            --bg: #eefaf9;
-            --ink: #12292f;
-            --muted: #4e6a72;
-            --card: #faffff;
-            --line: #cfe5e5;
-            --hero-1: #0b4f68;
-            --hero-2: #0b7f7f;
-            --hero-3: #55b89a;
-        }
-
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            margin: 0;
             font-family: "Outfit", "Trebuchet MS", sans-serif;
             color: var(--ink);
-            background:
-                radial-gradient(circle at 10% 6%, #d6f2ef 0, #d6f2ef00 30%),
-                radial-gradient(circle at 90% 8%, #ffe5b7 0, #ffe5b700 28%),
-                var(--bg);
+            background: var(--bg);
+            min-height: 100vh;
         }
 
-        .page {
-            width: min(1240px, calc(100% - 24px));
-            margin: 12px auto 28px;
+        /* ── Layout ──────────────────────────────────────────────── */
+        .portal-wrap {
+            display: flex;
+            min-height: 100vh;
         }
 
-        .customer-topbar {
+        /* ── Sidebar ─────────────────────────────────────────────── */
+        .portal-sidebar {
+            width: 248px;
+            flex-shrink: 0;
+            background: #ffffff;
+            border-right: 1px solid var(--line);
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        .sidebar-header {
+            padding: 18px 16px 14px;
+            border-bottom: 1px solid var(--line);
             display: flex;
             align-items: center;
-            justify-content: space-between;
             gap: 10px;
-            padding: 10px 12px;
-            border: 1px solid var(--line);
-            border-radius: 14px;
-            background: color-mix(in srgb, #ffffff 90%, #eef7fd 10%);
-            margin-bottom: 10px;
         }
 
-        .customer-topbar h2 {
-            margin: 0;
-            font-size: 0.92rem;
-            color: #1d435d;
-            letter-spacing: 0.02em;
-        }
-
-        .icon {
-            display: inline-flex;
+        .sidebar-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 999px;
+            background: #ddeef9;
+            color: #1d5a7e;
+            display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 6px;
-            font-size: 0.95em;
+            font-size: 0.85rem;
+            flex-shrink: 0;
         }
 
-        .customer-topbar-actions {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .customer-pill {
-            display: inline-flex;
-            align-items: center;
-            border: 1px solid #cadbeb;
-            border-radius: 999px;
-            padding: 6px 10px;
-            background: #f4fbff;
-            color: #1e4b69;
-            font-size: 0.79rem;
+        .sidebar-member-name {
+            font-size: 0.9rem;
             font-weight: 700;
+            color: #1a2f41;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .topbar-link,
-        .topbar-btn {
-            text-decoration: none;
-            border: 1px solid #cadbeb;
-            border-radius: 10px;
-            padding: 7px 11px;
-            background: #ffffff;
-            color: #1e4b69;
-            font-size: 0.8rem;
-            font-weight: 700;
-            font-family: inherit;
-            cursor: pointer;
+        .sidebar-member-email {
+            font-size: 0.72rem;
+            color: #7a90a4;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .topbar-link.primary {
-            color: #ffffff;
-            background: linear-gradient(135deg, #0f5f79 0%, #1f7f8f 100%);
-            border-color: #0f5f79;
+        .sidebar-nav {
+            padding: 8px 0;
+            flex: 1;
+            overflow-y: auto;
         }
 
-        .hero {
-            background: linear-gradient(130deg, var(--hero-1) 0%, var(--hero-2) 52%, var(--hero-3) 100%);
-            border-radius: 18px;
-            color: #fff;
-            padding: 18px;
-            box-shadow: 0 16px 36px rgba(18, 38, 58, 0.18);
-        }
-
-        .eyebrow {
-            display: inline-block;
-            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
-            font-size: 0.75rem;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: #d7f2f5;
-            margin-bottom: 10px;
-        }
-
-        .hero h1 {
-            margin: 0 0 8px;
-            font-size: clamp(1.45rem, 2.5vw, 2.1rem);
-            line-height: 1.15;
-        }
-
-        .hero p {
-            margin: 0;
-            color: #dcf4f3;
-            max-width: 900px;
-            font-size: 0.95rem;
-        }
-
-        .hero-actions {
-            margin-top: 12px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .theme-row {
-            margin-top: 10px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .theme-chip {
-            border: 1px solid rgba(215, 244, 246, 0.45);
-            border-radius: 999px;
-            padding: 6px 10px;
-            background: rgba(9, 61, 79, 0.35);
-            color: #e7fbff;
-            font-size: 0.76rem;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        .theme-chip.is-active {
-            border-color: #f6d9a7;
-            background: rgba(246, 165, 62, 0.25);
-            color: #fff4de;
-        }
-
-        .hero-btn {
-            border: 1px solid rgba(219, 247, 248, 0.5);
-            border-radius: 10px;
-            padding: 8px 12px;
-            text-decoration: none;
-            color: #ebfbff;
-            background: rgba(10, 57, 70, 0.25);
-            font-size: 0.82rem;
-            font-weight: 700;
-        }
-
-        .portal-shell {
-            margin-top: 12px;
-            display: grid;
-            grid-template-columns: 280px minmax(0, 1fr);
-            gap: 12px;
-            align-items: start;
-            min-height: calc(100vh - 96px);
-        }
-
-        .profile-dashboard {
-            margin-top: 12px;
-            border: 1px solid var(--line);
-            border-radius: 14px;
-            background: #ffffff;
-            padding: 12px;
-            display: grid;
-            grid-template-columns: 88px minmax(0, 1fr) auto;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .profile-avatar {
-            width: 88px;
-            height: 88px;
-            border-radius: 14px;
-            border: 1px solid #cddce8;
-            background: linear-gradient(135deg, #e2f3ff 0%, #ecfff4 100%);
-            display: grid;
-            place-items: center;
-            font-weight: 800;
-            color: #1d5671;
-            font-size: 1.3rem;
-            letter-spacing: 0.04em;
-        }
-
-        .profile-title {
-            margin: 0;
-            font-size: 1.08rem;
-            color: #1c3d54;
-        }
-
-        .profile-meta {
-            margin: 6px 0 0;
-            color: #4b6275;
-            font-size: 0.84rem;
-            display: grid;
-            gap: 4px;
-        }
-
-        .profile-actions {
-            display: grid;
-            gap: 8px;
-            justify-items: end;
-        }
-
-        .side-panel {
-            display: grid;
-            gap: 10px;
-            position: sticky;
-            top: 8px;
-        }
-
-        .hero-links,
-        .quick-filters {
-            display: grid;
-            gap: 8px;
-            padding: 12px;
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            background: #ffffff;
-        }
-
-        .hero-link {
-            color: #1f4d53;
-            text-decoration: none;
-            border-radius: 10px;
-            padding: 8px 10px;
-            font-size: 0.82rem;
-            background: #f4faf8;
-            border: 1px solid #d4e6e2;
-            font-weight: 700;
-        }
-
-        .portal-nav {
-            display: grid;
-            gap: 8px;
-        }
-
-        .portal-nav a {
-            text-decoration: none;
-            border: 1px solid #d6e2ec;
-            border-radius: 10px;
-            padding: 8px 10px;
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: #204864;
-            background: #f7fbff;
-        }
-
-        .quick-filter-btn {
-            border: 1px solid #d7e4ee;
-            border-radius: 10px;
-            padding: 8px;
-            background: #f8fbff;
-            color: #24405a;
-            text-align: left;
-            font-size: 0.82rem;
-            cursor: pointer;
-            font-weight: 700;
-            font-family: "Outfit", "Trebuchet MS", sans-serif;
-        }
-
-        .quick-filter-btn:hover {
-            border-color: #a6bfd4;
-            background: #f0f7ff;
-        }
-
-        .quick-filter-btn.is-active {
-            border-color: #5d97bd;
-            background: #eaf4ff;
-            color: #113e62;
-        }
-
-        .portal-content {
-            min-width: 0;
-        }
-
-        .summary-grid {
-            margin-top: 2px;
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 10px;
-        }
-
-        .summary-card {
-            background: var(--card);
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            padding: 12px;
-        }
-
-        .summary-card.accent {
-            background: linear-gradient(120deg, #fff6e3 0%, #fff1d6 100%);
-            border-color: #f5d29b;
-        }
-
-        .summary-label {
-            margin: 0;
-            font-size: 0.74rem;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
-        }
-
-        .summary-value {
-            margin: 6px 0 0;
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: #1f3346;
-        }
-
-        .summary-meta {
-            margin: 6px 0 0;
-            font-size: 0.8rem;
-            color: var(--muted);
-        }
-
-        .easy-toggle {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            border: 1px solid #d7e2ea;
-            border-radius: 10px;
-            padding: 8px 10px;
-            background: #fff;
-            font-size: 0.82rem;
-            font-weight: 700;
-            color: #294760;
-        }
-
-        .easy-toggle input {
-            width: 18px;
-            height: 18px;
-            accent-color: #187e73;
-        }
-
-        .discovery-tools {
-            margin-top: 12px;
-            padding: 12px;
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            background: #ffffff;
-            display: grid;
-            grid-template-columns: 1.25fr repeat(3, minmax(0, 1fr));
-            gap: 8px;
-            align-items: end;
-        }
-
-        .field {
-            display: grid;
-            gap: 4px;
-        }
-
-        .field label {
-            font-size: 0.73rem;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
-        }
-
-        .field input,
-        .field select {
-            border: 1px solid #c9d7e3;
-            border-radius: 10px;
-            padding: 9px 10px;
-            font-size: 0.88rem;
-            font-family: "Outfit", "Trebuchet MS", sans-serif;
-            color: #1a3348;
-            background: #fff;
-        }
-
-        .card {
-            background: var(--card);
-            border: 1px solid var(--line);
-            border-radius: 14px;
-            padding: 14px;
-        }
-
-        .applied-filter-badge {
-            margin-top: 8px;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            border: 1px solid #c8def0;
-            border-radius: 999px;
-            background: #eef7ff;
-            color: #1d4969;
-            padding: 6px 10px;
-            font-size: 0.78rem;
-            font-weight: 700;
-        }
-
-        .applied-filter-badge.is-visible {
-            animation: appliedFilterIn 220ms ease-out;
-        }
-
-        .applied-filter-badge[hidden] {
-            display: none;
-        }
-
-        @keyframes appliedFilterIn {
-            from {
-                opacity: 0;
-                transform: translateY(-4px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .applied-filter-badge.is-visible {
-                animation: none;
-            }
-        }
-
-        .applied-filter-badge button {
-            border: 1px solid #b6d2e8;
-            border-radius: 999px;
-            background: #ffffff;
-            color: #1f4b6b;
-            font-size: 0.74rem;
-            font-weight: 700;
-            padding: 4px 8px;
-            cursor: pointer;
-        }
-
-        .label {
-            margin: 0 0 8px;
-            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
-            font-size: 0.75rem;
-            letter-spacing: 0.11em;
-            text-transform: uppercase;
-            color: var(--muted);
-        }
-
-        .results-row {
-            margin: 12px 0 0;
+        /* Collapsible nav group */
+        .nav-group-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 8px;
-            flex-wrap: wrap;
-            font-size: 0.83rem;
-            color: #4c6278;
-        }
-
-        .listing-feed {
-            margin-top: 14px;
-        }
-
-        .listing-grid {
-            margin-top: 10px;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-            gap: 12px;
-        }
-
-        .listing-card {
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            background: #ffffff;
-            overflow: hidden;
-            box-shadow: 0 8px 22px rgba(23, 44, 66, 0.08);
-            display: grid;
-            grid-template-rows: auto 1fr;
-        }
-
-        .listing-property-media {
-            width: 100%;
-            aspect-ratio: 16 / 10;
-            height: auto;
-            display: block;
-            object-fit: cover;
-            background: #e8eef4;
-        }
-
-        .listing-content {
-            padding: 12px;
-        }
-
-        .listing-title {
-            margin: 0;
-            font-size: 1.06rem;
-            color: #1f3346;
-        }
-
-        .listing-badges {
-            margin-top: 8px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-
-        .badge {
-            border-radius: 999px;
-            border: 1px solid #d8e4ee;
-            background: #f7fbff;
-            color: #35556f;
-            padding: 4px 8px;
-            font-size: 0.72rem;
-            font-weight: 700;
-        }
-
-        .listing-meta {
-            margin: 6px 0 0;
-            font-size: 0.84rem;
-            color: #48627b;
-        }
-
-        .room-list {
-            margin-top: 10px;
-            display: grid;
-            gap: 8px;
-        }
-
-        .room-item {
-            border: 1px solid #dbe5ee;
-            border-radius: 10px;
-            background: #f9fcff;
-            padding: 8px;
-            display: grid;
-            grid-template-columns: 78px 1fr;
-            gap: 8px;
-            align-items: center;
-        }
-
-        .room-item img {
-            width: 78px;
-            height: 58px;
-            object-fit: cover;
-            border-radius: 8px;
-            background: #e8eef4;
-        }
-
-        .room-item strong {
-            display: block;
-            font-size: 0.84rem;
-            color: #1f3346;
-        }
-
-        .room-item span {
-            font-size: 0.78rem;
-            color: #48627b;
-        }
-
-        .listing-actions {
-            margin-top: 10px;
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .listing-actions a {
-            text-decoration: none;
-            border-radius: 10px;
-            padding: 8px 10px;
-            font-weight: 700;
-            font-size: 0.8rem;
-        }
-
-        .btn-go {
-            background: #0f7e79;
-            color: #f2fffd;
-        }
-
-        .btn-lite {
-            border: 1px solid #d5e3ef;
-            color: #2a4c68;
-            background: #f7fbff;
-        }
-
-        .layout {
-            margin-top: 14px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .empty {
-            border: 1px dashed #c8d3df;
-            border-radius: 10px;
-            padding: 12px;
-            color: var(--muted);
+            padding: 9px 16px;
             font-size: 0.85rem;
-            background: #f9fcff;
+            font-weight: 700;
+            color: #1a2f41;
+            cursor: pointer;
+            user-select: none;
+            border: none;
+            background: none;
+            width: 100%;
+            font-family: inherit;
         }
 
-        .list {
-            margin: 0;
-            padding-left: 18px;
-            line-height: 1.45;
-            color: #29435b;
+        .nav-group-header:hover { background: #f4f8fc; }
+
+        .nav-chevron {
+            color: #8a9aaa;
+            font-size: 0.7rem;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+
+        .nav-group.is-open .nav-chevron { transform: rotate(180deg); }
+
+        .nav-group-body { display: none; }
+        .nav-group.is-open .nav-group-body { display: block; }
+
+        /* Sub-links inside a group */
+        .nav-link {
+            display: block;
+            padding: 7px 16px 7px 32px;
+            font-size: 0.81rem;
+            color: #4a6275;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover { background: #f4f8fc; color: #0f5f79; }
+
+        .nav-link.is-active {
+            background: #ebf4fb;
+            color: #0a4a65;
+            font-weight: 700;
+            border-left-color: #0f6179;
+        }
+
+        /* Top-level standalone nav items */
+        .nav-item {
+            display: block;
+            padding: 9px 16px;
             font-size: 0.84rem;
+            color: #1a2f41;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
+            font-weight: 600;
         }
 
-        .status-pill {
+        .nav-item:hover { background: #f4f8fc; }
+
+        .nav-item.is-active {
+            background: #ebf4fb;
+            color: #0a4a65;
+            font-weight: 700;
+        }
+
+        .nav-divider {
+            height: 1px;
+            background: var(--line);
+            margin: 6px 8px;
+        }
+
+        .sidebar-footer {
+            padding: 12px 16px;
+            border-top: 1px solid var(--line);
+        }
+
+        .sidebar-logout {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 8px 12px;
+            background: #ffffff;
+            color: #3d5870;
+            font-size: 0.82rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .sidebar-logout:hover {
+            background: #fff5f5;
+            border-color: #f0b4b4;
+            color: #7b2525;
+        }
+
+        /* ── Main content ────────────────────────────────────────── */
+        .portal-main {
+            flex: 1;
+            min-width: 0;
+            padding: 24px 28px 48px;
+        }
+
+        /* ── Portal sections ─────────────────────────────────────── */
+        .portal-section { display: none; }
+        .portal-section.is-active { display: block; }
+
+        /* ── Section header row ──────────────────────────────────── */
+        .section-title-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+
+        .section-title-row h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #16212e;
+        }
+
+        .title-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            border: 1px solid #c8e4f5;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 0.76rem;
+            color: #1a5a7a;
+            background: #e8f4fb;
+        }
+
+        .title-actions {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .title-action-link {
+            font-size: 0.8rem;
+            color: #1a6abf;
+            text-decoration: none;
+        }
+
+        .title-action-link:hover { text-decoration: underline; }
+
+        .title-divider { color: #c0ccda; }
+
+        /* ── Booking status tabs ─────────────────────────────────── */
+        .booking-tabs {
+            display: flex;
+            border-bottom: 2px solid var(--line);
+            margin-bottom: 16px;
+        }
+
+        .booking-tab {
+            padding: 10px 20px;
+            font-size: 0.84rem;
+            font-weight: 600;
+            color: #5a6a7a;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-family: inherit;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            white-space: nowrap;
+        }
+
+        .booking-tab:hover { color: #1a2f41; }
+
+        .booking-tab.is-active {
+            color: #0d4f6a;
+            border-bottom-color: #0f6179;
+        }
+
+        /* ── Category filter pills ───────────────────────────────── */
+        .category-filter-bar {
+            display: flex;
+            gap: 2px;
+            overflow-x: auto;
+            background: #e4eaf0;
+            border-radius: 10px;
+            padding: 3px;
+            margin-bottom: 16px;
+            scrollbar-width: none;
+        }
+
+        .category-filter-bar::-webkit-scrollbar { display: none; }
+
+        .category-filter-btn {
+            white-space: nowrap;
+            padding: 7px 13px;
+            border: none;
+            background: transparent;
+            color: #4a6278;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 7px;
+            font-family: inherit;
+            flex-shrink: 0;
+        }
+
+        .category-filter-btn:hover { background: #ffffff88; }
+
+        .category-filter-btn.is-active {
+            background: #ffffff;
+            color: #0d4a65;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+
+        /* ── Booking cards ───────────────────────────────────────── */
+        .booking-list { display: grid; gap: 12px; }
+
+        .booking-card {
+            background: #ffffff;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .booking-card-meta-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--line);
+            font-size: 0.78rem;
+            color: #5a6a7a;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .booking-number-link {
+            color: #1a6abf;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .booking-number-link:hover { text-decoration: underline; }
+
+        .booking-status-badge {
             display: inline-block;
             border-radius: 999px;
-            padding: 4px 8px;
-            font-size: 0.75rem;
+            padding: 3px 11px;
+            font-size: 0.74rem;
             font-weight: 700;
         }
 
-        .status-pill.ok { color: var(--ok); background: var(--ok-bg); }
-        .status-pill.warn { color: var(--warn); background: var(--warn-bg); }
+        .bs-cancelled  { background: #fff0f0; color: #a33030; border: 1px solid #f5c0c0; }
+        .bs-confirmed  { background: #e8f8ef; color: #1a6e3a; border: 1px solid #a8dfc0; }
+        .bs-pending    { background: #fff6e0; color: #7a5c00; border: 1px solid #f5d98a; }
+        .bs-completed  { background: #f0f2f5; color: #4a5a6a; border: 1px solid #c8d4df; }
 
-        .no-results {
-            margin-top: 12px;
-            border: 1px dashed #cddbe8;
-            background: #f7fbff;
-            color: #3f5a72;
-            border-radius: 12px;
-            padding: 14px;
-            font-size: 0.88rem;
+        .booking-card-body {
+            display: grid;
+            grid-template-columns: 104px 1fr;
         }
 
-        .booking-categories {
-            margin-top: 10px;
+        .booking-card-thumb-wrap {
+            width: 104px;
+            border-right: 1px solid var(--line);
+            background: linear-gradient(135deg, #d7e8f5 0%, #c6dded 100%);
             display: flex;
-            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            color: #7a9ab4;
+            font-size: 1.8rem;
+            min-height: 90px;
+        }
+
+        .booking-card-thumb-wrap img {
+            width: 104px;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .booking-card-info {
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .booking-card-title-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
             gap: 8px;
         }
 
-        .booking-category-btn {
-            border: 1px solid #d3e0ec;
-            border-radius: 999px;
-            padding: 7px 11px;
-            background: #f8fcff;
-            color: #244a65;
-            font-size: 0.78rem;
+        .booking-card-property {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #16212e;
+        }
+
+        .booking-card-price {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #16212e;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .booking-card-meta {
+            font-size: 0.8rem;
+            color: #5a6a7a;
+            line-height: 1.45;
+        }
+
+        .booking-card-guest {
+            font-size: 0.8rem;
+            color: #3d5870;
+            font-weight: 600;
+        }
+
+        .booking-card-actions {
+            padding: 10px 16px;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            border-top: 1px solid var(--line);
+            flex-wrap: wrap;
+        }
+
+        .btn-outline {
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 6px 16px;
+            background: white;
+            color: #3d5870;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-outline:hover { border-color: #a8c0d0; background: #f5faff; }
+
+        .btn-brand {
+            display: inline-block;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 16px;
+            background: linear-gradient(135deg, #0f6179 0%, #1e7d90 100%);
+            color: white;
+            font-size: 0.8rem;
             font-weight: 700;
             cursor: pointer;
-        }
-
-        .booking-category-btn.is-active {
-            border-color: #5d97bd;
-            background: #eaf4ff;
-            color: #123f63;
-        }
-
-        .booking-panel {
-            margin-top: 10px;
-            border: 1px solid #d9e5ef;
-            border-radius: 12px;
-            background: #fbfdff;
-            padding: 10px;
-        }
-
-        .booking-panel[hidden] {
-            display: none;
-        }
-
-        .booking-list {
-            display: grid;
-            gap: 8px;
-        }
-
-        .booking-item {
-            border: 1px solid #d9e5ef;
-            border-radius: 10px;
-            background: #fff;
-            padding: 9px 10px;
-            display: grid;
-            gap: 5px;
-        }
-
-        .booking-item-title {
-            margin: 0;
-            font-size: 0.88rem;
-            color: #1b3e58;
-            font-weight: 700;
-        }
-
-        .booking-item-meta {
-            font-size: 0.79rem;
-            color: #4e667b;
-        }
-
-        .booking-item-actions {
-            margin-top: 4px;
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .booking-item-link {
+            font-family: inherit;
             text-decoration: none;
-            border: 1px solid #d2e1ec;
+        }
+
+        .btn-brand:hover { opacity: 0.92; }
+
+        .booking-empty {
+            padding: 40px 20px;
+            text-align: center;
+            color: #7a8a9a;
+            background: #f9fbfd;
+            border: 1px dashed #d0dce8;
             border-radius: 10px;
-            background: #f6fbff;
-            color: #1f4a69;
-            font-size: 0.76rem;
+        }
+
+        .booking-empty i { font-size: 2rem; color: #b0c0d0; display: block; margin-bottom: 10px; }
+
+        /* ── My Cards ────────────────────────────────────────────── */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 14px;
+        }
+
+        .payment-card {
+            background: linear-gradient(135deg, #1e3a56 0%, #0f5f7c 100%);
+            border-radius: 14px;
+            padding: 20px;
+            color: #ecf6ff;
+            min-height: 148px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .payment-card-chip { font-size: 1.1rem; opacity: 0.85; }
+        .payment-card-network { position: absolute; top: 16px; right: 16px; font-size: 1rem; opacity: 0.7; }
+        .payment-card-number { font-size: 1rem; letter-spacing: 0.15em; font-weight: 700; margin-top: 12px; }
+        .payment-card-row { display: flex; justify-content: space-between; font-size: 0.75rem; opacity: 0.7; margin-top: 6px; }
+
+        .add-card-tile {
+            border: 2px dashed #c8d8e8;
+            border-radius: 14px;
+            padding: 20px;
+            min-height: 148px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #5a7a94;
+            cursor: pointer;
+            background: #f8fbff;
+            font-size: 0.84rem;
+            font-weight: 600;
+        }
+
+        .add-card-tile:hover { border-color: #8ab4cc; background: #eef6fc; }
+
+        /* ── Generic section card ────────────────────────────────── */
+        .section-card {
+            background: white;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .section-card h3 {
+            font-size: 1rem;
+            color: #1a2f41;
+            margin-bottom: 14px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        /* ── Form layout ─────────────────────────────────────────── */
+        .profile-avatar-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .profile-avatar-large {
+            width: 72px;
+            height: 72px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #d4ecfa 0%, #c8e4f5 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #1a5070;
+            flex-shrink: 0;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .form-field { display: grid; gap: 5px; }
+        .form-field.full-width { grid-column: 1 / -1; }
+
+        .form-field label {
+            font-size: 0.75rem;
             font-weight: 700;
-            padding: 6px 9px;
+            color: #3a5060;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
         }
 
-        .easy-mode .listing-title { font-size: 1.24rem; }
-        .easy-mode .listing-meta,
-        .easy-mode .room-item span,
-        .easy-mode .hero p { font-size: 0.98rem; }
-        .easy-mode .listing-actions a,
-        .easy-mode .portal-nav a,
-        .easy-mode .hero-link,
-        .easy-mode .quick-filter-btn { font-size: 0.92rem; padding: 10px 12px; }
-
-        @media (max-width: 980px) {
-            .portal-shell { grid-template-columns: 1fr; min-height: auto; }
-            .side-panel { position: static; }
-            .portal-nav { grid-template-columns: 1fr 1fr; }
-            .discovery-tools { grid-template-columns: 1fr; }
-            .summary-grid { grid-template-columns: 1fr 1fr; }
-            .layout { grid-template-columns: 1fr; }
+        .form-field input,
+        .form-field select,
+        .form-field textarea {
+            border: 1px solid #c8d8e4;
+            border-radius: 8px;
+            padding: 9px 11px;
+            font-size: 0.88rem;
+            font-family: inherit;
+            color: #1a2f41;
+            background: #f9fbff;
         }
 
-        @media (max-width: 640px) {
-            .page { width: calc(100% - 16px); }
-            .customer-topbar { flex-direction: column; align-items: flex-start; }
-            .customer-topbar-actions { width: 100%; justify-content: flex-start; }
-            .hero { padding: 14px; }
-            .portal-nav { grid-template-columns: 1fr; }
-            .summary-grid { grid-template-columns: 1fr; }
+        .form-footer {
+            margin-top: 18px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* ── Empty states ────────────────────────────────────────── */
+        .empty-state {
+            padding: 44px 20px;
+            text-align: center;
+            color: #7a8a9a;
+            background: #f9fbfd;
+            border: 1px dashed #d0dce8;
+            border-radius: 10px;
+        }
+
+        .empty-state i { font-size: 2.2rem; color: #b0c0d0; display: block; margin-bottom: 12px; }
+        .empty-state p { font-size: 0.88rem; }
+
+        /* ── Subscriptions ───────────────────────────────────────── */
+        .pref-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.88rem;
+            color: #2a4060;
+            cursor: pointer;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f4f8;
+        }
+
+        .pref-row:last-child { border-bottom: none; }
+        .pref-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: #0f6179; flex-shrink: 0; }
+
+        /* ── No-auth banner ──────────────────────────────────────── */
+        .no-auth-banner {
+            background: white;
+            border: 1px solid #c8d8f0;
+            border-radius: 12px;
+            padding: 32px 24px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .no-auth-banner h2 { font-size: 1.2rem; color: #1a2f41; margin-bottom: 8px; }
+        .no-auth-banner p  { color: #5a7088; font-size: 0.9rem; margin-bottom: 16px; }
+        .no-auth-banner .btn-row { display: flex; gap: 10px; justify-content: center; }
+
+        /* ── Responsive ──────────────────────────────────────────── */
+        @media (max-width: 860px) {
+            .portal-sidebar { width: 220px; }
+            .portal-main { padding: 16px 16px 32px; }
+        }
+
+        @media (max-width: 680px) {
+            .portal-wrap { flex-direction: column; }
+            .portal-sidebar { width: 100%; height: auto; position: static; }
+            .booking-card-body { grid-template-columns: 80px 1fr; }
+            .booking-card-thumb-wrap { width: 80px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .section-title-row h1 { font-size: 1.25rem; }
         }
     </style>
-    @include('partials.uniform-buttons')
 </head>
 <body>
     @php
-        $customerProperties = $customerProperties ?? collect();
-        $customerRoomsByProperty = $customerRoomsByProperty ?? collect();
-        $propertyMediaByProperty = $propertyMediaByProperty ?? collect();
-        $roomMediaByRoom = $roomMediaByRoom ?? collect();
-        $bookingCategoryMeta = collect($bookingCategoryMeta ?? []);
         $customerBookingsByCategory = collect($customerBookingsByCategory ?? []);
-        $customerProfile = is_array($customerProfile ?? null) ? $customerProfile : [];
-        $customerLoggedIn = (bool) session('portal_customer_authenticated', false);
-        $customerName = trim((string) session('portal_customer_user', 'Customer'));
-        $profileName = trim((string) ($customerProfile['name'] ?? $customerName));
-        $profileEmail = trim((string) ($customerProfile['email'] ?? ''));
-        $profileMemberSince = trim((string) ($customerProfile['member_since'] ?? '-'));
-        $profileInitials = strtoupper(substr(preg_replace('/[^a-z0-9]/i', '', $profileName), 0, 2) ?: 'CU');
-        $mediaVariantUrl = static function ($media, string $variant = 'banner'): ?string {
-            $mediaId = (int) ($media->id ?? 0);
-            if ($mediaId <= 0) {
-                return null;
-            }
+        $bookingCategoryMeta        = collect($bookingCategoryMeta ?? []);
+        $allBookings                = collect($allBookings ?? $customerBookingsByCategory->flatten(1)->sortByDesc('created_at')->values());
+        $bookingStatusCounts        = $bookingStatusCounts ?? ['all' => 0, 'awaiting_payment' => 0, 'upcoming' => 0, 'awaiting_review' => 0];
+        $customerProfile            = is_array($customerProfile ?? null) ? $customerProfile : [];
+        $customerLoggedIn           = (bool) session('portal_customer_authenticated', false);
+        $customerName               = trim((string) session('portal_customer_user', 'Customer'));
+        $profileName                = trim((string) ($customerProfile['name'] ?? $customerName));
+        $profileEmail               = trim((string) ($customerProfile['email'] ?? ''));
+        $profileMemberSince         = trim((string) ($customerProfile['member_since'] ?? '-'));
+        $profileInitials            = strtoupper(substr(preg_replace('/[^a-z0-9]/i', '', $profileName), 0, 2) ?: 'CU');
 
-            $normalizedVariant = strtolower(trim($variant));
-            if (!in_array($normalizedVariant, ['banner', 'thumb'], true)) {
-                $normalizedVariant = 'banner';
-            }
+        $today = now()->startOfDay();
 
-            return '/media/vendor/' . $mediaId . '/' . $normalizedVariant;
-        };
+        $awaitingPaymentBookings = $allBookings->filter(
+            fn ($b) => strtolower((string) ($b['payment_status'] ?? '')) === 'unpaid'
+                    && !in_array(strtolower((string) ($b['status'] ?? '')), ['cancelled', 'canceled'])
+        )->values();
+
+        $upcomingBookings = $allBookings->filter(
+            fn ($b) => $b['start_at'] !== '-'
+                    && \Carbon\Carbon::parse((string) $b['start_at'])->startOfDay()->greaterThanOrEqualTo($today)
+        )->values();
+
+        $awaitingReviewBookings = $allBookings->filter(
+            fn ($b) => !in_array(strtolower((string) ($b['status'] ?? '')), ['pending', 'cancelled', 'canceled'])
+                    && ($b['end_at'] === '-' || \Carbon\Carbon::parse((string) $b['end_at'])->isPast())
+        )->values();
+
+        $bookingsByTab = [
+            'all'              => $allBookings,
+            'awaiting_payment' => $awaitingPaymentBookings,
+            'upcoming'         => $upcomingBookings,
+            'awaiting_review'  => $awaitingReviewBookings,
+        ];
+
+        $statusTabDefs = [
+            'all'              => 'All',
+            'awaiting_payment' => 'Awaiting Payment',
+            'upcoming'         => 'Upcoming',
+            'awaiting_review'  => 'Awaiting Review',
+        ];
     @endphp
 
-    <main class="page">
-        <header class="customer-topbar" aria-label="Customer account status">
-            <h2><span class="icon" aria-hidden="true">👤</span>Customer Portal</h2>
-            <div class="customer-topbar-actions">
+    <div class="portal-wrap">
+
+        {{-- ───────────── Sidebar ──────────────────────────────── --}}
+        <aside class="portal-sidebar" aria-label="Customer navigation">
+
+            <div class="sidebar-header">
+                <div class="sidebar-avatar" aria-hidden="true">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                <div style="min-width:0;">
+                    <div class="sidebar-member-name">{{ $profileName ?: 'Member' }}</div>
+                    @if ($profileEmail !== '')
+                        <div class="sidebar-member-email">{{ $profileEmail }}</div>
+                    @endif
+                </div>
+            </div>
+
+            <nav class="sidebar-nav" aria-label="Account sections">
+
+                {{-- My bookings collapsible --}}
+                <div class="nav-group is-open" data-nav-group="bookings-group">
+                    <button class="nav-group-header" type="button" data-group-toggle="bookings-group">
+                        <span>My bookings</span>
+                        <i class="fa-solid fa-chevron-up nav-chevron"></i>
+                    </button>
+                    <div class="nav-group-body">
+                        <button class="nav-link is-active" type="button" data-section="bookings" data-booking-category="all">All</button>
+                        @foreach ($bookingCategoryMeta as $categoryKey => $category)
+                            <button class="nav-link" type="button" data-section="bookings" data-booking-category="{{ $categoryKey }}">
+                                {{ (string) ($category['label'] ?? ucfirst(str_replace('_', ' ', (string) $categoryKey))) }}
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="nav-divider"></div>
+
+                <button class="nav-item" type="button" data-section="saved">Saved</button>
+                <button class="nav-item" type="button" data-section="my-posts">My posts</button>
+                <button class="nav-item" type="button" data-section="price-alerts">Price alerts</button>
+                <button class="nav-item" type="button" data-section="my-cards">My cards</button>
+                <button class="nav-item" type="button" data-section="gift-cards">Gift cards</button>
+                <button class="nav-item" type="button" data-section="promo-codes">Promo codes</button>
+
+                <div class="nav-divider"></div>
+
+                {{-- Account collapsible --}}
+                <div class="nav-group is-open" data-nav-group="account-group">
+                    <button class="nav-group-header" type="button" data-group-toggle="account-group">
+                        <span>Account</span>
+                        <i class="fa-solid fa-chevron-up nav-chevron"></i>
+                    </button>
+                    <div class="nav-group-body">
+                        <button class="nav-link" type="button" data-section="profile">Profile</button>
+                        <button class="nav-link" type="button" data-section="frequent-traveller">Frequent Traveller Info</button>
+                        <button class="nav-link" type="button" data-section="contact-info">Contact info</button>
+                        <button class="nav-link" type="button" data-section="receipt-options">Receipt &amp; invoice options</button>
+                        <button class="nav-link" type="button" data-section="subscriptions">Subscriptions</button>
+                    </div>
+                </div>
+
+            </nav>
+
+            <div class="sidebar-footer">
                 @if ($customerLoggedIn)
-                    <span class="customer-pill"><span class="icon" aria-hidden="true">✨</span>Hi, {{ $customerName }}</span>
-                    <form method="POST" action="/portal/customer/logout" style="margin:0;">
+                    <form method="POST" action="/portal/customer/logout">
                         @csrf
-                        <button class="topbar-btn" type="submit">Logout</button>
+                        <button class="sidebar-logout" type="submit">
+                            <i class="fa-solid fa-arrow-right-from-bracket" style="margin-right:6px;"></i>Sign out
+                        </button>
                     </form>
                 @else
-                    <a class="topbar-link" href="/portal/customer/login"><span class="icon" aria-hidden="true">🔐</span>Customer Login</a>
-                    <a class="topbar-link primary" href="/portal/customer/register"><span class="icon" aria-hidden="true">📝</span>Customer Registration</a>
+                    <a href="/portal/customer/login" style="display:block; text-align:center; background:linear-gradient(135deg,#0f6179,#1e7d90); color:#fff; border-radius:8px; padding:9px 14px; text-decoration:none; font-weight:700; font-size:0.84rem;">Sign in</a>
                 @endif
             </div>
-        </header>
+        </aside>
 
-        <section class="hero">
-            <span class="eyebrow">Customer Experience</span>
-            <h1>Pick your island plan in a few taps.</h1>
-            <p>Search, compare, and choose your ideal stay or experience with clear photos, simple language, and no confusion.</p>
-            <div class="hero-actions">
-                <a class="hero-btn" href="/"><span class="icon" aria-hidden="true">🏠</span>Back to Home</a>
-                <a class="hero-btn" href="#discoverListings"><span class="icon" aria-hidden="true">🧭</span>Start browsing</a>
-                <a class="hero-btn" href="mailto:support@workation.mv"><span class="icon" aria-hidden="true">💬</span>Need help?</a>
-            </div>
-            <div class="theme-row" aria-label="Theme switcher">
-                <button class="theme-chip is-active" type="button" data-theme-choice="ocean">🌊 Ocean</button>
-                <button class="theme-chip" type="button" data-theme-choice="sunset">🌇 Sunset</button>
-                <button class="theme-chip" type="button" data-theme-choice="lagoon">🏝️ Lagoon</button>
-            </div>
-        </section>
+        {{-- ───────────── Main content ─────────────────────────── --}}
+        <main class="portal-main">
 
-        <section class="profile-dashboard" aria-label="Customer profile dashboard">
-            <div class="profile-avatar" aria-hidden="true">{{ $profileInitials }}</div>
-            <div>
-                <h2 class="profile-title">{{ $profileName !== '' ? $profileName : 'Customer Profile' }}</h2>
-                <div class="profile-meta">
-                    <span>Email: {{ $profileEmail !== '' ? $profileEmail : 'Not available' }}</span>
-                    <span>Member Since: {{ $profileMemberSince !== '' ? $profileMemberSince : '-' }}</span>
-                    <span>Account: {{ $customerLoggedIn ? 'Signed In' : 'Guest' }}</span>
+            @if (!$customerLoggedIn)
+                <div class="no-auth-banner">
+                    <h2>Sign in to view your account</h2>
+                    <p>Sign in to manage your bookings, saved properties, and account details.</p>
+                    <div class="btn-row">
+                        <a class="btn-outline" href="/">Browse freely</a>
+                        <a class="btn-brand" href="/portal/customer/login">Sign in</a>
+                    </div>
                 </div>
-            </div>
-            <div class="profile-actions">
-                <a class="topbar-link" href="/portal/customer/forgot-password">Reset Password</a>
-                @if (!$customerLoggedIn)
-                    <a class="topbar-link primary" href="/portal/customer/login">Sign In</a>
-                @endif
-            </div>
-        </section>
+            @endif
 
-        <div class="portal-shell">
-            <aside class="side-panel" aria-label="Customer shortcuts">
-                <nav class="portal-nav" aria-label="Customer navigation">
-                    <a href="#customerSummary"><span class="icon" aria-hidden="true">📊</span>Summary</a>
-                    <a href="#discoverListings"><span class="icon" aria-hidden="true">🏡</span>Listings</a>
-                    <a href="#bookingsCard"><span class="icon" aria-hidden="true">📅</span>Bookings</a>
-                    <a href="#paymentsCard"><span class="icon" aria-hidden="true">💳</span>Payments</a>
-                    <a href="#notificationsCard"><span class="icon" aria-hidden="true">🔔</span>Notifications</a>
-                </nav>
-                <div class="quick-filters">
-                    <strong style="font-size:0.82rem; color:#2a4862;"><span class="icon" aria-hidden="true">⚡</span>Quick Picks</strong>
-                    <button class="quick-filter-btn" type="button" data-quick-category="all">🔎 All listings</button>
-                    <button class="quick-filter-btn" type="button" data-quick-category="accommodation">🏨 Stays</button>
-                    <button class="quick-filter-btn" type="button" data-quick-category="remote_workspace">💻 Workspaces</button>
-                    <button class="quick-filter-btn" type="button" data-quick-category="marine-transport">🚤 Marine Transport</button>
-                    <button class="quick-filter-btn" type="button" data-quick-category="land-transport">🚐 Land Transport</button>
-                    <button class="quick-filter-btn" type="button" data-quick-category="excursion">🌊 Excursions</button>
+            @if (session('status'))
+                <div style="background:#e8f8ef; border:1px solid #a8dfc0; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:0.84rem; color:#1a6e3a;">
+                    {{ session('status') }}
                 </div>
-            </aside>
+            @endif
 
-            <div class="portal-content">
-                <section id="customerSummary" class="summary-grid" aria-label="Customer dashboard summary">
-                    <article class="summary-card">
-                        <p class="summary-label"><span class="icon" aria-hidden="true">🧳</span>Upcoming Trips</p>
-                        <p class="summary-value">{{ $summary['upcoming_bookings'] }}</p>
-                        <p class="summary-meta">Confirmed future bookings</p>
-                    </article>
-                    <article class="summary-card">
-                        <p class="summary-label"><span class="icon" aria-hidden="true">✅</span>Completed Trips</p>
-                        <p class="summary-value">{{ $summary['completed_bookings'] }}</p>
-                        <p class="summary-meta">Booking history completed</p>
-                    </article>
-                    <article class="summary-card">
-                        <p class="summary-label"><span class="icon" aria-hidden="true">🧾</span>Payment Receipts</p>
-                        <p class="summary-value">{{ $summary['receipts_available'] }}</p>
-                        <p class="summary-meta">Downloadable receipts available</p>
-                    </article>
-                    <article class="summary-card">
-                        <p class="summary-label"><span class="icon" aria-hidden="true">🔔</span>Notification Status</p>
-                        <p class="summary-value"><span class="status-pill {{ $summary['notification_state'] === 'ACTIVE' ? 'ok' : 'warn' }}">{{ $summary['notification_state'] }}</span></p>
-                        <p class="summary-meta">Messages and booking updates</p>
-                    </article>
-                    <article class="summary-card accent">
-                        <p class="summary-label"><span class="icon" aria-hidden="true">👓</span>Simple Mode</p>
-                        <p class="summary-value" style="font-size:1rem; margin-top:8px;">
-                            <label class="easy-toggle" for="easyModeToggle">
-                                <input id="easyModeToggle" type="checkbox">
-                                Bigger text and simpler browsing
-                            </label>
-                        </p>
-                        <p class="summary-meta">Designed for kids and first-time users</p>
-                    </article>
-                </section>
-
-                <section class="discovery-tools" aria-label="Discovery filters">
-                    <div class="field">
-                        <label for="listingSearch">Search</label>
-                        <input id="listingSearch" type="text" placeholder="Try: beach, male, ferry, workspace...">
+            {{-- ────────── My Bookings ──────────────────────────── --}}
+            <section class="portal-section is-active" data-portal-section="bookings">
+                <div class="section-title-row">
+                    <h1>My Bookings</h1>
+                    <span class="title-badge"><i class="fa-solid fa-shield-halved" style="color:#1a6abf;"></i> Travel Worry-free Guarantee</span>
+                    <div class="title-actions">
+                        <a class="title-action-link" href="#">Can't find your booking?</a>
+                        <span class="title-divider">|</span>
+                        <a class="title-action-link" href="#" title="Download bookings"><i class="fa-solid fa-download"></i></a>
                     </div>
-                    <div class="field">
-                        <label for="listingCategoryFilter">Category</label>
-                        <select id="listingCategoryFilter">
-                            <option value="all">All categories</option>
-                            <option value="accommodation">Accommodation</option>
-                            <option value="remote_workspace">Remote Workspace</option>
-                            <option value="marine-transport">Marine Transport</option>
-                            <option value="land-transport">Land Transport</option>
-                            <option value="excursion">Excursion</option>
-                            <option value="restaurant">Restaurant</option>
-                            <option value="vehicle_rental">Vehicle Rental</option>
-                            <option value="resort_day_visit">Resort Day Visit</option>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label for="listingPriceFilter">Price band</label>
-                        <select id="listingPriceFilter">
-                            <option value="all">Any price</option>
-                            <option value="0-500">Up to 500</option>
-                            <option value="501-1000">501 to 1000</option>
-                            <option value="1001-2500">1001 to 2500</option>
-                            <option value="2501-9999999">2500+</option>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label for="listingSort">Sort by</label>
-                        <select id="listingSort">
-                            <option value="recommended">Recommended</option>
-                            <option value="priceAsc">Price low to high</option>
-                            <option value="priceDesc">Price high to low</option>
-                            <option value="nameAsc">Name A to Z</option>
-                        </select>
-                    </div>
-                </section>
-
-                <div id="appliedFilterBadge" class="applied-filter-badge" hidden>
-                    <span id="appliedFilterText">Filters applied from booking.</span>
-                    <button id="clearAppliedFilterBtn" type="button">Clear</button>
                 </div>
 
-                <section id="discoverListings" class="card listing-feed" aria-label="Customer listing feed">
-                    <p class="label">🏝️ Discover Properties and Rooms</p>
-                    <div class="results-row">
-                        <strong id="listingCountLabel">Showing 0 listings</strong>
-                        <span>Tip: use quick picks for one-tap browsing</span>
-                    </div>
-                    @if ($customerProperties->isEmpty())
-                        <div class="empty">No active listings are available right now. Please check again shortly.</div>
-                    @else
-                        <div class="listing-grid" id="listingGrid">
-                            @foreach ($customerProperties as $property)
-                                @php
-                                    $propertyId = (int) ($property->id ?? 0);
-                                    $propertyMedia = collect($propertyMediaByProperty->get($propertyId, collect()));
-                                    $primaryPropertyMedia = $propertyMedia->first();
-                                    $propertyImageThumbUrl = $primaryPropertyMedia ? $mediaVariantUrl($primaryPropertyMedia, 'thumb') : null;
-                                    $propertyImageBannerUrl = $primaryPropertyMedia ? $mediaVariantUrl($primaryPropertyMedia, 'banner') : null;
-                                    $propertyImageFallback = $primaryPropertyMedia ? (vendorMediaStorageUrlFromPath((string) ($primaryPropertyMedia->file_path ?? '')) ?? '') : '';
-                                    $allRoomsForProperty = collect($customerRoomsByProperty->get($propertyId, collect()));
-                                    $roomsForProperty = $allRoomsForProperty->take(4);
-                                    $lowestPricedRoom = $allRoomsForProperty
-                                        ->filter(static fn ($room) => is_numeric($room->base_price ?? null))
-                                        ->sortBy(static fn ($room) => (float) ($room->base_price ?? 0))
-                                        ->first();
-                                    $categoryKey = strtolower((string) ($property->listing_category ?? ''));
-                                    $isAccommodationListing = $categoryKey === 'accommodation';
-                                    $lowestRoomRate = $lowestPricedRoom ? (float) ($lowestPricedRoom->base_price ?? 0) : null;
-                                    $lowestRoomCurrency = strtoupper((string) (($lowestPricedRoom->currency ?? null) ?: ($property->currency ?? 'MVR')));
-                                    $displayPrice = $isAccommodationListing ? (float) ($lowestRoomRate ?? 0) : (float) ($property->base_price ?? 0);
-                                    $locationText = trim((string) ($property->location ?? ''));
-                                    $searchText = strtolower(trim((string) ($property->name ?? '')) . ' ' . $locationText . ' ' . $categoryKey);
-                                @endphp
-                                <article
-                                    class="listing-card"
-                                    data-listing-card
-                                    data-search="{{ $searchText }}"
-                                    data-category="{{ $categoryKey !== '' ? $categoryKey : 'other' }}"
-                                    data-price="{{ number_format($displayPrice, 2, '.', '') }}"
-                                    data-name="{{ strtolower(trim((string) ($property->name ?? ''))) }}"
-                                >
-                                    @if ($propertyImageThumbUrl)
-                                        <img class="listing-property-media" src="{{ $propertyImageThumbUrl }}" srcset="{{ $propertyImageThumbUrl }} 480w, {{ $propertyImageBannerUrl ?? $propertyImageThumbUrl }} 1600w" sizes="(max-width: 900px) 100vw, 50vw" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $propertyImageFallback }}';}" alt="{{ $primaryPropertyMedia->alt_text ?? ($property->name . ' photo') }}" loading="lazy">
-                                    @endif
-                                    <div class="listing-content">
-                                        <h2 class="listing-title">{{ $property->name }}</h2>
-                                        <p class="listing-meta">{{ $property->location ?: 'Location details coming soon' }}</p>
-                                        <div class="listing-badges">
-                                            <span class="badge">{{ strtoupper($categoryKey !== '' ? str_replace('_', ' ', $categoryKey) : 'GENERAL') }}</span>
-                                            <span class="badge">{{ strtoupper((string) ($property->currency ?? 'MVR')) }}</span>
-                                        </div>
-                                        @if ($isAccommodationListing)
-                                            <p class="listing-meta">
-                                                @if ($lowestRoomRate !== null)
-                                                    Starting from {{ $lowestRoomCurrency }} {{ number_format($lowestRoomRate, 2) }} per night | {{ $allRoomsForProperty->count() }} room type{{ $allRoomsForProperty->count() === 1 ? '' : 's' }}
-                                                @else
-                                                    Room rates coming soon
-                                                @endif
-                                            </p>
-                                        @else
-                                            <p class="listing-meta">{{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format((float) ($property->base_price ?? 0), 2) }} | Guests: {{ (int) ($property->max_guests ?? 0) }}</p>
-                                        @endif
-                                        <div class="room-list" aria-label="Room-level entries for {{ $property->name }}">
-                                            @forelse ($roomsForProperty as $room)
-                                                @php
-                                                    $roomId = (int) ($room->id ?? 0);
-                                                    $roomMediaItems = collect($roomMediaByRoom->get($roomId, collect()));
-                                                    $primaryRoomMedia = $roomMediaItems->first();
-                                                    $roomImageThumbUrl = $primaryRoomMedia ? $mediaVariantUrl($primaryRoomMedia, 'thumb') : null;
-                                                    $roomImageBannerUrl = $primaryRoomMedia ? $mediaVariantUrl($primaryRoomMedia, 'banner') : null;
-                                                    $roomImageFallback = $primaryRoomMedia ? (vendorMediaStorageUrlFromPath((string) ($primaryRoomMedia->file_path ?? '')) ?? '') : '';
-                                                @endphp
-                                                <article class="room-item">
-                                                    @if ($roomImageThumbUrl)
-                                                        <img src="{{ $roomImageThumbUrl }}" srcset="{{ $roomImageThumbUrl }} 480w, {{ $roomImageBannerUrl ?? $roomImageThumbUrl }} 1600w" sizes="70px" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $roomImageFallback }}';}" alt="{{ $primaryRoomMedia->alt_text ?? ($room->name . ' photo') }}" loading="lazy">
-                                                    @else
-                                                        <div class="empty" style="margin:0; padding:6px; font-size:0.74rem;">No photo</div>
-                                                    @endif
-                                                    <div>
-                                                        <strong>{{ $room->name }}</strong>
-                                                        <span>Qty {{ (int) ($room->quantity ?? 0) }} | Max {{ (int) ($room->max_occupancy ?? 0) }} | {{ strtoupper((string) ($room->currency ?? 'MVR')) }} {{ number_format((float) ($room->base_price ?? 0), 2) }}</span>
-                                                    </div>
-                                                </article>
-                                            @empty
-                                                <div class="empty">Room inventory will appear here once published by the vendor.</div>
-                                            @endforelse
-                                        </div>
-                                        <div class="listing-actions">
-                                            <a class="btn-go" href="#">Book now</a>
-                                            <a class="btn-lite" href="#">View details</a>
-                                        </div>
-                                    </div>
-                                </article>
-                            @endforeach
-                        </div>
-                        <div id="noResultsState" class="no-results" hidden>No listings match your filters yet. Try another category or clear search terms.</div>
-                    @endif
-                </section>
+                {{-- Status tabs --}}
+                <div class="booking-tabs" role="tablist" aria-label="Booking status filter">
+                    @foreach ($statusTabDefs as $tabKey => $tabLabel)
+                        <button class="booking-tab {{ $loop->first ? 'is-active' : '' }}" type="button" role="tab" data-booking-tab="{{ $tabKey }}">
+                            {{ $tabLabel }}
+                        </button>
+                    @endforeach
+                </div>
 
-                <section class="layout">
-                    <article id="bookingsCard" class="card">
-                        <p class="label">📅 Bookings</p>
-                        <div class="booking-categories" aria-label="Booking categories">
-                            @foreach ($bookingCategoryMeta as $categoryKey => $category)
-                                @php
-                                    $bookingCount = collect($customerBookingsByCategory->get($categoryKey, collect()))->count();
-                                @endphp
-                                <button
-                                    class="booking-category-btn {{ $loop->first ? 'is-active' : '' }}"
-                                    type="button"
-                                    data-booking-category-btn="{{ $categoryKey }}"
-                                >
-                                    {{ (string) ($category['label'] ?? strtoupper((string) $categoryKey)) }} ({{ $bookingCount }})
-                                </button>
-                            @endforeach
-                        </div>
+                {{-- Category filter pills --}}
+                <div class="category-filter-bar" id="bookingCategoryBar" aria-label="Filter by booking category">
+                    <button class="category-filter-btn is-active" type="button" data-category-pill="all">All</button>
+                    @foreach ($bookingCategoryMeta as $catKey => $cat)
+                        <button class="category-filter-btn" type="button" data-category-pill="{{ $catKey }}">
+                            {{ (string) ($cat['label'] ?? ucfirst(str_replace('_', ' ', (string) $catKey))) }}
+                        </button>
+                    @endforeach
+                </div>
 
-                        @foreach ($bookingCategoryMeta as $categoryKey => $category)
-                            @php
-                                $bookings = collect($customerBookingsByCategory->get($categoryKey, collect()));
-                            @endphp
-                            <section class="booking-panel" data-booking-panel="{{ $categoryKey }}" {{ $loop->first ? '' : 'hidden' }}>
-                                @if ($bookings->isEmpty())
-                                    <div class="empty">No bookings available under {{ (string) ($category['label'] ?? 'this category') }} yet.</div>
-                                @else
-                                    <div class="booking-list">
-                                        @foreach ($bookings as $booking)
-                                            <article class="booking-item">
-                                                <p class="booking-item-title">{{ (string) ($booking['property_name'] ?? 'Property') }} • {{ (string) ($booking['service_label'] ?? 'Service') }}</p>
-                                                <div class="booking-item-meta">Trip: {{ (string) ($booking['start_at'] ?? '-') }} to {{ (string) ($booking['end_at'] ?? '-') }}</div>
-                                                <div class="booking-item-meta">Status: {{ (string) ($booking['status'] ?? 'PENDING') }} | Payment: {{ (string) ($booking['payment_status'] ?? 'UNPAID') }}</div>
-                                                <div class="booking-item-meta">Total: {{ (string) ($booking['currency'] ?? 'MVR') }} {{ number_format((float) ($booking['total_amount'] ?? 0), 2) }} | Booking #{{ (int) ($booking['id'] ?? 0) }}</div>
-                                                <div class="booking-item-actions">
-                                                    @if ((int) ($booking['id'] ?? 0) > 0)
-                                                        <a class="booking-item-link" href="/booking/checkout/{{ (int) $booking['id'] }}">🔎 View Booking Summary</a>
-                                                    @endif
-                                                    <a class="booking-item-link" href="#discoverListings" data-browse-category="{{ (string) ($booking['category_key'] ?? 'all') }}" data-browse-price="{{ number_format((float) ($booking['total_amount'] ?? 0), 2, '.', '') }}">🏝️ Browse Similar Services</a>
+                {{-- One panel per status tab --}}
+                @foreach ($statusTabDefs as $tabKey => $tabLabel)
+                    @php $tabBookings = $bookingsByTab[$tabKey] ?? collect(); @endphp
+                    <div data-tab-panel="{{ $tabKey }}" {{ !$loop->first ? 'hidden' : '' }}>
+                        @if ($tabBookings->isEmpty())
+                            <div class="booking-empty">
+                                <i class="fa-regular fa-calendar-xmark"></i>
+                                No bookings in this category yet.
+                            </div>
+                        @else
+                            <div class="booking-list" data-booking-list="{{ $tabKey }}">
+                                @foreach ($tabBookings as $booking)
+                                    @php
+                                        $bStatus       = strtolower(trim((string) ($booking['status'] ?? 'pending')));
+                                        $bStatusClass  = match($bStatus) {
+                                            'confirmed'           => 'bs-confirmed',
+                                            'cancelled','canceled' => 'bs-cancelled',
+                                            'completed'           => 'bs-completed',
+                                            default               => 'bs-pending',
+                                        };
+                                        $bStart = (string) ($booking['start_at'] ?? '-');
+                                        $bEnd   = (string) ($booking['end_at'] ?? '-');
+                                        $bNights = ($bStart !== '-' && $bEnd !== '-')
+                                            ? max(1, (int) \Carbon\Carbon::parse($bStart)->diffInDays(\Carbon\Carbon::parse($bEnd)))
+                                            : null;
+                                        $bStartLabel = $bStart !== '-' ? \Carbon\Carbon::parse($bStart)->format('M j') : '-';
+                                        $bEndLabel   = $bEnd   !== '-' ? \Carbon\Carbon::parse($bEnd)->format('M j')   : '-';
+                                        $bCreated    = (string) ($booking['created_at'] ?? '-');
+                                        $bCreatedLabel = $bCreated !== '-' ? \Carbon\Carbon::parse($bCreated)->format('F j, Y') : '-';
+                                    @endphp
+                                    <article class="booking-card" data-booking-category="{{ (string) ($booking['category_key'] ?? 'accommodation') }}">
+
+                                        <div class="booking-card-meta-bar">
+                                            <span>
+                                                Booking No.&nbsp;
+                                                <a class="booking-number-link" href="/booking/checkout/{{ (int) ($booking['id'] ?? 0) }}">#{{ str_pad((string) (int) ($booking['id'] ?? 0), 6, '0', STR_PAD_LEFT) }}</a>
+                                                &nbsp;|&nbsp; Booking Date: {{ $bCreatedLabel }}
+                                            </span>
+                                            <span class="booking-status-badge {{ $bStatusClass }}">{{ strtoupper($bStatus) }}</span>
+                                        </div>
+
+                                        <div class="booking-card-body">
+                                            <div class="booking-card-thumb-wrap" aria-hidden="true">
+                                                <i class="fa-solid fa-building"></i>
+                                            </div>
+                                            <div class="booking-card-info">
+                                                <div class="booking-card-title-row">
+                                                    <span class="booking-card-property">{{ (string) ($booking['property_name'] ?? 'Property') }}</span>
+                                                    <span class="booking-card-price">{{ (string) ($booking['currency'] ?? 'MVR') }} {{ number_format((float) ($booking['total_amount'] ?? 0), 2) }}</span>
                                                 </div>
-                                            </article>
-                                        @endforeach
-                                    </div>
-                                @endif
-                            </section>
-                        @endforeach
-                    </article>
-                    <article id="paymentsCard" class="card">
-                        <p class="label">💳 Payments and Receipts</p>
-                        <ul class="list">
-                            <li>Recent payment timeline with status badges</li>
-                            <li>Receipt download links for settled invoices</li>
-                            <li>Support escalation entry for failed charges</li>
-                        </ul>
-                    </article>
-                    <article id="notificationsCard" class="card">
-                        <p class="label">🔔 Notifications Center</p>
-                        <div class="empty">No new notifications. This section is ready for booking updates, reminders, and support responses.</div>
-                    </article>
-                    <article class="card">
-                        <p class="label">🛟 Account and Support</p>
-                        <ul class="list">
-                            <li><a href="/terms-of-service">Terms of Service</a></li>
-                            <li><a href="/privacy-policy">Privacy Policy</a></li>
-                            <li><a href="mailto:support@workation.mv">Contact Support</a></li>
-                        </ul>
-                    </article>
-                </section>
+                                                <div class="booking-card-meta">
+                                                    {{ $bStartLabel }} – {{ $bEndLabel }}
+                                                    @if ($bNights !== null)
+                                                        &middot; {{ $bNights }} night{{ $bNights !== 1 ? 's' : '' }}
+                                                    @endif
+                                                </div>
+                                                @if (trim((string) ($booking['service_label'] ?? '')) !== '')
+                                                    <div class="booking-card-meta">{{ (string) $booking['service_label'] }}</div>
+                                                @endif
+                                                <div class="booking-card-guest">
+                                                    {{ (string) ($booking['category_label'] ?? '') }}
+                                                    &middot; Payment: {{ strtoupper((string) ($booking['payment_status'] ?? 'UNPAID')) }}
+                                                </div>
+                                            </div>
+                                        </div>
 
-                @include('partials.global-site-footer')
-            </div>
-        </div>
-    </main>
+                                        <div class="booking-card-actions">
+                                            <button class="btn-outline" type="button">Delete</button>
+                                            <a class="btn-outline" href="/">Similar deals</a>
+                                            <a class="btn-brand" href="/">Book Again</a>
+                                        </div>
+                                    </article>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+            </section>
+
+            {{-- ────────── Saved / Favourites ──────────────────── --}}
+            <section class="portal-section" data-portal-section="saved">
+                <div class="section-title-row"><h1>Saved</h1></div>
+                <div class="empty-state">
+                    <i class="fa-regular fa-heart"></i>
+                    <p>Properties and experiences you save while browsing will appear here.</p>
+                    <a class="btn-outline" href="/" style="display:inline-block; margin-top:14px;">Start browsing</a>
+                </div>
+            </section>
+
+            {{-- ────────── My Posts (reviews) ──────────────────── --}}
+            <section class="portal-section" data-portal-section="my-posts">
+                <div class="section-title-row"><h1>My Posts</h1></div>
+                <div class="empty-state">
+                    <i class="fa-regular fa-star"></i>
+                    <p>Reviews and ratings you've submitted to vendors and service providers appear here.</p>
+                </div>
+            </section>
+
+            {{-- ────────── Price Alerts ─────────────────────────── --}}
+            <section class="portal-section" data-portal-section="price-alerts">
+                <div class="section-title-row"><h1>Price Alerts</h1></div>
+                <div class="empty-state">
+                    <i class="fa-regular fa-bell"></i>
+                    <p>Set price alerts for properties and services to get notified when rates drop.</p>
+                </div>
+            </section>
+
+            {{-- ────────── My Cards ─────────────────────────────── --}}
+            <section class="portal-section" data-portal-section="my-cards">
+                <div class="section-title-row"><h1>My Cards</h1></div>
+                <div class="cards-grid">
+                    <div class="add-card-tile" role="button" tabindex="0">
+                        <i class="fa-solid fa-plus" style="font-size:1.3rem;"></i>
+                        Add a credit or debit card
+                    </div>
+                </div>
+                <p style="margin-top:14px; font-size:0.78rem; color:#8a9aaa;">
+                    <i class="fa-solid fa-lock" style="margin-right:4px;"></i>
+                    Saved cards are encrypted and stored securely. They are never shared with third parties.
+                </p>
+            </section>
+
+            {{-- ────────── Gift Cards ───────────────────────────── --}}
+            <section class="portal-section" data-portal-section="gift-cards">
+                <div class="section-title-row"><h1>Gift Cards</h1></div>
+                <div class="empty-state">
+                    <i class="fa-solid fa-gift"></i>
+                    <p>Redeem a Workation gift card or check your remaining balance here.</p>
+                </div>
+            </section>
+
+            {{-- ────────── Promo Codes ──────────────────────────── --}}
+            <section class="portal-section" data-portal-section="promo-codes">
+                <div class="section-title-row"><h1>Promo Codes</h1></div>
+                <div class="empty-state">
+                    <i class="fa-solid fa-tag"></i>
+                    <p>Your available and past promo codes will appear here.</p>
+                </div>
+            </section>
+
+            {{-- ────────── Profile ──────────────────────────────── --}}
+            <section class="portal-section" data-portal-section="profile">
+                <div class="section-title-row"><h1>Profile</h1></div>
+                <div class="section-card">
+                    <div class="profile-avatar-row">
+                        <div class="profile-avatar-large" aria-hidden="true">{{ $profileInitials }}</div>
+                        <div>
+                            <p style="font-size:1rem; font-weight:700; color:#1a2f41;">{{ $profileName }}</p>
+                            <p style="font-size:0.82rem; color:#5a7088; margin-top:4px;">Member since {{ $profileMemberSince }}</p>
+                        </div>
+                    </div>
+                    <form method="POST" action="/portal/customer/profile/update">
+                        @csrf
+                        <div class="form-grid">
+                            <div class="form-field">
+                                <label for="profileFirstName">First name</label>
+                                <input id="profileFirstName" name="first_name" type="text" value="{{ explode(' ', $profileName)[0] ?? '' }}" placeholder="First name">
+                            </div>
+                            <div class="form-field">
+                                <label for="profileLastName">Last name</label>
+                                <input id="profileLastName" name="last_name" type="text" value="{{ implode(' ', array_slice(explode(' ', $profileName), 1)) }}" placeholder="Last name">
+                            </div>
+                            <div class="form-field">
+                                <label for="profileEmail">Email</label>
+                                <input id="profileEmail" name="email" type="email" value="{{ $profileEmail }}" placeholder="Email address">
+                            </div>
+                            <div class="form-field">
+                                <label for="profilePhone">Phone</label>
+                                <input id="profilePhone" name="phone" type="tel" placeholder="Phone number">
+                            </div>
+                            <div class="form-field">
+                                <label for="profileDob">Date of birth</label>
+                                <input id="profileDob" name="dob" type="date">
+                            </div>
+                            <div class="form-field">
+                                <label for="profileNationality">Nationality</label>
+                                <input id="profileNationality" name="nationality" type="text" placeholder="Your nationality">
+                            </div>
+                            <div class="form-field">
+                                <label for="profileGender">Gender</label>
+                                <select id="profileGender" name="gender">
+                                    <option value="">Prefer not to say</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-field">
+                                <label for="profileLanguage">Preferred language</label>
+                                <select id="profileLanguage" name="preferred_language">
+                                    <option value="en">English</option>
+                                    <option value="dv">Dhivehi</option>
+                                    <option value="ar">Arabic</option>
+                                    <option value="zh">Chinese</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-footer">
+                            <button class="btn-brand" type="submit" style="padding:9px 22px; border-radius:8px;">Save changes</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            {{-- ────────── Frequent Traveller Info ──────────────── --}}
+            <section class="portal-section" data-portal-section="frequent-traveller">
+                <div class="section-title-row"><h1>Frequent Traveller Info</h1></div>
+                <div class="section-card">
+                    <h3>Travel Documents &amp; Loyalty Programmes</h3>
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label for="ftPassport">Passport number</label>
+                            <input id="ftPassport" name="passport_number" type="text" placeholder="Passport No.">
+                        </div>
+                        <div class="form-field">
+                            <label for="ftPassportExpiry">Passport expiry</label>
+                            <input id="ftPassportExpiry" name="passport_expiry" type="date">
+                        </div>
+                        <div class="form-field">
+                            <label for="ftMembership">Loyalty / frequent traveller no.</label>
+                            <input id="ftMembership" name="loyalty_number" type="text" placeholder="Membership number">
+                        </div>
+                        <div class="form-field">
+                            <label for="ftPreferredSeat">Preferred seat</label>
+                            <select id="ftPreferredSeat" name="preferred_seat">
+                                <option value="">No preference</option>
+                                <option value="window">Window</option>
+                                <option value="aisle">Aisle</option>
+                                <option value="middle">Middle</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="ftDiet">Dietary preference</label>
+                            <select id="ftDiet" name="dietary_preference">
+                                <option value="">No special diet</option>
+                                <option value="vegetarian">Vegetarian</option>
+                                <option value="vegan">Vegan</option>
+                                <option value="halal">Halal</option>
+                                <option value="gluten_free">Gluten-free</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="ftEmergencyContact">Emergency contact number</label>
+                            <input id="ftEmergencyContact" name="emergency_contact" type="tel" placeholder="Emergency contact">
+                        </div>
+                    </div>
+                    <div class="form-footer">
+                        <button class="btn-brand" type="button" style="padding:9px 22px; border-radius:8px;">Save</button>
+                    </div>
+                </div>
+            </section>
+
+            {{-- ────────── Contact Info ─────────────────────────── --}}
+            <section class="portal-section" data-portal-section="contact-info">
+                <div class="section-title-row"><h1>Contact Info</h1></div>
+                <div class="section-card">
+                    <h3>How we reach you</h3>
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label for="ciEmail">Email address</label>
+                            <input id="ciEmail" name="contact_email" type="email" value="{{ $profileEmail }}" placeholder="Your email">
+                        </div>
+                        <div class="form-field">
+                            <label for="ciPhone">Mobile number</label>
+                            <input id="ciPhone" name="contact_phone" type="tel" placeholder="Mobile number">
+                        </div>
+                        <div class="form-field full-width">
+                            <label for="ciAddress">Mailing address</label>
+                            <input id="ciAddress" name="address" type="text" placeholder="Street address">
+                        </div>
+                        <div class="form-field">
+                            <label for="ciCity">City</label>
+                            <input id="ciCity" name="city" type="text" placeholder="City">
+                        </div>
+                        <div class="form-field">
+                            <label for="ciCountry">Country</label>
+                            <input id="ciCountry" name="country" type="text" placeholder="Country">
+                        </div>
+                    </div>
+                    <div class="form-footer">
+                        <button class="btn-brand" type="button" style="padding:9px 22px; border-radius:8px;">Save</button>
+                    </div>
+                </div>
+            </section>
+
+            {{-- ────────── Receipt & Invoice Options ───────────── --}}
+            <section class="portal-section" data-portal-section="receipt-options">
+                <div class="section-title-row"><h1>Receipt &amp; Invoice Options</h1></div>
+                <div class="section-card">
+                    <h3>Billing preferences</h3>
+                    <div class="form-grid">
+                        <div class="form-field full-width">
+                            <label for="roName">Name on receipt</label>
+                            <input id="roName" name="receipt_name" type="text" value="{{ $profileName }}" placeholder="Full name or company name">
+                        </div>
+                        <div class="form-field full-width">
+                            <label for="roVat">VAT / tax registration number</label>
+                            <input id="roVat" name="vat_number" type="text" placeholder="Optional">
+                        </div>
+                        <div class="form-field full-width">
+                            <label for="roBilling">Billing address</label>
+                            <input id="roBilling" name="billing_address" type="text" placeholder="Billing address">
+                        </div>
+                        <div class="form-field">
+                            <label for="roFormat">Preferred receipt format</label>
+                            <select id="roFormat" name="receipt_format">
+                                <option value="email">Email PDF</option>
+                                <option value="download">Downloadable link</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-footer">
+                        <button class="btn-brand" type="button" style="padding:9px 22px; border-radius:8px;">Save</button>
+                    </div>
+                </div>
+            </section>
+
+            {{-- ────────── Subscriptions ───────────────────────── --}}
+            <section class="portal-section" data-portal-section="subscriptions">
+                <div class="section-title-row"><h1>Subscriptions</h1></div>
+                <div class="section-card">
+                    <h3>Communication preferences</h3>
+                    <label class="pref-row"><input type="checkbox" checked> Booking confirmations and status updates</label>
+                    <label class="pref-row"><input type="checkbox" checked> Price drop alerts for saved properties</label>
+                    <label class="pref-row"><input type="checkbox"> Promotional offers and new listings</label>
+                    <label class="pref-row"><input type="checkbox"> Weekly travel inspiration newsletter</label>
+                    <label class="pref-row"><input type="checkbox"> Tips and recommendations from Workation team</label>
+                    <div class="form-footer">
+                        <button class="btn-brand" type="button" style="padding:9px 22px; border-radius:8px;">Save preferences</button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
 
     <script>
         (function () {
-            const searchInput = document.getElementById('listingSearch');
-            const categoryFilter = document.getElementById('listingCategoryFilter');
-            const priceFilter = document.getElementById('listingPriceFilter');
-            const sortFilter = document.getElementById('listingSort');
-            const listingGrid = document.getElementById('listingGrid');
-            const listingCountLabel = document.getElementById('listingCountLabel');
-            const noResultsState = document.getElementById('noResultsState');
-            const easyModeToggle = document.getElementById('easyModeToggle');
-            const quickButtons = Array.from(document.querySelectorAll('[data-quick-category]'));
-            const themeButtons = Array.from(document.querySelectorAll('[data-theme-choice]'));
-            const bookingCategoryButtons = Array.from(document.querySelectorAll('[data-booking-category-btn]'));
-            const bookingPanels = Array.from(document.querySelectorAll('[data-booking-panel]'));
-            const bookingBrowseLinks = Array.from(document.querySelectorAll('[data-browse-category]'));
-            const appliedFilterBadge = document.getElementById('appliedFilterBadge');
-            const appliedFilterText = document.getElementById('appliedFilterText');
-            const clearAppliedFilterBtn = document.getElementById('clearAppliedFilterBtn');
+            'use strict';
 
-            const THEME_STORAGE_KEY = 'workation-customer-theme';
-            const applyTheme = function (themeName) {
-                const normalized = String(themeName || 'ocean').toLowerCase();
-                const effectiveTheme = ['ocean', 'sunset', 'lagoon'].includes(normalized) ? normalized : 'ocean';
+            const allSections = Array.from(document.querySelectorAll('[data-portal-section]'));
+            const allNavButtons = Array.from(document.querySelectorAll('[data-section]'));
 
-                if (effectiveTheme === 'ocean') {
-                    document.body.removeAttribute('data-theme');
+            // ── Activate a portal section ─────────────────────────────
+            function activateSection(sectionKey) {
+                allSections.forEach(function (s) {
+                    s.classList.toggle('is-active', s.getAttribute('data-portal-section') === sectionKey);
+                });
+            }
+
+            // ── Highlight active sidebar link ─────────────────────────
+            function setActiveNav(sectionKey, bookingCategory) {
+                allNavButtons.forEach(function (btn) {
+                    const btnSection  = btn.getAttribute('data-section') || '';
+                    const btnCategory = btn.getAttribute('data-booking-category') || '';
+
+                    if (btnCategory) {
+                        // sub-link: match both section + category
+                        btn.classList.toggle('is-active', btnSection === sectionKey && btnCategory === (bookingCategory || 'all'));
+                    } else {
+                        btn.classList.toggle('is-active', btnSection === sectionKey && sectionKey !== 'bookings');
+                    }
+                });
+            }
+
+            // ── Current state ─────────────────────────────────────────
+            let activeTab      = 'all';
+            let activeCategory = 'all';
+
+            const categoryPills = Array.from(document.querySelectorAll('[data-category-pill]'));
+
+            // ── Filter booking cards by tab + category ────────────────
+            function filterBookings(tabKey, categoryKey) {
+                activeTab      = tabKey      || 'all';
+                activeCategory = categoryKey || 'all';
+
+                // Show correct tab panel
+                document.querySelectorAll('[data-tab-panel]').forEach(function (panel) {
+                    panel.hidden = panel.getAttribute('data-tab-panel') !== activeTab;
+                });
+
+                // Filter cards inside that panel
+                const visiblePanel = document.querySelector('[data-tab-panel="' + activeTab + '"]');
+                if (visiblePanel) {
+                    visiblePanel.querySelectorAll('[data-booking-category]').forEach(function (card) {
+                        const cardCat = card.getAttribute('data-booking-category') || '';
+                        card.style.display = (activeCategory === 'all' || cardCat === activeCategory) ? '' : 'none';
+                    });
+                }
+
+                // Sync category pills
+                categoryPills.forEach(function (pill) {
+                    pill.classList.toggle('is-active', pill.getAttribute('data-category-pill') === activeCategory);
+                });
+            }
+
+            // ── Sidebar navigation clicks ─────────────────────────────
+            allNavButtons.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    const sectionKey  = btn.getAttribute('data-section')          || 'bookings';
+                    const catKey      = btn.getAttribute('data-booking-category') || '';
+
+                    activateSection(sectionKey);
+
+                    if (sectionKey === 'bookings') {
+                        const cat = catKey || 'all';
+                        filterBookings(activeTab, cat);
+                        setActiveNav(sectionKey, cat);
+                    } else {
+                        setActiveNav(sectionKey, '');
+                    }
+                });
+            });
+
+            // ── Booking status tabs ───────────────────────────────────
+            const bookingTabs = Array.from(document.querySelectorAll('[data-booking-tab]'));
+            bookingTabs.forEach(function (tab) {
+                tab.addEventListener('click', function () {
+                    const tabKey = tab.getAttribute('data-booking-tab') || 'all';
+                    bookingTabs.forEach(function (t) { t.classList.toggle('is-active', t === tab); });
+                    filterBookings(tabKey, activeCategory);
+                });
+            });
+
+            // ── Category filter pills ─────────────────────────────────
+            categoryPills.forEach(function (pill) {
+                pill.addEventListener('click', function () {
+                    const cat = pill.getAttribute('data-category-pill') || 'all';
+                    filterBookings(activeTab, cat);
+                    // Sync sidebar nav link
+                    setActiveNav('bookings', cat);
+                });
+            });
+
+            // ── Nav group collapse / expand ───────────────────────────
+            document.querySelectorAll('[data-group-toggle]').forEach(function (header) {
+                header.addEventListener('click', function () {
+                    const groupName = header.getAttribute('data-group-toggle');
+                    const group = document.querySelector('[data-nav-group="' + groupName + '"]');
+                    if (group) { group.classList.toggle('is-open'); }
+                });
+            });
+
+            // ── Hash-based deep linking ───────────────────────────────
+            const hashMap = {
+                '#bookings':           ['bookings',           'all'],
+                '#saved':              ['saved',              ''],
+                '#favourites':         ['saved',              ''],
+                '#my-posts':           ['my-posts',           ''],
+                '#posts':              ['my-posts',           ''],
+                '#price-alerts':       ['price-alerts',       ''],
+                '#alerts':             ['price-alerts',       ''],
+                '#my-cards':           ['my-cards',           ''],
+                '#gift-cards':         ['gift-cards',         ''],
+                '#promos':             ['promo-codes',        ''],
+                '#profile':            ['profile',            ''],
+                '#frequent-traveller': ['frequent-traveller', ''],
+                '#contact-info':       ['contact-info',       ''],
+                '#receipt-options':    ['receipt-options',    ''],
+                '#subscriptions':      ['subscriptions',      ''],
+            };
+
+            function applyHash() {
+                const entry = hashMap[window.location.hash];
+                if (!entry) { return; }
+                const [sectionKey, catKey] = entry;
+                activateSection(sectionKey);
+                if (sectionKey === 'bookings') {
+                    filterBookings(activeTab, catKey || 'all');
+                    setActiveNav(sectionKey, catKey || 'all');
                 } else {
-                    document.body.setAttribute('data-theme', effectiveTheme);
-                }
-
-                themeButtons.forEach(function (btn) {
-                    const btnTheme = String(btn.getAttribute('data-theme-choice') || 'ocean').toLowerCase();
-                    btn.classList.toggle('is-active', btnTheme === effectiveTheme);
-                });
-
-                try {
-                    window.localStorage.setItem(THEME_STORAGE_KEY, effectiveTheme);
-                } catch (error) {
-                    // Ignore storage errors.
-                }
-            };
-
-            themeButtons.forEach(function (button) {
-                button.addEventListener('click', function () {
-                    applyTheme(button.getAttribute('data-theme-choice'));
-                });
-            });
-
-            try {
-                applyTheme(window.localStorage.getItem(THEME_STORAGE_KEY) || 'ocean');
-            } catch (error) {
-                applyTheme('ocean');
-            }
-
-            const activateBookingCategory = function (categoryKey) {
-                const normalized = String(categoryKey || '').toLowerCase();
-
-                bookingCategoryButtons.forEach(function (button) {
-                    button.classList.toggle('is-active', String(button.getAttribute('data-booking-category-btn') || '').toLowerCase() === normalized);
-                });
-
-                bookingPanels.forEach(function (panel) {
-                    const panelKey = String(panel.getAttribute('data-booking-panel') || '').toLowerCase();
-                    panel.hidden = panelKey !== normalized;
-                });
-            };
-
-            bookingCategoryButtons.forEach(function (button) {
-                button.addEventListener('click', function () {
-                    activateBookingCategory(button.getAttribute('data-booking-category-btn'));
-                });
-            });
-
-            if (bookingCategoryButtons.length > 0) {
-                activateBookingCategory(bookingCategoryButtons[0].getAttribute('data-booking-category-btn'));
-            }
-
-            if (!listingGrid) {
-                return;
-            }
-
-            const cards = Array.from(listingGrid.querySelectorAll('[data-listing-card]'));
-
-            const categoryLabelMap = {
-                all: 'All categories',
-                accommodation: 'Accommodation',
-                transport: 'Transport',
-                'marine-transport': 'Marine Transport',
-                'land-transport': 'Land Transport',
-                excursion: 'Excursion',
-                remote_workspace: 'Remote Workspace',
-                resort_day_visit: 'Resort Day Visit',
-                restaurant: 'Restaurant',
-                vehicle_rental: 'Vehicle Rental'
-            };
-
-            const priceLabelMap = {
-                all: 'Any price',
-                '0-500': 'Up to 500',
-                '501-1000': '501 to 1000',
-                '1001-2500': '1001 to 2500',
-                '2501-9999999': '2500+'
-            };
-
-            function setAppliedFilterBadge(categoryValue, priceValue) {
-                if (!appliedFilterBadge || !appliedFilterText) {
-                    return;
-                }
-
-                const categoryLabel = categoryLabelMap[String(categoryValue || 'all')] || 'Category';
-                const priceLabel = priceLabelMap[String(priceValue || 'all')] || 'Any price';
-                appliedFilterText.textContent = 'Applied from booking: ' + categoryLabel + ' + ' + priceLabel + '.';
-                appliedFilterBadge.hidden = false;
-                appliedFilterBadge.classList.remove('is-visible');
-                window.requestAnimationFrame(function () {
-                    appliedFilterBadge.classList.add('is-visible');
-                });
-            }
-
-            function clearAppliedFilterBadge() {
-                if (!appliedFilterBadge) {
-                    return;
-                }
-                appliedFilterBadge.classList.remove('is-visible');
-                appliedFilterBadge.hidden = true;
-            }
-
-            function parsePriceBand(value) {
-                if (!value || value === 'all') {
-                    return null;
-                }
-
-                const tokens = String(value).split('-');
-                if (tokens.length !== 2) {
-                    return null;
-                }
-
-                const minValue = Number(tokens[0]);
-                const maxValue = Number(tokens[1]);
-                if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) {
-                    return null;
-                }
-
-                return { minValue, maxValue };
-            }
-
-            function isTransportFamilyCategory(value) {
-                const normalized = String(value || '').toLowerCase();
-                return normalized === 'transport' || normalized === 'marine-transport' || normalized === 'land-transport';
-            }
-
-            function render() {
-                const searchTerm = (searchInput ? searchInput.value : '').trim().toLowerCase();
-                const categoryValue = categoryFilter ? categoryFilter.value : 'all';
-                const priceBand = parsePriceBand(priceFilter ? priceFilter.value : 'all');
-
-                const visibleCards = cards.filter((card) => {
-                    const searchable = String(card.getAttribute('data-search') || '').toLowerCase();
-                    const category = String(card.getAttribute('data-category') || 'other').toLowerCase();
-                    const price = Number(card.getAttribute('data-price') || 0);
-
-                    const searchMatch = searchTerm === '' || searchable.includes(searchTerm);
-                    const categoryMatch = categoryValue === 'all'
-                        || category === categoryValue
-                        || (categoryValue === 'transport' && isTransportFamilyCategory(category));
-                    const priceMatch = priceBand === null || (price >= priceBand.minValue && price <= priceBand.maxValue);
-
-                    const visible = searchMatch && categoryMatch && priceMatch;
-                    card.hidden = !visible;
-                    return visible;
-                });
-
-                const sortValue = sortFilter ? sortFilter.value : 'recommended';
-                const sortedCards = visibleCards.slice().sort((left, right) => {
-                    const leftPrice = Number(left.getAttribute('data-price') || 0);
-                    const rightPrice = Number(right.getAttribute('data-price') || 0);
-                    const leftName = String(left.getAttribute('data-name') || '');
-                    const rightName = String(right.getAttribute('data-name') || '');
-
-                    if (sortValue === 'priceAsc') {
-                        return leftPrice - rightPrice;
-                    }
-                    if (sortValue === 'priceDesc') {
-                        return rightPrice - leftPrice;
-                    }
-                    if (sortValue === 'nameAsc') {
-                        return leftName.localeCompare(rightName);
-                    }
-                    return 0;
-                });
-
-                sortedCards.forEach((card) => listingGrid.appendChild(card));
-
-                if (listingCountLabel) {
-                    listingCountLabel.textContent = 'Showing ' + visibleCards.length + ' listing' + (visibleCards.length === 1 ? '' : 's');
-                }
-
-                if (noResultsState) {
-                    noResultsState.hidden = visibleCards.length > 0;
+                    setActiveNav(sectionKey, '');
                 }
             }
 
-            if (searchInput) {
-                searchInput.addEventListener('input', render);
-            }
-            if (categoryFilter) {
-                categoryFilter.addEventListener('change', render);
-            }
-            if (priceFilter) {
-                priceFilter.addEventListener('change', render);
-            }
-            if (sortFilter) {
-                sortFilter.addEventListener('change', render);
-            }
-
-            quickButtons.forEach((button) => {
-                button.addEventListener('click', function () {
-                    const quickCategory = String(button.getAttribute('data-quick-category') || 'all');
-                    if (categoryFilter) {
-                        categoryFilter.value = quickCategory;
-                    }
-
-                    quickButtons.forEach((item) => item.classList.remove('is-active'));
-                    button.classList.add('is-active');
-                    render();
-                });
-            });
-
-            bookingBrowseLinks.forEach(function (link) {
-                link.addEventListener('click', function () {
-                    const category = String(link.getAttribute('data-browse-category') || 'all').toLowerCase();
-                    const bookingPrice = Number(link.getAttribute('data-browse-price') || 0);
-                    const validCategories = ['all', 'accommodation', 'transport', 'marine-transport', 'land-transport', 'excursion', 'remote_workspace', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
-                    const targetCategory = validCategories.includes(category) ? category : 'all';
-                    let targetPriceBand = 'all';
-
-                    if (categoryFilter) {
-                        categoryFilter.value = targetCategory;
-                    }
-
-                    if (priceFilter) {
-                        if (!Number.isFinite(bookingPrice) || bookingPrice <= 0) {
-                            targetPriceBand = 'all';
-                        } else if (bookingPrice <= 500) {
-                            targetPriceBand = '0-500';
-                        } else if (bookingPrice <= 1000) {
-                            targetPriceBand = '501-1000';
-                        } else if (bookingPrice <= 2500) {
-                            targetPriceBand = '1001-2500';
-                        } else {
-                            targetPriceBand = '2501-9999999';
-                        }
-
-                        priceFilter.value = targetPriceBand;
-                    }
-
-                    quickButtons.forEach(function (item) {
-                        const quickCategory = String(item.getAttribute('data-quick-category') || 'all').toLowerCase();
-                        item.classList.toggle('is-active', quickCategory === targetCategory || (targetCategory === 'transport' && isTransportFamilyCategory(quickCategory) && quickCategory !== 'transport'));
-                    });
-
-                    render();
-                    setAppliedFilterBadge(targetCategory, targetPriceBand);
-                });
-            });
-
-            if (clearAppliedFilterBtn) {
-                clearAppliedFilterBtn.addEventListener('click', function () {
-                    if (categoryFilter) {
-                        categoryFilter.value = 'all';
-                    }
-                    if (priceFilter) {
-                        priceFilter.value = 'all';
-                    }
-                    quickButtons.forEach(function (item) {
-                        const quickCategory = String(item.getAttribute('data-quick-category') || 'all').toLowerCase();
-                        item.classList.toggle('is-active', quickCategory === 'all');
-                    });
-                    render();
-                    clearAppliedFilterBadge();
-                });
-            }
-
-            if (easyModeToggle) {
-                easyModeToggle.addEventListener('change', function () {
-                    document.body.classList.toggle('easy-mode', !!easyModeToggle.checked);
-                });
-            }
-
-            render();
+            window.addEventListener('hashchange', applyHash);
+            applyHash();
         })();
     </script>
 </body>

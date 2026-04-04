@@ -864,11 +864,6 @@
 
         <div class="portal-shell">
             <aside class="side-panel" aria-label="Customer shortcuts">
-                <div class="hero-links">
-                    <a class="hero-link" href="/"><span class="icon" aria-hidden="true">🏠</span>Home</a>
-                    <a class="hero-link" href="/vendor"><span class="icon" aria-hidden="true">🏪</span>Vendor Portal</a>
-                    <a class="hero-link" href="/admin"><span class="icon" aria-hidden="true">🛡️</span>Admin Portal</a>
-                </div>
                 <nav class="portal-nav" aria-label="Customer navigation">
                     <a href="#customerSummary"><span class="icon" aria-hidden="true">📊</span>Summary</a>
                     <a href="#discoverListings"><span class="icon" aria-hidden="true">🏡</span>Listings</a>

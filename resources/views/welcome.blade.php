@@ -882,7 +882,7 @@
             <div class="customer-auth">
                 @if ($customerLoggedIn)
                     <span class="auth-welcome">Hi, {{ $customerName }}</span>
-                    <a class="auth-link" href="/customer">Open Customer Portal</a>
+                    <a class="auth-link" href="/customer">Manage My Account</a>
                     <form method="POST" action="/portal/customer/logout" style="margin:0;">
                         @csrf
                         <button class="auth-btn" type="submit">Logout</button>

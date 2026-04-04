@@ -919,10 +919,11 @@ if (!function_exists('getAvailableCategories')) {
 Route::get('/', function () {
     $apiBase = workationApiBase();
 
-    // Home page sidebar shows only core browsing categories, not transport
-    // Transport is featured in the "Browse Cards" section separately
+    // Keep home sidebar identical to category pages for uniform navigation.
     $homeTopCategoryLinks = collect([
         ['icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas', 'url' => '/catalog/accommodation'],
+        ['icon' => 'fa-solid fa-water', 'title' => 'Marine Transport', 'subtitle' => 'Speedboats & water transfers', 'url' => '/catalog/marine-transport'],
+        ['icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers', 'url' => '/catalog/land-transport'],
         ['icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'subtitle' => 'Tours and activities', 'url' => '/catalog/excursion'],
         ['icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces', 'url' => '/catalog/remote_workspace'],
         ['icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces', 'url' => '/catalog/conference_room'],
@@ -1014,6 +1015,25 @@ Route::get('/', function () {
             return vendorMediaStorageUrlFromPath($filePath);
         };
 
+        $resolvePropertyFallbackImage = static function (int $propertyId) use ($homeListingMediaByProperty): ?string {
+            if ($propertyId <= 0) {
+                return null;
+            }
+
+            $mediaItems = collect($homeListingMediaByProperty->get($propertyId, collect()));
+            $primaryMedia = $mediaItems->first();
+            if (!$primaryMedia) {
+                return null;
+            }
+
+            $filePath = trim((string) ($primaryMedia->file_path ?? ''));
+            if ($filePath === '') {
+                return null;
+            }
+
+            return vendorMediaStorageUrlFromPath($filePath);
+        };
+
         $propertyLocationLabel = static function ($property): string {
             $island = trim((string) ($property->island ?? ''));
             $city = trim((string) ($property->city ?? ''));
@@ -1096,7 +1116,7 @@ Route::get('/', function () {
                 return $card;
             });
 
-            $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categorySamples, $resolvePropertyImage, $propertyLocationLabel) {
+            $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categorySamples, $resolvePropertyImage, $resolvePropertyFallbackImage, $propertyLocationLabel) {
                 $categoryHint = match ($card['title']) {
                     'Stay Options' => 'accommodation',
                     'Marine Transport' => 'marine-transport',
@@ -1117,7 +1137,9 @@ Route::get('/', function () {
                     return $card;
                 }
 
-                $card['image_url'] = $resolvePropertyImage((int) ($sample->id ?? 0));
+                $sampleId = (int) ($sample->id ?? 0);
+                $card['image_url'] = $resolvePropertyImage($sampleId);
+                $card['fallback_image_url'] = $resolvePropertyFallbackImage($sampleId);
                 $location = $propertyLocationLabel($sample);
                 if ($location !== '') {
                     $card['subtitle'] = $location;
@@ -1150,7 +1172,7 @@ Route::get('/', function () {
         if (!empty($locationScores)) {
             uasort($locationScores, static fn (array $a, array $b) => $b['count'] <=> $a['count']);
             $homeTrendingCards = collect(array_slice(array_values($locationScores), 0, 4))
-                ->map(function (array $row) use ($resolvePropertyImage) {
+                ->map(function (array $row) use ($resolvePropertyImage, $resolvePropertyFallbackImage) {
                     $sample = $row['sample_property'] ?? null;
                     $sampleId = (int) ($sample->id ?? 0);
                     $sampleCategory = strtolower(trim((string) ($sample->listing_category ?? 'accommodation')));
@@ -1160,6 +1182,7 @@ Route::get('/', function () {
                         'subtitle' => $row['count'] . ' listings',
                         'url' => $sampleId > 0 ? ('/property/' . $sampleId) : ('/catalog/accommodation?q=' . urlencode($row['title'])),
                         'image_url' => $resolvePropertyImage($sampleId),
+                        'fallback_image_url' => $resolvePropertyFallbackImage($sampleId),
                         'category' => $sampleCategory,
                     ];
                 })
@@ -1172,10 +1195,11 @@ Route::get('/', function () {
             ->values();
 
         if ($priceSorted->isNotEmpty()) {
-            $homeWeekendDealCards = $priceSorted->take(4)->map(function ($property) use ($resolvePropertyImage) {
+            $homeWeekendDealCards = $priceSorted->take(4)->map(function ($property) use ($resolvePropertyImage, $resolvePropertyFallbackImage) {
                 $name = trim((string) ($property->name ?? 'Weekend Offer'));
                 $currency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
                 $price = number_format((float) ($property->base_price ?? 0), 2);
+                $propertyId = (int) ($property->id ?? 0);
                 $place = trim((string) ($property->island ?? ''));
                 if ($place === '') {
                     $place = trim((string) ($property->atoll ?? ''));
@@ -1184,8 +1208,9 @@ Route::get('/', function () {
                 return [
                     'title' => $name,
                     'subtitle' => 'From ' . $currency . ' ' . $price,
-                    'url' => '/property/' . (int) ($property->id ?? 0),
-                    'image_url' => $resolvePropertyImage((int) ($property->id ?? 0)),
+                    'url' => '/property/' . $propertyId,
+                    'image_url' => $resolvePropertyImage($propertyId),
+                    'fallback_image_url' => $resolvePropertyFallbackImage($propertyId),
                     'meta' => $place,
                 ];
             })->values();
@@ -1217,9 +1242,10 @@ Route::get('/', function () {
                 ->get();
 
             if ($lovedRows->isNotEmpty()) {
-                $homeLovedCards = $lovedRows->map(function ($property) use ($sortColumn, $resolvePropertyImage) {
+                $homeLovedCards = $lovedRows->map(function ($property) use ($sortColumn, $resolvePropertyImage, $resolvePropertyFallbackImage) {
                     $name = trim((string) ($property->name ?? 'Loved Listing'));
                     $score = (string) ($property->{$sortColumn} ?? '0');
+                    $propertyId = (int) ($property->id ?? 0);
                     $loc = trim((string) ($property->island ?? ''));
                     if ($loc === '') {
                         $loc = trim((string) ($property->atoll ?? ''));
@@ -1228,8 +1254,9 @@ Route::get('/', function () {
                     return [
                         'title' => $name,
                         'subtitle' => 'Score ' . $score,
-                        'url' => '/property/' . (int) ($property->id ?? 0),
-                        'image_url' => $resolvePropertyImage((int) ($property->id ?? 0)),
+                        'url' => '/property/' . $propertyId,
+                        'image_url' => $resolvePropertyImage($propertyId),
+                        'fallback_image_url' => $resolvePropertyFallbackImage($propertyId),
                         'meta' => $loc,
                     ];
                 })->values();
@@ -5429,15 +5456,38 @@ Route::post('/portal/{portal}/forgot-password', function (Request $request, stri
     }
 
 
+    $response = back()->with('status', 'If the email is registered for a ' . strtolower($config['name']) . ' account, a reset link has been sent.');
+
     if ($portalUser) {
-        $broker = ($portalUser instanceof \App\Models\User)
-            ? Password::broker('backend_users')
-            : Password::broker('customer_users');
-        $token = $broker->createToken($portalUser);
-        $portalUser->sendPasswordResetNotification($token);
+        $brokerName = ($portalUser instanceof \App\Models\User) ? 'backend_users' : 'customer_users';
+        $broker = Password::broker($brokerName);
+
+        try {
+            $token = $broker->createToken($portalUser);
+            $portalUser->sendPasswordResetNotification($token);
+
+            // Local/test fallback to unblock manual verification when mail transport is not configured.
+            if (app()->environment(['local', 'testing'])) {
+                $debugLink = url('/portal/' . $portal . '/reset-password/' . $token . '?email=' . rawurlencode($email));
+                $response->with('password_reset_debug_link', $debugLink);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Portal forgot-password notification failed.', [
+                'portal' => $portal,
+                'broker' => $brokerName,
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
+
+            if (app()->environment(['local', 'testing'])) {
+                $response->withErrors([
+                    'email' => 'Mail delivery failed locally. Use the debug reset link below while mail settings are being fixed.',
+                ]);
+            }
+        }
     }
 
-    return back()->with('status', 'If the email is registered for a ' . strtolower($config['name']) . ' account, a reset link has been sent.');
+    return $response;
 });
 
 Route::get('/portal/{portal}/reset-password/{token}', function (Request $request, string $portal, string $token) {
@@ -5514,10 +5564,9 @@ Route::post('/portal/{portal}/reset-password', function (Request $request, strin
             ? 'backend_users'
             : 'customer_users';
         $tokenTable = (string) config("auth.passwords.$broker.table", 'password_reset_tokens');
-        $tokenConnection = $portalUser->getConnectionName();
-        $tokenQuery = $tokenConnection
-            ? DB::connection($tokenConnection)->table($tokenTable)
-            : DB::table($tokenTable);
+        // Password brokers store reset tokens in their configured token table/connection.
+        // Do not force user-model connection here; it can differ in split-db setups.
+        $tokenQuery = DB::table($tokenTable);
 
         $resetRow = $tokenQuery
             ->whereRaw('LOWER(email) = ?', [$email])

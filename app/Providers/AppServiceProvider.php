@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Customer;
 use App\Models\User;
 use Illuminate\Support\ServiceProvider;
 use App\Services\TransportProviderAdapterInterface;
@@ -29,7 +30,9 @@ class AppServiceProvider extends ServiceProvider
     {
             ResetPassword::createUrlUsing(function (object $notifiable, string $token): string {
                 $portal = 'admin';
-                if ($notifiable instanceof User) {
+                if ($notifiable instanceof Customer) {
+                    $portal = 'customer';
+                } elseif ($notifiable instanceof User) {
                     $role = Str::upper((string) $notifiable->portal_role);
                     $normalizedRole = $role === 'ADMIN_FINACE' ? 'ADMIN_FINANCE' : $role;
                     if ($normalizedRole === 'VENDOR') {

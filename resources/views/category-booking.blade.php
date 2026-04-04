@@ -48,7 +48,10 @@
             font-weight:700;
         }
 
-        .layout { margin-top:12px; display:grid; grid-template-columns:minmax(0,1.25fr) minmax(320px,0.75fr); gap:12px; align-items:start; }
+        .layout { margin-top:12px; display:grid; grid-template-columns:minmax(320px,0.75fr) minmax(0,1.25fr); gap:12px; align-items:start; }
+
+        .reservation-form { grid-column: 1; }
+        .service-content { grid-column: 2; }
 
         .block {
             border:1px solid var(--line);
@@ -192,6 +195,8 @@
 
         @media (max-width: 980px) {
             .layout { grid-template-columns:1fr; }
+            .reservation-form,
+            .service-content { grid-column: auto; }
             .booking-card { position:static; }
             .service-intel { grid-template-columns:1fr 1fr; }
             .gallery-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
@@ -286,7 +291,7 @@
         </section>
 
         <div class="layout">
-            <section>
+            <section class="service-content">
                 <section class="block" aria-label="Service gallery">
                     <h2 class="block-title">Service Gallery</h2>
                     <img class="gallery-main" src="{{ $heroImage ?: $fallbackImage }}" alt="Service image" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $fallbackImage }}';}">
@@ -408,7 +413,7 @@
                 </section>
             </section>
 
-            <aside class="booking-card" aria-label="Category booking form">
+            <aside class="booking-card reservation-form" aria-label="Category booking form">
                 <h2 class="block-title">Booking Request</h2>
                 <div class="booking-price">
                     <span>Starting price</span>

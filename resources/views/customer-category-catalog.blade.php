@@ -80,8 +80,9 @@
         }
 
         .header-brand-wrap {
-            display: flex;
-            align-items: center;
+            display: grid;
+            gap: 2px;
+            align-content: center;
             flex-shrink: 0;
             padding-left: 6px;
         }

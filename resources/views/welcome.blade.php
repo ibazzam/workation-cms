@@ -37,7 +37,6 @@
         .page {
             width: min(1180px, calc(100% - 24px));
             margin: 0 auto 28px;
-            padding-left: 262px;
             max-width: none;
             position: relative;
         }
@@ -45,9 +44,9 @@
         .floating-sidebar {
             position: fixed;
             left: 0;
-            top: var(--header-offset, 0px);
+            top: 0;
             width: 250px;
-            height: calc(100dvh - var(--header-offset, 0px));
+            height: 100dvh;
             overflow-y: auto;
             scrollbar-width: thin;
             z-index: 200;
@@ -58,7 +57,7 @@
             align-items: center;
             justify-content: space-between;
             gap: 14px;
-            padding: 10px 16px;
+            padding: 10px 24px;
             border-top: 0;
             border-right: 0;
             border-bottom: 1px solid #d8e3ec;
@@ -86,9 +85,9 @@
         .header-main {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 12px;
             min-width: 0;
-            flex: 1;
+            flex: 0 0 auto;
         }
 
         .header-menu-button {
@@ -105,10 +104,11 @@
         }
 
         .header-brand-wrap {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            display: grid;
+            gap: 2px;
+            align-content: center;
             flex-shrink: 0;
+            padding-left: 6px;
         }
 
         .header-brand {
@@ -137,7 +137,7 @@
         }
 
         .header-search-mini {
-            display: flex;
+            display: none;
             align-items: center;
             min-width: 0;
             width: min(460px, 100%);
@@ -175,8 +175,10 @@
         .header-links {
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 2px;
             min-width: 0;
+            flex: 1 1 auto;
             overflow-x: auto;
             scrollbar-width: none;
         }
@@ -202,6 +204,7 @@
 
         .page-body-split {
             display: block;
+            padding-left: 262px;
         }
 
         .page-main-content {
@@ -233,15 +236,14 @@
             padding: 10px 12px;
             border-bottom: 1px solid #d6e4ef;
             background: linear-gradient(180deg, #f8fcff 0%, #f1f8fd 100%);
-            opacity: 0;
-            transform: translateY(-4px);
-            pointer-events: none;
-            transition: opacity 0.22s ease, transform 0.22s ease;
+            opacity: 1;
+            transform: none;
+            pointer-events: auto;
         }
 
         .sidebar-brand-title {
             margin: 0;
-            font-size: 1.95rem;
+            font-size: 2rem;
             font-weight: 800;
             letter-spacing: -0.04em;
             line-height: 1;
@@ -249,17 +251,15 @@
             text-decoration: none;
         }
 
+        .sidebar-brand-title:hover {
+            color: var(--brand-strong);
+        }
+
         .sidebar-brand-subline {
             margin: 0;
             font-size: 0.7rem;
             color: #71869a;
             white-space: nowrap;
-        }
-
-        .page.is-scrolled .sidebar-brand {
-            opacity: 1;
-            transform: translateY(0);
-            pointer-events: auto;
         }
 
         .page.is-header-hidden .floating-sidebar {
@@ -283,6 +283,7 @@
             flex-wrap: wrap;
             justify-content: flex-end;
             flex-shrink: 0;
+            margin-left: auto;
         }
 
         .account-menu {
@@ -1096,11 +1097,11 @@
             .page {
                 width: calc(100% - 28px);
                 margin: 0 auto 30px;
-                padding-left: 242px;
             }
 
             .page-body-split {
                 display: block;
+                padding-left: 242px;
             }
 
             .floating-sidebar {
@@ -1119,6 +1120,7 @@
 
             .header-main {
                 flex-wrap: wrap;
+                flex: 1 1 auto;
             }
 
             .header-search-mini {
@@ -1129,6 +1131,7 @@
             .header-links {
                 order: 4;
                 flex-basis: 100%;
+                justify-content: flex-start;
             }
 
             .page-with-sidebar {
@@ -1215,6 +1218,9 @@
             .page {
                 width: calc(100% - 18px);
                 margin: 10px auto 22px;
+            }
+
+            .page-body-split {
                 padding-left: 0;
             }
 
@@ -1239,6 +1245,7 @@
                 width: 100%;
                 margin-left: 0;
                 margin-right: 0;
+                padding: 10px 12px;
                 border: 1px solid #d8e3ec;
                 border-radius: 14px;
             }
@@ -1251,6 +1258,10 @@
             .header-main {
                 width: 100%;
                 gap: 10px;
+            }
+
+            .header-brand-wrap {
+                padding-left: 0;
             }
 
             .header-brand {
@@ -1723,11 +1734,8 @@
                 const isDesktop = window.matchMedia('(min-width: 1041px)').matches;
                 const isScrollingDown = currentY > lastScrollY;
                 const shouldHideHeader = isDesktop && currentY > revealThreshold && isScrollingDown;
-                const headerOffset = shouldHideHeader ? 0 : header.offsetHeight;
 
-                page.classList.toggle('is-scrolled', currentY > revealThreshold);
                 page.classList.toggle('is-header-hidden', shouldHideHeader);
-                page.style.setProperty('--header-offset', headerOffset + 'px');
 
                 lastScrollY = currentY;
             }

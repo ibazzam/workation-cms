@@ -42,7 +42,8 @@
         }
 
         .floating-sidebar {
-            position: relative;
+            position: sticky;
+            top: 8px;
             width: 250px;
             height: fit-content;
             z-index: 200;
@@ -59,7 +60,8 @@
             background: rgba(255, 255, 255, 0.96);
             box-shadow: 0 10px 24px rgba(22, 64, 93, 0.06);
             margin-bottom: 12px;
-            position: relative;
+            position: sticky;
+            top: 8px;
             z-index: 980;
             backdrop-filter: blur(10px);
         }
@@ -497,19 +499,18 @@
         .search-section-full-width {
             margin-top: 0;
             margin-bottom: 18px;
-            border: 1px solid #d6e2ee;
+            border: 1px solid #c4d9e8;
             border-radius: 22px;
             background:
                 var(--home-hero-image, none),
-                linear-gradient(115deg, rgba(11, 79, 102, 0.88) 0%, rgba(15, 97, 121, 0.82) 48%, rgba(31, 125, 144, 0.72) 100%),
-                radial-gradient(circle at 20% 18%, rgba(255,255,255,0.22) 0, rgba(255,255,255,0) 34%),
-                radial-gradient(circle at 80% 25%, rgba(255,255,255,0.18) 0, rgba(255,255,255,0) 28%),
-                linear-gradient(180deg, #1c6f86 0%, #0f6179 100%);
-            background-size: cover, auto, auto, auto, auto;
-            background-position: center center, center center, center center, center center, center center;
-            color: #ecfcff;
+                linear-gradient(135deg, var(--brand) 0%, var(--brand-strong) 48%, #0a3d52 100%),
+                radial-gradient(circle at 120% -10%, rgba(243, 163, 55, 0.08) 0%, rgba(243, 163, 55, 0) 40%),
+                radial-gradient(circle at 15% 85%, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0) 35%);
+            background-size: cover, auto, auto, auto;
+            background-position: center center, center center, center center, center center;
+            color: #e8f5f9;
             padding: 18px 20px 54px;
-            box-shadow: 0 24px 44px rgba(32, 72, 155, 0.18);
+            box-shadow: 0 24px 44px rgba(15, 97, 121, 0.22);
             width: 100%;
             position: relative;
             overflow: hidden;

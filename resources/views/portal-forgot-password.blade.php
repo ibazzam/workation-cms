@@ -100,7 +100,13 @@
         @endphp
         <span class="eyebrow">Secure Access</span>
         <h1>Forgot {{ $portalDisplayName }} Password</h1>
-        <p>Enter your {{ strtolower($portalDisplayName) }} account email and we will send a secure reset link.</p>
+        <p>
+            @if (($portal ?? '') === 'vendor' || ($portal ?? '') === 'admin')
+                Enter your {{ strtolower($portalDisplayName) }} account email or username and we will send a secure reset link.
+            @else
+                Enter your {{ strtolower($portalDisplayName) }} account email and we will send a secure reset link.
+            @endif
+        </p>
 
         @if (session('status'))
             <div class="msg">{{ session('status') }}</div>
@@ -119,8 +125,14 @@
 
         <form method="POST" action="/portal/{{ $portal ?? 'admin' }}/forgot-password">
             @csrf
-            <label for="email">{{ $portalDisplayName }} Email</label>
-            <input id="email" name="email" type="email" value="{{ old('email') }}" autocomplete="email" required>
+            <label for="email">
+                @if (($portal ?? '') === 'vendor' || ($portal ?? '') === 'admin')
+                    {{ $portalDisplayName }} Email or Username
+                @else
+                    {{ $portalDisplayName }} Email
+                @endif
+            </label>
+            <input id="email" name="email" type="text" value="{{ old('email') }}" autocomplete="username" required>
 
             <div class="actions">
                 <button type="submit">Send Reset Link</button>

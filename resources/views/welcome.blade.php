@@ -42,8 +42,7 @@
         }
 
         .floating-sidebar {
-            position: sticky;
-            top: 82px;
+            position: relative;
             width: 250px;
             height: fit-content;
             z-index: 200;
@@ -60,8 +59,7 @@
             background: rgba(255, 255, 255, 0.96);
             box-shadow: 0 10px 24px rgba(22, 64, 93, 0.06);
             margin-bottom: 12px;
-            position: sticky;
-            top: 8px;
+            position: relative;
             z-index: 980;
             backdrop-filter: blur(10px);
         }
@@ -579,15 +577,19 @@
 
         .search-category-tabs {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             gap: 6px;
             margin: -24px auto 10px;
-            width: fit-content;
+            width: min(100%, max-content);
             max-width: 100%;
             padding: 5px;
             border-radius: 999px;
             background: rgba(35, 46, 62, 0.82);
             box-shadow: 0 10px 20px rgba(18, 31, 57, 0.2);
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
         }
 
         .search-category-tab {
@@ -1225,6 +1227,17 @@
         $customerContinueUrl = request()->fullUrl();
         $homeHeroBackgroundUrl = trim((string) ($homeHeroBackgroundUrl ?? ''));
         $homeTopCategoryLinks = $homeTopCategoryLinks ?? collect();
+        $homeDefaultCategoryUrl = '/catalog/accommodation';
+        $firstCategoryLink = $homeTopCategoryLinks->first(function ($link) {
+            $url = (string) ($link['url'] ?? '');
+            return preg_match('#/catalog/([a-z_-]+)#', $url) === 1;
+        });
+        if (is_array($firstCategoryLink) && trim((string) ($firstCategoryLink['url'] ?? '')) !== '') {
+            $homeDefaultCategoryUrl = (string) $firstCategoryLink['url'];
+        }
+        $homeDefaultCategoryKey = preg_match('#/catalog/([a-z_-]+)#', $homeDefaultCategoryUrl, $categoryMatch)
+            ? (string) ($categoryMatch[1] ?? 'accommodation')
+            : 'accommodation';
         $homePromoBanner = $homePromoBanner ?? ['message' => 'Promotions coming soon.', 'url' => '/catalog/accommodation', 'cta' => 'View Promotions'];
         $homeTrendingChips = $homeTrendingChips ?? collect();
         $homeBrowseCards = $homeBrowseCards ?? collect();
@@ -1323,7 +1336,7 @@
                     </div>
                     <div class="search-shell">
                         <div class="search-category-tabs" aria-label="Travel search categories">
-                            @foreach ($homeTopCategoryLinks->take(5) as $index => $link)
+                            @foreach ($homeTopCategoryLinks as $index => $link)
                                 @php
                                     $tabUrl = (string) ($link['url'] ?? '/catalog/accommodation');
                                     $tabCategoryKey = preg_match('#/catalog/([a-z_-]+)#', $tabUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
@@ -1334,8 +1347,8 @@
                                 </button>
                             @endforeach
                         </div>
-                        <form id="homeCatalogSearchForm" class="search-form" action="/catalog/accommodation" method="get">
-                            <input id="categorySelect" name="category" type="hidden" value="accommodation">
+                        <form id="homeCatalogSearchForm" class="search-form" action="{{ '/catalog/' . $homeDefaultCategoryKey }}" method="get">
+                            <input id="categorySelect" name="category" type="hidden" value="{{ $homeDefaultCategoryKey }}">
                             <div class="search-field-shell">
                                 <div class="search-primary-field">
                                     <input type="search" name="q" placeholder="City, airport, island, landmark, hotel, or service name" aria-label="Search query">

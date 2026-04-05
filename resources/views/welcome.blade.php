@@ -578,80 +578,104 @@
         .search-category-tabs {
             display: flex;
             flex-wrap: nowrap;
-            gap: 6px;
-            margin: -24px auto 10px;
-            width: min(100%, max-content);
-            max-width: 100%;
-            padding: 5px;
-            border-radius: 999px;
-            background: rgba(35, 46, 62, 0.82);
-            box-shadow: 0 10px 20px rgba(18, 31, 57, 0.2);
+            gap: 0;
+            margin: 0;
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 18px 18px 0 0;
+            background: linear-gradient(180deg, rgba(21, 39, 56, 0.92) 0%, rgba(15, 30, 45, 0.88) 100%);
             overflow-x: auto;
             overflow-y: hidden;
             scrollbar-width: thin;
             -webkit-overflow-scrolling: touch;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+        }
+
+        .search-category-tabs::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .search-category-tabs::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .search-category-tabs::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
         }
 
         .search-category-tab {
             border: 0;
-            border-radius: 999px;
+            border-radius: 10px;
             background: transparent;
-            color: rgba(255,255,255,0.86);
-            padding: 6px 11px;
+            color: rgba(255,255,255,0.75);
+            padding: 7px 12px;
             font: inherit;
-            font-size: 0.75rem;
-            font-weight: 700;
+            font-size: 0.78rem;
+            font-weight: 600;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 7px;
+            gap: 6px;
             white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .search-category-tab:hover {
+            background: rgba(255,255,255,0.12);
+            color: #ffffff;
         }
 
         .search-category-tab.is-active {
             background: #ffffff;
-            color: #16344d;
+            color: var(--brand);
+            font-weight: 700;
         }
 
         .search-form {
             margin-top: 0;
             display: grid;
-            grid-template-columns: minmax(20ch, 1fr) auto;
-            gap: 10px;
+            grid-template-columns: 1fr;
+            gap: 0;
             align-items: start;
             min-width: 0;
             overflow: hidden;
+            border-radius: 0 0 18px 18px;
+            background: #ffffff;
         }
 
         .search-field-shell {
             display: flex;
             align-items: stretch;
             min-width: 0;
-            grid-column: span 1;
+            padding: 12px 14px 0;
+            border-bottom: 1px solid #e8f0f7;
         }
 
         .search-primary-field {
             display: grid;
             grid-template-columns: minmax(0, 1fr);
             width: 100%;
-            border: 1px solid #dce5ee;
-            border-radius: 12px;
+            border: 1px solid #d8e3ec;
+            border-radius: 10px;
             overflow: hidden;
-            background: #ffffff;
+            background: #f9fbfd;
         }
 
         .search-primary-field input {
             border-radius: 0 !important;
+            padding: 10px 14px !important;
+            font-size: 0.95rem;
         }
 
         .search-dynamic-fields {
             margin-top: 0;
             display: none;
             grid-column: 1 / -1;
-            grid-template-columns: repeat(12, minmax(0, 1fr));
-            gap: 8px;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 10px;
             min-width: 0;
-            overflow: hidden;
+            padding: 12px 14px;
             background: #ffffff;
         }
 
@@ -668,34 +692,19 @@
             gap: 4px;
             min-width: 0;
             overflow: hidden;
-            border: 1px solid #dce5ee;
-            border-radius: 12px;
-            padding: 6px 9px;
-            background: #ffffff;
-        }
-
-        .search-dynamic-fields .field.field-short {
-            grid-column: span 2;
-        }
-
-        .search-dynamic-fields .field.field-medium {
-            grid-column: span 3;
-        }
-
-        .search-dynamic-fields .field.field-date {
-            grid-column: span 3;
-        }
-
-        .search-dynamic-fields .field.field-long {
-            grid-column: span 4;
+            border: 1px solid #d8e3ec;
+            border-radius: 10px;
+            padding: 8px 10px;
+            background: #f9fbfd;
         }
 
         .search-dynamic-fields .field label {
-            font-size: 0.64rem;
-            letter-spacing: 0.04em;
-            text-transform: none;
-            color: #7a8ea2;
+            font-size: 0.68rem;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            color: #6b8299;
             font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            font-weight: 600;
         }
 
         .search-form select,
@@ -704,11 +713,12 @@
             min-width: 0;
             max-width: 100%;
             border: 0;
-            border-radius: 10px;
+            border-radius: 0;
             padding: 8px 10px;
             font: inherit;
+            font-size: 0.95rem;
             color: #103247;
-            background: #ffffff;
+            background: transparent;
             box-sizing: border-box;
         }
 
@@ -718,13 +728,17 @@
             min-width: 0;
             max-width: 100%;
             border: 0;
-            border-radius: 8px;
-            padding: 3px 0 0;
+            border-radius: 0;
+            padding: 6px 0 0;
             font-size: 0.92rem;
             font: inherit;
             color: #103247;
             background: transparent;
             box-sizing: border-box;
+        }
+
+        .search-dynamic-fields input::placeholder {
+            color: #99aec4;
         }
 
         .search-form input[type="date"],
@@ -735,21 +749,16 @@
             width: 100%;
             min-width: 0;
             max-width: 100%;
-            padding-right: 8px;
+            padding: 6px 0;
             overflow: hidden;
+            font-size: 0.92rem;
+            cursor: pointer;
         }
 
-        .search-dynamic-fields input[type="date"] {
-            min-height: 44px;
-            font-size: 16px;
-            line-height: 1.2;
-        }
-
-        .search-form input[type="date"],
-        .search-dynamic-fields input[type="date"] {
-            min-height: 36px;
-            padding-right: 10px;
-            overflow: hidden;
+        .search-form input[type="number"],
+        .search-dynamic-fields input[type="number"] {
+            padding: 6px 8px;
+            font-size: 0.92rem;
         }
 
         .search-form button {
@@ -757,22 +766,25 @@
             width: auto;
             justify-self: stretch;
             box-shadow: none;
+            border-radius: 10px;
         }
 
         .search-submit-row {
-            grid-column: auto;
+            grid-column: 1 / -1;
             display: flex;
-            justify-content: stretch;
-            align-self: stretch;
-            margin-top: 0;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 12px 14px;
+            border-top: 1px solid #e8f0f7;
+            background: #f9fbfd;
         }
 
         .search-submit-row button {
-            width: 100%;
-            border-radius: 12px;
-            min-height: 100%;
-            padding: 10px 14px;
-            font-size: 0.86rem;
+            border-radius: 10px;
+            padding: 10px 24px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            min-width: 120px;
         }
 
         .search-actions {
@@ -1335,61 +1347,104 @@
                         <span class="search-support-item"><i class="fa-solid fa-bolt"></i>Instant category search</span>
                     </div>
                     <div class="search-shell">
-                        <div class="search-category-tabs" aria-label="Travel search categories">
-                            @foreach ($homeTopCategoryLinks as $index => $link)
-                                @php
-                                    $tabUrl = (string) ($link['url'] ?? '/catalog/accommodation');
-                                    $tabCategoryKey = preg_match('#/catalog/([a-z_-]+)#', $tabUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
-                                @endphp
-                                <button class="search-category-tab{{ $index === 0 ? ' is-active' : '' }}" type="button" data-home-category-tab="{{ $tabCategoryKey }}">
-                                    <i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i>
-                                    <span>{{ $link['title'] ?? 'Category' }}</span>
-                                </button>
-                            @endforeach
-                        </div>
                         <form id="homeCatalogSearchForm" class="search-form" action="{{ '/catalog/' . $homeDefaultCategoryKey }}" method="get">
                             <input id="categorySelect" name="category" type="hidden" value="{{ $homeDefaultCategoryKey }}">
+                            
+                            <div class="search-category-tabs" aria-label="Travel search categories">
+                                @foreach ($homeTopCategoryLinks as $index => $link)
+                                    @php
+                                        $tabUrl = (string) ($link['url'] ?? '/catalog/accommodation');
+                                        $tabCategoryKey = preg_match('#/catalog/([a-z_-]+)#', $tabUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
+                                    @endphp
+                                    <button class="search-category-tab{{ $index === 0 ? ' is-active' : '' }}" type="button" data-home-category-tab="{{ $tabCategoryKey }}">
+                                        <i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i>
+                                        <span>{{ $link['title'] ?? 'Category' }}</span>
+                                    </button>
+                                @endforeach
+                            </div>
+
                             <div class="search-field-shell">
                                 <div class="search-primary-field">
                                     <input type="search" name="q" placeholder="City, airport, island, landmark, hotel, or service name" aria-label="Search query">
                                 </div>
                             </div>
 
+                            <!-- Accommodation Fields -->
                             <div id="accommodationFields" class="search-dynamic-fields is-active" data-fields-for="accommodation" aria-hidden="false">
-                                <div class="field field-date"><label for="checkin">Check-in</label><input id="checkin" name="checkin" type="date"></div>
-                                <div class="field field-date"><label for="checkout">Check-out</label><input id="checkout" name="checkout" type="date"></div>
-                                <div class="field field-short"><label for="adults">Adults</label><input id="adults" name="adults" type="number" min="1" value="2"></div>
-                                <div class="field field-short"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="0"></div>
-                                <div class="field field-short"><label for="rooms">Rooms</label><input id="rooms" name="rooms" type="number" min="1" value="1"></div>
+                                <div class="field"><label for="checkin">Check-in</label><input id="checkin" name="checkin" type="date"></div>
+                                <div class="field"><label for="checkout">Check-out</label><input id="checkout" name="checkout" type="date"></div>
+                                <div class="field"><label for="adults">Adults</label><input id="adults" name="adults" type="number" min="1" value="2"></div>
+                                <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="0"></div>
+                                <div class="field"><label for="rooms">Rooms</label><input id="rooms" name="rooms" type="number" min="1" value="1"></div>
                             </div>
 
-                            <div id="transportFields" class="search-dynamic-fields" data-fields-for="transport" hidden aria-hidden="true">
-                                <div class="field field-medium"><label for="transportMode">Transport Mode</label><select id="transportMode" name="transport_mode"><option value="marine">Marine Transport</option><option value="land">Land Transport</option></select></div>
-                                <div class="field field-medium" id="transportTripTypeField"><label for="transportTripType">Trip Type</label><select id="transportTripType" name="trip_type"><option value="one_way">One Way</option><option value="round_trip">Round Trip</option></select></div>
-                                <div class="field field-long"><label for="transportFrom">From</label><input id="transportFrom" name="from" type="text" placeholder="Atoll or island"></div>
-                                <div class="field field-long"><label for="transportTo">To</label><input id="transportTo" name="to" type="text" placeholder="Atoll or island"></div>
-                                <div class="field field-date" id="transportDepartureDateField"><label for="travelDate">Departure</label><input id="travelDate" name="travel_date" type="date"></div>
-                                <div class="field field-date" id="transportReturnDateField"><label for="returnDate">Return</label><input id="returnDate" name="return_date" type="date"></div>
-                                <div class="field field-short"><label for="transportAdults">Adults</label><input id="transportAdults" name="adults" type="number" min="1" value="2"></div>
-                                <div class="field field-short"><label for="transportChildren">Children</label><input id="transportChildren" name="children" type="number" min="0" value="0"></div>
-                                <div class="field field-medium" id="transportVehicleTypeField"><label for="vehicleType">Vehicle Type</label><input id="vehicleType" name="vehicle_type" type="text" placeholder="Car, Van, Bike"></div>
+                            <!-- Marine Transport Fields -->
+                            <div id="marineTransportFields" class="search-dynamic-fields" data-fields-for="marine-transport" hidden aria-hidden="true">
+                                <div class="field"><label for="marineTripType">Trip Type</label><select id="marineTripType" name="trip_type"><option value="one_way">One Way</option><option value="round_trip">Round Trip</option></select></div>
+                                <div class="field"><label for="marineFrom">From Island</label><input id="marineFrom" name="from" type="text" placeholder="Departure island"></div>
+                                <div class="field"><label for="marineTo">To Island</label><input id="marineTo" name="to" type="text" placeholder="Arrival island"></div>
+                                <div class="field"><label for="marineDeparture">Departure</label><input id="marineDeparture" name="travel_date" type="date"></div>
+                                <div class="field"><label for="marineReturn">Return</label><input id="marineReturn" name="return_date" type="date"></div>
+                                <div class="field"><label for="marineAdults">Adults</label><input id="marineAdults" name="adults" type="number" min="1" value="2"></div>
                             </div>
 
-                            <div id="serviceFields" class="search-dynamic-fields" data-fields-for="service" hidden aria-hidden="true">
-                                <div class="field field-medium">
-                                    <label for="serviceAtoll">Atoll</label>
-                                    <select id="serviceAtoll" name="atoll">
-                                        <option value="">All Atolls</option>
-                                    </select>
-                                </div>
-                                <div class="field field-medium">
-                                    <label for="serviceIsland">Island</label>
-                                    <select id="serviceIsland" name="island">
-                                        <option value="">All Islands</option>
-                                    </select>
-                                </div>
-                                <div class="field field-short"><label for="minPrice">Min Price</label><input id="minPrice" name="min_price" type="number" min="0" placeholder="0"></div>
-                                <div class="field field-short"><label for="maxPrice">Max Price</label><input id="maxPrice" name="max_price" type="number" min="0" placeholder="5000"></div>
+                            <!-- Land Transport Fields -->
+                            <div id="landTransportFields" class="search-dynamic-fields" data-fields-for="land-transport" hidden aria-hidden="true">
+                                <div class="field"><label for="landTripType">Trip Type</label><select id="landTripType" name="trip_type"><option value="one_way">One Way</option><option value="round_trip">Round Trip</option></select></div>
+                                <div class="field"><label for="landFrom">From</label><input id="landFrom" name="from" type="text" placeholder="Pickup location"></div>
+                                <div class="field"><label for="landTo">To</label><input id="landTo" name="to" type="text" placeholder="Dropoff location"></div>
+                                <div class="field"><label for="landDeparture">Pickup Date</label><input id="landDeparture" name="travel_date" type="date"></div>
+                                <div class="field"><label for="landReturn">Return Date</label><input id="landReturn" name="return_date" type="date"></div>
+                                <div class="field"><label for="landAdults">Adults</label><input id="landAdults" name="adults" type="number" min="1" value="2"></div>
+                                <div class="field"><label for="vehicleType">Vehicle</label><input id="vehicleType" name="vehicle_type" type="text" placeholder="Car, Van, Bike"></div>
+                            </div>
+
+                            <!-- Excursion Fields -->
+                            <div id="excursionFields" class="search-dynamic-fields" data-fields-for="excursion" hidden aria-hidden="true">
+                                <div class="field"><label for="excursionDate">Date</label><input id="excursionDate" name="date" type="date"></div>
+                                <div class="field"><label for="excursionParticipants">Participants</label><input id="excursionParticipants" name="participants" type="number" min="1" value="2"></div>
+                                <div class="field"><label for="activityType">Activity Type</label><select id="activityType" name="activity_type"><option value="">All Types</option><option value="water">Water Sports</option><option value="land">Land Tours</option><option value="cultural">Cultural</option></select></div>
+                                <div class="field"><label for="excPrice">Max Price</label><input id="excPrice" name="max_price" type="number" min="0" placeholder="5000"></div>
+                            </div>
+
+                            <!-- Remote Workspace Fields -->
+                            <div id="remoteWorkspaceFields" class="search-dynamic-fields" data-fields-for="remote_workspace" hidden aria-hidden="true">
+                                <div class="field"><label for="workCheckIn">Check-in</label><input id="workCheckIn" name="checkin" type="date"></div>
+                                <div class="field"><label for="workCheckOut">Check-out</label><input id="workCheckOut" name="checkout" type="date"></div>
+                                <div class="field"><label for="workSpaces">Workspaces Needed</label><input id="workSpaces" name="workspaces" type="number" min="1" value="1"></div>
+                                <div class="field"><label for="workType">Workspace Type</label><select id="workType" name="workspace_type"><option value="">All Types</option><option value="desk">Dedicated Desk</option><option value="office">Private Office</option><option value="villa">Villa Office</option></select></div>
+                            </div>
+
+                            <!-- Conference Room Fields -->
+                            <div id="conferenceRoomFields" class="search-dynamic-fields" data-fields-for="conference_room" hidden aria-hidden="true">
+                                <div class="field"><label for="confCheckIn">Event Date</label><input id="confCheckIn" name="date" type="date"></div>
+                                <div class="field"><label for="confDuration">Duration (Hours)</label><input id="confDuration" name="duration" type="number" min="1" value="8"></div>
+                                <div class="field"><label for="confAttendees">Attendees</label><input id="confAttendees" name="attendees" type="number" min="1" value="20"></div>
+                                <div class="field"><label for="confType">Room Type</label><select id="confType" name="room_type"><option value="">All Types</option><option value="meeting">Meeting</option><option value="boardroom">Boardroom</option><option value="ballroom">Ballroom</option></select></div>
+                            </div>
+
+                            <!-- Resort Day Visit Fields -->
+                            <div id="resortDayVisitFields" class="search-dynamic-fields" data-fields-for="resort_day_visit" hidden aria-hidden="true">
+                                <div class="field"><label for="resortDate">Visit Date</label><input id="resortDate" name="date" type="date"></div>
+                                <div class="field"><label for="resortGuests">Guests</label><input id="resortGuests" name="guests" type="number" min="1" value="2"></div>
+                                <div class="field"><label for="resortStartTime">Arrival Time</label><input id="resortStartTime" name="start_time" type="time"></div>
+                                <div class="field"><label for="resortPackage">Package</label><select id="resortPackage" name="package"><option value="">All Packages</option><option value="beach">Beach</option><option value="water">Water Sports</option><option value="spa">Spa & Wellness</option></select></div>
+                            </div>
+
+                            <!-- Restaurant Fields -->
+                            <div id="restaurantFields" class="search-dynamic-fields" data-fields-for="restaurant" hidden aria-hidden="true">
+                                <div class="field"><label for="restDate">Date</label><input id="restDate" name="date" type="date"></div>
+                                <div class="field"><label for="restTime">Time</label><input id="restTime" name="time" type="time"></div>
+                                <div class="field"><label for="restGuests">Guests</label><input id="restGuests" name="guests" type="number" min="1" value="2"></div>
+                                <div class="field"><label for="cuisine">Cuisine Type</label><select id="cuisine" name="cuisine"><option value="">All Cuisines</option><option value="maldivian">Maldivian</option><option value="asian">Asian</option><option value="seafood">Seafood</option><option value="international">International</option></select></div>
+                            </div>
+
+                            <!-- Vehicle Rental Fields -->
+                            <div id="vehicleRentalFields" class="search-dynamic-fields" data-fields-for="vehicle_rental" hidden aria-hidden="true">
+                                <div class="field"><label for="rentalPickup">Pickup Date</label><input id="rentalPickup" name="pickup_date" type="date"></div>
+                                <div class="field"><label for="rentalReturn">Return Date</label><input id="rentalReturn" name="return_date" type="date"></div>
+                                <div class="field"><label for="rentalVehicleType">Vehicle Type</label><select id="rentalVehicleType" name="vehicle_type"><option value="">All Types</option><option value="car">Car</option><option value="suv">SUV</option><option value="van">Van</option><option value="bike">Bike</option></select></div>
+                                <div class="field"><label for="age">Driver Age</label><input id="age" name="driver_age" type="number" min="18" value="30"></div>
                             </div>
 
                             <div class="search-submit-row">
@@ -1520,6 +1575,82 @@
 
     <script>
         (function () {
+            const form = document.getElementById('homeCatalogSearchForm');
+            const categorySelect = document.getElementById('categorySelect');
+            const categoryTabs = Array.from(document.querySelectorAll('[data-home-category-tab]'));
+            
+            // Map all individual field containers
+            const fieldSets = {
+                'accommodation': document.getElementById('accommodationFields'),
+                'marine-transport': document.getElementById('marineTransportFields'),
+                'land-transport': document.getElementById('landTransportFields'),
+                'excursion': document.getElementById('excursionFields'),
+                'remote_workspace': document.getElementById('remoteWorkspaceFields'),
+                'conference_room': document.getElementById('conferenceRoomFields'),
+                'resort_day_visit': document.getElementById('resortDayVisitFields'),
+                'restaurant': document.getElementById('restaurantFields'),
+                'vehicle_rental': document.getElementById('vehicleRentalFields')
+            };
+
+            if (!form || !categorySelect) {
+                return;
+            }
+
+            function normalizeCategoryKey(category) {
+                return String(category || '').toLowerCase().replace(/-/g, '_').trim();
+            }
+
+            function toggleFields() {
+                const category = String(categorySelect.value || 'accommodation').toLowerCase();
+                const normalizedCategory = normalizeCategoryKey(category);
+                
+                // Update form action
+                const displayCategory = normalizedCategory.replace(/_/g, '-');
+                form.setAttribute('action', '/catalog/' + displayCategory);
+
+                // Hide all field sets and disable their inputs
+                Object.keys(fieldSets).forEach(function (key) {
+                    const el = fieldSets[key];
+                    if (!el) return;
+                    
+                    const isActive = key === normalizedCategory;
+                    el.hidden = !isActive;
+                    el.classList.toggle('is-active', isActive);
+                    el.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+
+                    el.querySelectorAll('input, select, textarea').forEach(function (control) {
+                        control.disabled = !isActive;
+                    });
+                });
+
+                // Update active tab styling
+                categoryTabs.forEach(function (tab) {
+                    const tabCategory = normalizeCategoryKey(tab.getAttribute('data-home-category-tab') || '');
+                    tab.classList.toggle('is-active', tabCategory === normalizedCategory);
+                });
+            }
+
+            // Attach category tab click handlers
+            categoryTabs.forEach(function (tab) {
+                tab.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    const categoryKey = String(tab.getAttribute('data-home-category-tab') || '').toLowerCase();
+                    if (!categoryKey) {
+                        return;
+                    }
+
+                    categorySelect.value = categoryKey;
+                    toggleFields();
+                });
+            });
+
+            // Initialize on load
+            toggleFields();
+        })();
+    </script>
+
+    <script>
+        (function () {
             const menuRoot = document.querySelector('[data-customer-menu]');
             if (!menuRoot) {
                 return;
@@ -1553,293 +1684,6 @@
                     setMenuOpen(false);
                 }
             });
-        })();
-    </script>
-
-    <script>
-        (function () {
-            const form = document.getElementById('homeCatalogSearchForm');
-            const categorySelect = document.getElementById('categorySelect');
-            const accommodationFields = document.getElementById('accommodationFields');
-            const transportFields = document.getElementById('transportFields');
-            const serviceFields = document.getElementById('serviceFields');
-            const transportMode = document.getElementById('transportMode');
-            const transportTripType = document.getElementById('transportTripType');
-            const transportTripTypeField = document.getElementById('transportTripTypeField');
-            const transportReturnDateField = document.getElementById('transportReturnDateField');
-            const transportVehicleTypeField = document.getElementById('transportVehicleTypeField');
-            const transportReturnDateInput = document.getElementById('returnDate');
-            const transportVehicleTypeInput = document.getElementById('vehicleType');
-            const serviceAtollSelect = document.getElementById('serviceAtoll');
-            const serviceIslandSelect = document.getElementById('serviceIsland');
-            const apiBase = String(document.querySelector('.page')?.getAttribute('data-api-base') || '').replace(/\/$/, '');
-            const topCategoryLinks = Array.from(document.querySelectorAll('.top-link[data-category-key]'));
-            const categoryTabs = Array.from(document.querySelectorAll('[data-home-category-tab]'));
-
-            if (!form || !categorySelect || !accommodationFields || !transportFields || !serviceFields) {
-                return;
-            }
-
-            function setFieldActive(fieldWrapper, isActive) {
-                if (!fieldWrapper) {
-                    return;
-                }
-
-                fieldWrapper.hidden = !isActive;
-                fieldWrapper.querySelectorAll('input, select, textarea').forEach(function (control) {
-                    control.disabled = !isActive;
-                });
-            }
-
-            function fillSelect(select, options, emptyLabel) {
-                if (!select) {
-                    return;
-                }
-
-                const currentValue = String(select.value || '');
-                select.innerHTML = '';
-
-                const emptyOption = document.createElement('option');
-                emptyOption.value = '';
-                emptyOption.textContent = emptyLabel;
-                select.appendChild(emptyOption);
-
-                options.forEach(function (entry) {
-                    const option = document.createElement('option');
-                    option.value = String(entry.value ?? '');
-                    option.textContent = String(entry.label ?? entry.value ?? '');
-                    select.appendChild(option);
-                });
-
-                if (currentValue !== '') {
-                    const hasValue = Array.from(select.options).some(function (option) {
-                        return String(option.value) === currentValue;
-                    });
-
-                    if (hasValue) {
-                        select.value = currentValue;
-                    }
-                }
-            }
-
-            async function loadAtolls() {
-                if (!serviceAtollSelect || !apiBase) {
-                    return;
-                }
-
-                try {
-                    const response = await fetch(apiBase + '/atolls', { headers: { 'Accept': 'application/json' } });
-                    if (!response.ok) {
-                        return;
-                    }
-
-                    const rows = await response.json();
-                    const options = Array.isArray(rows)
-                        ? rows
-                            .map(function (row) {
-                                return {
-                                    value: String(row.id ?? ''),
-                                    label: String(row.name ?? '')
-                                };
-                            })
-                            .filter(function (row) {
-                                return row.value !== '' && row.label !== '';
-                            })
-                        : [];
-
-                    fillSelect(serviceAtollSelect, options, 'All Atolls');
-                } catch (error) {
-                    // Keep default empty options when API is unavailable.
-                }
-            }
-
-            async function loadIslandsByAtoll(atollId) {
-                if (!serviceIslandSelect || !apiBase) {
-                    return;
-                }
-
-                if (!atollId) {
-                    fillSelect(serviceIslandSelect, [], 'All Islands');
-                    return;
-                }
-
-                try {
-                    const response = await fetch(apiBase + '/islands?atollId=' + encodeURIComponent(String(atollId)), {
-                        headers: { 'Accept': 'application/json' }
-                    });
-
-                    if (!response.ok) {
-                        fillSelect(serviceIslandSelect, [], 'All Islands');
-                        return;
-                    }
-
-                    const rows = await response.json();
-                    const options = Array.isArray(rows)
-                        ? rows
-                            .map(function (row) {
-                                return {
-                                    value: String(row.name ?? ''),
-                                    label: String(row.name ?? '')
-                                };
-                            })
-                            .filter(function (row) {
-                                return row.value !== '';
-                            })
-                        : [];
-
-                    fillSelect(serviceIslandSelect, options, 'All Islands');
-                } catch (error) {
-                    fillSelect(serviceIslandSelect, [], 'All Islands');
-                }
-            }
-
-            function toggleTransportModeFields() {
-                if (!transportMode || !transportTripType) {
-                    return;
-                }
-
-                const mode = String(transportMode.value || 'marine').toLowerCase();
-                const tripType = String(transportTripType.value || 'one_way').toLowerCase();
-                const isLand = mode === 'land';
-                const isMarineRoundTrip = mode === 'marine' && tripType === 'round_trip';
-
-                setFieldActive(transportTripTypeField, !isLand);
-                setFieldActive(transportVehicleTypeField, isLand);
-                setFieldActive(transportReturnDateField, isLand || isMarineRoundTrip);
-
-                if (!isLand && !isMarineRoundTrip && transportReturnDateInput) {
-                    transportReturnDateInput.value = '';
-                }
-
-                if (!isLand && transportVehicleTypeInput) {
-                    transportVehicleTypeInput.value = '';
-                }
-            }
-
-            function normalizeCategoryKey(category) {
-                return String(category || '').toLowerCase().replace(/_/g, '-').trim();
-            }
-
-            function resolveGroup(category) {
-                const normalized = normalizeCategoryKey(category);
-                const categoryGroupMap = {
-                    'accommodation': 'accommodation',
-                    'marine-transport': 'transport',
-                    'land-transport': 'transport',
-                    'transport': 'transport',
-                    'excursion': 'service',
-                    'remote-workspace': 'service',
-                    'conference-room': 'service',
-                    'resort-day-visit': 'service',
-                    'restaurant': 'service',
-                    'vehicle-rental': 'service'
-                };
-
-                if (categoryGroupMap[normalized]) {
-                    return categoryGroupMap[normalized];
-                }
-
-                if (normalized.indexOf('transport') !== -1) {
-                    return 'transport';
-                }
-
-                if (normalized === 'accommodation' || normalized.indexOf('stay') !== -1 || normalized.indexOf('hotel') !== -1) {
-                    return 'accommodation';
-                }
-
-                return 'service';
-            }
-
-            function toggleFields() {
-                const category = String(categorySelect.value || 'accommodation').toLowerCase();
-                const normalizedCategory = normalizeCategoryKey(category);
-                const group = resolveGroup(normalizedCategory);
-                const groups = [
-                    { key: 'accommodation', el: accommodationFields },
-                    { key: 'transport', el: transportFields },
-                    { key: 'service', el: serviceFields }
-                ];
-
-                form.setAttribute('action', '/catalog/' + normalizedCategory.replace(/_/g, '-'));
-
-                groups.forEach(function (entry) {
-                    const isActive = entry.key === group;
-                    entry.el.hidden = !isActive;
-                    entry.el.classList.toggle('is-active', isActive);
-                    entry.el.setAttribute('aria-hidden', isActive ? 'false' : 'true');
-
-                    entry.el.querySelectorAll('input, select, textarea').forEach(function (control) {
-                        control.disabled = !isActive;
-                    });
-                });
-
-                if (group === 'transport') {
-                    if (transportMode) {
-                        transportMode.value = normalizedCategory === 'land-transport' ? 'land' : 'marine';
-                    }
-                    toggleTransportModeFields();
-                }
-
-                if (categoryTabs.length > 0) {
-                    categoryTabs.forEach(function (tab) {
-                        const tabCategory = normalizeCategoryKey(tab.getAttribute('data-home-category-tab') || '');
-                        tab.classList.toggle('is-active', tabCategory === normalizedCategory);
-                    });
-                }
-            }
-
-            if (transportMode) {
-                transportMode.addEventListener('change', toggleTransportModeFields);
-            }
-
-            if (transportTripType) {
-                transportTripType.addEventListener('change', toggleTransportModeFields);
-            }
-
-            if (serviceAtollSelect) {
-                serviceAtollSelect.addEventListener('change', function () {
-                    loadIslandsByAtoll(serviceAtollSelect.value || '');
-                });
-            }
-
-            if (topCategoryLinks.length > 0) {
-                topCategoryLinks.forEach(function (link) {
-                    // Skip floating sidebar links - let them navigate naturally
-                    if (link.classList.contains('floating-link')) {
-                        return;
-                    }
-
-                    link.addEventListener('click', function (event) {
-                        const categoryKey = String(link.getAttribute('data-category-key') || '').toLowerCase();
-                        if (!categoryKey) {
-                            return;
-                        }
-
-                        event.preventDefault();
-                        categorySelect.value = categoryKey;
-                        toggleFields();
-                        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    });
-                });
-            }
-
-            if (categoryTabs.length > 0) {
-                categoryTabs.forEach(function (tab) {
-                    tab.addEventListener('click', function () {
-                        const categoryKey = String(tab.getAttribute('data-home-category-tab') || '').toLowerCase();
-                        if (!categoryKey) {
-                            return;
-                        }
-
-                        categorySelect.value = categoryKey;
-                        toggleFields();
-                    });
-                });
-            }
-
-            loadAtolls();
-            loadIslandsByAtoll('');
-            toggleFields();
         })();
     </script>
 </body>

@@ -275,7 +275,7 @@
             <a class="brand" href="/">Workation Blog</a>
             <nav class="topnav" aria-label="Blog top links">
                 <a href="/">Home</a>
-                <a href="/things-to-do">Things to Do</a>
+                <a href="/blog">Things to Do</a>
                 <a href="/catalog/accommodation">Stays</a>
             </nav>
         </header>

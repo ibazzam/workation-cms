@@ -37,15 +37,17 @@
         .page {
             width: min(1180px, calc(100% - 24px));
             margin: 0 auto 28px;
+            padding-left: 262px;
             max-width: none;
             position: relative;
         }
 
         .floating-sidebar {
-            position: sticky;
-            top: 0;
+            position: fixed;
+            left: 0;
+            top: var(--header-offset, 0px);
             width: 250px;
-            height: 100dvh;
+            height: calc(100dvh - var(--header-offset, 0px));
             overflow-y: auto;
             scrollbar-width: thin;
             z-index: 200;
@@ -199,9 +201,7 @@
         }
 
         .page-body-split {
-            display: flex;
-            gap: 12px;
-            align-items: flex-start;
+            display: block;
         }
 
         .page-main-content {
@@ -219,7 +219,9 @@
 
         .sidebar-shell {
             border: 1px solid #c9ddeb;
-            border-radius: 16px;
+            border-radius: 0;
+            border-top: 0;
+            border-left: 0;
             background: linear-gradient(160deg, #ffffff 0%, #f5f9fc 100%);
             padding: 0;
             box-shadow: inset 0 1px 0 #ffffff;
@@ -258,6 +260,11 @@
             opacity: 1;
             transform: translateY(0);
             pointer-events: auto;
+        }
+
+        .page.is-header-hidden .floating-sidebar {
+            top: 0;
+            height: 100dvh;
         }
 
         .sidebar-title {
@@ -1088,7 +1095,8 @@
         @media (max-width: 1040px) {
             .page {
                 width: calc(100% - 28px);
-                margin: 14px auto 30px;
+                margin: 0 auto 30px;
+                padding-left: 242px;
             }
 
             .page-body-split {
@@ -1096,11 +1104,7 @@
             }
 
             .floating-sidebar {
-                position: static;
-                width: 100%;
-                height: auto;
-                overflow-y: visible;
-                margin-bottom: 12px;
+                width: 230px;
             }
 
             .sidebar-brand {
@@ -1110,16 +1114,7 @@
             }
 
             .header-bar {
-                position: static;
-                width: 100%;
-                margin: 0;
-                margin-left: 0;
-                margin-right: 0;
-                border: 1px solid #d8e3ec;
-                border-radius: 14px;
-                transform: none;
-                opacity: 1;
-                pointer-events: auto;
+                border-bottom-color: #d8e3ec;
             }
 
             .header-main {
@@ -1220,10 +1215,17 @@
             .page {
                 width: calc(100% - 18px);
                 margin: 10px auto 22px;
+                padding-left: 0;
             }
 
             .floating-sidebar {
                 display: none;
+            }
+
+            .page.is-header-hidden .header-bar {
+                transform: none;
+                opacity: 1;
+                pointer-events: auto;
             }
 
             .mobile-category-nav {
@@ -1233,6 +1235,12 @@
             .header-bar {
                 flex-direction: column;
                 align-items: stretch;
+                position: static;
+                width: 100%;
+                margin-left: 0;
+                margin-right: 0;
+                border: 1px solid #d8e3ec;
+                border-radius: 14px;
             }
 
             .customer-auth {
@@ -1393,8 +1401,7 @@
                 </div>
             </div>
             <nav class="header-links" aria-label="Primary links">
-                <a class="header-link" href="/things-to-do">Things to Do</a>
-                <a class="header-link" href="/blog">Blog</a>
+                <a class="header-link" href="/blog">Things to Do</a>
             </nav>
             <div class="customer-auth">
                 @if ($customerLoggedIn)
@@ -1461,8 +1468,7 @@
                             @endphp
                             <a class="mobile-category-link" href="{{ $mobileLinkUrl }}"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i><span>{{ $link['title'] ?? 'Category' }}</span></a>
                         @endforeach
-                        <a class="mobile-category-link" href="/things-to-do"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i><span>Things to Do</span></a>
-                        <a class="mobile-category-link" href="/blog"><i class="fa-solid fa-book-open" aria-hidden="true"></i><span>Blog</span></a>
+                        <a class="mobile-category-link" href="/blog"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i><span>Things to Do</span></a>
                     </div>
                 </details>
 
@@ -1716,9 +1722,12 @@
                 const currentY = window.scrollY || 0;
                 const isDesktop = window.matchMedia('(min-width: 1041px)').matches;
                 const isScrollingDown = currentY > lastScrollY;
+                const shouldHideHeader = isDesktop && currentY > revealThreshold && isScrollingDown;
+                const headerOffset = shouldHideHeader ? 0 : header.offsetHeight;
 
                 page.classList.toggle('is-scrolled', currentY > revealThreshold);
-                page.classList.toggle('is-header-hidden', isDesktop && currentY > revealThreshold && isScrollingDown);
+                page.classList.toggle('is-header-hidden', shouldHideHeader);
+                page.style.setProperty('--header-offset', headerOffset + 'px');
 
                 lastScrollY = currentY;
             }

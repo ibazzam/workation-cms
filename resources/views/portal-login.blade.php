@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $portalName }} Portal Login | Workation</title>
+    <title>{{ $portal === 'customer' ? 'Member' : $portalName }} Portal Login | Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
     <style>
@@ -181,17 +181,18 @@
 <body>
     @php
         $socialProviders = is_array($socialProviders ?? null) ? $socialProviders : [];
+        $portalDisplayName = $portal === 'customer' ? 'Member' : $portalName;
     @endphp
     <main class="frame">
     <section class="card">
         <span class="eyebrow">Secure Access</span>
-        <h1>{{ $portalName }} Portal Login</h1>
+        <h1>{{ $portalDisplayName }} Portal Login</h1>
         <p>Sign in with your assigned portal account username and password.</p>
 
         @if ($portal === 'vendor')
             <div class="hint">Vendor access requires an enabled account with <strong>VENDOR</strong> role. Too many failed attempts will temporarily lock login for security.</div>
         @elseif ($portal === 'customer')
-            <div class="hint">Customer access uses your registered email and password from the customer signup flow.</div>
+            <div class="hint">Member access uses your registered email and password from the member signup flow.</div>
         @else
             <div class="hint">Admin access is restricted to enabled admin roles. Repeated failed attempts are rate-limited for security.</div>
         @endif
@@ -206,7 +207,7 @@
 
         @if ($portal === 'customer' && session('pending_verification_email'))
             <div class="hint" role="status" aria-live="polite">
-                Email verification is required before customer login.
+                Email verification is required before member login.
                 <form method="POST" action="/portal/customer/verify-email/resend" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                     @csrf
                     <input type="hidden" name="email" value="{{ session('pending_verification_email') }}">
@@ -243,7 +244,7 @@
                 @if ($portal === 'vendor')
                     <a href="/portal/vendor/register">Register as Vendor</a>
                 @elseif ($portal === 'customer')
-                    <a href="/portal/customer/register">Create Customer Account</a>
+                    <a href="/portal/customer/register">Create Member Account</a>
                 @endif
             </div>
         </form>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $portalName ?? 'Portal' }} Reset Password | Workation</title>
+    <title>{{ ($portal ?? '') === 'customer' ? 'Member' : ($portalName ?? 'Portal') }} Reset Password | Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
     <style>
@@ -86,9 +86,12 @@
 <body>
     <main class="frame">
     <section class="card">
+        @php
+            $portalDisplayName = ($portal ?? '') === 'customer' ? 'Member' : ($portalName ?? 'Portal');
+        @endphp
         <span class="eyebrow">Secure Access</span>
-        <h1>Reset {{ $portalName ?? 'Portal' }} Password</h1>
-        <p>Choose a new password for your {{ strtolower($portalName ?? 'portal') }} account.</p>
+        <h1>Reset {{ $portalDisplayName }} Password</h1>
+        <p>Choose a new password for your {{ strtolower($portalDisplayName) }} account.</p>
 
         @if ($errors->any())
             <div class="error">{{ $errors->first() }}</div>
@@ -98,7 +101,7 @@
             @csrf
             <input type="hidden" name="token" value="{{ $token }}">
 
-            <label for="email">{{ $portalName ?? 'Portal' }} Email</label>
+            <label for="email">{{ $portalDisplayName }} Email</label>
             <input id="email" name="email" type="email" value="{{ old('email', $email) }}" autocomplete="email" required>
 
             <label for="password">New Password</label>

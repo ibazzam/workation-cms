@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Customer Registration | Workation</title>
+    <title>Member Registration | Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
     <style>
@@ -147,9 +147,9 @@
         $socialProviders = is_array($socialProviders ?? null) ? $socialProviders : [];
     @endphp
     <section class="card">
-        <span class="eyebrow">Customer Access</span>
-        <h1>Create Customer Account</h1>
-        <p>Register with your name, email, and password to continue to the customer portal.</p>
+        <span class="eyebrow">Member Access</span>
+        <h1>Create Member Account</h1>
+        <p>Register with your name, email, and password to continue to the member portal.</p>
 
         @if ($errors->any())
             <div class="error" role="alert" aria-live="assertive">{{ $errors->first() }}</div>
@@ -187,7 +187,7 @@
 
             <div class="actions">
                 <button type="submit">Create Account</button>
-                <a href="/portal/customer/login">Customer Login</a>
+                <a href="/portal/customer/login">Member Login</a>
                 <a href="/">Back to Home</a>
             </div>
         </form>

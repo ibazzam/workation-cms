@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $portalName ?? 'Portal' }} Forgot Password | Workation</title>
+    <title>{{ ($portal ?? '') === 'customer' ? 'Member' : ($portalName ?? 'Portal') }} Forgot Password | Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
     <style>
@@ -95,9 +95,12 @@
 <body>
     <main class="frame">
     <section class="card">
+        @php
+            $portalDisplayName = ($portal ?? '') === 'customer' ? 'Member' : ($portalName ?? 'Portal');
+        @endphp
         <span class="eyebrow">Secure Access</span>
-        <h1>Forgot {{ $portalName ?? 'Portal' }} Password</h1>
-        <p>Enter your {{ strtolower($portalName ?? 'portal') }} account email and we will send a secure reset link.</p>
+        <h1>Forgot {{ $portalDisplayName }} Password</h1>
+        <p>Enter your {{ strtolower($portalDisplayName) }} account email and we will send a secure reset link.</p>
 
         @if (session('status'))
             <div class="msg">{{ session('status') }}</div>
@@ -116,7 +119,7 @@
 
         <form method="POST" action="/portal/{{ $portal ?? 'admin' }}/forgot-password">
             @csrf
-            <label for="email">{{ $portalName ?? 'Portal' }} Email</label>
+            <label for="email">{{ $portalDisplayName }} Email</label>
             <input id="email" name="email" type="email" value="{{ old('email') }}" autocomplete="email" required>
 
             <div class="actions">

@@ -43,7 +43,7 @@ if (!function_exists('portalConfig')) {
         if ($portal === 'customer') {
             return [
                 'session_key' => 'portal_customer_authenticated',
-                'name' => 'Customer',
+                'name' => 'Member',
                 'allowed_roles' => [],
             ];
         }
@@ -393,7 +393,7 @@ if (!function_exists('sendCustomerPortalRegistrationNotification')) {
             ? url('/portal/customer/verify-email?email=' . rawurlencode($recipient) . '&token=' . rawurlencode($verificationToken))
             : '';
 
-        $body = "Hi {$displayName},\n\nYour Workation customer account has been created successfully.";
+        $body = "Hi {$displayName},\n\nYour Workation member account has been created successfully.";
         if ($verificationUrl !== '') {
             $body .= "\n\nBefore signing in, verify your email address using this secure link:\n{$verificationUrl}\n\nThis link expires in 24 hours.";
         } else {
@@ -405,7 +405,7 @@ if (!function_exists('sendCustomerPortalRegistrationNotification')) {
             Mail::raw(
                 $body,
                 static function ($message) use ($recipient) {
-                    $message->to($recipient)->subject('Workation Customer Account Verification');
+                    $message->to($recipient)->subject('Workation Member Account Verification');
                 }
             );
         } catch (\Throwable $e) {
@@ -5323,7 +5323,7 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
         }
 
         if (!$customerUser) {
-            throw new \RuntimeException('Unable to initialize customer account from social identity.');
+            throw new \RuntimeException('Unable to initialize member account from social identity.');
         }
 
         $needsSave = false;
@@ -5387,7 +5387,7 @@ Route::post('/portal/customer/register', function (Request $request) {
 
     if ($existingCustomer) {
         return back()->withErrors([
-            'email' => 'A customer account with this email already exists. Please log in or reset password.',
+            'email' => 'A member account with this email already exists. Please log in or reset password.',
         ])->withInput();
     }
 
@@ -5419,7 +5419,7 @@ Route::post('/portal/customer/register', function (Request $request) {
 
     $verificationToken = sendCustomerPortalRegistrationNotification($email, (string) $payload['name'], true);
 
-    $response = redirect('/portal/customer/login')->with('status', 'Customer registration successful. Please verify your email before signing in.');
+    $response = redirect('/portal/customer/login')->with('status', 'Member registration successful. Please verify your email before signing in.');
 
     if (app()->environment('testing') && is_string($verificationToken) && $verificationToken !== '') {
         $response->with('customer_verification_test_token', $verificationToken)
@@ -5457,7 +5457,7 @@ Route::get('/portal/customer/verify-email', function (Request $request) {
 
     if (!$customerUser) {
         return redirect('/portal/customer/register')->withErrors([
-            'registration' => 'Customer account was not found for this verification link. Please register again.',
+            'registration' => 'Member account was not found for this verification link. Please register again.',
         ]);
     }
 
@@ -5478,7 +5478,7 @@ Route::post('/portal/customer/verify-email/resend', function (Request $request) 
 
     if (!$customerUser) {
         return back()->withErrors([
-            'username' => 'No customer account was found for this email address.',
+            'username' => 'No member account was found for this email address.',
         ]);
     }
 
@@ -5488,7 +5488,7 @@ Route::post('/portal/customer/verify-email/resend', function (Request $request) 
 
     $verificationToken = sendCustomerPortalRegistrationNotification($email, (string) ($customerUser->name ?? 'Customer'), true);
 
-    $response = redirect('/portal/customer/login')->with('status', 'Customer registration successful. Please verify your email before signing in.');
+    $response = redirect('/portal/customer/login')->with('status', 'Member registration successful. Please verify your email before signing in.');
 
     if (app()->environment('testing') && is_string($verificationToken) && $verificationToken !== '') {
         $response->with('customer_verification_test_token', $verificationToken)
@@ -5526,7 +5526,7 @@ Route::get('/portal/customer/verify-email', function (Request $request) {
 
     if (!$customerUser) {
         return redirect('/portal/customer/register')->withErrors([
-            'registration' => 'Customer account was not found for this verification link. Please register again.',
+            'registration' => 'Member account was not found for this verification link. Please register again.',
         ]);
     }
 
@@ -5547,7 +5547,7 @@ Route::post('/portal/customer/verify-email/resend', function (Request $request) 
 
     if (!$customerUser) {
         return back()->withErrors([
-            'username' => 'No customer account was found for this email address.',
+            'username' => 'No member account was found for this email address.',
         ]);
     }
 

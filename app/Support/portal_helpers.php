@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\User;
+use App\Models\BlogPost;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -100,6 +102,33 @@ if (!function_exists('generatePortalUsernameFromEmail')) {
         }
 
         return $username;
+    }
+}
+
+if (!function_exists('generateUniqueBlogSlug')) {
+    function generateUniqueBlogSlug(string $title, ?int $ignoreId = null): string
+    {
+        $baseSlug = Str::slug(trim($title));
+        if ($baseSlug === '') {
+            $baseSlug = 'post';
+        }
+
+        $slug = $baseSlug;
+        $suffix = 2;
+
+        while (true) {
+            $query = BlogPost::query()->where('slug', $slug);
+            if ($ignoreId !== null) {
+                $query->where('id', '!=', $ignoreId);
+            }
+
+            if (!$query->exists()) {
+                return $slug;
+            }
+
+            $slug = $baseSlug . '-' . $suffix;
+            $suffix++;
+        }
     }
 }
 

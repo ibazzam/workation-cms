@@ -29,8 +29,8 @@
         }
 
         .page {
-            width: 100%;
-            margin: 0 0 30px;
+            width: min(1180px, calc(100% - 24px));
+            margin: 14px auto 28px;
         }
 
         .header-bar {
@@ -42,17 +42,19 @@
             padding: 8px 14px;
             border: 0;
             border-radius: 0;
-            background: rgba(8, 44, 66, 0.36);
+            background: transparent;
             box-shadow: none;
             margin-bottom: 14px;
             position: relative;
             z-index: 980;
-            backdrop-filter: blur(8px);
+            backdrop-filter: none;
         }
 
         .header-category-tabs {
-            width: 100%;
-            margin-top: 4px;
+            width: auto;
+            margin-top: 0;
+            flex: 1;
+            min-width: 0;
         }
 
         .header-main {
@@ -691,7 +693,7 @@
 
         @media (max-width: 1040px) {
             .page {
-                width: calc(100% - 28px);
+                width: calc(100% - 20px);
                 margin: 14px auto 30px;
             }
 
@@ -759,6 +761,11 @@
             .header-main {
                 width: 100%;
                 gap: 10px;
+            }
+
+            .header-category-tabs {
+                width: 100%;
+                flex: 0 0 100%;
             }
 
             .header-brand {
@@ -882,10 +889,14 @@
         <section class="journey-hero" aria-label="Category hero and quick navigation">
             <header class="header-bar" aria-label="Member account actions">
                 <div class="header-main">
-                    <span class="header-menu-button" aria-hidden="true"><i class="fa-solid fa-bars"></i></span>
                     <div>
                         <a class="header-brand header-brand-link" href="/">Workation</a>
                         <p class="header-subline">Maldives travel marketplace</p>
+                    </div>
+                    <div class="hero-links header-category-tabs" aria-label="Category tabs in header">
+                        @foreach ($catalogCategoryLinks as $item)
+                            <a class="{{ $categoryKey === ($item['key'] ?? '') ? 'is-active' : '' }}" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">{{ $item['title'] ?? 'Category' }}</a>
+                        @endforeach
                     </div>
                     <div class="header-search-mini" aria-label="Quick destination search">
                         <input type="search" value="{{ $filters['q'] ?? '' }}" placeholder="Destinations, islands, hotels, and experiences">
@@ -924,12 +935,6 @@
                         <a class="auth-link" href="{{ '/portal/customer/login?continue=' . urlencode($customerContinueUrl) }}">Member Login</a>
                         <a class="auth-link primary" href="{{ '/portal/customer/register?continue=' . urlencode($customerContinueUrl) }}">Member Registration</a>
                     @endif
-                </div>
-
-                <div class="hero-links header-category-tabs" aria-label="Category tabs in header">
-                    @foreach ($catalogCategoryLinks as $item)
-                        <a class="{{ $categoryKey === ($item['key'] ?? '') ? 'is-active' : '' }}" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">{{ $item['title'] ?? 'Category' }}</a>
-                    @endforeach
                 </div>
             </header>
 

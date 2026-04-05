@@ -40,23 +40,17 @@
             overflow: hidden;
         }
 
-        .footer-links {
+        .legal-links {
             margin-top: 12px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.8rem;
+            line-height: 1.5;
         }
 
-        .footer-links a {
-            text-decoration: none;
-            border: 1px solid #c8d3df;
-            border-radius: 10px;
-            background: #fff;
-            color: #20415d;
-            padding: 9px 10px;
+        .legal-links a {
+            font-size: 0.8rem;
             font-weight: 700;
-            font-size: 0.82rem;
-            text-align: center;
         }
 
         .shell-head {
@@ -443,7 +437,7 @@
                         <div class="field field-full">
                             <label for="agree_terms">
                                 <input id="agree_terms" type="checkbox" name="agree_terms" value="1" {{ old('agree_terms') ? 'checked' : '' }} style="width:auto;margin-right:6px;">
-                                I agree to the Terms of Service and Privacy Policy.
+                                I agree to the <a href="/terms-of-service">Terms of Service</a> and <a href="/privacy-policy">Privacy Policy</a>.
                             </label>
                         </div>
 
@@ -457,12 +451,7 @@
             </div>
         </section>
 
-        <footer class="footer-links" aria-label="Global support links">
-            <a href="/terms-of-service">Terms of Service</a>
-            <a href="/privacy-policy">Privacy Policy</a>
-            <a href="mailto:support@workation.mv">Email Support</a>
-            <a href="https://api.workation.mv/api/v1/ops/runbooks" target="_blank" rel="noopener">Operations Runbooks</a>
-        </footer>
+        <p class="legal-links">By continuing vendor onboarding, you agree to the <a href="/terms-of-service">Terms of Service</a>, <a href="/privacy-policy">Privacy Policy</a>, and can contact <a href="mailto:support@workation.mv">Support</a> if you need help.</p>
     </main>
 </body>
 <script>

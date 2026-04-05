@@ -28,9 +28,9 @@
         }
 
         .page {
-            max-width: 1160px;
-            margin: 0 auto;
-            padding: 24px 18px 34px;
+            width: min(1180px, calc(100% - 24px));
+            margin: 14px auto 28px;
+            padding: 24px 0 34px;
         }
 
         .hero {

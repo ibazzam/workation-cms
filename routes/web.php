@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Models\BlogPost;
 use App\Support\ReservationPricingPolicy;
 use App\Support\UniformIconSystem;
 use Illuminate\Http\Request;
@@ -1063,6 +1064,7 @@ Route::get('/', function () {
         ['icon' => 'fa-solid fa-water', 'title' => 'Marine Transport', 'subtitle' => 'Speedboats & water transfers', 'url' => '/catalog/marine-transport'],
         ['icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers', 'url' => '/catalog/land-transport'],
         ['icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'subtitle' => 'Tours and activities', 'url' => '/catalog/excursion'],
+        ['icon' => 'fa-solid fa-map-location-dot', 'title' => 'Things to Do', 'subtitle' => 'Must-try island activities', 'url' => '/things-to-do'],
         ['icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces', 'url' => '/catalog/remote_workspace'],
         ['icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces', 'url' => '/catalog/conference_room'],
         ['icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'subtitle' => 'Day-use resort offers', 'url' => '/catalog/resort_day_visit'],
@@ -1402,6 +1404,19 @@ Route::get('/', function () {
         }
     }
 
+    $featuredBlogPost = null;
+    if (Schema::hasTable('blog_posts')) {
+        $featuredBlogPost = BlogPost::query()
+            ->where('is_published', true)
+            ->where(function ($query) {
+                $query->whereNull('published_at')->orWhere('published_at', '<=', now());
+            })
+            ->orderByDesc('is_featured')
+            ->orderByDesc('published_at')
+            ->orderByDesc('created_at')
+            ->first();
+    }
+
     return view('welcome', [
         'apiBase' => $apiBase,
         'homeHeroBackgroundUrl' => $homeHeroBackgroundUrl,
@@ -1412,6 +1427,7 @@ Route::get('/', function () {
         'homeTrendingCards' => $homeTrendingCards,
         'homeWeekendDealCards' => $homeWeekendDealCards,
         'homeLovedCards' => $homeLovedCards,
+        'featuredBlogPost' => $featuredBlogPost,
         'activityLinks' => [
             [
                 'label' => 'Strict Live Preflight PASS - Run 22991556615',
@@ -1449,6 +1465,68 @@ Route::get('/privacy-policy', function () {
 
 Route::get('/terms-of-service', function () {
     return response()->view('terms-of-service');
+});
+
+Route::get('/things-to-do', function () {
+    return redirect('/catalog/excursion?sort=most_wanted');
+});
+
+Route::get('/blog', function () {
+    $posts = collect();
+
+    if (Schema::hasTable('blog_posts')) {
+        $posts = BlogPost::query()
+            ->where('is_published', true)
+            ->where(function ($query) {
+                $query->whereNull('published_at')->orWhere('published_at', '<=', now());
+            })
+            ->orderByDesc('is_featured')
+            ->orderByDesc('published_at')
+            ->orderByDesc('created_at')
+            ->limit(30)
+            ->get();
+    }
+
+    $featuredPost = $posts->first(function ($post) {
+        return (bool) ($post->is_featured ?? false);
+    });
+
+    return view('blog-index', [
+        'apiBase' => workationApiBase(),
+        'posts' => $posts,
+        'featuredPost' => $featuredPost,
+    ]);
+});
+
+Route::get('/blog/{slug}', function (string $slug) {
+    if (!Schema::hasTable('blog_posts')) {
+        abort(404);
+    }
+
+    $post = BlogPost::query()
+        ->where('slug', $slug)
+        ->where('is_published', true)
+        ->where(function ($query) {
+            $query->whereNull('published_at')->orWhere('published_at', '<=', now());
+        })
+        ->firstOrFail();
+
+    $relatedPosts = BlogPost::query()
+        ->where('id', '!=', (int) $post->id)
+        ->where('is_published', true)
+        ->where(function ($query) {
+            $query->whereNull('published_at')->orWhere('published_at', '<=', now());
+        })
+        ->orderByDesc('published_at')
+        ->orderByDesc('created_at')
+        ->limit(3)
+        ->get();
+
+    return view('blog-show', [
+        'apiBase' => workationApiBase(),
+        'post' => $post,
+        'relatedPosts' => $relatedPosts,
+    ]);
 });
 
 Route::get('/catalog/{category}', function (Request $request, string $category) {
@@ -4071,6 +4149,223 @@ Route::post('/portal/admin/listing-options/{option}/delete', function (int $opti
     ]);
 
     return back()->with('portal_notice', 'Listing option removed.');
+});
+
+Route::get('/portal/admin/blog', function () {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canManageVendorUsers()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can manage blog posts.']);
+    }
+
+    $posts = collect();
+    if (Schema::hasTable('blog_posts')) {
+        $posts = BlogPost::query()
+            ->orderByDesc('is_featured')
+            ->orderByDesc('published_at')
+            ->orderByDesc('created_at')
+            ->limit(200)
+            ->get();
+    }
+
+    return view('admin-blog-index', [
+        'posts' => $posts,
+    ]);
+});
+
+Route::get('/portal/admin/blog/create', function () {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canManageVendorUsers()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can create blog posts.']);
+    }
+
+    return view('admin-blog-form', [
+        'mode' => 'create',
+        'post' => null,
+    ]);
+});
+
+Route::post('/portal/admin/blog', function (Request $request) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canManageVendorUsers()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can create blog posts.']);
+    }
+
+    if (!Schema::hasTable('blog_posts')) {
+        return back()->withErrors(['auth' => 'Blog table is not ready. Run migrations first.'])->withInput();
+    }
+
+    $validated = $request->validate([
+        'title' => ['required', 'string', 'max:180'],
+        'excerpt' => ['nullable', 'string', 'max:420'],
+        'content' => ['required', 'string', 'min:50'],
+        'is_published' => ['nullable', 'boolean'],
+        'is_featured' => ['nullable', 'boolean'],
+        'cover_image' => ['nullable', 'image', 'max:6144'],
+    ]);
+
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+    $slug = generateUniqueBlogSlug((string) $validated['title']);
+
+    $post = new BlogPost();
+    $post->title = trim((string) $validated['title']);
+    $post->slug = $slug;
+    $post->excerpt = trim((string) ($validated['excerpt'] ?? '')) ?: null;
+    $post->content = (string) $validated['content'];
+    $post->is_published = (bool) ($validated['is_published'] ?? false);
+    $post->is_featured = (bool) ($validated['is_featured'] ?? false);
+    $post->published_at = $post->is_published ? now() : null;
+    $post->created_by_user_id = $actorUserId;
+    $post->updated_by_user_id = $actorUserId;
+    $post->save();
+
+    if ($request->hasFile('cover_image')) {
+        $coverFile = $request->file('cover_image');
+        if ($coverFile !== null && $coverFile->isValid()) {
+            $extension = strtolower((string) $coverFile->getClientOriginalExtension());
+            if ($extension === '') {
+                $extension = 'jpg';
+            }
+
+            $storagePath = 'blog/' . (int) $post->id . '/cover.' . $extension;
+            Storage::disk('public')->putFileAs('blog/' . (int) $post->id, $coverFile, 'cover.' . $extension);
+            $post->cover_image_path = $storagePath;
+            $post->save();
+        }
+    }
+
+    if ($post->is_featured) {
+        BlogPost::query()
+            ->where('id', '!=', (int) $post->id)
+            ->update(['is_featured' => false, 'updated_at' => now()]);
+    }
+
+    portalAdminAuditLog('blog_post_created', [
+        'target_role' => 'ADMIN',
+        'post_id' => (int) $post->id,
+        'post_slug' => (string) $post->slug,
+        'is_featured' => (bool) $post->is_featured,
+        'is_published' => (bool) $post->is_published,
+    ]);
+
+    return redirect('/portal/admin/blog')->with('portal_notice', 'Blog post created successfully.');
+});
+
+Route::get('/portal/admin/blog/{post}/edit', function (int $post) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canManageVendorUsers()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can edit blog posts.']);
+    }
+
+    if (!Schema::hasTable('blog_posts')) {
+        return redirect('/portal/admin/blog')->withErrors(['auth' => 'Blog table is not ready. Run migrations first.']);
+    }
+
+    $blogPost = BlogPost::query()->findOrFail($post);
+
+    return view('admin-blog-form', [
+        'mode' => 'edit',
+        'post' => $blogPost,
+    ]);
+});
+
+Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canManageVendorUsers()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can edit blog posts.']);
+    }
+
+    if (!Schema::hasTable('blog_posts')) {
+        return back()->withErrors(['auth' => 'Blog table is not ready. Run migrations first.'])->withInput();
+    }
+
+    $blogPost = BlogPost::query()->findOrFail($post);
+
+    $validated = $request->validate([
+        'title' => ['required', 'string', 'max:180'],
+        'excerpt' => ['nullable', 'string', 'max:420'],
+        'content' => ['required', 'string', 'min:50'],
+        'is_published' => ['nullable', 'boolean'],
+        'is_featured' => ['nullable', 'boolean'],
+        'cover_image' => ['nullable', 'image', 'max:6144'],
+        'remove_cover_image' => ['nullable', 'boolean'],
+    ]);
+
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+
+    $blogPost->title = trim((string) $validated['title']);
+    $blogPost->slug = generateUniqueBlogSlug((string) $validated['title'], (int) $blogPost->id);
+    $blogPost->excerpt = trim((string) ($validated['excerpt'] ?? '')) ?: null;
+    $blogPost->content = (string) $validated['content'];
+    $blogPost->is_published = (bool) ($validated['is_published'] ?? false);
+    $blogPost->is_featured = (bool) ($validated['is_featured'] ?? false);
+
+    if ($blogPost->is_published && $blogPost->published_at === null) {
+        $blogPost->published_at = now();
+    }
+    if (!$blogPost->is_published) {
+        $blogPost->published_at = null;
+    }
+
+    if ((bool) ($validated['remove_cover_image'] ?? false)) {
+        $existingPath = trim((string) ($blogPost->cover_image_path ?? ''));
+        if ($existingPath !== '') {
+            Storage::disk('public')->delete($existingPath);
+        }
+        $blogPost->cover_image_path = null;
+    }
+
+    if ($request->hasFile('cover_image')) {
+        $coverFile = $request->file('cover_image');
+        if ($coverFile !== null && $coverFile->isValid()) {
+            $existingPath = trim((string) ($blogPost->cover_image_path ?? ''));
+            if ($existingPath !== '') {
+                Storage::disk('public')->delete($existingPath);
+            }
+
+            $extension = strtolower((string) $coverFile->getClientOriginalExtension());
+            if ($extension === '') {
+                $extension = 'jpg';
+            }
+
+            $storagePath = 'blog/' . (int) $blogPost->id . '/cover.' . $extension;
+            Storage::disk('public')->putFileAs('blog/' . (int) $blogPost->id, $coverFile, 'cover.' . $extension);
+            $blogPost->cover_image_path = $storagePath;
+        }
+    }
+
+    $blogPost->updated_by_user_id = $actorUserId;
+    $blogPost->save();
+
+    if ($blogPost->is_featured) {
+        BlogPost::query()
+            ->where('id', '!=', (int) $blogPost->id)
+            ->update(['is_featured' => false, 'updated_at' => now()]);
+    }
+
+    portalAdminAuditLog('blog_post_updated', [
+        'target_role' => 'ADMIN',
+        'post_id' => (int) $blogPost->id,
+        'post_slug' => (string) $blogPost->slug,
+        'is_featured' => (bool) $blogPost->is_featured,
+        'is_published' => (bool) $blogPost->is_published,
+    ]);
+
+    return redirect('/portal/admin/blog')->with('portal_notice', 'Blog post updated successfully.');
 });
 
     Route::post('/portal/admin/users/create', function (\Illuminate\Http\Request $request) {

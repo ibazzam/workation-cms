@@ -232,133 +232,6 @@
             padding: 24px 28px 48px;
         }
 
-        .dashboard-header-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-            padding: 10px 16px;
-            border: 1px solid #d8e3ec;
-            border-radius: 14px;
-            background: #ffffff;
-            box-shadow: 0 8px 20px rgba(22, 64, 93, 0.06);
-            margin-bottom: 18px;
-            flex-wrap: nowrap;
-        }
-
-        .dashboard-header-brand-wrap {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-shrink: 0;
-        }
-
-        .dashboard-header-brand-mark {
-            width: 34px;
-            height: 34px;
-            border-radius: 10px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #e8f5fb 0%, #d5eef7 100%);
-            color: #166083;
-            font-size: 0.95rem;
-        }
-
-        .dashboard-header-brand {
-            margin: 0;
-            font-size: 1rem;
-            font-weight: 800;
-            color: #163f5a;
-            letter-spacing: 0.02em;
-        }
-
-        .dashboard-header-subline {
-            margin: 2px 0 0;
-            font-size: 0.74rem;
-            color: #587186;
-        }
-
-        .dashboard-top-nav {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            min-width: 0;
-            flex: 1;
-            overflow-x: auto;
-            scrollbar-width: none;
-        }
-
-        .dashboard-top-nav::-webkit-scrollbar {
-            display: none;
-        }
-
-        .dashboard-top-nav-link {
-            text-decoration: none;
-            color: #21455e;
-            font-size: 0.8rem;
-            font-weight: 600;
-            padding: 8px 10px;
-            border-radius: 9px;
-            white-space: nowrap;
-            border: 1px solid transparent;
-            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-        }
-
-        .dashboard-top-nav-link:hover {
-            background: #f5faff;
-            border-color: #d6e3ee;
-            color: #0e5c7c;
-        }
-
-        .dashboard-top-nav-link.is-active {
-            background: #ebf4fb;
-            border-color: #c7dceb;
-            color: #0a4a65;
-            font-weight: 700;
-        }
-
-        .dashboard-header-actions {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            flex-wrap: wrap;
-            gap: 8px;
-            flex-shrink: 0;
-        }
-
-        .dashboard-header-link {
-            text-decoration: none;
-            border: 1px solid #c9dbea;
-            border-radius: 10px;
-            padding: 7px 11px;
-            background: #f6fbff;
-            color: #19466a;
-            font-size: 0.77rem;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-
-        .dashboard-header-link.primary {
-            background: linear-gradient(135deg, #0f6179 0%, #1e7d90 100%);
-            border-color: #0f6179;
-            color: #ffffff;
-        }
-
-        .dashboard-status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            border: 1px solid #d0dfeb;
-            border-radius: 999px;
-            padding: 7px 10px;
-            background: #ffffff;
-            color: #476276;
-            font-size: 0.76rem;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-
         /* ── Portal sections ─────────────────────────────────────── */
         .portal-section { display: none; }
         .portal-section.is-active { display: block; }
@@ -796,22 +669,11 @@
         @media (max-width: 860px) {
             .portal-sidebar { width: 220px; }
             .portal-main { padding: 16px 16px 32px; }
-            .dashboard-header-bar {
-                flex-wrap: wrap;
-            }
-            .dashboard-top-nav {
-                order: 3;
-                flex-basis: 100%;
-            }
         }
 
         @media (max-width: 680px) {
             .portal-wrap { flex-direction: column; }
             .portal-sidebar { width: 100%; height: auto; position: static; }
-            .dashboard-header-bar { align-items: flex-start; }
-            .dashboard-header-actions { width: 100%; justify-content: flex-start; }
-            .dashboard-header-brand-wrap { width: 100%; }
-            .dashboard-top-nav { width: 100%; }
             .booking-card-body { grid-template-columns: 80px 1fr; }
             .booking-card-thumb-wrap { width: 80px; }
             .form-grid { grid-template-columns: 1fr; }
@@ -947,35 +809,6 @@
 
         {{-- ───────────── Main content ─────────────────────────── --}}
         <main class="portal-main">
-
-            <header class="dashboard-header-bar" aria-label="Member dashboard header">
-                <div class="dashboard-header-brand-wrap">
-                    <span class="dashboard-header-brand-mark" aria-hidden="true"><i class="fa-solid fa-compass"></i></span>
-                    <div>
-                        <p class="dashboard-header-brand">Workation</p>
-                        <p class="dashboard-header-subline">Member dashboard</p>
-                    </div>
-                </div>
-
-                <nav class="dashboard-top-nav" aria-label="Member dashboard quick navigation">
-                    <a class="dashboard-top-nav-link is-active" href="#bookings" data-dashboard-nav-link="bookings">My Bookings</a>
-                    <a class="dashboard-top-nav-link" href="#saved" data-dashboard-nav-link="saved">Saved</a>
-                    <a class="dashboard-top-nav-link" href="#price-alerts" data-dashboard-nav-link="price-alerts">Price Alerts</a>
-                    <a class="dashboard-top-nav-link" href="#my-cards" data-dashboard-nav-link="my-cards">Cards</a>
-                    <a class="dashboard-top-nav-link" href="#profile" data-dashboard-nav-link="profile">Profile</a>
-                    <a class="dashboard-top-nav-link" href="/catalog/accommodation">Stays</a>
-                    <a class="dashboard-top-nav-link" href="/catalog/transport">Transport</a>
-                </nav>
-
-                <div class="dashboard-header-actions">
-                    <a class="dashboard-header-link" href="/">Back to Home</a>
-                    @if ($customerLoggedIn)
-                        <span class="dashboard-status-pill"><i class="fa-solid fa-user-check" aria-hidden="true"></i>{{ $profileName ?: 'Member' }}</span>
-                    @else
-                        <a class="dashboard-header-link primary" href="/portal/customer/login">Member Login</a>
-                    @endif
-                </div>
-            </header>
 
             @if (!$customerLoggedIn)
                 <div class="no-auth-banner">
@@ -1367,7 +1200,6 @@
 
             const allSections = Array.from(document.querySelectorAll('[data-portal-section]'));
             const allNavButtons = Array.from(document.querySelectorAll('[data-section]'));
-            const topNavLinks = Array.from(document.querySelectorAll('[data-dashboard-nav-link]'));
 
             // ── Activate a portal section ─────────────────────────────
             function activateSection(sectionKey) {
@@ -1388,10 +1220,6 @@
                     } else {
                         btn.classList.toggle('is-active', btnSection === sectionKey && sectionKey !== 'bookings');
                     }
-                });
-
-                topNavLinks.forEach(function (link) {
-                    link.classList.toggle('is-active', (link.getAttribute('data-dashboard-nav-link') || '') === sectionKey);
                 });
             }
 

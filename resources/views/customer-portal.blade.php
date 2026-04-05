@@ -181,6 +181,28 @@
         .sidebar-footer {
             padding: 12px 16px;
             border-top: 1px solid var(--line);
+            display: grid;
+            gap: 8px;
+        }
+
+        .sidebar-home-link {
+            display: block;
+            width: 100%;
+            border: 1px solid #cfe0eb;
+            border-radius: 8px;
+            padding: 8px 12px;
+            background: #f5fbff;
+            color: #1f5877;
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-decoration: none;
+            text-align: left;
+        }
+
+        .sidebar-home-link:hover {
+            background: #ebf4fb;
+            border-color: #b7d3e2;
+            color: #0d4f6d;
         }
 
         .sidebar-logout {
@@ -769,6 +791,9 @@
             </nav>
 
             <div class="sidebar-footer">
+                <a class="sidebar-home-link" href="/">
+                    <i class="fa-solid fa-house" style="margin-right:6px;"></i>Back to Home
+                </a>
                 @if ($customerLoggedIn)
                     <form method="POST" action="/portal/customer/logout">
                         @csrf

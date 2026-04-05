@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         :root {
             --bg: #edf4f2;
@@ -71,6 +72,21 @@
             font-size: 0.86rem;
         }
 
+        .hero-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .hero-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
         .portal-shell {
             margin-top: 10px;
             display: grid;
@@ -94,33 +110,120 @@
 
         .hero-links {
             display: flex;
-            flex-direction: column;
+            flex-wrap: wrap;
             gap: 8px;
-            padding: 12px;
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            background: #f7fbff;
-            position: sticky;
-            top: 8px;
-            max-height: calc(100vh - 16px);
-            overflow-y: auto;
+            margin-top: 14px;
         }
 
         .auth-bar {
-            margin-top: 10px;
             display: flex;
-            border-radius: 10px;
-            padding: 8px 10px;
-            font-size: 0.82rem;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
         }
 
-            background: #ffffff;
+        .auth-user {
             font-size: 0.82rem;
             border: 1px solid #b8dfe4;
             border-radius: 999px;
             padding: 6px 10px;
             background: rgba(11, 49, 75, 0.32);
             color: #dff4fb;
+        }
+
+        .portal-nav {
+            position: sticky;
+            top: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #ffffff;
+            max-height: calc(100vh - 16px);
+            overflow-y: auto;
+        }
+
+        .admin-nav-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 4px 10px;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #e5edf3;
+        }
+
+        .admin-nav-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #d5ecf5 0%, #b9deea 100%);
+            color: #0e4a64;
+            font-size: 0.82rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .admin-nav-user-meta {
+            min-width: 0;
+            display: grid;
+            gap: 2px;
+        }
+
+        .admin-nav-user-name {
+            margin: 0;
+            font-size: 0.84rem;
+            font-weight: 700;
+            color: #163042;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .admin-nav-user-role {
+            margin: 0;
+            font-size: 0.72rem;
+            color: #6f8598;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .nav-group-title {
+            margin: 8px 4px 2px;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #6f8598;
+        }
+
+        .portal-nav a {
+            text-decoration: none;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #1e4456;
+            background: #f7fbff;
+            transition: all 0.15s ease;
+        }
+
+        .portal-nav a:hover {
+            border-color: #cddce8;
+            background: #eef7fd;
+            color: #124967;
+        }
+
+        .portal-nav a.prominent {
+            background: #ebf4fb;
+            color: #0a4a65;
+            border-color: #bcd8ea;
         }
 
         .logout {
@@ -142,24 +245,6 @@
             padding: 8px 10px;
             font-size: 0.82rem;
             background: rgba(11, 49, 75, 0.32);
-        }
-
-        .portal-nav {
-            margin-top: 12px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .portal-nav a {
-            text-decoration: none;
-            border: 1px solid #c8d4df;
-            border-radius: 999px;
-            padding: 7px 11px;
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: #1e405f;
-            background: #f5f9fc;
         }
 
         .permissions-section {
@@ -829,6 +914,10 @@
                 min-height: auto;
             }
 
+            .hero-actions {
+                align-items: flex-start;
+            }
+
             .layout {
                 grid-template-columns: 1fr;
             }
@@ -853,10 +942,8 @@
             .portal-nav {
                 position: static;
                 overflow-x: auto;
-                overflow-y: hidden;
-                white-space: nowrap;
-                flex-direction: row;
-                flex-wrap: wrap;
+                overflow-y: visible;
+                white-space: normal;
             }
         }
         .prominent {
@@ -876,36 +963,58 @@
 <body>
     <main class="page" data-api-base="{{ $apiBase }}">
         <section class="hero">
-            <span class="eyebrow">Internal Access</span>
-            <h1>Admin Portal</h1>
-            <p>Use a valid admin bearer token to test operational APIs from this page. Token is stored in browser session storage only.</p>
-            <div class="hero-links">
-                <a class="hero-link" href="/">Back to Home</a>
-                <a class="hero-link" href="/vendor">Go to Vendor Portal</a>
-                <a class="hero-link" href="{{ $apiBase }}/api/v1/ops/metrics" target="_blank" rel="noopener">Open Public Metrics</a>
-            </div>
-            <div class="auth-bar">
-                <span class="auth-user">Signed in as {{ $portalUser }}</span>
-                <span class="role-pill">Role: {{ $portalRole }}</span>
-                <form method="POST" action="/portal/admin/logout">
-                    @csrf
-                    <button class="logout" type="submit">Log Out</button>
-                </form>
+            <div class="hero-top">
+                <div>
+                    <span class="eyebrow">Internal Access</span>
+                    <h1>Admin Portal</h1>
+                    <p>Monitor platform health, finance moderation, vendor onboarding, audit history, and operational controls from one unified admin workspace.</p>
+                    <div class="hero-links">
+                        <a class="hero-link" href="/">Back to Home</a>
+                        <a class="hero-link" href="/vendor">Go to Vendor Portal</a>
+                        <a class="hero-link" href="#financeModerationPanel">Open Finance</a>
+                        <a class="hero-link" href="#vendorRegistrationsPanel">Review Vendors</a>
+                    </div>
+                </div>
+                <div class="hero-actions">
+                    <div class="auth-bar">
+                        <span class="auth-user">Signed in as {{ $portalUser }}</span>
+                        <span class="role-pill">Role: {{ $portalRole }}</span>
+                        <form method="POST" action="/portal/admin/logout">
+                            @csrf
+                            <button class="logout" type="submit">Log Out</button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </section>
 
         <div class="portal-shell">
         <nav class="portal-nav" aria-label="Admin navigation">
-            <a href="#dashboardWidgets">Dashboard</a>
+            <div class="admin-nav-head">
+                <div class="admin-nav-avatar" aria-hidden="true">{{ strtoupper(substr((string) ($portalUser ?? 'A'), 0, 1)) }}</div>
+                <div class="admin-nav-user-meta">
+                    <p class="admin-nav-user-name">{{ $portalUser }}</p>
+                    <p class="admin-nav-user-role">{{ $portalRole }}</p>
+                </div>
+            </div>
+
+            <p class="nav-group-title">Overview</p>
+            <a class="prominent" href="#dashboardWidgets">Dashboard</a>
             <a href="#rolePermissionsPanel">Role Permissions</a>
+            <a href="#auditPanel">Audit History</a>
+
+            <p class="nav-group-title">Finance &amp; Catalog</p>
             <a href="#financeModerationPanel">Finance Moderation</a>
             <a href="#listingOptionCatalogPanel">Listing Options</a>
-            <a href="#sessionDebug">Session</a>
-            <a href="#authApiSection">Auth and API</a>
+
+            <p class="nav-group-title">Moderation &amp; Vendors</p>
             <a href="#moderationPanel" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Moderation</a>
             <a href="#vendorRegistrationsPanel" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Vendor Registrations</a>
             <a href="#vendorRegistrationHistoryPanel" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Vendor Review History</a>
-            <a href="#auditPanel">Audit History</a>
+
+            <p class="nav-group-title">Tools</p>
+            <a href="#sessionDebug">Session</a>
+            <a href="#authApiSection">Auth and API</a>
         </nav>
 
         <div class="portal-content">

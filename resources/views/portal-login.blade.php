@@ -6,6 +6,7 @@
     <title>{{ $portal === 'customer' ? 'Member' : $portalName }} Portal Login | Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         :root {
             --ink: #182433;
@@ -121,6 +122,10 @@
         }
 
         .social-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
             text-decoration: none;
             border: 1px solid #c8d3df;
             border-radius: 10px;
@@ -131,6 +136,19 @@
             font-size: 0.82rem;
             text-align: center;
         }
+
+        .social-btn .social-icon {
+            font-size: 1rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .social-btn.social-google { border-color: #d9d9d9; color: #444; }
+        .social-btn.social-google .social-icon { color: #4285f4; }
+        .social-btn.social-facebook { border-color: #b5c5d6; color: #1877f2; }
+        .social-btn.social-facebook .social-icon { color: #1877f2; }
+        .social-btn.social-apple { border-color: #c8cdd3; color: #111; }
+        .social-btn.social-apple .social-icon { color: #111; }
 
         .social-btn.disabled {
             opacity: 0.55;
@@ -182,6 +200,11 @@
     @php
         $socialProviders = is_array($socialProviders ?? null) ? $socialProviders : [];
         $portalDisplayName = $portal === 'customer' ? 'Member' : $portalName;
+        $socialIconMap = [
+            'google'   => ['class' => 'fa-brands fa-google',    'css' => 'social-google'],
+            'facebook' => ['class' => 'fa-brands fa-facebook-f','css' => 'social-facebook'],
+            'apple'    => ['class' => 'fa-brands fa-apple',     'css' => 'social-apple'],
+        ];
     @endphp
     <main class="frame">
     <section class="card">
@@ -223,7 +246,18 @@
                         $isConfigured = (bool) ($meta['configured'] ?? false);
                         $redirectUrl = (string) ($meta['redirect'] ?? '#');
                     @endphp
-                    <a class="social-btn {{ $isConfigured ? '' : 'disabled' }}" href="{{ $redirectUrl }}" aria-label="Continue with {{ ucfirst((string) $provider) }}">Continue with {{ ucfirst((string) $provider) }}</a>
+                    @php
+                        $providerName  = ucfirst((string) $provider);
+                        $iconEntry     = $socialIconMap[(string) $provider] ?? ['class' => 'fa-solid fa-link', 'css' => ''];
+                        $iconClass     = $iconEntry['class'];
+                        $cssClass      = $iconEntry['css'];
+                    @endphp
+                    <a class="social-btn {{ $cssClass }} {{ $isConfigured ? '' : 'disabled' }}"
+                       href="{{ $redirectUrl }}"
+                       aria-label="Continue with {{ $providerName }}">
+                        <i class="{{ $iconClass }} social-icon" aria-hidden="true"></i>
+                        Continue with {{ $providerName }}
+                    </a>
                 @endforeach
             </div>
         @endif
@@ -274,4 +308,3 @@
     </script>
 </body>
 </html>
-

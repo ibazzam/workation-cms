@@ -1,6 +1,6 @@
 <section id="vendorDailyCollectionSection" class="card ops-section" aria-label="Vendor daily collection and settlements" data-panel-group="billing">
             <div class="ops-header">
-                <p class="ops-title">Daily Collection and Payout Ledger</p>
+                <p class="ops-title">Billing, Payouts, and Refunds</p>
                 <span class="ops-chip">Commission {{ (int) ($commissionRate * 100) }}%</span>
             </div>
 
@@ -21,7 +21,17 @@
                         <p class="metric-label">Settled Invoices</p>
                         <p class="metric-value">{{ $settledInvoicesCount }}</p>
                     </article>
+                    <article class="billing-ledger-card">
+                        <p class="metric-label">Refund Cases</p>
+                        <p class="metric-value">{{ $vendorRefundCaseCount }}</p>
+                    </article>
+                    <article class="billing-ledger-card">
+                        <p class="metric-label">Refund Exposure</p>
+                        <p class="metric-value">MVR {{ number_format($vendorRefundExposureTotal, 2) }}</p>
+                    </article>
                 </div>
+
+                <p class="small" style="margin:10px 0 0;">This ledger tracks earnings handled by Workation, expected payouts to the vendor, and reservations that may require refund follow-up.</p>
 
                 <div class="ops-table-wrap">
                     <table class="ops-table" aria-label="Vendor daily collection table">

@@ -36,7 +36,7 @@
 
         .page {
             width: min(1180px, calc(100% - 24px));
-            margin: 14px auto 28px;
+            margin: 0 auto 28px;
             max-width: none;
             position: relative;
         }
@@ -64,11 +64,21 @@
             border-radius: 0;
             background: rgba(255, 255, 255, 0.96);
             box-shadow: 0 10px 24px rgba(22, 64, 93, 0.06);
-            margin: 0 -12px 0;
-            width: calc(100% + 24px);
-            position: static;
+            margin: 0;
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
+            position: sticky;
+            top: 0;
+            transition: transform 0.22s ease, opacity 0.22s ease;
             z-index: 980;
             backdrop-filter: blur(10px);
+        }
+
+        .page.is-header-hidden .header-bar {
+            transform: translateY(calc(-100% - 2px));
+            opacity: 0;
+            pointer-events: none;
         }
 
         .header-main {
@@ -1103,8 +1113,13 @@
                 position: static;
                 width: 100%;
                 margin: 0;
+                margin-left: 0;
+                margin-right: 0;
                 border: 1px solid #d8e3ec;
                 border-radius: 14px;
+                transform: none;
+                opacity: 1;
+                pointer-events: auto;
             }
 
             .header-main {
@@ -1694,9 +1709,18 @@
                 return;
             }
 
+            let lastScrollY = window.scrollY || 0;
+
             function syncSidebarBrandReveal() {
                 const revealThreshold = Math.max(56, header.offsetHeight - 4);
-                page.classList.toggle('is-scrolled', window.scrollY > revealThreshold);
+                const currentY = window.scrollY || 0;
+                const isDesktop = window.matchMedia('(min-width: 1041px)').matches;
+                const isScrollingDown = currentY > lastScrollY;
+
+                page.classList.toggle('is-scrolled', currentY > revealThreshold);
+                page.classList.toggle('is-header-hidden', isDesktop && currentY > revealThreshold && isScrollingDown);
+
+                lastScrollY = currentY;
             }
 
             window.addEventListener('scroll', syncSidebarBrandReveal, { passive: true });

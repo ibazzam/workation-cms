@@ -748,6 +748,13 @@
                 margin: 10px auto 22px;
             }
 
+            .search-sticky-wrap {
+                position: static;
+                top: auto;
+                z-index: auto;
+                margin-top: 0;
+            }
+
             .header-bar {
                 flex-direction: column;
                 align-items: stretch;
@@ -781,8 +788,6 @@
             }
 
             .search-sticky-wrap {
-                top: 0;
-                margin-top: -6px;
                 padding: 0 10px;
             }
 

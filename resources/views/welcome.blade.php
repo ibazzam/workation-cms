@@ -45,7 +45,7 @@
             position: sticky;
             top: 0;
             width: 250px;
-            height: 100vh;
+            height: 100dvh;
             overflow-y: auto;
             scrollbar-width: thin;
             z-index: 200;
@@ -64,7 +64,7 @@
             border-radius: 0;
             background: rgba(255, 255, 255, 0.96);
             box-shadow: 0 10px 24px rgba(22, 64, 93, 0.06);
-            margin: 0 -12px 10px;
+            margin: 0 -12px 0;
             width: calc(100% + 24px);
             position: static;
             z-index: 980;
@@ -106,6 +106,15 @@
             color: var(--brand);
             letter-spacing: -0.04em;
             line-height: 1;
+        }
+
+        .header-brand-link {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .header-brand-link:hover {
+            color: var(--brand-strong);
         }
 
         .header-subline {
@@ -202,12 +211,47 @@
             border: 1px solid #c9ddeb;
             border-radius: 16px;
             background: linear-gradient(160deg, #ffffff 0%, #f5f9fc 100%);
-            padding: 10px;
+            padding: 0;
             box-shadow: inset 0 1px 0 #ffffff;
         }
 
+        .sidebar-brand {
+            display: grid;
+            gap: 2px;
+            padding: 10px 12px;
+            border-bottom: 1px solid #d6e4ef;
+            background: linear-gradient(180deg, #f8fcff 0%, #f1f8fd 100%);
+            opacity: 0;
+            transform: translateY(-4px);
+            pointer-events: none;
+            transition: opacity 0.22s ease, transform 0.22s ease;
+        }
+
+        .sidebar-brand-title {
+            margin: 0;
+            font-size: 1.95rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            color: var(--brand);
+            text-decoration: none;
+        }
+
+        .sidebar-brand-subline {
+            margin: 0;
+            font-size: 0.7rem;
+            color: #71869a;
+            white-space: nowrap;
+        }
+
+        .page.is-scrolled .sidebar-brand {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
         .sidebar-title {
-            margin: 0 0 8px;
+            margin: 10px 10px 8px;
             font-size: 0.72rem;
             text-transform: uppercase;
             letter-spacing: 0.09em;
@@ -380,7 +424,7 @@
             display: grid;
             grid-template-columns: 1fr;
             gap: 6px;
-            padding: 0;
+            padding: 0 10px 10px;
             border: 0;
             background: transparent;
         }
@@ -1049,10 +1093,16 @@
                 margin-bottom: 12px;
             }
 
+            .sidebar-brand {
+                opacity: 1;
+                transform: none;
+                pointer-events: auto;
+            }
+
             .header-bar {
                 position: static;
                 width: 100%;
-                margin: 0 0 12px;
+                margin: 0;
                 border: 1px solid #d8e3ec;
                 border-radius: 14px;
             }
@@ -1318,7 +1368,7 @@
                 <span class="header-menu-button" aria-hidden="true"><i class="fa-solid fa-bars"></i></span>
                 <div class="header-brand-wrap">
                     <div>
-                        <p class="header-brand">Workation</p>
+                        <a class="header-brand header-brand-link" href="/">Workation</a>
                         <p class="header-subline">Maldives travel marketplace</p>
                     </div>
                 </div>
@@ -1366,6 +1416,10 @@
 
         <div class="page-body-split">
             <aside class="floating-sidebar sidebar-shell" aria-label="Category sidebar">
+                <div class="sidebar-brand" aria-label="Sidebar workation logo">
+                    <a class="sidebar-brand-title" href="/">Workation</a>
+                    <p class="sidebar-brand-subline">Maldives travel marketplace</p>
+                </div>
                 <p class="sidebar-title">Browse Categories</p>
                 <section class="top-links" aria-label="Top categories">
                     @foreach ($homeTopCategoryLinks as $link)
@@ -1625,6 +1679,25 @@
             </div>{{-- /page-main-content --}}
         </div>{{-- /page-body-split --}}
     </main>
+
+    <script>
+        (function () {
+            const page = document.querySelector('.page');
+            const header = document.querySelector('.header-bar');
+            if (!page || !header) {
+                return;
+            }
+
+            function syncSidebarBrandReveal() {
+                const revealThreshold = Math.max(56, header.offsetHeight - 4);
+                page.classList.toggle('is-scrolled', window.scrollY > revealThreshold);
+            }
+
+            window.addEventListener('scroll', syncSidebarBrandReveal, { passive: true });
+            window.addEventListener('resize', syncSidebarBrandReveal);
+            syncSidebarBrandReveal();
+        })();
+    </script>
 
     <script>
         (function () {

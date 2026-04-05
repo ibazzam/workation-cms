@@ -5626,29 +5626,35 @@ Route::post('/portal/{portal}/forgot-password', function (Request $request, stri
     if ($portalUser) {
         $brokerName = ($portalUser instanceof \App\Models\User) ? 'backend_users' : 'customer_users';
         $broker = Password::broker($brokerName);
+        $mailSent = false;
 
         try {
             $token = $broker->createToken($portalUser);
-            $portalUser->sendPasswordResetNotification($token);
+            $resetUrl = url('/portal/' . $portal . '/reset-password/' . $token . '?email=' . rawurlencode($email));
+            $portalLabel = ucfirst($portal);
+            $displayName = trim((string) ($portalUser->name ?? ''));
+            $greeting = $displayName !== '' ? "Hi {$displayName}," : 'Hello,';
 
-            // Local/test fallback to unblock manual verification when mail transport is not configured.
+            Mail::raw(
+                "{$greeting}\n\nWe received a request to reset your {$portalLabel} account password on Workation.\n\nUse the link below to set a new password. This link expires in 60 minutes:\n\n{$resetUrl}\n\nIf you did not request a password reset, you can safely ignore this email. Your password will not change.\n\n— Workation Support",
+                static function ($message) use ($email, $portalLabel) {
+                    $message->to($email)->subject('Reset Your ' . $portalLabel . ' Password | Workation');
+                }
+            );
+            $mailSent = true;
+
+            // Debug link available in local/testing environments.
             if (app()->environment(['local', 'testing'])) {
-                $debugLink = url('/portal/' . $portal . '/reset-password/' . $token . '?email=' . rawurlencode($email));
-                $response->with('password_reset_debug_link', $debugLink);
+                $response->with('password_reset_debug_link', $resetUrl);
             }
         } catch (\Throwable $e) {
-            Log::warning('Portal forgot-password notification failed.', [
+            Log::warning('Portal forgot-password mail failed.', [
                 'portal' => $portal,
                 'broker' => $brokerName,
                 'email' => $email,
+                'mail_sent' => $mailSent,
                 'error' => $e->getMessage(),
             ]);
-
-            if (app()->environment(['local', 'testing'])) {
-                $response->withErrors([
-                    'email' => 'Mail delivery failed locally. Use the debug reset link below while mail settings are being fixed.',
-                ]);
-            }
         }
     }
 

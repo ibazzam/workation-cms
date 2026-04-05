@@ -73,7 +73,7 @@
             <h2 class="wf-footer-title">Explore</h2>
             <ul class="wf-footer-links">
                 <li><a href="/">Home</a></li>
-                <li><a href="/customer">Customer Portal</a></li>
+                <li><a href="/customer">Member Portal</a></li>
                 <li><a href="/customer?category=Accommodation">Stays and Properties</a></li>
                 <li><a href="/catalog/marine-transport">Marine Transport</a></li>
                 <li><a href="/catalog/land-transport">Land Transport</a></li>
@@ -84,8 +84,8 @@
         <section class="wf-footer-col" aria-label="Portal links">
             <h2 class="wf-footer-title">Portals</h2>
             <ul class="wf-footer-links">
-                <li><a href="/portal/customer/login">Customer Login</a></li>
-                <li><a href="/portal/customer/register">Customer Registration</a></li>
+                <li><a href="/portal/customer/login">Member Login</a></li>
+                <li><a href="/portal/customer/register">Member Registration</a></li>
                 <li><a href="/vendor">Vendor Portal</a></li>
                 <li><a href="/admin">Admin Portal</a></li>
             </ul>

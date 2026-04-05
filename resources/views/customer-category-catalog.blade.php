@@ -535,7 +535,7 @@
             <p>{{ $categoryMeta['subtitle'] }}</p>
             <div class="hero-links">
                 <a href="/">Back Home</a>
-                <a href="/customer">Customer Portal</a>
+                <a href="/customer">Member Portal</a>
                 <a href="/catalog/accommodation">Accommodation</a>
                 <a href="/catalog/marine-transport">Marine Transfer</a>
                 <a href="/catalog/land-transport">Land Transfer</a>

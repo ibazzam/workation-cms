@@ -991,7 +991,7 @@
     </aside>
 
     <main class="page" data-api-base="{{ $apiBase }}">
-        <header class="header-bar" aria-label="Customer account actions">
+        <header class="header-bar" aria-label="Member account actions">
             <div>
                 <p class="header-brand">Workation</p>
                 <p class="header-subline">Discover stays, services, and transfers across the Maldives.</p>
@@ -1026,8 +1026,8 @@
                         </div>
                     </div>
                 @else
-                    <a class="auth-link" href="{{ '/portal/customer/login?continue=' . urlencode($customerContinueUrl) }}">Customer Login</a>
-                    <a class="auth-link primary" href="{{ '/portal/customer/register?continue=' . urlencode($customerContinueUrl) }}">Customer Registration</a>
+                    <a class="auth-link" href="{{ '/portal/customer/login?continue=' . urlencode($customerContinueUrl) }}">Member Login</a>
+                    <a class="auth-link primary" href="{{ '/portal/customer/register?continue=' . urlencode($customerContinueUrl) }}">Member Registration</a>
                 @endif
             </div>
         </header>

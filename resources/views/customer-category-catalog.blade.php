@@ -39,15 +39,14 @@
             justify-content: space-between;
             gap: 14px;
             padding: 8px 14px;
-            border: 1px solid #d8e3ec;
+            border: 1px solid rgba(214, 235, 247, 0.34);
             border-radius: 14px;
-            background: rgba(255, 255, 255, 0.96);
-            box-shadow: 0 10px 24px rgba(22, 64, 93, 0.06);
-            margin-bottom: 12px;
-            position: sticky;
-            top: 8px;
+            background: rgba(8, 44, 66, 0.64);
+            box-shadow: 0 10px 24px rgba(11, 34, 52, 0.22);
+            margin-bottom: 14px;
+            position: relative;
             z-index: 980;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(8px);
         }
 
         .header-main {
@@ -64,10 +63,10 @@
             justify-content: center;
             width: 34px;
             height: 34px;
-            border: 1px solid #d8e5ef;
+            border: 1px solid rgba(217, 235, 245, 0.4);
             border-radius: 10px;
-            background: #f9fcff;
-            color: #61778c;
+            background: rgba(245, 252, 255, 0.18);
+            color: #e7f8ff;
             font-size: 0.82rem;
         }
 
@@ -75,7 +74,7 @@
             margin: 0;
             font-size: 2rem;
             font-weight: 800;
-            color: var(--brand);
+            color: #f2fcff;
             letter-spacing: -0.04em;
             line-height: 1;
         }
@@ -83,7 +82,7 @@
         .header-subline {
             margin: 1px 0 0;
             font-size: 0.7rem;
-            color: #71869a;
+            color: #cce5f0;
             white-space: nowrap;
         }
 
@@ -92,11 +91,11 @@
             align-items: center;
             min-width: 0;
             width: min(460px, 100%);
-            border: 1px solid #d8e3ec;
+            border: 1px solid rgba(209, 232, 245, 0.32);
             border-radius: 10px;
             overflow: hidden;
-            background: #ffffff;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+            background: rgba(246, 252, 255, 0.92);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.55);
         }
 
         .header-search-mini input {
@@ -130,7 +129,7 @@
 
         .header-link {
             text-decoration: none;
-            color: #1d3449;
+            color: #eaf9ff;
             font-size: 0.8rem;
             font-weight: 600;
             padding: 7px 9px;
@@ -139,17 +138,17 @@
         }
 
         .header-link:hover {
-            background: #f4f8fc;
-            color: #154e71;
+            background: rgba(237, 248, 255, 0.2);
+            color: #ffffff;
         }
 
         .auth-link {
             text-decoration: none;
-            border: 1px solid #c9dbea;
+            border: 1px solid rgba(225, 242, 251, 0.55);
             border-radius: 10px;
             padding: 7px 12px;
-            background: #f6fbff;
-            color: #19466a;
+            background: rgba(255, 255, 255, 0.92);
+            color: #174968;
             font-size: 0.8rem;
             font-weight: 700;
             font-family: inherit;
@@ -169,10 +168,10 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            border: 1px solid #c9dbea;
+            border: 1px solid rgba(226, 243, 251, 0.62);
             border-radius: 11px;
             padding: 6px 10px;
-            background: #ffffff;
+            background: rgba(255, 255, 255, 0.95);
             color: #173e5b;
             font-size: 0.8rem;
             font-weight: 700;
@@ -426,12 +425,25 @@
                 flex: 0 0 auto;
             }
 
-        .hero {
-            border: 1px solid #cbe0ea;
+        .journey-hero {
+            border: 1px solid #c8dce7;
             border-radius: 16px;
-            background: linear-gradient(132deg, #0f6179 0%, #1d848c 58%, #2f9891 100%);
+            overflow: hidden;
+            background:
+                linear-gradient(120deg, rgba(8, 42, 66, 0.84) 0%, rgba(10, 80, 109, 0.78) 45%, rgba(24, 130, 126, 0.66) 100%),
+                radial-gradient(circle at 78% 26%, rgba(255, 255, 255, 0.28) 0, rgba(255, 255, 255, 0) 36%),
+                url('/images/category-hero-seasonal.jpg');
+            background-size: cover;
+            background-position: center;
+            padding: 10px 12px 16px;
+        }
+
+        .hero {
+            border: 1px solid rgba(212, 236, 245, 0.24);
+            border-radius: 12px;
+            background: transparent;
             color: #ecfcff;
-            padding: 16px;
+            padding: 6px 2px 2px;
         }
 
         .hero p {
@@ -440,29 +452,39 @@
 
         .hero h1 {
             margin: 6px 0;
-            font-size: clamp(1.2rem, 2.2vw, 2rem);
+            font-size: clamp(1.4rem, 2.6vw, 2.4rem);
         }
 
         .hero-links {
             margin-top: 10px;
             display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+            flex-wrap: nowrap;
+            gap: 7px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .hero-links::-webkit-scrollbar {
+            display: none;
         }
 
         .hero-links a {
             text-decoration: none;
-            border: 1px solid rgba(214, 244, 248, 0.5);
-            background: rgba(4, 64, 83, 0.25);
+            border: 1px solid rgba(214, 244, 248, 0.44);
+            background: rgba(4, 64, 83, 0.2);
             color: #eafcff;
             border-radius: 999px;
             padding: 7px 10px;
             font-size: 0.76rem;
             font-weight: 700;
+            white-space: nowrap;
+            flex: 0 0 auto;
         }
 
         .search-box {
-            margin-top: 12px;
+            margin-top: -8px;
             border: 1px solid var(--line);
             border-radius: 14px;
             background: var(--surface);
@@ -470,6 +492,9 @@
             display: grid;
             gap: 8px;
             overflow: hidden;
+            box-shadow: 0 12px 28px rgba(14, 44, 68, 0.14);
+            position: relative;
+            z-index: 4;
         }
 
         .grid {
@@ -633,10 +658,6 @@
                 margin: 14px auto 30px;
             }
 
-            .header-bar {
-                position: static;
-            }
-
             .header-main {
                 flex-wrap: wrap;
             }
@@ -797,53 +818,6 @@
     </aside>
 
     <main class="page" data-api-base="{{ $apiBase }}">
-        <header class="header-bar" aria-label="Member account actions">
-            <div class="header-main">
-                <span class="header-menu-button" aria-hidden="true"><i class="fa-solid fa-bars"></i></span>
-                <div>
-                    <p class="header-brand">Workation</p>
-                    <p class="header-subline">Maldives travel marketplace</p>
-                </div>
-                <div class="header-search-mini" aria-label="Quick destination search">
-                    <input type="search" value="{{ $filters['q'] ?? '' }}" placeholder="Destinations, islands, hotels, and experiences">
-                    <button type="button" aria-label="Search destinations"><i class="fa-solid fa-magnifying-glass"></i></button>
-                </div>
-            </div>
-            <div class="customer-auth">
-                @if ($customerLoggedIn)
-                    <a class="header-link" href="/customer#bookings">My bookings</a>
-                    <div class="account-menu" data-customer-menu>
-                        <button class="account-menu-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="customerMenuPanelCatalog">
-                            <span class="account-avatar" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
-                            <span>Welcome, {{ $customerName }}</span>
-                            <i class="fa-solid fa-chevron-down account-chevron" aria-hidden="true"></i>
-                        </button>
-                        <div id="customerMenuPanelCatalog" class="account-menu-panel" role="menu" hidden>
-                            <div class="account-panel-head">
-                                <p class="account-panel-greet">Hi, {{ $customerName }}</p>
-                                <p class="account-panel-note">Great to see you again.</p>
-                            </div>
-                            <div class="account-panel-links">
-                                <a class="account-panel-link" href="/customer#bookings" role="menuitem">My Bookings</a>
-                                <a class="account-panel-link" href="/customer" role="menuitem">Manage my account</a>
-                                <a class="account-panel-link" href="/customer#promos" role="menuitem">Promo codes</a>
-                                <a class="account-panel-link" href="/customer#favourites" role="menuitem">Favourites</a>
-                            </div>
-                            <div class="account-panel-foot">
-                                <form method="POST" action="/portal/customer/logout" style="margin:0;">
-                                    @csrf
-                                    <button class="account-panel-logout" type="submit">Sign out</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                @else
-                    <a class="auth-link" href="{{ '/portal/customer/login?continue=' . urlencode($customerContinueUrl) }}">Member Login</a>
-                    <a class="auth-link primary" href="{{ '/portal/customer/register?continue=' . urlencode($customerContinueUrl) }}">Member Registration</a>
-                @endif
-            </div>
-        </header>
-
         <details class="mobile-category-nav" aria-label="Mobile category quick links">
             <summary class="mobile-category-toggle">Browse Categories</summary>
             <div class="mobile-category-row">
@@ -853,23 +827,64 @@
             </div>
         </details>
 
-        <section class="hero">
-            <p>Category Portfolio</p>
-            <h1>{{ $categoryMeta['label'] }} Catalogue</h1>
-            <p>{{ $categoryMeta['subtitle'] }}</p>
-            <div class="hero-links">
-                <a href="/">Back Home</a>
-                <a href="/customer">Member Portal</a>
-                <a href="/catalog/accommodation">Accommodation</a>
-                <a href="/catalog/marine-transport">Marine Transfer</a>
-                <a href="/catalog/land-transport">Land Transfer</a>
-                <a href="/catalog/excursion">Excursion</a>
-                <a href="/catalog/remote_workspace">Remote Workspace</a>
-                <a href="/catalog/conference_room">Conference Rooms</a>
-                <a href="/catalog/resort_day_visit">Resort Day Visit</a>
-                <a href="/catalog/restaurant">Restaurant</a>
-                <a href="/catalog/vehicle_rental">Vehicle Rental</a>
-            </div>
+        <section class="journey-hero" aria-label="Category hero and quick navigation">
+            <header class="header-bar" aria-label="Member account actions">
+                <div class="header-main">
+                    <span class="header-menu-button" aria-hidden="true"><i class="fa-solid fa-bars"></i></span>
+                    <div>
+                        <p class="header-brand">Workation</p>
+                        <p class="header-subline">Maldives travel marketplace</p>
+                    </div>
+                    <div class="header-search-mini" aria-label="Quick destination search">
+                        <input type="search" value="{{ $filters['q'] ?? '' }}" placeholder="Destinations, islands, hotels, and experiences">
+                        <button type="button" aria-label="Search destinations"><i class="fa-solid fa-magnifying-glass"></i></button>
+                    </div>
+                </div>
+                <div class="customer-auth">
+                    @if ($customerLoggedIn)
+                        <a class="header-link" href="/customer#bookings">My bookings</a>
+                        <div class="account-menu" data-customer-menu>
+                            <button class="account-menu-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="customerMenuPanelCatalog">
+                                <span class="account-avatar" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
+                                <span>Welcome, {{ $customerName }}</span>
+                                <i class="fa-solid fa-chevron-down account-chevron" aria-hidden="true"></i>
+                            </button>
+                            <div id="customerMenuPanelCatalog" class="account-menu-panel" role="menu" hidden>
+                                <div class="account-panel-head">
+                                    <p class="account-panel-greet">Hi, {{ $customerName }}</p>
+                                    <p class="account-panel-note">Great to see you again.</p>
+                                </div>
+                                <div class="account-panel-links">
+                                    <a class="account-panel-link" href="/customer#bookings" role="menuitem">My Bookings</a>
+                                    <a class="account-panel-link" href="/customer" role="menuitem">Manage my account</a>
+                                    <a class="account-panel-link" href="/customer#promos" role="menuitem">Promo codes</a>
+                                    <a class="account-panel-link" href="/customer#favourites" role="menuitem">Favourites</a>
+                                </div>
+                                <div class="account-panel-foot">
+                                    <form method="POST" action="/portal/customer/logout" style="margin:0;">
+                                        @csrf
+                                        <button class="account-panel-logout" type="submit">Sign out</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        <a class="auth-link" href="{{ '/portal/customer/login?continue=' . urlencode($customerContinueUrl) }}">Member Login</a>
+                        <a class="auth-link primary" href="{{ '/portal/customer/register?continue=' . urlencode($customerContinueUrl) }}">Member Registration</a>
+                    @endif
+                </div>
+            </header>
+
+            <section class="hero">
+                <p>Category Portfolio</p>
+                <h1>{{ $categoryMeta['label'] }} Catalogue</h1>
+                <p>{{ $categoryMeta['subtitle'] }}</p>
+                <div class="hero-links">
+                    @foreach ($catalogCategoryLinks as $item)
+                        <a href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">{{ $item['title'] ?? 'Category' }}</a>
+                    @endforeach
+                </div>
+            </section>
         </section>
 
         <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}">

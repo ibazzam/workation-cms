@@ -280,18 +280,31 @@
         }
 
         .floating-sidebar {
-            position: fixed;
-            left: 12px;
-            top: 12px;
+            position: sticky;
+            top: 0;
             width: 250px;
-            height: calc(100vh - 24px);
+            height: 100vh;
             overflow-y: auto;
-            z-index: 900;
+            z-index: 200;
+            flex-shrink: 0;
+            scrollbar-width: thin;
             border: 1px solid #c9ddeb;
             border-radius: 16px;
             background: linear-gradient(160deg, #f8fcff 0%, #eef6fb 100%);
             padding: 10px;
             box-shadow: inset 0 1px 0 #ffffff;
+        }
+
+        .page-body-split {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin-top: 12px;
+        }
+
+        .page-main-content {
+            flex: 1;
+            min-width: 0;
         }
 
         .sidebar-title {
@@ -686,11 +699,17 @@
                 order: 3;
             }
 
+            .page-body-split {
+                display: block;
+            }
+
             .floating-sidebar {
                 position: static;
-                width: calc(100% - 28px);
+                width: 100%;
                 height: auto;
-                margin: 14px auto 12px;
+                overflow-y: visible;
+                flex-shrink: unset;
+                margin-bottom: 12px;
             }
 
             .top-links {
@@ -718,10 +737,6 @@
                 grid-column: span 6;
             }
 
-            .search-box {
-                position: static;
-                top: auto;
-            }
         }
 
         @media (max-width: 680px) {
@@ -913,6 +928,20 @@
 
         </section>
 
+        <div class="page-body-split">
+            <aside class="floating-sidebar" aria-label="Browse categories">
+                <p class="sidebar-title">Browse Categories</p>
+                <nav class="top-links" aria-label="Category navigation">
+                    @foreach ($catalogCategoryLinks as $item)
+                        <a class="top-link{{ ($categoryKey === ($item['key'] ?? '')) ? ' is-active' : '' }}" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">
+                            <span class="top-link-head"><i class="{{ $item['icon'] ?? 'fa-solid fa-location-dot' }}"></i>{{ $item['title'] ?? 'Category' }}</span>
+                            <span>{{ $item['subtitle'] ?? '' }}</span>
+                        </a>
+                    @endforeach
+                </nav>
+            </aside>
+
+            <div class="page-main-content">
         <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}">
             <div class="grid">
                 <div class="field field-long">
@@ -1172,7 +1201,6 @@
                 <a href="/catalog/{{ $categoryKey }}">Reset</a>
             </div>
         </form>
-        </section>
 
         <h2 class="section-title">Available Portfolio Items</h2>
         @if ($catalogProperties->isEmpty())
@@ -1248,6 +1276,8 @@
         @endif
 
         @include('partials.global-site-footer')
+            </div>{{-- /page-main-content --}}
+        </div>{{-- /page-body-split --}}
     </main>
 
     <script>

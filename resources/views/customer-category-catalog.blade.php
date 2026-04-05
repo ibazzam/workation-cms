@@ -40,10 +40,10 @@
             justify-content: space-between;
             gap: 14px;
             padding: 8px 14px;
-            border: 1px solid rgba(214, 235, 247, 0.34);
-            border-radius: 14px;
-            background: rgba(8, 44, 66, 0.64);
-            box-shadow: 0 10px 24px rgba(11, 34, 52, 0.22);
+            border: 0;
+            border-radius: 0;
+            background: rgba(8, 44, 66, 0.36);
+            box-shadow: none;
             margin-bottom: 14px;
             position: relative;
             z-index: 980;
@@ -85,6 +85,15 @@
             line-height: 1;
         }
 
+        .header-brand-link {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .header-brand-link:hover {
+            color: #ffffff;
+        }
+
         .header-subline {
             margin: 1px 0 0;
             font-size: 0.7rem;
@@ -93,7 +102,7 @@
         }
 
         .header-search-mini {
-            display: flex;
+            display: none;
             align-items: center;
             min-width: 0;
             width: min(460px, 100%);
@@ -280,26 +289,12 @@
         }
 
         .floating-sidebar {
-            position: sticky;
-            top: 0;
-            width: 250px;
-            height: 100vh;
-            overflow-y: auto;
-            z-index: 200;
-            flex-shrink: 0;
-            scrollbar-width: thin;
-            border: 1px solid #c9ddeb;
-            border-radius: 16px;
-            background: linear-gradient(160deg, #f8fcff 0%, #eef6fb 100%);
-            padding: 10px;
-            box-shadow: inset 0 1px 0 #ffffff;
+            display: none;
         }
 
         .page-body-split {
-            display: flex;
-            gap: 12px;
-            align-items: flex-start;
-            margin-top: 12px;
+            display: block;
+            margin-top: 0;
         }
 
         .page-main-content {
@@ -445,16 +440,24 @@
             }
 
         .journey-hero {
-            border: 1px solid #c8dce7;
-            border-radius: 16px;
-            overflow: hidden;
+            border: 0;
+            border-radius: 0;
+            overflow: visible;
             background:
                 linear-gradient(120deg, rgba(8, 42, 66, 0.84) 0%, rgba(10, 80, 109, 0.78) 45%, rgba(24, 130, 126, 0.66) 100%),
                 radial-gradient(circle at 78% 26%, rgba(255, 255, 255, 0.28) 0, rgba(255, 255, 255, 0) 36%),
                 url('/images/category-hero-seasonal.jpg');
             background-size: cover;
             background-position: center;
-            padding: 10px 12px 16px;
+            padding: 10px 16px 18px;
+        }
+
+        .search-sticky-wrap {
+            position: sticky;
+            top: 0;
+            z-index: 940;
+            margin-top: -8px;
+            padding: 0 16px;
         }
 
         .hero {
@@ -518,9 +521,11 @@
             gap: 8px;
             overflow: hidden;
             box-shadow: 0 12px 28px rgba(14, 44, 68, 0.14);
-            position: sticky;
-            top: 8px;
-            z-index: 940;
+            position: static;
+            z-index: auto;
+            width: min(1060px, 100%);
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .catalog-section-title {
@@ -703,17 +708,13 @@
                 display: block;
             }
 
-            .floating-sidebar {
-                position: static;
-                width: 100%;
-                height: auto;
-                overflow-y: visible;
-                flex-shrink: unset;
-                margin-bottom: 12px;
+            .header-bar {
+                border-radius: 0;
+                margin-bottom: 10px;
             }
 
-            .top-links {
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            .search-sticky-wrap {
+                padding: 0 12px;
             }
 
             .catalog-grid {
@@ -764,12 +765,18 @@
                 font-size: 1.65rem;
             }
 
-            .floating-sidebar {
-                display: none;
-            }
-
             .mobile-category-nav {
                 display: block;
+            }
+
+            .journey-hero {
+                padding: 10px 10px 14px;
+            }
+
+            .search-sticky-wrap {
+                top: 0;
+                margin-top: -6px;
+                padding: 0 10px;
             }
 
             .mobile-category-row {
@@ -877,7 +884,7 @@
                 <div class="header-main">
                     <span class="header-menu-button" aria-hidden="true"><i class="fa-solid fa-bars"></i></span>
                     <div>
-                        <p class="header-brand">Workation</p>
+                        <a class="header-brand header-brand-link" href="/">Workation</a>
                         <p class="header-subline">Maldives travel marketplace</p>
                     </div>
                     <div class="header-search-mini" aria-label="Quick destination search">
@@ -928,21 +935,9 @@
 
         </section>
 
-        <div class="page-body-split">
-            <aside class="floating-sidebar" aria-label="Browse categories">
-                <p class="sidebar-title">Browse Categories</p>
-                <nav class="top-links" aria-label="Category navigation">
-                    @foreach ($catalogCategoryLinks as $item)
-                        <a class="top-link{{ ($categoryKey === ($item['key'] ?? '')) ? ' is-active' : '' }}" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">
-                            <span class="top-link-head"><i class="{{ $item['icon'] ?? 'fa-solid fa-location-dot' }}"></i>{{ $item['title'] ?? 'Category' }}</span>
-                            <span>{{ $item['subtitle'] ?? '' }}</span>
-                        </a>
-                    @endforeach
-                </nav>
-            </aside>
+        <div class="search-sticky-wrap">
 
-            <div class="page-main-content">
-        <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}">
+            <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}">
             <div class="grid">
                 <div class="field field-long">
                     <label for="q">Search</label>
@@ -1200,7 +1195,11 @@
                 <button class="primary" type="submit">Apply Filters</button>
                 <a href="/catalog/{{ $categoryKey }}">Reset</a>
             </div>
-        </form>
+            </form>
+        </div>
+
+        <div class="page-body-split">
+            <div class="page-main-content">
 
         <h2 class="section-title">Available Portfolio Items</h2>
         @if ($catalogProperties->isEmpty())

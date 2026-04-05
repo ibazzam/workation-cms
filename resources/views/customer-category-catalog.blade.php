@@ -505,8 +505,15 @@
             gap: 8px;
             overflow: hidden;
             box-shadow: 0 12px 28px rgba(14, 44, 68, 0.14);
-            position: relative;
-            z-index: 4;
+            position: sticky;
+            top: 8px;
+            z-index: 940;
+        }
+
+        .catalog-section-title {
+            margin: 16px 0 8px;
+            font-size: 1.05rem;
+            letter-spacing: 0.02em;
         }
 
         .grid {
@@ -710,6 +717,11 @@
             .field.field-long {
                 grid-column: span 6;
             }
+
+            .search-box {
+                position: static;
+                top: auto;
+            }
         }
 
         @media (max-width: 680px) {
@@ -802,6 +814,33 @@
         $catalogPropertyMediaByProperty = $catalogPropertyMediaByProperty ?? collect();
         $atollOptions = $atollOptions ?? collect();
         $islandOptions = $islandOptions ?? collect();
+        $popularityScore = static function ($property): float {
+            $bookings = (float) ($property->booking_count ?? $property->bookings_count ?? 0);
+            $reviews = (float) ($property->reviews_count ?? 0);
+            $rating = (float) ($property->rating ?? $property->average_rating ?? 0);
+            $views = (float) ($property->view_count ?? 0);
+
+            return ($bookings * 6.0) + ($reviews * 3.0) + ($rating * 10.0) + ($views * 0.2);
+        };
+
+        $popularOverall = $catalogProperties
+            ->sortByDesc(static fn ($property) => $popularityScore($property))
+            ->take(8)
+            ->values();
+
+        $popularByAtoll = $catalogProperties
+            ->filter(static fn ($property) => trim((string) ($property->atoll ?? '')) !== '')
+            ->groupBy(static fn ($property) => trim((string) ($property->atoll ?? '')))
+            ->map(static fn ($group) => $group->sortByDesc(static fn ($property) => $popularityScore($property))->take(6)->values())
+            ->filter(static fn ($group) => $group->isNotEmpty())
+            ->take(3);
+
+        $popularByIsland = $catalogProperties
+            ->filter(static fn ($property) => trim((string) ($property->island ?? '')) !== '')
+            ->groupBy(static fn ($property) => trim((string) ($property->island ?? '')))
+            ->map(static fn ($group) => $group->sortByDesc(static fn ($property) => $popularityScore($property))->take(6)->values())
+            ->filter(static fn ($group) => $group->isNotEmpty())
+            ->take(3);
         $mediaVariantUrl = static function ($media, string $variant = 'banner'): ?string {
             $mediaId = (int) ($media->id ?? 0);
             if ($mediaId <= 0) {
@@ -871,6 +910,8 @@
                     @endforeach
                 </div>
             </header>
+
+        </section>
 
         <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}">
             <div class="grid">
@@ -1137,57 +1178,73 @@
         @if ($catalogProperties->isEmpty())
             <div class="empty">No listings found for this category and selected filters yet.</div>
         @else
-            <section class="catalog-grid" aria-label="Category listing catalogue">
-                @foreach ($catalogProperties as $property)
-                    @php
-                        $propertyId = (int) ($property->id ?? 0);
-                        $mediaItems = collect($catalogPropertyMediaByProperty->get($propertyId, collect()));
-                        $primaryMedia = $mediaItems->first();
-                        $bannerUrl = $primaryMedia ? $mediaVariantUrl($primaryMedia, 'banner') : null;
-                        $fallbackPath = trim((string) ($primaryMedia->file_path ?? ''));
-                        $fallbackImage = '';
-                        if ($fallbackPath !== '') {
-                            if (str_starts_with($fallbackPath, 'http://') || str_starts_with($fallbackPath, 'https://')) {
-                                $fallbackImage = $fallbackPath;
-                            } else {
-                                $fallbackImage = '/storage/' . ltrim(str_replace('public/', '', str_replace('storage/', '', str_replace('\\', '/', $fallbackPath))), '/');
+            @php
+                $catalogSections = collect();
+                if ($popularOverall->isNotEmpty()) {
+                    $catalogSections->push(['title' => 'Popular in this category', 'items' => $popularOverall]);
+                }
+                foreach ($popularByAtoll as $atollName => $items) {
+                    $catalogSections->push(['title' => 'Popular in ' . $atollName . ' Atoll', 'items' => $items]);
+                }
+                foreach ($popularByIsland as $islandName => $items) {
+                    $catalogSections->push(['title' => 'Popular in ' . $islandName, 'items' => $items]);
+                }
+            @endphp
+
+            @foreach ($catalogSections as $section)
+                <h3 class="catalog-section-title">{{ $section['title'] }}</h3>
+                <section class="catalog-grid" aria-label="Category listing catalogue section">
+                    @foreach (($section['items'] ?? collect()) as $property)
+                        @php
+                            $propertyId = (int) ($property->id ?? 0);
+                            $mediaItems = collect($catalogPropertyMediaByProperty->get($propertyId, collect()));
+                            $primaryMedia = $mediaItems->first();
+                            $bannerUrl = $primaryMedia ? $mediaVariantUrl($primaryMedia, 'banner') : null;
+                            $fallbackPath = trim((string) ($primaryMedia->file_path ?? ''));
+                            $fallbackImage = '';
+                            if ($fallbackPath !== '') {
+                                if (str_starts_with($fallbackPath, 'http://') || str_starts_with($fallbackPath, 'https://')) {
+                                    $fallbackImage = $fallbackPath;
+                                } else {
+                                    $fallbackImage = '/storage/' . ltrim(str_replace('public/', '', str_replace('storage/', '', str_replace('\\', '/', $fallbackPath))), '/');
+                                }
                             }
-                        }
-                        $svgFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2234%22%3ENo%20image%3C%2Ftext%3E%3C%2Fsvg%3E";
-                        $price = (float) ($property->base_price ?? 0);
-                        $detailUrl = $categoryKey === 'accommodation'
-                            ? ('/property/' . $propertyId)
-                            : ('/category-booking/' . $categoryKey . '/' . $propertyId);
-                        $actionLabel = match ($categoryKey) {
-                            'accommodation'     => 'Open Listing Profile',
-                            'restaurant'        => 'Reserve a Table',
-                            'vehicle_rental'    => 'Hire Vehicle / Vessel',
-                            'marine-transport'  => 'Book Marine Transfer',
-                            'land-transport'    => 'Book Land Transfer',
-                            'excursion'         => 'Book Excursion',
-                            'conference_room'   => 'Book Conference Room',
-                            'resort_day_visit'  => 'Book Day Visit',
-                            'remote_workspace'  => 'Book Workspace',
-                            default             => 'Proceed to Booking',
-                        };
-                    @endphp
-                    <article class="card">
-                        <a class="card-link" href="{{ $detailUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
-                            @php
-                                $resolvedImage = $fallbackImage !== '' ? $fallbackImage : ($bannerUrl ?: $svgFallback);
-                            @endphp
-                            <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
-                            <div class="card-body">
-                                <h3>{{ (string) ($property->name ?? 'Listing') }}</h3>
-                                <div class="meta">{{ trim((string) (($property->atoll ?? '') . ' ' . ($property->island ?? ''))) !== '' ? trim((string) (($property->atoll ?? '') . ' · ' . ($property->island ?? ''))) : 'Location will be updated soon.' }}</div>
-                                <div class="meta">{{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}</div>
-                                <div class="meta">{{ strtoupper(str_replace('_', ' ', (string) ($property->listing_category ?? $categoryKey))) }}</div>
-                                <div class="actions"><span>{{ $actionLabel }}</span></div>
-                            </div>
-                        </a>
-                    </article>
-                @endforeach
-            </section>
+                            $svgFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2234%22%3ENo%20image%3C%2Ftext%3E%3C%2Fsvg%3E";
+                            $price = (float) ($property->base_price ?? 0);
+                            $detailUrl = $categoryKey === 'accommodation'
+                                ? ('/property/' . $propertyId)
+                                : ('/category-booking/' . $categoryKey . '/' . $propertyId);
+                            $actionLabel = match ($categoryKey) {
+                                'accommodation'     => 'Open Listing Profile',
+                                'restaurant'        => 'Reserve a Table',
+                                'vehicle_rental'    => 'Hire Vehicle / Vessel',
+                                'marine-transport'  => 'Book Marine Transfer',
+                                'land-transport'    => 'Book Land Transfer',
+                                'excursion'         => 'Book Excursion',
+                                'conference_room'   => 'Book Conference Room',
+                                'resort_day_visit'  => 'Book Day Visit',
+                                'remote_workspace'  => 'Book Workspace',
+                                default             => 'Proceed to Booking',
+                            };
+                        @endphp
+                        <article class="card">
+                            <a class="card-link" href="{{ $detailUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
+                                @php
+                                    $resolvedImage = $fallbackImage !== '' ? $fallbackImage : ($bannerUrl ?: $svgFallback);
+                                @endphp
+                                <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
+                                <div class="card-body">
+                                    <h3>{{ (string) ($property->name ?? 'Listing') }}</h3>
+                                    <div class="meta">{{ trim((string) (($property->atoll ?? '') . ' ' . ($property->island ?? ''))) !== '' ? trim((string) (($property->atoll ?? '') . ' · ' . ($property->island ?? ''))) : 'Location will be updated soon.' }}</div>
+                                    <div class="meta">{{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}</div>
+                                    <div class="meta">{{ strtoupper(str_replace('_', ' ', (string) ($property->listing_category ?? $categoryKey))) }}</div>
+                                    <div class="actions"><span>{{ $actionLabel }}</span></div>
+                                </div>
+                            </a>
+                        </article>
+                    @endforeach
+                </section>
+            @endforeach
         @endif
 
         @include('partials.global-site-footer')

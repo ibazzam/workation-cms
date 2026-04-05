@@ -35,11 +35,11 @@
 
         .header-bar {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             align-items: center;
             justify-content: space-between;
             gap: 14px;
-            padding: 10px 16px;
+            padding: 10px 24px;
             border-top: 0;
             border-right: 0;
             border-bottom: 1px solid #d8e3ec;
@@ -65,18 +65,25 @@
         }
 
         .header-category-tabs {
-            width: auto;
+            width: 100%;
             margin-top: 0;
-            flex: 1;
+            flex: 1 1 auto;
             min-width: 0;
         }
 
         .header-main {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 16px;
             min-width: 0;
-            flex: 1;
+            flex: 1 1 auto;
+        }
+
+        .header-brand-wrap {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+            padding-left: 6px;
         }
 
         .header-menu-button {
@@ -466,6 +473,8 @@
         .header-bar .hero-links {
             margin-top: 0;
             gap: 6px;
+            justify-content: center;
+            align-items: center;
         }
 
         .header-bar .hero-links a {
@@ -729,6 +738,10 @@
                 flex-wrap: wrap;
             }
 
+            .header-category-tabs {
+                justify-content: flex-start;
+            }
+
             .header-search-mini {
                 width: 100%;
                 order: 3;
@@ -795,6 +808,7 @@
                 width: 100%;
                 margin-left: 0;
                 margin-right: 0;
+                padding: 10px 12px;
                 border: 1px solid #d8e3ec;
                 border-radius: 14px;
             }
@@ -816,6 +830,10 @@
 
             .header-brand {
                 font-size: 1.65rem;
+            }
+
+            .header-brand-wrap {
+                padding-left: 0;
             }
 
             .mobile-category-nav {
@@ -933,7 +951,7 @@
         <section class="journey-hero" aria-label="Category hero and quick navigation">
             <header class="header-bar" aria-label="Member account actions">
                 <div class="header-main">
-                    <div>
+                    <div class="header-brand-wrap">
                         <a class="header-brand header-brand-link" href="/">Workation</a>
                         <p class="header-subline">Maldives travel marketplace</p>
                     </div>
@@ -948,6 +966,7 @@
                     </div>
                 </div>
                 <div class="customer-auth">
+                    <a class="header-link" href="/blog">Things to Do</a>
                     @if ($customerLoggedIn)
                         <a class="header-link" href="/customer#bookings">My bookings</a>
                         <div class="account-menu" data-customer-menu>

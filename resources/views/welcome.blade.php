@@ -35,7 +35,7 @@
         }
 
         .page {
-            margin: 8px 12px 30px;
+            margin: 0 12px 30px;
             width: calc(100% - 24px);
             max-width: none;
             position: relative;
@@ -43,7 +43,7 @@
 
         .floating-sidebar {
             position: sticky;
-            top: 8px;
+            top: 10px;
             width: 250px;
             height: fit-content;
             z-index: 200;
@@ -54,14 +54,17 @@
             align-items: center;
             justify-content: space-between;
             gap: 14px;
-            padding: 8px 14px;
-            border: 1px solid #d8e3ec;
-            border-radius: 14px;
+            padding: 10px 16px;
+            border-top: 0;
+            border-right: 0;
+            border-bottom: 1px solid #d8e3ec;
+            border-left: 0;
+            border-radius: 0;
             background: rgba(255, 255, 255, 0.96);
             box-shadow: 0 10px 24px rgba(22, 64, 93, 0.06);
-            margin-bottom: 12px;
-            position: sticky;
-            top: 8px;
+            margin: 0 -12px 10px;
+            width: calc(100% + 24px);
+            position: static;
             z-index: 980;
             backdrop-filter: blur(10px);
         }
@@ -574,6 +577,7 @@
             border: 1px solid #dde5ee;
             box-shadow: 0 20px 38px rgba(22, 49, 97, 0.2);
             padding: 10px 12px;
+            overflow: visible;
         }
 
         .search-category-tabs {
@@ -584,12 +588,15 @@
             width: 100%;
             padding: 10px 14px;
             border-radius: 18px 18px 0 0;
-            background: linear-gradient(180deg, rgba(21, 39, 56, 0.92) 0%, rgba(15, 30, 45, 0.88) 100%);
+            background: linear-gradient(180deg, var(--brand-strong) 0%, var(--brand) 100%);
             overflow-x: auto;
             overflow-y: hidden;
             scrollbar-width: thin;
             -webkit-overflow-scrolling: touch;
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+            position: static;
+            top: auto;
+            z-index: 970;
         }
 
         .search-category-tabs::-webkit-scrollbar {
@@ -1039,6 +1046,10 @@
 
             .header-bar {
                 position: static;
+                width: 100%;
+                margin: 0 0 12px;
+                border: 1px solid #d8e3ec;
+                border-radius: 14px;
             }
 
             .header-main {
@@ -1108,6 +1119,11 @@
 
             .search-dynamic-fields .field.field-long {
                 grid-column: span 6;
+            }
+
+            .search-category-tabs {
+                position: static;
+                top: auto;
             }
         }
 

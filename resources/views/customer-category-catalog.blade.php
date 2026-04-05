@@ -442,7 +442,7 @@
         .journey-hero {
             border: 0;
             border-radius: 0;
-            overflow: hidden;
+            overflow: visible;
             background:
                 linear-gradient(120deg, rgba(8, 42, 66, 0.84) 0%, rgba(10, 80, 109, 0.78) 45%, rgba(24, 130, 126, 0.66) 100%),
                 radial-gradient(circle at 78% 26%, rgba(255, 255, 255, 0.28) 0, rgba(255, 255, 255, 0) 36%),
@@ -450,6 +450,14 @@
             background-size: cover;
             background-position: center;
             padding: 10px 16px 18px;
+        }
+
+        .search-sticky-wrap {
+            position: sticky;
+            top: 0;
+            z-index: 940;
+            margin-top: -8px;
+            padding: 0 16px;
         }
 
         .hero {
@@ -513,9 +521,8 @@
             gap: 8px;
             overflow: hidden;
             box-shadow: 0 12px 28px rgba(14, 44, 68, 0.14);
-            position: sticky;
-            top: 8px;
-            z-index: 940;
+            position: static;
+            z-index: auto;
             width: min(1060px, 100%);
             margin-left: auto;
             margin-right: auto;
@@ -706,6 +713,10 @@
                 margin-bottom: 10px;
             }
 
+            .search-sticky-wrap {
+                padding: 0 12px;
+            }
+
             .catalog-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
@@ -760,6 +771,12 @@
 
             .journey-hero {
                 padding: 10px 10px 14px;
+            }
+
+            .search-sticky-wrap {
+                top: 0;
+                margin-top: -6px;
+                padding: 0 10px;
             }
 
             .mobile-category-row {
@@ -915,6 +932,10 @@
                     @endforeach
                 </div>
             </header>
+
+        </section>
+
+        <div class="search-sticky-wrap">
 
             <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}">
             <div class="grid">
@@ -1175,7 +1196,7 @@
                 <a href="/catalog/{{ $categoryKey }}">Reset</a>
             </div>
             </form>
-        </section>
+        </div>
 
         <div class="page-body-split">
             <div class="page-main-content">

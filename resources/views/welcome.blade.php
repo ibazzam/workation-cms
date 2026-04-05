@@ -582,60 +582,62 @@
 
         .search-category-tabs {
             display: flex;
-            flex-wrap: nowrap;
-            gap: 0;
+            flex-wrap: wrap;
+            gap: 8px;
             margin: 0;
             width: 100%;
-            padding: 10px 14px;
-            border-radius: 18px 18px 0 0;
+            padding: 10px;
+            border-radius: 14px 14px 0 0;
             background: linear-gradient(180deg, var(--brand-strong) 0%, var(--brand) 100%);
-            overflow-x: auto;
-            overflow-y: hidden;
-            scrollbar-width: thin;
-            -webkit-overflow-scrolling: touch;
+            overflow: visible;
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
             position: static;
             top: auto;
             z-index: 970;
         }
 
-        .search-category-tabs::-webkit-scrollbar {
-            height: 4px;
-        }
-
-        .search-category-tabs::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .search-category-tabs::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 2px;
-        }
-
         .search-category-tab {
-            border: 0;
-            border-radius: 10px;
-            background: transparent;
-            color: rgba(255,255,255,0.75);
-            padding: 7px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 999px;
+            background: rgba(7, 36, 51, 0.2);
+            color: rgba(255,255,255,0.94);
+            padding: 7px 11px;
             font: inherit;
-            font-size: 0.78rem;
-            font-weight: 600;
+            font-size: 0.76rem;
+            font-weight: 700;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
             gap: 6px;
             white-space: nowrap;
-            transition: all 0.2s ease;
+            line-height: 1.15;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+        }
+
+        .search-category-tab i {
+            flex: 0 0 auto;
+            font-size: 0.74rem;
+            opacity: 0.9;
+        }
+
+        .search-category-tab span {
+            display: inline-block;
+            max-width: 18ch;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: middle;
         }
 
         .search-category-tab:hover {
-            background: rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.14);
+            border-color: rgba(255,255,255,0.4);
             color: #ffffff;
+            transform: translateY(-1px);
         }
 
         .search-category-tab.is-active {
             background: #ffffff;
+            border-color: #ffffff;
             color: var(--brand);
             font-weight: 700;
         }
@@ -1124,6 +1126,25 @@
             .search-category-tabs {
                 position: static;
                 top: auto;
+                flex-wrap: nowrap;
+                gap: 6px;
+                overflow-x: auto;
+                overflow-y: hidden;
+                scrollbar-width: thin;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .search-category-tabs::-webkit-scrollbar {
+                height: 4px;
+            }
+
+            .search-category-tabs::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.35);
+                border-radius: 999px;
+            }
+
+            .search-category-tab {
+                flex: 0 0 auto;
             }
         }
 
@@ -1204,7 +1225,19 @@
                 width: 100%;
                 justify-content: flex-start;
                 overflow-x: auto;
+                overflow-y: hidden;
                 flex-wrap: nowrap;
+                gap: 6px;
+                padding: 8px;
+            }
+
+            .search-category-tab {
+                padding: 7px 10px;
+                font-size: 0.74rem;
+            }
+
+            .search-category-tab i {
+                font-size: 0.72rem;
             }
 
             .search-shell {

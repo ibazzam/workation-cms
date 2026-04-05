@@ -1049,6 +1049,13 @@ if (!function_exists('getAvailableCategories')) {
 
 Route::get('/', function () {
     $apiBase = workationApiBase();
+    $homeHeroBackgroundUrl = trim((string) env('HOME_HERO_IMAGE_URL', ''));
+    if ($homeHeroBackgroundUrl === '') {
+        $seasonalHeroPath = public_path('images/home-hero-seasonal.jpg');
+        if (is_file($seasonalHeroPath)) {
+            $homeHeroBackgroundUrl = '/images/home-hero-seasonal.jpg';
+        }
+    }
 
     // Keep home sidebar identical to category pages for uniform navigation.
     $homeTopCategoryLinks = collect([
@@ -1397,6 +1404,7 @@ Route::get('/', function () {
 
     return view('welcome', [
         'apiBase' => $apiBase,
+        'homeHeroBackgroundUrl' => $homeHeroBackgroundUrl,
         'homeTopCategoryLinks' => $homeTopCategoryLinks,
         'homePromoBanner' => $homePromoBanner,
         'homeTrendingChips' => $homeTrendingChips,
@@ -5590,10 +5598,11 @@ Route::post('/portal/{portal}/forgot-password', function (Request $request, stri
     }
 
     $validated = $request->validate([
-        'email' => ['required', 'email'],
+        'email' => ['required', 'string', 'max:190'],
     ]);
 
-    $email = strtolower(trim((string) $validated['email']));
+    $identifier = trim((string) $validated['email']);
+    $identifierLower = strtolower($identifier);
     $config = portalConfig($portal);
     $allowedRoles = collect($config['allowed_roles'])
         ->map(function ($role) {
@@ -5603,27 +5612,37 @@ Route::post('/portal/{portal}/forgot-password', function (Request $request, stri
         ->values();
 
     $portalUser = null;
+    $email = '';
     if ($allowedRoles->isNotEmpty()) {
         $portalUser = \App\Models\User::query()
-            ->whereRaw('LOWER(email) = ?', [$email])
+            ->where(function ($query) use ($identifierLower) {
+                $query->whereRaw('LOWER(email) = ?', [$identifierLower]);
+
+                if (Schema::hasColumn('users', 'username')) {
+                    $query->orWhereRaw('LOWER(username) = ?', [$identifierLower]);
+                }
+            })
             ->first();
 
         if ($portalUser instanceof \App\Models\User) {
             $resolvedRole = normalizePortalRoleValue((string) $portalUser->portal_role);
             if (!$allowedRoles->contains($resolvedRole) || !$portalUser->portal_enabled) {
                 $portalUser = null;
+            } else {
+                $email = strtolower(trim((string) ($portalUser->email ?? '')));
             }
         }
     } else {
-        $portalUser = \App\Models\Customer::query()
-            ->whereRaw('LOWER(email) = ?', [$email])
-            ->first();
+        $portalUser = findCustomerByEmail($identifierLower);
+        if ($portalUser instanceof \App\Models\Customer) {
+            $email = strtolower(trim((string) ($portalUser->email ?? '')));
+        }
     }
 
 
     $response = back()->with('status', 'If the email is registered for a ' . strtolower($config['name']) . ' account, a reset link has been sent.');
 
-    if ($portalUser) {
+    if ($portalUser && $email !== '') {
         $brokerName = ($portalUser instanceof \App\Models\User) ? 'backend_users' : 'customer_users';
         $broker = Password::broker($brokerName);
         $mailSent = false;
@@ -6008,6 +6027,10 @@ $handlePortalLogout = function (Request $request, string $portal) {
 
     if ($portal === 'vendor') {
         return redirect('/portal/vendor/register?mode=email');
+    }
+
+    if ($portal === 'customer') {
+        return redirect('/');
     }
 
     return redirect('/portal/' . $portal . '/login');

@@ -6,6 +6,7 @@
     <title>Vendor Portal | Workation</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <style>
         :root {
@@ -75,6 +76,21 @@
             font-size: 0.86rem;
         }
 
+        .hero-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .hero-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
         .hero-links {
             margin-top: 14px;
             display: flex;
@@ -83,11 +99,46 @@
         }
 
         .auth-bar {
-            margin-top: 10px;
             display: flex;
             flex-wrap: wrap;
             align-items: center;
             gap: 8px;
+        }
+
+        .hero-highlights {
+            margin-top: 14px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .hero-highlight {
+            border: 1px solid rgba(202, 236, 241, 0.28);
+            border-radius: 12px;
+            background: rgba(6, 49, 65, 0.22);
+            padding: 10px 12px;
+        }
+
+        .hero-highlight-label {
+            margin: 0;
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #c9edf2;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .hero-highlight-value {
+            margin: 6px 0 0;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #ffffff;
+        }
+
+        .hero-highlight-meta {
+            margin: 5px 0 0;
+            font-size: 0.76rem;
+            color: #d5eef1;
         }
 
         .auth-user {
@@ -338,6 +389,33 @@
             margin-top: 10px;
             display: flex;
             justify-content: flex-end;
+        }
+
+        .reports-grid {
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .report-card {
+            border: 1px solid #d7e0e6;
+            border-radius: 12px;
+            background: #ffffff;
+            padding: 12px;
+        }
+
+        .report-card h3 {
+            margin: 0 0 6px;
+            font-size: 0.96rem;
+            color: #173754;
+        }
+
+        .report-card p {
+            margin: 0;
+            font-size: 0.82rem;
+            color: var(--muted);
+            line-height: 1.45;
         }
 
         .progress-snapshot {
@@ -1746,11 +1824,20 @@
         }
 
         @media (max-width: 900px) {
+            .hero-actions {
+                align-items: flex-start;
+            }
+
             .summary-grid {
                 grid-template-columns: 1fr 1fr;
             }
 
             .progress-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .hero-highlights,
+            .reports-grid {
                 grid-template-columns: 1fr 1fr;
             }
 
@@ -1834,6 +1921,11 @@
             }
 
             .progress-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-highlights,
+            .reports-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -2003,49 +2095,96 @@
         $payoutTotal = (float) $billingLedgerRows->sum('payout');
         $expectedPayoutTotal = (float) $billingLedgerRows->where('is_settled', false)->sum('payout');
         $settledPayoutTotal = (float) $billingLedgerRows->where('is_settled', true)->sum('payout');
+        $vendorListingCount = (int) ($vendorProperties->count() + $vendorServices->count());
+        $vendorActiveListingCount = (int) ($vendorProperties->where('status', 'active')->count() + $vendorServices->where('status', 'active')->count());
+        $vendorPendingReservationsCount = (int) $vendorReservations->filter(fn ($reservation) => strtolower(trim((string) ($reservation->status ?? ''))) === 'pending')->count();
+        $vendorConfirmedReservationsCount = (int) $vendorReservations->filter(fn ($reservation) => in_array(strtolower(trim((string) ($reservation->status ?? ''))), ['confirmed', 'upcoming'], true))->count();
+        $vendorCompletedReservationsCount = (int) $vendorReservations->filter(fn ($reservation) => strtolower(trim((string) ($reservation->status ?? ''))) === 'completed')->count();
+        $vendorAverageBookingValue = $vendorReservations->count() > 0 ? round($grossCollectionsTotal / max(1, $vendorReservations->count()), 2) : 0.0;
+        $vendorUnresolvedCareCount = (int) $engagementInquiries->whereNotIn('status', ['resolved', 'closed', 'replied'])->count();
+        $vendorPendingReviewResponses = (int) $engagementReviews->filter(fn ($row) => trim((string) ($row['response'] ?? '')) === '')->count();
+        $vendorRefundCases = $vendorReservations->filter(function ($reservation) {
+            $status = strtolower(trim((string) ($reservation->status ?? '')));
+            $paymentStatus = strtolower(trim((string) ($reservation->payment_status ?? '')));
+            return in_array($status, ['cancelled', 'canceled', 'refunded'], true) || $paymentStatus === 'refunded';
+        });
+        $vendorRefundCaseCount = (int) $vendorRefundCases->count();
+        $vendorRefundExposureTotal = (float) $vendorRefundCases->sum(fn ($reservation) => (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0));
+        $vendorGoLiveProgress = $vendorListingCount > 0
+            ? min(100, (int) round((($vendorActiveListingCount > 0 ? 35 : 0) + ($vendorPricingRules->count() > 0 ? 20 : 0) + ($vendorAvailability->count() > 0 ? 20 : 0) + ($vendorBilling ? 25 : 0))))
+            : 0;
     @endphp
     <main class="page" data-api-base="{{ $apiBase }}">
         <section class="hero">
-            <span class="eyebrow">Partner Access</span>
-            <h1>Vendor Portal</h1>
-            <p>Use a valid vendor bearer token to check vendor-facing APIs and account-level data.</p>
-            <div class="hero-links">
-                <a class="hero-link" href="/">Back to Home</a>
-                <a class="hero-link" href="/admin">Go to Admin Portal</a>
-                <a class="hero-link" href="{{ $apiBase }}/api/v1/ops/metrics" target="_blank" rel="noopener">Open Public Metrics</a>
+            <div class="hero-top">
+                <div class="hero-head">
+                    <span class="eyebrow">Vendor Workspace</span>
+                    <h1>My Listings</h1>
+                    <p>Manage listings, reservations, availability, pricing, reports, payouts, refunds, and customer care from one vendor dashboard.</p>
+                    <div class="hero-links">
+                        <a class="hero-link" href="/">Back to Home</a>
+                        <a class="hero-link" href="/admin">Go to Admin Portal</a>
+                        <a class="hero-link" href="#vendorPropertiesSection">Open My Listings</a>
+                        <a class="hero-link" href="#vendorDailyCollectionSection">Open Billing &amp; Refunds</a>
+                    </div>
+                </div>
+                <div class="hero-actions">
+                    <div class="auth-bar">
+                        <span class="auth-user">Signed in as {{ $portalUser }}</span>
+                        <form method="POST" action="/portal/vendor/logout">
+                            @csrf
+                            <button class="logout" type="submit">Log Out</button>
+                        </form>
+                    </div>
+                </div>
             </div>
-            <div class="auth-bar">
-                <span class="auth-user">Signed in as {{ $portalUser }}</span>
-                <form method="POST" action="/portal/vendor/logout">
-                    @csrf
-                    <button class="logout" type="submit">Log Out</button>
-                </form>
+            <div class="hero-highlights" aria-label="Vendor dashboard highlights">
+                <article class="hero-highlight">
+                    <p class="hero-highlight-label">Live Listings</p>
+                    <p class="hero-highlight-value">{{ $vendorActiveListingCount }} / {{ $vendorListingCount }}</p>
+                    <p class="hero-highlight-meta">Active listings ready for reservations</p>
+                </article>
+                <article class="hero-highlight">
+                    <p class="hero-highlight-label">Reservations in Flow</p>
+                    <p class="hero-highlight-value">{{ $vendorPendingReservationsCount + $vendorConfirmedReservationsCount }}</p>
+                    <p class="hero-highlight-meta">Pending and confirmed guest reservations</p>
+                </article>
+                <article class="hero-highlight">
+                    <p class="hero-highlight-label">Gross Earnings</p>
+                    <p class="hero-highlight-value">MVR {{ number_format($grossCollectionsTotal, 2) }}</p>
+                    <p class="hero-highlight-meta">Revenue tracked across current vendor bookings</p>
+                </article>
+                <article class="hero-highlight">
+                    <p class="hero-highlight-label">Go-Live Progress</p>
+                    <p class="hero-highlight-value">{{ $vendorGoLiveProgress }}%</p>
+                    <p class="hero-highlight-meta">Listings, pricing, availability, and billing readiness</p>
+                </article>
             </div>
         </section>
 
         <section class="card" data-panel-group="overview" aria-label="Vendor operating scope" style="margin-top:10px;">
-            <p class="label">Vendor Operating Scope</p>
-            <p class="small" style="margin-top:0;">Vendors do not create customer bookings. Vendors manage listings and operations for customer-generated reservations.</p>
+            <p class="label">Vendor Action Center</p>
+            <p class="small" style="margin-top:0;">Use this home page as the working dashboard for listing growth, reservation handling, payout tracking, and customer care follow-up.</p>
             <div class="ops-metrics" style="margin-top:10px;">
                 <article class="ops-metric">
-                    <p class="metric-label">Listings</p>
+                    <p class="metric-label">My Listings</p>
                     <p class="metric-value">Create / Edit / Archive</p>
                 </article>
                 <article class="ops-metric">
                     <p class="metric-label">Reservations</p>
-                    <p class="metric-value">Receive / Confirm / Update</p>
+                    <p class="metric-value">Manage / Confirm / Update</p>
                 </article>
                 <article class="ops-metric">
                     <p class="metric-label">Availability</p>
                     <p class="metric-value">Category-wise calendar</p>
                 </article>
                 <article class="ops-metric">
-                    <p class="metric-label">Pricing &amp; Tariffs</p>
-                    <p class="metric-value">Structures / rules / offers</p>
+                    <p class="metric-label">Pricing</p>
+                    <p class="metric-value">Rates / tariffs / offers</p>
                 </article>
                 <article class="ops-metric">
-                    <p class="metric-label">Customer Ops</p>
-                    <p class="metric-value">Inquiries / Reviews / Loyalty</p>
+                    <p class="metric-label">Customer Care</p>
+                    <p class="metric-value">Complaints / reviews / replies</p>
                 </article>
             </div>
         </section>
@@ -2057,32 +2196,32 @@
 
         <section id="vendorSummary" class="summary-grid" aria-label="Vendor dashboard summary" data-panel-group="overview">
             <article class="summary-card">
-                <p class="summary-label">Reservations Received</p>
-                <p id="summaryBookings" class="summary-value">-</p>
-                <p class="summary-meta">Customer-generated reservations visible with current token</p>
+                <p class="summary-label">Total Listings</p>
+                <p id="summaryBookings" class="summary-value">{{ $vendorListingCount }}</p>
+                <p class="summary-meta">Properties and services currently managed in your vendor account</p>
             </article>
 
             <article class="summary-card">
-                <p class="summary-label">Settlements</p>
-                <p id="summarySettlements" class="summary-value">-</p>
-                <p class="summary-meta">Settlement entries returned by payments API</p>
+                <p class="summary-label">Reservations</p>
+                <p id="summarySettlements" class="summary-value">{{ $vendorReservations->count() }}</p>
+                <p class="summary-meta">All reservation records received across your listings</p>
             </article>
 
             <article class="summary-card">
-                <p class="summary-label">Token Status</p>
-                <p id="summaryToken" class="summary-value">N/A</p>
-                <p id="summaryTokenMeta" class="summary-meta">Save token to evaluate readiness</p>
+                <p class="summary-label">Average Booking Value</p>
+                <p id="summaryToken" class="summary-value">MVR {{ number_format($vendorAverageBookingValue, 2) }}</p>
+                <p id="summaryTokenMeta" class="summary-meta">Average gross value per reservation</p>
             </article>
 
             <article class="summary-card">
-                <p class="summary-label">Backend Connectivity</p>
-                <p class="summary-value"><span id="summaryConnectivity" class="status-pill warn">UNKNOWN</span></p>
-                <p id="summaryLastSync" class="summary-meta">Last sync: not run yet</p>
+                <p class="summary-label">Customer Care Queue</p>
+                <p class="summary-value"><span id="summaryConnectivity" class="status-pill {{ $vendorUnresolvedCareCount > 0 ? 'warn' : 'ok' }}">{{ $vendorUnresolvedCareCount > 0 ? 'ACTION NEEDED' : 'ON TRACK' }}</span></p>
+                <p id="summaryLastSync" class="summary-meta">{{ $vendorUnresolvedCareCount }} open conversations and {{ $vendorPendingReviewResponses }} pending review replies</p>
             </article>
         </section>
 
         <div id="vendorSummaryActions" class="summary-actions" data-panel-group="overview">
-            <button id="refreshSummary" type="button" class="summary-refresh">Refresh Summary</button>
+            <button id="refreshSummary" type="button" class="summary-refresh">Refresh API Snapshot</button>
         </div>
 
         <section id="vendorProgressSnapshot" class="card progress-snapshot" aria-label="Vendor activity progress snapshot" data-panel-group="overview">
@@ -2092,14 +2231,14 @@
             </div>
             <div class="progress-grid">
                 <article class="progress-card">
-                    <p class="progress-label">Total Reservations</p>
-                    <p class="progress-value">{{ $vendorReservations->count() }}</p>
-                    <p class="progress-meta">Reservation entries in this vendor account</p>
+                    <p class="progress-label">Pending Reservations</p>
+                    <p class="progress-value">{{ $vendorPendingReservationsCount }}</p>
+                    <p class="progress-meta">Reservations waiting for action or confirmation</p>
                 </article>
                 <article class="progress-card">
                     <p class="progress-label">Revenue Collected</p>
                     <p class="progress-value">MVR {{ number_format($grossCollectionsTotal, 2) }}</p>
-                    <p class="progress-meta">Gross collections before commission deductions</p>
+                    <p class="progress-meta">Gross collections before Workation commission deductions</p>
                 </article>
                 <article class="progress-card">
                     <p class="progress-label">Expected Payout</p>
@@ -2107,9 +2246,30 @@
                     <p class="progress-meta">Pending payout expected from Workation</p>
                 </article>
                 <article class="progress-card">
-                    <p class="progress-label">Settled Amount</p>
-                    <p class="progress-value">MVR {{ number_format($settledPayoutTotal, 2) }}</p>
-                    <p class="progress-meta">Net payouts already marked as settled</p>
+                    <p class="progress-label">Completed Stays</p>
+                    <p class="progress-value">{{ $vendorCompletedReservationsCount }}</p>
+                    <p class="progress-meta">Completed reservations contributing to payout confidence</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="vendorReportsSection" class="card ops-section" aria-label="Vendor reports and performance" data-panel-group="overview">
+            <div class="ops-header">
+                <p class="ops-title">Reports &amp; Performance</p>
+                <span class="ops-chip">Home dashboard intelligence</span>
+            </div>
+            <div class="reports-grid">
+                <article class="report-card">
+                    <h3>Sales Performance</h3>
+                    <p>{{ $vendorConfirmedReservationsCount }} confirmed reservations, {{ $vendorCompletedReservationsCount }} completed stays, and an average booking value of MVR {{ number_format($vendorAverageBookingValue, 2) }}.</p>
+                </article>
+                <article class="report-card">
+                    <h3>Payout Forecast</h3>
+                    <p>MVR {{ number_format($settledPayoutTotal, 2) }} settled and MVR {{ number_format($expectedPayoutTotal, 2) }} still expected from Workation settlements.</p>
+                </article>
+                <article class="report-card">
+                    <h3>Care &amp; Reputation</h3>
+                    <p>{{ $vendorUnresolvedCareCount }} unresolved care cases and {{ $vendorPendingReviewResponses }} reviews still waiting for a vendor response.</p>
                 </article>
             </div>
         </section>
@@ -2166,8 +2326,14 @@
 
         <section id="vendorOperationsOverview" class="card ops-section" aria-label="Vendor operations overview" data-panel-group="listings">
             <div class="ops-header">
-                <p class="ops-title">Operations Console</p>
+                <p class="ops-title">My Listings Console</p>
                 <span class="ops-chip">Database-backed</span>
+            </div>
+            <div class="inline-actions" style="margin-bottom:10px;">
+                <button class="btn btn-primary" id="openPropertyCreateForm" type="button">Create Listing</button>
+                <a class="btn btn-secondary" href="#vendorAvailabilitySection">Manage Reservations</a>
+                <a class="btn btn-secondary" href="#vendorPricingSection">Change Pricing</a>
+                <a class="btn btn-secondary" href="#vendorDailyCollectionSection">Billing &amp; Refunds</a>
             </div>
             @if (!$hasSelectedCategories)
                 <p class="wizard-note">Select at least one category in Category Wizard before creating listings.</p>
@@ -2202,7 +2368,7 @@
 
         <section id="vendorPropertiesSection" class="card ops-section" aria-label="Vendor properties" data-panel-group="listings" data-listing-step="1">
             <div class="ops-header">
-                <p class="ops-title">Properties and Listings</p>
+                <p class="ops-title">My Listings by Category</p>
                 <span class="ops-chip">{{ $vendorProperties->count() }} total</span>
             </div>
             <div class="ops-grid properties-grid">
@@ -3567,7 +3733,7 @@
 
         <section id="vendorEngagement" class="card ops-section" data-panel-group="engagement" aria-label="Vendor customer engagement tools">
             <div class="ops-header">
-                <p class="ops-title">Customer Engagement</p>
+                <p class="ops-title">Customer Care</p>
                 <span class="ops-chip">Operations</span>
             </div>
             <div class="ops-metrics" style="margin-bottom:10px;">
@@ -3580,11 +3746,11 @@
                     <p class="metric-value">{{ $engagementLoyalCustomers->count() }}</p>
                 </article>
                 <article class="ops-metric">
-                    <p class="metric-label">Open Inquiries</p>
+                    <p class="metric-label">Open Complaints &amp; Messages</p>
                     <p class="metric-value">{{ $engagementInquiries->whereNotIn('status', ['resolved', 'closed', 'replied'])->count() }}</p>
                 </article>
                 <article class="ops-metric">
-                    <p class="metric-label">Reviews Pending Response</p>
+                    <p class="metric-label">Reviews Pending Reply</p>
                     <p class="metric-value">{{ $engagementReviews->filter(fn ($row) => trim((string) ($row['response'] ?? '')) === '')->count() }}</p>
                 </article>
             </div>
@@ -3593,12 +3759,12 @@
                 <article class="ops-metric" style="text-align:left;">
                     <p class="metric-label">Promotions &amp; Offers</p>
                     <p class="small">Offer execution uses pricing rules and tariff structures. Create promo or demand discount rules, then monitor uptake.</p>
-                    <p style="margin-top:8px;"><a class="btn btn-secondary" href="#reservations">Open Pricing &amp; Tariffs</a></p>
+                    <p style="margin-top:8px;"><a class="btn btn-secondary" href="#vendorPricingSection">Open Pricing &amp; Tariffs</a></p>
                 </article>
                 <article class="ops-metric" style="text-align:left;">
-                    <p class="metric-label">Loyalty Programs</p>
-                    <p class="small">Loyalty is handled via API integration and repeat-customer tracking from reservations.</p>
-                    <p style="margin-top:8px;"><a class="btn btn-secondary" href="#api">Open Loyalty API Tools</a></p>
+                    <p class="metric-label">Complaint Handling &amp; Replies</p>
+                    <p class="small">Use inquiries and review responses to communicate back and forth with customers, resolve complaints, and protect listing reputation.</p>
+                    <p style="margin-top:8px;"><a class="btn btn-secondary" href="#vendorEngagement">Open Customer Care Queue</a></p>
                 </article>
             </div>
 

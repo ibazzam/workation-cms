@@ -1411,6 +1411,9 @@
                     <button type="button" aria-label="Search destinations"><i class="fa-solid fa-magnifying-glass"></i></button>
                 </div>
             </div>
+            <nav class="header-links" aria-label="Primary links">
+                <a class="header-link" href="/blog">Things to Do</a>
+            </nav>
             <div class="customer-auth">
                 <a class="header-link" href="/blog">Things to Do</a>
                 @if ($customerLoggedIn)

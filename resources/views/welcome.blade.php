@@ -43,9 +43,11 @@
 
         .floating-sidebar {
             position: sticky;
-            top: 10px;
+            top: 0;
             width: 250px;
-            height: fit-content;
+            height: 100vh;
+            overflow-y: auto;
+            scrollbar-width: thin;
             z-index: 200;
         }
 
@@ -177,14 +179,14 @@
             color: #154e71;
         }
 
-        .hero-layout {
-            display: grid;
-            grid-template-columns: minmax(220px, 250px) minmax(0, 1fr);
+        .page-body-split {
+            display: flex;
             gap: 12px;
-            align-items: start;
+            align-items: flex-start;
         }
 
-        .hero-main {
+        .page-main-content {
+            flex: 1;
             min-width: 0;
         }
 
@@ -1035,14 +1037,15 @@
                 margin: 14px auto 30px;
             }
 
-            .hero-layout {
-                grid-template-columns: 1fr;
+            .page-body-split {
+                display: block;
             }
 
             .floating-sidebar {
                 position: static;
                 width: 100%;
                 height: auto;
+                overflow-y: visible;
                 margin-bottom: 12px;
             }
 
@@ -1361,7 +1364,7 @@
             </div>
         </header>
 
-        <div class="hero-layout">
+        <div class="page-body-split">
             <aside class="floating-sidebar sidebar-shell" aria-label="Category sidebar">
                 <p class="sidebar-title">Browse Categories</p>
                 <section class="top-links" aria-label="Top categories">
@@ -1375,7 +1378,7 @@
                 </section>
             </aside>
 
-            <div class="hero-main">
+            <div class="page-main-content">
                 <details class="mobile-category-nav" aria-label="Mobile category quick links">
                     <summary class="mobile-category-toggle">Browse Categories</summary>
                     <div class="mobile-category-row">
@@ -1503,8 +1506,6 @@
                         </form>
                     </div>
                 </div>
-            </div>
-        </div>
 
         <section class="promo-banner" aria-label="Offers and promotions">
             <strong>{{ $homePromoBanner['message'] ?? 'Promotions coming soon.' }}</strong>
@@ -1621,6 +1622,8 @@
         <div class="home-footer-skin">
             @include('partials.global-site-footer')
         </div>
+            </div>{{-- /page-main-content --}}
+        </div>{{-- /page-body-split --}}
     </main>
 
     <script>

@@ -176,6 +176,21 @@
             white-space: nowrap;
         }
 
+        .header-links {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 2px;
+            min-width: 0;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .header-links::-webkit-scrollbar {
+            display: none;
+        }
+
         .header-link:hover {
             background: #f4f8fc;
             color: #154e71;
@@ -471,25 +486,9 @@
             padding: 0;
         }
 
-        .header-bar .hero-links {
-            margin-top: 0;
-            gap: 6px;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .header-bar .hero-links a {
-            border: 1px solid #d8e3ec;
-            background: #f5f9fc;
-            color: #244761;
-            padding: 7px 10px;
-            font-size: 0.74rem;
-        }
-
-        .header-bar .hero-links a.is-active {
-            background: #ffffff;
-            border-color: #b8cfdf;
-            color: #0f6179;
+        .header-category-tabs .header-link.is-active {
+            background: #f4f8fc;
+            color: #154e71;
         }
 
         .search-sticky-wrap {
@@ -956,18 +955,18 @@
                         <a class="header-brand header-brand-link" href="/">Workation</a>
                         <p class="header-subline">Maldives travel marketplace</p>
                     </div>
-                    <div class="hero-links header-category-tabs" aria-label="Category tabs in header">
+                    <nav class="header-links header-category-tabs" aria-label="Category tabs in header">
                         @foreach ($catalogCategoryLinks as $item)
-                            <a class="{{ $categoryKey === ($item['key'] ?? '') ? 'is-active' : '' }}" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">{{ $item['title'] ?? 'Category' }}</a>
+                            <a class="header-link{{ $categoryKey === ($item['key'] ?? '') ? ' is-active' : '' }}" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">{{ $item['title'] ?? 'Category' }}</a>
                         @endforeach
-                    </div>
+                        <a class="header-link" href="/blog">Things to Do</a>
+                    </nav>
                     <div class="header-search-mini" aria-label="Quick destination search">
                         <input type="search" value="{{ $filters['q'] ?? '' }}" placeholder="Destinations, islands, hotels, and experiences">
                         <button type="button" aria-label="Search destinations"><i class="fa-solid fa-magnifying-glass"></i></button>
                     </div>
                 </div>
                 <div class="customer-auth">
-                    <a class="header-link" href="/blog">Things to Do</a>
                     @if ($customerLoggedIn)
                         <a class="header-link" href="/customer#bookings">My bookings</a>
                         <div class="account-menu" data-customer-menu>

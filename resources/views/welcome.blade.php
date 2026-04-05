@@ -1415,6 +1415,7 @@
                 <a class="header-link" href="/blog">Things to Do</a>
             </nav>
             <div class="customer-auth">
+                <a class="header-link" href="/blog">Things to Do</a>
                 @if ($customerLoggedIn)
                     <a class="header-link" href="/customer#bookings">My bookings</a>
                     <div class="account-menu" data-customer-menu>

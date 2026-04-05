@@ -30,7 +30,7 @@
 
         .page {
             width: min(1180px, calc(100% - 24px));
-            margin: 14px auto 28px;
+            margin: 0 auto 28px;
         }
 
         .header-bar {
@@ -39,15 +39,29 @@
             align-items: center;
             justify-content: space-between;
             gap: 14px;
-            padding: 8px 14px;
-            border: 0;
+            padding: 10px 16px;
+            border-top: 0;
+            border-right: 0;
+            border-bottom: 1px solid #d8e3ec;
+            border-left: 0;
             border-radius: 0;
-            background: transparent;
-            box-shadow: none;
-            margin-bottom: 14px;
-            position: relative;
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 10px 24px rgba(22, 64, 93, 0.06);
+            margin: 0;
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
+            position: sticky;
+            top: 0;
+            transition: transform 0.22s ease, opacity 0.22s ease;
             z-index: 980;
-            backdrop-filter: none;
+            backdrop-filter: blur(10px);
+        }
+
+        .page.is-header-hidden .header-bar {
+            transform: translateY(calc(-100% - 2px));
+            opacity: 0;
+            pointer-events: none;
         }
 
         .header-category-tabs {
@@ -82,7 +96,7 @@
             margin: 0;
             font-size: 2rem;
             font-weight: 800;
-            color: #f2fcff;
+            color: var(--brand);
             letter-spacing: -0.04em;
             line-height: 1;
         }
@@ -93,13 +107,13 @@
         }
 
         .header-brand-link:hover {
-            color: #ffffff;
+            color: var(--brand-strong);
         }
 
         .header-subline {
             margin: 1px 0 0;
             font-size: 0.7rem;
-            color: #cce5f0;
+            color: #71869a;
             white-space: nowrap;
         }
 
@@ -146,7 +160,7 @@
 
         .header-link {
             text-decoration: none;
-            color: #eaf9ff;
+            color: #1d3449;
             font-size: 0.8rem;
             font-weight: 600;
             padding: 7px 9px;
@@ -155,8 +169,8 @@
         }
 
         .header-link:hover {
-            background: rgba(237, 248, 255, 0.2);
-            color: #ffffff;
+            background: #f4f8fc;
+            color: #154e71;
         }
 
         .auth-link {
@@ -445,13 +459,27 @@
             border: 0;
             border-radius: 0;
             overflow: visible;
-            background:
-                linear-gradient(120deg, rgba(8, 42, 66, 0.84) 0%, rgba(10, 80, 109, 0.78) 45%, rgba(24, 130, 126, 0.66) 100%),
-                radial-gradient(circle at 78% 26%, rgba(255, 255, 255, 0.28) 0, rgba(255, 255, 255, 0) 36%),
-                url('/images/category-hero-seasonal.jpg');
-            background-size: cover;
-            background-position: center;
-            padding: 10px 16px 18px;
+            background: none;
+            padding: 0;
+        }
+
+        .header-bar .hero-links {
+            margin-top: 0;
+            gap: 6px;
+        }
+
+        .header-bar .hero-links a {
+            border: 1px solid #d8e3ec;
+            background: #f5f9fc;
+            color: #244761;
+            padding: 7px 10px;
+            font-size: 0.74rem;
+        }
+
+        .header-bar .hero-links a.is-active {
+            background: #ffffff;
+            border-color: #b8cfdf;
+            color: #0f6179;
         }
 
         .search-sticky-wrap {
@@ -694,7 +722,7 @@
         @media (max-width: 1040px) {
             .page {
                 width: calc(100% - 20px);
-                margin: 14px auto 30px;
+                margin: 0 auto 30px;
             }
 
             .header-main {
@@ -711,8 +739,7 @@
             }
 
             .header-bar {
-                border-radius: 0;
-                margin-bottom: 10px;
+                border-bottom-color: #d8e3ec;
             }
 
             .search-sticky-wrap {
@@ -748,6 +775,12 @@
                 margin: 10px auto 22px;
             }
 
+            .page.is-header-hidden .header-bar {
+                transform: none;
+                opacity: 1;
+                pointer-events: auto;
+            }
+
             .search-sticky-wrap {
                 position: static;
                 top: auto;
@@ -758,6 +791,12 @@
             .header-bar {
                 flex-direction: column;
                 align-items: stretch;
+                position: static;
+                width: 100%;
+                margin-left: 0;
+                margin-right: 0;
+                border: 1px solid #d8e3ec;
+                border-radius: 14px;
             }
 
             .customer-auth {
@@ -1288,6 +1327,32 @@
             </div>{{-- /page-main-content --}}
         </div>{{-- /page-body-split --}}
     </main>
+
+    <script>
+        (function () {
+            const page = document.querySelector('.page');
+            const header = document.querySelector('.header-bar');
+            if (!page || !header) {
+                return;
+            }
+
+            let lastScrollY = window.scrollY || 0;
+
+            function syncHeaderScrollState() {
+                const revealThreshold = Math.max(56, header.offsetHeight - 4);
+                const currentY = window.scrollY || 0;
+                const isDesktop = window.matchMedia('(min-width: 1041px)').matches;
+                const isScrollingDown = currentY > lastScrollY;
+
+                page.classList.toggle('is-header-hidden', isDesktop && currentY > revealThreshold && isScrollingDown);
+                lastScrollY = currentY;
+            }
+
+            window.addEventListener('scroll', syncHeaderScrollState, { passive: true });
+            window.addEventListener('resize', syncHeaderScrollState);
+            syncHeaderScrollState();
+        })();
+    </script>
 
     <script>
         (function () {

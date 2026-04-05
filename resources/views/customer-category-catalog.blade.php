@@ -29,12 +29,13 @@
         }
 
         .page {
-            width: calc(100% - 294px);
-            margin: 14px 14px 30px 270px;
+            width: 100%;
+            margin: 0 0 30px;
         }
 
         .header-bar {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
             gap: 14px;
@@ -47,6 +48,11 @@
             position: relative;
             z-index: 980;
             backdrop-filter: blur(8px);
+        }
+
+        .header-category-tabs {
+            width: 100%;
+            margin-top: 4px;
         }
 
         .header-main {
@@ -483,8 +489,14 @@
             flex: 0 0 auto;
         }
 
+        .hero-links a.is-active {
+            background: rgba(255, 255, 255, 0.96);
+            border-color: rgba(255, 255, 255, 0.96);
+            color: #0f6179;
+        }
+
         .search-box {
-            margin-top: -8px;
+            margin-top: 10px;
             border: 1px solid var(--line);
             border-radius: 14px;
             background: var(--surface);
@@ -805,28 +817,7 @@
         };
     @endphp
 
-    <aside class="floating-sidebar" aria-label="Category sidebar">
-        <p class="sidebar-title">Browse Categories</p>
-        <section class="top-links" aria-label="Top categories">
-            @foreach ($catalogCategoryLinks as $item)
-                <a class="top-link{{ $categoryKey === ($item['key'] ?? '') ? ' is-active' : '' }}" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">
-                    <span class="top-link-head"><i class="{{ $item['icon'] ?? 'fa-solid fa-location-dot' }}"></i>{{ $item['title'] ?? 'Category' }}</span>
-                    <span>{{ $item['subtitle'] ?? '' }}</span>
-                </a>
-            @endforeach
-        </section>
-    </aside>
-
     <main class="page" data-api-base="{{ $apiBase }}">
-        <details class="mobile-category-nav" aria-label="Mobile category quick links">
-            <summary class="mobile-category-toggle">Browse Categories</summary>
-            <div class="mobile-category-row">
-                @foreach ($catalogCategoryLinks as $item)
-                    <a class="mobile-category-link" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}"><i class="{{ $item['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i><span>{{ $item['title'] ?? 'Category' }}</span></a>
-                @endforeach
-            </div>
-        </details>
-
         <section class="journey-hero" aria-label="Category hero and quick navigation">
             <header class="header-bar" aria-label="Member account actions">
                 <div class="header-main">
@@ -873,19 +864,13 @@
                         <a class="auth-link primary" href="{{ '/portal/customer/register?continue=' . urlencode($customerContinueUrl) }}">Member Registration</a>
                     @endif
                 </div>
-            </header>
 
-            <section class="hero">
-                <p>Category Portfolio</p>
-                <h1>{{ $categoryMeta['label'] }} Catalogue</h1>
-                <p>{{ $categoryMeta['subtitle'] }}</p>
-                <div class="hero-links">
+                <div class="hero-links header-category-tabs" aria-label="Category tabs in header">
                     @foreach ($catalogCategoryLinks as $item)
-                        <a href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">{{ $item['title'] ?? 'Category' }}</a>
+                        <a class="{{ $categoryKey === ($item['key'] ?? '') ? 'is-active' : '' }}" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">{{ $item['title'] ?? 'Category' }}</a>
                     @endforeach
                 </div>
-            </section>
-        </section>
+            </header>
 
         <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}">
             <div class="grid">
@@ -1146,6 +1131,7 @@
                 <a href="/catalog/{{ $categoryKey }}">Reset</a>
             </div>
         </form>
+        </section>
 
         <h2 class="section-title">Available Portfolio Items</h2>
         @if ($catalogProperties->isEmpty())

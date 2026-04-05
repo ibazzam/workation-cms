@@ -15,6 +15,7 @@
             --line: #d5e2ec;
             --surface: #ffffff;
             --brand: #0f6179;
+            --brand-strong: #0b4f66;
             --accent: #f3a337;
         }
 
@@ -30,6 +31,247 @@
         .page {
             width: calc(100% - 294px);
             margin: 14px 14px 30px 270px;
+        }
+
+        .header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 8px 14px;
+            border: 1px solid #d8e3ec;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 10px 24px rgba(22, 64, 93, 0.06);
+            margin-bottom: 12px;
+            position: sticky;
+            top: 8px;
+            z-index: 980;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-main {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .header-menu-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border: 1px solid #d8e5ef;
+            border-radius: 10px;
+            background: #f9fcff;
+            color: #61778c;
+            font-size: 0.82rem;
+        }
+
+        .header-brand {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--brand);
+            letter-spacing: -0.04em;
+            line-height: 1;
+        }
+
+        .header-subline {
+            margin: 1px 0 0;
+            font-size: 0.7rem;
+            color: #71869a;
+            white-space: nowrap;
+        }
+
+        .header-search-mini {
+            display: flex;
+            align-items: center;
+            min-width: 0;
+            width: min(460px, 100%);
+            border: 1px solid #d8e3ec;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #ffffff;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+        }
+
+        .header-search-mini input {
+            border: 0;
+            background: transparent;
+            padding: 9px 12px;
+            font: inherit;
+            min-width: 0;
+            width: 100%;
+            color: #244057;
+        }
+
+        .header-search-mini button {
+            border: 0;
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--brand) 0%, var(--brand-strong) 100%);
+            color: #ffffff;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .customer-auth {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            flex-shrink: 0;
+        }
+
+        .header-link {
+            text-decoration: none;
+            color: #1d3449;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 7px 9px;
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+
+        .header-link:hover {
+            background: #f4f8fc;
+            color: #154e71;
+        }
+
+        .auth-link {
+            text-decoration: none;
+            border: 1px solid #c9dbea;
+            border-radius: 10px;
+            padding: 7px 12px;
+            background: #f6fbff;
+            color: #19466a;
+            font-size: 0.8rem;
+            font-weight: 700;
+            font-family: inherit;
+        }
+
+        .auth-link.primary {
+            background: linear-gradient(135deg, #0f6179 0%, #1e7d90 100%);
+            border-color: #0f6179;
+            color: #ffffff;
+        }
+
+        .account-menu {
+            position: relative;
+        }
+
+        .account-menu-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #c9dbea;
+            border-radius: 11px;
+            padding: 6px 10px;
+            background: #ffffff;
+            color: #173e5b;
+            font-size: 0.8rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(20, 63, 90, 0.08);
+        }
+
+        .account-avatar {
+            width: 22px;
+            height: 22px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #e8f5fb 0%, #d4ebf7 100%);
+            color: #1e5a7e;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+        }
+
+        .account-chevron {
+            color: #65829a;
+            font-size: 0.68rem;
+            transition: transform 0.2s ease;
+        }
+
+        .account-menu.is-open .account-chevron {
+            transform: rotate(180deg);
+        }
+
+        .account-menu-panel {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            width: min(290px, calc(100vw - 24px));
+            border: 1px solid #c9ddeb;
+            border-radius: 14px;
+            background: #ffffff;
+            box-shadow: 0 20px 34px rgba(15, 50, 77, 0.2);
+            overflow: hidden;
+            z-index: 950;
+        }
+
+        .account-panel-head {
+            padding: 12px 14px;
+            border-bottom: 1px solid #d8e6f0;
+            background: linear-gradient(140deg, #f7fbff 0%, #edf6fb 100%);
+        }
+
+        .account-panel-greet {
+            margin: 0;
+            color: #1f4d6f;
+            font-size: 0.9rem;
+            font-weight: 800;
+        }
+
+        .account-panel-note {
+            margin: 3px 0 0;
+            color: #5d778d;
+            font-size: 0.75rem;
+        }
+
+        .account-panel-links {
+            display: grid;
+            padding: 8px;
+            gap: 2px;
+        }
+
+        .account-panel-link {
+            text-decoration: none;
+            border-radius: 9px;
+            padding: 9px 10px;
+            color: #264c66;
+            font-size: 0.81rem;
+            font-weight: 600;
+        }
+
+        .account-panel-link:hover {
+            background: #eff7fc;
+        }
+
+        .account-panel-foot {
+            border-top: 1px solid #d8e6f0;
+            padding: 8px;
+            background: #fbfdff;
+        }
+
+        .account-panel-logout {
+            width: 100%;
+            border: 1px solid #d4e0ea;
+            border-radius: 9px;
+            padding: 9px 10px;
+            background: #ffffff;
+            color: #37516a;
+            font-size: 0.8rem;
+            font-weight: 700;
+            font-family: inherit;
+            text-align: left;
+            cursor: pointer;
         }
 
         .floating-sidebar {
@@ -391,6 +633,19 @@
                 margin: 14px auto 30px;
             }
 
+            .header-bar {
+                position: static;
+            }
+
+            .header-main {
+                flex-wrap: wrap;
+            }
+
+            .header-search-mini {
+                width: 100%;
+                order: 3;
+            }
+
             .floating-sidebar {
                 position: static;
                 width: calc(100% - 28px);
@@ -428,6 +683,25 @@
             .page {
                 width: calc(100% - 18px);
                 margin: 10px auto 22px;
+            }
+
+            .header-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .customer-auth {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .header-main {
+                width: 100%;
+                gap: 10px;
+            }
+
+            .header-brand {
+                font-size: 1.65rem;
             }
 
             .floating-sidebar {
@@ -477,6 +751,9 @@
         $filters = $filters ?? [];
         $categoryKey = $categoryKey ?? 'accommodation';
         $categoryMeta = $categoryMeta ?? ['label' => 'Catalogue', 'subtitle' => ''];
+        $customerLoggedIn = (bool) session('portal_customer_authenticated', false);
+        $customerName = trim((string) session('portal_customer_user', 'Customer'));
+        $customerContinueUrl = request()->fullUrl();
         $catalogCategoryLinks = collect([
             ['key' => 'accommodation',    'icon' => 'fa-solid fa-hotel',          'title' => 'Accommodation',   'subtitle' => 'Hotels, resorts, villas'],
             ['key' => 'marine-transport',  'icon' => 'fa-solid fa-water',          'title' => 'Marine Transport','subtitle' => 'Speedboats & water transfers'],
@@ -520,6 +797,53 @@
     </aside>
 
     <main class="page" data-api-base="{{ $apiBase }}">
+        <header class="header-bar" aria-label="Member account actions">
+            <div class="header-main">
+                <span class="header-menu-button" aria-hidden="true"><i class="fa-solid fa-bars"></i></span>
+                <div>
+                    <p class="header-brand">Workation</p>
+                    <p class="header-subline">Maldives travel marketplace</p>
+                </div>
+                <div class="header-search-mini" aria-label="Quick destination search">
+                    <input type="search" value="{{ $filters['q'] ?? '' }}" placeholder="Destinations, islands, hotels, and experiences">
+                    <button type="button" aria-label="Search destinations"><i class="fa-solid fa-magnifying-glass"></i></button>
+                </div>
+            </div>
+            <div class="customer-auth">
+                @if ($customerLoggedIn)
+                    <a class="header-link" href="/customer#bookings">My bookings</a>
+                    <div class="account-menu" data-customer-menu>
+                        <button class="account-menu-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="customerMenuPanelCatalog">
+                            <span class="account-avatar" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
+                            <span>Welcome, {{ $customerName }}</span>
+                            <i class="fa-solid fa-chevron-down account-chevron" aria-hidden="true"></i>
+                        </button>
+                        <div id="customerMenuPanelCatalog" class="account-menu-panel" role="menu" hidden>
+                            <div class="account-panel-head">
+                                <p class="account-panel-greet">Hi, {{ $customerName }}</p>
+                                <p class="account-panel-note">Great to see you again.</p>
+                            </div>
+                            <div class="account-panel-links">
+                                <a class="account-panel-link" href="/customer#bookings" role="menuitem">My Bookings</a>
+                                <a class="account-panel-link" href="/customer" role="menuitem">Manage my account</a>
+                                <a class="account-panel-link" href="/customer#promos" role="menuitem">Promo codes</a>
+                                <a class="account-panel-link" href="/customer#favourites" role="menuitem">Favourites</a>
+                            </div>
+                            <div class="account-panel-foot">
+                                <form method="POST" action="/portal/customer/logout" style="margin:0;">
+                                    @csrf
+                                    <button class="account-panel-logout" type="submit">Sign out</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                @else
+                    <a class="auth-link" href="{{ '/portal/customer/login?continue=' . urlencode($customerContinueUrl) }}">Member Login</a>
+                    <a class="auth-link primary" href="{{ '/portal/customer/register?continue=' . urlencode($customerContinueUrl) }}">Member Registration</a>
+                @endif
+            </div>
+        </header>
+
         <details class="mobile-category-nav" aria-label="Mobile category quick links">
             <summary class="mobile-category-toggle">Browse Categories</summary>
             <div class="mobile-category-row">
@@ -867,5 +1191,43 @@
 
         @include('partials.global-site-footer')
     </main>
+
+    <script>
+        (function () {
+            const menuRoot = document.querySelector('[data-customer-menu]');
+            if (!menuRoot) {
+                return;
+            }
+
+            const menuToggle = menuRoot.querySelector('.account-menu-toggle');
+            const menuPanel = menuRoot.querySelector('.account-menu-panel');
+            if (!menuToggle || !menuPanel) {
+                return;
+            }
+
+            function setMenuOpen(isOpen) {
+                menuRoot.classList.toggle('is-open', isOpen);
+                menuPanel.hidden = !isOpen;
+                menuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            }
+
+            menuToggle.addEventListener('click', function (event) {
+                event.preventDefault();
+                setMenuOpen(menuPanel.hidden);
+            });
+
+            document.addEventListener('click', function (event) {
+                if (!menuRoot.contains(event.target)) {
+                    setMenuOpen(false);
+                }
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    setMenuOpen(false);
+                }
+            });
+        })();
+    </script>
 </body>
 </html>

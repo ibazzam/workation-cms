@@ -16,6 +16,7 @@
             --surface: #ffffff;
             --surface-soft: #edf6f3;
             --brand: #0f6179;
+            --brand-strong: #0b4f66;
             --brand-soft: #dff1f6;
             --accent: #f3a337;
             --accent-soft: #fff3df;
@@ -34,20 +35,18 @@
         }
 
         .page {
-            margin: 8px 12px 30px 270px;
-            width: calc(100% - 282px);
+            margin: 8px 12px 30px;
+            width: calc(100% - 24px);
             max-width: none;
             position: relative;
         }
 
         .floating-sidebar {
-            position: fixed;
-            left: 12px;
-            top: 56px;
+            position: sticky;
+            top: 82px;
             width: 250px;
-            height: calc(100vh - 68px);
-            overflow-y: auto;
-            z-index: 900;
+            height: fit-content;
+            z-index: 200;
         }
 
         .header-bar {
@@ -99,7 +98,7 @@
             margin: 0;
             font-size: 2rem;
             font-weight: 800;
-            color: #2a5bff;
+            color: var(--brand);
             letter-spacing: -0.04em;
             line-height: 1;
         }
@@ -141,7 +140,7 @@
             border: 0;
             width: 38px;
             height: 38px;
-            background: #2a5bff;
+            background: linear-gradient(135deg, var(--brand) 0%, var(--brand-strong) 100%);
             color: #ffffff;
             cursor: pointer;
             flex-shrink: 0;
@@ -180,6 +179,10 @@
             grid-template-columns: minmax(220px, 250px) minmax(0, 1fr);
             gap: 12px;
             align-items: start;
+        }
+
+        .hero-main {
+            min-width: 0;
         }
 
         .page-with-sidebar {
@@ -499,12 +502,15 @@
             border: 1px solid #d6e2ee;
             border-radius: 22px;
             background:
-                linear-gradient(115deg, rgba(28, 88, 243, 0.86) 0%, rgba(23, 136, 228, 0.76) 48%, rgba(16, 98, 164, 0.68) 100%),
+                var(--home-hero-image, none),
+                linear-gradient(115deg, rgba(11, 79, 102, 0.88) 0%, rgba(15, 97, 121, 0.82) 48%, rgba(31, 125, 144, 0.72) 100%),
                 radial-gradient(circle at 20% 18%, rgba(255,255,255,0.22) 0, rgba(255,255,255,0) 34%),
                 radial-gradient(circle at 80% 25%, rgba(255,255,255,0.18) 0, rgba(255,255,255,0) 28%),
-                linear-gradient(180deg, #326de5 0%, #2158cb 100%);
+                linear-gradient(180deg, #1c6f86 0%, #0f6179 100%);
+            background-size: cover, auto, auto, auto, auto;
+            background-position: center center, center center, center center, center center, center center;
             color: #ecfcff;
-            padding: 28px 28px 110px;
+            padding: 18px 20px 54px;
             box-shadow: 0 24px 44px rgba(32, 72, 155, 0.18);
             width: 100%;
             position: relative;
@@ -534,8 +540,8 @@
         }
 
         .search-title {
-            margin: 10px 0 0;
-            font-size: clamp(1.85rem, 3vw, 3rem);
+            margin: 7px 0 0;
+            font-size: clamp(1.45rem, 2.4vw, 2.3rem);
             line-height: 1.08;
             max-width: 760px;
             font-weight: 800;
@@ -543,12 +549,12 @@
         }
 
         .search-support-strip {
-            margin-top: 12px;
+            margin-top: 8px;
             display: flex;
             flex-wrap: wrap;
-            gap: 16px;
+            gap: 12px;
             color: #e6f1ff;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             position: relative;
             z-index: 1;
         }
@@ -562,23 +568,23 @@
         .search-shell {
             position: relative;
             z-index: 1;
-            margin: 26px auto 0;
+            margin: 14px auto 0;
             width: min(980px, 100%);
             background: #ffffff;
             border-radius: 18px;
             border: 1px solid #dde5ee;
             box-shadow: 0 20px 38px rgba(22, 49, 97, 0.2);
-            padding: 16px 14px 14px;
+            padding: 10px 12px;
         }
 
         .search-category-tabs {
             display: flex;
             flex-wrap: wrap;
             gap: 6px;
-            margin: -30px auto 14px;
+            margin: -24px auto 10px;
             width: fit-content;
             max-width: 100%;
-            padding: 6px;
+            padding: 5px;
             border-radius: 999px;
             background: rgba(35, 46, 62, 0.82);
             box-shadow: 0 10px 20px rgba(18, 31, 57, 0.2);
@@ -589,9 +595,9 @@
             border-radius: 999px;
             background: transparent;
             color: rgba(255,255,255,0.86);
-            padding: 8px 14px;
+            padding: 6px 11px;
             font: inherit;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 700;
             cursor: pointer;
             display: inline-flex;
@@ -608,7 +614,7 @@
         .search-form {
             margin-top: 0;
             display: grid;
-            grid-template-columns: minmax(18ch, 1.25fr) minmax(16ch, 1fr) minmax(16ch, 1fr) minmax(16ch, 1fr) auto;
+            grid-template-columns: minmax(20ch, 1fr) auto;
             gap: 10px;
             align-items: start;
             min-width: 0;
@@ -624,17 +630,12 @@
 
         .search-primary-field {
             display: grid;
-            grid-template-columns: 150px minmax(0, 1fr);
+            grid-template-columns: minmax(0, 1fr);
             width: 100%;
             border: 1px solid #dce5ee;
             border-radius: 12px;
             overflow: hidden;
             background: #ffffff;
-        }
-
-        .search-primary-field select {
-            border-right: 1px solid #e2e9f1 !important;
-            border-radius: 0 !important;
         }
 
         .search-primary-field input {
@@ -643,7 +644,7 @@
 
         .search-dynamic-fields {
             margin-top: 0;
-            display: grid;
+            display: none;
             grid-column: 1 / -1;
             grid-template-columns: repeat(12, minmax(0, 1fr));
             gap: 8px;
@@ -656,6 +657,10 @@
             display: grid;
         }
 
+        .search-dynamic-fields[hidden] {
+            display: none !important;
+        }
+
         .search-dynamic-fields .field {
             display: grid;
             gap: 4px;
@@ -663,7 +668,7 @@
             overflow: hidden;
             border: 1px solid #dce5ee;
             border-radius: 12px;
-            padding: 8px 10px;
+            padding: 6px 9px;
             background: #ffffff;
         }
 
@@ -684,7 +689,7 @@
         }
 
         .search-dynamic-fields .field label {
-            font-size: 0.68rem;
+            font-size: 0.64rem;
             letter-spacing: 0.04em;
             text-transform: none;
             color: #7a8ea2;
@@ -698,7 +703,7 @@
             max-width: 100%;
             border: 0;
             border-radius: 10px;
-            padding: 10px 12px;
+            padding: 8px 10px;
             font: inherit;
             color: #103247;
             background: #ffffff;
@@ -713,6 +718,7 @@
             border: 0;
             border-radius: 8px;
             padding: 3px 0 0;
+            font-size: 0.92rem;
             font: inherit;
             color: #103247;
             background: transparent;
@@ -763,8 +769,8 @@
             width: 100%;
             border-radius: 12px;
             min-height: 100%;
-            padding: 12px 18px;
-            font-size: 0.92rem;
+            padding: 10px 14px;
+            font-size: 0.86rem;
         }
 
         .search-actions {
@@ -1005,6 +1011,10 @@
                 margin: 14px auto 30px;
             }
 
+            .hero-layout {
+                grid-template-columns: 1fr;
+            }
+
             .floating-sidebar {
                 position: static;
                 width: 100%;
@@ -1155,7 +1165,7 @@
 
             .search-section-full-width {
                 overflow: hidden;
-                padding: 22px 16px 20px;
+                padding: 16px 14px 16px;
             }
 
             .search-category-tabs {
@@ -1169,15 +1179,6 @@
             .search-shell {
                 padding: 12px;
                 border-radius: 16px;
-            }
-
-            .search-primary-field {
-                grid-template-columns: 1fr;
-            }
-
-            .search-primary-field select {
-                border-right: 0 !important;
-                border-bottom: 1px solid #e2e9f1 !important;
             }
 
             .search-dynamic-fields {
@@ -1222,6 +1223,7 @@
         $customerLoggedIn = (bool) session('portal_customer_authenticated', false);
         $customerName = trim((string) session('portal_customer_user', 'Customer'));
         $customerContinueUrl = request()->fullUrl();
+        $homeHeroBackgroundUrl = trim((string) ($homeHeroBackgroundUrl ?? ''));
         $homeTopCategoryLinks = $homeTopCategoryLinks ?? collect();
         $homePromoBanner = $homePromoBanner ?? ['message' => 'Promotions coming soon.', 'url' => '/catalog/accommodation', 'cta' => 'View Promotions'];
         $homeTrendingChips = $homeTrendingChips ?? collect();
@@ -1231,19 +1233,6 @@
         $homeLovedCards = $homeLovedCards ?? collect();
         $cardSvgFallback = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2234%22%3EImage unavailable%3C/text%3E%3C/svg%3E';
     @endphp
-
-    <aside class="floating-sidebar sidebar-shell" aria-label="Category sidebar">
-        <p class="sidebar-title">Browse Categories</p>
-        <section class="top-links" aria-label="Top categories">
-            @foreach ($homeTopCategoryLinks as $link)
-                @php
-                    $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
-                    $categoryKeyFromUrl = preg_match('#/catalog/([a-z_-]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
-                @endphp
-                <a class="top-link floating-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}"><span class="top-link-head"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}"></i>{{ $link['title'] ?? 'Category' }}</span><span>{{ $link['subtitle'] ?? '' }}</span></a>
-            @endforeach
-        </section>
-    </aside>
 
     <main class="page" data-api-base="{{ $apiBase }}">
         <header class="header-bar" aria-label="Member account actions">
@@ -1259,17 +1248,10 @@
                     <input type="search" placeholder="Destinations, islands, hotels, and experiences">
                     <button type="button" aria-label="Search destinations"><i class="fa-solid fa-magnifying-glass"></i></button>
                 </div>
-                <nav class="header-links" aria-label="Primary site navigation">
-                    <a class="header-link" href="/catalog/accommodation">Hotels &amp; Homes</a>
-                    <a class="header-link" href="/catalog/transport">Flights</a>
-                    <a class="header-link" href="/catalog/marine-transport">Trains</a>
-                    <a class="header-link" href="/catalog/land-transport">Car services</a>
-                    <a class="header-link" href="/catalog/service">Attractions &amp; Tours</a>
-                </nav>
             </div>
             <div class="customer-auth">
-                <a class="header-link" href="/customer#bookings">My bookings</a>
                 @if ($customerLoggedIn)
+                    <a class="header-link" href="/customer#bookings">My bookings</a>
                     <div class="account-menu" data-customer-menu>
                         <button class="account-menu-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="customerMenuPanel">
                             <span class="account-avatar" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
@@ -1304,96 +1286,105 @@
             </div>
         </header>
 
-        <details class="mobile-category-nav" aria-label="Mobile category quick links">
-            <summary class="mobile-category-toggle">Browse Categories</summary>
-            <div class="mobile-category-row">
-                @foreach ($homeTopCategoryLinks as $link)
-                    @php
-                        $mobileLinkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
-                    @endphp
-                    <a class="mobile-category-link" href="{{ $mobileLinkUrl }}"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i><span>{{ $link['title'] ?? 'Category' }}</span></a>
-                @endforeach
-            </div>
-        </details>
-
-        <div class="search-section-full-width" aria-label="Smart category search">
-            <p class="search-eyebrow">Plan Your Dream Maldives Escape</p>
-            <h1 class="search-title">Search stays, transfers, and island experiences with a travel-first booking flow.</h1>
-            <div class="search-support-strip" aria-label="Trust signals">
-                <span class="search-support-item"><i class="fa-solid fa-shield-heart"></i>Secure payment</span>
-                <span class="search-support-item"><i class="fa-solid fa-headset"></i>Fast customer support</span>
-                <span class="search-support-item"><i class="fa-solid fa-bolt"></i>Instant category search</span>
-            </div>
-            <div class="search-shell">
-                <div class="search-category-tabs" aria-label="Travel search categories">
-                    @foreach ($homeTopCategoryLinks->take(5) as $index => $link)
+        <div class="hero-layout">
+            <aside class="floating-sidebar sidebar-shell" aria-label="Category sidebar">
+                <p class="sidebar-title">Browse Categories</p>
+                <section class="top-links" aria-label="Top categories">
+                    @foreach ($homeTopCategoryLinks as $link)
                         @php
-                            $tabUrl = (string) ($link['url'] ?? '/catalog/accommodation');
-                            $tabCategoryKey = preg_match('#/catalog/([a-z_-]+)#', $tabUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
+                            $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
+                            $categoryKeyFromUrl = preg_match('#/catalog/([a-z_-]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
                         @endphp
-                        <button class="search-category-tab{{ $index === 0 ? ' is-active' : '' }}" type="button" data-home-category-tab="{{ $tabCategoryKey }}">
-                            <i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i>
-                            <span>{{ $link['title'] ?? 'Category' }}</span>
-                        </button>
+                        <a class="top-link floating-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}"><span class="top-link-head"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}"></i>{{ $link['title'] ?? 'Category' }}</span><span>{{ $link['subtitle'] ?? '' }}</span></a>
                     @endforeach
+                </section>
+            </aside>
+
+            <div class="hero-main">
+                <details class="mobile-category-nav" aria-label="Mobile category quick links">
+                    <summary class="mobile-category-toggle">Browse Categories</summary>
+                    <div class="mobile-category-row">
+                        @foreach ($homeTopCategoryLinks as $link)
+                            @php
+                                $mobileLinkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
+                            @endphp
+                            <a class="mobile-category-link" href="{{ $mobileLinkUrl }}"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i><span>{{ $link['title'] ?? 'Category' }}</span></a>
+                        @endforeach
+                    </div>
+                </details>
+
+                <div class="search-section-full-width" aria-label="Smart category search" @if ($homeHeroBackgroundUrl !== '') style="--home-hero-image: url('{{ $homeHeroBackgroundUrl }}');" @endif>
+                    <p class="search-eyebrow">Plan Your Dream Maldives Escape</p>
+                    <h1 class="search-title">Search stays, transfers, and island experiences with a travel-first booking flow.</h1>
+                    <div class="search-support-strip" aria-label="Trust signals">
+                        <span class="search-support-item"><i class="fa-solid fa-shield-heart"></i>Secure payment</span>
+                        <span class="search-support-item"><i class="fa-solid fa-headset"></i>Fast customer support</span>
+                        <span class="search-support-item"><i class="fa-solid fa-bolt"></i>Instant category search</span>
+                    </div>
+                    <div class="search-shell">
+                        <div class="search-category-tabs" aria-label="Travel search categories">
+                            @foreach ($homeTopCategoryLinks->take(5) as $index => $link)
+                                @php
+                                    $tabUrl = (string) ($link['url'] ?? '/catalog/accommodation');
+                                    $tabCategoryKey = preg_match('#/catalog/([a-z_-]+)#', $tabUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
+                                @endphp
+                                <button class="search-category-tab{{ $index === 0 ? ' is-active' : '' }}" type="button" data-home-category-tab="{{ $tabCategoryKey }}">
+                                    <i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i>
+                                    <span>{{ $link['title'] ?? 'Category' }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                        <form id="homeCatalogSearchForm" class="search-form" action="/catalog/accommodation" method="get">
+                            <input id="categorySelect" name="category" type="hidden" value="accommodation">
+                            <div class="search-field-shell">
+                                <div class="search-primary-field">
+                                    <input type="search" name="q" placeholder="City, airport, island, landmark, hotel, or service name" aria-label="Search query">
+                                </div>
+                            </div>
+
+                            <div id="accommodationFields" class="search-dynamic-fields is-active" data-fields-for="accommodation" aria-hidden="false">
+                                <div class="field field-date"><label for="checkin">Check-in</label><input id="checkin" name="checkin" type="date"></div>
+                                <div class="field field-date"><label for="checkout">Check-out</label><input id="checkout" name="checkout" type="date"></div>
+                                <div class="field field-short"><label for="adults">Adults</label><input id="adults" name="adults" type="number" min="1" value="2"></div>
+                                <div class="field field-short"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="0"></div>
+                                <div class="field field-short"><label for="rooms">Rooms</label><input id="rooms" name="rooms" type="number" min="1" value="1"></div>
+                            </div>
+
+                            <div id="transportFields" class="search-dynamic-fields" data-fields-for="transport" hidden aria-hidden="true">
+                                <div class="field field-medium"><label for="transportMode">Transport Mode</label><select id="transportMode" name="transport_mode"><option value="marine">Marine Transport</option><option value="land">Land Transport</option></select></div>
+                                <div class="field field-medium" id="transportTripTypeField"><label for="transportTripType">Trip Type</label><select id="transportTripType" name="trip_type"><option value="one_way">One Way</option><option value="round_trip">Round Trip</option></select></div>
+                                <div class="field field-long"><label for="transportFrom">From</label><input id="transportFrom" name="from" type="text" placeholder="Atoll or island"></div>
+                                <div class="field field-long"><label for="transportTo">To</label><input id="transportTo" name="to" type="text" placeholder="Atoll or island"></div>
+                                <div class="field field-date" id="transportDepartureDateField"><label for="travelDate">Departure</label><input id="travelDate" name="travel_date" type="date"></div>
+                                <div class="field field-date" id="transportReturnDateField"><label for="returnDate">Return</label><input id="returnDate" name="return_date" type="date"></div>
+                                <div class="field field-short"><label for="transportAdults">Adults</label><input id="transportAdults" name="adults" type="number" min="1" value="2"></div>
+                                <div class="field field-short"><label for="transportChildren">Children</label><input id="transportChildren" name="children" type="number" min="0" value="0"></div>
+                                <div class="field field-medium" id="transportVehicleTypeField"><label for="vehicleType">Vehicle Type</label><input id="vehicleType" name="vehicle_type" type="text" placeholder="Car, Van, Bike"></div>
+                            </div>
+
+                            <div id="serviceFields" class="search-dynamic-fields" data-fields-for="service" hidden aria-hidden="true">
+                                <div class="field field-medium">
+                                    <label for="serviceAtoll">Atoll</label>
+                                    <select id="serviceAtoll" name="atoll">
+                                        <option value="">All Atolls</option>
+                                    </select>
+                                </div>
+                                <div class="field field-medium">
+                                    <label for="serviceIsland">Island</label>
+                                    <select id="serviceIsland" name="island">
+                                        <option value="">All Islands</option>
+                                    </select>
+                                </div>
+                                <div class="field field-short"><label for="minPrice">Min Price</label><input id="minPrice" name="min_price" type="number" min="0" placeholder="0"></div>
+                                <div class="field field-short"><label for="maxPrice">Max Price</label><input id="maxPrice" name="max_price" type="number" min="0" placeholder="5000"></div>
+                            </div>
+
+                            <div class="search-submit-row">
+                                <button class="primary" type="submit"><i class="fa-solid fa-magnifying-glass" style="margin-right:8px;"></i>Search</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-                <form id="homeCatalogSearchForm" class="search-form" action="/catalog/accommodation" method="get">
-                    <div class="search-field-shell">
-                        <div class="search-primary-field">
-                            <select id="categorySelect" name="category" aria-label="Select category">
-                                @foreach ($homeTopCategoryLinks as $link)
-                                    @php
-                                        $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
-                                        $categoryKeyFromUrl = preg_match('#/catalog/([a-z_-]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
-                                    @endphp
-                                    <option value="{{ $categoryKeyFromUrl }}">{{ $link['title'] ?? 'Category' }}</option>
-                                @endforeach
-                            </select>
-                            <input type="search" name="q" placeholder="City, airport, island, landmark, hotel, or service name" aria-label="Search query">
-                        </div>
-                    </div>
-
-                    <div id="accommodationFields" class="search-dynamic-fields is-active" data-fields-for="accommodation" aria-hidden="false">
-                        <div class="field field-date"><label for="checkin">Check-in</label><input id="checkin" name="checkin" type="date"></div>
-                        <div class="field field-date"><label for="checkout">Check-out</label><input id="checkout" name="checkout" type="date"></div>
-                        <div class="field field-short"><label for="adults">Adults</label><input id="adults" name="adults" type="number" min="1" value="2"></div>
-                        <div class="field field-short"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="0"></div>
-                        <div class="field field-short"><label for="rooms">Rooms</label><input id="rooms" name="rooms" type="number" min="1" value="1"></div>
-                    </div>
-
-                    <div id="transportFields" class="search-dynamic-fields" data-fields-for="transport" hidden aria-hidden="true">
-                        <div class="field field-medium"><label for="transportMode">Transport Mode</label><select id="transportMode" name="transport_mode"><option value="marine">Marine Transport</option><option value="land">Land Transport</option></select></div>
-                        <div class="field field-medium" id="transportTripTypeField"><label for="transportTripType">Trip Type</label><select id="transportTripType" name="trip_type"><option value="one_way">One Way</option><option value="round_trip">Round Trip</option></select></div>
-                        <div class="field field-long"><label for="transportFrom">From</label><input id="transportFrom" name="from" type="text" placeholder="Atoll or island"></div>
-                        <div class="field field-long"><label for="transportTo">To</label><input id="transportTo" name="to" type="text" placeholder="Atoll or island"></div>
-                        <div class="field field-date" id="transportDepartureDateField"><label for="travelDate">Departure</label><input id="travelDate" name="travel_date" type="date"></div>
-                        <div class="field field-date" id="transportReturnDateField"><label for="returnDate">Return</label><input id="returnDate" name="return_date" type="date"></div>
-                        <div class="field field-short"><label for="transportAdults">Adults</label><input id="transportAdults" name="adults" type="number" min="1" value="2"></div>
-                        <div class="field field-short"><label for="transportChildren">Children</label><input id="transportChildren" name="children" type="number" min="0" value="0"></div>
-                        <div class="field field-medium" id="transportVehicleTypeField"><label for="vehicleType">Vehicle Type</label><input id="vehicleType" name="vehicle_type" type="text" placeholder="Car, Van, Bike"></div>
-                    </div>
-
-                    <div id="serviceFields" class="search-dynamic-fields" data-fields-for="service" hidden aria-hidden="true">
-                        <div class="field field-medium">
-                            <label for="serviceAtoll">Atoll</label>
-                            <select id="serviceAtoll" name="atoll">
-                                <option value="">All Atolls</option>
-                            </select>
-                        </div>
-                        <div class="field field-medium">
-                            <label for="serviceIsland">Island</label>
-                            <select id="serviceIsland" name="island">
-                                <option value="">All Islands</option>
-                            </select>
-                        </div>
-                        <div class="field field-short"><label for="minPrice">Min Price</label><input id="minPrice" name="min_price" type="number" min="0" placeholder="0"></div>
-                        <div class="field field-short"><label for="maxPrice">Max Price</label><input id="maxPrice" name="max_price" type="number" min="0" placeholder="5000"></div>
-                    </div>
-
-                    <div class="search-submit-row">
-                        <button class="primary" type="submit"><i class="fa-solid fa-magnifying-glass" style="margin-right:8px;"></i>Search</button>
-                    </div>
-                </form>
             </div>
         </div>
 
@@ -1712,13 +1703,35 @@
                 }
             }
 
+            function normalizeCategoryKey(category) {
+                return String(category || '').toLowerCase().replace(/_/g, '-').trim();
+            }
+
             function resolveGroup(category) {
-                if (category === 'accommodation') {
-                    return 'accommodation';
+                const normalized = normalizeCategoryKey(category);
+                const categoryGroupMap = {
+                    'accommodation': 'accommodation',
+                    'marine-transport': 'transport',
+                    'land-transport': 'transport',
+                    'transport': 'transport',
+                    'excursion': 'service',
+                    'remote-workspace': 'service',
+                    'conference-room': 'service',
+                    'resort-day-visit': 'service',
+                    'restaurant': 'service',
+                    'vehicle-rental': 'service'
+                };
+
+                if (categoryGroupMap[normalized]) {
+                    return categoryGroupMap[normalized];
                 }
 
-                if (category === 'marine-transport' || category === 'land-transport' || category === 'transport') {
+                if (normalized.indexOf('transport') !== -1) {
                     return 'transport';
+                }
+
+                if (normalized === 'accommodation' || normalized.indexOf('stay') !== -1 || normalized.indexOf('hotel') !== -1) {
+                    return 'accommodation';
                 }
 
                 return 'service';
@@ -1726,14 +1739,15 @@
 
             function toggleFields() {
                 const category = String(categorySelect.value || 'accommodation').toLowerCase();
-                const group = resolveGroup(category);
+                const normalizedCategory = normalizeCategoryKey(category);
+                const group = resolveGroup(normalizedCategory);
                 const groups = [
                     { key: 'accommodation', el: accommodationFields },
                     { key: 'transport', el: transportFields },
                     { key: 'service', el: serviceFields }
                 ];
 
-                form.setAttribute('action', '/catalog/' + category);
+                form.setAttribute('action', '/catalog/' + normalizedCategory.replace(/_/g, '-'));
 
                 groups.forEach(function (entry) {
                     const isActive = entry.key === group;
@@ -1748,14 +1762,15 @@
 
                 if (group === 'transport') {
                     if (transportMode) {
-                        transportMode.value = category === 'land-transport' ? 'land' : 'marine';
+                        transportMode.value = normalizedCategory === 'land-transport' ? 'land' : 'marine';
                     }
                     toggleTransportModeFields();
                 }
 
                 if (categoryTabs.length > 0) {
                     categoryTabs.forEach(function (tab) {
-                        tab.classList.toggle('is-active', String(tab.getAttribute('data-home-category-tab') || '').toLowerCase() === category);
+                        const tabCategory = normalizeCategoryKey(tab.getAttribute('data-home-category-tab') || '');
+                        tab.classList.toggle('is-active', tabCategory === normalizedCategory);
                     });
                 }
             }
@@ -1783,7 +1798,7 @@
 
                     link.addEventListener('click', function (event) {
                         const categoryKey = String(link.getAttribute('data-category-key') || '').toLowerCase();
-                        if (!categoryKey || !categorySelect.querySelector('option[value="' + categoryKey + '"]')) {
+                        if (!categoryKey) {
                             return;
                         }
 
@@ -1799,7 +1814,7 @@
                 categoryTabs.forEach(function (tab) {
                     tab.addEventListener('click', function () {
                         const categoryKey = String(tab.getAttribute('data-home-category-tab') || '').toLowerCase();
-                        if (!categoryKey || !categorySelect.querySelector('option[value="' + categoryKey + '"]')) {
+                        if (!categoryKey) {
                             return;
                         }
 
@@ -1809,7 +1824,6 @@
                 });
             }
 
-            categorySelect.addEventListener('change', toggleFields);
             loadAtolls();
             loadIslandsByAtoll('');
             toggleFields();

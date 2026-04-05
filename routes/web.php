@@ -1049,6 +1049,13 @@ if (!function_exists('getAvailableCategories')) {
 
 Route::get('/', function () {
     $apiBase = workationApiBase();
+    $homeHeroBackgroundUrl = trim((string) env('HOME_HERO_IMAGE_URL', ''));
+    if ($homeHeroBackgroundUrl === '') {
+        $seasonalHeroPath = public_path('images/home-hero-seasonal.jpg');
+        if (is_file($seasonalHeroPath)) {
+            $homeHeroBackgroundUrl = '/images/home-hero-seasonal.jpg';
+        }
+    }
 
     // Keep home sidebar identical to category pages for uniform navigation.
     $homeTopCategoryLinks = collect([
@@ -1397,6 +1404,7 @@ Route::get('/', function () {
 
     return view('welcome', [
         'apiBase' => $apiBase,
+        'homeHeroBackgroundUrl' => $homeHeroBackgroundUrl,
         'homeTopCategoryLinks' => $homeTopCategoryLinks,
         'homePromoBanner' => $homePromoBanner,
         'homeTrendingChips' => $homeTrendingChips,
@@ -6008,6 +6016,10 @@ $handlePortalLogout = function (Request $request, string $portal) {
 
     if ($portal === 'vendor') {
         return redirect('/portal/vendor/register?mode=email');
+    }
+
+    if ($portal === 'customer') {
+        return redirect('/');
     }
 
     return redirect('/portal/' . $portal . '/login');

@@ -139,6 +139,19 @@
             font-weight: 600;
             font-size: 0.9rem;
         }
+
+        .legal-links {
+            margin-top: 12px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.8rem;
+            line-height: 1.5;
+        }
+
+        .legal-links a {
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
     </style>
     @include('partials.uniform-buttons')
 </head>
@@ -191,6 +204,8 @@
                 <a href="/">Back to Home</a>
             </div>
         </form>
+
+        <p class="legal-links">By creating an account, you agree to the <a href="/terms-of-service">Terms of Service</a>, <a href="/privacy-policy">Privacy Policy</a>, and can reach <a href="mailto:support@workation.mv">Support</a> if you need help.</p>
     </section>
 </body>
 </html>

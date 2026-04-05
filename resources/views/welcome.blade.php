@@ -35,8 +35,8 @@
         }
 
         .page {
-            margin: 0 12px 30px;
-            width: calc(100% - 24px);
+            width: min(1180px, calc(100% - 24px));
+            margin: 14px auto 28px;
             max-width: none;
             position: relative;
         }
@@ -1377,6 +1377,10 @@
                     <button type="button" aria-label="Search destinations"><i class="fa-solid fa-magnifying-glass"></i></button>
                 </div>
             </div>
+            <nav class="header-links" aria-label="Primary links">
+                <a class="header-link" href="/things-to-do">Things to Do</a>
+                <a class="header-link" href="/blog">Blog</a>
+            </nav>
             <div class="customer-auth">
                 @if ($customerLoggedIn)
                     <a class="header-link" href="/customer#bookings">My bookings</a>
@@ -1442,6 +1446,8 @@
                             @endphp
                             <a class="mobile-category-link" href="{{ $mobileLinkUrl }}"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i><span>{{ $link['title'] ?? 'Category' }}</span></a>
                         @endforeach
+                        <a class="mobile-category-link" href="/things-to-do"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i><span>Things to Do</span></a>
+                        <a class="mobile-category-link" href="/blog"><i class="fa-solid fa-book-open" aria-hidden="true"></i><span>Blog</span></a>
                     </div>
                 </details>
 

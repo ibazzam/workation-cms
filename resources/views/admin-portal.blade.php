@@ -35,10 +35,10 @@
         }
 
         .page {
-            width: 100%;
+            width: min(1180px, calc(100% - 24px));
             max-width: none;
-            margin: 0;
-            padding: 10px 12px 20px;
+            margin: 14px auto 28px;
+            padding: 10px 0 20px;
         }
 
         .hero {
@@ -973,6 +973,7 @@
                         <a class="hero-link" href="/vendor">Go to Vendor Portal</a>
                         <a class="hero-link" href="#financeModerationPanel">Open Finance</a>
                         <a class="hero-link" href="#vendorRegistrationsPanel">Review Vendors</a>
+                        <a class="hero-link" href="/portal/admin/blog">Manage Blog</a>
                     </div>
                 </div>
                 <div class="hero-actions">
@@ -1013,6 +1014,7 @@
             <a href="#vendorRegistrationHistoryPanel" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Vendor Review History</a>
 
             <p class="nav-group-title">Tools</p>
+            <a href="/portal/admin/blog">Blog Manager</a>
             <a href="#sessionDebug">Session</a>
             <a href="#authApiSection">Auth and API</a>
         </nav>

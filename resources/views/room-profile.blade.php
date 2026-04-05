@@ -10,7 +10,7 @@
         :root { --bg:#f3f8f5; --ink:#152738; --muted:#5f7488; --line:#d5e2ec; --surface:#ffffff; --brand:#0f6179; --accent:#f3a337; }
         * { box-sizing:border-box; }
         body { margin:0; font-family:"Outfit","Trebuchet MS",sans-serif; color:var(--ink); background:var(--bg); }
-        .page { width:min(1060px,calc(100% - 24px)); margin:14px auto 28px; }
+        .page { width:min(1180px,calc(100% - 24px)); margin:14px auto 28px; }
         .hero { border:1px solid #cbe0ea; border-radius:18px; background:linear-gradient(132deg,#0f6179 0%,#1d848c 58%,#2f9891 100%); color:#ecfcff; padding:18px; }
         .hero h1 { margin:0; font-size:clamp(1.2rem,2.3vw,1.9rem); }
         .hero p { margin:6px 0 0; color:#daf5f9; font-size:0.9rem; }

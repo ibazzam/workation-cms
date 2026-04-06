@@ -3302,8 +3302,28 @@ Route::get('/customer', function () {
 });
 
 Route::get('/media/vendor/{media}/{variant?}', function (int $media, ?string $variant = 'banner') {
+        $placeholderResponse = static function () {
+                $svg = <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+    <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#d7ebf8"/>
+            <stop offset="100%" stop-color="#c7deef"/>
+        </linearGradient>
+    </defs>
+    <rect width="900" height="520" fill="url(#g)"/>
+    <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#406582" font-family="Arial" font-size="34">Image unavailable</text>
+</svg>
+SVG;
+
+                return response($svg, 200, [
+                        'Content-Type' => 'image/svg+xml; charset=UTF-8',
+                        'Cache-Control' => 'public, max-age=3600',
+                ]);
+        };
+
     if (!Schema::hasTable('vendor_listing_media')) {
-        abort(404);
+                return $placeholderResponse();
     }
 
     $mediaRecord = DB::table('vendor_listing_media')
@@ -3311,12 +3331,12 @@ Route::get('/media/vendor/{media}/{variant?}', function (int $media, ?string $va
         ->first(['file_path', 'mime_type']);
 
     if (!$mediaRecord) {
-        abort(404);
+        return $placeholderResponse();
     }
 
     $originalPath = trim((string) ($mediaRecord->file_path ?? ''));
     if ($originalPath === '') {
-        abort(404);
+        return $placeholderResponse();
     }
 
     if (str_starts_with($originalPath, 'http://') || str_starts_with($originalPath, 'https://')) {
@@ -3358,7 +3378,7 @@ Route::get('/media/vendor/{media}/{variant?}', function (int $media, ?string $va
             ]);
         }
 
-        abort(404);
+        return $placeholderResponse();
     }
 
     $normalizedVariant = strtolower(trim((string) $variant));
@@ -3467,7 +3487,7 @@ Route::get('/media/vendor/{media}/{variant?}', function (int $media, ?string $va
     }
 
     if ($resolvedBinary === null) {
-        abort(404);
+        return $placeholderResponse();
     }
 
     $mimeType = $resolvedMimeType !== '' ? $resolvedMimeType : ((string) ($mediaRecord->mime_type ?? 'image/jpeg'));

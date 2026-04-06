@@ -3286,7 +3286,45 @@ Route::get('/media/vendor/{media}/{variant?}', function (int $media, ?string $va
     }
 
     if (str_starts_with($originalPath, 'http://') || str_starts_with($originalPath, 'https://')) {
-        return redirect()->away($originalPath);
+        $remoteCandidates = [$originalPath];
+        if (str_starts_with($originalPath, 'http://')) {
+            $remoteCandidates[] = 'https://' . ltrim(substr($originalPath, 7), '/');
+        }
+
+        foreach (array_unique($remoteCandidates) as $remoteUrl) {
+            try {
+                $remoteResponse = Http::retry(1, 200)
+                    ->timeout(10)
+                    ->withHeaders([
+                        'Accept' => 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                        'User-Agent' => 'WorkationMediaProxy/1.0',
+                    ])
+                    ->get($remoteUrl);
+            } catch (\Throwable $exception) {
+                continue;
+            }
+
+            if (!$remoteResponse->successful()) {
+                continue;
+            }
+
+            $remoteBody = $remoteResponse->body();
+            if ($remoteBody === '') {
+                continue;
+            }
+
+            $remoteContentType = trim((string) $remoteResponse->header('Content-Type', ''));
+            if ($remoteContentType === '') {
+                $remoteContentType = (string) ($mediaRecord->mime_type ?? 'image/jpeg');
+            }
+
+            return response($remoteBody, 200, [
+                'Content-Type' => $remoteContentType,
+                'Cache-Control' => 'public, max-age=86400',
+            ]);
+        }
+
+        abort(404);
     }
 
     $normalizedVariant = strtolower(trim((string) $variant));

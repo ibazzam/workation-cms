@@ -1376,6 +1376,12 @@
         $customerContinueUrl = request()->fullUrl();
         $homeHeroBackgroundUrl = trim((string) ($homeHeroBackgroundUrl ?? ''));
         $homeTopCategoryLinks = $homeTopCategoryLinks ?? collect();
+        $homeCatalogCategoryLinks = $homeTopCategoryLinks
+            ->filter(function ($link) {
+                $url = (string) ($link['url'] ?? '');
+                return preg_match('#^/catalog/#', $url) === 1;
+            })
+            ->values();
         $homeDefaultCategoryUrl = '/catalog/accommodation';
         $firstCategoryLink = $homeTopCategoryLinks->first(function ($link) {
             $url = (string) ($link['url'] ?? '');
@@ -1457,7 +1463,7 @@
                 </div>
                 <p class="sidebar-title">Browse Categories</p>
                 <section class="top-links" aria-label="Top categories">
-                    @foreach ($homeTopCategoryLinks as $link)
+                    @foreach ($homeCatalogCategoryLinks as $link)
                         @php
                             $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
                             $categoryKeyFromUrl = preg_match('#/catalog/([a-z_-]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
@@ -1471,13 +1477,12 @@
                 <details class="mobile-category-nav" aria-label="Mobile category quick links">
                     <summary class="mobile-category-toggle">Browse Categories</summary>
                     <div class="mobile-category-row">
-                        @foreach ($homeTopCategoryLinks as $link)
+                        @foreach ($homeCatalogCategoryLinks as $link)
                             @php
                                 $mobileLinkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
                             @endphp
                             <a class="mobile-category-link" href="{{ $mobileLinkUrl }}"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i><span>{{ $link['title'] ?? 'Category' }}</span></a>
                         @endforeach
-                        <a class="mobile-category-link" href="/blog"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i><span>Things to Do</span></a>
                     </div>
                 </details>
 
@@ -1494,7 +1499,7 @@
                             <input id="categorySelect" name="category" type="hidden" value="{{ $homeDefaultCategoryKey }}">
                             
                             <div class="search-category-tabs" aria-label="Travel search categories">
-                                @foreach ($homeTopCategoryLinks as $index => $link)
+                                @foreach ($homeCatalogCategoryLinks as $index => $link)
                                     @php
                                         $tabUrl = (string) ($link['url'] ?? '/catalog/accommodation');
                                         $tabCategoryKey = preg_match('#/catalog/([a-z_-]+)#', $tabUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';

@@ -20,6 +20,7 @@
             --brand-soft: #dff1f6;
             --accent: #f3a337;
             --accent-soft: #fff3df;
+            --search-control-height: 56px;
         }
 
         * {
@@ -766,8 +767,11 @@
             border-radius: 10px;
             overflow: hidden;
             background: #f9fbfd;
-            min-height: 58px;
+            height: var(--search-control-height);
+            min-height: var(--search-control-height);
+            max-height: var(--search-control-height);
             padding: 5px 9px;
+            box-sizing: border-box;
         }
 
         .search-primary-field label {
@@ -927,7 +931,10 @@
             border-radius: 10px;
             padding: 5px 8px;
             background: #f9fbfd;
-            min-height: 58px;
+            height: var(--search-control-height);
+            min-height: var(--search-control-height);
+            max-height: var(--search-control-height);
+            box-sizing: border-box;
         }
 
         .search-dynamic-fields .field label {
@@ -1029,8 +1036,9 @@
             font-weight: 600;
             min-width: 0;
             width: 100%;
-            height: 100%;
-            min-height: 58px;
+            height: var(--search-control-height);
+            min-height: var(--search-control-height);
+            max-height: var(--search-control-height);
             white-space: nowrap;
         }
 

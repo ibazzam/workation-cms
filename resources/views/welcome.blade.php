@@ -865,7 +865,7 @@
             background: #ffffff;
             box-shadow: 0 12px 28px rgba(16, 50, 84, 0.2);
             padding: 10px;
-            z-index: 30;
+            z-index: 80;
         }
 
         .guest-popover[hidden] {
@@ -935,6 +935,12 @@
             min-height: var(--search-control-height);
             max-height: var(--search-control-height);
             box-sizing: border-box;
+        }
+
+        .search-dynamic-fields .field.guest-picker {
+            overflow: visible;
+            position: relative;
+            z-index: 40;
         }
 
         .search-dynamic-fields .field label {
@@ -2293,6 +2299,14 @@
                 });
 
                 [roomsInput, adultsInput, childrenInput].forEach(function (input) {
+                    input.addEventListener('click', function (event) {
+                        event.stopPropagation();
+                    });
+
+                    input.addEventListener('focus', function () {
+                        setPopoverOpen(true);
+                    });
+
                     input.addEventListener('input', updateSummary);
 
                     input.addEventListener('change', function () {

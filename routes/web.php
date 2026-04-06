@@ -1154,15 +1154,11 @@ Route::get('/', function () {
                 return null;
             }
 
-            $resolved = $filePath;
-            if (!str_starts_with($resolved, 'http://') && !str_starts_with($resolved, 'https://')) {
-                $resolved = (string) vendorMediaStorageUrlFromPath($resolved);
-            }
-
-            $resolved = trim((string) $resolved);
-            if ($resolved === '') {
+            if (!str_starts_with($filePath, 'http://') && !str_starts_with($filePath, 'https://')) {
                 return null;
             }
+
+            $resolved = trim((string) $filePath);
 
             if (str_starts_with($resolved, 'http://')) {
                 $resolved = 'https://' . ltrim(substr($resolved, 7), '/');
@@ -1869,12 +1865,8 @@ Route::get('/property/{property}', function (Request $request, int $property) {
 
     $mediaUrl = static function ($media, string $variant = 'banner'): ?string {
         $filePath = trim((string) ($media->file_path ?? ''));
-        if ($filePath !== '') {
+        if ($filePath !== '' && (str_starts_with($filePath, 'http://') || str_starts_with($filePath, 'https://'))) {
             $resolved = $filePath;
-            if (!str_starts_with($resolved, 'http://') && !str_starts_with($resolved, 'https://')) {
-                $resolved = (string) vendorMediaStorageUrlFromPath($resolved);
-            }
-
             $resolved = trim((string) $resolved);
             if ($resolved !== '') {
                 if (str_starts_with($resolved, 'http://')) {
@@ -2100,12 +2092,8 @@ Route::get('/room/{room}', function (Request $request, int $room) {
 
     $mediaUrl = static function ($media, string $variant = 'banner'): ?string {
         $filePath = trim((string) ($media->file_path ?? ''));
-        if ($filePath !== '') {
+        if ($filePath !== '' && (str_starts_with($filePath, 'http://') || str_starts_with($filePath, 'https://'))) {
             $resolved = $filePath;
-            if (!str_starts_with($resolved, 'http://') && !str_starts_with($resolved, 'https://')) {
-                $resolved = (string) vendorMediaStorageUrlFromPath($resolved);
-            }
-
             $resolved = trim((string) $resolved);
             if ($resolved !== '') {
                 if (str_starts_with($resolved, 'http://')) {

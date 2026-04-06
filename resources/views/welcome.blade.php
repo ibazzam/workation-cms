@@ -20,6 +20,7 @@
             --brand-soft: #dff1f6;
             --accent: #f3a337;
             --accent-soft: #fff3df;
+            --search-control-height: 56px;
         }
 
         * {
@@ -766,8 +767,11 @@
             border-radius: 10px;
             overflow: hidden;
             background: #f9fbfd;
-            min-height: 58px;
+            height: var(--search-control-height);
+            min-height: var(--search-control-height);
+            max-height: var(--search-control-height);
             padding: 5px 9px;
+            box-sizing: border-box;
         }
 
         .search-primary-field label {
@@ -861,7 +865,7 @@
             background: #ffffff;
             box-shadow: 0 12px 28px rgba(16, 50, 84, 0.2);
             padding: 10px;
-            z-index: 30;
+            z-index: 80;
         }
 
         .guest-popover[hidden] {
@@ -927,7 +931,16 @@
             border-radius: 10px;
             padding: 5px 8px;
             background: #f9fbfd;
-            min-height: 58px;
+            height: var(--search-control-height);
+            min-height: var(--search-control-height);
+            max-height: var(--search-control-height);
+            box-sizing: border-box;
+        }
+
+        .search-dynamic-fields .field.guest-picker {
+            overflow: visible;
+            position: relative;
+            z-index: 40;
         }
 
         .search-dynamic-fields .field label {
@@ -1019,7 +1032,7 @@
             flex: 0 0 auto;
             align-items: stretch;
             min-width: 0;
-            width: 100%;
+            width: auto;
         }
 
         .search-submit-row button {
@@ -1028,10 +1041,16 @@
             font-size: 0.84rem;
             font-weight: 600;
             min-width: 0;
-            width: 100%;
-            height: 100%;
-            min-height: 58px;
+            width: 136px;
+            height: var(--search-control-height);
+            min-height: var(--search-control-height);
+            max-height: var(--search-control-height);
             white-space: nowrap;
+        }
+
+        .search-form.is-accommodation .search-submit-row,
+        .search-form.is-accommodation .search-submit-row button {
+            width: 100%;
         }
 
         .search-actions {
@@ -1398,6 +1417,14 @@
                 grid-column: auto;
             }
 
+            .search-form:not(.is-accommodation) .search-submit-row {
+                width: 100%;
+            }
+
+            .search-form:not(.is-accommodation) .search-submit-row button {
+                width: 100%;
+            }
+
             .search-field-shell {
                 min-width: 0;
                 padding: 0;
@@ -1550,6 +1577,14 @@
 
             .search-form {
                 grid-template-columns: 1fr;
+            }
+
+            .search-form:not(.is-accommodation) .search-submit-row {
+                width: 100%;
+            }
+
+            .search-form:not(.is-accommodation) .search-submit-row button {
+                width: 100%;
             }
 
             .search-inline-row {
@@ -2285,6 +2320,14 @@
                 });
 
                 [roomsInput, adultsInput, childrenInput].forEach(function (input) {
+                    input.addEventListener('click', function (event) {
+                        event.stopPropagation();
+                    });
+
+                    input.addEventListener('focus', function () {
+                        setPopoverOpen(true);
+                    });
+
                     input.addEventListener('input', updateSummary);
 
                     input.addEventListener('change', function () {

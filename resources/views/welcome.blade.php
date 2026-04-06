@@ -566,8 +566,23 @@
         .search-section-full-width {
             margin-top: 10px;
             margin-bottom: 18px;
-            border: 1px solid #b9d1e5;
-            border-radius: 18px;
+            color: #e8f5f9;
+            padding: 20px 20px 54px;
+            min-height: 340px;
+            width: 100%;
+            position: relative;
+            overflow: visible;
+            border: 0;
+            border-radius: 0;
+            background: none;
+            box-shadow: none;
+        }
+
+        .search-section-full-width::before {
+            content: '';
+            position: absolute;
+            inset: 0 auto 0 calc(50% - 50vw);
+            width: 100vw;
             background:
                 var(--home-hero-image, none),
                 linear-gradient(135deg, #1550be 0%, #3c78e0 52%, #89b0ff 100%),
@@ -576,34 +591,18 @@
             background-size: cover, cover, auto, auto;
             background-position: center center, center center, center center, center center;
             background-repeat: no-repeat;
-            color: #e8f5f9;
-            padding: 18px 20px 54px;
-            min-height: 330px;
-            box-shadow: 0 22px 42px rgba(18, 56, 109, 0.24);
-            width: 100%;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .search-section-full-width::before {
-            content: '';
-            position: absolute;
-            inset: auto -10% -24% 42%;
-            height: 62%;
-            background:
-                radial-gradient(circle at 25% 48%, rgba(255,255,255,0.22) 0, rgba(255,255,255,0.02) 28%, rgba(255,255,255,0) 55%),
-                linear-gradient(180deg, rgba(227, 241, 255, 0.24) 0%, rgba(197, 224, 255, 0) 100%);
-            clip-path: polygon(0 100%, 18% 62%, 32% 72%, 47% 48%, 60% 62%, 74% 32%, 88% 58%, 100% 18%, 100% 100%);
             pointer-events: none;
-            opacity: 0.85;
+            z-index: 0;
         }
 
         .search-section-full-width::after {
             content: '';
             position: absolute;
-            inset: 0;
+            inset: 0 auto 0 calc(50% - 50vw);
+            width: 100vw;
             background: linear-gradient(180deg, rgba(10, 33, 88, 0.2) 0%, rgba(10, 33, 88, 0.36) 100%);
             pointer-events: none;
+            z-index: 0;
         }
 
         .search-eyebrow {
@@ -722,22 +721,30 @@
 
         .search-form {
             margin-top: 0;
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 0;
-            align-items: start;
+            display: block;
             min-width: 0;
             overflow: hidden;
             border-radius: 0 0 18px 18px;
             background: #ffffff;
         }
 
-        .search-field-shell {
+        .search-inline-row {
             display: flex;
             align-items: stretch;
-            min-width: 0;
-            padding: 12px 14px 0;
-            border-bottom: 1px solid #e8f0f7;
+            gap: 8px;
+            padding: 12px 14px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+
+        .search-field-shell {
+            display: block;
+            min-width: 280px;
+            flex: 1 1 340px;
+            padding: 0;
+            border-bottom: 0;
         }
 
         .search-primary-field {
@@ -759,16 +766,19 @@
         .search-dynamic-fields {
             margin-top: 0;
             display: none;
-            grid-column: 1 / -1;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 10px;
+            grid-column: auto;
+            grid-template-columns: none;
+            gap: 8px;
             min-width: 0;
-            padding: 12px 14px;
-            background: #ffffff;
+            padding: 0;
+            background: transparent;
         }
 
         .search-dynamic-fields.is-active {
-            display: grid;
+            display: flex;
+            align-items: stretch;
+            flex-wrap: nowrap;
+            flex: 1 1 auto;
         }
 
         .search-dynamic-fields[hidden] {
@@ -778,11 +788,11 @@
         .search-dynamic-fields .field {
             display: grid;
             gap: 4px;
-            min-width: 0;
+            min-width: 140px;
             overflow: hidden;
             border: 1px solid #d8e3ec;
             border-radius: 10px;
-            padding: 8px 10px;
+            padding: 7px 9px;
             background: #f9fbfd;
         }
 
@@ -858,21 +868,23 @@
         }
 
         .search-submit-row {
-            grid-column: 1 / -1;
             display: flex;
-            justify-content: flex-end;
+            justify-content: center;
             gap: 8px;
-            padding: 12px 14px;
-            border-top: 1px solid #e8f0f7;
-            background: #f9fbfd;
+            padding: 0;
+            border-top: 0;
+            background: transparent;
+            flex: 0 0 auto;
+            align-items: stretch;
         }
 
         .search-submit-row button {
             border-radius: 10px;
-            padding: 10px 24px;
+            padding: 0 20px;
             font-size: 0.88rem;
             font-weight: 600;
-            min-width: 120px;
+            min-width: 108px;
+            height: 100%;
         }
 
         .search-actions {
@@ -1177,9 +1189,23 @@
                 grid-template-columns: 1fr 1fr;
             }
 
+            .search-inline-row {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 10px;
+                padding: 12px 14px;
+                overflow: visible;
+            }
+
             .search-field-shell,
             .search-submit-row {
-                grid-column: 1 / -1;
+                grid-column: auto;
+            }
+
+            .search-field-shell {
+                min-width: 0;
+                padding: 0;
+                border-bottom: 0;
             }
 
             .search-primary-field {
@@ -1188,6 +1214,12 @@
 
             .search-dynamic-fields {
                 grid-template-columns: repeat(6, minmax(0, 1fr));
+                padding: 0;
+            }
+
+            .search-dynamic-fields.is-active {
+                display: grid;
+                gap: 10px;
             }
 
             .search-dynamic-fields .field.field-short {
@@ -1316,10 +1348,22 @@
                 grid-template-columns: 1fr;
             }
 
+            .search-inline-row {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 10px;
+                padding: 12px;
+                overflow: visible;
+            }
+
             .search-section-full-width {
-                overflow: hidden;
+                overflow: visible;
                 padding: 16px 14px 16px;
                 min-height: 0;
+            }
+
+            .search-field-shell {
+                min-width: 0;
             }
 
             .search-category-tabs {
@@ -1349,6 +1393,12 @@
 
             .search-dynamic-fields {
                 grid-template-columns: 1fr;
+                padding: 0;
+            }
+
+            .search-dynamic-fields.is-active {
+                display: grid;
+                gap: 8px;
             }
 
             .search-dynamic-fields .field.field-short,
@@ -1433,7 +1483,6 @@
                 </div>
             </div>
             <div class="customer-auth">
-                <a class="header-link" href="/blog">Things to Do</a>
                 @if ($customerLoggedIn)
                     <a class="header-link" href="/customer#bookings">My bookings</a>
                     <div class="account-menu" data-customer-menu>
@@ -1526,6 +1575,8 @@
                                 @endforeach
                             </div>
 
+                            <div class="search-inline-row">
+
                             <div class="search-field-shell">
                                 <div class="search-primary-field">
                                     <input type="search" name="q" placeholder="City, airport, island, landmark, hotel, or service name" aria-label="Search query">
@@ -1612,6 +1663,8 @@
 
                             <div class="search-submit-row">
                                 <button class="primary" type="submit"><i class="fa-solid fa-magnifying-glass" style="margin-right:8px;"></i>Search</button>
+                            </div>
+
                             </div>
                         </form>
                     </div>

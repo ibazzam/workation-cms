@@ -479,11 +479,59 @@
             }
 
         .journey-hero {
+            position: relative;
             border: 0;
             border-radius: 0;
             overflow: visible;
             background: none;
-            padding: 0;
+            margin-top: 10px;
+            padding: 14px 16px 16px;
+        }
+
+        .hero-banner {
+            position: relative;
+            min-height: 318px;
+            border-radius: 18px;
+            overflow: hidden;
+            background: linear-gradient(140deg, #1a57c4 0%, #3d7de8 48%, #7fa7ff 100%);
+            box-shadow: 0 20px 38px rgba(18, 56, 109, 0.24);
+        }
+
+        .hero-banner::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(7, 34, 95, 0.24) 0%, rgba(7, 34, 95, 0.4) 100%);
+            pointer-events: none;
+        }
+
+        .hero-banner-image {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+        }
+
+        .hero-banner-content {
+            position: absolute;
+            top: 38px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(1060px, calc(100% - 52px));
+            z-index: 2;
+            display: grid;
+            gap: 12px;
+        }
+
+        .hero-banner-title {
+            margin: 0;
+            color: #f5fbff;
+            font-size: clamp(1.8rem, 3.2vw, 3rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            text-shadow: 0 6px 24px rgba(6, 27, 74, 0.35);
         }
 
         .header-category-tabs .header-link.is-active {
@@ -492,11 +540,11 @@
         }
 
         .search-sticky-wrap {
-            position: sticky;
-            top: 0;
-            z-index: 940;
-            margin-top: -8px;
-            padding: 0 16px;
+            position: static;
+            z-index: 2;
+            width: 100%;
+            padding: 0;
+            transform: none;
         }
 
         .hero {
@@ -551,18 +599,18 @@
         }
 
         .search-box {
-            margin-top: 10px;
-            border: 1px solid var(--line);
-            border-radius: 14px;
+            margin-top: 0;
+            border: 1px solid #d5deeb;
+            border-radius: 10px;
             background: var(--surface);
             padding: 12px;
             display: grid;
             gap: 8px;
             overflow: hidden;
-            box-shadow: 0 12px 28px rgba(14, 44, 68, 0.14);
+            box-shadow: 0 12px 26px rgba(14, 41, 92, 0.2);
             position: static;
             z-index: auto;
-            width: min(1060px, 100%);
+            width: 100%;
             margin-left: auto;
             margin-right: auto;
         }
@@ -574,40 +622,50 @@
         }
 
         .grid {
-            display: grid;
-            grid-template-columns: repeat(12, minmax(0, 1fr));
-            gap: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: flex-end;
             min-width: 0;
         }
 
         .field {
             min-width: 0;
+            display: flex;
+            flex-direction: column;
         }
 
         .field.field-short {
-            grid-column: span 2;
+            flex: 0 0 68px;
+            width: 68px;
         }
 
         .field.field-medium {
-            grid-column: span 3;
+            flex: 0 1 140px;
+            min-width: 110px;
         }
 
         .field.field-date {
-            grid-column: span 3;
+            flex: 0 0 148px;
+            width: 148px;
         }
 
         .field.field-long {
-            grid-column: span 4;
+            flex: 1 1 160px;
+            min-width: 130px;
         }
 
         .field label {
             display: block;
-            margin-bottom: 4px;
-            font-size: 0.76rem;
+            margin-bottom: 3px;
+            font-size: 0.7rem;
             color: #4b6378;
             text-transform: uppercase;
             letter-spacing: 0.07em;
             font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .field input,
@@ -616,11 +674,11 @@
             min-width: 0;
             max-width: 100%;
             border: 1px solid #c8d8e5;
-            border-radius: 10px;
-            padding: 10px 12px;
+            border-radius: 8px;
+            padding: 5px 8px;
             font: inherit;
-            font-size: 0.9rem;
-            height: 42px;
+            font-size: 0.875rem;
+            height: 36px;
             line-height: 1.4;
             display: flex;
             align-items: center;
@@ -632,14 +690,14 @@
             appearance: none;
             -webkit-appearance: none;
             display: block;
-            min-height: 48px;
-            padding-right: 8px;
-            font-size: 16px;
+            min-height: 36px;
+            padding-right: 4px;
+            font-size: 14px;
             overflow: hidden;
         }
         
         .field select {
-            padding: 8px 12px;
+            padding: 4px 8px;
         }
 
         .actions {
@@ -755,29 +813,31 @@
                 border-bottom-color: #d8e3ec;
             }
 
-            .search-sticky-wrap {
-                padding: 0 12px;
+            .journey-hero {
+                padding: 12px;
+            }
+
+            .hero-banner {
+                min-height: 300px;
+            }
+
+            .hero-banner-content {
+                width: calc(100% - 24px);
+                top: 30px;
             }
 
             .catalog-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
-            .grid {
-                grid-template-columns: repeat(6, minmax(0, 1fr));
-            }
-
             .field.field-short {
-                grid-column: span 2;
+                flex: 0 0 64px;
+                width: 64px;
             }
 
-            .field.field-medium,
             .field.field-date {
-                grid-column: span 3;
-            }
-
-            .field.field-long {
-                grid-column: span 6;
+                flex: 0 0 138px;
+                width: 138px;
             }
 
         }
@@ -799,6 +859,8 @@
                 top: auto;
                 z-index: auto;
                 margin-top: 0;
+                transform: none;
+                width: 100%;
             }
 
             .header-bar {
@@ -841,11 +903,22 @@
             }
 
             .journey-hero {
-                padding: 10px 10px 14px;
+                margin-top: 8px;
+                padding: 8px 10px 10px;
             }
 
-            .search-sticky-wrap {
-                padding: 0 10px;
+            .hero-banner {
+                min-height: 286px;
+            }
+
+            .hero-banner-content {
+                width: calc(100% - 16px);
+                top: 16px;
+                gap: 8px;
+            }
+
+            .hero-banner-title {
+                font-size: clamp(1.45rem, 7.4vw, 2rem);
             }
 
             .mobile-category-row {
@@ -945,6 +1018,11 @@
 
             return '/media/vendor/' . $mediaId . '/' . $normalizedVariant;
         };
+        $categoryHeroImageUrl = trim((string) ($categoryMeta['hero_image_url'] ?? ''));
+        $categoryHeroFallback = "data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%271800%27 height=%27720%27 viewBox=%270 0 1800 720%27%3E%3Cdefs%3E%3ClinearGradient id=%27g%27 x1=%270%27 y1=%270%27 x2=%271%27 y2=%271%27%3E%3Cstop offset=%270%25%27 stop-color=%27%230f6d8f%27/%3E%3Cstop offset=%2748%25%27 stop-color=%27%231d88a8%27/%3E%3Cstop offset=%27100%25%27 stop-color=%27%233fb8d1%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%271800%27 height=%27720%27 fill=%27url(%23g)%27/%3E%3Cpath d=%27M0 490 C260 440 430 565 700 520 C930 482 1150 350 1410 400 C1580 432 1700 505 1800 548 L1800 720 L0 720 Z%27 fill=%27rgba(255,255,255,0.22)%27/%3E%3Cpath d=%27M0 560 C200 510 410 610 640 588 C860 567 1020 500 1240 515 C1490 532 1670 606 1800 655 L1800 720 L0 720 Z%27 fill=%27rgba(255,255,255,0.30)%27/%3E%3C/svg%3E";
+        if ($categoryHeroImageUrl === '') {
+            $categoryHeroImageUrl = $categoryHeroFallback;
+        }
     @endphp
 
     <main class="page" data-api-base="{{ $apiBase }}">
@@ -1001,11 +1079,12 @@
                 </div>
             </header>
 
-        </section>
-
-        <div class="search-sticky-wrap">
-
-            <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}">
+            <div class="hero-banner" aria-label="Category banner and quick filters">
+                <img class="hero-banner-image" src="{{ $categoryHeroImageUrl }}" alt="{{ (string) ($categoryMeta['label'] ?? 'Category') }} banner" loading="lazy" onerror="this.onerror=null;this.src='{{ $categoryHeroFallback }}';">
+                <div class="hero-banner-content">
+                    <h1 class="hero-banner-title">{{ (string) ($categoryMeta['label'] ?? 'Category') }}.</h1>
+                    <div class="search-sticky-wrap">
+                        <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}">
             <div class="grid">
                 <div class="field field-long">
                     <label for="q">Search</label>
@@ -1263,8 +1342,12 @@
                 <button class="primary" type="submit">Apply Filters</button>
                 <a href="/catalog/{{ $categoryKey }}">Reset</a>
             </div>
-            </form>
-        </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </section>
 
         <div class="page-body-split">
             <div class="page-main-content">

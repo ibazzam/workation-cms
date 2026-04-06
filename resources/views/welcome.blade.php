@@ -564,20 +564,22 @@
             }
 
         .search-section-full-width {
-            margin-top: 0;
+            margin-top: 10px;
             margin-bottom: 18px;
-            border: 1px solid #c4d9e8;
-            border-radius: 22px;
+            border: 1px solid #b9d1e5;
+            border-radius: 18px;
             background:
                 var(--home-hero-image, none),
-                linear-gradient(135deg, var(--brand) 0%, var(--brand-strong) 48%, #0a3d52 100%),
+                linear-gradient(135deg, #1550be 0%, #3c78e0 52%, #89b0ff 100%),
                 radial-gradient(circle at 120% -10%, rgba(243, 163, 55, 0.08) 0%, rgba(243, 163, 55, 0) 40%),
                 radial-gradient(circle at 15% 85%, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0) 35%);
-            background-size: cover, auto, auto, auto;
+            background-size: cover, cover, auto, auto;
             background-position: center center, center center, center center, center center;
+            background-repeat: no-repeat;
             color: #e8f5f9;
             padding: 18px 20px 54px;
-            box-shadow: 0 24px 44px rgba(15, 97, 121, 0.22);
+            min-height: 330px;
+            box-shadow: 0 22px 42px rgba(18, 56, 109, 0.24);
             width: 100%;
             position: relative;
             overflow: hidden;
@@ -593,7 +595,15 @@
                 linear-gradient(180deg, rgba(227, 241, 255, 0.24) 0%, rgba(197, 224, 255, 0) 100%);
             clip-path: polygon(0 100%, 18% 62%, 32% 72%, 47% 48%, 60% 62%, 74% 32%, 88% 58%, 100% 18%, 100% 100%);
             pointer-events: none;
-            opacity: 0.9;
+            opacity: 0.85;
+        }
+
+        .search-section-full-width::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(10, 33, 88, 0.2) 0%, rgba(10, 33, 88, 0.36) 100%);
+            pointer-events: none;
         }
 
         .search-eyebrow {
@@ -603,6 +613,8 @@
             font-size: 0.72rem;
             color: #dce9ff;
             font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            position: relative;
+            z-index: 1;
         }
 
         .search-title {
@@ -612,6 +624,8 @@
             max-width: 760px;
             font-weight: 800;
             letter-spacing: -0.03em;
+            position: relative;
+            z-index: 1;
         }
 
         .search-support-strip {
@@ -1305,6 +1319,7 @@
             .search-section-full-width {
                 overflow: hidden;
                 padding: 16px 14px 16px;
+                min-height: 0;
             }
 
             .search-category-tabs {

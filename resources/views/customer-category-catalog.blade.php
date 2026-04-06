@@ -1139,7 +1139,7 @@
             </header>
 
             <div class="hero-banner" aria-label="Category banner and quick filters">
-                <img class="hero-banner-image" src="{{ $categoryHeroImageUrl }}" alt="{{ (string) ($categoryMeta['label'] ?? 'Category') }} banner" loading="lazy" onerror="this.onerror=null;this.src='{{ $categoryHeroFallback }}';">
+                <img class="hero-banner-image" src="{{ $categoryHeroImageUrl }}" alt="{{ (string) ($categoryMeta['label'] ?? 'Category') }} banner" loading="eager" fetchpriority="high" decoding="async" onerror="this.onerror=null;this.src='{{ $categoryHeroFallback }}';">
                 <div class="hero-banner-content">
                     <h1 class="hero-banner-title">{{ (string) ($categoryMeta['label'] ?? 'Category') }}.</h1>
                     <div class="search-sticky-wrap">
@@ -1472,7 +1472,7 @@
                         <article class="card">
                             <a class="card-link" href="{{ $detailUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
                                 @php
-                                    $resolvedImage = $fallbackImage !== '' ? $fallbackImage : ($bannerUrl ?: $svgFallback);
+                                    $resolvedImage = $bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback);
                                 @endphp
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                                 <div class="card-body">

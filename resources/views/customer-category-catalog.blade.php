@@ -1437,13 +1437,21 @@
                             $mediaItems = collect($catalogPropertyMediaByProperty->get($propertyId, collect()));
                             $primaryMedia = $mediaItems->first();
                             $bannerUrl = $primaryMedia ? $mediaVariantUrl($primaryMedia, 'banner') : null;
+                            $thumbUrl = $primaryMedia ? $mediaVariantUrl($primaryMedia, 'thumb') : null;
                             $fallbackPath = trim((string) ($primaryMedia->file_path ?? ''));
                             $fallbackImage = '';
+                            if ($thumbUrl !== null && trim($thumbUrl) !== '') {
+                                $fallbackImage = (string) $thumbUrl;
+                            }
                             if ($fallbackPath !== '') {
                                 if (str_starts_with($fallbackPath, 'http://') || str_starts_with($fallbackPath, 'https://')) {
-                                    $fallbackImage = $fallbackPath;
+                                    if ($fallbackImage === '') {
+                                        $fallbackImage = $fallbackPath;
+                                    }
                                 } else {
-                                    $fallbackImage = '/storage/' . ltrim(str_replace('public/', '', str_replace('storage/', '', str_replace('\\', '/', $fallbackPath))), '/');
+                                    if ($fallbackImage === '') {
+                                        $fallbackImage = '/storage/' . ltrim(str_replace('public/', '', str_replace('storage/', '', str_replace('\\', '/', $fallbackPath))), '/');
+                                    }
                                 }
                             }
                             if (str_starts_with($fallbackImage, 'http://')) {

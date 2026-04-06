@@ -1179,6 +1179,11 @@ Route::get('/', function () {
                 return null;
             }
 
+            $mediaId = (int) ($primaryMedia->id ?? 0);
+            if ($mediaId > 0) {
+                return '/media/vendor/' . $mediaId . '/thumb';
+            }
+
             $filePath = trim((string) ($primaryMedia->file_path ?? ''));
             if ($filePath === '') {
                 return null;

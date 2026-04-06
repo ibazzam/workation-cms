@@ -865,8 +865,7 @@
             border-radius: 12px;
             background: #ffffff;
             box-shadow: 0 12px 28px rgba(16, 50, 84, 0.2);
-            padding: 8px;
-            padding: 10px;
+            padding: 6px;
             z-index: 80;
         }
 
@@ -878,31 +877,31 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 8px;
-            padding: 3px 0;
+            gap: 6px;
+            padding: 1px 0;
         }
 
         .guest-label {
             color: #20415b;
-            font-size: 0.8rem;
+            font-size: 0.76rem;
             font-weight: 600;
         }
 
         .guest-counter {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
         }
 
         .guest-counter button {
-            width: 22px;
-            height: 22px;
-            min-width: 22px;
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
             border-radius: 999px;
             border: 1px solid #b7cddd;
             background: #f5fbff;
             color: #1d4b6a;
-            font-size: 0.74rem;
+            font-size: 0.7rem;
             padding: 0;
             display: inline-flex;
             align-items: center;
@@ -910,11 +909,11 @@
         }
 
         .guest-counter input {
-            width: 30px;
+            width: 26px;
             text-align: center;
             border: 0;
             padding: 0;
-            font-size: 0.8rem;
+            font-size: 0.76rem;
             font-weight: 700;
             color: #103247;
             background: transparent;
@@ -926,6 +925,7 @@
 
         .search-dynamic-fields .field {
             display: grid;
+            grid-template-rows: auto minmax(0, 1fr);
             gap: 2px;
             min-width: 0;
             overflow: hidden;
@@ -937,6 +937,16 @@
             min-height: var(--search-control-height);
             max-height: var(--search-control-height);
             box-sizing: border-box;
+        }
+
+        .search-dynamic-fields .field > input,
+        .search-dynamic-fields .field > select {
+            align-self: end;
+            line-height: 1.15;
+        }
+
+        .search-dynamic-fields.is-active .field {
+            flex: 1 1 0;
         }
 
         .search-dynamic-fields .field.guest-picker {

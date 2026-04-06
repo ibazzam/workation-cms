@@ -1051,6 +1051,19 @@ if (!function_exists('getAvailableCategories')) {
 Route::get('/', function () {
     $apiBase = workationApiBase();
     $homeHeroBackgroundUrl = trim((string) env('HOME_HERO_IMAGE_URL', ''));
+    if (Schema::hasTable('portal_finance_settings')) {
+        $managedHomeHeroImage = DB::table('portal_finance_settings')
+            ->where('setting_key', 'home_hero_image_url')
+            ->value('value_string');
+        if (is_string($managedHomeHeroImage) && trim($managedHomeHeroImage) !== '') {
+            $homeHeroBackgroundUrl = trim($managedHomeHeroImage);
+        }
+    }
+
+    if (str_starts_with($homeHeroBackgroundUrl, 'http://')) {
+        $homeHeroBackgroundUrl = 'https://' . ltrim(substr($homeHeroBackgroundUrl, 7), '/');
+    }
+
     if ($homeHeroBackgroundUrl === '') {
         $seasonalHeroPath = public_path('images/home-hero-seasonal.jpg');
         if (is_file($seasonalHeroPath)) {
@@ -1546,6 +1559,22 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     if (!array_key_exists($categoryKey, $categoryMap)) {
         abort(404);
     }
+
+    if (Schema::hasTable('portal_finance_settings')) {
+        $categorySettingKey = 'catalog_hero_image_' . str_replace('-', '_', $categoryKey);
+        $managedCategoryHeroImage = DB::table('portal_finance_settings')
+            ->where('setting_key', $categorySettingKey)
+            ->value('value_string');
+        if (is_string($managedCategoryHeroImage) && trim($managedCategoryHeroImage) !== '') {
+            $categoryMap[$categoryKey]['hero_image_url'] = trim($managedCategoryHeroImage);
+        }
+    }
+
+    $resolvedCategoryHeroImage = trim((string) ($categoryMap[$categoryKey]['hero_image_url'] ?? ''));
+    if (str_starts_with($resolvedCategoryHeroImage, 'http://')) {
+        $resolvedCategoryHeroImage = 'https://' . ltrim(substr($resolvedCategoryHeroImage, 7), '/');
+    }
+    $categoryMap[$categoryKey]['hero_image_url'] = $resolvedCategoryHeroImage;
 
     $queryText = trim((string) $request->query('q', ''));
     $atollFilter = trim((string) $request->query('atoll', ''));
@@ -3825,6 +3854,48 @@ Route::get('/admin', function () {
             ->get();
     }
 
+    $catalogHeroAdminCategories = [
+        'accommodation' => 'Accommodation',
+        'marine-transport' => 'Marine Transport',
+        'land-transport' => 'Land Transport',
+        'excursion' => 'Excursion',
+        'remote_workspace' => 'Remote Workspace',
+        'conference_room' => 'Conference & Meeting Spaces',
+        'resort_day_visit' => 'Resort Day Visit',
+        'restaurant' => 'Restaurant',
+        'vehicle_rental' => 'Vehicle Rental',
+    ];
+    $homeHeroAdminImageUrl = '';
+    $catalogHeroAdminImages = collect($catalogHeroAdminCategories)
+        ->mapWithKeys(static fn ($label, $key) => [$key => '']);
+
+    if (Schema::hasTable('portal_finance_settings')) {
+        $mediaSettingKeys = collect(array_keys($catalogHeroAdminCategories))
+            ->map(static fn ($key) => 'catalog_hero_image_' . str_replace('-', '_', $key))
+            ->prepend('home_hero_image_url')
+            ->values();
+
+        $mediaSettings = DB::table('portal_finance_settings')
+            ->whereIn('setting_key', $mediaSettingKeys->all())
+            ->pluck('value_string', 'setting_key');
+
+        $homeHeroAdminImageUrl = trim((string) ($mediaSettings->get('home_hero_image_url') ?? ''));
+        if (str_starts_with($homeHeroAdminImageUrl, 'http://')) {
+            $homeHeroAdminImageUrl = 'https://' . ltrim(substr($homeHeroAdminImageUrl, 7), '/');
+        }
+
+        $catalogHeroAdminImages = collect($catalogHeroAdminCategories)
+            ->mapWithKeys(function ($label, $key) use ($mediaSettings) {
+                $settingKey = 'catalog_hero_image_' . str_replace('-', '_', $key);
+                $imageUrl = trim((string) ($mediaSettings->get($settingKey) ?? ''));
+                if (str_starts_with($imageUrl, 'http://')) {
+                    $imageUrl = 'https://' . ltrim(substr($imageUrl, 7), '/');
+                }
+
+                return [$key => $imageUrl];
+            });
+    }
+
     $systemHealth = [
         'db_connected' => false,
         'audit_table_ready' => Schema::hasTable('portal_admin_audit_logs'),
@@ -3928,6 +3999,9 @@ Route::get('/admin', function () {
         'financeReservationPolicy' => $financeReservationPolicy,
         'financeTaxComponents' => $financeTaxComponents,
         'listingOptionCatalog' => $listingOptionCatalog,
+        'homeHeroAdminImageUrl' => $homeHeroAdminImageUrl,
+        'catalogHeroAdminImages' => $catalogHeroAdminImages,
+        'catalogHeroAdminCategories' => $catalogHeroAdminCategories,
     ]);
 });
 
@@ -4187,6 +4261,71 @@ Route::post('/portal/admin/listing-options/{option}/delete', function (int $opti
     ]);
 
     return back()->with('portal_notice', 'Listing option removed.');
+});
+
+Route::post('/portal/admin/media-hero/update', function (Request $request) {
+    if (!canManageVendorUsers()) {
+        return back()->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can update homepage and category hero images.']);
+    }
+
+    if (!Schema::hasTable('portal_finance_settings')) {
+        return back()->withErrors(['auth' => 'Settings table is not ready. Run migrations first.']);
+    }
+
+    $catalogHeroAdminCategories = [
+        'accommodation' => 'Accommodation',
+        'marine-transport' => 'Marine Transport',
+        'land-transport' => 'Land Transport',
+        'excursion' => 'Excursion',
+        'remote_workspace' => 'Remote Workspace',
+        'conference_room' => 'Conference & Meeting Spaces',
+        'resort_day_visit' => 'Resort Day Visit',
+        'restaurant' => 'Restaurant',
+        'vehicle_rental' => 'Vehicle Rental',
+    ];
+
+    $validationRules = [
+        'home_hero_image_url' => ['nullable', 'string', 'max:2048'],
+    ];
+    foreach (array_keys($catalogHeroAdminCategories) as $categoryKey) {
+        $fieldName = 'catalog_hero_image_' . str_replace('-', '_', $categoryKey);
+        $validationRules[$fieldName] = ['nullable', 'string', 'max:2048'];
+    }
+
+    $validated = $request->validate($validationRules);
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+
+    $persistSetting = static function (string $settingKey, ?string $rawValue, ?int $updatedByUserId): void {
+        $value = trim((string) ($rawValue ?? ''));
+        if (str_starts_with($value, 'http://')) {
+            $value = 'https://' . ltrim(substr($value, 7), '/');
+        }
+
+        DB::table('portal_finance_settings')->updateOrInsert(
+            ['setting_key' => $settingKey],
+            [
+                'value_decimal' => null,
+                'value_string' => $value !== '' ? $value : null,
+                'value_json' => null,
+                'updated_by_user_id' => $updatedByUserId,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+    };
+
+    $persistSetting('home_hero_image_url', (string) ($validated['home_hero_image_url'] ?? ''), $actorUserId);
+    foreach (array_keys($catalogHeroAdminCategories) as $categoryKey) {
+        $fieldName = 'catalog_hero_image_' . str_replace('-', '_', $categoryKey);
+        $persistSetting($fieldName, (string) ($validated[$fieldName] ?? ''), $actorUserId);
+    }
+
+    portalAdminAuditLog('media_hero_settings.updated', [
+        'target_role' => 'ADMIN',
+        'updated_category_hero_keys' => array_keys($catalogHeroAdminCategories),
+    ]);
+
+    return back()->with('portal_notice', 'Homepage and category hero images updated.');
 });
 
 Route::get('/portal/admin/blog', function () {

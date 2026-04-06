@@ -771,6 +771,8 @@
         }
 
         .search-primary-field label {
+            display: block;
+            margin: 0;
             font-size: 0.56rem;
             letter-spacing: 0.05em;
             text-transform: uppercase;
@@ -929,6 +931,8 @@
         }
 
         .search-dynamic-fields .field label {
+            display: block;
+            margin: 0;
             font-size: 0.56rem;
             letter-spacing: 0.02em;
             text-transform: uppercase;
@@ -987,8 +991,14 @@
 
         .search-form input[type="number"],
         .search-dynamic-fields input[type="number"] {
-            padding: 6px 8px;
+            padding: 2px 6px;
             font-size: 0.86rem;
+        }
+
+        .guest-counter input[type="number"] {
+            width: 40px;
+            padding: 0;
+            text-align: center;
         }
 
         .search-form button {
@@ -2275,10 +2285,7 @@
                 });
 
                 [roomsInput, adultsInput, childrenInput].forEach(function (input) {
-                    input.addEventListener('input', function () {
-                        normalizeInputValue(input);
-                        updateSummary();
-                    });
+                    input.addEventListener('input', updateSummary);
 
                     input.addEventListener('change', function () {
                         normalizeInputValue(input);

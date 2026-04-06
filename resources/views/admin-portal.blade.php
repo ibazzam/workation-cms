@@ -1006,6 +1006,7 @@
 
             <p class="nav-group-title">Finance &amp; Catalog</p>
             <a href="#financeModerationPanel">Finance Moderation</a>
+            <a href="#heroImageSettingsPanel">Hero Image Settings</a>
             <a href="#listingOptionCatalogPanel">Listing Options</a>
 
             <p class="nav-group-title">Moderation &amp; Vendors</p>
@@ -1358,6 +1359,35 @@
                     </tbody>
                 </table>
             </div>
+        </section>
+
+        <section class="card manage" id="heroImageSettingsPanel">
+            <p class="label">Hero Image Settings</p>
+            <p class="small">Update the homepage banner and category catalogue hero images. Use full HTTPS image URLs for reliable desktop rendering.</p>
+
+            @if (!$canManageVendorUsers)
+                <div class="error-box" style="margin-top:10px;">Only ADMIN_SUPER or ADMIN can update hero image settings.</div>
+            @else
+                <form class="finance-form" method="POST" action="/portal/admin/media-hero/update" style="margin-top:10px;">
+                    @csrf
+                    <div class="finance-form-grid">
+                        <div class="finance-field finance-field-wide">
+                            <label for="home_hero_image_url">Homepage Banner Image URL</label>
+                            <input id="home_hero_image_url" name="home_hero_image_url" type="url" maxlength="2048" value="{{ old('home_hero_image_url', $homeHeroAdminImageUrl ?? '') }}" placeholder="https://cdn.example.com/home-banner.jpg">
+                        </div>
+                        @foreach (($catalogHeroAdminCategories ?? []) as $categoryKey => $categoryLabel)
+                            @php
+                                $fieldName = 'catalog_hero_image_' . str_replace('-', '_', (string) $categoryKey);
+                            @endphp
+                            <div class="finance-field">
+                                <label for="{{ $fieldName }}">{{ $categoryLabel }} Hero URL</label>
+                                <input id="{{ $fieldName }}" name="{{ $fieldName }}" type="url" maxlength="2048" value="{{ old($fieldName, (string) data_get($catalogHeroAdminImages ?? [], $categoryKey, '')) }}" placeholder="https://cdn.example.com/{{ $categoryKey }}-hero.jpg">
+                            </div>
+                        @endforeach
+                    </div>
+                    <button class="btn btn-primary" type="submit">Save Hero Image Settings</button>
+                </form>
+            @endif
         </section>
 
         <section class="card manage" id="listingOptionCatalogPanel">

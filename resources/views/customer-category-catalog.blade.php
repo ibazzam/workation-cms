@@ -113,7 +113,7 @@
         }
 
         .header-brand-link:hover {
-            color: var(--brand-strong);
+            color: #ffffff;
         }
 
         .header-subline {
@@ -1080,7 +1080,7 @@
                 <div class="header-main">
                     <div class="header-brand-wrap">
                         <a class="header-brand header-brand-link" href="/">Workation</a>
-                        <p class="header-subline">Maldives travel marketplace</p>
+                        <p class="header-subline">Maldives Travel Market</p>
                     </div>
                     <nav class="header-links header-category-tabs" aria-label="Category tabs in header">
                         @foreach ($catalogCategoryLinks as $item)

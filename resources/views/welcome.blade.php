@@ -766,22 +766,25 @@
             border-radius: 10px;
             overflow: hidden;
             background: #f9fbfd;
-            min-height: 72px;
-            padding: 7px 10px;
+            min-height: 58px;
+            padding: 5px 9px;
         }
 
         .search-primary-field label {
+            display: block;
+            margin: 0;
             font-size: 0.56rem;
             letter-spacing: 0.05em;
             text-transform: uppercase;
             color: #6b8299;
             font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
             font-weight: 700;
+            line-height: 1.1;
         }
 
         .search-primary-field input {
             border-radius: 0 !important;
-            padding: 6px 0 0 !important;
+            padding: 2px 0 0 !important;
             font-size: 0.84rem;
         }
 
@@ -826,7 +829,7 @@
             color: #103247;
             font: inherit;
             font-size: 0.86rem;
-            padding: 6px 0 0;
+            padding: 2px 0 0;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -909,7 +912,6 @@
             font-weight: 700;
             color: #103247;
             background: transparent;
-            pointer-events: none;
         }
 
         .search-dynamic-fields[hidden] {
@@ -918,17 +920,19 @@
 
         .search-dynamic-fields .field {
             display: grid;
-            gap: 4px;
+            gap: 2px;
             min-width: 0;
             overflow: hidden;
             border: 1px solid #d8e3ec;
             border-radius: 10px;
-            padding: 7px 9px;
+            padding: 5px 8px;
             background: #f9fbfd;
-            min-height: 72px;
+            min-height: 58px;
         }
 
         .search-dynamic-fields .field label {
+            display: block;
+            margin: 0;
             font-size: 0.56rem;
             letter-spacing: 0.02em;
             text-transform: uppercase;
@@ -959,7 +963,7 @@
             max-width: 100%;
             border: 0;
             border-radius: 0;
-            padding: 6px 0 0;
+            padding: 2px 0 0;
             font-size: 0.86rem;
             font: inherit;
             color: #103247;
@@ -979,7 +983,7 @@
             width: 100%;
             min-width: 0;
             max-width: 100%;
-            padding: 6px 0;
+            padding: 2px 0;
             overflow: hidden;
             font-size: 0.86rem;
             cursor: pointer;
@@ -987,8 +991,14 @@
 
         .search-form input[type="number"],
         .search-dynamic-fields input[type="number"] {
-            padding: 6px 8px;
+            padding: 2px 6px;
             font-size: 0.86rem;
+        }
+
+        .guest-counter input[type="number"] {
+            width: 40px;
+            padding: 0;
+            text-align: center;
         }
 
         .search-form button {
@@ -1020,7 +1030,7 @@
             min-width: 0;
             width: 100%;
             height: 100%;
-            min-height: 72px;
+            min-height: 58px;
             white-space: nowrap;
         }
 
@@ -1681,11 +1691,10 @@
     <main class="page" data-api-base="{{ $apiBase }}">
         <header class="header-bar" aria-label="Member account actions">
             <div class="header-main">
-                <span class="header-menu-button" aria-hidden="true"><i class="fa-solid fa-bars"></i></span>
                 <div class="header-brand-wrap">
                     <div>
                         <a class="header-brand header-brand-link" href="/">Workation</a>
-                        <p class="header-subline">Maldives travel marketplace</p>
+                        <p class="header-subline">Maldives Travel Market</p>
                     </div>
                 </div>
                 <div class="header-search-mini" aria-label="Quick destination search">
@@ -1734,7 +1743,7 @@
             <aside class="floating-sidebar sidebar-shell" aria-label="Category sidebar">
                 <div class="sidebar-brand" aria-label="Sidebar workation logo">
                     <a class="sidebar-brand-title" href="/">Workation</a>
-                    <p class="sidebar-brand-subline">Maldives travel marketplace</p>
+                    <p class="sidebar-brand-subline">Maldives Travel Market</p>
                 </div>
                 <p class="sidebar-title">Browse Categories</p>
                 <section class="top-links" aria-label="Top categories">
@@ -1810,7 +1819,7 @@
                                             <span class="guest-label">Rooms</span>
                                             <div class="guest-counter">
                                                 <button type="button" data-counter-action="decrement" data-counter-target="rooms">-</button>
-                                                <input id="rooms" name="rooms" type="number" min="1" value="1" readonly>
+                                                <input id="rooms" name="rooms" type="number" min="1" value="1">
                                                 <button type="button" data-counter-action="increment" data-counter-target="rooms">+</button>
                                             </div>
                                         </div>
@@ -1818,7 +1827,7 @@
                                             <span class="guest-label">Adults</span>
                                             <div class="guest-counter">
                                                 <button type="button" data-counter-action="decrement" data-counter-target="adults">-</button>
-                                                <input id="adults" name="adults" type="number" min="1" value="2" readonly>
+                                                <input id="adults" name="adults" type="number" min="1" value="2">
                                                 <button type="button" data-counter-action="increment" data-counter-target="adults">+</button>
                                             </div>
                                         </div>
@@ -1826,7 +1835,7 @@
                                             <span class="guest-label">Children</span>
                                             <div class="guest-counter">
                                                 <button type="button" data-counter-action="decrement" data-counter-target="children">-</button>
-                                                <input id="children" name="children" type="number" min="0" value="0" readonly>
+                                                <input id="children" name="children" type="number" min="0" value="0">
                                                 <button type="button" data-counter-action="increment" data-counter-target="children">+</button>
                                             </div>
                                         </div>
@@ -2220,6 +2229,14 @@
                     summaryText.textContent = rooms + ' room' + (rooms === 1 ? '' : 's') + ', ' + adults + ' adult' + (adults === 1 ? '' : 's') + ', ' + children + ' children';
                 }
 
+                function normalizeInputValue(input) {
+                    const min = Number(input.getAttribute('min') || 0);
+                    const raw = String(input.value || '').trim();
+                    const parsed = Number(raw);
+                    const safeValue = Number.isFinite(parsed) ? Math.max(min, Math.floor(parsed)) : min;
+                    input.value = String(safeValue);
+                }
+
                 function setPopoverOpen(isOpen) {
                     popover.hidden = !isOpen;
                     summaryButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
@@ -2268,7 +2285,17 @@
                 });
 
                 [roomsInput, adultsInput, childrenInput].forEach(function (input) {
-                    input.addEventListener('change', updateSummary);
+                    input.addEventListener('input', updateSummary);
+
+                    input.addEventListener('change', function () {
+                        normalizeInputValue(input);
+                        updateSummary();
+                    });
+
+                    input.addEventListener('blur', function () {
+                        normalizeInputValue(input);
+                        updateSummary();
+                    });
                 });
 
                 summaryButton.addEventListener('click', function (event) {

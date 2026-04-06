@@ -1032,7 +1032,7 @@
             flex: 0 0 auto;
             align-items: stretch;
             min-width: 0;
-            width: 100%;
+            width: auto;
         }
 
         .search-submit-row button {
@@ -1041,11 +1041,16 @@
             font-size: 0.84rem;
             font-weight: 600;
             min-width: 0;
-            width: 100%;
+            width: 136px;
             height: var(--search-control-height);
             min-height: var(--search-control-height);
             max-height: var(--search-control-height);
             white-space: nowrap;
+        }
+
+        .search-form.is-accommodation .search-submit-row,
+        .search-form.is-accommodation .search-submit-row button {
+            width: 100%;
         }
 
         .search-actions {
@@ -1412,6 +1417,14 @@
                 grid-column: auto;
             }
 
+            .search-form:not(.is-accommodation) .search-submit-row {
+                width: 100%;
+            }
+
+            .search-form:not(.is-accommodation) .search-submit-row button {
+                width: 100%;
+            }
+
             .search-field-shell {
                 min-width: 0;
                 padding: 0;
@@ -1564,6 +1577,14 @@
 
             .search-form {
                 grid-template-columns: 1fr;
+            }
+
+            .search-form:not(.is-accommodation) .search-submit-row {
+                width: 100%;
+            }
+
+            .search-form:not(.is-accommodation) .search-submit-row button {
+                width: 100%;
             }
 
             .search-inline-row {

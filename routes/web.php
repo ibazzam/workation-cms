@@ -1148,7 +1148,30 @@ Route::get('/', function () {
             $homeListingMediaByProperty = $mediaRows->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
         }
 
-        $resolvePropertyImage = static function (int $propertyId) use ($homeListingMediaByProperty): ?string {
+        $resolveDirectMediaUrl = static function ($media): ?string {
+            $filePath = trim((string) ($media->file_path ?? ''));
+            if ($filePath === '') {
+                return null;
+            }
+
+            $resolved = $filePath;
+            if (!str_starts_with($resolved, 'http://') && !str_starts_with($resolved, 'https://')) {
+                $resolved = (string) vendorMediaStorageUrlFromPath($resolved);
+            }
+
+            $resolved = trim((string) $resolved);
+            if ($resolved === '') {
+                return null;
+            }
+
+            if (str_starts_with($resolved, 'http://')) {
+                $resolved = 'https://' . ltrim(substr($resolved, 7), '/');
+            }
+
+            return $resolved;
+        };
+
+        $resolvePropertyImage = static function (int $propertyId) use ($homeListingMediaByProperty, $resolveDirectMediaUrl): ?string {
             if ($propertyId <= 0) {
                 return null;
             }
@@ -1157,6 +1180,11 @@ Route::get('/', function () {
             $primaryMedia = $mediaItems->first();
             if (!$primaryMedia) {
                 return null;
+            }
+
+            $directUrl = $resolveDirectMediaUrl($primaryMedia);
+            if ($directUrl !== null && $directUrl !== '') {
+                return $directUrl;
             }
 
             $mediaId = (int) ($primaryMedia->id ?? 0);
@@ -1164,11 +1192,10 @@ Route::get('/', function () {
                 return '/media/vendor/' . $mediaId . '/banner';
             }
 
-            $filePath = trim((string) ($primaryMedia->file_path ?? ''));
-            return vendorMediaStorageUrlFromPath($filePath);
+            return null;
         };
 
-        $resolvePropertyFallbackImage = static function (int $propertyId) use ($homeListingMediaByProperty): ?string {
+        $resolvePropertyFallbackImage = static function (int $propertyId) use ($homeListingMediaByProperty, $resolveDirectMediaUrl): ?string {
             if ($propertyId <= 0) {
                 return null;
             }
@@ -1179,17 +1206,17 @@ Route::get('/', function () {
                 return null;
             }
 
+            $directUrl = $resolveDirectMediaUrl($primaryMedia);
+            if ($directUrl !== null && $directUrl !== '') {
+                return $directUrl;
+            }
+
             $mediaId = (int) ($primaryMedia->id ?? 0);
             if ($mediaId > 0) {
                 return '/media/vendor/' . $mediaId . '/thumb';
             }
 
-            $filePath = trim((string) ($primaryMedia->file_path ?? ''));
-            if ($filePath === '') {
-                return null;
-            }
-
-            return vendorMediaStorageUrlFromPath($filePath);
+            return null;
         };
 
         $propertyLocationLabel = static function ($property): string {
@@ -1841,12 +1868,29 @@ Route::get('/property/{property}', function (Request $request, int $property) {
     }
 
     $mediaUrl = static function ($media, string $variant = 'banner'): ?string {
+        $filePath = trim((string) ($media->file_path ?? ''));
+        if ($filePath !== '') {
+            $resolved = $filePath;
+            if (!str_starts_with($resolved, 'http://') && !str_starts_with($resolved, 'https://')) {
+                $resolved = (string) vendorMediaStorageUrlFromPath($resolved);
+            }
+
+            $resolved = trim((string) $resolved);
+            if ($resolved !== '') {
+                if (str_starts_with($resolved, 'http://')) {
+                    $resolved = 'https://' . ltrim(substr($resolved, 7), '/');
+                }
+
+                return $resolved;
+            }
+        }
+
         $mediaId = (int) ($media->id ?? 0);
         if ($mediaId > 0) {
             return '/media/vendor/' . $mediaId . '/' . $variant;
         }
 
-        return vendorMediaStorageUrlFromPath((string) ($media->file_path ?? ''));
+        return null;
     };
 
     $details = json_decode((string) ($propertyRow->listing_details ?? ''), true);
@@ -2055,12 +2099,29 @@ Route::get('/room/{room}', function (Request $request, int $room) {
     ];
 
     $mediaUrl = static function ($media, string $variant = 'banner'): ?string {
+        $filePath = trim((string) ($media->file_path ?? ''));
+        if ($filePath !== '') {
+            $resolved = $filePath;
+            if (!str_starts_with($resolved, 'http://') && !str_starts_with($resolved, 'https://')) {
+                $resolved = (string) vendorMediaStorageUrlFromPath($resolved);
+            }
+
+            $resolved = trim((string) $resolved);
+            if ($resolved !== '') {
+                if (str_starts_with($resolved, 'http://')) {
+                    $resolved = 'https://' . ltrim(substr($resolved, 7), '/');
+                }
+
+                return $resolved;
+            }
+        }
+
         $mediaId = (int) ($media->id ?? 0);
         if ($mediaId > 0) {
             return '/media/vendor/' . $mediaId . '/' . $variant;
         }
 
-        return vendorMediaStorageUrlFromPath((string) ($media->file_path ?? ''));
+        return null;
     };
 
     $sessionGuestName = trim((string) session('portal_customer_user', ''));

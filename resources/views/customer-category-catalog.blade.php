@@ -735,7 +735,7 @@
 
         .card img {
             width: 100%;
-            height: 160px;
+            height: 184px;
             object-fit: cover;
             background: #edf4fb;
             display: block;
@@ -747,14 +747,61 @@
             gap: 6px;
         }
 
-        .card h3 {
-            margin: 0;
-            font-size: 0.93rem;
+        .card-city {
+            color: #698094;
+            font-size: 0.7rem;
+            line-height: 1;
         }
 
-        .meta {
-            font-size: 0.8rem;
-            color: var(--muted);
+        .card h3 {
+            margin: 0;
+            font-size: 1rem;
+            line-height: 1.3;
+            color: #102f45;
+            font-weight: 700;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-stars {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            color: #f3a337;
+            font-size: 0.72rem;
+            min-height: 14px;
+        }
+
+        .card-review {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #587085;
+            font-size: 0.73rem;
+        }
+
+        .card-rating-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            height: 18px;
+            padding: 0 6px;
+            border-radius: 6px;
+            background: #1f4fd6;
+            color: #ffffff;
+            font-size: 0.68rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .card-price {
+            margin-top: 2px;
+            color: #0d2e44;
+            font-size: 0.88rem;
+            font-weight: 700;
         }
 
         .empty {
@@ -1391,6 +1438,11 @@
                             }
                             $svgFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2234%22%3ENo%20image%3C%2Ftext%3E%3C%2Fsvg%3E";
                             $price = (float) ($property->base_price ?? 0);
+                            $cityName = trim((string) ($property->city ?? $property->island ?? $property->atoll ?? ''));
+                            $starRank = max(0, min(5, (int) round((float) ($property->star_rating ?? $property->stars ?? $property->hotel_stars ?? 0))));
+                            $reviewScoreRaw = (float) ($property->rating ?? $property->average_rating ?? 0);
+                            $reviewScore = $reviewScoreRaw > 0 ? number_format($reviewScoreRaw, 1) : 'N/A';
+                            $reviewCount = (int) ($property->reviews_count ?? 0);
                             $detailUrl = $categoryKey === 'accommodation'
                                 ? ('/property/' . $propertyId)
                                 : ('/category-booking/' . $categoryKey . '/' . $propertyId);
@@ -1414,11 +1466,20 @@
                                 @endphp
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                                 <div class="card-body">
+                                    <span class="card-city">{{ $cityName !== '' ? $cityName : 'Maldives' }}</span>
                                     <h3>{{ (string) ($property->name ?? 'Listing') }}</h3>
-                                    <div class="meta">{{ trim((string) (($property->atoll ?? '') . ' ' . ($property->island ?? ''))) !== '' ? trim((string) (($property->atoll ?? '') . ' · ' . ($property->island ?? ''))) : 'Location will be updated soon.' }}</div>
-                                    <div class="meta">{{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}</div>
-                                    <div class="meta">{{ strtoupper(str_replace('_', ' ', (string) ($property->listing_category ?? $categoryKey))) }}</div>
-                                    <div class="actions"><span>{{ $actionLabel }}</span></div>
+                                    <div class="card-stars" aria-label="Star ranking">
+                                        @if ($starRank > 0)
+                                            @for ($i = 0; $i < $starRank; $i++)
+                                                <i class="fa-solid fa-star" aria-hidden="true"></i>
+                                            @endfor
+                                        @endif
+                                    </div>
+                                    <div class="card-review">
+                                        <span class="card-rating-badge">{{ $reviewScore }}</span>
+                                        <span>{{ number_format($reviewCount) }} reviews</span>
+                                    </div>
+                                    <div class="card-price">From {{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}</div>
                                 </div>
                             </a>
                         </article>

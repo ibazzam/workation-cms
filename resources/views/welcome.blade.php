@@ -866,6 +866,7 @@
             background: #ffffff;
             box-shadow: 0 12px 28px rgba(16, 50, 84, 0.2);
             padding: 8px;
+            padding: 10px;
             z-index: 80;
         }
 

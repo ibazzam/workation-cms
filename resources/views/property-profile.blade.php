@@ -1544,7 +1544,7 @@
                                 @php
                                     $gallerySvgFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22420%22 viewBox=%220 0 900 420%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22420%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2228%22%3EProperty%20Image%3C%2Ftext%3E%3C%2Fsvg%3E";
                                 @endphp
-                                <img id="propertyGalleryBanner" class="gallery-banner" src="{{ $initialBanner ?: $gallerySvgFallback }}" alt="Property image 1" loading="lazy" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $gallerySvgFallback }}';}">
+                                <img id="propertyGalleryBanner" class="gallery-banner" src="{{ $initialBanner ?: $gallerySvgFallback }}" data-fallback-src="{{ $gallerySvgFallback }}" alt="Property image 1" loading="lazy" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $gallerySvgFallback }}';}">
                             </div>
                             <div class="gallery-thumbs" role="list" aria-label="Property image thumbnails">
                                 @foreach ($galleryItems as $index => $media)
@@ -1559,7 +1559,7 @@
                                         data-banner-alt="Property image {{ $index + 1 }}"
                                         aria-label="Show image {{ $index + 1 }}"
                                     >
-                                        <img src="{{ $thumbUrl }}" alt="Property thumbnail {{ $index + 1 }}" loading="lazy" onerror="this.onerror=null; this.src='{{ $bannerUrl }}';">
+                                        <img src="{{ $thumbUrl }}" alt="Property thumbnail {{ $index + 1 }}" loading="lazy" onerror="if(!this.dataset.fallbackApplied){this.dataset.fallbackApplied='1';this.src='{{ $bannerUrl }}';}else{this.onerror=null;this.src='{{ $gallerySvgFallback }}';}">
                                     </button>
                                 @endforeach
                             </div>
@@ -1974,10 +1974,61 @@
 
             let current = Math.max(0, thumbs.findIndex((thumb) => thumb.classList.contains('is-active')));
             let rotateTimer = null;
+            const brokenBannerSources = new Set();
+            const fallbackBannerSrc = String(banner.getAttribute('data-fallback-src') || '');
+
+            function normalizedSrc(value) {
+                return String(value || '').trim();
+            }
+
+            function nextValidIndex(startIndex) {
+                if (thumbs.length === 0) {
+                    return -1;
+                }
+
+                for (let offset = 0; offset < thumbs.length; offset += 1) {
+                    const candidateIndex = (startIndex + offset + thumbs.length) % thumbs.length;
+                    const candidate = thumbs[candidateIndex];
+                    if (!candidate) {
+                        continue;
+                    }
+
+                    const candidateSrc = normalizedSrc(candidate.dataset.bannerSrc);
+                    if (candidateSrc === '' || brokenBannerSources.has(candidateSrc)) {
+                        continue;
+                    }
+
+                    return candidateIndex;
+                }
+
+                return -1;
+            }
+
+            function usableThumbCount() {
+                return thumbs.filter((thumb) => {
+                    const src = normalizedSrc(thumb.dataset.bannerSrc);
+                    return src !== '' && !brokenBannerSources.has(src);
+                }).length;
+            }
 
             function setActive(index) {
                 const target = thumbs[index];
                 if (!target) {
+                    return;
+                }
+
+                const requestedSrc = normalizedSrc(target.dataset.bannerSrc);
+                if (requestedSrc === '' || brokenBannerSources.has(requestedSrc)) {
+                    const replacementIndex = nextValidIndex(index + 1);
+                    if (replacementIndex === -1) {
+                        if (fallbackBannerSrc !== '') {
+                            banner.onerror = null;
+                            banner.src = fallbackBannerSrc;
+                        }
+                        return;
+                    }
+
+                    setActive(replacementIndex);
                     return;
                 }
 
@@ -1987,7 +2038,25 @@
                     thumb.setAttribute('aria-current', active ? 'true' : 'false');
                 });
 
-                banner.src = target.dataset.bannerSrc || banner.src;
+                banner.onerror = function () {
+                    const failedSrc = normalizedSrc(target.dataset.bannerSrc);
+                    if (failedSrc !== '') {
+                        brokenBannerSources.add(failedSrc);
+                    }
+
+                    const replacementIndex = nextValidIndex(index + 1);
+                    if (replacementIndex !== -1) {
+                        setActive(replacementIndex);
+                        return;
+                    }
+
+                    this.onerror = null;
+                    if (fallbackBannerSrc !== '') {
+                        this.src = fallbackBannerSrc;
+                    }
+                };
+
+                banner.src = requestedSrc;
                 banner.alt = target.dataset.bannerAlt || 'Property image';
                 current = index;
             }
@@ -1997,12 +2066,17 @@
                     clearInterval(rotateTimer);
                 }
 
-                if (thumbs.length < 2) {
+                if (usableThumbCount() < 2) {
                     return;
                 }
 
                 rotateTimer = setInterval(() => {
-                    const next = (current + 1) % thumbs.length;
+                    const next = nextValidIndex(current + 1);
+                    if (next === -1) {
+                        clearInterval(rotateTimer);
+                        rotateTimer = null;
+                        return;
+                    }
                     setActive(next);
                 }, 6000);
             }

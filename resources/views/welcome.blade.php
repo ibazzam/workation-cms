@@ -1432,6 +1432,9 @@
                     <button type="button" aria-label="Search destinations"><i class="fa-solid fa-magnifying-glass"></i></button>
                 </div>
             </div>
+            <nav class="header-links" aria-label="Primary links">
+                <a class="header-link" href="/blog">Things to Do</a>
+            </nav>
             <div class="customer-auth">
                 <a class="header-link" href="/blog">Things to Do</a>
                 @if ($customerLoggedIn)
@@ -1498,6 +1501,7 @@
                             @endphp
                             <a class="mobile-category-link" href="{{ $mobileLinkUrl }}"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i><span>{{ $link['title'] ?? 'Category' }}</span></a>
                         @endforeach
+                        <a class="mobile-category-link" href="/blog"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i><span>Things to Do</span></a>
                     </div>
                 </details>
 

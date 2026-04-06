@@ -40,28 +40,25 @@
             justify-content: space-between;
             gap: 14px;
             padding: 10px 24px;
-            border-top: 0;
-            border-right: 0;
-            border-bottom: 1px solid #d8e3ec;
-            border-left: 0;
+            border: 0;
             border-radius: 0;
-            background: rgba(255, 255, 255, 0.96);
-            box-shadow: 0 10px 24px rgba(22, 64, 93, 0.06);
+            background: transparent;
+            box-shadow: none;
             margin: 0;
-            width: 100vw;
-            margin-left: calc(50% - 50vw);
-            margin-right: calc(50% - 50vw);
-            position: sticky;
+            width: 100%;
+            position: absolute;
             top: 0;
-            transition: transform 0.22s ease, opacity 0.22s ease;
-            z-index: 980;
-            backdrop-filter: blur(10px);
+            left: 0;
+            right: 0;
+            transition: none;
+            z-index: 10;
+            backdrop-filter: none;
         }
 
         .page.is-header-hidden .header-bar {
-            transform: translateY(calc(-100% - 2px));
-            opacity: 0;
-            pointer-events: none;
+            transform: none;
+            opacity: 1;
+            pointer-events: auto;
         }
 
         .header-category-tabs {
@@ -104,9 +101,10 @@
             margin: 0;
             font-size: 2rem;
             font-weight: 800;
-            color: var(--brand);
+            color: #f3fbff;
             letter-spacing: -0.04em;
             line-height: 1;
+            text-shadow: 0 4px 16px rgba(8, 30, 85, 0.35);
         }
 
         .header-brand-link {
@@ -121,7 +119,7 @@
         .header-subline {
             margin: 1px 0 0;
             font-size: 0.7rem;
-            color: #71869a;
+            color: rgba(235, 246, 255, 0.9);
             white-space: nowrap;
         }
 
@@ -168,7 +166,7 @@
 
         .header-link {
             text-decoration: none;
-            color: #1d3449;
+            color: #e9f5ff;
             font-size: 0.8rem;
             font-weight: 600;
             padding: 7px 9px;
@@ -192,8 +190,8 @@
         }
 
         .header-link:hover {
-            background: #f4f8fc;
-            color: #154e71;
+            background: rgba(255, 255, 255, 0.18);
+            color: #ffffff;
         }
 
         .auth-link {
@@ -484,17 +482,20 @@
             border-radius: 0;
             overflow: visible;
             background: none;
-            margin-top: 10px;
-            padding: 14px 16px 16px;
+            margin-top: 0;
+            padding: 0;
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
         }
 
         .hero-banner {
             position: relative;
-            min-height: 318px;
-            border-radius: 18px;
+            min-height: 360px;
+            border-radius: 0;
             overflow: hidden;
             background: linear-gradient(140deg, #1a57c4 0%, #3d7de8 48%, #7fa7ff 100%);
-            box-shadow: 0 20px 38px rgba(18, 56, 109, 0.24);
+            box-shadow: none;
         }
 
         .hero-banner::after {
@@ -516,10 +517,10 @@
 
         .hero-banner-content {
             position: absolute;
-            top: 38px;
+            top: 96px;
             left: 50%;
             transform: translateX(-50%);
-            width: min(1060px, calc(100% - 52px));
+            width: min(1120px, calc(100% - 56px));
             z-index: 2;
             display: grid;
             gap: 12px;
@@ -535,7 +536,7 @@
         }
 
         .header-category-tabs .header-link.is-active {
-            background: #f4f8fc;
+            background: rgba(255, 255, 255, 0.94);
             color: #154e71;
         }
 
@@ -810,20 +811,20 @@
             }
 
             .header-bar {
-                border-bottom-color: #d8e3ec;
+                padding: 10px 14px;
             }
 
             .journey-hero {
-                padding: 12px;
+                padding: 0;
             }
 
             .hero-banner {
-                min-height: 300px;
+                min-height: 332px;
             }
 
             .hero-banner-content {
-                width: calc(100% - 24px);
-                top: 30px;
+                width: calc(100% - 28px);
+                top: 88px;
             }
 
             .catalog-grid {
@@ -866,13 +867,14 @@
             .header-bar {
                 flex-direction: column;
                 align-items: stretch;
-                position: static;
+                position: absolute;
                 width: 100%;
-                margin-left: 0;
-                margin-right: 0;
+                margin: 0;
                 padding: 10px 12px;
-                border: 1px solid #d8e3ec;
-                border-radius: 14px;
+                border: 0;
+                border-radius: 0;
+                background: transparent;
+                box-shadow: none;
             }
 
             .customer-auth {
@@ -903,17 +905,17 @@
             }
 
             .journey-hero {
-                margin-top: 8px;
-                padding: 8px 10px 10px;
+                margin-top: 0;
+                padding: 0;
             }
 
             .hero-banner {
-                min-height: 286px;
+                min-height: 320px;
             }
 
             .hero-banner-content {
-                width: calc(100% - 16px);
-                top: 16px;
+                width: calc(100% - 18px);
+                top: 150px;
                 gap: 8px;
             }
 

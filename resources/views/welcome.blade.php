@@ -581,8 +581,8 @@
         .search-section-full-width::before {
             content: '';
             position: absolute;
-            inset: 0 auto 0 calc(50% - 50vw);
-            width: 100vw;
+            inset: 0 auto 0 calc(50% - 50vw + 12px);
+            width: calc(100vw - 24px);
             background:
                 var(--home-hero-image, none),
                 linear-gradient(135deg, #1550be 0%, #3c78e0 52%, #89b0ff 100%),
@@ -591,6 +591,7 @@
             background-size: cover, cover, auto, auto;
             background-position: center center, center center, center center, center center;
             background-repeat: no-repeat;
+            border-radius: 14px;
             pointer-events: none;
             z-index: 0;
         }
@@ -598,9 +599,10 @@
         .search-section-full-width::after {
             content: '';
             position: absolute;
-            inset: 0 auto 0 calc(50% - 50vw);
-            width: 100vw;
+            inset: 0 auto 0 calc(50% - 50vw + 12px);
+            width: calc(100vw - 24px);
             background: linear-gradient(180deg, rgba(10, 33, 88, 0.2) 0%, rgba(10, 33, 88, 0.36) 100%);
+            border-radius: 14px;
             pointer-events: none;
             z-index: 0;
         }
@@ -733,10 +735,7 @@
             align-items: stretch;
             gap: 8px;
             padding: 12px 14px;
-            overflow-x: auto;
-            overflow-y: hidden;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: thin;
+            overflow: visible;
         }
 
         .search-field-shell {
@@ -779,6 +778,99 @@
             align-items: stretch;
             flex-wrap: nowrap;
             flex: 1 1 auto;
+        }
+
+        #accommodationFields.is-active {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(150px, 1fr));
+            gap: 8px;
+            flex: 1 1 auto;
+        }
+
+        .guest-picker {
+            position: relative;
+        }
+
+        .guest-summary-btn {
+            width: 100%;
+            border: 0;
+            background: transparent;
+            text-align: left;
+            color: #103247;
+            font: inherit;
+            font-size: 0.92rem;
+            padding: 6px 0 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .guest-summary-btn i {
+            color: #6b8299;
+            font-size: 0.78rem;
+        }
+
+        .guest-popover {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 250px;
+            border: 1px solid #c9ddeb;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 12px 28px rgba(16, 50, 84, 0.2);
+            padding: 10px;
+            z-index: 30;
+        }
+
+        .guest-popover[hidden] {
+            display: none !important;
+        }
+
+        .guest-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 5px 0;
+        }
+
+        .guest-label {
+            color: #20415b;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .guest-counter {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .guest-counter button {
+            width: 24px;
+            height: 24px;
+            min-width: 24px;
+            border-radius: 999px;
+            border: 1px solid #b7cddd;
+            background: #f5fbff;
+            color: #1d4b6a;
+            font-size: 0.78rem;
+            padding: 0;
+        }
+
+        .guest-counter input {
+            width: 34px;
+            text-align: center;
+            border: 0;
+            padding: 0;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #103247;
+            background: transparent;
+            pointer-events: none;
         }
 
         .search-dynamic-fields[hidden] {
@@ -1222,6 +1314,10 @@
                 gap: 10px;
             }
 
+            #accommodationFields.is-active {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
             .search-dynamic-fields .field.field-short {
                 grid-column: span 2;
             }
@@ -1362,6 +1458,12 @@
                 min-height: 0;
             }
 
+            .search-section-full-width::before,
+            .search-section-full-width::after {
+                inset: 0 auto 0 calc(50% - 50vw + 8px);
+                width: calc(100vw - 16px);
+            }
+
             .search-field-shell {
                 min-width: 0;
             }
@@ -1399,6 +1501,17 @@
             .search-dynamic-fields.is-active {
                 display: grid;
                 gap: 8px;
+            }
+
+            #accommodationFields.is-active {
+                grid-template-columns: 1fr;
+            }
+
+            .guest-popover {
+                position: static;
+                min-width: 0;
+                margin-top: 8px;
+                box-shadow: none;
             }
 
             .search-dynamic-fields .field.field-short,
@@ -1587,9 +1700,39 @@
                             <div id="accommodationFields" class="search-dynamic-fields is-active" data-fields-for="accommodation" aria-hidden="false">
                                 <div class="field"><label for="checkin">Check-in</label><input id="checkin" name="checkin" type="date"></div>
                                 <div class="field"><label for="checkout">Check-out</label><input id="checkout" name="checkout" type="date"></div>
-                                <div class="field"><label for="adults">Adults</label><input id="adults" name="adults" type="number" min="1" value="2"></div>
-                                <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="0"></div>
-                                <div class="field"><label for="rooms">Rooms</label><input id="rooms" name="rooms" type="number" min="1" value="1"></div>
+                                <div class="field guest-picker" data-guest-picker>
+                                    <label for="guestSummary">Rooms and guests</label>
+                                    <button id="guestSummary" class="guest-summary-btn" type="button" aria-haspopup="dialog" aria-expanded="false">
+                                        <span data-guest-summary-text>1 room, 2 adults, 0 children</span>
+                                        <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                                    </button>
+                                    <div class="guest-popover" data-guest-popover hidden>
+                                        <div class="guest-row">
+                                            <span class="guest-label">Rooms</span>
+                                            <div class="guest-counter">
+                                                <button type="button" data-counter-action="decrement" data-counter-target="rooms">-</button>
+                                                <input id="rooms" name="rooms" type="number" min="1" value="1" readonly>
+                                                <button type="button" data-counter-action="increment" data-counter-target="rooms">+</button>
+                                            </div>
+                                        </div>
+                                        <div class="guest-row">
+                                            <span class="guest-label">Adults</span>
+                                            <div class="guest-counter">
+                                                <button type="button" data-counter-action="decrement" data-counter-target="adults">-</button>
+                                                <input id="adults" name="adults" type="number" min="1" value="2" readonly>
+                                                <button type="button" data-counter-action="increment" data-counter-target="adults">+</button>
+                                            </div>
+                                        </div>
+                                        <div class="guest-row">
+                                            <span class="guest-label">Children</span>
+                                            <div class="guest-counter">
+                                                <button type="button" data-counter-action="decrement" data-counter-target="children">-</button>
+                                                <input id="children" name="children" type="number" min="0" value="0" readonly>
+                                                <button type="button" data-counter-action="increment" data-counter-target="children">+</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Marine Transport Fields -->
@@ -1874,6 +2017,66 @@
                 });
             }
 
+            function initGuestPicker() {
+                const picker = document.querySelector('[data-guest-picker]');
+                if (!picker) {
+                    return;
+                }
+
+                const summaryButton = picker.querySelector('.guest-summary-btn');
+                const summaryText = picker.querySelector('[data-guest-summary-text]');
+                const popover = picker.querySelector('[data-guest-popover]');
+                const roomsInput = picker.querySelector('#rooms');
+                const adultsInput = picker.querySelector('#adults');
+                const childrenInput = picker.querySelector('#children');
+
+                if (!summaryButton || !summaryText || !popover || !roomsInput || !adultsInput || !childrenInput) {
+                    return;
+                }
+
+                function updateSummary() {
+                    const rooms = Number(roomsInput.value || 1);
+                    const adults = Number(adultsInput.value || 2);
+                    const children = Number(childrenInput.value || 0);
+                    summaryText.textContent = rooms + ' room' + (rooms === 1 ? '' : 's') + ', ' + adults + ' adult' + (adults === 1 ? '' : 's') + ', ' + children + ' children';
+                }
+
+                function setPopoverOpen(isOpen) {
+                    popover.hidden = !isOpen;
+                    summaryButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                }
+
+                picker.querySelectorAll('[data-counter-action]').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        const action = String(btn.getAttribute('data-counter-action') || '');
+                        const target = String(btn.getAttribute('data-counter-target') || '');
+                        const input = picker.querySelector('#' + target);
+                        if (!input) {
+                            return;
+                        }
+
+                        const min = Number(input.getAttribute('min') || 0);
+                        const current = Number(input.value || min);
+                        const next = action === 'increment' ? current + 1 : Math.max(min, current - 1);
+                        input.value = String(next);
+                        updateSummary();
+                    });
+                });
+
+                summaryButton.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    setPopoverOpen(popover.hidden);
+                });
+
+                document.addEventListener('click', function (event) {
+                    if (!picker.contains(event.target)) {
+                        setPopoverOpen(false);
+                    }
+                });
+
+                updateSummary();
+            }
+
             // Attach category tab click handlers
             categoryTabs.forEach(function (tab) {
                 tab.addEventListener('click', function (event) {
@@ -1890,6 +2093,7 @@
 
             // Initialize on load
             toggleFields();
+            initGuestPicker();
         })();
     </script>
 

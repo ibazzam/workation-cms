@@ -1982,7 +1982,8 @@
                 @foreach ($homeBrowseCards as $card)
                     @php
                         $fallbackImage = (string) ($card['fallback_image_url'] ?? '');
-                        $resolvedImage = (string) ($card['image_url'] ?? ($fallbackImage !== '' ? $fallbackImage : $cardSvgFallback));
+                        $primaryImage = trim((string) ($card['image_url'] ?? ''));
+                        $resolvedImage = $primaryImage !== '' ? $primaryImage : ($fallbackImage !== '' ? $fallbackImage : $cardSvgFallback);
                         $cityName = trim((string) ($card['city'] ?? $card['location'] ?? $card['island'] ?? ''));
                         if ($cityName === '') {
                             $cityName = trim((string) ($card['subtitle'] ?? ''));
@@ -2032,7 +2033,8 @@
                 @foreach ($homeTrendingCards as $card)
                     @php
                         $fallbackImage = (string) ($card['fallback_image_url'] ?? '');
-                        $resolvedImage = (string) ($card['image_url'] ?? ($fallbackImage !== '' ? $fallbackImage : $cardSvgFallback));
+                        $primaryImage = trim((string) ($card['image_url'] ?? ''));
+                        $resolvedImage = $primaryImage !== '' ? $primaryImage : ($fallbackImage !== '' ? $fallbackImage : $cardSvgFallback);
                         $cityName = trim((string) ($card['city'] ?? $card['location'] ?? $card['island'] ?? ''));
                         if ($cityName === '') {
                             $cityName = trim((string) ($card['subtitle'] ?? ''));
@@ -2077,7 +2079,8 @@
                 @foreach ($homeWeekendDealCards as $card)
                     @php
                         $fallbackImage = (string) ($card['fallback_image_url'] ?? '');
-                        $resolvedImage = (string) ($card['image_url'] ?? ($fallbackImage !== '' ? $fallbackImage : $cardSvgFallback));
+                        $primaryImage = trim((string) ($card['image_url'] ?? ''));
+                        $resolvedImage = $primaryImage !== '' ? $primaryImage : ($fallbackImage !== '' ? $fallbackImage : $cardSvgFallback);
                         $cityName = trim((string) ($card['city'] ?? $card['location'] ?? $card['island'] ?? ''));
                         if ($cityName === '') {
                             $cityName = trim((string) ($card['subtitle'] ?? ''));
@@ -2122,7 +2125,8 @@
                 @foreach ($homeLovedCards as $card)
                     @php
                         $fallbackImage = (string) ($card['fallback_image_url'] ?? '');
-                        $resolvedImage = (string) ($card['image_url'] ?? ($fallbackImage !== '' ? $fallbackImage : $cardSvgFallback));
+                        $primaryImage = trim((string) ($card['image_url'] ?? ''));
+                        $resolvedImage = $primaryImage !== '' ? $primaryImage : ($fallbackImage !== '' ? $fallbackImage : $cardSvgFallback);
                         $cityName = trim((string) ($card['city'] ?? $card['location'] ?? $card['island'] ?? ''));
                         if ($cityName === '') {
                             $cityName = trim((string) ($card['subtitle'] ?? ''));

@@ -732,10 +732,14 @@
 
         .search-form.is-accommodation .search-inline-row {
             display: grid;
-            grid-template-columns: minmax(250px, 1.45fr) minmax(150px, 1fr) minmax(150px, 1fr) minmax(190px, 1.2fr) auto;
+            grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(122px, 0.78fr);
             gap: 8px;
             align-items: stretch;
             padding: 12px 14px;
+        }
+
+        .search-form.is-accommodation .search-inline-row > * {
+            min-width: 0;
         }
 
         .search-inline-row {
@@ -767,7 +771,7 @@
         }
 
         .search-primary-field label {
-            font-size: 0.62rem;
+            font-size: 0.56rem;
             letter-spacing: 0.05em;
             text-transform: uppercase;
             color: #6b8299;
@@ -778,7 +782,7 @@
         .search-primary-field input {
             border-radius: 0 !important;
             padding: 6px 0 0 !important;
-            font-size: 0.95rem;
+            font-size: 0.88rem;
         }
 
         .search-dynamic-fields {
@@ -821,7 +825,7 @@
             text-align: left;
             color: #103247;
             font: inherit;
-            font-size: 0.92rem;
+            font-size: 0.86rem;
             padding: 6px 0 0;
             cursor: pointer;
             display: flex;
@@ -882,6 +886,9 @@
             color: #1d4b6a;
             font-size: 0.78rem;
             padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .guest-counter input {
@@ -903,7 +910,7 @@
         .search-dynamic-fields .field {
             display: grid;
             gap: 4px;
-            min-width: 140px;
+            min-width: 0;
             overflow: hidden;
             border: 1px solid #d8e3ec;
             border-radius: 10px;
@@ -913,7 +920,7 @@
         }
 
         .search-dynamic-fields .field label {
-            font-size: 0.62rem;
+            font-size: 0.56rem;
             letter-spacing: 0.02em;
             text-transform: uppercase;
             color: #6b8299;
@@ -930,7 +937,7 @@
             border-radius: 0;
             padding: 8px 10px;
             font: inherit;
-            font-size: 0.95rem;
+            font-size: 0.88rem;
             color: #103247;
             background: transparent;
             box-sizing: border-box;
@@ -944,7 +951,7 @@
             border: 0;
             border-radius: 0;
             padding: 6px 0 0;
-            font-size: 0.92rem;
+            font-size: 0.86rem;
             font: inherit;
             color: #103247;
             background: transparent;
@@ -965,14 +972,14 @@
             max-width: 100%;
             padding: 6px 0;
             overflow: hidden;
-            font-size: 0.92rem;
+            font-size: 0.86rem;
             cursor: pointer;
         }
 
         .search-form input[type="number"],
         .search-dynamic-fields input[type="number"] {
             padding: 6px 8px;
-            font-size: 0.92rem;
+            font-size: 0.86rem;
         }
 
         .search-form button {
@@ -992,15 +999,19 @@
             background: transparent;
             flex: 0 0 auto;
             align-items: stretch;
+            min-width: 0;
+            width: 100%;
         }
 
         .search-submit-row button {
             border-radius: 10px;
             padding: 0 20px;
-            font-size: 0.88rem;
+            font-size: 0.84rem;
             font-weight: 600;
             min-width: 108px;
-            height: 72px;
+            width: 100%;
+            height: 100%;
+            min-height: 72px;
         }
 
         .search-actions {
@@ -2204,21 +2215,38 @@
                     summaryButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
                 }
 
-                picker.querySelectorAll('[data-counter-action]').forEach(function (btn) {
-                    btn.addEventListener('click', function () {
-                        const action = String(btn.getAttribute('data-counter-action') || '');
-                        const target = String(btn.getAttribute('data-counter-target') || '');
-                        const input = picker.querySelector('#' + target);
-                        if (!input) {
-                            return;
-                        }
+                function updateCounterValue(button) {
+                    const action = String(button.getAttribute('data-counter-action') || '');
+                    const target = String(button.getAttribute('data-counter-target') || '');
+                    const input = picker.querySelector('#' + target);
+                    if (!input) {
+                        return;
+                    }
 
-                        const min = Number(input.getAttribute('min') || 0);
-                        const current = Number(input.value || min);
-                        const next = action === 'increment' ? current + 1 : Math.max(min, current - 1);
-                        input.value = String(next);
-                        updateSummary();
+                    const min = Number(input.getAttribute('min') || 0);
+                    const current = Number(input.value || min);
+                    const next = action === 'increment' ? current + 1 : Math.max(min, current - 1);
+                    input.value = String(next);
+                    updateSummary();
+                }
+
+                picker.querySelectorAll('[data-counter-action]').forEach(function (btn) {
+                    btn.addEventListener('click', function (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        updateCounterValue(btn);
                     });
+                });
+
+                popover.addEventListener('click', function (event) {
+                    const button = event.target.closest('[data-counter-action]');
+                    if (!button || !popover.contains(button)) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    event.stopPropagation();
+                    updateCounterValue(button);
                 });
 
                 [roomsInput, adultsInput, childrenInput].forEach(function (input) {

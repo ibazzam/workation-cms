@@ -859,12 +859,13 @@
             position: absolute;
             top: calc(100% + 8px);
             right: 0;
-            min-width: 250px;
+            width: 100%;
+            min-width: 0;
             border: 1px solid #c9ddeb;
             border-radius: 12px;
             background: #ffffff;
             box-shadow: 0 12px 28px rgba(16, 50, 84, 0.2);
-            padding: 10px;
+            padding: 8px;
             z-index: 80;
         }
 
@@ -877,7 +878,7 @@
             align-items: center;
             justify-content: space-between;
             gap: 8px;
-            padding: 5px 0;
+            padding: 3px 0;
         }
 
         .guest-label {
@@ -893,14 +894,14 @@
         }
 
         .guest-counter button {
-            width: 24px;
-            height: 24px;
-            min-width: 24px;
+            width: 22px;
+            height: 22px;
+            min-width: 22px;
             border-radius: 999px;
             border: 1px solid #b7cddd;
             background: #f5fbff;
             color: #1d4b6a;
-            font-size: 0.78rem;
+            font-size: 0.74rem;
             padding: 0;
             display: inline-flex;
             align-items: center;
@@ -908,11 +909,11 @@
         }
 
         .guest-counter input {
-            width: 34px;
+            width: 30px;
             text-align: center;
             border: 0;
             padding: 0;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: 700;
             color: #103247;
             background: transparent;

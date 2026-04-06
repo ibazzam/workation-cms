@@ -725,9 +725,17 @@
             margin-top: 0;
             display: block;
             min-width: 0;
-            overflow: hidden;
+            overflow: visible;
             border-radius: 0 0 18px 18px;
             background: #ffffff;
+        }
+
+        .search-form.is-accommodation .search-inline-row {
+            display: grid;
+            grid-template-columns: minmax(250px, 1.45fr) minmax(150px, 1fr) minmax(150px, 1fr) minmax(190px, 1.2fr) auto;
+            gap: 8px;
+            align-items: stretch;
+            padding: 12px 14px;
         }
 
         .search-inline-row {
@@ -754,11 +762,22 @@
             border-radius: 10px;
             overflow: hidden;
             background: #f9fbfd;
+            min-height: 72px;
+            padding: 7px 10px;
+        }
+
+        .search-primary-field label {
+            font-size: 0.62rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: #6b8299;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            font-weight: 700;
         }
 
         .search-primary-field input {
             border-radius: 0 !important;
-            padding: 10px 14px !important;
+            padding: 6px 0 0 !important;
             font-size: 0.95rem;
         }
 
@@ -785,6 +804,10 @@
             grid-template-columns: repeat(3, minmax(150px, 1fr));
             gap: 8px;
             flex: 1 1 auto;
+        }
+
+        .search-form.is-accommodation #accommodationFields.is-active {
+            display: contents;
         }
 
         .guest-picker {
@@ -886,10 +909,11 @@
             border-radius: 10px;
             padding: 7px 9px;
             background: #f9fbfd;
+            min-height: 72px;
         }
 
         .search-dynamic-fields .field label {
-            font-size: 0.68rem;
+            font-size: 0.62rem;
             letter-spacing: 0.02em;
             text-transform: uppercase;
             color: #6b8299;
@@ -976,7 +1000,7 @@
             font-size: 0.88rem;
             font-weight: 600;
             min-width: 108px;
-            height: 100%;
+            height: 72px;
         }
 
         .search-actions {
@@ -1089,14 +1113,14 @@
             color: #1b3f58;
             display: grid;
             overflow: hidden;
-            min-height: 210px;
-            grid-template-rows: 128px auto;
+            min-height: 286px;
+            grid-template-rows: 164px auto;
         }
 
         .item-card-media {
             position: relative;
             width: 100%;
-            height: 128px;
+            height: 164px;
             background: linear-gradient(140deg, #d6edf1 0%, #bfdfeb 45%, #ffe3be 100%);
             overflow: hidden;
         }
@@ -1118,29 +1142,74 @@
         .item-card-body {
             padding: 10px;
             display: grid;
-            gap: 4px;
+            gap: 6px;
             align-content: start;
             background: #fbfdff;
         }
 
-        .item-card strong {
-            font-size: 0.95rem;
-            line-height: 1.28;
-            color: #133b55;
+        .item-card-city {
+            color: #698094;
+            font-size: 0.7rem;
+            line-height: 1;
+            text-transform: none;
         }
 
-        .item-card span {
-            color: #5b7185;
-            font-size: 0.79rem;
-            line-height: 1.35;
+        .item-card-title {
+            margin: 0;
+            font-size: 1rem;
+            line-height: 1.3;
+            color: #102f45;
+            font-weight: 700;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
 
-        .item-card-meta {
-            color: #2b617e;
+        .item-card-stars {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            color: #f3a337;
+            font-size: 0.72rem;
+            min-height: 14px;
+        }
+
+        .item-card-review {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #587085;
+            font-size: 0.73rem;
+        }
+
+        .item-card-rating-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            height: 18px;
+            padding: 0 6px;
+            border-radius: 6px;
+            background: #1f4fd6;
+            color: #ffffff;
+            font-size: 0.68rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .item-card-price {
+            margin-top: 2px;
+            color: #0d2e44;
+            font-size: 0.88rem;
+            font-weight: 700;
+        }
+
+        .item-card-price span {
+            color: #6a8094;
             font-size: 0.74rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            font-weight: 500;
+            margin-left: 2px;
         }
 
         .home-footer-skin {
@@ -1289,6 +1358,10 @@
                 overflow: visible;
             }
 
+            .search-form.is-accommodation .search-inline-row {
+                grid-template-columns: 1fr;
+            }
+
             .search-field-shell,
             .search-submit-row {
                 grid-column: auto;
@@ -1302,6 +1375,10 @@
 
             .search-primary-field {
                 grid-template-columns: 130px minmax(0, 1fr);
+            }
+
+            .search-form.is-accommodation .search-primary-field {
+                grid-template-columns: minmax(0, 1fr);
             }
 
             .search-dynamic-fields {
@@ -1692,7 +1769,8 @@
 
                             <div class="search-field-shell">
                                 <div class="search-primary-field">
-                                    <input type="search" name="q" placeholder="City, airport, island, landmark, hotel, or service name" aria-label="Search query">
+                                    <label for="homeSearchDestination">Destination</label>
+                                    <input id="homeSearchDestination" type="search" name="q" placeholder="City, airport, island, landmark, hotel, or service name" aria-label="Search query">
                                 </div>
                             </div>
 
@@ -1828,14 +1906,35 @@
                     @php
                         $fallbackImage = (string) ($card['fallback_image_url'] ?? '');
                         $resolvedImage = (string) ($card['image_url'] ?? ($fallbackImage !== '' ? $fallbackImage : $cardSvgFallback));
+                        $cityName = trim((string) ($card['city'] ?? $card['location'] ?? $card['island'] ?? ''));
+                        if ($cityName === '') {
+                            $cityName = trim((string) ($card['subtitle'] ?? ''));
+                        }
+                        $starRank = max(0, min(5, (int) round((float) ($card['star_rating'] ?? $card['stars'] ?? 0))));
+                        $reviewScoreRaw = (float) ($card['review_score'] ?? $card['rating'] ?? 0);
+                        $reviewScore = $reviewScoreRaw > 0 ? number_format($reviewScoreRaw, 1) : 'N/A';
+                        $reviewCount = (int) ($card['review_count'] ?? $card['reviews_count'] ?? 0);
+                        $priceLabel = trim((string) ($card['price_label'] ?? $card['price'] ?? $card['meta'] ?? 'See details'));
                     @endphp
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
                         <div class="item-card-media">
                             <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && this.src !== '{{ $fallbackImage }}' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $cardSvgFallback }}';};" alt="{{ $card['title'] ?? 'Category' }} thumbnail" loading="lazy">
                         </div>
                         <div class="item-card-body">
-                            <strong>{{ $card['title'] ?? 'Category' }}</strong>
-                            <span>{{ $card['subtitle'] ?? 'Explore listings in this category.' }}</span>
+                            <span class="item-card-city">{{ $cityName !== '' ? $cityName : 'Maldives' }}</span>
+                            <h3 class="item-card-title">{{ $card['title'] ?? 'Category' }}</h3>
+                            <div class="item-card-stars" aria-label="Star ranking">
+                                @if ($starRank > 0)
+                                    @for ($i = 0; $i < $starRank; $i++)
+                                        <i class="fa-solid fa-star" aria-hidden="true"></i>
+                                    @endfor
+                                @endif
+                            </div>
+                            <div class="item-card-review">
+                                <span class="item-card-rating-badge">{{ $reviewScore }}</span>
+                                <span>{{ number_format($reviewCount) }} reviews</span>
+                            </div>
+                            <div class="item-card-price">From {{ $priceLabel }}</div>
                         </div>
                     </a>
                 @endforeach
@@ -1857,14 +1956,35 @@
                     @php
                         $fallbackImage = (string) ($card['fallback_image_url'] ?? '');
                         $resolvedImage = (string) ($card['image_url'] ?? ($fallbackImage !== '' ? $fallbackImage : $cardSvgFallback));
+                        $cityName = trim((string) ($card['city'] ?? $card['location'] ?? $card['island'] ?? ''));
+                        if ($cityName === '') {
+                            $cityName = trim((string) ($card['subtitle'] ?? ''));
+                        }
+                        $starRank = max(0, min(5, (int) round((float) ($card['star_rating'] ?? $card['stars'] ?? 0))));
+                        $reviewScoreRaw = (float) ($card['review_score'] ?? $card['rating'] ?? 0);
+                        $reviewScore = $reviewScoreRaw > 0 ? number_format($reviewScoreRaw, 1) : 'N/A';
+                        $reviewCount = (int) ($card['review_count'] ?? $card['reviews_count'] ?? 0);
+                        $priceLabel = trim((string) ($card['price_label'] ?? $card['price'] ?? $card['meta'] ?? 'See details'));
                     @endphp
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
                         <div class="item-card-media">
                             <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && this.src !== '{{ $fallbackImage }}' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $cardSvgFallback }}';};" alt="{{ $card['title'] ?? 'Trending Destination' }} thumbnail" loading="lazy">
                         </div>
                         <div class="item-card-body">
-                            <strong>{{ $card['title'] ?? 'Trending Destination' }}</strong>
-                            <span>{{ $card['subtitle'] ?? 'Trending destination currently popular with guests.' }}</span>
+                            <span class="item-card-city">{{ $cityName !== '' ? $cityName : 'Maldives' }}</span>
+                            <h3 class="item-card-title">{{ $card['title'] ?? 'Trending Destination' }}</h3>
+                            <div class="item-card-stars" aria-label="Star ranking">
+                                @if ($starRank > 0)
+                                    @for ($i = 0; $i < $starRank; $i++)
+                                        <i class="fa-solid fa-star" aria-hidden="true"></i>
+                                    @endfor
+                                @endif
+                            </div>
+                            <div class="item-card-review">
+                                <span class="item-card-rating-badge">{{ $reviewScore }}</span>
+                                <span>{{ number_format($reviewCount) }} reviews</span>
+                            </div>
+                            <div class="item-card-price">From {{ $priceLabel }}</div>
                         </div>
                     </a>
                 @endforeach
@@ -1881,17 +2001,35 @@
                     @php
                         $fallbackImage = (string) ($card['fallback_image_url'] ?? '');
                         $resolvedImage = (string) ($card['image_url'] ?? ($fallbackImage !== '' ? $fallbackImage : $cardSvgFallback));
+                        $cityName = trim((string) ($card['city'] ?? $card['location'] ?? $card['island'] ?? ''));
+                        if ($cityName === '') {
+                            $cityName = trim((string) ($card['subtitle'] ?? ''));
+                        }
+                        $starRank = max(0, min(5, (int) round((float) ($card['star_rating'] ?? $card['stars'] ?? 0))));
+                        $reviewScoreRaw = (float) ($card['review_score'] ?? $card['rating'] ?? 0);
+                        $reviewScore = $reviewScoreRaw > 0 ? number_format($reviewScoreRaw, 1) : 'N/A';
+                        $reviewCount = (int) ($card['review_count'] ?? $card['reviews_count'] ?? 0);
+                        $priceLabel = trim((string) ($card['price_label'] ?? $card['price'] ?? $card['meta'] ?? 'See details'));
                     @endphp
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
                         <div class="item-card-media">
                             <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && this.src !== '{{ $fallbackImage }}' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $cardSvgFallback }}';};" alt="{{ $card['title'] ?? 'Weekend Deal' }} thumbnail" loading="lazy">
                         </div>
                         <div class="item-card-body">
-                            @if (!empty($card['meta']))
-                                <span class="item-card-meta">{{ $card['meta'] }}</span>
-                            @endif
-                            <strong>{{ $card['title'] ?? 'Weekend Deal' }}</strong>
-                            <span>{{ $card['subtitle'] ?? 'Recommended weekend offer for quick getaways.' }}</span>
+                            <span class="item-card-city">{{ $cityName !== '' ? $cityName : 'Maldives' }}</span>
+                            <h3 class="item-card-title">{{ $card['title'] ?? 'Weekend Deal' }}</h3>
+                            <div class="item-card-stars" aria-label="Star ranking">
+                                @if ($starRank > 0)
+                                    @for ($i = 0; $i < $starRank; $i++)
+                                        <i class="fa-solid fa-star" aria-hidden="true"></i>
+                                    @endfor
+                                @endif
+                            </div>
+                            <div class="item-card-review">
+                                <span class="item-card-rating-badge">{{ $reviewScore }}</span>
+                                <span>{{ number_format($reviewCount) }} reviews</span>
+                            </div>
+                            <div class="item-card-price">From {{ $priceLabel }}</div>
                         </div>
                     </a>
                 @endforeach
@@ -1908,17 +2046,35 @@
                     @php
                         $fallbackImage = (string) ($card['fallback_image_url'] ?? '');
                         $resolvedImage = (string) ($card['image_url'] ?? ($fallbackImage !== '' ? $fallbackImage : $cardSvgFallback));
+                        $cityName = trim((string) ($card['city'] ?? $card['location'] ?? $card['island'] ?? ''));
+                        if ($cityName === '') {
+                            $cityName = trim((string) ($card['subtitle'] ?? ''));
+                        }
+                        $starRank = max(0, min(5, (int) round((float) ($card['star_rating'] ?? $card['stars'] ?? 0))));
+                        $reviewScoreRaw = (float) ($card['review_score'] ?? $card['rating'] ?? 0);
+                        $reviewScore = $reviewScoreRaw > 0 ? number_format($reviewScoreRaw, 1) : 'N/A';
+                        $reviewCount = (int) ($card['review_count'] ?? $card['reviews_count'] ?? 0);
+                        $priceLabel = trim((string) ($card['price_label'] ?? $card['price'] ?? $card['meta'] ?? 'See details'));
                     @endphp
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
                         <div class="item-card-media">
                             <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && this.src !== '{{ $fallbackImage }}' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $cardSvgFallback }}';};" alt="{{ $card['title'] ?? 'Loved Place' }} thumbnail" loading="lazy">
                         </div>
                         <div class="item-card-body">
-                            @if (!empty($card['meta']))
-                                <span class="item-card-meta">{{ $card['meta'] }}</span>
-                            @endif
-                            <strong>{{ $card['title'] ?? 'Loved Place' }}</strong>
-                            <span>{{ $card['subtitle'] ?? 'Highly rated by guests and repeat visitors.' }}</span>
+                            <span class="item-card-city">{{ $cityName !== '' ? $cityName : 'Maldives' }}</span>
+                            <h3 class="item-card-title">{{ $card['title'] ?? 'Loved Place' }}</h3>
+                            <div class="item-card-stars" aria-label="Star ranking">
+                                @if ($starRank > 0)
+                                    @for ($i = 0; $i < $starRank; $i++)
+                                        <i class="fa-solid fa-star" aria-hidden="true"></i>
+                                    @endfor
+                                @endif
+                            </div>
+                            <div class="item-card-review">
+                                <span class="item-card-rating-badge">{{ $reviewScore }}</span>
+                                <span>{{ number_format($reviewCount) }} reviews</span>
+                            </div>
+                            <div class="item-card-price">From {{ $priceLabel }}</div>
                         </div>
                     </a>
                 @endforeach
@@ -1990,10 +2146,12 @@
             function toggleFields() {
                 const category = String(categorySelect.value || 'accommodation').toLowerCase();
                 const normalizedCategory = normalizeCategoryKey(category);
+                const isAccommodation = normalizedCategory === 'accommodation';
                 
                 // Update form action
                 const displayCategory = normalizedCategory.replace(/_/g, '-');
                 form.setAttribute('action', '/catalog/' + displayCategory);
+                form.classList.toggle('is-accommodation', isAccommodation);
 
                 // Hide all field sets and disable their inputs
                 Object.keys(fieldSets).forEach(function (key) {
@@ -2063,13 +2221,24 @@
                     });
                 });
 
+                [roomsInput, adultsInput, childrenInput].forEach(function (input) {
+                    input.addEventListener('change', updateSummary);
+                });
+
                 summaryButton.addEventListener('click', function (event) {
                     event.preventDefault();
+                    event.stopPropagation();
                     setPopoverOpen(popover.hidden);
                 });
 
                 document.addEventListener('click', function (event) {
                     if (!picker.contains(event.target)) {
+                        setPopoverOpen(false);
+                    }
+                });
+
+                document.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape') {
                         setPopoverOpen(false);
                     }
                 });

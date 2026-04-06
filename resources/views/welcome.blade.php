@@ -650,7 +650,7 @@
             position: relative;
             z-index: 1;
             margin: 14px auto 0;
-            width: min(980px, 100%);
+            width: min(960px, 100%);
             background: #ffffff;
             border-radius: 18px;
             border: 1px solid #dde5ee;
@@ -732,8 +732,8 @@
 
         .search-form.is-accommodation .search-inline-row {
             display: grid;
-            grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(122px, 0.78fr);
-            gap: 8px;
+            grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(102px, 0.65fr);
+            gap: 7px;
             align-items: stretch;
             padding: 12px 14px;
         }
@@ -782,7 +782,7 @@
         .search-primary-field input {
             border-radius: 0 !important;
             padding: 6px 0 0 !important;
-            font-size: 0.88rem;
+            font-size: 0.84rem;
         }
 
         .search-dynamic-fields {
@@ -832,11 +832,20 @@
             align-items: center;
             justify-content: space-between;
             gap: 8px;
+            white-space: nowrap;
+        }
+
+        .guest-summary-btn [data-guest-summary-text] {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .guest-summary-btn i {
             color: #6b8299;
             font-size: 0.78rem;
+            flex-shrink: 0;
         }
 
         .guest-popover {
@@ -1005,13 +1014,14 @@
 
         .search-submit-row button {
             border-radius: 10px;
-            padding: 0 20px;
+            padding: 0 12px;
             font-size: 0.84rem;
             font-weight: 600;
-            min-width: 108px;
+            min-width: 0;
             width: 100%;
             height: 100%;
             min-height: 72px;
+            white-space: nowrap;
         }
 
         .search-actions {
@@ -2231,10 +2241,18 @@
                 }
 
                 picker.querySelectorAll('[data-counter-action]').forEach(function (btn) {
-                    btn.addEventListener('click', function (event) {
+                    function handleCounterActivate(event) {
                         event.preventDefault();
                         event.stopPropagation();
                         updateCounterValue(btn);
+                    }
+
+                    btn.addEventListener('click', handleCounterActivate);
+                    btn.addEventListener('touchstart', handleCounterActivate, { passive: false });
+                    btn.addEventListener('keydown', function (event) {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            handleCounterActivate(event);
+                        }
                     });
                 });
 

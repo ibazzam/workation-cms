@@ -957,13 +957,23 @@
             }
 
             .hero-banner {
-                min-height: 320px;
+                min-height: 0;
+                overflow: visible;
+                padding: 126px 0 14px;
             }
 
             .hero-banner-content {
+                position: relative;
+                left: auto;
+                transform: none;
                 width: calc(100% - 18px);
-                top: 150px;
+                top: auto;
+                margin: 0 auto;
                 gap: 8px;
+            }
+
+            .search-box {
+                margin-top: 4px;
             }
 
             .hero-banner-title {

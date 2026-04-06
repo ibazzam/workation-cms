@@ -173,6 +173,18 @@
             flex-shrink: 0;
         }
 
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
         .header-links {
             display: flex;
             align-items: center;
@@ -1745,7 +1757,8 @@
                     </div>
                 </div>
                 <div class="header-search-mini" aria-label="Quick destination search">
-                    <input type="search" placeholder="Destinations, islands, hotels, and experiences">
+                    <label for="headerQuickSearchInput" class="visually-hidden">Quick destination search</label>
+                    <input id="headerQuickSearchInput" name="quick_search" type="search" placeholder="Destinations, islands, hotels, and experiences" aria-label="Quick destination search">
                     <button type="button" aria-label="Search destinations"><i class="fa-solid fa-magnifying-glass"></i></button>
                 </div>
             </div>
@@ -1829,13 +1842,31 @@
                         <form id="homeCatalogSearchForm" class="search-form" action="{{ '/catalog/' . $homeDefaultCategoryKey }}" method="get">
                             <input id="categorySelect" name="category" type="hidden" value="{{ $homeDefaultCategoryKey }}">
                             
-                            <div class="search-category-tabs" aria-label="Travel search categories">
+                            <div class="search-category-tabs" aria-label="Travel search categories" role="tablist">
                                 @foreach ($homeCatalogCategoryLinks as $index => $link)
                                     @php
                                         $tabUrl = (string) ($link['url'] ?? '/catalog/accommodation');
                                         $tabCategoryKey = preg_match('#/catalog/([a-z_-]+)#', $tabUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
+                                        $tabCategoryToken = str_replace('_', '-', preg_replace('/[^a-z0-9_-]/i', '-', $tabCategoryKey));
+                                        $tabCategoryToken = trim($tabCategoryToken, '-');
+                                        if ($tabCategoryToken === '') {
+                                            $tabCategoryToken = 'accommodation';
+                                        }
+                                        $tabId = 'searchTab-' . $tabCategoryToken;
+                                        $tabPanelMap = [
+                                            'accommodation' => 'accommodationFields',
+                                            'marine-transport' => 'marineTransportFields',
+                                            'land-transport' => 'landTransportFields',
+                                            'excursion' => 'excursionFields',
+                                            'remote_workspace' => 'remoteWorkspaceFields',
+                                            'conference_room' => 'conferenceRoomFields',
+                                            'resort_day_visit' => 'resortDayVisitFields',
+                                            'restaurant' => 'restaurantFields',
+                                            'vehicle_rental' => 'vehicleRentalFields',
+                                        ];
+                                        $tabPanelId = (string) ($tabPanelMap[$tabCategoryKey] ?? 'accommodationFields');
                                     @endphp
-                                    <button class="search-category-tab{{ $index === 0 ? ' is-active' : '' }}" type="button" data-home-category-tab="{{ $tabCategoryKey }}">
+                                    <button id="{{ $tabId }}" class="search-category-tab{{ $index === 0 ? ' is-active' : '' }}" type="button" role="tab" aria-selected="{{ $index === 0 ? 'true' : 'false' }}" aria-controls="{{ $tabPanelId }}" tabindex="{{ $index === 0 ? '0' : '-1' }}" data-home-category-tab="{{ $tabCategoryKey }}">
                                         <i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i>
                                         <span>{{ $link['title'] ?? 'Category' }}</span>
                                     </button>
@@ -1852,7 +1883,7 @@
                             </div>
 
                             <!-- Accommodation Fields -->
-                            <div id="accommodationFields" class="search-dynamic-fields is-active" data-fields-for="accommodation" aria-hidden="false">
+                            <div id="accommodationFields" class="search-dynamic-fields is-active" role="tabpanel" aria-labelledby="searchTab-accommodation" data-fields-for="accommodation" aria-hidden="false">
                                 <div class="field"><label for="checkin">Check-in</label><input id="checkin" name="checkin" type="date"></div>
                                 <div class="field"><label for="checkout">Check-out</label><input id="checkout" name="checkout" type="date"></div>
                                 <div class="field guest-picker" data-guest-picker>
@@ -1891,7 +1922,7 @@
                             </div>
 
                             <!-- Marine Transport Fields -->
-                            <div id="marineTransportFields" class="search-dynamic-fields" data-fields-for="marine-transport" hidden aria-hidden="true">
+                            <div id="marineTransportFields" class="search-dynamic-fields" role="tabpanel" aria-labelledby="searchTab-marine-transport" data-fields-for="marine-transport" hidden aria-hidden="true">
                                 <div class="field"><label for="marineTripType">Trip Type</label><select id="marineTripType" name="trip_type"><option value="one_way">One Way</option><option value="round_trip">Round Trip</option></select></div>
                                 <div class="field"><label for="marineFrom">From Island</label><input id="marineFrom" name="from" type="text" placeholder="Departure island"></div>
                                 <div class="field"><label for="marineTo">To Island</label><input id="marineTo" name="to" type="text" placeholder="Arrival island"></div>
@@ -1901,7 +1932,7 @@
                             </div>
 
                             <!-- Land Transport Fields -->
-                            <div id="landTransportFields" class="search-dynamic-fields" data-fields-for="land-transport" hidden aria-hidden="true">
+                            <div id="landTransportFields" class="search-dynamic-fields" role="tabpanel" aria-labelledby="searchTab-land-transport" data-fields-for="land-transport" hidden aria-hidden="true">
                                 <div class="field"><label for="landTripType">Trip Type</label><select id="landTripType" name="trip_type"><option value="one_way">One Way</option><option value="round_trip">Round Trip</option></select></div>
                                 <div class="field"><label for="landFrom">From</label><input id="landFrom" name="from" type="text" placeholder="Pickup location"></div>
                                 <div class="field"><label for="landTo">To</label><input id="landTo" name="to" type="text" placeholder="Dropoff location"></div>
@@ -1912,7 +1943,7 @@
                             </div>
 
                             <!-- Excursion Fields -->
-                            <div id="excursionFields" class="search-dynamic-fields" data-fields-for="excursion" hidden aria-hidden="true">
+                            <div id="excursionFields" class="search-dynamic-fields" role="tabpanel" aria-labelledby="searchTab-excursion" data-fields-for="excursion" hidden aria-hidden="true">
                                 <div class="field"><label for="excursionDate">Date</label><input id="excursionDate" name="date" type="date"></div>
                                 <div class="field"><label for="excursionParticipants">Participants</label><input id="excursionParticipants" name="participants" type="number" min="1" value="2"></div>
                                 <div class="field"><label for="activityType">Activity Type</label><select id="activityType" name="activity_type"><option value="">All Types</option><option value="water">Water Sports</option><option value="land">Land Tours</option><option value="cultural">Cultural</option></select></div>
@@ -1920,7 +1951,7 @@
                             </div>
 
                             <!-- Remote Workspace Fields -->
-                            <div id="remoteWorkspaceFields" class="search-dynamic-fields" data-fields-for="remote_workspace" hidden aria-hidden="true">
+                            <div id="remoteWorkspaceFields" class="search-dynamic-fields" role="tabpanel" aria-labelledby="searchTab-remote-workspace" data-fields-for="remote_workspace" hidden aria-hidden="true">
                                 <div class="field"><label for="workCheckIn">Check-in</label><input id="workCheckIn" name="checkin" type="date"></div>
                                 <div class="field"><label for="workCheckOut">Check-out</label><input id="workCheckOut" name="checkout" type="date"></div>
                                 <div class="field"><label for="workSpaces">Workspaces Needed</label><input id="workSpaces" name="workspaces" type="number" min="1" value="1"></div>
@@ -1928,7 +1959,7 @@
                             </div>
 
                             <!-- Conference Room Fields -->
-                            <div id="conferenceRoomFields" class="search-dynamic-fields" data-fields-for="conference_room" hidden aria-hidden="true">
+                            <div id="conferenceRoomFields" class="search-dynamic-fields" role="tabpanel" aria-labelledby="searchTab-conference-room" data-fields-for="conference_room" hidden aria-hidden="true">
                                 <div class="field"><label for="confCheckIn">Event Date</label><input id="confCheckIn" name="date" type="date"></div>
                                 <div class="field"><label for="confDuration">Duration (Hours)</label><input id="confDuration" name="duration" type="number" min="1" value="8"></div>
                                 <div class="field"><label for="confAttendees">Attendees</label><input id="confAttendees" name="attendees" type="number" min="1" value="20"></div>
@@ -1936,7 +1967,7 @@
                             </div>
 
                             <!-- Resort Day Visit Fields -->
-                            <div id="resortDayVisitFields" class="search-dynamic-fields" data-fields-for="resort_day_visit" hidden aria-hidden="true">
+                            <div id="resortDayVisitFields" class="search-dynamic-fields" role="tabpanel" aria-labelledby="searchTab-resort-day-visit" data-fields-for="resort_day_visit" hidden aria-hidden="true">
                                 <div class="field"><label for="resortDate">Visit Date</label><input id="resortDate" name="date" type="date"></div>
                                 <div class="field"><label for="resortGuests">Guests</label><input id="resortGuests" name="guests" type="number" min="1" value="2"></div>
                                 <div class="field"><label for="resortStartTime">Arrival Time</label><input id="resortStartTime" name="start_time" type="time"></div>
@@ -1944,7 +1975,7 @@
                             </div>
 
                             <!-- Restaurant Fields -->
-                            <div id="restaurantFields" class="search-dynamic-fields" data-fields-for="restaurant" hidden aria-hidden="true">
+                            <div id="restaurantFields" class="search-dynamic-fields" role="tabpanel" aria-labelledby="searchTab-restaurant" data-fields-for="restaurant" hidden aria-hidden="true">
                                 <div class="field"><label for="restDate">Date</label><input id="restDate" name="date" type="date"></div>
                                 <div class="field"><label for="restTime">Time</label><input id="restTime" name="time" type="time"></div>
                                 <div class="field"><label for="restGuests">Guests</label><input id="restGuests" name="guests" type="number" min="1" value="2"></div>
@@ -1952,7 +1983,7 @@
                             </div>
 
                             <!-- Vehicle Rental Fields -->
-                            <div id="vehicleRentalFields" class="search-dynamic-fields" data-fields-for="vehicle_rental" hidden aria-hidden="true">
+                            <div id="vehicleRentalFields" class="search-dynamic-fields" role="tabpanel" aria-labelledby="searchTab-vehicle-rental" data-fields-for="vehicle_rental" hidden aria-hidden="true">
                                 <div class="field"><label for="rentalPickup">Pickup Date</label><input id="rentalPickup" name="pickup_date" type="date"></div>
                                 <div class="field"><label for="rentalReturn">Return Date</label><input id="rentalReturn" name="return_date" type="date"></div>
                                 <div class="field"><label for="rentalVehicleType">Vehicle Type</label><select id="rentalVehicleType" name="vehicle_type"><option value="">All Types</option><option value="car">Car</option><option value="suv">SUV</option><option value="van">Van</option><option value="bike">Bike</option></select></div>
@@ -2276,7 +2307,10 @@
                 // Update active tab styling
                 categoryTabs.forEach(function (tab) {
                     const tabCategory = normalizeCategoryKey(tab.getAttribute('data-home-category-tab') || '');
-                    tab.classList.toggle('is-active', tabCategory === normalizedCategory);
+                    const isActive = tabCategory === normalizedCategory;
+                    tab.classList.toggle('is-active', isActive);
+                    tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                    tab.setAttribute('tabindex', isActive ? '0' : '-1');
                 });
             }
 

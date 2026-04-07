@@ -779,6 +779,17 @@ if (!function_exists('canModeratePortalFinance')) {
     }
 }
 
+if (!function_exists('canModerateListings')) {
+    function canModerateListings(): bool
+    {
+        if (!session('portal_admin_authenticated', false)) {
+            return false;
+        }
+
+        return in_array(currentPortalAdminRole(), ['ADMIN_SUPER', 'ADMIN', 'ADMIN_CARE'], true);
+    }
+}
+
 if (!function_exists('portalFinancePolicySettingKey')) {
     function portalFinancePolicySettingKey(): string
     {
@@ -2189,6 +2200,14 @@ Route::post('/booking/reserve', function (Request $request) {
         abort(404);
     }
 
+    // Listing-level publish gate: only approved listings can accept bookings.
+    if (Schema::hasColumn('vendor_properties', 'listing_moderation_status')) {
+        $listingModerationStatus = strtolower(trim((string) ($propertyRow->listing_moderation_status ?? 'draft')));
+        if ($listingModerationStatus !== 'approved') {
+            return back()->withErrors(['booking' => 'This listing is not yet available for bookings. It is currently under review or pending approval.']);
+        }
+    }
+
     $checkin = Carbon::parse((string) $payload['checkin']);
     $checkout = Carbon::parse((string) $payload['checkout']);
     $nights = max(1, $checkin->diffInDays($checkout));
@@ -2743,12 +2762,21 @@ Route::post('/booking/reserve-category', function (Request $request) {
         abort(404);
     }
 
+    // Listing-level publish gate: only approved listings can accept bookings.
+    if (Schema::hasColumn('vendor_properties', 'listing_moderation_status')) {
+        $listingModerationStatus = strtolower(trim((string) ($propertyRow->listing_moderation_status ?? 'draft')));
+        if ($listingModerationStatus !== 'approved') {
+            return back()->withErrors(['booking' => 'This listing is not yet available for bookings. It is currently under review or pending approval.']);
+        }
+    }
+
     $listingDetails = json_decode((string) ($propertyRow->listing_details ?? ''), true);
     if (!is_array($listingDetails)) {
         $listingDetails = [];
     }
 
     $serviceStart = Carbon::parse((string) $payload['service_start_date'])->startOfDay();
+
     $serviceEndInput = trim((string) ($payload['service_end_date'] ?? ''));
     $serviceEnd = $serviceEndInput !== ''
         ? Carbon::parse($serviceEndInput)->startOfDay()
@@ -3552,12 +3580,25 @@ Route::get('/users', function (Request $request) {
         return redirect('/portal/admin/login');
     }
 
+    $portalUserSelectColumns = ['id', 'name', 'username', 'email', 'portal_role', 'portal_enabled', 'portal_vendor_id'];
+    foreach ([
+        'vendor_verification_status',
+        'vendor_verification_notes',
+        'vendor_approved_service_categories',
+        'vendor_contact_verified_at',
+        'vendor_verified_at',
+    ] as $optionalColumn) {
+        if (Schema::hasColumn('users', $optionalColumn)) {
+            $portalUserSelectColumns[] = $optionalColumn;
+        }
+    }
+
     $query = strtolower(trim((string) $request->query('q', '')));
     $portalUsers = User::query()
         ->whereIn('portal_role', ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE', 'ADMIN_FINACE', 'VENDOR'])
         ->orderBy('portal_role')
         ->orderBy('username')
-        ->get(['id', 'name', 'username', 'email', 'portal_role', 'portal_enabled', 'portal_vendor_id']);
+        ->get($portalUserSelectColumns);
 
     if ($query !== '') {
         $portalUsers = $portalUsers->filter(function (User $managedUser) use ($query) {
@@ -3622,7 +3663,7 @@ Route::get('/users', function (Request $request) {
 
 use Illuminate\Support\Facades\Auth;
 
-Route::get('/admin', function () {
+Route::get('/admin', function (Request $request) {
     $portal = 'admin';
     $config = portalConfig($portal);
     if (!session()->get($config['session_key'], false)) {
@@ -3638,11 +3679,25 @@ Route::get('/admin', function () {
     $canApproveVendorDeleteRequest = canApproveVendorDeleteRequest();
     $canRequestVendorDeleteApproval = canRequestVendorDeleteApproval();
     $canModerateFinance = canModeratePortalFinance();
+    $canModerateListings = canModerateListings();
+    $portalUserSelectColumns = ['id', 'name', 'username', 'email', 'portal_role', 'portal_enabled', 'portal_vendor_id'];
+    foreach ([
+        'vendor_verification_status',
+        'vendor_verification_notes',
+        'vendor_approved_service_categories',
+        'vendor_contact_verified_at',
+        'vendor_verified_at',
+    ] as $optionalColumn) {
+        if (Schema::hasColumn('users', $optionalColumn)) {
+            $portalUserSelectColumns[] = $optionalColumn;
+        }
+    }
+
     $portalUsers = User::query()
         ->whereIn('portal_role', ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE', 'ADMIN_FINACE', 'VENDOR'])
         ->orderBy('portal_role')
         ->orderBy('username')
-        ->get(['id', 'name', 'username', 'email', 'portal_role', 'portal_enabled', 'portal_vendor_id']);
+        ->get($portalUserSelectColumns);
 
     $adminPortalUsers = $portalUsers
         ->filter(function (User $managedUser) {
@@ -3794,6 +3849,37 @@ Route::get('/admin', function () {
     }
 
     $currentRolePermissions = $rolePermissions[$currentPortalRole] ?? null;
+
+    $adminPageAliases = [
+        'overview' => 'overview',
+        'permissions' => 'permissions',
+        'finance' => 'finance',
+        'media' => 'media',
+        'catalog' => 'catalog',
+        'moderation' => 'moderation',
+        'listings' => 'listings',
+        'audit' => 'audit',
+        'tools' => 'tools',
+    ];
+
+    $requestedPage = strtolower(trim((string) $request->query('page', 'overview')));
+    $adminPage = $adminPageAliases[$requestedPage] ?? 'overview';
+
+    $adminAllowedPages = ['overview', 'permissions', 'audit', 'tools', 'moderation'];
+    if ($canModerateFinance) {
+        $adminAllowedPages[] = 'finance';
+    }
+    if ($canManageVendorUsers) {
+        $adminAllowedPages[] = 'media';
+        $adminAllowedPages[] = 'catalog';
+    }
+    if ($canModerateListings) {
+        $adminAllowedPages[] = 'listings';
+    }
+
+    if (!in_array($adminPage, $adminAllowedPages, true)) {
+        $adminPage = in_array('overview', $adminAllowedPages, true) ? 'overview' : (string) ($adminAllowedPages[0] ?? 'overview');
+    }
 
     $dashboardStats = [
         'total_users' => $portalUsers->count(),
@@ -4039,6 +4125,56 @@ Route::get('/admin', function () {
         $alerts->push('Finance moderation tables are missing. Run migrations to enable frontend commission controls.');
     }
 
+    // Listing moderation data (pending_review listings for admin panel)
+    $pendingModerationListings = collect();
+    $listingModerationHistory = collect();
+    if (Schema::hasTable('vendor_properties') && Schema::hasColumn('vendor_properties', 'listing_moderation_status')) {
+        $pendingModerationListings = DB::table('vendor_properties as vp')
+            ->leftJoin('users as vu', 'vu.id', '=', 'vp.vendor_user_id')
+            ->leftJoin('users as approver', 'approver.id', '=', 'vp.listing_approved_by_user_id')
+            ->where('vp.listing_moderation_status', 'pending_review')
+            ->orderBy('vp.listing_submitted_for_review_at')
+            ->limit(100)
+            ->get([
+                'vp.id',
+                'vp.vendor_user_id',
+                'vp.listing_name',
+                'vp.listing_category',
+                'vp.listing_moderation_status',
+                'vp.listing_admin_notes',
+                'vp.listing_submitted_for_review_at',
+                'vp.created_at',
+                'vu.name as vendor_name',
+                'vu.email as vendor_email',
+                'vu.portal_vendor_id',
+            ]);
+
+        $listingModerationHistory = DB::table('vendor_properties as vp')
+            ->leftJoin('users as vu', 'vu.id', '=', 'vp.vendor_user_id')
+            ->leftJoin('users as approver', 'approver.id', '=', 'vp.listing_approved_by_user_id')
+            ->whereIn('vp.listing_moderation_status', ['approved', 'rejected', 'suspended'])
+            ->orderByDesc('vp.listing_approved_at')
+            ->limit(80)
+            ->get([
+                'vp.id',
+                'vp.vendor_user_id',
+                'vp.listing_name',
+                'vp.listing_category',
+                'vp.listing_moderation_status',
+                'vp.listing_admin_notes',
+                'vp.listing_approved_at',
+                'vu.name as vendor_name',
+                'vu.email as vendor_email',
+                'vu.portal_vendor_id',
+                'approver.name as approved_by_name',
+                'approver.portal_role as approved_by_role',
+            ]);
+    }
+
+    if ($pendingModerationListings->isNotEmpty()) {
+        $alerts->push('Listings pending moderation approval: ' . $pendingModerationListings->count());
+    }
+
     return view('admin-portal', [
         'apiBase' => workationApiBase(),
         'portalUser' => session('portal_admin_user', $config['name']),
@@ -4076,8 +4212,32 @@ Route::get('/admin', function () {
         'homeHeroAdminImageUrl' => $homeHeroAdminImageUrl,
         'catalogHeroAdminImages' => $catalogHeroAdminImages,
         'catalogHeroAdminCategories' => $catalogHeroAdminCategories,
+        'vendorCategoryMap' => vendorPortalCategoryMap(),
+        'canModerateListings' => $canModerateListings,
+        'pendingModerationListings' => $pendingModerationListings,
+        'listingModerationHistory' => $listingModerationHistory,
+        'adminPage' => $adminPage,
+        'adminAllowedPages' => $adminAllowedPages,
     ]);
 });
+
+Route::get('/admin/{page}', function (Request $request, string $page) {
+    $normalizedPage = strtolower(trim($page));
+
+    return redirect()->to('/admin?page=' . urlencode($normalizedPage));
+})->where('page', 'overview|permissions|finance|media|catalog|moderation|listings|audit|tools');
+
+Route::get('/portal/admin', function (Request $request) {
+    $page = strtolower(trim((string) $request->query('page', 'overview')));
+
+    return redirect()->to('/admin?page=' . urlencode($page));
+});
+
+Route::get('/portal/admin/{page}', function (string $page) {
+    $normalizedPage = strtolower(trim($page));
+
+    return redirect()->to('/admin?page=' . urlencode($normalizedPage));
+})->where('page', 'overview|permissions|finance|media|catalog|moderation|listings|audit|tools');
 
 Route::post('/portal/admin/finance/commission/update', function (Request $request) {
     if (!canModeratePortalFinance()) {
@@ -4360,14 +4520,27 @@ Route::post('/portal/admin/media-hero/update', function (Request $request) {
 
     $validationRules = [
         'home_hero_image_url' => ['nullable', 'string', 'max:2048'],
+        'home_hero_image_file' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        'home_hero_image_clear' => ['nullable', 'boolean'],
     ];
     foreach (array_keys($catalogHeroAdminCategories) as $categoryKey) {
         $fieldName = 'catalog_hero_image_' . str_replace('-', '_', $categoryKey);
         $validationRules[$fieldName] = ['nullable', 'string', 'max:2048'];
+        $validationRules[$fieldName . '_file'] = ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'];
+        $validationRules[$fieldName . '_clear'] = ['nullable', 'boolean'];
     }
 
     $validated = $request->validate($validationRules);
     $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+
+    $existingSettings = DB::table('portal_finance_settings')
+        ->where(function ($query) use ($catalogHeroAdminCategories) {
+            $query->where('setting_key', 'home_hero_image_url');
+            foreach (array_keys($catalogHeroAdminCategories) as $categoryKey) {
+                $query->orWhere('setting_key', 'catalog_hero_image_' . str_replace('-', '_', $categoryKey));
+            }
+        })
+        ->pluck('value_string', 'setting_key');
 
     $persistSetting = static function (string $settingKey, ?string $rawValue, ?int $updatedByUserId): void {
         $value = trim((string) ($rawValue ?? ''));
@@ -4388,10 +4561,48 @@ Route::post('/portal/admin/media-hero/update', function (Request $request) {
         );
     };
 
-    $persistSetting('home_hero_image_url', (string) ($validated['home_hero_image_url'] ?? ''), $actorUserId);
+    $resolveMediaSetting = function (string $settingKey, string $slot, string $urlField, string $fileField, string $clearField) use ($request, $validated, $existingSettings, $persistSetting, $actorUserId): void {
+        $currentValue = trim((string) ($existingSettings->get($settingKey) ?? ''));
+        $nextValue = $currentValue;
+        $shouldClear = $request->boolean($clearField);
+        $uploadedFile = $request->file($fileField);
+        $submittedUrl = trim((string) ($validated[$urlField] ?? $currentValue));
+
+        if ($shouldClear) {
+            portalDeleteManagedPublicAsset($currentValue);
+            $nextValue = '';
+        } elseif ($uploadedFile) {
+            $storedPath = portalStoreAdminHeroImage($uploadedFile, $slot);
+            if ($storedPath === null) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    $fileField => 'Unable to process and store the uploaded image. Use a valid JPG, PNG, or WebP file.',
+                ]);
+            }
+
+            if ($currentValue !== '' && $currentValue !== $storedPath) {
+                portalDeleteManagedPublicAsset($currentValue);
+            }
+
+            $nextValue = $storedPath;
+        } elseif ($submittedUrl !== $currentValue) {
+            if ($submittedUrl !== '') {
+                if ($currentValue !== '' && $currentValue !== $submittedUrl) {
+                    portalDeleteManagedPublicAsset($currentValue);
+                }
+                $nextValue = $submittedUrl;
+            } else {
+                portalDeleteManagedPublicAsset($currentValue);
+                $nextValue = '';
+            }
+        }
+
+        $persistSetting($settingKey, $nextValue, $actorUserId);
+    };
+
+    $resolveMediaSetting('home_hero_image_url', 'home', 'home_hero_image_url', 'home_hero_image_file', 'home_hero_image_clear');
     foreach (array_keys($catalogHeroAdminCategories) as $categoryKey) {
         $fieldName = 'catalog_hero_image_' . str_replace('-', '_', $categoryKey);
-        $persistSetting($fieldName, (string) ($validated[$fieldName] ?? ''), $actorUserId);
+        $resolveMediaSetting($fieldName, $categoryKey, $fieldName, $fieldName . '_file', $fieldName . '_clear');
     }
 
     portalAdminAuditLog('media_hero_settings.updated', [
@@ -6610,6 +6821,11 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
         'portal_role' => ['required', 'in:ADMIN,ADMIN_SUPER,ADMIN_CARE,ADMIN_FINANCE,ADMIN_FINACE,VENDOR'],
         'portal_enabled' => ['required', 'in:1,0'],
         'portal_vendor_id' => ['nullable', 'string', 'max:255'],
+        'vendor_verification_status' => ['nullable', 'in:pending,under_review,approved,rejected,suspended'],
+        'vendor_verification_notes' => ['nullable', 'string', 'max:2000'],
+        'vendor_approved_service_categories' => ['nullable', 'array'],
+        'vendor_approved_service_categories.*' => ['required', 'string', 'max:80'],
+        'vendor_contact_verified' => ['nullable', 'in:1,0'],
     ]);
 
     $isSelf = (int) session('portal_admin_user_id') === (int) $user->id;
@@ -6648,11 +6864,66 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
         'portal_role' => (string) $user->portal_role,
         'portal_enabled' => (bool) $user->portal_enabled,
         'portal_vendor_id' => $user->portal_vendor_id,
+        'vendor_verification_status' => Schema::hasColumn('users', 'vendor_verification_status') ? (string) ($user->vendor_verification_status ?? 'pending') : null,
+        'vendor_approved_service_categories' => Schema::hasColumn('users', 'vendor_approved_service_categories') ? (string) ($user->vendor_approved_service_categories ?? '[]') : null,
     ];
 
     $user->portal_role = $nextRole;
     $user->portal_enabled = $nextEnabled;
     $user->portal_vendor_id = ($nextRole === 'VENDOR' && $vendorId !== '') ? $vendorId : null;
+
+    if ($nextRole === 'VENDOR') {
+        $requestedApprovedCategories = collect($validated['vendor_approved_service_categories'] ?? [])
+            ->map(static fn ($item) => strtolower(trim((string) $item)))
+            ->filter(static fn ($item) => $item !== '')
+            ->values()
+            ->all();
+
+        $allowedCategories = array_keys(vendorPortalCategoryMap());
+        $approvedCategories = array_values(array_unique(array_intersect($allowedCategories, $requestedApprovedCategories)));
+        $verificationStatus = strtolower(trim((string) ($validated['vendor_verification_status'] ?? 'pending')));
+
+        if ($verificationStatus === 'approved' && $approvedCategories === []) {
+            return back()->withErrors([
+                'vendor_approved_service_categories' => 'At least one approved service category is required when verification status is approved.',
+            ])->withInput();
+        }
+
+        if (Schema::hasColumn('users', 'vendor_verification_status')) {
+            $user->vendor_verification_status = $verificationStatus;
+        }
+        if (Schema::hasColumn('users', 'vendor_verification_notes')) {
+            $user->vendor_verification_notes = trim((string) ($validated['vendor_verification_notes'] ?? ''));
+        }
+        if (Schema::hasColumn('users', 'vendor_approved_service_categories')) {
+            $user->vendor_approved_service_categories = json_encode($approvedCategories);
+        }
+        if (Schema::hasColumn('users', 'vendor_verified_at')) {
+            if ($verificationStatus === 'approved') {
+                $user->vendor_verified_at = now();
+            } elseif (in_array($verificationStatus, ['rejected', 'pending', 'under_review', 'suspended'], true)) {
+                $user->vendor_verified_at = null;
+            }
+        }
+        if (Schema::hasColumn('users', 'vendor_verified_by_user_id')) {
+            if ($verificationStatus === 'approved') {
+                $user->vendor_verified_by_user_id = (int) session('portal_admin_user_id', 0) ?: null;
+            } elseif (in_array($verificationStatus, ['rejected', 'pending', 'under_review', 'suspended'], true)) {
+                $user->vendor_verified_by_user_id = null;
+            }
+        }
+        if (Schema::hasColumn('users', 'vendor_contact_verified_at')) {
+            $contactVerified = (string) ($validated['vendor_contact_verified'] ?? '0') === '1';
+            $user->vendor_contact_verified_at = $contactVerified ? now() : null;
+        }
+        if (Schema::hasColumn('users', 'vendor_contact_verified_by_user_id')) {
+            $contactVerified = (string) ($validated['vendor_contact_verified'] ?? '0') === '1';
+            $user->vendor_contact_verified_by_user_id = $contactVerified
+                ? ((int) session('portal_admin_user_id', 0) ?: null)
+                : null;
+        }
+    }
+
     $user->save();
 
     portalAdminAuditLog('user.updated', [
@@ -6664,6 +6935,8 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
             'portal_role' => (string) $user->portal_role,
             'portal_enabled' => (bool) $user->portal_enabled,
             'portal_vendor_id' => $user->portal_vendor_id,
+            'vendor_verification_status' => Schema::hasColumn('users', 'vendor_verification_status') ? (string) ($user->vendor_verification_status ?? 'pending') : null,
+            'vendor_approved_service_categories' => Schema::hasColumn('users', 'vendor_approved_service_categories') ? (string) ($user->vendor_approved_service_categories ?? '[]') : null,
         ],
     ]);
 
@@ -7131,6 +7404,91 @@ Route::post('/portal/admin/vendor-registrations/{registration}/reject', function
 });
 
 // Legacy Laravel business routes are decommissioned in runtime.
+Route::post('/portal/admin/listings/{listing}/approve', function (Request $request, int $listing) {
+    if (!canModerateListings()) {
+        abort(403);
+    }
+
+    if (!Schema::hasTable('vendor_properties') || !Schema::hasColumn('vendor_properties', 'listing_moderation_status')) {
+        return back()->withErrors(['listing' => 'Listing moderation columns are missing. Run migrations first.']);
+    }
+
+    $listingRow = DB::table('vendor_properties')->where('id', $listing)->first();
+    if (!$listingRow) {
+        return back()->withErrors(['listing' => 'Listing not found.']);
+    }
+
+    if ((string) ($listingRow->listing_moderation_status ?? '') !== 'pending_review') {
+        return back()->withErrors(['listing' => 'Only listings in pending_review status can be approved.']);
+    }
+
+    $adminNotes = trim((string) ($request->input('admin_notes') ?? ''));
+    $adminUserId = (int) session('portal_admin_user_id');
+
+    DB::table('vendor_properties')
+        ->where('id', $listing)
+        ->update([
+            'listing_moderation_status' => 'approved',
+            'listing_admin_notes' => $adminNotes ?: null,
+            'listing_approved_at' => now(),
+            'listing_approved_by_user_id' => $adminUserId,
+            'updated_at' => now(),
+        ]);
+
+    portalAdminAuditLog('listing.approved', [
+        'target_identifier' => (string) ($listingRow->listing_name ?? ('listing_id:' . $listing)),
+        'target_role' => 'VENDOR',
+        'listing_id' => $listing,
+        'vendor_id' => (int) ($listingRow->vendor_user_id ?? 0),
+    ]);
+
+    return back()->with('portal_notice', 'Listing approved and is now open for bookings.');
+});
+
+Route::post('/portal/admin/listings/{listing}/reject', function (Request $request, int $listing) {
+    if (!canModerateListings()) {
+        abort(403);
+    }
+
+    if (!Schema::hasTable('vendor_properties') || !Schema::hasColumn('vendor_properties', 'listing_moderation_status')) {
+        return back()->withErrors(['listing' => 'Listing moderation columns are missing. Run migrations first.']);
+    }
+
+    $validated = $request->validate([
+        'admin_notes' => ['required', 'string', 'max:2000'],
+    ]);
+
+    $listingRow = DB::table('vendor_properties')->where('id', $listing)->first();
+    if (!$listingRow) {
+        return back()->withErrors(['listing' => 'Listing not found.']);
+    }
+
+    if (!in_array((string) ($listingRow->listing_moderation_status ?? ''), ['pending_review', 'approved'], true)) {
+        return back()->withErrors(['listing' => 'Only pending_review or approved listings can be rejected.']);
+    }
+
+    $adminUserId = (int) session('portal_admin_user_id');
+
+    DB::table('vendor_properties')
+        ->where('id', $listing)
+        ->update([
+            'listing_moderation_status' => 'rejected',
+            'listing_admin_notes' => trim((string) $validated['admin_notes']),
+            'listing_approved_at' => now(),
+            'listing_approved_by_user_id' => $adminUserId,
+            'updated_at' => now(),
+        ]);
+
+    portalAdminAuditLog('listing.rejected', [
+        'target_identifier' => (string) ($listingRow->listing_name ?? ('listing_id:' . $listing)),
+        'target_role' => 'VENDOR',
+        'listing_id' => $listing,
+        'vendor_id' => (int) ($listingRow->vendor_user_id ?? 0),
+    ]);
+
+    return back()->with('portal_notice', 'Listing rejected. The vendor will be notified to make corrections.');
+});
+
 // Keep these endpoints available only in testing for legacy feature-test coverage.
 if (app()->environment('testing')) {
     Route::prefix('api')->group(function () {

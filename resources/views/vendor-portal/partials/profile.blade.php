@@ -7,6 +7,29 @@
             </div>
             <form method="POST" action="/portal/vendor/profile/update">
                 @csrf
+                @php
+                    $verificationStatus = strtolower(trim((string) ($vendorProfile['verification_status'] ?? 'pending')));
+                    $verificationLabelMap = [
+                        'pending' => 'Pending verification',
+                        'under_review' => 'Under admin review',
+                        'approved' => 'Approved for go-live',
+                        'rejected' => 'Needs correction',
+                        'suspended' => 'Suspended',
+                    ];
+                    $verificationLabel = $verificationLabelMap[$verificationStatus] ?? 'Pending verification';
+                @endphp
+                <p class="profile-help" style="margin-top:0;">
+                    Verification status: <strong>{{ $verificationLabel }}</strong>
+                    @if (trim((string) ($vendorProfile['verification_notes'] ?? '')) !== '')
+                        <br>
+                        Admin notes: {{ (string) ($vendorProfile['verification_notes'] ?? '') }}
+                    @endif
+                    @if (!empty($vendorProfile['approved_categories'] ?? []))
+                        <br>
+                        Approved categories:
+                        {{ collect($vendorProfile['approved_categories'])->map(fn ($key) => (string) ($vendorCategoryMap[$key] ?? $key))->join(', ') }}
+                    @endif
+                </p>
                 <div class="profile-grid">
                     <div class="profile-field">
                         <label for="display_name">Display Name</label>
@@ -30,6 +53,90 @@
                             value="{{ old('contact_phone', $vendorProfile['phone'] ?? '') }}"
                             maxlength="40"
                             placeholder="+960..."
+                            required
+                        >
+                    </div>
+                    <div class="profile-field">
+                        <label for="company_name">Registered Company / Service Name</label>
+                        <input
+                            id="company_name"
+                            name="company_name"
+                            class="profile-input"
+                            type="text"
+                            value="{{ old('company_name', $vendorProfile['company_name'] ?? '') }}"
+                            maxlength="190"
+                            required
+                        >
+                    </div>
+                    <div class="profile-field">
+                        <label for="business_registration_number">Business Registration Number</label>
+                        <input
+                            id="business_registration_number"
+                            name="business_registration_number"
+                            class="profile-input"
+                            type="text"
+                            value="{{ old('business_registration_number', $vendorProfile['business_registration_number'] ?? '') }}"
+                            maxlength="120"
+                            required
+                        >
+                    </div>
+                    <div class="profile-field">
+                        <label for="business_license_number">Service / Trade License Number</label>
+                        <input
+                            id="business_license_number"
+                            name="business_license_number"
+                            class="profile-input"
+                            type="text"
+                            value="{{ old('business_license_number', $vendorProfile['business_license_number'] ?? '') }}"
+                            maxlength="120"
+                        >
+                    </div>
+                    <div class="profile-field">
+                        <label for="contact_person_name">Authorized Contact Person Name</label>
+                        <input
+                            id="contact_person_name"
+                            name="contact_person_name"
+                            class="profile-input"
+                            type="text"
+                            value="{{ old('contact_person_name', $vendorProfile['contact_person_name'] ?? '') }}"
+                            maxlength="190"
+                            required
+                        >
+                    </div>
+                    <div class="profile-field">
+                        <label for="contact_person_phone">Authorized Contact Person Phone</label>
+                        <input
+                            id="contact_person_phone"
+                            name="contact_person_phone"
+                            class="profile-input"
+                            type="text"
+                            value="{{ old('contact_person_phone', $vendorProfile['contact_person_phone'] ?? '') }}"
+                            maxlength="60"
+                            required
+                        >
+                    </div>
+                    <div class="profile-field">
+                        <label for="contact_person_email">Authorized Contact Person Email</label>
+                        <input
+                            id="contact_person_email"
+                            name="contact_person_email"
+                            class="profile-input"
+                            type="email"
+                            value="{{ old('contact_person_email', $vendorProfile['contact_person_email'] ?? '') }}"
+                            maxlength="190"
+                            required
+                        >
+                    </div>
+                    <div class="profile-field">
+                        <label for="contact_person_id_number">Authorized Contact Person ID / Passport</label>
+                        <input
+                            id="contact_person_id_number"
+                            name="contact_person_id_number"
+                            class="profile-input"
+                            type="text"
+                            value="{{ old('contact_person_id_number', $vendorProfile['contact_person_id_number'] ?? '') }}"
+                            maxlength="120"
+                            required
                         >
                     </div>
                     <div class="profile-field">
@@ -53,8 +160,8 @@
                         >
                     </div>
                 </div>
-                <p class="profile-help">Update your display name and primary phone number used by the vendor team.</p>
-                <button class="btn btn-primary" type="submit">Save Profile Settings</button>
+                <p class="profile-help">These fields are mandatory for compliance review. Listings and operations are enabled only after admin verification and category approval.</p>
+                <button class="btn btn-primary" type="submit">Save & Submit for Verification</button>
             </form>
 
             <div id="vendorCategoryWizard" class="ops-section" aria-label="Vendor category setup wizard">

@@ -55,8 +55,23 @@ Target: complete launch-critical portal work by March 31, 2026.
 - [x] Enforce accommodation room-level operations (property -> room linking, room-only availability updates, room-only accommodation reservations in operations view)
 - [x] Split heavy vendor portal Blade into partials (sidebar, profile, billing settings, category operations, pricing, billing collection)
 - [x] Add route-per-page vendor portal aliases (`/vendor/overview`, `/vendor/listings`, `/vendor/operations`, `/vendor/pricing`, `/vendor/billing`) with shared layout/nav wrapper
-- [ ] Add category-specific advanced listing forms (transport schedule fields, restaurant table windows, excursion slot constraints, rental license rules)
-- [ ] Add per-category publish readiness checks and mandatory image/field validation before listing publish
+- [x] Add category-specific advanced listing forms (transport schedule fields, restaurant table windows, excursion slot constraints, rental license rules)
+- [x] Add per-category publish readiness checks and mandatory image/field validation before listing publish
+- [x] Add listing refinement QA scenario matrix for accommodation/transport/excursion/water sports (`docs/vendor-listings-refinement-scenario-matrix-2026-04-07.md`) (2026-04-07)
+- [x] Add listing field contract mapping (UI field -> request key -> persisted details -> publish checklist hook) (`docs/vendor-listings-field-contract.md`) (2026-04-07)
+- [x] Capture listing refinement implementation evidence and conditional sign-off record (`docs/evidence/vendor-listings-refinement-signoff-2026-04-07.md`) (2026-04-07)
+
+#### Vendor Portal Multi-Page Migration Task List (Execution Tracker)
+- [x] Step 1: Introduce URL-based vendor section endpoints (`/vendor/profile`, `/vendor/listings`, `/vendor/reservations`, `/vendor/availability`, `/vendor/pricing`, `/vendor/billing`, `/vendor/promotions`, `/vendor/reports`) and map each to a section context.
+- [x] Step 2: Switch vendor sidebar links from in-page anchors to route-driven section URLs.
+- [x] Step 3: Support direct section URLs by honoring `?page=` as default panel state on first load.
+- [x] Step 4: Extract listings management block into standalone partial (`resources/views/vendor-portal/partials/listings-console.blade.php`).
+- [x] Step 5: Render reservations + availability section only for reservations routes (`?page=reservations|operations|availability`).
+- [x] Step 6: Render pricing section only for pricing routes (`?page=pricing`).
+- [x] Step 7: Render billing + collections section only for billing routes (`?page=billing`).
+- [x] Step 8: Render profile/account/compliance section only for profile routes (`?page=profile`).
+- [x] Step 9: Add promotions/loyalty dedicated page view and route-level policy checks.
+- [x] Step 10: Add reports dedicated page view with export/download actions.
 
 ### Landing Page
 - [ ] Improve CTA hierarchy and conversion-focused content blocks

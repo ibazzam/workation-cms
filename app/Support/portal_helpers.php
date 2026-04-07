@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 if (!function_exists('workationApiBase')) {
     function workationApiBase(): string
@@ -41,6 +42,24 @@ if (!function_exists('portalRoutePath')) {
     function portalRoutePath(string $portal): string
     {
         return $portal === 'admin' ? '/admin' : '/vendor';
+    }
+}
+
+if (!function_exists('vendorPortalCategoryMap')) {
+    function vendorPortalCategoryMap(): array
+    {
+        return [
+            'accommodation' => 'Accommodation',
+            'marine_transport' => 'Marine Transport',
+            'land_transport' => 'Land Transport',
+            'excursion' => 'Excursions',
+            'remote_workspace' => 'Remote Workspaces',
+            'resort_day_visit' => 'Resort Day Visits',
+            'restaurant' => 'Restaurants',
+            'vehicle_rental' => 'Vehicle Rentals',
+            'water_sports' => 'Water Sports',
+            'conference_room' => 'Conference Rooms',
+        ];
     }
 }
 
@@ -591,5 +610,370 @@ if (!function_exists('portalAdminAuditLog')) {
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+}
+
+if (!function_exists('portalPreferredMediaOutputFormat')) {
+    function portalPreferredMediaOutputFormat(): array
+    {
+        if (function_exists('imagewebp')) {
+            return [
+                'extension' => 'webp',
+                'mime' => 'image/webp',
+            ];
+        }
+
+        return [
+            'extension' => 'jpg',
+            'mime' => 'image/jpeg',
+        ];
+    }
+}
+
+if (!function_exists('portalCreateImageResourceFromFile')) {
+    function portalCreateImageResourceFromFile(string $filePath, string $mimeType)
+    {
+        if ($filePath === '' || !is_file($filePath)) {
+            return null;
+        }
+
+        $mime = strtolower(trim($mimeType));
+        if ($mime === 'image/jpeg' || $mime === 'image/jpg') {
+            return @imagecreatefromjpeg($filePath) ?: null;
+        }
+        if ($mime === 'image/png') {
+            return @imagecreatefrompng($filePath) ?: null;
+        }
+        if ($mime === 'image/webp' && function_exists('imagecreatefromwebp')) {
+            return @imagecreatefromwebp($filePath) ?: null;
+        }
+
+        return null;
+    }
+}
+
+if (!function_exists('portalResizeImageToFill')) {
+    function portalResizeImageToFill($sourceImage, int $sourceWidth, int $sourceHeight, int $targetWidth, int $targetHeight)
+    {
+        if (!is_resource($sourceImage) && !($sourceImage instanceof \GdImage)) {
+            return null;
+        }
+        if ($sourceWidth <= 0 || $sourceHeight <= 0 || $targetWidth <= 0 || $targetHeight <= 0) {
+            return null;
+        }
+
+        $sourceAspect = $sourceWidth / $sourceHeight;
+        $targetAspect = $targetWidth / $targetHeight;
+
+        $cropWidth = $sourceWidth;
+        $cropHeight = $sourceHeight;
+        $sourceX = 0;
+        $sourceY = 0;
+
+        if ($sourceAspect > $targetAspect) {
+            $cropWidth = (int) round($sourceHeight * $targetAspect);
+            $sourceX = (int) floor(($sourceWidth - $cropWidth) / 2);
+        } elseif ($sourceAspect < $targetAspect) {
+            $cropHeight = (int) round($sourceWidth / $targetAspect);
+            $sourceY = (int) floor(($sourceHeight - $cropHeight) / 2);
+        }
+
+        $destinationImage = imagecreatetruecolor($targetWidth, $targetHeight);
+        if ($destinationImage === false) {
+            return null;
+        }
+
+        imagealphablending($destinationImage, false);
+        imagesavealpha($destinationImage, true);
+        $transparent = imagecolorallocatealpha($destinationImage, 0, 0, 0, 127);
+        imagefill($destinationImage, 0, 0, $transparent);
+
+        imagecopyresampled(
+            $destinationImage,
+            $sourceImage,
+            0,
+            0,
+            $sourceX,
+            $sourceY,
+            $targetWidth,
+            $targetHeight,
+            $cropWidth,
+            $cropHeight
+        );
+
+        return $destinationImage;
+    }
+}
+
+if (!function_exists('portalWriteMediaVariant')) {
+    function portalWriteMediaVariant($image, string $relativePath, string $extension): bool
+    {
+        if ((!is_resource($image) && !($image instanceof \GdImage)) || $relativePath === '') {
+            return false;
+        }
+
+        $ext = strtolower(trim($extension));
+        ob_start();
+        $encoded = false;
+        if ($ext === 'webp' && function_exists('imagewebp')) {
+            $encoded = (bool) @imagewebp($image, null, 84);
+        } else {
+            $encoded = (bool) @imagejpeg($image, null, 86);
+        }
+
+        $binary = ob_get_clean();
+        if (!$encoded || !is_string($binary) || $binary === '') {
+            return false;
+        }
+
+        return Storage::disk('public')->put($relativePath, $binary);
+    }
+}
+
+if (!function_exists('portalDeleteManagedPublicAsset')) {
+    function portalDeleteManagedPublicAsset(?string $storedValue, string $managedPrefix = 'portal-admin/hero-images/'): void
+    {
+        $value = trim((string) ($storedValue ?? ''));
+        if ($value === '') {
+            return;
+        }
+
+        $relativePath = '';
+        if (str_starts_with($value, '/storage/')) {
+            $relativePath = ltrim(substr($value, strlen('/storage/')), '/');
+        } else {
+            $path = (string) parse_url($value, PHP_URL_PATH);
+            if (str_starts_with($path, '/storage/')) {
+                $relativePath = ltrim(substr($path, strlen('/storage/')), '/');
+            } elseif (!str_contains($value, '://')) {
+                $relativePath = ltrim($value, '/');
+            }
+        }
+
+        if ($relativePath === '' || !str_starts_with($relativePath, $managedPrefix)) {
+            return;
+        }
+
+        try {
+            Storage::disk('public')->delete($relativePath);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to delete managed portal media asset.', [
+                'path' => $relativePath,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+}
+
+if (!function_exists('portalStoreAdminHeroImage')) {
+    function portalStoreAdminHeroImage($file, string $slot): ?string
+    {
+        if (!$file || !method_exists($file, 'getPathname')) {
+            return null;
+        }
+
+        $imageSize = @getimagesize((string) $file->getPathname());
+        if (!is_array($imageSize) || count($imageSize) < 2) {
+            return null;
+        }
+
+        $sourceWidth = (int) $imageSize[0];
+        $sourceHeight = (int) $imageSize[1];
+        $sourceImage = portalCreateImageResourceFromFile(
+            (string) $file->getPathname(),
+            (string) ($file->getMimeType() ?? '')
+        );
+
+        if ($sourceImage === null) {
+            return null;
+        }
+
+        $format = portalPreferredMediaOutputFormat();
+        $extension = (string) ($format['extension'] ?? 'jpg');
+        $targetImage = portalResizeImageToFill($sourceImage, $sourceWidth, $sourceHeight, 1600, 900);
+        $relativePath = 'portal-admin/hero-images/' . trim($slot, '/') . '/' . now()->format('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.' . $extension;
+        $written = $targetImage !== null ? portalWriteMediaVariant($targetImage, $relativePath, $extension) : false;
+
+        if (is_resource($sourceImage) || $sourceImage instanceof \GdImage) {
+            imagedestroy($sourceImage);
+        }
+        if (is_resource($targetImage) || $targetImage instanceof \GdImage) {
+            imagedestroy($targetImage);
+        }
+
+        if (!$written) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($relativePath);
+    }
+}
+
+if (!function_exists('portalVendorNormalizeListingCategory')) {
+    function portalVendorNormalizeListingCategory(?string $value): string
+    {
+        $normalized = strtolower(trim((string) ($value ?? '')));
+        $normalized = preg_replace('/[^a-z0-9]+/', '_', $normalized) ?? $normalized;
+        $normalized = trim((string) preg_replace('/_+/', '_', $normalized), '_');
+
+        return match ($normalized) {
+            'marine_transport', 'land_transport' => 'transport',
+            default => $normalized,
+        };
+    }
+}
+
+if (!function_exists('portalVendorListingPublishChecklist')) {
+    function portalVendorListingPublishChecklist($listing, array $details = [], int $mediaCount = 0, int $roomCount = 0): array
+    {
+        $category = portalVendorNormalizeListingCategory((string) (data_get($listing, 'listing_category') ?? ($details['listing_category'] ?? '')));
+        $name = trim((string) data_get($listing, 'name', ''));
+        $description = trim((string) data_get($listing, 'description', ''));
+        $status = strtolower(trim((string) data_get($listing, 'status', 'active')));
+        $location = trim((string) data_get($listing, 'location', ''));
+        $basePrice = (float) data_get($listing, 'base_price', 0);
+        $maxGuests = (int) data_get($listing, 'max_guests', 0);
+        $capacityValue = is_numeric($details['capacity_value'] ?? null) ? (int) $details['capacity_value'] : 0;
+
+        $missing = [];
+
+        if ($name === '') {
+            $missing[] = 'Add a listing name';
+        }
+        if ($description === '') {
+            $missing[] = 'Add a listing description';
+        }
+        if ($status !== 'active') {
+            $missing[] = 'Set listing status to Active';
+        }
+        if ($mediaCount < 1) {
+            $missing[] = 'Upload at least one listing photo';
+        }
+
+        if ($category === 'transport') {
+            $pickup = trim((string) ($details['pickup_location'] ?? ''));
+            $dropoff = trim((string) ($details['dropoff_location'] ?? ''));
+            if ($pickup === '' || $dropoff === '') {
+                $missing[] = 'Complete pickup and dropoff route details';
+            }
+        } elseif ($location === '' && trim((string) ($details['location_city'] ?? '')) === '' && trim((string) ($details['location_state'] ?? '')) === '') {
+            $missing[] = 'Add the listing location';
+        }
+
+        if ($category === 'accommodation') {
+            if ($roomCount < 1) {
+                $missing[] = 'Add at least one room category';
+            }
+            if (trim((string) ($details['meal_plan'] ?? '')) === '') {
+                $missing[] = 'Choose an accommodation meal plan';
+            }
+            if (!is_numeric($details['extra_guest_fee'] ?? null)) {
+                $missing[] = 'Set accommodation extra guest fee policy';
+            }
+            if (!is_numeric($details['child_fee'] ?? null)) {
+                $missing[] = 'Set accommodation child fee policy';
+            }
+            if (trim((string) ($details['child_policy'] ?? '')) === '') {
+                $missing[] = 'Add accommodation child policy';
+            }
+        } else {
+            $effectiveCapacity = max($maxGuests, $capacityValue);
+            if ($effectiveCapacity <= 0) {
+                $missing[] = 'Set guest capacity';
+            }
+        }
+
+        if ($category === 'transport') {
+            $hourlyRate = (float) ($details['hourly_rate'] ?? 0);
+            $dailyRate = (float) ($details['daily_rate'] ?? 0);
+            if ($basePrice <= 0 && $hourlyRate <= 0 && $dailyRate <= 0) {
+                $missing[] = 'Set at least one fare or hire rate';
+            }
+            if (trim((string) ($details['transport_mode'] ?? '')) === '') {
+                $missing[] = 'Select a transport mode';
+            }
+            if (trim((string) ($details['contact_name'] ?? '')) === '' || trim((string) ($details['contact_number'] ?? '')) === '') {
+                $missing[] = 'Add transport contact name and number';
+            }
+            if (!is_numeric($details['trip_duration_minutes'] ?? null) || (int) ($details['trip_duration_minutes'] ?? 0) <= 0) {
+                $missing[] = 'Add trip duration estimate';
+            }
+            if (trim((string) ($details['schedule_start_time'] ?? '')) === '' || trim((string) ($details['schedule_end_time'] ?? '')) === '') {
+                $missing[] = 'Set transport operating schedule start and end times';
+            }
+            if (!is_numeric($details['booking_cutoff_minutes'] ?? null)) {
+                $missing[] = 'Set transport booking cutoff time';
+            }
+            if (trim((string) ($details['boarding_instructions'] ?? '')) === '') {
+                $missing[] = 'Add transport boarding instructions';
+            }
+        } elseif ($category !== 'accommodation' && $basePrice <= 0) {
+            $missing[] = 'Set a base price';
+        }
+
+        if (in_array($category, ['excursion', 'water_sports'], true)) {
+            if (trim((string) ($details['excursion_type'] ?? '')) === '') {
+                $missing[] = 'Choose an excursion type';
+            }
+            if (!is_numeric($details['excursion_duration_minutes'] ?? null) || (int) ($details['excursion_duration_minutes'] ?? 0) <= 0) {
+                $missing[] = 'Add excursion duration';
+            }
+            if (trim((string) ($details['safety_waiver_required'] ?? '')) === '') {
+                $missing[] = 'Set whether safety waiver is required';
+            }
+            if (trim((string) ($details['weather_cancellation_policy'] ?? '')) === '') {
+                $missing[] = 'Add weather cancellation policy';
+            }
+            if (!is_array($details['equipment_included'] ?? null) || count((array) ($details['equipment_included'] ?? [])) < 1) {
+                $missing[] = 'Select at least one included equipment item';
+            }
+        }
+
+        if ($category === 'remote_workspace') {
+            if (trim((string) ($details['workspace_type'] ?? '')) === '') {
+                $missing[] = 'Choose workspace type';
+            }
+            if (!is_numeric($details['internet_speed_mbps'] ?? null) || (float) ($details['internet_speed_mbps'] ?? 0) <= 0) {
+                $missing[] = 'Add internet speed';
+            }
+        }
+
+        if ($category === 'resort_day_visit') {
+            if (trim((string) ($details['day_visit_start_time'] ?? '')) === '' || trim((string) ($details['day_visit_end_time'] ?? '')) === '') {
+                $missing[] = 'Set day-visit start and end time';
+            }
+        }
+
+        if ($category === 'restaurant') {
+            if (trim((string) ($details['cuisine_type'] ?? '')) === '') {
+                $missing[] = 'Add cuisine type';
+            }
+            if (trim((string) ($details['meal_service'] ?? '')) === '') {
+                $missing[] = 'Choose meal service window';
+            }
+        }
+
+        if ($category === 'vehicle_rental') {
+            if (trim((string) ($details['vehicle_type'] ?? '')) === '') {
+                $missing[] = 'Choose vehicle type';
+            }
+            if (trim((string) ($details['transmission_type'] ?? '')) === '') {
+                $missing[] = 'Choose transmission type';
+            }
+            if (trim((string) ($details['fuel_type'] ?? '')) === '') {
+                $missing[] = 'Choose fuel type';
+            }
+        }
+
+        $missing = array_values(array_unique(array_filter($missing, static fn ($item): bool => trim((string) $item) !== '')));
+
+        return [
+            'ready' => $missing === [],
+            'missing' => $missing,
+            'missing_count' => count($missing),
+            'category' => $category,
+            'media_count' => max(0, $mediaCount),
+            'room_count' => max(0, $roomCount),
+        ];
     }
 }

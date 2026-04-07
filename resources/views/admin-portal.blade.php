@@ -962,6 +962,9 @@
 </head>
 <body>
     <main class="page" data-api-base="{{ $apiBase }}">
+        @php
+            $adminPage = strtolower((string) ($adminPage ?? 'overview'));
+        @endphp
         <section class="hero">
             <div class="hero-top">
                 <div>
@@ -971,8 +974,8 @@
                     <div class="hero-links">
                         <a class="hero-link" href="/">Back to Home</a>
                         <a class="hero-link" href="/vendor">Go to Vendor Portal</a>
-                        <a class="hero-link" href="#financeModerationPanel">Open Finance</a>
-                        <a class="hero-link" href="#vendorRegistrationsPanel">Review Vendors</a>
+                        <a class="hero-link" href="/admin/finance">Open Finance</a>
+                        <a class="hero-link" href="/admin/moderation">Review Vendors</a>
                         <a class="hero-link" href="/portal/admin/blog">Manage Blog</a>
                     </div>
                 </div>
@@ -1000,29 +1003,33 @@
             </div>
 
             <p class="nav-group-title">Overview</p>
-            <a class="prominent" href="#dashboardWidgets">Dashboard</a>
-            <a href="#rolePermissionsPanel">Role Permissions</a>
-            <a href="#auditPanel">Audit History</a>
+            <a class="{{ $adminPage === 'overview' ? 'prominent' : '' }}" href="/admin/overview">Dashboard</a>
+            <a class="{{ $adminPage === 'permissions' ? 'prominent' : '' }}" href="/admin/permissions">Role Permissions</a>
+            <a class="{{ $adminPage === 'audit' ? 'prominent' : '' }}" href="/admin/audit">Audit History</a>
 
             <p class="nav-group-title">Finance &amp; Catalog</p>
-            <a href="#financeModerationPanel">Finance Moderation</a>
-            <a href="#heroImageSettingsPanel">Hero Image Settings</a>
-            <a href="#listingOptionCatalogPanel">Listing Options</a>
+            @if ($canModerateFinance)
+            <a class="{{ $adminPage === 'finance' ? 'prominent' : '' }}" href="/admin/finance">Finance Moderation</a>
+            @endif
+            @if ($canManageVendorUsers)
+            <a class="{{ $adminPage === 'media' ? 'prominent' : '' }}" href="/admin/media">Hero Image Settings</a>
+            <a class="{{ $adminPage === 'catalog' ? 'prominent' : '' }}" href="/admin/catalog">Listing Options</a>
+            @endif
 
             <p class="nav-group-title">Moderation &amp; Vendors</p>
-            <a href="#moderationPanel" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Moderation</a>
-            <a href="#vendorRegistrationsPanel" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Vendor Registrations</a>
-            <a href="#vendorRegistrationHistoryPanel" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Vendor Review History</a>
+            <a class="{{ $adminPage === 'moderation' ? 'prominent' : '' }}" href="/admin/moderation" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Moderation</a>
+            @if ($canModerateListings)
+            <a class="{{ $adminPage === 'listings' ? 'prominent' : '' }}" href="/admin/listings">Listing Moderation</a>
+            @endif
 
             <p class="nav-group-title">Tools</p>
             <a href="/portal/admin/blog">Blog Manager</a>
-            <a href="#sessionDebug">Session</a>
-            <a href="#authApiSection">Auth and API</a>
+            <a class="{{ $adminPage === 'tools' ? 'prominent' : '' }}" href="/admin/tools">Session + API</a>
         </nav>
 
         <div class="portal-content">
 
-        <section class="widget-grid" id="dashboardWidgets">
+        <section class="widget-grid" id="dashboardWidgets" style="{{ $adminPage === 'overview' ? '' : 'display:none;' }}">
             <article class="widget-card">
                 <p class="widget-title">Portal Users</p>
                 <p class="widget-value">{{ $dashboardStats['total_users'] }}</p>
@@ -1062,7 +1069,7 @@
             </article>
         </section>
 
-        @if ($alerts->isNotEmpty())
+        @if ($alerts->isNotEmpty() && $adminPage === 'overview')
             <section class="card" style="margin-top:12px;">
                 <p class="label">Operational Alerts</p>
                 <ul class="alert-list">
@@ -1073,7 +1080,7 @@
             </section>
         @endif
 
-        <section class="permissions-section" id="rolePermissionsPanel">
+        <section class="permissions-section" id="rolePermissionsPanel" style="{{ $adminPage === 'permissions' ? '' : 'display:none;' }}">
             <p class="label">Role Permissions</p>
             @if ($currentRolePermissions)
                 <p class="small">Current session role: <span class="role-pill">{{ $currentRolePermissions['label'] }}</span> — {{ $currentRolePermissions['summary'] }}</p>
@@ -1095,7 +1102,7 @@
             </div>
         </section>
 
-        <section class="card manage" id="financeModerationPanel">
+        <section class="card manage" id="financeModerationPanel" style="{{ $adminPage === 'finance' ? '' : 'display:none;' }}">
             <p class="label">Finance Moderation</p>
             <p class="small">Only ADMIN_SUPER and ADMIN_FINANCE can adjust commission rates and apply billing-level moderation for daily collections and vendor payouts.</p>
 
@@ -1361,27 +1368,52 @@
             </div>
         </section>
 
-        <section class="card manage" id="heroImageSettingsPanel">
+        <section class="card manage" id="heroImageSettingsPanel" style="{{ $adminPage === 'media' ? '' : 'display:none;' }}">
             <p class="label">Hero Image Settings</p>
-            <p class="small">Update the homepage banner and category catalogue hero images. Use full HTTPS image URLs for reliable desktop rendering.</p>
+            <p class="small">Update the homepage banner and category catalogue hero images. You can upload images directly or keep using HTTPS image URLs. Uploaded images are optimized and stored in the application media library.</p>
 
             @if (!$canManageVendorUsers)
                 <div class="error-box" style="margin-top:10px;">Only ADMIN_SUPER or ADMIN can update hero image settings.</div>
             @else
-                <form class="finance-form" method="POST" action="/portal/admin/media-hero/update" style="margin-top:10px;">
+                <form class="finance-form" method="POST" action="/portal/admin/media-hero/update" enctype="multipart/form-data" style="margin-top:10px;">
                     @csrf
                     <div class="finance-form-grid">
-                        <div class="finance-field finance-field-wide">
+                        <div class="finance-field finance-field-wide" style="padding:14px;border:1px solid #d7e0e6;border-radius:12px;background:#f9fbfc;">
+                            <label style="display:block;margin-bottom:8px;font-weight:600;">Current Homepage Banner</label>
+                            @if (!empty($homeHeroAdminImageUrl))
+                                <img src="{{ $homeHeroAdminImageUrl }}" alt="Homepage banner preview" style="display:block;width:100%;max-width:520px;aspect-ratio:16/9;object-fit:cover;border-radius:12px;border:1px solid #d7e0e6;margin-bottom:10px;background:#eef4f7;">
+                            @else
+                                <div class="small" style="margin-bottom:10px;">No homepage banner configured yet.</div>
+                            @endif
+                            <label for="home_hero_image_file">Upload Homepage Banner</label>
+                            <input id="home_hero_image_file" name="home_hero_image_file" type="file" accept="image/png,image/jpeg,image/webp" style="margin-bottom:10px;">
                             <label for="home_hero_image_url">Homepage Banner Image URL</label>
-                            <input id="home_hero_image_url" name="home_hero_image_url" type="url" maxlength="2048" value="{{ old('home_hero_image_url', $homeHeroAdminImageUrl ?? '') }}" placeholder="https://cdn.example.com/home-banner.jpg">
+                            <input id="home_hero_image_url" name="home_hero_image_url" type="text" maxlength="2048" value="{{ old('home_hero_image_url', $homeHeroAdminImageUrl ?? '') }}" placeholder="https://cdn.example.com/home-banner.jpg or /storage/...">
+                            <label class="small" style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+                                <input name="home_hero_image_clear" type="checkbox" value="1">
+                                Clear homepage banner
+                            </label>
                         </div>
                         @foreach (($catalogHeroAdminCategories ?? []) as $categoryKey => $categoryLabel)
                             @php
                                 $fieldName = 'catalog_hero_image_' . str_replace('-', '_', (string) $categoryKey);
+                                $fieldValue = (string) data_get($catalogHeroAdminImages ?? [], $categoryKey, '');
                             @endphp
-                            <div class="finance-field">
+                            <div class="finance-field" style="padding:14px;border:1px solid #d7e0e6;border-radius:12px;background:#f9fbfc;">
+                                <label style="display:block;margin-bottom:8px;font-weight:600;">{{ $categoryLabel }}</label>
+                                @if ($fieldValue !== '')
+                                    <img src="{{ $fieldValue }}" alt="{{ $categoryLabel }} hero preview" style="display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;border:1px solid #d7e0e6;margin-bottom:10px;background:#eef4f7;">
+                                @else
+                                    <div class="small" style="margin-bottom:10px;">No image configured yet.</div>
+                                @endif
+                                <label for="{{ $fieldName }}_file">Upload {{ $categoryLabel }} Hero</label>
+                                <input id="{{ $fieldName }}_file" name="{{ $fieldName }}_file" type="file" accept="image/png,image/jpeg,image/webp" style="margin-bottom:10px;">
                                 <label for="{{ $fieldName }}">{{ $categoryLabel }} Hero URL</label>
-                                <input id="{{ $fieldName }}" name="{{ $fieldName }}" type="url" maxlength="2048" value="{{ old($fieldName, (string) data_get($catalogHeroAdminImages ?? [], $categoryKey, '')) }}" placeholder="https://cdn.example.com/{{ $categoryKey }}-hero.jpg">
+                                <input id="{{ $fieldName }}" name="{{ $fieldName }}" type="text" maxlength="2048" value="{{ old($fieldName, $fieldValue) }}" placeholder="https://cdn.example.com/{{ $categoryKey }}-hero.jpg or /storage/...">
+                                <label class="small" style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+                                    <input name="{{ $fieldName }}_clear" type="checkbox" value="1">
+                                    Clear {{ $categoryLabel }} image
+                                </label>
                             </div>
                         @endforeach
                     </div>
@@ -1390,7 +1422,7 @@
             @endif
         </section>
 
-        <section class="card manage" id="listingOptionCatalogPanel">
+        <section class="card manage" id="listingOptionCatalogPanel" style="{{ $adminPage === 'catalog' ? '' : 'display:none;' }}">
             <p class="label">Listing Option Catalog</p>
             <p class="small">Maintain vendor form options from database so transport modes, accommodation facilities, and room amenities can be expanded without code changes.</p>
 
@@ -1520,7 +1552,7 @@
         @if (session('portal_notice'))
             <div class="notice prominent" id="successBox">{{ session('portal_notice') }}</div>
         @endif
-        <section class="card" id="sessionDebug">
+        <section class="card" id="sessionDebug" style="{{ $adminPage === 'tools' ? '' : 'display:none;' }}">
             <p class="label">Session Debug</p>
             <pre style="background:#f7f7f7;border-radius:8px;padding:8px;font-size:0.9rem;">portal_admin_authenticated: {{ session('portal_admin_authenticated') ? 'true' : 'false' }}
         portal_admin_role: {{ session('portal_admin_role') ?? 'null' }}
@@ -1532,13 +1564,14 @@
         canCreateVendorUsers: {{ var_export($canCreateVendorUsers, true) }}
         canReviewVendorRegistrations: {{ var_export($canReviewVendorRegistrations, true) }}
         canRequestVendorDeleteApproval: {{ var_export($canRequestVendorDeleteApproval, true) }}
+            canModerateListings: {{ var_export($canModerateListings, true) }}
         </pre>
         </section>
         @if ($errors->any())
             <div class="error-box prominent" id="errorBox">{{ $errors->first() }}</div>
         @endif
 
-        <section class="layout" id="authApiSection">
+        <section class="layout" id="authApiSection" style="{{ $adminPage === 'tools' ? '' : 'display:none;' }}">
             <article class="card">
                 <p class="label">Auth</p>
                 <input id="tokenInput" class="token-input" type="password" placeholder="Paste admin JWT bearer token">
@@ -1576,8 +1609,8 @@
             </article>
         </section>
 
-        <button id="toggleModerationBtn" class="btn btn-primary" type="button" style="margin-bottom:18px;">Show Moderation Panel</button>
-        <section class="card manage" id="moderationPanel" style="display:none;">
+        <button id="toggleModerationBtn" class="btn btn-primary" type="button" style="{{ $adminPage === 'moderation' ? 'margin-bottom:18px;' : 'display:none;' }}">Show Moderation Panel</button>
+        <section class="card manage" id="moderationPanel" style="{{ $adminPage === 'moderation' ? '' : 'display:none;' }}">
             <p class="label">Portal User Moderation</p>
             @if (!$canManageUsers && !$canManageVendorUsers && !$canReviewVendorRegistrations)
                 <p class="small">Current role cannot manage users/vendors or review vendor registrations.</p>
@@ -1918,6 +1951,12 @@
                         <div class="edit-user-form" id="edit-user-form-{{ $managedUser->id }}" style="display:none;">
                             <form class="manage-form" method="POST" action="/portal/admin/users/{{ $managedUser->id }}/manage">
                                 @csrf
+                                @php
+                                    $vendorVerificationStatus = strtolower(trim((string) ($managedUser->vendor_verification_status ?? 'pending')));
+                                    $vendorApprovedRaw = $managedUser->vendor_approved_service_categories ?? '[]';
+                                    $vendorApprovedDecoded = is_string($vendorApprovedRaw) ? json_decode($vendorApprovedRaw, true) : $vendorApprovedRaw;
+                                    $vendorApprovedCategories = is_array($vendorApprovedDecoded) ? $vendorApprovedDecoded : [];
+                                @endphp
                                 <div>
                                     <label>Role</label>
                                     @if ($canManageUsers)
@@ -1945,6 +1984,38 @@
                                     <input name="portal_vendor_id" value="{{ $managedUser->portal_vendor_id ?? '' }}" placeholder="Required for VENDOR">
                                 </div>
                                 <div>
+                                    <label>Verification Status</label>
+                                    <select name="vendor_verification_status">
+                                        <option value="pending" @selected($vendorVerificationStatus === 'pending')>PENDING</option>
+                                        <option value="under_review" @selected($vendorVerificationStatus === 'under_review')>UNDER_REVIEW</option>
+                                        <option value="approved" @selected($vendorVerificationStatus === 'approved')>APPROVED</option>
+                                        <option value="rejected" @selected($vendorVerificationStatus === 'rejected')>REJECTED</option>
+                                        <option value="suspended" @selected($vendorVerificationStatus === 'suspended')>SUSPENDED</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label>Approved Service Categories</label>
+                                    <div class="category-grid" style="margin-top:6px;">
+                                        @foreach (($vendorCategoryMap ?? []) as $categoryKey => $categoryLabel)
+                                            <label class="category-item" style="min-height:auto; padding:6px 8px;">
+                                                <input type="checkbox" name="vendor_approved_service_categories[]" value="{{ $categoryKey }}" @checked(in_array($categoryKey, $vendorApprovedCategories, true))>
+                                                <span>{{ $categoryLabel }}</span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                <div>
+                                    <label>Verification Notes</label>
+                                    <textarea name="vendor_verification_notes" rows="3" placeholder="Explain what was checked, what is missing, and approval conditions.">{{ old('vendor_verification_notes', (string) ($managedUser->vendor_verification_notes ?? '')) }}</textarea>
+                                </div>
+                                <div>
+                                    <label>Contact Person Verification</label>
+                                    <select name="vendor_contact_verified">
+                                        <option value="0" @selected(empty($managedUser->vendor_contact_verified_at))>NOT VERIFIED</option>
+                                        <option value="1" @selected(!empty($managedUser->vendor_contact_verified_at))>VERIFIED</option>
+                                    </select>
+                                </div>
+                                <div>
                                     <button type="submit">Save</button>
                                     <button type="button" class="btn btn-secondary cancel-edit-btn" data-user-id="{{ $managedUser->id }}">Cancel</button>
                                 </div>
@@ -1962,8 +2033,82 @@
             @endif
         </section>
 
-        <section class="card" id="auditPanel" style="margin-top:14px;">
+        @if ($canModerateListings)
+        <section class="card manage" id="listingModerationPanel" style="{{ $adminPage === 'listings' ? 'margin-top:14px;' : 'display:none;' }}">
+                        <p class="label">Listing Moderation</p>
+                        <p class="small">Review and approve or reject individual vendor listings. Only approved listings are open for guest bookings. ADMIN_FINANCE cannot access this panel.</p>
+
+                        <p class="group-title">Pending Review ({{ count($pendingModerationListings) }})</p>
+                        <div class="registration-grid" style="margin-bottom:16px;">
+                            @forelse ($pendingModerationListings as $listing)
+                                <div class="registration-row">
+                                    <div class="registration-head">
+                                        <span class="user-name">{{ $listing->listing_name ?: ('Listing #' . $listing->id) }}</span>
+                                        <span class="role-pill">PENDING REVIEW</span>
+                                        <span class="small">Vendor: {{ $listing->vendor_name ?: $listing->vendor_email ?: 'Unknown' }}</span>
+                                    </div>
+                                    <div class="small">Category: {{ ucwords(str_replace('_', ' ', (string) ($listing->listing_category ?: 'general'))) }}</div>
+                                    @if (!empty($listing->listing_submitted_for_review_at))
+                                        <div class="small">Submitted: {{ \Illuminate\Support\Carbon::parse($listing->listing_submitted_for_review_at)->format('Y-m-d H:i') }}</div>
+                                    @endif
+                                    <div class="registration-actions">
+                                        <form method="POST" action="/portal/admin/listings/{{ $listing->id }}/approve">
+                                            @csrf
+                                            <label class="small" for="approve_listing_notes_{{ $listing->id }}">Approval notes (optional)</label>
+                                            <textarea id="approve_listing_notes_{{ $listing->id }}" name="admin_notes" placeholder="Internal notes for this approval"></textarea>
+                                            <button class="btn-approve" type="submit">Approve Listing</button>
+                                        </form>
+                                        <form method="POST" action="/portal/admin/listings/{{ $listing->id }}/reject">
+                                            @csrf
+                                            <label class="small" for="reject_listing_notes_{{ $listing->id }}">Rejection reason <span style="color:red">*</span></label>
+                                            <textarea id="reject_listing_notes_{{ $listing->id }}" name="admin_notes" required placeholder="Explain what must be resolved before the listing can be approved"></textarea>
+                                            <button class="btn-reject" type="submit">Reject Listing</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="user-row">
+                                    <div class="small">No listings pending review.</div>
+                                </div>
+                            @endforelse
+                        </div>
+
+                        <p class="group-title" id="listingModerationHistoryPanel">Moderation History ({{ count($listingModerationHistory) }})</p>
+                        <div class="registration-grid">
+                            @forelse ($listingModerationHistory as $listing)
+                                <div class="registration-row">
+                                    <div class="registration-head">
+                                        <span class="user-name">{{ $listing->listing_name ?: ('Listing #' . $listing->id) }}</span>
+                                        @php
+                                            $histChipClass = match(strtolower((string) ($listing->listing_moderation_status ?? ''))) {
+                                                'approved' => 'ok',
+                                                'rejected', 'suspended' => 'err',
+                                                default => 'warn',
+                                            };
+                                        @endphp
+                                        <span class="state {{ $histChipClass }}">{{ strtoupper((string) ($listing->listing_moderation_status ?? 'unknown')) }}</span>
+                                        <span class="small">Vendor: {{ $listing->vendor_name ?: $listing->vendor_email ?: 'Unknown' }}</span>
+                                    </div>
+                                    <div class="small">Category: {{ ucwords(str_replace('_', ' ', (string) ($listing->listing_category ?: 'general'))) }}</div>
+                                    @if (!empty($listing->listing_approved_at))
+                                        <div class="small">Actioned: {{ \Illuminate\Support\Carbon::parse($listing->listing_approved_at)->format('Y-m-d H:i') }} by {{ $listing->approved_by_name ?: 'Unknown' }}</div>
+                                    @endif
+                                    @if (!empty($listing->listing_admin_notes))
+                                        <div class="small">Notes: {{ $listing->listing_admin_notes }}</div>
+                                    @endif
+                                </div>
+                            @empty
+                                <div class="user-row">
+                                    <div class="small">No listing moderation history yet.</div>
+                                </div>
+                            @endforelse
+                        </div>
+                    </section>
+        @endif
+
+        <section class="card" id="auditPanel" style="{{ $adminPage === 'audit' ? 'margin-top:14px;' : 'display:none;' }}">
             <p class="label">Admin Activity History</p>
+
             <p class="small">Latest moderation actions performed from this admin portal.</p>
             <div class="audit-list">
                 @forelse ($auditLogs as $auditLog)

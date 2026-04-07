@@ -33,11 +33,18 @@ class VendorPortalProfileUpdateTest extends TestCase
             ->post('/portal/vendor/profile/update', [
                 'display_name' => 'New Vendor Name',
                 'contact_phone' => '+9607770123',
+                'company_name' => 'Workation Vendor Co',
+                'business_registration_number' => 'REG-2026-0001',
+                'business_license_number' => 'LIC-7788',
+                'contact_person_name' => 'Vendor Contact',
+                'contact_person_phone' => '+9607770456',
+                'contact_person_email' => 'contact@vendor.example.com',
+                'contact_person_id_number' => 'A123456',
             ]);
 
         $response
             ->assertStatus(302)
-            ->assertSessionHas('portal_notice', 'Profile settings updated successfully.')
+            ->assertSessionHas('portal_notice', 'Profile and compliance details saved. Verification review status updated.')
             ->assertSessionHas('portal_vendor_user', 'New Vendor Name');
 
         $this->assertDatabaseHas('users', [

@@ -3514,15 +3514,28 @@ SVG;
     $resolvedBinary = null;
     $resolvedMimeType = '';
 
-    $publicDisk = Storage::disk('public');
-    foreach ($candidatePaths as $path) {
-        if (!$publicDisk->exists($path)) {
+    $configuredMediaDisk = trim((string) config('filesystems.vendor_media_disk', 'public'));
+    $diskNames = array_values(array_unique(array_filter([
+        $configuredMediaDisk !== '' ? $configuredMediaDisk : null,
+        'public',
+    ])));
+
+    foreach ($diskNames as $diskName) {
+        try {
+            $disk = Storage::disk($diskName);
+        } catch (\Throwable $exception) {
             continue;
         }
 
-        $resolvedBinary = $publicDisk->get($path);
-        $resolvedMimeType = (string) ($publicDisk->mimeType($path) ?: '');
-        break;
+        foreach ($candidatePaths as $path) {
+            if (!$disk->exists($path)) {
+                continue;
+            }
+
+            $resolvedBinary = $disk->get($path);
+            $resolvedMimeType = (string) ($disk->mimeType($path) ?: '');
+            break 2;
+        }
     }
 
     if ($resolvedBinary === null) {

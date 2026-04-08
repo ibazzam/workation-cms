@@ -315,6 +315,14 @@ if (!function_exists('vendorPortalResizeImageToFill')) {
     }
 }
 
+if (!function_exists('vendorPortalMediaDiskName')) {
+    function vendorPortalMediaDiskName(): string
+    {
+        $disk = trim((string) config('filesystems.vendor_media_disk', 'public'));
+        return $disk !== '' ? $disk : 'public';
+    }
+}
+
 if (!function_exists('vendorPortalWriteMediaVariant')) {
     function vendorPortalWriteMediaVariant($image, string $relativePath, string $extension): bool
     {
@@ -336,7 +344,7 @@ if (!function_exists('vendorPortalWriteMediaVariant')) {
             return false;
         }
 
-        return Storage::disk('public')->put($relativePath, $binary);
+        return Storage::disk(vendorPortalMediaDiskName())->put($relativePath, $binary);
     }
 }
 
@@ -2546,7 +2554,7 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
 
         $storedBannerSizeBytes = 0;
         try {
-            $storedBannerSizeBytes = (int) (Storage::disk('public')->size($bannerPath) ?? 0);
+            $storedBannerSizeBytes = (int) (Storage::disk(vendorPortalMediaDiskName())->size($bannerPath) ?? 0);
         } catch (\Throwable $e) {
             $storedBannerSizeBytes = 0;
         }

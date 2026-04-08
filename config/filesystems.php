@@ -15,6 +15,9 @@ return [
 
     'default' => env('FILESYSTEM_DISK', 'local'),
 
+    // Dedicated disk for vendor listing media so app/runtime split deployments can use shared object storage.
+    'vendor_media_disk' => env('VENDOR_MEDIA_DISK', 'public'),
+
     /*
     |--------------------------------------------------------------------------
     | Filesystem Disks

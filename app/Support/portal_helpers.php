@@ -733,6 +733,7 @@ if (!function_exists('portalWriteMediaVariant')) {
             'visibility' => 'public',
             'ContentType' => $contentType,
         ]);
+        return Storage::disk(portalManagedMediaDiskName())->put($relativePath, $binary);
     }
 }
 

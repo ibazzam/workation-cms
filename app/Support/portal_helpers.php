@@ -726,6 +726,13 @@ if (!function_exists('portalWriteMediaVariant')) {
             return false;
         }
 
+        $diskName = portalManagedMediaDiskName();
+        $contentType = $ext === 'webp' ? 'image/webp' : 'image/jpeg';
+
+        return Storage::disk($diskName)->put($relativePath, $binary, [
+            'visibility' => 'public',
+            'ContentType' => $contentType,
+        ]);
         return Storage::disk(portalManagedMediaDiskName())->put($relativePath, $binary);
     }
 }

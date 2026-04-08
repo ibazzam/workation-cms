@@ -1196,7 +1196,7 @@ Route::get('/', function () {
 
             $mediaId = (int) ($primaryMedia->id ?? 0);
             if ($mediaId > 0) {
-                return '/media/vendor/' . $mediaId . '/banner';
+                return '/media/vendor/' . $mediaId . '/thumb';
             }
 
             return null;
@@ -1220,7 +1220,7 @@ Route::get('/', function () {
 
             $mediaId = (int) ($primaryMedia->id ?? 0);
             if ($mediaId > 0) {
-                return '/media/vendor/' . $mediaId . '/thumb';
+                return '/media/vendor/' . $mediaId . '/banner';
             }
 
             return null;

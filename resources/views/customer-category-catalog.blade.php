@@ -1440,8 +1440,8 @@
                             $thumbUrl = $primaryMedia ? $mediaVariantUrl($primaryMedia, 'thumb') : null;
                             $fallbackPath = trim((string) ($primaryMedia->file_path ?? ''));
                             $fallbackImage = '';
-                            if ($thumbUrl !== null && trim($thumbUrl) !== '') {
-                                $fallbackImage = (string) $thumbUrl;
+                            if ($bannerUrl !== null && trim($bannerUrl) !== '') {
+                                $fallbackImage = (string) $bannerUrl;
                             }
                             if ($fallbackPath !== '') {
                                 if (str_starts_with($fallbackPath, 'http://') || str_starts_with($fallbackPath, 'https://')) {
@@ -1483,7 +1483,9 @@
                         <article class="card">
                             <a class="card-link" href="{{ $detailUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
                                 @php
-                                    $resolvedImage = $bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback);
+                                    $resolvedImage = ($thumbUrl && trim($thumbUrl) !== '')
+                                        ? (string) $thumbUrl
+                                        : ($bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback));
                                 @endphp
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                                 <div class="card-body">

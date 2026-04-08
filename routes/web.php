@@ -4511,11 +4511,11 @@ Route::post('/portal/admin/listing-options/{option}/delete', function (int $opti
 
 Route::post('/portal/admin/media-hero/update', function (Request $request) {
     if (!canManageVendorUsers()) {
-        return back()->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can update homepage and category hero images.']);
+        return redirect('/admin?page=media')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can update homepage and category hero images.']);
     }
 
     if (!Schema::hasTable('portal_finance_settings')) {
-        return back()->withErrors(['auth' => 'Settings table is not ready. Run migrations first.']);
+        return redirect('/admin?page=media')->withErrors(['auth' => 'Settings table is not ready. Run migrations first.']);
     }
 
     $catalogHeroAdminCategories = [
@@ -4618,7 +4618,7 @@ Route::post('/portal/admin/media-hero/update', function (Request $request) {
         'updated_category_hero_keys' => array_keys($catalogHeroAdminCategories),
     ]);
 
-    return back()->with('portal_notice', 'Homepage and category hero images updated.');
+    return redirect('/admin?page=media')->with('portal_notice', 'Hero image updated successfully.');
 });
 
 Route::get('/portal/admin/blog', function () {

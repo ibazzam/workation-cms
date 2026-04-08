@@ -733,6 +733,10 @@ if (!function_exists('portalWriteMediaVariant')) {
             'visibility' => 'public',
             'ContentType' => $contentType,
         ]);
+<<<<<<< feat/vendor-listings-wizard-flow-20260324
+=======
+        return Storage::disk(portalManagedMediaDiskName())->put($relativePath, $binary);
+>>>>>>> main
     }
 }
 

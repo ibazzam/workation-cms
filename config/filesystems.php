@@ -21,6 +21,10 @@ return [
     // Shared disk for admin-managed hero/banner media. Defaults to the vendor media disk so both flows stay portable.
     'portal_media_disk' => env('PORTAL_MEDIA_DISK', env('VENDOR_MEDIA_DISK', 'public')),
 
+    // When enabled, portal hero media URLs are generated as temporary signed URLs for private object storage.
+    'portal_media_use_temporary_urls' => env('PORTAL_MEDIA_USE_TEMPORARY_URLS', true),
+    'portal_media_temporary_url_ttl_minutes' => (int) env('PORTAL_MEDIA_TEMPORARY_URL_TTL_MINUTES', 30),
+
     /*
     |--------------------------------------------------------------------------
     | Filesystem Disks

@@ -18,6 +18,9 @@ return [
     // Dedicated disk for vendor listing media so app/runtime split deployments can use shared object storage.
     'vendor_media_disk' => env('VENDOR_MEDIA_DISK', 'public'),
 
+    // Shared disk for admin-managed hero/banner media. Defaults to the vendor media disk so both flows stay portable.
+    'portal_media_disk' => env('PORTAL_MEDIA_DISK', env('VENDOR_MEDIA_DISK', 'public')),
+
     /*
     |--------------------------------------------------------------------------
     | Filesystem Disks

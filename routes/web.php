@@ -4138,7 +4138,7 @@ Route::get('/admin', function (Request $request) {
             ->get([
                 'vp.id',
                 'vp.vendor_user_id',
-                'vp.listing_name',
+                'vp.name as listing_name',
                 'vp.listing_category',
                 'vp.listing_moderation_status',
                 'vp.listing_admin_notes',
@@ -4158,7 +4158,7 @@ Route::get('/admin', function (Request $request) {
             ->get([
                 'vp.id',
                 'vp.vendor_user_id',
-                'vp.listing_name',
+                'vp.name as listing_name',
                 'vp.listing_category',
                 'vp.listing_moderation_status',
                 'vp.listing_admin_notes',
@@ -7436,7 +7436,7 @@ Route::post('/portal/admin/listings/{listing}/approve', function (Request $reque
         ]);
 
     portalAdminAuditLog('listing.approved', [
-        'target_identifier' => (string) ($listingRow->listing_name ?? ('listing_id:' . $listing)),
+        'target_identifier' => (string) ($listingRow->name ?? $listingRow->listing_name ?? ('listing_id:' . $listing)),
         'target_role' => 'VENDOR',
         'listing_id' => $listing,
         'vendor_id' => (int) ($listingRow->vendor_user_id ?? 0),
@@ -7480,7 +7480,7 @@ Route::post('/portal/admin/listings/{listing}/reject', function (Request $reques
         ]);
 
     portalAdminAuditLog('listing.rejected', [
-        'target_identifier' => (string) ($listingRow->listing_name ?? ('listing_id:' . $listing)),
+        'target_identifier' => (string) ($listingRow->name ?? $listingRow->listing_name ?? ('listing_id:' . $listing)),
         'target_role' => 'VENDOR',
         'listing_id' => $listing,
         'vendor_id' => (int) ($listingRow->vendor_user_id ?? 0),

@@ -1370,67 +1370,85 @@
 
         <section class="card manage" id="heroImageSettingsPanel" style="{{ $adminPage === 'media' ? '' : 'display:none;' }}">
             <p class="label">Hero Image Settings</p>
-            <p class="small">Update the homepage banner and category catalogue hero images. You can upload images directly or keep using HTTPS image URLs. Uploaded images are optimized and stored in the application media library.</p>
+            <p class="small">Update the homepage banner and category catalogue hero images. Each slot saves independently — upload an image, paste an HTTPS URL, or remove the current one.</p>
+
+            @if ($adminPage === 'media')
+                @if (session('portal_notice'))
+                    <div class="notice prominent" style="margin-top:12px;">{{ session('portal_notice') }}</div>
+                @endif
+                @if ($errors->any())
+                    <div class="error-box prominent" style="margin-top:12px;">{{ $errors->first() }}</div>
+                @endif
+            @endif
 
             @if (!$canManageVendorUsers)
                 <div class="error-box" style="margin-top:10px;">Only ADMIN_SUPER or ADMIN can update hero image settings.</div>
             @else
-                <form class="finance-form" method="POST" action="/portal/admin/media-hero/update" enctype="multipart/form-data" style="margin-top:10px;">
-                    @csrf
-                    <div class="finance-form-grid">
-                        <div class="finance-field finance-field-wide" style="padding:14px;border:1px solid #d7e0e6;border-radius:12px;background:#f9fbfc;">
-                            @php
-                                $homeHeroStoredValue = trim((string) ($homeHeroAdminStoredValue ?? ''));
-                                $homeHeroExternalValue = preg_match('#^https?://#i', $homeHeroStoredValue) === 1 ? $homeHeroStoredValue : '';
-                            @endphp
-                            <label style="display:block;margin-bottom:8px;font-weight:600;">Current Homepage Banner</label>
-                            @if (!empty($homeHeroAdminImageUrl))
-                                <img src="{{ $homeHeroAdminImageUrl }}" alt="Homepage banner preview" style="display:block;width:100%;max-width:520px;aspect-ratio:16/9;object-fit:cover;border-radius:12px;border:1px solid #d7e0e6;margin-bottom:10px;background:#eef4f7;">
-                                <div class="small" style="margin-bottom:10px;">Current source: {{ $homeHeroExternalValue !== '' ? 'External URL' : 'Managed upload' }}</div>
+                {{-- Homepage banner slot --}}
+                @php
+                    $homeHeroStoredValue = trim((string) ($homeHeroAdminStoredValue ?? ''));
+                    $homeHeroExternalValue = preg_match('#^https?://#i', $homeHeroStoredValue) === 1 ? $homeHeroStoredValue : '';
+                @endphp
+                <div style="padding:16px;border:1px solid #d7e0e6;border-radius:12px;background:#f9fbfc;margin-top:16px;">
+                    <p style="font-weight:600;margin:0 0 10px;">Homepage Banner</p>
+                    @if (!empty($homeHeroAdminImageUrl))
+                        <img src="{{ $homeHeroAdminImageUrl }}" alt="Homepage banner preview" style="display:block;width:100%;max-width:540px;aspect-ratio:16/9;object-fit:cover;border-radius:10px;border:1px solid #d7e0e6;margin-bottom:8px;background:#eef4f7;">
+                        <p class="small" style="margin:0 0 12px;">Source: {{ $homeHeroExternalValue !== '' ? 'External URL' : 'Managed upload' }}</p>
+                    @else
+                        <p class="small" style="margin:0 0 12px;">No banner configured yet.</p>
+                    @endif
+                    <form method="POST" action="/portal/admin/media-hero/update" enctype="multipart/form-data" style="margin-bottom:10px;">
+                        @csrf
+                        <label for="home_hero_image_file" style="display:block;margin-bottom:4px;font-size:0.85rem;">Upload new image (JPG, PNG, WebP · max 4 MB)</label>
+                        <input id="home_hero_image_file" name="home_hero_image_file" type="file" accept="image/png,image/jpeg,image/webp" style="display:block;margin-bottom:12px;">
+                        <label for="home_hero_image_url" style="display:block;margin-bottom:4px;font-size:0.85rem;">Or paste an external HTTPS URL</label>
+                        <input id="home_hero_image_url" name="home_hero_image_url" type="text" maxlength="2048" value="{{ old('home_hero_image_url', $homeHeroExternalValue) }}" placeholder="https://cdn.example.com/homepage-banner.jpg" style="display:block;width:100%;max-width:540px;margin-bottom:12px;">
+                        <button class="btn btn-primary" type="submit">Update Homepage Banner</button>
+                    </form>
+                    @if (!empty($homeHeroAdminImageUrl))
+                        <form method="POST" action="/portal/admin/media-hero/update" style="display:inline;">
+                            @csrf
+                            <input type="hidden" name="home_hero_image_clear" value="1">
+                            <button class="btn" type="submit" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;" onclick="return confirm('Remove the homepage banner? This cannot be undone.')">Remove Image</button>
+                        </form>
+                    @endif
+                </div>
+
+                {{-- Per-category hero slots --}}
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-top:16px;">
+                    @foreach (($catalogHeroAdminCategories ?? []) as $categoryKey => $categoryLabel)
+                        @php
+                            $fieldName = 'catalog_hero_image_' . str_replace('-', '_', (string) $categoryKey);
+                            $fieldValue = (string) data_get($catalogHeroAdminImages ?? [], $categoryKey, '');
+                            $fieldStoredValue = trim((string) data_get($catalogHeroAdminStoredValues ?? [], $categoryKey, ''));
+                            $fieldExternalValue = preg_match('#^https?://#i', $fieldStoredValue) === 1 ? $fieldStoredValue : '';
+                        @endphp
+                        <div style="padding:16px;border:1px solid #d7e0e6;border-radius:12px;background:#f9fbfc;">
+                            <p style="font-weight:600;margin:0 0 10px;">{{ $categoryLabel }}</p>
+                            @if ($fieldValue !== '')
+                                <img src="{{ $fieldValue }}" alt="{{ $categoryLabel }} hero preview" style="display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;border:1px solid #d7e0e6;margin-bottom:8px;background:#eef4f7;">
+                                <p class="small" style="margin:0 0 12px;">Source: {{ $fieldExternalValue !== '' ? 'External URL' : 'Managed upload' }}</p>
                             @else
-                                <div class="small" style="margin-bottom:10px;">No homepage banner configured yet.</div>
+                                <p class="small" style="margin:0 0 12px;">No image configured yet.</p>
                             @endif
-                            <label for="home_hero_image_file">Upload Homepage Banner</label>
-                            <input id="home_hero_image_file" name="home_hero_image_file" type="file" accept="image/png,image/jpeg,image/webp" style="margin-bottom:10px;">
-                            <div class="small" style="margin-bottom:10px;">Upload a new image to replace the current banner.</div>
-                            <label for="home_hero_image_url">Homepage Banner Image URL</label>
-                            <input id="home_hero_image_url" name="home_hero_image_url" type="text" maxlength="2048" value="{{ old('home_hero_image_url', $homeHeroExternalValue) }}" placeholder="https://cdn.example.com/home-banner.jpg">
-                            <div class="small" style="margin-top:8px;">Leave this blank to keep the current uploaded file. Paste a new HTTPS URL to replace it.</div>
-                            <label class="small" style="display:flex;align-items:center;gap:8px;margin-top:10px;">
-                                <input name="home_hero_image_clear" type="checkbox" value="1">
-                                Delete current homepage banner on save
-                            </label>
+                            <form method="POST" action="/portal/admin/media-hero/update" enctype="multipart/form-data" style="margin-bottom:10px;">
+                                @csrf
+                                <label for="{{ $fieldName }}_file" style="display:block;margin-bottom:4px;font-size:0.85rem;">Upload new image</label>
+                                <input id="{{ $fieldName }}_file" name="{{ $fieldName }}_file" type="file" accept="image/png,image/jpeg,image/webp" style="display:block;margin-bottom:12px;">
+                                <label for="{{ $fieldName }}" style="display:block;margin-bottom:4px;font-size:0.85rem;">Or paste an HTTPS URL</label>
+                                <input id="{{ $fieldName }}" name="{{ $fieldName }}" type="text" maxlength="2048" value="{{ old($fieldName, $fieldExternalValue) }}" placeholder="https://cdn.example.com/{{ $categoryKey }}.jpg" style="display:block;width:100%;margin-bottom:12px;">
+                                <button class="btn btn-primary" type="submit" style="font-size:0.82rem;">Update {{ $categoryLabel }}</button>
+                            </form>
+                            @if ($fieldValue !== '')
+                                <form method="POST" action="/portal/admin/media-hero/update" style="display:inline;">
+                                    @csrf
+                                    <input type="hidden" name="{{ $fieldName }}_clear" value="1">
+                                    <button class="btn" type="submit" style="font-size:0.82rem;background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;" onclick="return confirm('Remove the {{ $categoryLabel }} hero image?')">Remove</button>
+                                </form>
+                            @endif
                         </div>
-                        @foreach (($catalogHeroAdminCategories ?? []) as $categoryKey => $categoryLabel)
-                            @php
-                                $fieldName = 'catalog_hero_image_' . str_replace('-', '_', (string) $categoryKey);
-                                $fieldValue = (string) data_get($catalogHeroAdminImages ?? [], $categoryKey, '');
-                                $fieldStoredValue = trim((string) data_get($catalogHeroAdminStoredValues ?? [], $categoryKey, ''));
-                                $fieldExternalValue = preg_match('#^https?://#i', $fieldStoredValue) === 1 ? $fieldStoredValue : '';
-                            @endphp
-                            <div class="finance-field" style="padding:14px;border:1px solid #d7e0e6;border-radius:12px;background:#f9fbfc;">
-                                <label style="display:block;margin-bottom:8px;font-weight:600;">{{ $categoryLabel }}</label>
-                                @if ($fieldValue !== '')
-                                    <img src="{{ $fieldValue }}" alt="{{ $categoryLabel }} hero preview" style="display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;border:1px solid #d7e0e6;margin-bottom:10px;background:#eef4f7;">
-                                    <div class="small" style="margin-bottom:10px;">Current source: {{ $fieldExternalValue !== '' ? 'External URL' : 'Managed upload' }}</div>
-                                @else
-                                    <div class="small" style="margin-bottom:10px;">No image configured yet.</div>
-                                @endif
-                                <label for="{{ $fieldName }}_file">Upload {{ $categoryLabel }} Hero</label>
-                                <input id="{{ $fieldName }}_file" name="{{ $fieldName }}_file" type="file" accept="image/png,image/jpeg,image/webp" style="margin-bottom:10px;">
-                                <div class="small" style="margin-bottom:10px;">Upload a new image to replace the current {{ strtolower($categoryLabel) }} hero.</div>
-                                <label for="{{ $fieldName }}">{{ $categoryLabel }} Hero URL</label>
-                                <input id="{{ $fieldName }}" name="{{ $fieldName }}" type="text" maxlength="2048" value="{{ old($fieldName, $fieldExternalValue) }}" placeholder="https://cdn.example.com/{{ $categoryKey }}-hero.jpg">
-                                <div class="small" style="margin-top:8px;">Leave blank to keep the current uploaded file. Paste a new HTTPS URL to override it.</div>
-                                <label class="small" style="display:flex;align-items:center;gap:8px;margin-top:10px;">
-                                    <input name="{{ $fieldName }}_clear" type="checkbox" value="1">
-                                    Delete current {{ $categoryLabel }} image on save
-                                </label>
-                            </div>
-                        @endforeach
-                    </div>
-                    <button class="btn btn-primary" type="submit">Save Hero Image Settings</button>
-                </form>
+                    @endforeach
+                </div>
             @endif
         </section>
 
@@ -1561,7 +1579,7 @@
             </div>
         </section>
 
-        @if (session('portal_notice'))
+        @if (session('portal_notice') && $adminPage !== 'media')
             <div class="notice prominent" id="successBox">{{ session('portal_notice') }}</div>
         @endif
         <section class="card" id="sessionDebug" style="{{ $adminPage === 'tools' ? '' : 'display:none;' }}">
@@ -1579,7 +1597,7 @@
             canModerateListings: {{ var_export($canModerateListings, true) }}
         </pre>
         </section>
-        @if ($errors->any())
+        @if ($errors->any() && $adminPage !== 'media')
             <div class="error-box prominent" id="errorBox">{{ $errors->first() }}</div>
         @endif
 
@@ -2652,4 +2670,3 @@
     </script>
 </body>
 </html>
-

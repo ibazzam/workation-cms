@@ -3393,9 +3393,9 @@ Route::get('/media/vendor/{media}/{variant?}', function (int $media, ?string $va
 </svg>
 SVG;
 
-                return response($svg, 200, [
+                return response($svg, 404, [
                         'Content-Type' => 'image/svg+xml; charset=UTF-8',
-                        'Cache-Control' => 'public, max-age=3600',
+                        'Cache-Control' => 'no-store',
                 ]);
         };
 

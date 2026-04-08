@@ -1071,9 +1071,7 @@ Route::get('/', function () {
         }
     }
 
-    if (str_starts_with($homeHeroBackgroundUrl, 'http://')) {
-        $homeHeroBackgroundUrl = 'https://' . ltrim(substr($homeHeroBackgroundUrl, 7), '/');
-    }
+    $homeHeroBackgroundUrl = portalManagedMediaUrlFromPath($homeHeroBackgroundUrl) ?? $homeHeroBackgroundUrl;
 
     if ($homeHeroBackgroundUrl === '') {
         $seasonalHeroPath = public_path('images/home-hero-seasonal.jpg');
@@ -1610,9 +1608,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     }
 
     $resolvedCategoryHeroImage = trim((string) ($categoryMap[$categoryKey]['hero_image_url'] ?? ''));
-    if (str_starts_with($resolvedCategoryHeroImage, 'http://')) {
-        $resolvedCategoryHeroImage = 'https://' . ltrim(substr($resolvedCategoryHeroImage, 7), '/');
-    }
+    $resolvedCategoryHeroImage = portalManagedMediaUrlFromPath($resolvedCategoryHeroImage) ?? $resolvedCategoryHeroImage;
     $categoryMap[$categoryKey]['hero_image_url'] = $resolvedCategoryHeroImage;
 
     $queryText = trim((string) $request->query('q', ''));
@@ -4039,7 +4035,10 @@ Route::get('/admin', function (Request $request) {
         'vehicle_rental' => 'Vehicle Rental',
     ];
     $homeHeroAdminImageUrl = '';
+    $homeHeroAdminStoredValue = '';
     $catalogHeroAdminImages = collect($catalogHeroAdminCategories)
+        ->mapWithKeys(static fn ($label, $key) => [$key => '']);
+    $catalogHeroAdminStoredValues = collect($catalogHeroAdminCategories)
         ->mapWithKeys(static fn ($label, $key) => [$key => '']);
 
     if (Schema::hasTable('portal_finance_settings')) {
@@ -4052,20 +4051,18 @@ Route::get('/admin', function (Request $request) {
             ->whereIn('setting_key', $mediaSettingKeys->all())
             ->pluck('value_string', 'setting_key');
 
-        $homeHeroAdminImageUrl = trim((string) ($mediaSettings->get('home_hero_image_url') ?? ''));
-        if (str_starts_with($homeHeroAdminImageUrl, 'http://')) {
-            $homeHeroAdminImageUrl = 'https://' . ltrim(substr($homeHeroAdminImageUrl, 7), '/');
-        }
+        $homeHeroAdminStoredValue = trim((string) ($mediaSettings->get('home_hero_image_url') ?? ''));
+        $homeHeroAdminImageUrl = portalManagedMediaUrlFromPath($homeHeroAdminStoredValue) ?? '';
 
-        $catalogHeroAdminImages = collect($catalogHeroAdminCategories)
+        $catalogHeroAdminStoredValues = collect($catalogHeroAdminCategories)
             ->mapWithKeys(function ($label, $key) use ($mediaSettings) {
                 $settingKey = 'catalog_hero_image_' . str_replace('-', '_', $key);
-                $imageUrl = trim((string) ($mediaSettings->get($settingKey) ?? ''));
-                if (str_starts_with($imageUrl, 'http://')) {
-                    $imageUrl = 'https://' . ltrim(substr($imageUrl, 7), '/');
-                }
+                return [$key => trim((string) ($mediaSettings->get($settingKey) ?? ''))];
+            });
 
-                return [$key => $imageUrl];
+        $catalogHeroAdminImages = $catalogHeroAdminStoredValues
+            ->mapWithKeys(static function ($storedValue, $key) {
+                return [$key => portalManagedMediaUrlFromPath((string) $storedValue) ?? ''];
             });
     }
 
@@ -4223,7 +4220,9 @@ Route::get('/admin', function (Request $request) {
         'financeTaxComponents' => $financeTaxComponents,
         'listingOptionCatalog' => $listingOptionCatalog,
         'homeHeroAdminImageUrl' => $homeHeroAdminImageUrl,
+        'homeHeroAdminStoredValue' => $homeHeroAdminStoredValue,
         'catalogHeroAdminImages' => $catalogHeroAdminImages,
+        'catalogHeroAdminStoredValues' => $catalogHeroAdminStoredValues,
         'catalogHeroAdminCategories' => $catalogHeroAdminCategories,
         'vendorCategoryMap' => vendorPortalCategoryMap(),
         'canModerateListings' => $canModerateListings,
@@ -4579,7 +4578,7 @@ Route::post('/portal/admin/media-hero/update', function (Request $request) {
         $nextValue = $currentValue;
         $shouldClear = $request->boolean($clearField);
         $uploadedFile = $request->file($fileField);
-        $submittedUrl = trim((string) ($validated[$urlField] ?? $currentValue));
+        $submittedUrl = trim((string) ($validated[$urlField] ?? ''));
 
         if ($shouldClear) {
             portalDeleteManagedPublicAsset($currentValue);
@@ -4597,16 +4596,12 @@ Route::post('/portal/admin/media-hero/update', function (Request $request) {
             }
 
             $nextValue = $storedPath;
-        } elseif ($submittedUrl !== $currentValue) {
-            if ($submittedUrl !== '') {
-                if ($currentValue !== '' && $currentValue !== $submittedUrl) {
-                    portalDeleteManagedPublicAsset($currentValue);
-                }
-                $nextValue = $submittedUrl;
-            } else {
+        } elseif ($submittedUrl !== '' && $submittedUrl !== $currentValue) {
+            if ($currentValue !== '' && $currentValue !== $submittedUrl) {
                 portalDeleteManagedPublicAsset($currentValue);
-                $nextValue = '';
             }
+
+            $nextValue = $submittedUrl;
         }
 
         $persistSetting($settingKey, $nextValue, $actorUserId);

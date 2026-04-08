@@ -726,7 +726,93 @@ if (!function_exists('portalWriteMediaVariant')) {
             return false;
         }
 
-        return Storage::disk('public')->put($relativePath, $binary);
+        return Storage::disk(portalManagedMediaDiskName())->put($relativePath, $binary);
+    }
+}
+
+if (!function_exists('portalManagedMediaDiskName')) {
+    function portalManagedMediaDiskName(): string
+    {
+        $disk = trim((string) config('filesystems.portal_media_disk', config('filesystems.vendor_media_disk', 'public')));
+
+        return $disk !== '' ? $disk : 'public';
+    }
+}
+
+if (!function_exists('portalManagedMediaRelativePath')) {
+    function portalManagedMediaRelativePath(?string $storedValue): ?string
+    {
+        $value = trim(str_replace('\\', '/', (string) ($storedValue ?? '')));
+        if ($value === '') {
+            return null;
+        }
+
+        if (preg_match('#/storage/app/public/(.+)$#i', $value, $matches) === 1) {
+            $value = (string) ($matches[1] ?? '');
+        } elseif (preg_match('#/public/storage/(.+)$#i', $value, $matches) === 1) {
+            $value = (string) ($matches[1] ?? '');
+        } elseif (str_starts_with($value, '/storage/')) {
+            $value = (string) substr($value, strlen('/storage/'));
+        } elseif (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            $path = trim(str_replace('\\', '/', (string) parse_url($value, PHP_URL_PATH)));
+            if (preg_match('#^/storage/(.+)$#i', $path, $matches) === 1) {
+                $value = (string) ($matches[1] ?? '');
+            } else {
+                return null;
+            }
+        }
+
+        $value = ltrim($value, '/');
+        if (str_starts_with($value, 'public/')) {
+            $value = substr($value, 7);
+        }
+        if (str_starts_with($value, 'storage/')) {
+            $value = substr($value, 8);
+        }
+
+        $value = ltrim($value, '/');
+
+        return $value !== '' ? $value : null;
+    }
+}
+
+if (!function_exists('portalManagedMediaUrlFromPath')) {
+    function portalManagedMediaUrlFromPath(?string $storedValue): ?string
+    {
+        $value = trim((string) ($storedValue ?? ''));
+        if ($value === '') {
+            return null;
+        }
+
+        if (str_starts_with($value, 'http://')) {
+            return 'https://' . ltrim(substr($value, 7), '/');
+        }
+
+        if (str_starts_with($value, 'https://')) {
+            return $value;
+        }
+
+        $relativePath = portalManagedMediaRelativePath($value);
+        if ($relativePath === null) {
+            return null;
+        }
+
+        $diskName = portalManagedMediaDiskName();
+        if ($diskName === 'public') {
+            return Storage::disk('public')->url($relativePath);
+        }
+
+        try {
+            return Storage::disk($diskName)->url($relativePath);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to resolve managed portal media URL.', [
+                'disk' => $diskName,
+                'path' => $relativePath,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 }
 
@@ -738,24 +824,14 @@ if (!function_exists('portalDeleteManagedPublicAsset')) {
             return;
         }
 
-        $relativePath = '';
-        if (str_starts_with($value, '/storage/')) {
-            $relativePath = ltrim(substr($value, strlen('/storage/')), '/');
-        } else {
-            $path = (string) parse_url($value, PHP_URL_PATH);
-            if (str_starts_with($path, '/storage/')) {
-                $relativePath = ltrim(substr($path, strlen('/storage/')), '/');
-            } elseif (!str_contains($value, '://')) {
-                $relativePath = ltrim($value, '/');
-            }
-        }
+        $relativePath = portalManagedMediaRelativePath($value) ?? '';
 
         if ($relativePath === '' || !str_starts_with($relativePath, $managedPrefix)) {
             return;
         }
 
         try {
-            Storage::disk('public')->delete($relativePath);
+            Storage::disk(portalManagedMediaDiskName())->delete($relativePath);
         } catch (\Throwable $e) {
             Log::warning('Failed to delete managed portal media asset.', [
                 'path' => $relativePath,
@@ -805,7 +881,7 @@ if (!function_exists('portalStoreAdminHeroImage')) {
             return null;
         }
 
-        return Storage::disk('public')->url($relativePath);
+        return $relativePath;
     }
 }
 

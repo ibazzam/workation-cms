@@ -1379,40 +1379,52 @@
                     @csrf
                     <div class="finance-form-grid">
                         <div class="finance-field finance-field-wide" style="padding:14px;border:1px solid #d7e0e6;border-radius:12px;background:#f9fbfc;">
+                            @php
+                                $homeHeroStoredValue = trim((string) ($homeHeroAdminStoredValue ?? ''));
+                                $homeHeroExternalValue = preg_match('#^https?://#i', $homeHeroStoredValue) === 1 ? $homeHeroStoredValue : '';
+                            @endphp
                             <label style="display:block;margin-bottom:8px;font-weight:600;">Current Homepage Banner</label>
                             @if (!empty($homeHeroAdminImageUrl))
                                 <img src="{{ $homeHeroAdminImageUrl }}" alt="Homepage banner preview" style="display:block;width:100%;max-width:520px;aspect-ratio:16/9;object-fit:cover;border-radius:12px;border:1px solid #d7e0e6;margin-bottom:10px;background:#eef4f7;">
+                                <div class="small" style="margin-bottom:10px;">Current source: {{ $homeHeroExternalValue !== '' ? 'External URL' : 'Managed upload' }}</div>
                             @else
                                 <div class="small" style="margin-bottom:10px;">No homepage banner configured yet.</div>
                             @endif
                             <label for="home_hero_image_file">Upload Homepage Banner</label>
                             <input id="home_hero_image_file" name="home_hero_image_file" type="file" accept="image/png,image/jpeg,image/webp" style="margin-bottom:10px;">
+                            <div class="small" style="margin-bottom:10px;">Upload a new image to replace the current banner.</div>
                             <label for="home_hero_image_url">Homepage Banner Image URL</label>
-                            <input id="home_hero_image_url" name="home_hero_image_url" type="text" maxlength="2048" value="{{ old('home_hero_image_url', $homeHeroAdminImageUrl ?? '') }}" placeholder="https://cdn.example.com/home-banner.jpg or /storage/...">
+                            <input id="home_hero_image_url" name="home_hero_image_url" type="text" maxlength="2048" value="{{ old('home_hero_image_url', $homeHeroExternalValue) }}" placeholder="https://cdn.example.com/home-banner.jpg">
+                            <div class="small" style="margin-top:8px;">Leave this blank to keep the current uploaded file. Paste a new HTTPS URL to replace it.</div>
                             <label class="small" style="display:flex;align-items:center;gap:8px;margin-top:10px;">
                                 <input name="home_hero_image_clear" type="checkbox" value="1">
-                                Clear homepage banner
+                                Delete current homepage banner on save
                             </label>
                         </div>
                         @foreach (($catalogHeroAdminCategories ?? []) as $categoryKey => $categoryLabel)
                             @php
                                 $fieldName = 'catalog_hero_image_' . str_replace('-', '_', (string) $categoryKey);
                                 $fieldValue = (string) data_get($catalogHeroAdminImages ?? [], $categoryKey, '');
+                                $fieldStoredValue = trim((string) data_get($catalogHeroAdminStoredValues ?? [], $categoryKey, ''));
+                                $fieldExternalValue = preg_match('#^https?://#i', $fieldStoredValue) === 1 ? $fieldStoredValue : '';
                             @endphp
                             <div class="finance-field" style="padding:14px;border:1px solid #d7e0e6;border-radius:12px;background:#f9fbfc;">
                                 <label style="display:block;margin-bottom:8px;font-weight:600;">{{ $categoryLabel }}</label>
                                 @if ($fieldValue !== '')
                                     <img src="{{ $fieldValue }}" alt="{{ $categoryLabel }} hero preview" style="display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;border:1px solid #d7e0e6;margin-bottom:10px;background:#eef4f7;">
+                                    <div class="small" style="margin-bottom:10px;">Current source: {{ $fieldExternalValue !== '' ? 'External URL' : 'Managed upload' }}</div>
                                 @else
                                     <div class="small" style="margin-bottom:10px;">No image configured yet.</div>
                                 @endif
                                 <label for="{{ $fieldName }}_file">Upload {{ $categoryLabel }} Hero</label>
                                 <input id="{{ $fieldName }}_file" name="{{ $fieldName }}_file" type="file" accept="image/png,image/jpeg,image/webp" style="margin-bottom:10px;">
+                                <div class="small" style="margin-bottom:10px;">Upload a new image to replace the current {{ strtolower($categoryLabel) }} hero.</div>
                                 <label for="{{ $fieldName }}">{{ $categoryLabel }} Hero URL</label>
-                                <input id="{{ $fieldName }}" name="{{ $fieldName }}" type="text" maxlength="2048" value="{{ old($fieldName, $fieldValue) }}" placeholder="https://cdn.example.com/{{ $categoryKey }}-hero.jpg or /storage/...">
+                                <input id="{{ $fieldName }}" name="{{ $fieldName }}" type="text" maxlength="2048" value="{{ old($fieldName, $fieldExternalValue) }}" placeholder="https://cdn.example.com/{{ $categoryKey }}-hero.jpg">
+                                <div class="small" style="margin-top:8px;">Leave blank to keep the current uploaded file. Paste a new HTTPS URL to override it.</div>
                                 <label class="small" style="display:flex;align-items:center;gap:8px;margin-top:10px;">
                                     <input name="{{ $fieldName }}_clear" type="checkbox" value="1">
-                                    Clear {{ $categoryLabel }} image
+                                    Delete current {{ $categoryLabel }} image on save
                                 </label>
                             </div>
                         @endforeach

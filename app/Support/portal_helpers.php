@@ -727,13 +727,33 @@ if (!function_exists('portalWriteMediaVariant')) {
         }
 
         $diskName = portalManagedMediaDiskName();
+        $disk = Storage::disk($diskName);
         $contentType = $ext === 'webp' ? 'image/webp' : 'image/jpeg';
 
-        return Storage::disk($diskName)->put($relativePath, $binary, [
-            'visibility' => 'public',
-            'ContentType' => $contentType,
-        ]);
-        return Storage::disk(portalManagedMediaDiskName())->put($relativePath, $binary);
+        // Some S3 buckets disable ACLs (Bucket Owner Enforced), which can reject
+        // writes when visibility is explicitly set. Retry with progressively safer options.
+        $writeAttempts = [
+            ['visibility' => 'public', 'ContentType' => $contentType],
+            ['ContentType' => $contentType],
+            [],
+        ];
+
+        foreach ($writeAttempts as $options) {
+            try {
+                if ($disk->put($relativePath, $binary, $options)) {
+                    return true;
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Managed media write attempt failed.', [
+                    'disk' => $diskName,
+                    'path' => $relativePath,
+                    'options' => $options,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return false;
     }
 }
 

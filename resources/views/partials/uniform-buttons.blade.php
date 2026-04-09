@@ -231,18 +231,4 @@
         opacity: 0.78;
     }
 
-    body:not(.category-display-page) .wf-site-footer {
-        border-top-color: rgba(210, 232, 244, 0.24) !important;
-    }
-
-    body:not(.category-display-page) .wf-footer-col {
-        background: linear-gradient(135deg, #0f6179 0%, #175f7c 100%) !important;
-        border-color: rgba(214, 236, 247, 0.22) !important;
-    }
-
-    body:not(.category-display-page) .wf-footer-title,
-    body:not(.category-display-page) .wf-footer-links a,
-    body:not(.category-display-page) .wf-footer-note {
-        color: #ffffff !important;
-    }
 </style>

@@ -454,10 +454,16 @@
         .top-links {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 6px;
+            gap: 8px;
             padding: 0 10px 10px;
             border: 0;
             background: transparent;
+        }
+
+        .top-link-divider {
+            height: 1px;
+            background: #d7e4ee;
+            margin: 4px 2px 2px;
         }
 
         .top-link {
@@ -468,14 +474,13 @@
             color: #19405b;
             padding: 8px 10px;
             font-size: 0.78rem;
-            line-height: 1.28;
+            line-height: 1.2;
             font-weight: 600;
             text-align: left;
             display: flex;
-            flex-direction: column;
-            gap: 2px;
-            min-height: 48px;
-            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            min-height: 44px;
             transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
         }
 
@@ -485,25 +490,20 @@
             box-shadow: 0 6px 14px rgba(34, 86, 120, 0.08);
         }
 
-        .top-link span {
-            color: #5e7388;
-            font-size: 0.73rem;
-            font-weight: 500;
+        .top-link-head {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #19405b;
         }
 
-            .top-link-head {
-                display: flex;
-                align-items: center;
-                gap: 5px;
-            }
-
-            .top-link-head i {
-                font-size: 0.9rem;
-                color: #0f6179;
-                width: 16px;
-                text-align: center;
-                flex: 0 0 16px;
-            }
+        .top-link-head i {
+            font-size: 0.94rem;
+            color: #0f6179;
+            width: 16px;
+            text-align: center;
+            flex: 0 0 16px;
+        }
 
             .mobile-category-nav {
                 display: none;
@@ -546,14 +546,11 @@
 
             .mobile-category-row {
                 display: none;
-                flex-wrap: nowrap;
-                gap: 7px;
-                overflow-x: auto;
-                overflow-y: hidden;
+                flex-direction: column;
+                gap: 8px;
+                overflow: visible;
                 padding-top: 8px;
                 padding-bottom: 2px;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: thin;
             }
 
             .mobile-category-nav[open] .mobile-category-row {
@@ -563,17 +560,24 @@
             .mobile-category-link {
                 text-decoration: none;
                 border: 1px solid #d4e3ee;
-                border-radius: 999px;
-                background: #f8fcff;
+                border-radius: 12px;
+                background: #ffffff;
                 color: #19405b;
-                padding: 7px 10px;
+                padding: 9px 10px;
                 font-size: 0.75rem;
                 font-weight: 700;
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
-                white-space: nowrap;
-                flex: 0 0 auto;
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .mobile-category-divider {
+                width: 100%;
+                height: 1px;
+                background: #d7e4ee;
+                margin: 2px 0;
             }
 
         .search-section-full-width {
@@ -1727,6 +1731,29 @@
                 return preg_match('#^/catalog/#', $url) === 1;
             })
             ->values();
+        $homeSidebarLinkSourceByUrl = $homeTopCategoryLinks
+            ->filter(static fn ($link) => is_array($link))
+            ->keyBy(static fn ($link) => (string) ($link['url'] ?? ''));
+        $homeSidebarLinks = collect([
+            ['icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'url' => '/catalog/accommodation'],
+            ['icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'url' => '/catalog/resort_day_visit'],
+            ['icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'url' => '/catalog/excursion'],
+            ['icon' => 'fa-solid fa-person-swimming', 'title' => 'Water Sports', 'url' => '/catalog/water_sports', 'divider_after' => true],
+            ['icon' => 'fa-solid fa-utensils', 'title' => 'Restaurants', 'url' => '/catalog/restaurant'],
+            ['icon' => 'fa-solid fa-water', 'title' => 'Sea Transport', 'url' => '/catalog/marine-transport'],
+            ['icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'url' => '/catalog/land-transport'],
+            ['icon' => 'fa-solid fa-car-side', 'title' => 'Vehicle Rentals', 'url' => '/catalog/vehicle_rental', 'divider_after' => true],
+            ['icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'url' => '/catalog/remote_workspace'],
+            ['icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'url' => '/catalog/conference_room'],
+            ['icon' => 'fa-solid fa-map-location-dot', 'title' => 'Things To Do', 'url' => '/blog'],
+        ])->map(function (array $link) use ($homeSidebarLinkSourceByUrl) {
+            $source = $homeSidebarLinkSourceByUrl->get((string) ($link['url'] ?? ''), []);
+            if (!is_array($source)) {
+                $source = [];
+            }
+
+            return array_merge($source, $link);
+        })->values();
         $homeDefaultCategoryUrl = '/catalog/accommodation';
         $firstCategoryLink = $homeTopCategoryLinks->first(function ($link) {
             $url = (string) ($link['url'] ?? '');
@@ -1807,12 +1834,15 @@
                 </div>
                 <p class="sidebar-title">Browse Categories</p>
                 <section class="top-links" aria-label="Top categories">
-                    @foreach ($homeCatalogCategoryLinks as $link)
+                    @foreach ($homeSidebarLinks as $link)
                         @php
                             $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
                             $categoryKeyFromUrl = preg_match('#/catalog/([a-z_-]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
                         @endphp
-                        <a class="top-link floating-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}"><span class="top-link-head"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}"></i>{{ $link['title'] ?? 'Category' }}</span><span>{{ $link['subtitle'] ?? '' }}</span></a>
+                        <a class="top-link floating-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}"><span class="top-link-head"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}"></i>{{ $link['title'] ?? 'Category' }}</span></a>
+                        @if (!empty($link['divider_after']))
+                            <div class="top-link-divider" aria-hidden="true"></div>
+                        @endif
                     @endforeach
                 </section>
             </aside>
@@ -1821,11 +1851,14 @@
                 <details class="mobile-category-nav" aria-label="Mobile category quick links">
                     <summary class="mobile-category-toggle">Browse Categories</summary>
                     <div class="mobile-category-row">
-                        @foreach ($homeCatalogCategoryLinks as $link)
+                        @foreach ($homeSidebarLinks as $link)
                             @php
                                 $mobileLinkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
                             @endphp
                             <a class="mobile-category-link" href="{{ $mobileLinkUrl }}"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i><span>{{ $link['title'] ?? 'Category' }}</span></a>
+                            @if (!empty($link['divider_after']))
+                                <div class="mobile-category-divider" aria-hidden="true"></div>
+                            @endif
                         @endforeach
                     </div>
                 </details>

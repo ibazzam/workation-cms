@@ -207,10 +207,7 @@
     body:not(.category-display-page) .header-link:visited,
     body:not(.category-display-page) .customer-auth,
     body:not(.category-display-page) .customer-auth span,
-    body:not(.category-display-page) .customer-auth i,
-    body:not(.category-display-page) .sidebar-brand-title,
-    body:not(.category-display-page) .sidebar-brand-subline,
-    body:not(.category-display-page) .sidebar-title {
+    body:not(.category-display-page) .customer-auth i {
         color: #ffffff !important;
     }
 

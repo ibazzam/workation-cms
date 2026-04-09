@@ -207,7 +207,7 @@
             <div class="hero-links">
                 <a class="hero-link" href="/admin">Back to Admin Portal</a>
                 <a class="hero-link" href="/customer">Open Customer Portal</a>
-                <a class="hero-link" href="/vendor">Open Vendor Portal</a>
+                <a class="hero-link" href="/vendor">Open Partners Portal</a>
             </div>
         </section>
 

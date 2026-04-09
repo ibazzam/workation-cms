@@ -70,7 +70,7 @@
 
     <div class="nav-divider"></div>
 
-    <a class="nav-item-link" href="/vendor/profile" data-panel-key="profile">Vendor Profile</a>
+    <a class="nav-item-link" href="/vendor/profile" data-panel-key="profile">Partner Profile</a>
     <a class="nav-item-link" href="/vendor/billing" data-panel-key="billing">Billing Setup</a>
     <a class="nav-item-link" href="#api" data-panel-key="api">API Tools</a>
 </nav>

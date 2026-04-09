@@ -973,7 +973,7 @@
                     <p>Monitor platform health, finance moderation, vendor onboarding, audit history, and operational controls from one unified admin workspace.</p>
                     <div class="hero-links">
                         <a class="hero-link" href="/">Back to Home</a>
-                        <a class="hero-link" href="/vendor">Go to Vendor Portal</a>
+                        <a class="hero-link" href="/vendor">Go to Partners Portal</a>
                         <a class="hero-link" href="/admin/finance">Open Finance</a>
                         <a class="hero-link" href="/admin/moderation">Review Vendors</a>
                         <a class="hero-link" href="/portal/admin/blog">Manage Blog</a>

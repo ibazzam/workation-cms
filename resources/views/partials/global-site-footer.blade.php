@@ -1,3 +1,7 @@
+@once
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+@endonce
+
 <style>
     .wf-site-footer {
         margin-top: 16px;
@@ -99,21 +103,21 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 28px;
-        padding: 0 10px;
+        width: 36px;
+        height: 36px;
         border: 1px solid #cfe0eb;
-        border-radius: 999px;
+        border-radius: 50%;
         background: #ffffff;
         color: #214b68;
-        font-size: 0.76rem;
-        font-weight: 700;
-        transition: border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+        font-size: 0.96rem;
+        transition: border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
     }
 
     .wf-social-links a:hover {
         border-color: #89adc5;
         color: #0f6179;
         box-shadow: 0 4px 10px rgba(21, 63, 94, 0.12);
+        transform: translateY(-1px);
     }
 
     @media (max-width: 980px) {
@@ -134,8 +138,6 @@
         <section class="wf-footer-col" aria-label="Explore links">
             <h2 class="wf-footer-title">Explore</h2>
             <ul class="wf-footer-links">
-                <li><a href="/">Home</a></li>
-                <li><a href="/customer">Member Portal</a></li>
                 <li><a href="/customer?category=Accommodation">Stays and Properties</a></li>
                 <li><a href="/blog">Things to Do</a></li>
                 <li><a href="/catalog/marine-transport">Marine Transport</a></li>
@@ -149,7 +151,8 @@
             <ul class="wf-footer-links">
                 <li><a href="/portal/customer/login">Member Login</a></li>
                 <li><a href="/portal/customer/register">Member Registration</a></li>
-                <li><a href="/vendor">Vendor Portal</a></li>
+                <li><a href="/vendor">Partners Portal</a></li>
+                <li><a href="/portal/vendor/register">Become a Partner</a></li>
                 <li><a href="/admin">Admin Portal</a></li>
             </ul>
         </section>
@@ -167,17 +170,17 @@
             <h2 class="wf-footer-title">Support</h2>
             <ul class="wf-footer-links">
                 <li><a href="mailto:support@workation.mv">Email Support</a></li>
-                <li><a href="{{ $apiBase ?? workationApiBase() }}/api/v1/health" target="_blank" rel="noopener">API Health</a></li>
-                <li><a href="{{ $apiBase ?? workationApiBase() }}/api/v1/ops/runbooks" target="_blank" rel="noopener">Runbooks</a></li>
+                <li><a href="/portal/customer/forgot-password">Account Help</a></li>
+                <li><a href="/privacy-policy">Privacy and Data Requests</a></li>
             </ul>
             <div class="wf-footer-social" aria-label="Social media links">
                 <p class="wf-footer-social-title">Follow Us</p>
                 <ul class="wf-social-links">
-                    <li><a href="https://www.facebook.com/" target="_blank" rel="noopener">Facebook</a></li>
-                    <li><a href="https://www.instagram.com/" target="_blank" rel="noopener">Instagram</a></li>
-                    <li><a href="https://www.linkedin.com/" target="_blank" rel="noopener">LinkedIn</a></li>
-                    <li><a href="https://x.com/" target="_blank" rel="noopener">X</a></li>
-                    <li><a href="https://www.youtube.com/" target="_blank" rel="noopener">YouTube</a></li>
+                    <li><a href="https://www.facebook.com/" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a></li>
+                    <li><a href="https://www.instagram.com/" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a></li>
+                    <li><a href="https://www.linkedin.com/" target="_blank" rel="noopener" aria-label="LinkedIn" title="LinkedIn"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i></a></li>
+                    <li><a href="https://x.com/" target="_blank" rel="noopener" aria-label="X" title="X"><i class="fa-brands fa-x-twitter" aria-hidden="true"></i></a></li>
+                    <li><a href="https://www.youtube.com/" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube"><i class="fa-brands fa-youtube" aria-hidden="true"></i></a></li>
                 </ul>
             </div>
         </section>

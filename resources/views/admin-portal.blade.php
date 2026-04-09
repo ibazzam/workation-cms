@@ -1371,6 +1371,13 @@
         <section class="card manage" id="heroImageSettingsPanel" style="{{ $adminPage === 'media' ? '' : 'display:none;' }}">
             <p class="label">Hero Image Settings</p>
             <p class="small">Update the homepage banner and category catalogue hero images. Each slot saves independently — upload an image, paste an HTTPS URL, or remove the current one.</p>
+            <div style="margin-top:10px;padding:10px 12px;border:1px solid #cfe0ec;border-radius:10px;background:#f4f9fd;">
+                <p style="margin:0 0 6px;font-weight:700;font-size:0.82rem;color:#18435c;">Upload guidance</p>
+                <p class="small" style="margin:0;line-height:1.45;">
+                    Recommended: <strong>3200 x 1800</strong> (16:9). Minimum for desktop quality: <strong>2560 x 1440</strong>.
+                    Maximum file size: <strong>4 MB</strong>. Supported formats: <strong>JPG, PNG, WebP</strong>.
+                </p>
+            </div>
 
             @if ($adminPage === 'media')
                 @if (session('portal_notice'))
@@ -1399,7 +1406,7 @@
                     @endif
                     <form method="POST" action="/portal/admin/media-hero/update" enctype="multipart/form-data" style="margin-bottom:10px;">
                         @csrf
-                        <label for="home_hero_image_file" style="display:block;margin-bottom:4px;font-size:0.85rem;">Upload new image (JPG, PNG, WebP · max 4 MB)</label>
+                        <label for="home_hero_image_file" style="display:block;margin-bottom:4px;font-size:0.85rem;">Upload new image (JPG, PNG, WebP · max 4 MB · 16:9 recommended)</label>
                         <input id="home_hero_image_file" name="home_hero_image_file" type="file" accept="image/png,image/jpeg,image/webp" style="display:block;margin-bottom:12px;">
                         <label for="home_hero_image_url" style="display:block;margin-bottom:4px;font-size:0.85rem;">Or paste an external HTTPS URL</label>
                         <input id="home_hero_image_url" name="home_hero_image_url" type="text" maxlength="2048" value="{{ old('home_hero_image_url', $homeHeroExternalValue) }}" placeholder="https://cdn.example.com/homepage-banner.jpg" style="display:block;width:100%;max-width:540px;margin-bottom:12px;">
@@ -1433,7 +1440,7 @@
                             @endif
                             <form method="POST" action="/portal/admin/media-hero/update" enctype="multipart/form-data" style="margin-bottom:10px;">
                                 @csrf
-                                <label for="{{ $fieldName }}_file" style="display:block;margin-bottom:4px;font-size:0.85rem;">Upload new image</label>
+                                <label for="{{ $fieldName }}_file" style="display:block;margin-bottom:4px;font-size:0.85rem;">Upload new image (max 4 MB · 16:9 recommended)</label>
                                 <input id="{{ $fieldName }}_file" name="{{ $fieldName }}_file" type="file" accept="image/png,image/jpeg,image/webp" style="display:block;margin-bottom:12px;">
                                 <label for="{{ $fieldName }}" style="display:block;margin-bottom:4px;font-size:0.85rem;">Or paste an HTTPS URL</label>
                                 <input id="{{ $fieldName }}" name="{{ $fieldName }}" type="text" maxlength="2048" value="{{ old($fieldName, $fieldExternalValue) }}" placeholder="https://cdn.example.com/{{ $categoryKey }}.jpg" style="display:block;width:100%;margin-bottom:12px;">

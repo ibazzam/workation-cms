@@ -192,4 +192,60 @@
         box-shadow: none;
         transform: none;
     }
+
+    body:not(.category-display-page) .header-bar {
+        background: linear-gradient(135deg, #0f6179 0%, #1b7a9a 100%) !important;
+        border-bottom-color: rgba(214, 236, 247, 0.22) !important;
+        box-shadow: 0 12px 28px rgba(9, 46, 61, 0.32) !important;
+        backdrop-filter: none !important;
+    }
+
+    body:not(.category-display-page) .header-brand,
+    body:not(.category-display-page) .header-brand-link,
+    body:not(.category-display-page) .header-subline,
+    body:not(.category-display-page) .header-link,
+    body:not(.category-display-page) .header-link:visited,
+    body:not(.category-display-page) .customer-auth,
+    body:not(.category-display-page) .customer-auth span,
+    body:not(.category-display-page) .customer-auth i,
+    body:not(.category-display-page) .sidebar-brand-title,
+    body:not(.category-display-page) .sidebar-brand-subline,
+    body:not(.category-display-page) .sidebar-title {
+        color: #ffffff !important;
+    }
+
+    body:not(.category-display-page) .header-link:hover,
+    body:not(.category-display-page) .header-brand-link:hover {
+        color: #ffffff !important;
+        background: rgba(255, 255, 255, 0.12) !important;
+    }
+
+    body:not(.category-display-page) .header-search-mini {
+        border-color: rgba(208, 232, 245, 0.48) !important;
+        background: rgba(255, 255, 255, 0.14) !important;
+    }
+
+    body:not(.category-display-page) .header-search-mini input,
+    body:not(.category-display-page) .header-search-mini input::placeholder {
+        color: #ffffff !important;
+    }
+
+    body:not(.category-display-page) .header-search-mini input::placeholder {
+        opacity: 0.78;
+    }
+
+    body:not(.category-display-page) .wf-site-footer {
+        border-top-color: rgba(210, 232, 244, 0.24) !important;
+    }
+
+    body:not(.category-display-page) .wf-footer-col {
+        background: linear-gradient(135deg, #0f6179 0%, #175f7c 100%) !important;
+        border-color: rgba(214, 236, 247, 0.22) !important;
+    }
+
+    body:not(.category-display-page) .wf-footer-title,
+    body:not(.category-display-page) .wf-footer-links a,
+    body:not(.category-display-page) .wf-footer-note {
+        color: #ffffff !important;
+    }
 </style>

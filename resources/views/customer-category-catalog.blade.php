@@ -199,11 +199,16 @@
             border: 1px solid rgba(225, 242, 251, 0.55);
             border-radius: 10px;
             padding: 7px 12px;
-            background: rgba(255, 255, 255, 0.92);
-            color: #174968;
+            background: rgba(255, 255, 255, 0.14);
+            color: #ffffff;
             font-size: 0.8rem;
             font-weight: 700;
             font-family: inherit;
+        }
+
+        .auth-link:hover {
+            background: rgba(255, 255, 255, 0.24);
+            color: #ffffff;
         }
 
         .auth-link.primary {
@@ -223,21 +228,21 @@
             border: 1px solid rgba(226, 243, 251, 0.62);
             border-radius: 11px;
             padding: 6px 10px;
-            background: rgba(255, 255, 255, 0.95);
-            color: #173e5b;
+            background: rgba(255, 255, 255, 0.14);
+            color: #ffffff;
             font-size: 0.8rem;
             font-weight: 700;
             font-family: inherit;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(20, 63, 90, 0.08);
+            box-shadow: 0 4px 10px rgba(8, 33, 49, 0.22);
         }
 
         .account-avatar {
             width: 22px;
             height: 22px;
             border-radius: 999px;
-            background: linear-gradient(135deg, #e8f5fb 0%, #d4ebf7 100%);
-            color: #1e5a7e;
+            background: rgba(255, 255, 255, 0.22);
+            color: #ffffff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -1014,7 +1019,7 @@
     </style>
     @include('partials.uniform-buttons')
 </head>
-<body>
+<body class="category-display-page">
     @php
         $filters = $filters ?? [];
         $categoryKey = $categoryKey ?? 'accommodation';

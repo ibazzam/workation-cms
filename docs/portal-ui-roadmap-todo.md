@@ -103,3 +103,190 @@ Target: complete launch-critical portal work by March 31, 2026.
 - [ ] Demo completed items every Friday with screenshots
 - [ ] Convert completed roadmap items into release notes
 - [ ] Keep only one source of truth in this file (no duplicates)
+
+## Frontend + Customer Portal A-Z QA Checklist (Execution Draft)
+
+### Phase 1 - Route and Navigation Integrity
+- [ ] Verify all homepage category cards route correctly to the expected category pages (no 404, no wrong category mapping)
+- [ ] Verify all homepage promotional cards and links resolve to valid filtered catalog pages
+- [ ] Verify global footer customer links route to valid customer and catalog targets
+- [ ] Verify back-navigation consistency from property, room, category booking, and checkout pages
+- [ ] Verify all major entry points work on desktop, tablet, and mobile breakpoints
+
+### Phase 2 - Homepage Quality and Conversion
+- [ ] Validate homepage hero image rendering quality and loading speed on desktop and mobile
+- [ ] Validate homepage hero fallback behavior when managed hero image is missing
+- [ ] Validate category grid icon, title, and subtitle consistency with actual catalog destinations
+- [ ] Validate homepage sections (trending, weekend deals, loved stays) for stale or broken links
+- [ ] Validate primary CTA hierarchy (search, browse category, continue booking) for visual clarity
+
+### Phase 3 - Category Catalog Pages
+- [ ] Validate each category hero image renders correctly from admin-managed media
+- [ ] Validate category filters (query, atoll, island, sort, date-related fields) persist and apply correctly
+- [ ] Validate empty state UX per category when no listings match filters
+- [ ] Validate listing cards for image fallback, title, location, pricing, and CTA correctness
+- [ ] Validate category-specific fields and labels for each vertical (accommodation, transport, excursion, workspace, conference, resort day, restaurant, vehicle rental)
+
+### Phase 4 - Property and Room Journey
+- [ ] Validate property details page media gallery quality, ordering, and fallback behavior
+- [ ] Validate room list rendering and room-level media display for each property
+- [ ] Validate check-in/check-out, guest counts, and prefill propagation from catalog to property to room pages
+- [ ] Validate room booking form required fields and inline error states
+- [ ] Validate room booking summary calculations and date/night calculations in UI
+
+### Phase 5 - Category Booking Journey (Non-room flows)
+- [ ] Validate category booking pages for each supported service type and required custom fields
+- [ ] Validate category details are captured and passed to reservation notes correctly
+- [ ] Validate service-first flow (collect service details before checkout) for all categories
+- [ ] Validate validation errors are user-friendly and preserve entered values
+- [ ] Validate redirect to checkout with complete summary payload for all category paths
+
+### Phase 6 - Checkout and Payment Experience
+- [ ] Validate checkout page renders full summary correctly for room and category reservations
+- [ ] Validate invoice breakdown (subtotal, discounts, taxes, transfers, total) against reservation data
+- [ ] Validate tax line and inclusions display behavior for missing and populated data
+- [ ] Validate payment status UX and wording in checkout and customer portal booking cards
+- [ ] Replace placeholder Confirm and Pay behavior with production payment flow requirements checklist
+- [ ] Validate payment method display strategy (card, transfer, wallet, pay-later) and failure/retry UX
+
+### Phase 7 - Customer Authentication and Session Flow
+- [ ] Validate customer register, login, forgot password, reset password, and verify-email flows end-to-end
+- [ ] Validate continue URL logic after login/register from catalog, property, and checkout entry points
+- [ ] Validate social auth entry and callback flow for customer login/register
+- [ ] Validate logout from customer portal and account menu across pages
+- [ ] Validate session-expired behavior and protected-action prompts
+
+### Phase 8 - Customer Portal Functional Completeness
+- [ ] Validate bookings tabs (all, awaiting payment, upcoming, awaiting review) counts and data integrity
+- [ ] Validate booking category pills and sidebar booking category filters
+- [ ] Validate booking card actions (view, delete/cancel behavior, book again flow) and expected outcomes
+- [ ] Validate profile update form persistence and confirmation messaging
+- [ ] Validate frequent traveller, contact info, cards, promo, and gift card sections for real backend integration status
+- [ ] Validate account menu links from catalog and other pages to the correct customer portal anchors
+
+### Phase 9 - Frontend System Quality (Shared)
+- [ ] Standardize loading states (skeleton/spinner) across catalog, property, checkout, and customer portal
+- [ ] Standardize empty states, no-results states, and error state copy across core pages
+- [ ] Standardize button variants, form controls, card spacing, and typography tokens across pages
+- [ ] Verify responsive behavior at key breakpoints (<=480, <=768, <=980, >=1280)
+- [ ] Validate image performance strategy (compression, dimensions, lazy loading, fallback placeholders)
+
+### Phase 10 - Accessibility and UX Reliability
+- [ ] Validate keyboard navigation and focus order for all primary booking and account forms
+- [ ] Validate form labels, aria usage, and error association for inputs
+- [ ] Validate color contrast for text, badges, and CTA buttons across major sections
+- [ ] Validate semantic heading structure for homepage, category, property, checkout, and portal pages
+- [ ] Validate touch target sizes and interaction spacing on mobile
+
+### Phase 11 - Data and Business Rule Integrity
+- [ ] Validate availability and reservation data synchronization with displayed UI status
+- [ ] Validate pricing rules and rounding consistency between form, checkout summary, and stored reservation totals
+- [ ] Validate currency consistency across all customer-facing pages and components
+- [ ] Validate cancellation policy and inclusions source-of-truth consistency across property and checkout
+- [ ] Validate booking status transitions and payment status transitions against expected lifecycle
+
+### Phase 12 - Release Readiness and Sign-off
+- [ ] Produce screenshot evidence set for homepage, each category, property, room, checkout, and customer portal tabs
+- [ ] Produce route matrix with pass/fail and defect IDs for every critical journey
+- [ ] Produce payment flow readiness report (implemented, placeholder, blocked, next action)
+- [ ] Produce prioritized bug backlog by severity (P0/P1/P2) and assign owners
+- [ ] Run final regression pass after fixes and capture release sign-off record
+
+### Parallel Vendor Portal Follow-up (After Customer Frontend Sign-off)
+- [ ] Build equivalent A-Z checklist for vendor portal overview, listings, operations, pricing, billing, reports, and promotions
+- [ ] Validate every vendor form contract (field to request key to persistence to publish/readiness checks)
+- [ ] Validate vendor media, availability, reservations, and billing workflows end-to-end
+
+## Frontend + Customer Portal Working Tasklist (Run One by One)
+
+Execution rule: complete each task fully (verify + fix + evidence) before moving to the next.
+
+### Task 1 - Route Matrix and Link Integrity (P0)
+- [ ] Build route matrix for: home, all category pages, property, room, category-booking, checkout, customer portal
+- [ ] Click-test all homepage cards, promo links, and footer links
+- [ ] Log broken/mismatched routes with severity and owner
+- [ ] Acceptance: zero 404s and zero wrong-target links for critical booking flow
+- [ ] Evidence: route matrix table + screenshots of each critical route
+
+### Task 2 - Homepage UX and Hero Quality (P0)
+- [ ] Verify homepage hero quality on desktop and mobile after admin upload
+- [ ] Verify fallback behavior when no managed hero image exists
+- [ ] Validate category card labels and subtitles against actual destinations
+- [ ] Acceptance: hero renders sharp and all homepage CTAs route correctly
+- [ ] Evidence: desktop/mobile screenshots + CTA click results
+
+### Task 3 - Category Page Functional QA (P0)
+- [ ] Validate hero rendering for each category from admin-managed media
+- [ ] Validate search/filter/sort query behavior and URL persistence
+- [ ] Validate listing cards (image, price, location, CTA) and empty states
+- [ ] Acceptance: all categories usable with correct filtering behavior
+- [ ] Evidence: one pass screenshot set per category
+
+### Task 4 - Property and Room Journey QA (P0)
+- [ ] Validate property media gallery, room media, and fallback behavior
+- [ ] Validate prefill propagation: check-in/check-out/adults/children/rooms
+- [ ] Validate room booking form errors and required fields
+- [ ] Acceptance: property-to-room journey is consistent and error-safe
+- [ ] Evidence: journey screenshots + issue list (if any)
+
+### Task 5 - Non-room Category Booking QA (P0)
+- [ ] Validate each category-booking form and required category-specific fields
+- [ ] Validate category detail capture and reservation note payload completeness
+- [ ] Validate redirect to checkout with correct summary data
+- [ ] Acceptance: all category-booking flows reach checkout with correct context
+- [ ] Evidence: flow-by-flow payload and UI checks
+
+### Task 6 - Checkout Accuracy and Payment UX (P0)
+- [ ] Validate checkout summary values against reservation inputs
+- [ ] Validate invoice rows: subtotal, discount, taxes, transfer, total
+- [ ] Validate payment status wording and CTA behavior
+- [ ] Define production-ready replacement plan for placeholder Confirm and Pay behavior
+- [ ] Acceptance: no pricing mismatch and clear payment progression UX
+- [ ] Evidence: checkout comparison sheet (input vs displayed totals)
+
+### Task 7 - Customer Auth and Session Continuity (P1)
+- [ ] Validate register, login, verify-email, forgot/reset password
+- [ ] Validate continue URL return behavior from catalog/property/checkout
+- [ ] Validate logout and session-expiry handling
+- [ ] Acceptance: auth flows are reliable with no dead-end redirects
+- [ ] Evidence: auth flow test log + screenshots
+
+### Task 8 - Customer Portal Functional QA (P1)
+- [ ] Validate booking tabs and counts (all, awaiting payment, upcoming, awaiting review)
+- [ ] Validate booking category filter behavior in sidebar and pills
+- [ ] Validate profile update persistence and messaging
+- [ ] Validate account sections marked as placeholder vs integrated
+- [ ] Acceptance: customer portal sections behave as labeled and expected
+- [ ] Evidence: section-wise pass/fail sheet
+
+### Task 9 - Responsive and Accessibility Pass (P1)
+- [ ] Validate key pages at <=480, <=768, <=980, >=1280
+- [ ] Validate keyboard navigation and focus order on booking/auth forms
+- [ ] Validate labels, aria, and contrast issues for top flows
+- [ ] Acceptance: no blocking responsive or accessibility defects on core journey
+- [ ] Evidence: breakpoint screenshot set + a11y findings list
+
+### Task 10 - Frontend Consistency and UI System Cleanup (P2)
+- [ ] Standardize buttons, cards, form controls, and state components
+- [ ] Standardize loading, empty, and error states across customer journey
+- [ ] Reduce repeated inline styles into reusable classes/tokens where feasible
+- [ ] Acceptance: consistent interaction and visual language across pages
+- [ ] Evidence: before/after UI consistency checklist
+
+### Task 11 - Data and Business Rule Validation (P1)
+- [ ] Validate availability/status synchronization with displayed UI state
+- [ ] Validate currency and rounding consistency across catalog, booking, checkout, portal
+- [ ] Validate cancellation policy and inclusions consistency across touchpoints
+- [ ] Acceptance: no data integrity regressions in user-visible booking flow
+- [ ] Evidence: rule validation matrix with sample records
+
+### Task 12 - Release Readiness and Sign-off Pack (P0 final gate)
+- [ ] Compile final defects list grouped by P0/P1/P2
+- [ ] Confirm all P0 items resolved and retested
+- [ ] Produce final screenshot evidence pack for critical user journeys
+- [ ] Create go/no-go recommendation with residual risk notes
+- [ ] Acceptance: explicit sign-off for frontend + customer portal
+- [ ] Evidence: release sign-off document and pass summary
+
+## Immediate Next Step
+- [ ] Start Task 1 now and produce the first route matrix pass with defects list

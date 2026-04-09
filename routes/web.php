@@ -1102,6 +1102,123 @@ Route::get('/', function () {
 
     $homeTrendingChips = collect(['Top Islands', 'Top Cities', 'Top Atolls', 'Newly Rising']);
 
+    $homeCuratedDestinationImages = [
+        'maafushi' => '/images/home/destinations/maafushi-island.svg',
+        'maafushi_island' => '/images/home/destinations/maafushi-island.svg',
+        'male' => '/images/home/destinations/male-city.svg',
+        'male_city' => '/images/home/destinations/male-city.svg',
+        'baa_atoll' => '/images/home/destinations/baa-atoll.svg',
+        'ari_atoll' => '/images/home/destinations/ari-atoll.svg',
+        'hulhumale' => '/images/home/destinations/hulhumale-seafront.svg',
+        'hulhumale_seafront' => '/images/home/destinations/hulhumale-seafront.svg',
+        'thulusdhoo' => '/images/home/destinations/thulusdhoo-island.svg',
+        'thulusdhoo_island' => '/images/home/destinations/thulusdhoo-island.svg',
+        'thulhusdhoo' => '/images/home/destinations/thulusdhoo-island.svg',
+        'thulhusdhoo_island' => '/images/home/destinations/thulusdhoo-island.svg',
+        'ukulhas' => '/images/home/destinations/ukulhas-island.svg',
+        'ukulhas_island' => '/images/home/destinations/ukulhas-island.svg',
+        'dhigurah' => '/images/home/destinations/dhigurah-island.svg',
+        'dhigurah_island' => '/images/home/destinations/dhigurah-island.svg',
+    ];
+
+    $homeDestinationMediaOverrides = collect();
+    if (Schema::hasTable('portal_destination_media_overrides')) {
+        $homeDestinationMediaOverrides = DB::table('portal_destination_media_overrides')
+            ->orderBy('destination_name')
+            ->pluck('image_value', 'destination_key');
+    }
+
+    $resolveHomeDestinationKey = static function (array $card): string {
+        $candidates = [
+            $card['title'] ?? null,
+            $card['city'] ?? null,
+            $card['location'] ?? null,
+            $card['island'] ?? null,
+            $card['atoll'] ?? null,
+            $card['meta'] ?? null,
+        ];
+
+        $url = trim((string) ($card['url'] ?? ''));
+        if ($url !== '') {
+            $queryString = parse_url($url, PHP_URL_QUERY);
+            if (is_string($queryString) && $queryString !== '') {
+                parse_str($queryString, $queryParams);
+                if (isset($queryParams['q'])) {
+                    $candidates[] = $queryParams['q'];
+                }
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            $normalized = portalNormalizeDestinationMediaKey(is_scalar($candidate) ? (string) $candidate : '');
+            if ($normalized === '') {
+                continue;
+            }
+
+            return $normalized;
+        }
+
+        return '';
+    };
+
+    $resolveHomeCuratedDestinationImage = static function (array $card) use ($homeCuratedDestinationImages, $resolveHomeDestinationKey): ?string {
+        $destinationKey = $resolveHomeDestinationKey($card);
+        if ($destinationKey === '') {
+            return null;
+        }
+
+        return $homeCuratedDestinationImages[$destinationKey] ?? null;
+    };
+
+    $resolveHomeDestinationOverrideImage = static function (array $card) use ($homeDestinationMediaOverrides, $resolveHomeDestinationKey): ?string {
+        $destinationKey = $resolveHomeDestinationKey($card);
+        if ($destinationKey === '') {
+            return null;
+        }
+
+        $storedValue = trim((string) ($homeDestinationMediaOverrides[$destinationKey] ?? ''));
+        if ($storedValue === '') {
+            return null;
+        }
+
+        return portalManagedMediaUrlFromPath($storedValue) ?? null;
+    };
+
+    $applyHomeDestinationImages = static function ($cards) use ($resolveHomeDestinationOverrideImage, $resolveHomeCuratedDestinationImage, $resolveHomeDestinationKey) {
+        return collect($cards)->map(function ($card) use ($resolveHomeDestinationOverrideImage, $resolveHomeCuratedDestinationImage, $resolveHomeDestinationKey) {
+            if (!is_array($card)) {
+                return $card;
+            }
+
+            $destinationKey = $resolveHomeDestinationKey($card);
+            if ($destinationKey !== '') {
+                $card['destination_key'] = $destinationKey;
+            }
+
+            $overrideImage = $resolveHomeDestinationOverrideImage($card);
+            if ($overrideImage !== null && $overrideImage !== '') {
+                $card['image_url'] = $overrideImage;
+                $card['fallback_image_url'] = $overrideImage;
+
+                return $card;
+            }
+
+            $hasPrimaryImage = trim((string) ($card['image_url'] ?? '')) !== '';
+            $hasFallbackImage = trim((string) ($card['fallback_image_url'] ?? '')) !== '';
+            if ($hasPrimaryImage || $hasFallbackImage) {
+                return $card;
+            }
+
+            $curatedImage = $resolveHomeCuratedDestinationImage($card);
+            if ($curatedImage !== null && $curatedImage !== '') {
+                $card['image_url'] = $curatedImage;
+                $card['fallback_image_url'] = $curatedImage;
+            }
+
+            return $card;
+        })->values();
+    };
+
     $homeBrowseCards = collect([
         ['title' => 'Stay Options', 'subtitle' => 'Hotels, villas, guesthouses', 'url' => '/catalog/accommodation'],
         ['title' => 'Marine Transport', 'subtitle' => 'Speedboat, ferry, water transfer', 'url' => '/catalog/marine-transport'],
@@ -1132,6 +1249,9 @@ Route::get('/', function () {
         ['title' => 'Ukulhas Island', 'subtitle' => 'Loved for clean beaches and relaxed stays.', 'url' => '/catalog/accommodation?q=Ukulhas'],
         ['title' => 'Dhigurah Island', 'subtitle' => 'Strong demand for reef and marine experiences.', 'url' => '/catalog/accommodation?q=Dhigurah'],
     ]);
+
+    $homeTrendingCards = $applyHomeDestinationImages($homeTrendingCards);
+    $homeLovedCards = $applyHomeDestinationImages($homeLovedCards);
 
     $homeListingMediaByProperty = collect();
 
@@ -1242,6 +1362,20 @@ Route::get('/', function () {
             }
 
             return $atoll;
+        };
+
+        $propertyLocationValue = static function ($property): string {
+            $island = trim((string) ($property->island ?? ''));
+            if ($island !== '') {
+                return $island;
+            }
+
+            $city = trim((string) ($property->city ?? ''));
+            if ($city !== '') {
+                return $city;
+            }
+
+            return trim((string) ($property->atoll ?? ''));
         };
 
         if (Schema::hasColumn('vendor_properties', 'listing_category')) {
@@ -1370,13 +1504,15 @@ Route::get('/', function () {
                     return [
                         'title' => $row['title'],
                         'subtitle' => $row['count'] . ' listings',
-                        'url' => $sampleId > 0 ? ('/property/' . $sampleId) : ('/catalog/accommodation?q=' . urlencode($row['title'])),
+                        'url' => '/catalog/accommodation?q=' . urlencode($row['title']),
                         'image_url' => $resolvePropertyImage($sampleId),
                         'fallback_image_url' => $resolvePropertyFallbackImage($sampleId),
                         'category' => $sampleCategory,
                     ];
                 })
                 ->values();
+
+            $homeTrendingCards = $applyHomeDestinationImages($homeTrendingCards);
         }
 
         $priceSorted = $allProperties
@@ -1428,28 +1564,42 @@ Route::get('/', function () {
                 ->where('status', 'active')
                 ->orderByDesc($sortColumn)
                 ->orderByDesc('updated_at')
-                ->limit(4)
+                ->limit(120)
                 ->get();
 
             if ($lovedRows->isNotEmpty()) {
-                $homeLovedCards = $lovedRows->map(function ($property) use ($sortColumn, $resolvePropertyImage, $resolvePropertyFallbackImage) {
-                    $name = trim((string) ($property->name ?? 'Loved Listing'));
-                    $score = (string) ($property->{$sortColumn} ?? '0');
-                    $propertyId = (int) ($property->id ?? 0);
-                    $loc = trim((string) ($property->island ?? ''));
-                    if ($loc === '') {
-                        $loc = trim((string) ($property->atoll ?? ''));
+                $lovedDestinationCards = [];
+                $seenLovedDestinations = [];
+
+                foreach ($lovedRows as $property) {
+                    $location = $propertyLocationValue($property);
+                    $destinationKey = portalNormalizeDestinationMediaKey($location);
+                    if ($location === '' || $destinationKey === '' || isset($seenLovedDestinations[$destinationKey])) {
+                        continue;
                     }
 
-                    return [
-                        'title' => $name,
+                    $seenLovedDestinations[$destinationKey] = true;
+                    $score = (string) ($property->{$sortColumn} ?? '0');
+                    $propertyId = (int) ($property->id ?? 0);
+                    $lovedDestinationCards[] = [
+                        'title' => $location,
                         'subtitle' => 'Score ' . $score,
-                        'url' => '/property/' . $propertyId,
+                        'url' => '/catalog/accommodation?q=' . urlencode($location),
                         'image_url' => $resolvePropertyImage($propertyId),
                         'fallback_image_url' => $resolvePropertyFallbackImage($propertyId),
-                        'meta' => $loc,
+                        'meta' => trim((string) ($property->atoll ?? '')),
                     ];
-                })->values();
+
+                    if (count($lovedDestinationCards) >= 4) {
+                        break;
+                    }
+                }
+
+                if ($lovedDestinationCards !== []) {
+                    $homeLovedCards = collect($lovedDestinationCards)->values();
+                }
+
+                $homeLovedCards = $applyHomeDestinationImages($homeLovedCards);
             }
         }
     }
@@ -4041,6 +4191,7 @@ Route::get('/admin', function (Request $request) {
         ->mapWithKeys(static fn ($label, $key) => [$key => '']);
     $catalogHeroAdminStoredValues = collect($catalogHeroAdminCategories)
         ->mapWithKeys(static fn ($label, $key) => [$key => '']);
+    $destinationMediaOverrides = collect();
 
     if (Schema::hasTable('portal_finance_settings')) {
         $mediaSettingKeys = collect(array_keys($catalogHeroAdminCategories))
@@ -4065,6 +4216,24 @@ Route::get('/admin', function (Request $request) {
             ->mapWithKeys(static function ($storedValue, $key) {
                 return [$key => portalManagedMediaUrlFromPath((string) $storedValue) ?? ''];
             });
+    }
+
+    if (Schema::hasTable('portal_destination_media_overrides')) {
+        $destinationMediaOverrides = DB::table('portal_destination_media_overrides')
+            ->orderBy('destination_name')
+            ->limit(300)
+            ->get()
+            ->map(static function ($row) {
+                return [
+                    'id' => (int) ($row->id ?? 0),
+                    'destination_key' => (string) ($row->destination_key ?? ''),
+                    'destination_name' => (string) ($row->destination_name ?? ''),
+                    'destination_type' => (string) ($row->destination_type ?? 'destination'),
+                    'image_value' => (string) ($row->image_value ?? ''),
+                    'image_url' => portalManagedMediaUrlFromPath((string) ($row->image_value ?? '')) ?? '',
+                ];
+            })
+            ->values();
     }
 
     $systemHealth = [
@@ -4225,6 +4394,7 @@ Route::get('/admin', function (Request $request) {
         'catalogHeroAdminImages' => $catalogHeroAdminImages,
         'catalogHeroAdminStoredValues' => $catalogHeroAdminStoredValues,
         'catalogHeroAdminCategories' => $catalogHeroAdminCategories,
+        'destinationMediaOverrides' => $destinationMediaOverrides,
         'vendorCategoryMap' => vendorPortalCategoryMap(),
         'canModerateListings' => $canModerateListings,
         'pendingModerationListings' => $pendingModerationListings,
@@ -4620,6 +4790,108 @@ Route::post('/portal/admin/media-hero/update', function (Request $request) {
     ]);
 
     return redirect('/admin?page=media')->with('portal_notice', 'Hero image updated successfully.');
+});
+
+Route::post('/portal/admin/media-destination/update', function (Request $request) {
+    if (!canManageVendorUsers()) {
+        return redirect('/admin?page=media')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can update destination image overrides.']);
+    }
+
+    if (!Schema::hasTable('portal_destination_media_overrides')) {
+        return redirect('/admin?page=media')->withErrors(['auth' => 'Destination media override table is not ready. Run migrations first.']);
+    }
+
+    $validated = $request->validate([
+        'destination_name' => ['required', 'string', 'max:190'],
+        'destination_type' => ['nullable', Rule::in(['destination', 'island', 'atoll', 'city'])],
+        'destination_image_url' => ['nullable', 'string', 'max:2048'],
+        'destination_image_file' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        'destination_image_clear' => ['nullable', 'boolean'],
+        'destination_key' => ['nullable', 'string', 'max:190'],
+    ]);
+
+    $destinationName = trim((string) ($validated['destination_name'] ?? ''));
+    $destinationKey = trim((string) ($validated['destination_key'] ?? ''));
+    if ($destinationKey === '') {
+        $destinationKey = portalNormalizeDestinationMediaKey($destinationName);
+    }
+    if ($destinationKey === '') {
+        return redirect('/admin?page=media')->withErrors(['auth' => 'Destination name is required to save an override.'])->withInput();
+    }
+
+    $currentRow = DB::table('portal_destination_media_overrides')
+        ->where('destination_key', $destinationKey)
+        ->first();
+
+    $currentValue = trim((string) ($currentRow->image_value ?? ''));
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+    $nextValue = $currentValue;
+    $shouldClear = $request->boolean('destination_image_clear');
+    $uploadedFile = $request->file('destination_image_file');
+    $submittedUrl = trim((string) ($validated['destination_image_url'] ?? ''));
+
+    if ($shouldClear) {
+        portalDeleteManagedPublicAsset($currentValue, 'portal-admin/destination-images/');
+        DB::table('portal_destination_media_overrides')->where('destination_key', $destinationKey)->delete();
+
+        portalAdminAuditLog('media_destination_override.cleared', [
+            'target_role' => 'ADMIN',
+            'destination_key' => $destinationKey,
+            'destination_name' => $destinationName,
+        ]);
+
+        return redirect('/admin?page=media')->with('portal_notice', 'Destination image override removed.');
+    }
+
+    if ($uploadedFile) {
+        $storedPath = portalStoreAdminDestinationImage($uploadedFile, $destinationKey);
+        if ($storedPath === null) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'destination_image_file' => 'Unable to process and store the uploaded destination image. Use a valid JPG, PNG, or WebP file.',
+            ]);
+        }
+
+        if ($currentValue !== '' && $currentValue !== $storedPath) {
+            portalDeleteManagedPublicAsset($currentValue, 'portal-admin/destination-images/');
+        }
+
+        $nextValue = $storedPath;
+    } elseif ($submittedUrl !== '') {
+        if ($currentValue !== '' && $currentValue !== $submittedUrl) {
+            portalDeleteManagedPublicAsset($currentValue, 'portal-admin/destination-images/');
+        }
+
+        if (str_starts_with($submittedUrl, 'http://')) {
+            $submittedUrl = 'https://' . ltrim(substr($submittedUrl, 7), '/');
+        }
+
+        $nextValue = $submittedUrl;
+    }
+
+    if ($nextValue === '') {
+        return redirect('/admin?page=media')->withErrors(['auth' => 'Upload an image or paste an HTTPS URL to create a destination override.'])->withInput();
+    }
+
+    DB::table('portal_destination_media_overrides')->updateOrInsert(
+        ['destination_key' => $destinationKey],
+        [
+            'destination_name' => $destinationName,
+            'destination_type' => trim((string) ($validated['destination_type'] ?? 'destination')) ?: 'destination',
+            'image_value' => $nextValue,
+            'updated_by_user_id' => $actorUserId,
+            'updated_at' => now(),
+            'created_at' => now(),
+        ]
+    );
+
+    portalAdminAuditLog('media_destination_override.updated', [
+        'target_role' => 'ADMIN',
+        'destination_key' => $destinationKey,
+        'destination_name' => $destinationName,
+        'destination_type' => trim((string) ($validated['destination_type'] ?? 'destination')) ?: 'destination',
+    ]);
+
+    return redirect('/admin?page=media')->with('portal_notice', 'Destination image override saved.');
 });
 
 Route::get('/portal/admin/blog', function () {

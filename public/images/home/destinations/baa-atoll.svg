@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" role="img" aria-labelledby="title desc">
+  <title id="title">Baa Atoll</title>
+  <desc id="desc">Stylized reef and lagoon illustration for Baa Atoll.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6fcff1"/>
+      <stop offset="64%" stop-color="#def8ff"/>
+      <stop offset="100%" stop-color="#fbf5eb"/>
+    </linearGradient>
+    <linearGradient id="lagoon" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3ab8cf"/>
+      <stop offset="100%" stop-color="#17819e"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="520" fill="url(#sky)"/>
+  <circle cx="724" cy="108" r="44" fill="#ffe07f"/>
+  <path d="M0 320C144 286 236 274 332 286C430 298 512 356 604 356C694 356 784 322 900 266V520H0Z" fill="url(#lagoon)"/>
+  <path d="M128 328C182 298 228 280 284 278C352 274 430 304 514 352C466 372 406 392 340 398C254 406 180 384 128 328Z" fill="#fff4d8"/>
+  <path d="M490 246C540 224 598 224 648 244C708 268 752 316 792 378C718 396 630 404 556 384C516 374 494 350 476 326C456 300 458 266 490 246Z" fill="#94d39e"/>
+  <circle cx="540" cy="278" r="18" fill="#2b7a4c"/>
+  <circle cx="584" cy="260" r="14" fill="#2f7d3d"/>
+  <circle cx="632" cy="286" r="16" fill="#2f7d3d"/>
+  <text x="96" y="454" fill="#ffffff" font-family="Outfit, Arial, sans-serif" font-size="46" font-weight="800">Baa Atoll</text>
+  <text x="96" y="490" fill="#e8fbff" font-family="Outfit, Arial, sans-serif" font-size="24" font-weight="600">Reefs, lagoons, and manta-rich waters</text>
+</svg>

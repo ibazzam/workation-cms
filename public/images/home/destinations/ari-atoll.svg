@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" role="img" aria-labelledby="title desc">
+  <title id="title">Ari Atoll</title>
+  <desc id="desc">Stylized diving lagoon illustration for Ari Atoll.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5cb7ee"/>
+      <stop offset="62%" stop-color="#d6f5ff"/>
+      <stop offset="100%" stop-color="#fef5ea"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0e7fa1"/>
+      <stop offset="100%" stop-color="#0a4f66"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="520" fill="url(#sky)"/>
+  <circle cx="744" cy="100" r="48" fill="#ffd36b"/>
+  <path d="M0 302C118 286 196 294 302 324C406 354 496 382 610 374C722 366 810 324 900 268V520H0Z" fill="url(#sea)"/>
+  <path d="M566 304C614 264 664 252 716 264C780 280 836 336 884 428C820 446 740 456 674 442C624 432 594 404 566 304Z" fill="#fff0ca"/>
+  <path d="M642 228L674 294H610Z" fill="#fdffff" opacity="0.96"/>
+  <rect x="624" y="294" width="36" height="52" fill="#ffffff" opacity="0.96"/>
+  <path d="M204 336C238 312 272 300 310 300C356 300 398 320 442 358C392 378 330 392 274 388C246 386 224 374 204 336Z" fill="#7ecb8c"/>
+  <circle cx="278" cy="320" r="12" fill="#2e7d3d"/>
+  <circle cx="320" cy="314" r="16" fill="#2f7d3d"/>
+  <circle cx="354" cy="330" r="12" fill="#286f36"/>
+  <text x="92" y="454" fill="#ffffff" font-family="Outfit, Arial, sans-serif" font-size="46" font-weight="800">Ari Atoll</text>
+  <text x="92" y="490" fill="#e8fbff" font-family="Outfit, Arial, sans-serif" font-size="24" font-weight="600">Dive spots and premium island stays</text>
+</svg>

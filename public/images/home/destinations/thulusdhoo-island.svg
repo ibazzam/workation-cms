@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" role="img" aria-labelledby="title desc">
+  <title id="title">Thulusdhoo Island</title>
+  <desc id="desc">Stylized surf island illustration for Thulusdhoo Island.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#72d0f0"/>
+      <stop offset="60%" stop-color="#dcf8ff"/>
+      <stop offset="100%" stop-color="#fff5e9"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1b8aa8"/>
+      <stop offset="100%" stop-color="#0e566f"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="520" fill="url(#sky)"/>
+  <circle cx="736" cy="106" r="44" fill="#ffd46f"/>
+  <path d="M0 310C160 280 290 280 418 306C540 330 674 382 900 334V520H0Z" fill="url(#sea)"/>
+  <path d="M136 360C188 318 252 294 318 296C382 298 452 334 520 402C432 416 346 424 282 414C224 406 176 392 136 360Z" fill="#f3e3bb"/>
+  <path d="M430 290C478 292 520 328 552 396C518 408 474 418 438 414C400 410 368 392 346 364C370 318 394 290 430 290Z" fill="#87cf8e"/>
+  <path d="M618 314C646 286 682 270 724 270C776 270 824 300 872 358C820 380 756 394 704 392C668 390 640 370 618 314Z" fill="#ffffff" opacity="0.9"/>
+  <path d="M708 254C736 226 770 216 804 220C832 224 854 238 874 266" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/>
+  <text x="84" y="454" fill="#ffffff" font-family="Outfit, Arial, sans-serif" font-size="46" font-weight="800">Thulusdhoo Island</text>
+  <text x="84" y="490" fill="#e9fbff" font-family="Outfit, Arial, sans-serif" font-size="24" font-weight="600">Surf breaks and laid-back guest stays</text>
+</svg>

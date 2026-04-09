@@ -874,6 +874,22 @@ if (!function_exists('portalDeleteManagedPublicAsset')) {
     }
 }
 
+if (!function_exists('portalNormalizeDestinationMediaKey')) {
+    function portalNormalizeDestinationMediaKey(?string $value): string
+    {
+        $normalized = strtolower(trim((string) ($value ?? '')));
+        if ($normalized === '') {
+            return '';
+        }
+
+        $normalized = str_replace(['%20', '+'], ' ', $normalized);
+        $normalized = preg_replace('/[^a-z0-9]+/', ' ', $normalized) ?? '';
+        $normalized = trim(preg_replace('/\s+/', ' ', $normalized) ?? '');
+
+        return str_replace(' ', '_', $normalized);
+    }
+}
+
 if (!function_exists('portalStoreAdminHeroImage')) {
     function portalStoreAdminHeroImage($file, string $slot): ?string
     {
@@ -901,6 +917,50 @@ if (!function_exists('portalStoreAdminHeroImage')) {
         $extension = (string) ($format['extension'] ?? 'jpg');
         $targetImage = portalResizeImageToFill($sourceImage, $sourceWidth, $sourceHeight, 2560, 1440);
         $relativePath = 'portal-admin/hero-images/' . trim($slot, '/') . '/' . now()->format('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.' . $extension;
+        $written = $targetImage !== null ? portalWriteMediaVariant($targetImage, $relativePath, $extension) : false;
+
+        if (is_resource($sourceImage) || $sourceImage instanceof \GdImage) {
+            imagedestroy($sourceImage);
+        }
+        if (is_resource($targetImage) || $targetImage instanceof \GdImage) {
+            imagedestroy($targetImage);
+        }
+
+        if (!$written) {
+            return null;
+        }
+
+        return $relativePath;
+    }
+}
+
+if (!function_exists('portalStoreAdminDestinationImage')) {
+    function portalStoreAdminDestinationImage($file, string $slot): ?string
+    {
+        if (!$file || !method_exists($file, 'getPathname')) {
+            return null;
+        }
+
+        $imageSize = @getimagesize((string) $file->getPathname());
+        if (!is_array($imageSize) || count($imageSize) < 2) {
+            return null;
+        }
+
+        $sourceWidth = (int) $imageSize[0];
+        $sourceHeight = (int) $imageSize[1];
+        $sourceImage = portalCreateImageResourceFromFile(
+            (string) $file->getPathname(),
+            (string) ($file->getMimeType() ?? '')
+        );
+
+        if ($sourceImage === null) {
+            return null;
+        }
+
+        $format = portalPreferredMediaOutputFormat();
+        $extension = (string) ($format['extension'] ?? 'jpg');
+        $targetImage = portalResizeImageToFill($sourceImage, $sourceWidth, $sourceHeight, 1600, 900);
+        $relativePath = 'portal-admin/destination-images/' . trim($slot, '/') . '/' . now()->format('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.' . $extension;
         $written = $targetImage !== null ? portalWriteMediaVariant($targetImage, $relativePath, $extension) : false;
 
         if (is_resource($sourceImage) || $sourceImage instanceof \GdImage) {

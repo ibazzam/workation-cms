@@ -1303,31 +1303,6 @@
             margin-left: 2px;
         }
 
-        .home-footer-skin {
-            margin-top: 8px;
-            border-radius: 16px;
-            background: linear-gradient(165deg, #f1f8fc 0%, #f9fcff 100%);
-            border: 1px solid #d2e2ee;
-            padding: 12px;
-        }
-
-        .home-footer-skin .wf-site-footer {
-            margin-top: 0;
-            border-top: 0;
-            padding-top: 0;
-        }
-
-        .home-footer-skin .wf-footer-col {
-            background: #ffffff;
-            border-color: #d2e2ee;
-        }
-
-        .home-footer-skin .wf-footer-note {
-            margin: 10px 2px 0;
-            font-size: 0.75rem;
-            color: #597286;
-        }
-
         .chip-row {
             margin-top: 8px;
             display: flex;
@@ -2277,9 +2252,7 @@
             </div>
         </section>
 
-        <div class="home-footer-skin">
-            @include('partials.global-site-footer')
-        </div>
+        @include('partials.global-site-footer')
             </div>{{-- /page-main-content --}}
         </div>{{-- /page-body-split --}}
     </main>

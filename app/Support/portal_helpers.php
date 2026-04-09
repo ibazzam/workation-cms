@@ -899,7 +899,7 @@ if (!function_exists('portalStoreAdminHeroImage')) {
 
         $format = portalPreferredMediaOutputFormat();
         $extension = (string) ($format['extension'] ?? 'jpg');
-        $targetImage = portalResizeImageToFill($sourceImage, $sourceWidth, $sourceHeight, 1600, 900);
+        $targetImage = portalResizeImageToFill($sourceImage, $sourceWidth, $sourceHeight, 2560, 1440);
         $relativePath = 'portal-admin/hero-images/' . trim($slot, '/') . '/' . now()->format('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.' . $extension;
         $written = $targetImage !== null ? portalWriteMediaVariant($targetImage, $relativePath, $extension) : false;
 

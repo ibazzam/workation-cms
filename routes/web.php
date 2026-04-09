@@ -37,7 +37,7 @@ if (!function_exists('portalConfig')) {
             return [
                 'session_key' => 'portal_admin_authenticated',
                 'name' => 'Admin',
-                'allowed_roles' => ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE', 'ADMIN_FINACE'],
+                'allowed_roles' => ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE', 'ADMIN_FINACE', 'ADMIN_MEDIA'],
             ];
         }
 
@@ -787,6 +787,28 @@ if (!function_exists('canModerateListings')) {
         }
 
         return in_array(currentPortalAdminRole(), ['ADMIN_SUPER', 'ADMIN', 'ADMIN_CARE'], true);
+    }
+}
+
+if (!function_exists('canManageContent')) {
+    function canManageContent(): bool
+    {
+        if (!session('portal_admin_authenticated', false)) {
+            return false;
+        }
+
+        return in_array(currentPortalAdminRole(), ['ADMIN_SUPER', 'ADMIN_MEDIA'], true);
+    }
+}
+
+if (!function_exists('canEditorialReview')) {
+    function canEditorialReview(): bool
+    {
+        if (!session('portal_admin_authenticated', false)) {
+            return false;
+        }
+
+        return currentPortalAdminRole() === 'ADMIN_SUPER';
     }
 }
 
@@ -3755,7 +3777,7 @@ Route::get('/users', function (Request $request) {
 
     $query = strtolower(trim((string) $request->query('q', '')));
     $portalUsers = User::query()
-        ->whereIn('portal_role', ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE', 'ADMIN_FINACE', 'VENDOR'])
+        ->whereIn('portal_role', ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE', 'ADMIN_FINACE', 'ADMIN_MEDIA', 'VENDOR'])
         ->orderBy('portal_role')
         ->orderBy('username')
         ->get($portalUserSelectColumns);
@@ -3840,6 +3862,8 @@ Route::get('/admin', function (Request $request) {
     $canRequestVendorDeleteApproval = canRequestVendorDeleteApproval();
     $canModerateFinance = canModeratePortalFinance();
     $canModerateListings = canModerateListings();
+    $canManageContent = canManageContent();
+    $canEditorialReview = canEditorialReview();
     $portalUserSelectColumns = ['id', 'name', 'username', 'email', 'portal_role', 'portal_enabled', 'portal_vendor_id'];
     foreach ([
         'vendor_verification_status',
@@ -3854,7 +3878,7 @@ Route::get('/admin', function (Request $request) {
     }
 
     $portalUsers = User::query()
-        ->whereIn('portal_role', ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE', 'ADMIN_FINACE', 'VENDOR'])
+        ->whereIn('portal_role', ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE', 'ADMIN_FINACE', 'ADMIN_MEDIA', 'VENDOR'])
         ->orderBy('portal_role')
         ->orderBy('username')
         ->get($portalUserSelectColumns);
@@ -3994,6 +4018,16 @@ Route::get('/admin', function (Request $request) {
                 'Escalate user governance changes to super admin',
             ],
         ],
+        'ADMIN_MEDIA' => [
+            'label' => 'ADMIN_MEDIA',
+            'summary' => 'Content operations for blogs, newsletters, PR, and announcements under editorial workflow.',
+            'capabilities' => [
+                'Create and edit blog posts',
+                'Submit blog posts for editorial review',
+                'Create and update newsletters',
+                'Create and update announcements',
+            ],
+        ],
         'VENDOR' => [
             'label' => 'VENDOR',
             'summary' => 'Vendor portal access only (no admin moderation privileges).',
@@ -4015,6 +4049,7 @@ Route::get('/admin', function (Request $request) {
         'permissions' => 'permissions',
         'finance' => 'finance',
         'media' => 'media',
+        'content' => 'content',
         'catalog' => 'catalog',
         'moderation' => 'moderation',
         'listings' => 'listings',
@@ -4032,6 +4067,9 @@ Route::get('/admin', function (Request $request) {
     if ($canManageVendorUsers) {
         $adminAllowedPages[] = 'media';
         $adminAllowedPages[] = 'catalog';
+    }
+    if ($canManageContent) {
+        $adminAllowedPages[] = 'content';
     }
     if ($canModerateListings) {
         $adminAllowedPages[] = 'listings';
@@ -4367,6 +4405,8 @@ Route::get('/admin', function (Request $request) {
         'canApproveVendorDeleteRequest' => $canApproveVendorDeleteRequest,
         'canRequestVendorDeleteApproval' => $canRequestVendorDeleteApproval,
         'canModerateFinance' => $canModerateFinance,
+        'canManageContent' => $canManageContent,
+        'canEditorialReview' => $canEditorialReview,
         'portalUsers' => $portalUsers,
         'adminPortalUsers' => $adminPortalUsers,
         'vendorPortalUsers' => $vendorPortalUsers,
@@ -4408,7 +4448,7 @@ Route::get('/admin/{page}', function (Request $request, string $page) {
     $normalizedPage = strtolower(trim($page));
 
     return redirect()->to('/admin?page=' . urlencode($normalizedPage));
-})->where('page', 'overview|permissions|finance|media|catalog|moderation|listings|audit|tools');
+})->where('page', 'overview|permissions|finance|media|content|catalog|moderation|listings|audit|tools');
 
 Route::get('/portal/admin', function (Request $request) {
     $page = strtolower(trim((string) $request->query('page', 'overview')));
@@ -4420,7 +4460,7 @@ Route::get('/portal/admin/{page}', function (string $page) {
     $normalizedPage = strtolower(trim($page));
 
     return redirect()->to('/admin?page=' . urlencode($normalizedPage));
-})->where('page', 'overview|permissions|finance|media|catalog|moderation|listings|audit|tools');
+})->where('page', 'overview|permissions|finance|media|content|catalog|moderation|listings|audit|tools');
 
 Route::post('/portal/admin/finance/commission/update', function (Request $request) {
     if (!canModeratePortalFinance()) {
@@ -4899,8 +4939,8 @@ Route::get('/portal/admin/blog', function () {
         return redirect('/portal/admin/login');
     }
 
-    if (!canManageVendorUsers()) {
-        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can manage blog posts.']);
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can manage blog posts.']);
     }
 
     $posts = collect();
@@ -4915,6 +4955,7 @@ Route::get('/portal/admin/blog', function () {
 
     return view('admin-blog-index', [
         'posts' => $posts,
+        'canEditorialReview' => canEditorialReview(),
     ]);
 });
 
@@ -4923,13 +4964,14 @@ Route::get('/portal/admin/blog/create', function () {
         return redirect('/portal/admin/login');
     }
 
-    if (!canManageVendorUsers()) {
-        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can create blog posts.']);
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can create blog posts.']);
     }
 
     return view('admin-blog-form', [
         'mode' => 'create',
         'post' => null,
+        'canEditorialReview' => canEditorialReview(),
     ]);
 });
 
@@ -4938,8 +4980,8 @@ Route::post('/portal/admin/blog', function (Request $request) {
         return redirect('/portal/admin/login');
     }
 
-    if (!canManageVendorUsers()) {
-        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can create blog posts.']);
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can create blog posts.']);
     }
 
     if (!Schema::hasTable('blog_posts')) {
@@ -4956,6 +4998,7 @@ Route::post('/portal/admin/blog', function (Request $request) {
     ]);
 
     $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+    $isMediaRole = currentPortalAdminRole() === 'ADMIN_MEDIA';
     $slug = generateUniqueBlogSlug((string) $validated['title']);
 
     $post = new BlogPost();
@@ -4963,9 +5006,13 @@ Route::post('/portal/admin/blog', function (Request $request) {
     $post->slug = $slug;
     $post->excerpt = trim((string) ($validated['excerpt'] ?? '')) ?: null;
     $post->content = (string) $validated['content'];
-    $post->is_published = (bool) ($validated['is_published'] ?? false);
+    $post->is_published = $isMediaRole ? false : (bool) ($validated['is_published'] ?? false);
     $post->is_featured = (bool) ($validated['is_featured'] ?? false);
     $post->published_at = $post->is_published ? now() : null;
+    $post->editorial_status = $isMediaRole ? 'pending_review' : 'approved';
+    $post->editorial_notes = null;
+    $post->reviewed_by_user_id = null;
+    $post->reviewed_at = null;
     $post->created_by_user_id = $actorUserId;
     $post->updated_by_user_id = $actorUserId;
     $post->save();
@@ -5007,8 +5054,8 @@ Route::get('/portal/admin/blog/{post}/edit', function (int $post) {
         return redirect('/portal/admin/login');
     }
 
-    if (!canManageVendorUsers()) {
-        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can edit blog posts.']);
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can edit blog posts.']);
     }
 
     if (!Schema::hasTable('blog_posts')) {
@@ -5020,6 +5067,7 @@ Route::get('/portal/admin/blog/{post}/edit', function (int $post) {
     return view('admin-blog-form', [
         'mode' => 'edit',
         'post' => $blogPost,
+        'canEditorialReview' => canEditorialReview(),
     ]);
 });
 
@@ -5028,8 +5076,8 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
         return redirect('/portal/admin/login');
     }
 
-    if (!canManageVendorUsers()) {
-        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can edit blog posts.']);
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can edit blog posts.']);
     }
 
     if (!Schema::hasTable('blog_posts')) {
@@ -5049,13 +5097,19 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
     ]);
 
     $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+    $isMediaRole = currentPortalAdminRole() === 'ADMIN_MEDIA';
 
     $blogPost->title = trim((string) $validated['title']);
     $blogPost->slug = generateUniqueBlogSlug((string) $validated['title'], (int) $blogPost->id);
     $blogPost->excerpt = trim((string) ($validated['excerpt'] ?? '')) ?: null;
     $blogPost->content = (string) $validated['content'];
-    $blogPost->is_published = (bool) ($validated['is_published'] ?? false);
+    $blogPost->is_published = $isMediaRole ? false : (bool) ($validated['is_published'] ?? false);
     $blogPost->is_featured = (bool) ($validated['is_featured'] ?? false);
+    if ($isMediaRole) {
+        $blogPost->editorial_status = 'pending_review';
+        $blogPost->reviewed_by_user_id = null;
+        $blogPost->reviewed_at = null;
+    }
 
     if ($blogPost->is_published && $blogPost->published_at === null) {
         $blogPost->published_at = now();
@@ -5111,6 +5165,335 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
     return redirect('/portal/admin/blog')->with('portal_notice', 'Blog post updated successfully.');
 });
 
+Route::post('/portal/admin/blog/{post}/review', function (Request $request, int $post) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canEditorialReview()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER can review blog content.']);
+    }
+
+    if (!Schema::hasTable('blog_posts')) {
+        return back()->withErrors(['auth' => 'Blog table is not ready. Run migrations first.']);
+    }
+
+    $validated = $request->validate([
+        'decision' => ['required', Rule::in(['approve', 'reject'])],
+        'editorial_notes' => ['nullable', 'string', 'max:1500'],
+    ]);
+
+    $blogPost = BlogPost::query()->findOrFail($post);
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+
+    if ($validated['decision'] === 'approve') {
+        $blogPost->editorial_status = 'approved';
+        $blogPost->is_published = true;
+        if ($blogPost->published_at === null) {
+            $blogPost->published_at = now();
+        }
+    } else {
+        $blogPost->editorial_status = 'rejected';
+        $blogPost->is_published = false;
+        $blogPost->published_at = null;
+    }
+
+    $blogPost->editorial_notes = trim((string) ($validated['editorial_notes'] ?? '')) ?: null;
+    $blogPost->reviewed_by_user_id = $actorUserId;
+    $blogPost->reviewed_at = now();
+    $blogPost->updated_by_user_id = $actorUserId;
+    $blogPost->save();
+
+    portalAdminAuditLog('blog_post_reviewed', [
+        'target_role' => 'ADMIN_SUPER',
+        'post_id' => (int) $blogPost->id,
+        'post_slug' => (string) $blogPost->slug,
+        'decision' => (string) $validated['decision'],
+    ]);
+
+    return redirect('/portal/admin/blog')->with('portal_notice', $validated['decision'] === 'approve' ? 'Blog post approved.' : 'Blog post rejected with editorial notes.');
+});
+
+Route::get('/portal/admin/newsletter', function () {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER and ADMIN_MEDIA can manage newsletters.']);
+    }
+
+    $newsletters = collect();
+    if (Schema::hasTable('newsletters')) {
+        $newsletters = \App\Models\Newsletter::query()->orderByDesc('updated_at')->limit(200)->get();
+    }
+
+    return view('admin-newsletter-index', ['newsletters' => $newsletters]);
+});
+
+Route::get('/portal/admin/newsletter/create', function () {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER and ADMIN_MEDIA can manage newsletters.']);
+    }
+
+    return view('admin-newsletter-form', ['mode' => 'create', 'newsletter' => null]);
+});
+
+Route::post('/portal/admin/newsletter', function (Request $request) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER and ADMIN_MEDIA can manage newsletters.']);
+    }
+    if (!Schema::hasTable('newsletters')) {
+        return back()->withErrors(['auth' => 'Newsletters table is not ready. Run migrations first.'])->withInput();
+    }
+
+    $validated = $request->validate([
+        'title' => ['required', 'string', 'max:220'],
+        'subject' => ['required', 'string', 'max:300'],
+        'body' => ['required', 'string', 'min:20'],
+        'audience' => ['nullable', Rule::in(['all', 'members', 'partners'])],
+        'status' => ['nullable', Rule::in(['draft', 'scheduled', 'sent', 'archived'])],
+        'scheduled_at' => ['nullable', 'date'],
+    ]);
+
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+    $newsletter = new \App\Models\Newsletter();
+    $newsletter->title = trim((string) $validated['title']);
+    $newsletter->subject = trim((string) $validated['subject']);
+    $newsletter->body = (string) $validated['body'];
+    $newsletter->audience = (string) ($validated['audience'] ?? 'all');
+    $newsletter->status = (string) ($validated['status'] ?? 'draft');
+    $newsletter->scheduled_at = !empty($validated['scheduled_at']) ? Carbon::parse((string) $validated['scheduled_at']) : null;
+    $newsletter->created_by_user_id = $actorUserId;
+    $newsletter->updated_by_user_id = $actorUserId;
+    $newsletter->save();
+
+    portalAdminAuditLog('newsletter_created', [
+        'target_role' => currentPortalAdminRole(),
+        'newsletter_id' => (int) $newsletter->id,
+    ]);
+
+    return redirect('/portal/admin/newsletter')->with('portal_notice', 'Newsletter saved.');
+});
+
+Route::get('/portal/admin/newsletter/{id}/edit', function (int $id) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER and ADMIN_MEDIA can manage newsletters.']);
+    }
+
+    return view('admin-newsletter-form', [
+        'mode' => 'edit',
+        'newsletter' => \App\Models\Newsletter::query()->findOrFail($id),
+    ]);
+});
+
+Route::post('/portal/admin/newsletter/{id}', function (Request $request, int $id) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER and ADMIN_MEDIA can manage newsletters.']);
+    }
+    if (!Schema::hasTable('newsletters')) {
+        return back()->withErrors(['auth' => 'Newsletters table is not ready. Run migrations first.'])->withInput();
+    }
+
+    $validated = $request->validate([
+        'title' => ['required', 'string', 'max:220'],
+        'subject' => ['required', 'string', 'max:300'],
+        'body' => ['required', 'string', 'min:20'],
+        'audience' => ['nullable', Rule::in(['all', 'members', 'partners'])],
+        'status' => ['nullable', Rule::in(['draft', 'scheduled', 'sent', 'archived'])],
+        'scheduled_at' => ['nullable', 'date'],
+    ]);
+
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+    $newsletter = \App\Models\Newsletter::query()->findOrFail($id);
+    $newsletter->title = trim((string) $validated['title']);
+    $newsletter->subject = trim((string) $validated['subject']);
+    $newsletter->body = (string) $validated['body'];
+    $newsletter->audience = (string) ($validated['audience'] ?? 'all');
+    $newsletter->status = (string) ($validated['status'] ?? 'draft');
+    $newsletter->scheduled_at = !empty($validated['scheduled_at']) ? Carbon::parse((string) $validated['scheduled_at']) : null;
+    $newsletter->updated_by_user_id = $actorUserId;
+    $newsletter->save();
+
+    portalAdminAuditLog('newsletter_updated', [
+        'target_role' => currentPortalAdminRole(),
+        'newsletter_id' => (int) $newsletter->id,
+    ]);
+
+    return redirect('/portal/admin/newsletter')->with('portal_notice', 'Newsletter updated.');
+});
+
+Route::post('/portal/admin/newsletter/{id}/delete', function (int $id) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+    if (!canEditorialReview()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER can delete newsletters.']);
+    }
+
+    if (Schema::hasTable('newsletters')) {
+        \App\Models\Newsletter::query()->findOrFail($id)->delete();
+    }
+
+    portalAdminAuditLog('newsletter_deleted', [
+        'target_role' => currentPortalAdminRole(),
+        'newsletter_id' => $id,
+    ]);
+
+    return redirect('/portal/admin/newsletter')->with('portal_notice', 'Newsletter deleted.');
+});
+
+Route::get('/portal/admin/announcement', function () {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER and ADMIN_MEDIA can manage announcements.']);
+    }
+
+    $announcements = collect();
+    if (Schema::hasTable('announcements')) {
+        $announcements = \App\Models\Announcement::query()->orderByDesc('updated_at')->limit(200)->get();
+    }
+
+    return view('admin-announcement-index', ['announcements' => $announcements]);
+});
+
+Route::get('/portal/admin/announcement/create', function () {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER and ADMIN_MEDIA can manage announcements.']);
+    }
+
+    return view('admin-announcement-form', ['mode' => 'create', 'announcement' => null]);
+});
+
+Route::post('/portal/admin/announcement', function (Request $request) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER and ADMIN_MEDIA can manage announcements.']);
+    }
+    if (!Schema::hasTable('announcements')) {
+        return back()->withErrors(['auth' => 'Announcements table is not ready. Run migrations first.'])->withInput();
+    }
+
+    $validated = $request->validate([
+        'title' => ['required', 'string', 'max:220'],
+        'type' => ['nullable', Rule::in(['internal', 'public', 'partner'])],
+        'status' => ['nullable', Rule::in(['draft', 'published', 'archived'])],
+        'content' => ['required', 'string', 'min:10'],
+        'published_at' => ['nullable', 'date'],
+        'expires_at' => ['nullable', 'date'],
+    ]);
+
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+    $announcement = new \App\Models\Announcement();
+    $announcement->title = trim((string) $validated['title']);
+    $announcement->type = (string) ($validated['type'] ?? 'internal');
+    $announcement->status = (string) ($validated['status'] ?? 'draft');
+    $announcement->content = (string) $validated['content'];
+    $announcement->published_at = !empty($validated['published_at']) ? Carbon::parse((string) $validated['published_at']) : null;
+    $announcement->expires_at = !empty($validated['expires_at']) ? Carbon::parse((string) $validated['expires_at']) : null;
+    $announcement->created_by_user_id = $actorUserId;
+    $announcement->updated_by_user_id = $actorUserId;
+    $announcement->save();
+
+    portalAdminAuditLog('announcement_created', [
+        'target_role' => currentPortalAdminRole(),
+        'announcement_id' => (int) $announcement->id,
+    ]);
+
+    return redirect('/portal/admin/announcement')->with('portal_notice', 'Announcement saved.');
+});
+
+Route::get('/portal/admin/announcement/{id}/edit', function (int $id) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER and ADMIN_MEDIA can manage announcements.']);
+    }
+
+    return view('admin-announcement-form', [
+        'mode' => 'edit',
+        'announcement' => \App\Models\Announcement::query()->findOrFail($id),
+    ]);
+});
+
+Route::post('/portal/admin/announcement/{id}', function (Request $request, int $id) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER and ADMIN_MEDIA can manage announcements.']);
+    }
+    if (!Schema::hasTable('announcements')) {
+        return back()->withErrors(['auth' => 'Announcements table is not ready. Run migrations first.'])->withInput();
+    }
+
+    $validated = $request->validate([
+        'title' => ['required', 'string', 'max:220'],
+        'type' => ['nullable', Rule::in(['internal', 'public', 'partner'])],
+        'status' => ['nullable', Rule::in(['draft', 'published', 'archived'])],
+        'content' => ['required', 'string', 'min:10'],
+        'published_at' => ['nullable', 'date'],
+        'expires_at' => ['nullable', 'date'],
+    ]);
+
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+    $announcement = \App\Models\Announcement::query()->findOrFail($id);
+    $announcement->title = trim((string) $validated['title']);
+    $announcement->type = (string) ($validated['type'] ?? 'internal');
+    $announcement->status = (string) ($validated['status'] ?? 'draft');
+    $announcement->content = (string) $validated['content'];
+    $announcement->published_at = !empty($validated['published_at']) ? Carbon::parse((string) $validated['published_at']) : null;
+    $announcement->expires_at = !empty($validated['expires_at']) ? Carbon::parse((string) $validated['expires_at']) : null;
+    $announcement->updated_by_user_id = $actorUserId;
+    $announcement->save();
+
+    portalAdminAuditLog('announcement_updated', [
+        'target_role' => currentPortalAdminRole(),
+        'announcement_id' => (int) $announcement->id,
+    ]);
+
+    return redirect('/portal/admin/announcement')->with('portal_notice', 'Announcement updated.');
+});
+
+Route::post('/portal/admin/announcement/{id}/delete', function (int $id) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER and ADMIN_MEDIA can manage announcements.']);
+    }
+
+    if (Schema::hasTable('announcements')) {
+        \App\Models\Announcement::query()->findOrFail($id)->delete();
+    }
+
+    portalAdminAuditLog('announcement_deleted', [
+        'target_role' => currentPortalAdminRole(),
+        'announcement_id' => $id,
+    ]);
+
+    return redirect('/portal/admin/announcement')->with('portal_notice', 'Announcement deleted.');
+});
+
     Route::post('/portal/admin/users/create', function (\Illuminate\Http\Request $request) {
         $canManageUsers = Gate::allows('manage-portal-users');
         $canCreateVendorUsers = canCreateVendorUsers();
@@ -5125,7 +5508,7 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'email' => 'required|email|max:100|unique:users,email',
-            'portal_role' => 'required|in:ADMIN,ADMIN_SUPER,ADMIN_CARE,ADMIN_FINANCE,ADMIN_FINACE,VENDOR',
+            'portal_role' => 'required|in:ADMIN,ADMIN_SUPER,ADMIN_CARE,ADMIN_FINANCE,ADMIN_FINACE,ADMIN_MEDIA,VENDOR',
             'portal_enabled' => 'required|boolean',
             'portal_vendor_id' => 'nullable|string|max:255',
         ]);

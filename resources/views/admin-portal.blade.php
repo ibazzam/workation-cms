@@ -1016,6 +1016,14 @@
             <a class="{{ $adminPage === 'catalog' ? 'prominent' : '' }}" href="/admin/catalog">Listing Options</a>
             @endif
 
+            @if ($canManageContent ?? false)
+            <p class="nav-group-title">Content &amp; Media</p>
+            <a class="{{ $adminPage === 'content' ? 'prominent' : '' }}" href="/admin/content">Content Hub</a>
+            <a href="/portal/admin/blog">Blog Manager</a>
+            <a href="/portal/admin/newsletter">Newsletter Manager</a>
+            <a href="/portal/admin/announcement">Announcement Manager</a>
+            @endif
+
             <p class="nav-group-title">Moderation &amp; Vendors</p>
             <a class="{{ $adminPage === 'moderation' ? 'prominent' : '' }}" href="/admin/moderation" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Moderation</a>
             @if ($canModerateListings)
@@ -1023,7 +1031,6 @@
             @endif
 
             <p class="nav-group-title">Tools</p>
-            <a href="/portal/admin/blog">Blog Manager</a>
             <a class="{{ $adminPage === 'tools' ? 'prominent' : '' }}" href="/admin/tools">Session + API</a>
         </nav>
 
@@ -1099,6 +1106,26 @@
                         </ul>
                     </article>
                 @endforeach
+            </div>
+        </section>
+
+        <section class="card" id="contentPanel" style="{{ $adminPage === 'content' ? '' : 'display:none;' }}">
+            <p class="label">Content Hub</p>
+            <p class="small">Manage blogs, newsletters, PR content, and announcements from this workspace.</p>
+
+            @if (($canEditorialReview ?? false) === true)
+                <div class="notice-box" style="margin-top:10px;">Editorial reviewer mode enabled. You can approve or reject blog submissions from ADMIN_MEDIA.</div>
+            @else
+                <div class="notice-box" style="margin-top:10px;">Content author mode enabled. Your blog edits are submitted for editorial review.</div>
+            @endif
+
+            <div class="quick-actions" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:10px;">
+                <a class="btn-link" href="/portal/admin/blog">Open Blog Manager</a>
+                <a class="btn-link" href="/portal/admin/blog/create">Write Blog Post</a>
+                <a class="btn-link" href="/portal/admin/newsletter">Open Newsletters</a>
+                <a class="btn-link" href="/portal/admin/newsletter/create">Create Newsletter</a>
+                <a class="btn-link" href="/portal/admin/announcement">Open Announcements</a>
+                <a class="btn-link" href="/portal/admin/announcement/create">Create Announcement</a>
             </div>
         </section>
 

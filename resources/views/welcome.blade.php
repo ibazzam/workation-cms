@@ -466,6 +466,12 @@
             margin: 4px 2px 2px;
         }
 
+        .top-link-section-break {
+            height: 1px;
+            background: #cfddea;
+            margin: 8px 2px 6px;
+        }
+
         .top-link {
             text-decoration: none;
             border: 1px solid #edf3f7;
@@ -578,6 +584,13 @@
                 height: 1px;
                 background: #d7e4ee;
                 margin: 2px 0;
+            }
+
+            .mobile-category-section-break {
+                width: 100%;
+                height: 1px;
+                background: #cfddea;
+                margin: 8px 0 6px;
             }
 
         .search-section-full-width {
@@ -1738,14 +1751,14 @@
             ['icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'url' => '/catalog/accommodation'],
             ['icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'url' => '/catalog/resort_day_visit'],
             ['icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'url' => '/catalog/excursion'],
-            ['icon' => 'fa-solid fa-person-swimming', 'title' => 'Water Sports', 'url' => '/catalog/water_sports', 'divider_after' => true],
-            ['icon' => 'fa-solid fa-utensils', 'title' => 'Restaurants', 'url' => '/catalog/restaurant', 'divider_before' => true],
+            ['icon' => 'fa-solid fa-person-swimming', 'title' => 'Water Sports', 'url' => '/catalog/water_sports'],
+            ['icon' => 'fa-solid fa-utensils', 'title' => 'Restaurants', 'url' => '/catalog/restaurant', 'section_start' => true, 'section_end' => true],
             ['icon' => 'fa-solid fa-water', 'title' => 'Sea Transport', 'url' => '/catalog/marine-transport'],
             ['icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'url' => '/catalog/land-transport'],
             ['icon' => 'fa-solid fa-car-side', 'title' => 'Vehicle Rentals', 'url' => '/catalog/vehicle_rental', 'divider_after' => true],
             ['icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'url' => '/catalog/remote_workspace'],
             ['icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'url' => '/catalog/conference_room'],
-            ['icon' => 'fa-solid fa-map-location-dot', 'title' => 'Things To Do', 'url' => '/blog', 'divider_before' => true],
+            ['icon' => 'fa-solid fa-map-location-dot', 'title' => 'Things To Do', 'url' => '/blog', 'section_start' => true],
         ])->map(function (array $link) use ($homeSidebarLinkSourceByUrl) {
             $source = $homeSidebarLinkSourceByUrl->get((string) ($link['url'] ?? ''), []);
             if (!is_array($source)) {
@@ -1839,11 +1852,15 @@
                             $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
                             $categoryKeyFromUrl = preg_match('#/catalog/([a-z_-]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
                         @endphp
-                        @if (!empty($link['divider_before']))
+                        @if (!empty($link['section_start']))
+                            <div class="top-link-section-break" aria-hidden="true"></div>
+                        @elseif (!empty($link['divider_before']))
                             <div class="top-link-divider" aria-hidden="true"></div>
                         @endif
                         <a class="top-link floating-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}"><span class="top-link-head"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}"></i>{{ $link['title'] ?? 'Category' }}</span></a>
-                        @if (!empty($link['divider_after']))
+                        @if (!empty($link['section_end']))
+                            <div class="top-link-section-break" aria-hidden="true"></div>
+                        @elseif (!empty($link['divider_after']))
                             <div class="top-link-divider" aria-hidden="true"></div>
                         @endif
                     @endforeach
@@ -1858,11 +1875,15 @@
                             @php
                                 $mobileLinkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
                             @endphp
-                            @if (!empty($link['divider_before']))
+                            @if (!empty($link['section_start']))
+                                <div class="mobile-category-section-break" aria-hidden="true"></div>
+                            @elseif (!empty($link['divider_before']))
                                 <div class="mobile-category-divider" aria-hidden="true"></div>
                             @endif
                             <a class="mobile-category-link" href="{{ $mobileLinkUrl }}"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i><span>{{ $link['title'] ?? 'Category' }}</span></a>
-                            @if (!empty($link['divider_after']))
+                            @if (!empty($link['section_end']))
+                                <div class="mobile-category-section-break" aria-hidden="true"></div>
+                            @elseif (!empty($link['divider_after']))
                                 <div class="mobile-category-divider" aria-hidden="true"></div>
                             @endif
                         @endforeach

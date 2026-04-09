@@ -1,4 +1,4 @@
-<section id="vendorProfileCard" class="card profile-card" aria-label="Vendor profile settings" data-panel-group="profile">
+<section id="vendorProfileCard" class="card profile-card" aria-label="Partner profile settings" data-panel-group="profile">
             <p class="label">Account Settings</p>
             <div class="panel-links" aria-label="Profile actions">
                 <a href="#vendorProfileCard">Profile Settings</a>

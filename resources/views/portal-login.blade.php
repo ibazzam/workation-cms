@@ -258,7 +258,7 @@
                 <a href="/">Back to Home</a>
                 <a href="/portal/{{ $portal }}/forgot-password">Forgot Password?</a>
                 @if ($portal === 'vendor')
-                    <a href="/portal/vendor/register">Register as Vendor</a>
+                    <a href="/portal/vendor/register">Become a Partner</a>
                 @elseif ($portal === 'customer')
                     <a href="/portal/customer/register">Create Member Account</a>
                 @endif

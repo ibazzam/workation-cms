@@ -17,7 +17,7 @@ class VendorEmailOtpAuthTest extends TestCase
         $this->get('/portal/vendor/login')
             ->assertOk()
             ->assertSee('Vendor Portal Login')
-            ->assertSee('Register as Vendor');
+            ->assertSee('Become a Partner');
     }
 
     public function test_existing_vendor_can_login_with_email_otp(): void

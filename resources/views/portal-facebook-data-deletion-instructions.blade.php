@@ -36,7 +36,7 @@
     <h1>Facebook Data Deletion Instructions</h1>
     <p>If you want your Workation vendor account data removed, use one of these options:</p>
     <ol>
-        <li>Open the Workation vendor portal and request account deletion from support.</li>
+        <li>Open the Workation partners portal and request account deletion from support.</li>
         <li>Email our support team with your registered email and mention "Facebook data deletion".</li>
         <li>Or trigger deletion from Facebook, which calls our callback endpoint and returns a confirmation code.</li>
     </ol>

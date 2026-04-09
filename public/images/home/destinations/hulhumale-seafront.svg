@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" role="img" aria-labelledby="title desc">
+  <title id="title">Hulhumale Seafront</title>
+  <desc id="desc">Stylized waterfront boulevard illustration for Hulhumale Seafront.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7bc2f3"/>
+      <stop offset="58%" stop-color="#dcefff"/>
+      <stop offset="100%" stop-color="#f6f2ed"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#157fa2"/>
+      <stop offset="100%" stop-color="#0c5b75"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="520" fill="url(#sky)"/>
+  <circle cx="734" cy="96" r="46" fill="#ffd777"/>
+  <path d="M0 300C138 284 244 278 346 292C452 308 560 344 678 344C782 344 844 326 900 310V520H0Z" fill="url(#sea)"/>
+  <rect x="0" y="334" width="900" height="58" fill="#f4dfb7"/>
+  <rect x="0" y="392" width="900" height="128" fill="#d9e4ea"/>
+  <path d="M76 248H140V334H76Z" fill="#f8fbff"/>
+  <path d="M154 214H232V334H154Z" fill="#dfeaff"/>
+  <path d="M246 234H300V334H246Z" fill="#fff2d8"/>
+  <path d="M316 198H392V334H316Z" fill="#d6e6fb"/>
+  <path d="M408 220H468V334H408Z" fill="#edf5ff"/>
+  <path d="M484 190H566V334H484Z" fill="#cfe0f8"/>
+  <path d="M584 230H648V334H584Z" fill="#fff0d4"/>
+  <path d="M664 204H734V334H664Z" fill="#dbe7f7"/>
+  <path d="M750 222H820V334H750Z" fill="#edf5ff"/>
+  <text x="82" y="454" fill="#ffffff" font-family="Outfit, Arial, sans-serif" font-size="46" font-weight="800">Hulhumale Seafront</text>
+  <text x="82" y="490" fill="#e8f8ff" font-family="Outfit, Arial, sans-serif" font-size="24" font-weight="600">Waterfront stays near airport access</text>
+</svg>

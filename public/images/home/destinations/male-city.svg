@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" role="img" aria-labelledby="title desc">
+  <title id="title">Male City</title>
+  <desc id="desc">Stylized seafront skyline illustration for Male City.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7db7ff"/>
+      <stop offset="58%" stop-color="#ddebff"/>
+      <stop offset="100%" stop-color="#f7f4ef"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1b7da6"/>
+      <stop offset="100%" stop-color="#123e72"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="520" fill="url(#sky)"/>
+  <circle cx="742" cy="94" r="46" fill="#ffd978"/>
+  <path d="M0 306C126 300 244 294 336 286C428 278 510 244 626 244C742 244 816 266 900 292V520H0Z" fill="url(#water)"/>
+  <path d="M48 250H108V338H48Z" fill="#e6eef8"/>
+  <path d="M120 202H188V338H120Z" fill="#dce7f7"/>
+  <path d="M202 228H254V338H202Z" fill="#f6d49b"/>
+  <path d="M270 182H346V338H270Z" fill="#d2def5"/>
+  <path d="M360 214H424V338H360Z" fill="#ffe8bb"/>
+  <path d="M438 172H512V338H438Z" fill="#c9d8f2"/>
+  <path d="M526 198H590V338H526Z" fill="#e1ebfb"/>
+  <path d="M604 162H694V338H604Z" fill="#b7cdef"/>
+  <path d="M708 208H778V338H708Z" fill="#f6d7ab"/>
+  <path d="M790 238H854V338H790Z" fill="#dbe7f7"/>
+  <rect x="0" y="338" width="900" height="20" fill="#16365a" opacity="0.45"/>
+  <text x="84" y="454" fill="#ffffff" font-family="Outfit, Arial, sans-serif" font-size="46" font-weight="800">Male City</text>
+  <text x="84" y="490" fill="#e6f0ff" font-family="Outfit, Arial, sans-serif" font-size="24" font-weight="600">Capital stays with transfer access</text>
+</svg>

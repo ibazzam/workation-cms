@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" role="img" aria-labelledby="title desc">
+  <title id="title">Ukulhas Island</title>
+  <desc id="desc">Stylized clean beach and palms illustration for Ukulhas Island.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#73cdef"/>
+      <stop offset="62%" stop-color="#dbf6ff"/>
+      <stop offset="100%" stop-color="#fff7ea"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#24a1bc"/>
+      <stop offset="100%" stop-color="#0f6179"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="520" fill="url(#sky)"/>
+  <circle cx="738" cy="96" r="46" fill="#ffd46f"/>
+  <path d="M0 318C110 290 196 282 292 296C402 312 484 362 610 362C740 362 814 334 900 286V520H0Z" fill="url(#sea)"/>
+  <path d="M88 366C150 324 228 298 308 300C392 302 470 338 550 404C462 420 364 432 278 426C196 420 132 402 88 366Z" fill="#f7e7bf"/>
+  <path d="M202 320C214 286 232 250 252 214" fill="none" stroke="#7a5636" stroke-width="10" stroke-linecap="round"/>
+  <path d="M252 214C220 198 198 178 184 148" fill="none" stroke="#2e7d3d" stroke-width="14" stroke-linecap="round"/>
+  <path d="M252 214C282 196 306 174 320 144" fill="none" stroke="#2f7d3d" stroke-width="14" stroke-linecap="round"/>
+  <path d="M252 214C238 178 236 146 248 116" fill="none" stroke="#2c7638" stroke-width="14" stroke-linecap="round"/>
+  <path d="M324 336C336 302 354 266 374 230" fill="none" stroke="#7a5636" stroke-width="10" stroke-linecap="round"/>
+  <path d="M374 230C342 214 320 194 306 164" fill="none" stroke="#2f7d3d" stroke-width="14" stroke-linecap="round"/>
+  <path d="M374 230C404 212 428 190 442 160" fill="none" stroke="#2f7d3d" stroke-width="14" stroke-linecap="round"/>
+  <path d="M374 230C360 194 358 162 370 132" fill="none" stroke="#2c7638" stroke-width="14" stroke-linecap="round"/>
+  <text x="84" y="454" fill="#ffffff" font-family="Outfit, Arial, sans-serif" font-size="46" font-weight="800">Ukulhas Island</text>
+  <text x="84" y="490" fill="#edfcff" font-family="Outfit, Arial, sans-serif" font-size="24" font-weight="600">Known for tidy beaches and calm stays</text>
+</svg>

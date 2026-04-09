@@ -1456,6 +1456,60 @@
                         </div>
                     @endforeach
                 </div>
+
+                <div style="padding:16px;border:1px solid #d7e0e6;border-radius:12px;background:#f9fbfc;margin-top:18px;">
+                    <p style="font-weight:600;margin:0 0 8px;">Homepage Destination Image Overrides</p>
+                    <p class="small" style="margin:0 0 12px;line-height:1.5;">Trending and Loved destination cards now choose images automatically from live listing media. Use an override only when you want a specific island, city, or atoll image to replace the automatic choice.</p>
+
+                    <form method="POST" action="/portal/admin/media-destination/update" enctype="multipart/form-data" style="margin-bottom:14px;">
+                        @csrf
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;align-items:end;">
+                            <div>
+                                <label for="destination_name" style="display:block;margin-bottom:4px;font-size:0.85rem;">Destination Name</label>
+                                <input id="destination_name" name="destination_name" type="text" maxlength="190" value="{{ old('destination_name') }}" placeholder="Maafushi, Baa Atoll, Male City" style="display:block;width:100%;">
+                            </div>
+                            <div>
+                                <label for="destination_type" style="display:block;margin-bottom:4px;font-size:0.85rem;">Destination Type</label>
+                                <select id="destination_type" name="destination_type" style="display:block;width:100%;">
+                                    <option value="destination">Destination</option>
+                                    <option value="island" {{ old('destination_type') === 'island' ? 'selected' : '' }}>Island</option>
+                                    <option value="atoll" {{ old('destination_type') === 'atoll' ? 'selected' : '' }}>Atoll</option>
+                                    <option value="city" {{ old('destination_type') === 'city' ? 'selected' : '' }}>City</option>
+                                </select>
+                            </div>
+                        </div>
+                        <label for="destination_image_file" style="display:block;margin:12px 0 4px;font-size:0.85rem;">Upload replacement image (JPG, PNG, WebP · max 4 MB · 16:9 recommended)</label>
+                        <input id="destination_image_file" name="destination_image_file" type="file" accept="image/png,image/jpeg,image/webp" style="display:block;margin-bottom:12px;">
+                        <label for="destination_image_url" style="display:block;margin-bottom:4px;font-size:0.85rem;">Or paste an external HTTPS URL</label>
+                        <input id="destination_image_url" name="destination_image_url" type="text" maxlength="2048" value="{{ old('destination_image_url') }}" placeholder="https://cdn.example.com/destinations/maafushi.jpg" style="display:block;width:100%;max-width:640px;margin-bottom:12px;">
+                        <button class="btn btn-primary" type="submit">Save Destination Override</button>
+                    </form>
+
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">
+                        @forelse (($destinationMediaOverrides ?? collect()) as $override)
+                            <div style="padding:14px;border:1px solid #d7e0e6;border-radius:12px;background:#ffffff;">
+                                @if (!empty($override['image_url']))
+                                    <img src="{{ $override['image_url'] }}" alt="{{ $override['destination_name'] ?? 'Destination' }} override preview" style="display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;border:1px solid #d7e0e6;margin-bottom:10px;background:#eef4f7;">
+                                @endif
+                                <p style="margin:0 0 4px;font-weight:700;color:#173e5b;">{{ $override['destination_name'] ?? 'Destination' }}</p>
+                                <p class="small" style="margin:0 0 6px;">Type: {{ ucfirst(str_replace('_', ' ', $override['destination_type'] ?? 'destination')) }}</p>
+                                <p class="small" style="margin:0 0 10px;word-break:break-word;">Key: {{ $override['destination_key'] ?? '' }}</p>
+                                <form method="POST" action="/portal/admin/media-destination/update" style="display:inline;">
+                                    @csrf
+                                    <input type="hidden" name="destination_name" value="{{ $override['destination_name'] ?? '' }}">
+                                    <input type="hidden" name="destination_type" value="{{ $override['destination_type'] ?? 'destination' }}">
+                                    <input type="hidden" name="destination_key" value="{{ $override['destination_key'] ?? '' }}">
+                                    <input type="hidden" name="destination_image_clear" value="1">
+                                    <button class="btn" type="submit" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;" onclick="return confirm('Remove the override for {{ $override['destination_name'] ?? 'this destination' }}?')">Remove Override</button>
+                                </form>
+                            </div>
+                        @empty
+                            <div style="padding:14px;border:1px dashed #c7d6e2;border-radius:12px;background:#ffffff;grid-column:1 / -1;">
+                                <p class="small" style="margin:0;">No destination overrides saved yet. Homepage destination cards will continue using automatic representative listing media until you add one.</p>
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
             @endif
         </section>
 

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" role="img" aria-labelledby="title desc">
+  <title id="title">Dhigurah Island</title>
+  <desc id="desc">Stylized long sandbank and reef illustration for Dhigurah Island.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#70c8ee"/>
+      <stop offset="62%" stop-color="#daf5ff"/>
+      <stop offset="100%" stop-color="#fff6ea"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1ca5c5"/>
+      <stop offset="100%" stop-color="#0c5a72"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="520" fill="url(#sky)"/>
+  <circle cx="740" cy="100" r="46" fill="#ffd66f"/>
+  <path d="M0 304C128 280 246 282 350 302C456 322 544 372 662 372C774 372 844 350 900 330V520H0Z" fill="url(#sea)"/>
+  <path d="M126 388C220 326 314 286 406 274C474 266 542 278 622 316C544 372 452 408 358 422C272 434 192 426 126 388Z" fill="#f6e1b4"/>
+  <path d="M618 328C658 312 706 308 754 320C806 334 850 364 892 410C824 430 748 438 688 428C654 422 634 400 618 328Z" fill="#9bd7dc" opacity="0.95"/>
+  <path d="M684 332C700 318 722 312 744 316C772 320 794 336 816 360" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round"/>
+  <text x="84" y="454" fill="#ffffff" font-family="Outfit, Arial, sans-serif" font-size="46" font-weight="800">Dhigurah Island</text>
+  <text x="84" y="490" fill="#ebfbff" font-family="Outfit, Arial, sans-serif" font-size="24" font-weight="600">Long beach, reefs, and marine adventures</text>
+</svg>

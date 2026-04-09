@@ -178,6 +178,7 @@
                         <th>Title</th>
                         <th>Slug</th>
                         <th>Status</th>
+                        <th>Editorial</th>
                         <th>Featured</th>
                         <th>Published At</th>
                         <th>Updated</th>
@@ -195,6 +196,12 @@
                                 </span>
                             </td>
                             <td>
+                                @php $editorial = strtolower(trim((string) ($post->editorial_status ?? 'draft'))); @endphp
+                                <span class="status {{ $editorial === 'approved' ? '' : 'draft' }}">
+                                    {{ strtoupper(str_replace('_', ' ', $editorial)) }}
+                                </span>
+                            </td>
+                            <td>
                                 @if ((bool) ($post->is_featured ?? false))
                                     <span class="status featured">Featured</span>
                                 @else
@@ -206,6 +213,9 @@
                             <td>
                                 <div class="post-actions">
                                     <a class="btn" href="{{ '/portal/admin/blog/' . $post->id . '/edit' }}">Edit</a>
+                                    @if (($canEditorialReview ?? false) && in_array(strtolower(trim((string) ($post->editorial_status ?? 'draft'))), ['pending_review', 'rejected'], true))
+                                        <a class="btn" href="{{ '/portal/admin/blog/' . $post->id . '/edit' }}">Review</a>
+                                    @endif
                                     @if ((bool) ($post->is_published ?? false))
                                         <a class="btn" href="{{ '/blog/' . $post->slug }}" target="_blank" rel="noopener">View</a>
                                     @endif
@@ -214,7 +224,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7">No blog posts yet. Create your first post.</td>
+                            <td colspan="8">No blog posts yet. Create your first post.</td>
                         </tr>
                     @endforelse
                 </tbody>

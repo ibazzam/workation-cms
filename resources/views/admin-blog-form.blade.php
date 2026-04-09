@@ -196,6 +196,10 @@
             $formAction = $isEdit ? ('/portal/admin/blog/' . $post->id) : '/portal/admin/blog';
             $coverPath = $isEdit ? trim((string) ($post->cover_image_path ?? '')) : '';
             $coverUrl = $coverPath !== '' ? (string) \Illuminate\Support\Facades\Storage::disk('public')->url($coverPath) : '';
+            $portalRole = strtoupper((string) session('portal_admin_role', ''));
+            $isMediaRole = $portalRole === 'ADMIN_MEDIA';
+            $canReview = (bool) ($canEditorialReview ?? false);
+            $editorialStatus = $isEdit ? strtolower(trim((string) ($post->editorial_status ?? 'draft'))) : 'draft';
         @endphp
 
         <form class="card" method="POST" action="{{ $formAction }}" enctype="multipart/form-data">
@@ -236,11 +240,16 @@
                 <div class="field">
                     <label>Publishing</label>
                     <div class="checks">
-                        <label class="check">
+                        @if (!$isMediaRole)
+                            <label class="check">
+                                <input type="hidden" name="is_published" value="0">
+                                <input type="checkbox" name="is_published" value="1" @checked((string) old('is_published', $isEdit && (bool) ($post->is_published ?? false) ? '1' : '0') === '1')>
+                                Published
+                            </label>
+                        @else
                             <input type="hidden" name="is_published" value="0">
-                            <input type="checkbox" name="is_published" value="1" @checked((string) old('is_published', $isEdit && (bool) ($post->is_published ?? false) ? '1' : '0') === '1')>
-                            Published
-                        </label>
+                            <span class="check">Editorial Status: {{ strtoupper(str_replace('_', ' ', $editorialStatus)) }}</span>
+                        @endif
                         <label class="check">
                             <input type="hidden" name="is_featured" value="0">
                             <input type="checkbox" name="is_featured" value="1" @checked((string) old('is_featured', $isEdit && (bool) ($post->is_featured ?? false) ? '1' : '0') === '1')>
@@ -248,6 +257,12 @@
                         </label>
                     </div>
                 </div>
+
+                @if ($isMediaRole)
+                    <div class="field wide">
+                        <p class="hint">As ADMIN_MEDIA, saving this post submits it for super-admin editorial review before publishing.</p>
+                    </div>
+                @endif
             </div>
 
             <div class="actions">
@@ -255,6 +270,35 @@
                 <button class="btn primary" type="submit">{{ $isEdit ? 'Save Changes' : 'Create Post' }}</button>
             </div>
         </form>
+
+        @if ($isEdit && $canReview)
+            <form class="card" method="POST" action="{{ '/portal/admin/blog/' . $post->id . '/review' }}">
+                @csrf
+                <div class="grid">
+                    <div class="field wide">
+                        <label for="editorial_notes">Editorial Notes</label>
+                        <textarea id="editorial_notes" name="editorial_notes" rows="5">{{ old('editorial_notes', (string) ($post->editorial_notes ?? '')) }}</textarea>
+                        <p class="hint">These notes are visible to content authors and should explain approval or rejection reasons.</p>
+                    </div>
+                    <div class="field">
+                        <label>Editorial Decision</label>
+                        <div class="checks">
+                            <label class="check">
+                                <input type="radio" name="decision" value="approve" required>
+                                Approve + Publish
+                            </label>
+                            <label class="check">
+                                <input type="radio" name="decision" value="reject" required>
+                                Reject
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn primary" type="submit">Submit Editorial Review</button>
+                </div>
+            </form>
+        @endif
     </main>
 </body>
 </html>

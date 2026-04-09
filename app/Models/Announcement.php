@@ -5,31 +5,23 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class BlogPost extends Model
+class Announcement extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'title',
-        'slug',
-        'excerpt',
+        'type',
+        'status',
         'content',
-        'cover_image_path',
-        'is_featured',
-        'is_published',
         'published_at',
+        'expires_at',
         'created_by_user_id',
         'updated_by_user_id',
-        'editorial_status',
-        'editorial_notes',
-        'reviewed_by_user_id',
-        'reviewed_at',
     ];
 
     protected $casts = [
-        'is_featured' => 'boolean',
-        'is_published' => 'boolean',
         'published_at' => 'datetime',
-        'reviewed_at' => 'datetime',
+        'expires_at' => 'datetime',
     ];
 }

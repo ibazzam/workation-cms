@@ -106,7 +106,18 @@ if (!function_exists('normalizePortalRoleValue')) {
     function normalizePortalRoleValue(string $role): string
     {
         $normalized = strtoupper(trim($role));
-        return $normalized === 'ADMIN_FINACE' ? 'ADMIN_FINANCE' : $normalized;
+        $normalized = preg_replace('/[^A-Z0-9]+/', '_', $normalized) ?? $normalized;
+        $normalized = trim($normalized, '_');
+
+        $aliases = [
+            'ADMIN_FINACE' => 'ADMIN_FINANCE',
+            'ADMINFINACE' => 'ADMIN_FINANCE',
+            'ADMINFINANCE' => 'ADMIN_FINANCE',
+            'ADMINMEDIA' => 'ADMIN_MEDIA',
+            'MEDIA_ADMIN' => 'ADMIN_MEDIA',
+        ];
+
+        return $aliases[$normalized] ?? $normalized;
     }
 }
 
@@ -7697,7 +7708,18 @@ Route::post('/portal/{portal}/forgot-password', function (Request $request, stri
 
         if ($portalUser instanceof \App\Models\User) {
             $resolvedRole = normalizePortalRoleValue((string) $portalUser->portal_role);
-            if (!$allowedRoles->contains($resolvedRole) || !$portalUser->portal_enabled) {
+            $isAllowedRole = $allowedRoles->contains($resolvedRole);
+            if (!$isAllowedRole && $portal === 'admin' && Str::startsWith($resolvedRole, 'ADMIN')) {
+                $isAllowedRole = true;
+            }
+
+            if (!$isAllowedRole || !$portalUser->portal_enabled) {
+                Log::info('Portal forgot-password user filtered out.', [
+                    'portal' => $portal,
+                    'email' => strtolower(trim((string) ($portalUser->email ?? ''))),
+                    'resolved_role' => $resolvedRole,
+                    'portal_enabled' => (bool) $portalUser->portal_enabled,
+                ]);
                 $portalUser = null;
             } else {
                 $email = strtolower(trim((string) ($portalUser->email ?? '')));

@@ -1782,6 +1782,32 @@ if (!function_exists('blogTagDefinitions')) {
     }
 }
 
+if (!function_exists('blogNormalizeTagSlugs')) {
+    function blogNormalizeTagSlugs($value): array
+    {
+        $candidate = $value;
+        if (is_string($candidate)) {
+            $decoded = json_decode($candidate, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $candidate = $decoded;
+            } else {
+                $candidate = preg_split('/[\s,]+/', $candidate) ?: [];
+            }
+        }
+
+        if (!is_array($candidate)) {
+            return [];
+        }
+
+        return collect($candidate)
+            ->map(fn ($slug) => Str::slug((string) $slug))
+            ->filter(fn (string $slug) => $slug !== '')
+            ->unique()
+            ->values()
+            ->all();
+    }
+}
+
 if (!function_exists('blogInferCategorySlug')) {
     function blogInferCategorySlug($post): string
     {
@@ -1845,10 +1871,24 @@ if (!function_exists('blogHydratePostsWithMeta')) {
     {
         $categories = blogCategoryDefinitions();
         $tagDefinitions = blogTagDefinitions();
+        $validCategorySlugs = array_keys($categories);
+        $validTagSlugs = array_keys($tagDefinitions);
 
         return $posts->map(function ($post) use ($categories, $tagDefinitions) {
-            $categorySlug = blogInferCategorySlug($post);
-            $tagSlugs = blogInferTagSlugs($post);
+            $explicitCategorySlug = trim(Str::lower((string) ($post->blog_category_slug ?? '')));
+            $categorySlug = in_array($explicitCategorySlug, array_keys($categories), true)
+                ? $explicitCategorySlug
+                : blogInferCategorySlug($post);
+
+            $explicitTagSlugs = blogNormalizeTagSlugs($post->blog_tag_slugs ?? []);
+            $tagSlugs = collect($explicitTagSlugs)
+                ->filter(fn (string $slug) => in_array($slug, array_keys($tagDefinitions), true))
+                ->values()
+                ->all();
+            if (count($tagSlugs) === 0) {
+                $tagSlugs = blogInferTagSlugs($post);
+            }
+
             $post->cover_image_url = blogResolveCoverImageUrl((string) ($post->cover_image_path ?? ''));
 
             $post->blog_category_slug = $categorySlug;
@@ -1872,13 +1912,21 @@ if (!function_exists('blogHydratePostsWithMeta')) {
 if (!function_exists('blogResolveCoverImageUrl')) {
     function blogResolveCoverImageUrl(?string $coverImagePath): string
     {
-        $value = trim((string) $coverImagePath);
+        $value = str_replace('\\', '/', trim((string) $coverImagePath));
         if ($value === '') {
             return '';
         }
 
         if (Str::startsWith($value, ['https://', 'http://', '//'])) {
             return $value;
+        }
+
+        if (Str::startsWith($value, ['storage/'])) {
+            return '/' . ltrim($value, '/');
+        }
+
+        if (Str::startsWith($value, ['public/'])) {
+            $value = Str::after($value, 'public/');
         }
 
         if (Str::startsWith($value, ['/storage/', '/'])) {
@@ -5519,6 +5567,8 @@ Route::get('/portal/admin/blog/create', function () {
     return view('admin-blog-form', [
         'mode' => 'create',
         'post' => null,
+        'blogCategories' => blogCategoryDefinitions(),
+        'blogTags' => blogTagDefinitions(),
         'canEditorialReview' => canEditorialReview(),
     ]);
 });
@@ -5540,6 +5590,9 @@ Route::post('/portal/admin/blog', function (Request $request) {
         'title' => ['required', 'string', 'max:180'],
         'excerpt' => ['nullable', 'string', 'max:420'],
         'content' => ['required', 'string', 'min:50'],
+        'blog_category_slug' => ['nullable', Rule::in(array_keys(blogCategoryDefinitions()))],
+        'blog_tag_slugs' => ['nullable', 'array'],
+        'blog_tag_slugs.*' => [Rule::in(array_keys(blogTagDefinitions()))],
         'is_published' => ['nullable', 'boolean'],
         'is_featured' => ['nullable', 'boolean'],
         'cover_image' => ['nullable', 'image', 'max:6144'],
@@ -5554,6 +5607,12 @@ Route::post('/portal/admin/blog', function (Request $request) {
     $post->slug = $slug;
     $post->excerpt = trim((string) ($validated['excerpt'] ?? '')) ?: null;
     $post->content = (string) $validated['content'];
+    if (Schema::hasColumn('blog_posts', 'blog_category_slug')) {
+        $post->blog_category_slug = trim(Str::lower((string) ($validated['blog_category_slug'] ?? '')));
+    }
+    if (Schema::hasColumn('blog_posts', 'blog_tag_slugs')) {
+        $post->blog_tag_slugs = blogNormalizeTagSlugs($validated['blog_tag_slugs'] ?? []);
+    }
     $post->is_published = $isMediaRole ? false : (bool) ($validated['is_published'] ?? false);
     $post->is_featured = (bool) ($validated['is_featured'] ?? false);
     $post->published_at = $post->is_published ? now() : null;
@@ -5615,6 +5674,8 @@ Route::get('/portal/admin/blog/{post}/edit', function (int $post) {
     return view('admin-blog-form', [
         'mode' => 'edit',
         'post' => $blogPost,
+        'blogCategories' => blogCategoryDefinitions(),
+        'blogTags' => blogTagDefinitions(),
         'canEditorialReview' => canEditorialReview(),
     ]);
 });
@@ -5638,6 +5699,9 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
         'title' => ['required', 'string', 'max:180'],
         'excerpt' => ['nullable', 'string', 'max:420'],
         'content' => ['required', 'string', 'min:50'],
+        'blog_category_slug' => ['nullable', Rule::in(array_keys(blogCategoryDefinitions()))],
+        'blog_tag_slugs' => ['nullable', 'array'],
+        'blog_tag_slugs.*' => [Rule::in(array_keys(blogTagDefinitions()))],
         'is_published' => ['nullable', 'boolean'],
         'is_featured' => ['nullable', 'boolean'],
         'cover_image' => ['nullable', 'image', 'max:6144'],
@@ -5651,6 +5715,12 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
     $blogPost->slug = generateUniqueBlogSlug((string) $validated['title'], (int) $blogPost->id);
     $blogPost->excerpt = trim((string) ($validated['excerpt'] ?? '')) ?: null;
     $blogPost->content = (string) $validated['content'];
+    if (Schema::hasColumn('blog_posts', 'blog_category_slug')) {
+        $blogPost->blog_category_slug = trim(Str::lower((string) ($validated['blog_category_slug'] ?? '')));
+    }
+    if (Schema::hasColumn('blog_posts', 'blog_tag_slugs')) {
+        $blogPost->blog_tag_slugs = blogNormalizeTagSlugs($validated['blog_tag_slugs'] ?? []);
+    }
     $blogPost->is_published = $isMediaRole ? false : (bool) ($validated['is_published'] ?? false);
     $blogPost->is_featured = (bool) ($validated['is_featured'] ?? false);
     if ($isMediaRole) {

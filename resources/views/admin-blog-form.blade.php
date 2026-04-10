@@ -90,7 +90,7 @@
             font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
         }
 
-        input[type="text"], textarea {
+        input[type="text"], select, textarea {
             border: 1px solid #cbdbe8;
             border-radius: 10px;
             padding: 10px 11px;
@@ -160,6 +160,24 @@
             font-size: 0.82rem;
         }
 
+        .tag-picker {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid #c8d8e6;
+            border-radius: 999px;
+            background: #f8fbff;
+            padding: 7px 11px;
+            font-size: 0.82rem;
+            color: #234760;
+        }
+
         .cover-preview {
             margin-top: 8px;
             border-radius: 10px;
@@ -197,6 +215,13 @@
             $coverPath = $isEdit ? trim((string) ($post->cover_image_path ?? '')) : '';
             $coverUrl = '';
             if ($coverPath !== '') {
+                $coverPath = str_replace('\\', '/', $coverPath);
+                if (\Illuminate\Support\Str::startsWith($coverPath, ['storage/'])) {
+                    $coverPath = '/' . ltrim($coverPath, '/');
+                }
+                if (\Illuminate\Support\Str::startsWith($coverPath, ['public/'])) {
+                    $coverPath = (string) \Illuminate\Support\Str::after($coverPath, 'public/');
+                }
                 $coverUrl = \Illuminate\Support\Str::startsWith($coverPath, ['https://', 'http://', '//', '/'])
                     ? $coverPath
                     : (string) \Illuminate\Support\Facades\Storage::disk('public')->url($coverPath);
@@ -205,6 +230,14 @@
             $isMediaRole = $portalRole === 'ADMIN_MEDIA';
             $canReview = (bool) ($canEditorialReview ?? false);
             $editorialStatus = $isEdit ? strtolower(trim((string) ($post->editorial_status ?? 'draft'))) : 'draft';
+            $blogCategoryOptions = is_array($blogCategories ?? null) ? $blogCategories : blogCategoryDefinitions();
+            $blogTagOptions = is_array($blogTags ?? null) ? $blogTags : blogTagDefinitions();
+            $selectedCategorySlug = trim((string) old('blog_category_slug', $isEdit ? ((string) ($post->blog_category_slug ?? '')) : ''));
+            $selectedTagSlugs = collect(old('blog_tag_slugs', $isEdit ? ($post->blog_tag_slugs ?? []) : []))
+                ->map(fn ($slug) => \Illuminate\Support\Str::slug((string) $slug))
+                ->filter(fn ($slug) => $slug !== '')
+                ->values()
+                ->all();
         @endphp
 
         <form class="card" method="POST" action="{{ $formAction }}" enctype="multipart/form-data">
@@ -221,15 +254,42 @@
                     <input id="blog_excerpt" name="excerpt" type="text" maxlength="420" value="{{ old('excerpt', $isEdit ? ($post->excerpt ?? '') : '') }}">
                 </div>
 
+                <div class="field">
+                    <label for="blog_category_slug">Article Category</label>
+                    <select id="blog_category_slug" name="blog_category_slug">
+                        <option value="">Auto detect from content</option>
+                        @foreach ($blogCategoryOptions as $slug => $meta)
+                            <option value="{{ $slug }}" @selected($selectedCategorySlug === (string) $slug)>
+                                {{ $meta['label'] ?? \Illuminate\Support\Str::headline((string) $slug) }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="hint">Choose category manually to control where this article appears (Trip Ideas, Blue Trails, Sleep + Slow, Island Atlas).</p>
+                </div>
+
+                <div class="field">
+                    <label>Article Tags</label>
+                    <div class="tag-picker">
+                        @foreach ($blogTagOptions as $slug => $meta)
+                            <label class="tag-pill">
+                                <input type="checkbox" name="blog_tag_slugs[]" value="{{ $slug }}" @checked(in_array((string) $slug, $selectedTagSlugs, true))>
+                                {{ $meta['label'] ?? \Illuminate\Support\Str::headline((string) $slug) }}
+                            </label>
+                        @endforeach
+                    </div>
+                    <p class="hint">Tags drive discovery pages and tag filters. If none selected, tags are inferred from content text.</p>
+                </div>
+
                 <div class="field wide">
                     <label for="blog_content">Content</label>
                     <textarea id="blog_content" name="content" required>{{ old('content', $isEdit ? $post->content : '') }}</textarea>
-                    <p class="hint">Use plain text with line breaks. For mid-article images use <code>![Caption](https://...)</code> or <code>[image:storage/path.jpg]</code>. Use <code>## Heading</code> for section titles.</p>
+                    <p class="hint">Use plain text with line breaks. For mid-article images use <code>![Caption](https://...)</code> or <code>[image:/storage/path.jpg]</code>. Use <code>## Heading</code> for section titles.</p>
                 </div>
 
                 <div class="field">
                     <label for="blog_cover">Cover image (optional)</label>
                     <input id="blog_cover" name="cover_image" type="file" accept="image/*">
+                    <p class="hint">Upload from your device. Supported: JPG, PNG, WEBP. The system stores and serves this image in blog index and category cards.</p>
 
                     @if ($coverUrl !== '')
                         <div class="cover-preview">

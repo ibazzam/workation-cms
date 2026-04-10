@@ -44,10 +44,14 @@
             position: sticky;
             top: 0;
             z-index: 40;
-            padding: 0 6px;
-            backdrop-filter: blur(8px);
-            background: rgba(249, 252, 250, 0.92);
-            border-bottom: 1px solid rgba(182, 200, 208, 0.55);
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
+            padding-left: max(14px, calc((100vw - 1240px) / 2 + 8px));
+            padding-right: max(14px, calc((100vw - 1240px) / 2 + 8px));
+            background: transparent;
+            border-bottom: 0;
+            backdrop-filter: none;
         }
 
         .brand {
@@ -56,15 +60,16 @@
             font-size: 2rem;
             line-height: 1;
             letter-spacing: -0.04em;
-            color: var(--brand);
+            color: #ffffff;
             font-weight: 800;
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            text-shadow: 0 5px 18px rgba(0, 0, 0, 0.35);
         }
 
         .brand small {
-            color: #152936;
+            color: #f3fbf9;
             font-size: 0.8rem;
             text-transform: uppercase;
             letter-spacing: 0.2em;
@@ -81,7 +86,7 @@
 
         .nav-links a {
             text-decoration: none;
-            color: #1a3241;
+            color: #f9ffff;
             font-size: 0.84rem;
             font-weight: 800;
             text-transform: uppercase;
@@ -89,25 +94,29 @@
             padding: 8px 12px;
             border-radius: 999px;
             border: 1px solid transparent;
+            text-shadow: 0 4px 16px rgba(0, 0, 0, 0.33);
         }
 
         .nav-links a.is-active {
-            color: #0a3e50;
-            border-color: #9ac9c6;
-            background: #e7f6f4;
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.65);
+            background: rgba(0, 19, 28, 0.28);
         }
 
         .nav-links a:hover {
-            border-color: #b5cdd9;
-            background: #f2f8fd;
+            border-color: rgba(255, 255, 255, 0.7);
+            background: rgba(7, 24, 36, 0.34);
         }
 
         .hero-stage {
-            margin-top: 14px;
+            margin-top: -84px;
             position: relative;
-            border-radius: 22px;
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
+            border-radius: 0;
             overflow: hidden;
-            min-height: 600px;
+            min-height: 720px;
             background: linear-gradient(150deg, #abc7d8 0%, #8fb6cb 100%);
         }
 
@@ -566,6 +575,7 @@
             }
 
             .hero-stage {
+                margin-top: 0;
                 min-height: 430px;
             }
 
@@ -591,17 +601,55 @@
 <body>
     @php
         $allPosts = $posts->values();
-        $activeCategorySlug = $activeCategory ?: 'things-to-do';
-        $activeCategoryLabel = (string) ($blogCategories[$activeCategorySlug]['label'] ?? 'Things to Do');
+
+        $postImageUrl = function ($post): string {
+            $resolved = trim((string) ($post->cover_image_url ?? ''));
+            if ($resolved !== '') {
+                return $resolved;
+            }
+
+            $coverPath = trim((string) ($post->cover_image_path ?? ''));
+            if ($coverPath === '') {
+                return '';
+            }
+
+            $coverPath = str_replace('\\\\', '/', $coverPath);
+
+            if (\Illuminate\Support\Str::startsWith($coverPath, ['storage/'])) {
+                return '/' . ltrim($coverPath, '/');
+            }
+
+            if (\Illuminate\Support\Str::startsWith($coverPath, ['public/'])) {
+                $coverPath = (string) \Illuminate\Support\Str::after($coverPath, 'public/');
+            }
+
+            if (\Illuminate\Support\Str::startsWith($coverPath, ['https://', 'http://', '//', '/'])) {
+                return $coverPath;
+            }
+
+            return (string) \Illuminate\Support\Facades\Storage::disk('public')->url($coverPath);
+        };
+
+        $activeCategorySlug = $activeCategory ?: 'all';
+        $activeCategoryLabel = $activeCategorySlug === 'all'
+            ? 'All Stories'
+            : (string) ($blogCategories[$activeCategorySlug]['label'] ?? 'Stories');
         $contextLabel = $activeTag ? ('Tag: ' . ($activeTagLabel ?: \Illuminate\Support\Str::headline(str_replace('-', ' ', (string) $activeTag)))) : $activeCategoryLabel;
         $heroLead = $allPosts->first();
+        $heroBackgroundPost = $allPosts
+            ->filter(fn ($post) => $postImageUrl($post) !== '')
+            ->shuffle()
+            ->first();
         $teaserPosts = $allPosts->slice(1, 3)->values();
         $featureLead = $allPosts->get(4) ?? $heroLead;
         $featureList = $allPosts->slice(5, 4)->values();
         $driftPosts = $allPosts->slice(9, 3)->values();
         $archivePosts = $allPosts->slice(12, 8)->values();
         $loopPosts = $allPosts->filter(function ($post) {
-            return trim((string) ($post->cover_image_url ?? $post->cover_image_path ?? '')) !== '';
+            $isIslandsCategory = (string) ($post->blog_category_slug ?? '') === 'islands';
+            $hasImage = trim((string) ($post->cover_image_url ?? $post->cover_image_path ?? '')) !== '';
+
+            return $isIslandsCategory && $hasImage;
         })->take(10)->values();
 
         if ($teaserPosts->isEmpty()) {
@@ -627,24 +675,6 @@
             'islands' => 'Island Atlas',
         ];
 
-        $postImageUrl = function ($post): string {
-            $resolved = trim((string) ($post->cover_image_url ?? ''));
-            if ($resolved !== '') {
-                return $resolved;
-            }
-
-            $coverPath = trim((string) ($post->cover_image_path ?? ''));
-            if ($coverPath === '') {
-                return '';
-            }
-
-            if (\Illuminate\Support\Str::startsWith($coverPath, ['https://', 'http://', '//', '/'])) {
-                return $coverPath;
-            }
-
-            return (string) \Illuminate\Support\Facades\Storage::disk('public')->url($coverPath);
-        };
-
         $postDate = function ($post): string {
             return optional($post->published_at)->format('M d, Y - l')
                 ?? optional($post->created_at)->format('M d, Y - l')
@@ -662,15 +692,19 @@
 
     <main class="page">
         <header class="header-bar" aria-label="Blog category header">
-            <a class="brand" href="/">
+            <a class="brand" href="/blog">
                 Workation
                 <small>Blog</small>
             </a>
             <nav class="nav-links" aria-label="Blog categories">
+                @php
+                    $isAllActive = !$activeTag && $activeCategorySlug === 'all';
+                @endphp
+                <a class="{{ $isAllActive ? 'is-active' : '' }}" href="/blog">All Stories</a>
                 @foreach ($blogCategories as $slug => $meta)
                     @php
                         $isActiveCategory = !$activeTag && ($activeCategorySlug === $slug);
-                        $categoryHref = $slug === 'things-to-do' ? '/blog' : '/blog/category/' . $slug;
+                        $categoryHref = '/blog/category/' . $slug;
                         $navLabel = (string) ($navLabels[$slug] ?? ($meta['label'] ?? \Illuminate\Support\Str::headline($slug)));
                     @endphp
                     <a class="{{ $isActiveCategory ? 'is-active' : '' }}" href="{{ $categoryHref }}">{{ $navLabel }}</a>
@@ -680,7 +714,7 @@
 
         @if ($heroLead)
             @php
-                $heroImage = $postImageUrl($heroLead);
+                $heroImage = $postImageUrl($heroBackgroundPost ?? $heroLead);
             @endphp
             <section class="hero-stage" aria-label="Lead blog story">
                 @if ($heroImage !== '')

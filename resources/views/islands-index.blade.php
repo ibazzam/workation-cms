@@ -168,6 +168,38 @@
             margin-bottom: 16px;
         }
 
+        .stats-strip {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 10px;
+            margin: 0 0 20px;
+        }
+
+        .stats-card {
+            border: 1.5px solid var(--line);
+            border-radius: 12px;
+            background: var(--surface);
+            padding: 10px 12px;
+        }
+
+        .stats-card strong {
+            display: block;
+            font-size: 1.2rem;
+            line-height: 1;
+            letter-spacing: -0.02em;
+            color: var(--ink);
+        }
+
+        .stats-card span {
+            display: block;
+            margin-top: 4px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
         .atoll-chip {
             padding: 6px 18px;
             border-radius: 40px;
@@ -215,11 +247,138 @@
             border-color: #7fce95;
         }
 
+        /* ── Atoll sections ── */
+        .atolls-container {
+            display: flex;
+            flex-direction: column;
+            gap: 36px;
+        }
+
+        .atoll-section {
+            border: 1.5px solid var(--line);
+            border-radius: 12px;
+            background: var(--surface);
+            overflow: hidden;
+            transition: box-shadow .2s;
+        }
+
+        .atoll-section[data-hidden="true"] {
+            display: none;
+        }
+
+        .atoll-header {
+            padding: 18px 22px;
+            background: #f9fafb;
+            border-bottom: 1.5px solid var(--line);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            user-select: none;
+        }
+
+        .atoll-header:hover {
+            background: #f0f4f7;
+        }
+
+        .atoll-header-content {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex: 1;
+        }
+
+        .atoll-header-toggle {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            transition: transform .2s;
+            flex-shrink: 0;
+        }
+
+        .atoll-section[data-expanded="true"] .atoll-header-toggle {
+            transform: rotate(180deg);
+        }
+
+        .atoll-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin: 0;
+            line-height: 1.25;
+        }
+
+        .atoll-counts {
+            display: flex;
+            gap: 14px;
+            font-size: 0.81rem;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .atoll-count-item {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .atoll-count-number {
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .atoll-body {
+            padding: 22px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .3s ease-out;
+        }
+
+        .atoll-section[data-expanded="true"] .atoll-body {
+            max-height: 10000px;
+            transition: max-height .3s ease-in;
+        }
+
+        .atoll-type-section {
+            margin-bottom: 28px;
+        }
+
+        .atoll-type-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .atoll-type-heading {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--ink);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 0 0 14px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--line);
+        }
+
+        .atoll-type-heading.inhabited {
+            border-bottom-color: #43be66;
+        }
+
+        .atoll-type-heading.uninhabited {
+            border-bottom-color: #f59e0b;
+        }
+
+        .atoll-type-heading.resort {
+            border-bottom-color: #8b5cf6;
+        }
+
         /* ── Islands grid ── */
         .island-grid {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 28px 20px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px 16px;
         }
 
         .island-card {
@@ -303,17 +462,25 @@
 
         /* ── Responsive ── */
         @media (max-width: 1024px) {
-            .island-grid { grid-template-columns: repeat(4, 1fr); }
+            .island-grid { grid-template-columns: repeat(3, 1fr); }
         }
 
         @media (max-width: 720px) {
             .header-bar { padding: 0 16px; }
-            .island-grid { grid-template-columns: repeat(3, 1fr); gap: 20px 12px; }
-            .island-avatar { width: 100px; height: 100px; }
+            .stats-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .island-grid { grid-template-columns: repeat(2, 1fr); gap: 16px 12px; }
+            .island-avatar { width: 90px; height: 90px; }
+            .atoll-header { padding: 16px 14px; }
+            .atoll-body { padding: 16px; }
+            .atoll-title { font-size: 1.1rem; }
         }
 
         @media (max-width: 480px) {
-            .island-grid { grid-template-columns: repeat(2, 1fr); }
+            .island-grid { grid-template-columns: 1fr; }
+            .island-avatar { width: 80px; height: 80px; }
+            .atoll-header-content { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .atoll-title { font-size: 1rem; }
+            .atoll-counts { font-size: 0.75rem; }
         }
     </style>
 </head>
@@ -322,32 +489,43 @@
 @php
     use Illuminate\Support\Str;
     /** @var \Illuminate\Support\Collection $atolls */
-    /** @var \Illuminate\Support\Collection $islands */
-    /** @var string|null $activeAtollSlug */
+    /** @var \Illuminate\Support\Collection $groupedIslands */
     /** @var string|null $activeIslandType */
+    /** @var array|null $islandStats */
 
-    $activeAtoll = $atolls->first(fn ($a) => ($a->slug ?? Str::slug($a->name)) === $activeAtollSlug);
+    // Ensure islands are grouped by atoll and type
+    $groupedByAtoll = $groupedIslands ?? collect();
+    
     $typeLabelMap = [
-        'inhabited' => 'Inhabited',
+        'inhabited' => 'Local / Inhabited',
         'uninhabited' => 'Uninhabited',
         'resort' => 'Resort',
     ];
-    $activeTypeLabel = $activeIslandType !== null ? ($typeLabelMap[$activeIslandType] ?? null) : null;
-    $pageTitle = $activeAtoll ? 'Islands of ' . $activeAtoll->name . ' Atoll' : 'Islands of Maldives';
-    if ($activeTypeLabel !== null) {
-        $pageTitle .= ' · ' . $activeTypeLabel . ' Islands';
-    }
-    $pageSubtitle = $activeAtoll
-        ? 'Explore all islands within the ' . $activeAtoll->name . ' administrative atoll.'
-        : 'Discover the inhabited and uninhabited islands across all atolls of the Maldives.';
+    $typeColors = [
+        'inhabited' => '#10b981',
+        'uninhabited' => '#f59e0b',
+        'resort' => '#8b5cf6',
+    ];
+    $typeEmoji = [
+        'inhabited' => '🏘️',
+        'uninhabited' => '🏝️',
+        'resort' => '🏨',
+    ];
 
-    $islandFilterHref = function (?string $atollSlug, ?string $islandType) {
-        $basePath = $atollSlug ? '/islands/atoll/' . $atollSlug : '/islands';
-        if ($islandType === null || trim($islandType) === '') {
-            return $basePath;
-        }
-        return $basePath . '?type=' . urlencode($islandType);
-    };
+    $activeTypeLabel = $activeIslandType !== null ? ($typeLabelMap[$activeIslandType] ?? null) : null;
+    $pageTitle = 'Island Atlas · Maldives';
+    if ($activeTypeLabel !== null) {
+        $pageTitle .= ' · ' . $activeTypeLabel;
+    }
+    $pageSubtitle = 'Explore all 1079 islands directly organized by their administrative atolls. Select an atoll to view inhabited, uninhabited, and resort islands.';
+
+    $islandStats = is_array($islandStats ?? null) ? $islandStats : [
+        'atolls_total' => 0,
+        'islands_total' => 0,
+        'inhabited_total' => 0,
+        'resort_total' => 0,
+        'uninhabited_total' => 0,
+    ];
 @endphp
 
 <header class="header-bar" aria-label="Site navigation">
@@ -370,90 +548,138 @@
         <p>{{ $pageSubtitle }}</p>
     </div>
 
+    <section class="stats-strip" aria-label="Island inventory summary">
+        <article class="stats-card"><strong>{{ (int) ($islandStats['atolls_total'] ?? 0) }}</strong><span>Atolls</span></article>
+        <article class="stats-card"><strong>{{ (int) ($islandStats['islands_total'] ?? 0) }}</strong><span>Total Islands</span></article>
+        <article class="stats-card"><strong>{{ (int) ($islandStats['inhabited_total'] ?? 0) }}</strong><span>Local / Inhabited</span></article>
+        <article class="stats-card"><strong>{{ (int) ($islandStats['resort_total'] ?? 0) }}</strong><span>Resort Islands</span></article>
+        <article class="stats-card"><strong>{{ (int) ($islandStats['uninhabited_total'] ?? 0) }}</strong><span>Uninhabited</span></article>
+    </section>
+
     {{-- Search --}}
     <div class="search-wrap">
-        <span class="search-label">Search for Islands</span>
+        <span class="search-label">Search for Islands or Atolls</span>
         <input
             class="search-input"
             type="search"
             id="island-search"
-            placeholder="Search islands..."
+            placeholder="Search islands, atolls..."
             autocomplete="off"
-            aria-label="Search islands"
+            aria-label="Search islands and atolls"
         >
     </div>
 
     {{-- Island type filter chips --}}
     <div class="type-filter" role="navigation" aria-label="Filter by island type">
-        <a class="type-chip {{ $activeIslandType === null ? 'is-active' : '' }}" href="{{ $islandFilterHref($activeAtollSlug, null) }}">All Types</a>
-        <a class="type-chip {{ $activeIslandType === 'inhabited' ? 'is-active' : '' }}" href="{{ $islandFilterHref($activeAtollSlug, 'inhabited') }}">Inhabited</a>
-        <a class="type-chip {{ $activeIslandType === 'uninhabited' ? 'is-active' : '' }}" href="{{ $islandFilterHref($activeAtollSlug, 'uninhabited') }}">Uninhabited</a>
-        <a class="type-chip {{ $activeIslandType === 'resort' ? 'is-active' : '' }}" href="{{ $islandFilterHref($activeAtollSlug, 'resort') }}">Resort</a>
+        <a class="type-chip {{ $activeIslandType === null ? 'is-active' : '' }}" href="/islands">All Types</a>
+        <a class="type-chip {{ $activeIslandType === 'inhabited' ? 'is-active' : '' }}" href="/islands?type=inhabited">Local / Inhabited</a>
+        <a class="type-chip {{ $activeIslandType === 'uninhabited' ? 'is-active' : '' }}" href="/islands?type=uninhabited">Uninhabited</a>
+        <a class="type-chip {{ $activeIslandType === 'resort' ? 'is-active' : '' }}" href="/islands?type=resort">Resort</a>
     </div>
 
-    {{-- Atoll filter chips --}}
-    <div class="atoll-filter" role="navigation" aria-label="Filter by atoll">
-        <a
-            class="atoll-chip {{ $activeAtollSlug === null ? 'is-active' : '' }}"
-            href="{{ $islandFilterHref(null, $activeIslandType) }}"
-        >All Atolls</a>
-        @foreach ($atolls as $atoll)
+    {{-- Atolls Container --}}
+    <section class="atolls-container" id="atolls-container" aria-label="Island atolls">
+        @forelse ($atolls as $atoll)
             @php
                 $atollSlug = $atoll->slug ?? Str::slug($atoll->name);
-            @endphp
-            <a
-                class="atoll-chip {{ $activeAtollSlug === $atollSlug ? 'is-active' : '' }}"
-                href="{{ $islandFilterHref($atollSlug, $activeIslandType) }}"
-            >{{ $atoll->name }}</a>
-        @endforeach
-    </div>
+                $islandsInAtoll = $groupedByAtoll->get($atoll->id, collect());
+                $typeGroups = $islandsInAtoll->groupBy('island_type');
+                
+                // Count by type
+                $inhabCount = $typeGroups->get('inhabited', collect())->count();
+                $uninhabCount = $typeGroups->get('uninhabited', collect())->count();
+                $resortCount = $typeGroups->get('resort', collect())->count();
+                $totalInAtoll = $islandsInAtoll->count();
 
-    {{-- Islands grid --}}
-    <section class="island-grid" id="island-grid" aria-label="Islands list">
-        @forelse ($islands as $island)
-            @php
-                $islandSlug   = $island->slug ?? Str::slug($island->name);
-                $atollLabel   = $island->atoll ? $island->atoll->name : null;
-                $atollCode    = $island->atoll ? ($island->atoll->code ?? strtoupper(substr($island->atoll->name ?? '', 0, 3))) : '';
-                $distanceHint = $island->distance_from_airport_km ? $island->distance_from_airport_km . ' KM' : null;
-                $airportHint  = $island->nearest_airport_name ?? null;
-
-                $hintParts = [];
-                if ($atollLabel) $hintParts[] = $atollLabel . ' atoll';
-                if ($distanceHint && $airportHint) $hintParts[] = '– ' . $distanceHint . ' from VIA ' . $airportHint;
-                elseif ($distanceHint) $hintParts[] = '– ' . $distanceHint;
-                $hintText = implode(' ', $hintParts);
+                // Default expanded state (all atolls expanded on page load)
+                $isExpanded = true;
             @endphp
-            <a
-                class="island-card"
-                href="/islands/{{ $islandSlug }}"
-                data-name="{{ strtolower($island->name) }}"
-                data-atoll="{{ strtolower($atollLabel ?? '') }}"
-                aria-label="{{ $island->name }}"
-            >
-                <div class="island-avatar">
-                    @if ($island->photo_path)
-                        <img
-                            src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($island->photo_path) }}"
-                            alt="{{ $island->name }} aerial view"
-                            loading="lazy"
-                        >
-                    @else
-                        <div class="avatar-placeholder" aria-hidden="true">🏝</div>
-                    @endif
+            <div class="atoll-section" data-expanded="{{ $isExpanded ? 'true' : 'false' }}" data-atoll-id="{{ $atoll->id }}" data-atoll-name="{{ strtolower($atoll->name) }}">
+                <div class="atoll-header" role="button" tabindex="0" aria-expanded="{{ $isExpanded ? 'true' : 'false' }}" aria-controls="atoll-body-{{ $atoll->id }}">
+                    <div class="atoll-header-content">
+                        <div class="atoll-header-toggle" aria-hidden="true">⌄</div>
+                        <div>
+                            <h2 class="atoll-title">{{ $atoll->name }} Atoll</h2>
+                            <div class="atoll-counts">
+                                @if ($inhabCount > 0)
+                                    <span class="atoll-count-item"><span class="atoll-count-number">{{ $inhabCount }}</span> Inhabited</span>
+                                @endif
+                                @if ($uninhabCount > 0)
+                                    <span class="atoll-count-item"><span class="atoll-count-number">{{ $uninhabCount }}</span> Uninhabited</span>
+                                @endif
+                                @if ($resortCount > 0)
+                                    <span class="atoll-count-item"><span class="atoll-count-number">{{ $resortCount }}</span> Resort</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    <div style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">
+                        {{ $totalInAtoll }} islands
+                    </div>
                 </div>
-                <div class="island-meta">
-                    @if ($atollCode)
-                        <span class="island-atoll-code">{{ $atollCode }}.</span>
-                    @endif
-                    <span class="island-name">{{ $island->name }}</span>
-                    @if ($hintText)
-                        <span class="island-hint">{{ $hintText }}</span>
-                    @endif
+
+                <div class="atoll-body" id="atoll-body-{{ $atoll->id }}">
+                    {{-- Islands by type --}}
+                    @php $typeOrder = ['inhabited', 'uninhabited', 'resort']; @endphp
+                    @foreach ($typeOrder as $typeKey)
+                        @php
+                            $typeIslands = $typeGroups->get($typeKey, collect());
+                            $typeLabel = $typeLabelMap[$typeKey] ?? $typeKey;
+                        @endphp
+                        @if ($typeIslands->isNotEmpty())
+                            <div class="atoll-type-section">
+                                <h3 class="atoll-type-heading {{ $typeKey }}">
+                                    {{ $typeEmoji[$typeKey] ?? '' }} {{ $typeLabel }} ({{ $typeIslands->count() }})
+                                </h3>
+                                <div class="island-grid">
+                                    @foreach ($typeIslands as $island)
+                                        @php
+                                            $islandSlug = $island->slug ?? Str::slug($island->name);
+                                            $atollCode = $atoll->code ?? strtoupper(substr($atoll->name ?? '', 0, 3));
+                                            $distanceHint = $island->distance_from_airport_km ? $island->distance_from_airport_km . ' KM' : null;
+                                            $airportHint = $island->nearest_airport_name ?? null;
+                                            
+                                            $hintParts = [];
+                                            if ($distanceHint && $airportHint) $hintParts[] = $distanceHint . ' from ' . $airportHint;
+                                            elseif ($distanceHint) $hintParts[] = $distanceHint;
+                                            $hintText = implode(' ', $hintParts);
+                                        @endphp
+                                        <a
+                                            class="island-card"
+                                            href="/islands/{{ $islandSlug }}"
+                                            data-name="{{ strtolower($island->name) }}"
+                                            data-atoll="{{ strtolower($atoll->name) }}"
+                                            data-type="{{ $typeKey }}"
+                                            aria-label="{{ $island->name }}"
+                                        >
+                                            <div class="island-avatar">
+                                                @if ($island->photo_path)
+                                                    <img
+                                                        src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($island->photo_path) }}"
+                                                        alt="{{ $island->name }} aerial view"
+                                                        loading="lazy"
+                                                    >
+                                                @else
+                                                    <div class="avatar-placeholder" aria-hidden="true">{{ $typeEmoji[$typeKey] ?? '🏝' }}</div>
+                                                @endif
+                                            </div>
+                                            <div class="island-meta">
+                                                <span class="island-atoll-code">{{ $atollCode }}</span>
+                                                <span class="island-name">{{ $island->name }}</span>
+                                                @if ($hintText)
+                                                    <span class="island-hint">{{ $hintText }}</span>
+                                                @endif
+                                            </div>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+                    @endforeach
                 </div>
-            </a>
+            </div>
         @empty
-            <div class="empty-state">No islands found for this filter.</div>
+            <div class="empty-state">No atolls found.</div>
         @endforelse
     </section>
 
@@ -463,20 +689,60 @@
 
 <script>
     (function () {
-        const input = document.getElementById('island-search');
-        const cards = Array.from(document.querySelectorAll('.island-card'));
+        // Atoll expand/collapse
+        document.querySelectorAll('.atoll-header').forEach(function (header) {
+            header.addEventListener('click', function () {
+                const section = this.closest('.atoll-section');
+                const isExpanded = section.dataset.expanded === 'true';
+                section.dataset.expanded = isExpanded ? 'false' : 'true';
+                this.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
+            });
 
-        if (!input) return;
-
-        input.addEventListener('input', function () {
-            const q = this.value.toLowerCase().trim();
-            cards.forEach(function (card) {
-                const name  = (card.dataset.name  || '').toLowerCase();
-                const atoll = (card.dataset.atoll || '').toLowerCase();
-                const match = !q || name.includes(q) || atoll.includes(q);
-                card.dataset.hidden = match ? 'false' : 'true';
+            header.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    header.click();
+                }
             });
         });
+
+        // Search islands and atolls
+        const searchInput = document.getElementById('island-search');
+        const atollSections = Array.from(document.querySelectorAll('.atoll-section'));
+        const islandCards = Array.from(document.querySelectorAll('.island-card'));
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                const q = this.value.toLowerCase().trim();
+                
+                atollSections.forEach(function (section) {
+                    const atollName = section.dataset.atollName || '';
+                    const cardsInSection = Array.from(section.querySelectorAll('.island-card'));
+                    
+                    let hasVisibleCard = false;
+                    cardsInSection.forEach(function (card) {
+                        const name = (card.dataset.name || '').toLowerCase();
+                        const match = !q || name.includes(q) || atollName.includes(q);
+                        card.dataset.hidden = match ? 'false' : 'true';
+                        if (match) hasVisibleCard = true;
+                    });
+
+                    // Show section if it matches atoll name or has visible cards
+                    const atollMatch = !q || atollName.includes(q);
+                    section.dataset.hidden = (atollMatch || hasVisibleCard) ? 'false' : 'true';
+                });
+            });
+        }
+
+        // Type filtering based on URL query
+        const params = new URLSearchParams(window.location.search);
+        const typeFilter = params.get('type');
+        if (typeFilter) {
+            islandCards.forEach(function (card) {
+                const cardType = card.dataset.type || '';
+                card.dataset.hidden = cardType !== typeFilter ? 'true' : 'false';
+            });
+        }
     })();
 </script>
 

@@ -213,19 +213,7 @@
             $isEdit = $mode === 'edit' && $post;
             $formAction = $isEdit ? ('/portal/admin/blog/' . $post->id) : '/portal/admin/blog';
             $coverPath = $isEdit ? trim((string) ($post->cover_image_path ?? '')) : '';
-            $coverUrl = '';
-            if ($coverPath !== '') {
-                $coverPath = str_replace('\\', '/', $coverPath);
-                if (\Illuminate\Support\Str::startsWith($coverPath, ['storage/'])) {
-                    $coverPath = '/' . ltrim($coverPath, '/');
-                }
-                if (\Illuminate\Support\Str::startsWith($coverPath, ['public/'])) {
-                    $coverPath = (string) \Illuminate\Support\Str::after($coverPath, 'public/');
-                }
-                $coverUrl = \Illuminate\Support\Str::startsWith($coverPath, ['https://', 'http://', '//', '/'])
-                    ? $coverPath
-                    : (string) \Illuminate\Support\Facades\Storage::disk('public')->url($coverPath);
-            }
+            $coverUrl = $coverPath !== '' ? blogResolveCoverImageUrl($coverPath) : '';
             $portalRole = strtoupper((string) session('portal_admin_role', ''));
             $isMediaRole = $portalRole === 'ADMIN_MEDIA';
             $canReview = (bool) ($canEditorialReview ?? false);
@@ -238,6 +226,18 @@
                 ->filter(fn ($slug) => $slug !== '')
                 ->values()
                 ->all();
+            $selectedTagInput = trim((string) old('blog_tag_input', ''));
+            if ($selectedTagInput === '' && count($selectedTagSlugs) > 0) {
+                $selectedTagInput = implode(', ', $selectedTagSlugs);
+            }
+
+            foreach ($selectedTagSlugs as $selectedSlug) {
+                if (!array_key_exists($selectedSlug, $blogTagOptions)) {
+                    $blogTagOptions[$selectedSlug] = [
+                        'label' => \Illuminate\Support\Str::headline(str_replace('-', ' ', $selectedSlug)),
+                    ];
+                }
+            }
         @endphp
 
         <form class="card" method="POST" action="{{ $formAction }}" enctype="multipart/form-data">
@@ -277,7 +277,8 @@
                             </label>
                         @endforeach
                     </div>
-                    <p class="hint">Tags drive discovery pages and tag filters. If none selected, tags are inferred from content text.</p>
+                    <input name="blog_tag_input" type="text" value="{{ $selectedTagInput }}" placeholder="Add custom tags separated by commas (for example: family travel, overwater villa, reef tips)">
+                    <p class="hint">Tags are dynamic. Use presets or add custom tags separated by commas. If none selected, tags are inferred from content text.</p>
                 </div>
 
                 <div class="field wide">

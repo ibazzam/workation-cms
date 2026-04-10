@@ -156,6 +156,23 @@
                             class="profile-input"
                             type="text"
                             value="{{ $vendorProfile['vendor_id'] ?? '' }}"
+                
+                                            {{-- Business Location: Atoll & Island --}}
+                                            <div style="border-top: 1px solid #e0e0e0; margin-top: 24px; padding-top: 24px;">
+                                                <p style="font-weight: 600; margin: 0 0 12px; color: #111;">Business Location</p>
+                                                @include('components.atoll-island-select', [
+                                                    'fieldNameAtoll' => 'business_atoll_id',
+                                                    'fieldNameIsland' => 'business_island_id',
+                                                    'labelAtoll' => 'Operating Atoll',
+                                                    'labelIsland' => 'Operating Island',
+                                                    'selectedAtoll' => old('business_atoll_id', $vendorProfile['business_atoll_id'] ?? null),
+                                                    'selectedIsland' => old('business_island_id', $vendorProfile['business_island_id'] ?? null),
+                                                    'requiredAtoll' => true,
+                                                    'requiredIsland' => true,
+                                                    'cssClass' => 'profile-input',
+                                                ])
+                                            </div>
+
                             readonly
                         >
                     </div>

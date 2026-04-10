@@ -532,29 +532,10 @@
     @php
         $postCoverUrl = trim((string) ($post->cover_image_url ?? ''));
         if ($postCoverUrl === '') {
-            $postCoverPath = trim((string) ($post->cover_image_path ?? ''));
-            if ($postCoverPath !== '') {
-                $postCoverPath = str_replace('\\', '/', $postCoverPath);
-                if (\Illuminate\Support\Str::startsWith($postCoverPath, ['storage/'])) {
-                    $postCoverPath = '/' . ltrim($postCoverPath, '/');
-                }
-                if (\Illuminate\Support\Str::startsWith($postCoverPath, ['public/'])) {
-                    $postCoverPath = (string) \Illuminate\Support\Str::after($postCoverPath, 'public/');
-                }
-                $postCoverUrl = \Illuminate\Support\Str::startsWith($postCoverPath, ['https://', 'http://', '//', '/'])
-                    ? $postCoverPath
-                    : (string) \Illuminate\Support\Facades\Storage::disk('public')->url($postCoverPath);
-            }
+            $postCoverUrl = blogResolveCoverImageUrl((string) ($post->cover_image_path ?? ''));
         }
         $postCategorySlug = (string) ($post->blog_category_slug ?? 'things-to-do');
         $postCategoryLabel = (string) ($post->blog_category_label ?? 'Things to Do');
-        $navLabels = [
-            'things-to-do' => 'Trip Ideas',
-            'attractions' => 'Blue Trails',
-            'stay' => 'Sleep + Slow',
-            'islands' => 'Island Atlas',
-        ];
-
         $sidebarAd = is_array($blogSidebarAd ?? null) ? $blogSidebarAd : [];
         $sidebarAdTitle = trim((string) ($sidebarAd['title'] ?? 'Charter a vessel?'));
         $sidebarAdBrand = trim((string) ($sidebarAd['brand'] ?? 'workation'));
@@ -586,11 +567,7 @@
                 return '';
             }
 
-            if (\Illuminate\Support\Str::startsWith($value, ['https://', 'http://', '/'])) {
-                return $value;
-            }
-
-            return (string) \Illuminate\Support\Facades\Storage::disk('public')->url($value);
+            return blogResolveCoverImageUrl($value);
         };
 
         $contentBlocks = [];
@@ -664,8 +641,8 @@
                 <a href="/blog">All Stories</a>
                 @foreach ($blogCategories as $slug => $meta)
                     @php
-                        $href = '/blog/category/' . $slug;
-                        $navLabel = (string) ($navLabels[$slug] ?? ($meta['label'] ?? \Illuminate\Support\Str::headline($slug)));
+                        $href = $slug === 'islands' ? '/islands' : ('/blog/category/' . $slug);
+                        $navLabel = (string) ($meta['label'] ?? \Illuminate\Support\Str::headline($slug));
                     @endphp
                     <a class="{{ $slug === $postCategorySlug ? 'is-active' : '' }}" href="{{ $href }}">{{ $navLabel }}</a>
                 @endforeach

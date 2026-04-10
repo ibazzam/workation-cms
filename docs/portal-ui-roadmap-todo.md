@@ -13,6 +13,11 @@ Target: complete launch-critical portal work by March 31, 2026.
 - [x] Privacy Policy page published
 - [x] Terms of Service page published
 - [x] Vendor social auth baseline (Google, Facebook, Apple) implemented
+- [x] Island Atlas directory system (atoll-based grouping with type filtering) (2026-04-10)
+- [x] Island classification integrity locked (190 inhabited, 1 resort, 888 uninhabited) (2026-04-10)
+- [x] Atoll/Island API endpoints for cascading dropdowns across app (2026-04-10)
+- [x] Vendor profile form with atoll/island business location fields (2026-04-10)
+- [x] Shared Blade component for cascading atoll/island select dropdowns (2026-04-10)
 
 ## P0 Launch-Critical (Finish First)
 - [ ] Stabilize Facebook login end-to-end in production
@@ -22,6 +27,15 @@ Target: complete launch-critical portal work by March 31, 2026.
 	- [x] Captured production OAuth redirect/callback-path header evidence (`docs/evidence/facebook-prod-signoff-2026-03-22.md`) (2026-03-22)
 	- [x] Prepared final sign-off entry scaffold in evidence doc (`docs/evidence/facebook-prod-signoff-2026-03-22.md`) (2026-03-22)
 	- [ ] Capture production smoke evidence and sign-off (PASS/FAIL + Render log correlation) per runbook
+- [ ] Complete atoll/island integration across app (subsidiary of frontend work)
+	- [x] Backend: API endpoints (/api/atoll-island/*) for cascading data (2026-04-10)
+	- [x] Vendor: Profile form with atoll/island location selection (2026-04-10)
+	- [ ] Vendor: Listing forms with atoll/island per category
+	- [ ] Frontend: Search form with cascading atoll/island filters
+	- [ ] Frontend: Homepage "most loved destinations" with island photo carousel
+	- [ ] Frontend: Category cards showing atoll/island thumbnails
+	- [ ] Frontend: Listing cards with island/atoll location info
+	- [ ] Testing: End-to-end validation of cascading select behavior
 - [ ] Stabilize WhatsApp OTP delivery for vendor auth (Twilio template/sandbox and production sender rollout)
 	- [x] Added channel-mode hardening for `TWILIO_PHONE_CHANNEL=auto` with WhatsApp-first then SMS fallback behavior (2026-03-22)
 	- [x] Added OTP delivery regression coverage for WhatsApp guidance, template fallback, and auto SMS fallback (`tests/Feature/VendorPhoneOtpDeliveryTest.php`) (2026-03-22)

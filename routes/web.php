@@ -290,6 +290,13 @@ if (!function_exists('customerVerificationStateCacheKey')) {
     }
 }
 
+if (!function_exists('customerProfileMetaCacheKey')) {
+    function customerProfileMetaCacheKey(string $customerId): string
+    {
+        return 'customer_profile_meta:' . sha1(trim($customerId));
+    }
+}
+
 if (!function_exists('customerTableName')) {
     function customerTableName(): string
     {
@@ -1798,7 +1805,7 @@ if (!function_exists('blogCategoryDefinitions')) {
 if (!function_exists('blogTagDefinitions')) {
     function blogTagDefinitions(): array
     {
-        return [
+        $definitions = [
             'snorkeling' => ['label' => 'Snorkeling', 'keywords' => ['snorkel', 'snorkeling', 'reef']],
             'scuba-diving' => ['label' => 'Scuba Diving', 'keywords' => ['scuba', 'diving', 'dive']],
             'nature-and-outdoors' => ['label' => 'Nature and outdoors', 'keywords' => ['nature', 'outdoor', 'mangrove', 'biosphere']],
@@ -1809,6 +1816,43 @@ if (!function_exists('blogTagDefinitions')) {
             'wildlife' => ['label' => 'Wildlife', 'keywords' => ['wildlife', 'shark', 'manta', 'whale', 'fish']],
             'excursion' => ['label' => 'Excursion', 'keywords' => ['excursion', 'trip', 'tour', 'adventure']],
         ];
+
+        // Merge existing stored tags so tag navigation stays dynamic and not limited to presets.
+        if (Schema::hasTable('blog_posts') && Schema::hasColumn('blog_posts', 'blog_tag_slugs')) {
+            $storedTagValues = DB::table('blog_posts')
+                ->whereNotNull('blog_tag_slugs')
+                ->where('blog_tag_slugs', '!=', '')
+                ->limit(500)
+                ->pluck('blog_tag_slugs');
+
+            foreach ($storedTagValues as $storedTagValue) {
+                foreach (blogNormalizeTagSlugs($storedTagValue) as $storedSlug) {
+                    if (!array_key_exists($storedSlug, $definitions)) {
+                        $definitions[$storedSlug] = [
+                            'label' => Str::headline(str_replace('-', ' ', $storedSlug)),
+                            'keywords' => [],
+                        ];
+                    }
+                }
+            }
+        }
+
+        return $definitions;
+    }
+}
+
+if (!function_exists('blogBuildTagSlugsFromInput')) {
+    function blogBuildTagSlugsFromInput(array $validated): array
+    {
+        $checkboxTags = blogNormalizeTagSlugs($validated['blog_tag_slugs'] ?? []);
+        $typedTags = blogNormalizeTagSlugs($validated['blog_tag_input'] ?? '');
+
+        return collect(array_merge($checkboxTags, $typedTags))
+            ->map(fn (string $slug): string => Str::slug($slug))
+            ->filter(fn (string $slug): bool => $slug !== '')
+            ->unique()
+            ->values()
+            ->all();
     }
 }
 
@@ -1911,10 +1955,7 @@ if (!function_exists('blogHydratePostsWithMeta')) {
                 : blogInferCategorySlug($post);
 
             $explicitTagSlugs = blogNormalizeTagSlugs($post->blog_tag_slugs ?? []);
-            $tagSlugs = collect($explicitTagSlugs)
-                ->filter(fn (string $slug) => in_array($slug, array_keys($tagDefinitions), true))
-                ->values()
-                ->all();
+            $tagSlugs = collect($explicitTagSlugs)->values()->all();
             if (count($tagSlugs) === 0) {
                 $tagSlugs = blogInferTagSlugs($post);
             }
@@ -1993,10 +2034,6 @@ if (!function_exists('buildBlogIndexPayload')) {
             abort(404);
         }
 
-        if ($activeTag !== null && !array_key_exists($activeTag, $tagDefinitions)) {
-            abort(404);
-        }
-
         $posts = collect();
         if (Schema::hasTable('blog_posts')) {
             $posts = queryPublishedBlogPosts()->limit(80)->get();
@@ -2049,6 +2086,20 @@ if (!function_exists('buildBlogIndexPayload')) {
             return $b['count'] <=> $a['count'];
         });
 
+        $activeTagLabel = null;
+        if ($activeTag !== null) {
+            foreach ($tagStats as $entry) {
+                if ((string) ($entry['slug'] ?? '') === $activeTag) {
+                    $activeTagLabel = (string) ($entry['label'] ?? '');
+                    break;
+                }
+            }
+
+            if ($activeTagLabel === null || $activeTagLabel === '') {
+                $activeTagLabel = (string) ($tagDefinitions[$activeTag]['label'] ?? Str::headline(str_replace('-', ' ', $activeTag)));
+            }
+        }
+
         return [
             'apiBase' => workationApiBase(),
             'posts' => $posts,
@@ -2056,7 +2107,7 @@ if (!function_exists('buildBlogIndexPayload')) {
             'blogCategories' => $categories,
             'activeCategory' => $activeCategory,
             'activeTag' => $activeTag,
-            'activeTagLabel' => $activeTag !== null ? (string) ($tagDefinitions[$activeTag]['label'] ?? Str::headline(str_replace('-', ' ', $activeTag))) : null,
+            'activeTagLabel' => $activeTagLabel,
             'tagDirectory' => $tagStats,
         ];
     }
@@ -2171,14 +2222,20 @@ Route::get('/blog/{slug}', function (string $slug) {
 if (!function_exists('buildIslandsIndexPayload')) {
     function buildIslandsIndexPayload(?string $activeAtollSlug, ?string $activeIslandType = null): array
     {
+        $islandTypeAliases = [
+            'local' => 'inhabited',
+        ];
         $allowedIslandTypes = ['inhabited', 'uninhabited', 'resort'];
         $activeIslandType = is_string($activeIslandType) ? strtolower(trim($activeIslandType)) : null;
+        if ($activeIslandType !== null && array_key_exists($activeIslandType, $islandTypeAliases)) {
+            $activeIslandType = $islandTypeAliases[$activeIslandType];
+        }
         if ($activeIslandType !== null && !in_array($activeIslandType, $allowedIslandTypes, true)) {
             $activeIslandType = null;
         }
 
         $atolls  = \App\Models\Atoll::orderBy('name')->get();
-        $query   = \App\Models\Island::with('atoll')->orderBy('name');
+        $query   = \App\Models\Island::with('atoll')->orderBy('atoll_id')->orderBy('name');
 
         if ($activeAtollSlug !== null) {
             // Match by atoll slug column first, fall back to name-slug
@@ -2214,10 +2271,42 @@ if (!function_exists('buildIslandsIndexPayload')) {
 
         $islands = $query->get();
 
+        // Group islands by atoll_id, then by island_type
+        $groupedIslands = collect();
+        foreach ($atolls as $atoll) {
+            $atollIslands = $islands->where('atoll_id', $atoll->id);
+            $groupedIslands->put($atoll->id, $atollIslands);
+        }
+
+        // Calculate stats from all islands (not filtered)
+        $allIslands = \App\Models\Island::all();
+        $islandStats = [
+            'atolls_total' => (int) $atolls->count(),
+            'islands_total' => (int) $allIslands->count(),
+            'inhabited_total' => 0,
+            'resort_total' => 0,
+            'uninhabited_total' => 0,
+        ];
+
+        foreach ($allIslands as $island) {
+            $typed = strtolower(trim((string) ($island->island_type ?? '')));
+            if ($typed === 'resort') {
+                $islandStats['resort_total']++;
+            } elseif ($typed === 'inhabited') {
+                $islandStats['inhabited_total']++;
+            } elseif ($typed === 'uninhabited') {
+                $islandStats['uninhabited_total']++;
+            } elseif ((bool) ($island->is_inhabited ?? false)) {
+                $islandStats['inhabited_total']++;
+            } else {
+                $islandStats['uninhabited_total']++;
+            }
+        }
+
         return [
-            'atolls'          => $atolls,
-            'islands'         => $islands,
-            'activeAtollSlug' => $activeAtollSlug,
+            'islandStats' => $islandStats,
+            'atolls' => $atolls,
+            'groupedIslands' => $groupedIslands,
             'activeIslandType' => $activeIslandType,
         ];
     }
@@ -3905,6 +3994,14 @@ Route::get('/customer', function () {
         'name' => trim((string) session('portal_customer_user', 'Customer')),
         'email' => '',
         'member_since' => '-',
+        'phone' => '',
+        'dob' => '',
+        'nationality' => '',
+        'gender' => '',
+        'preferred_language' => 'en',
+        'address_line' => '',
+        'address_atoll_id' => '',
+        'address_island_id' => '',
     ];
 
     $customerUserId = session('portal_customer_user_id');
@@ -3924,6 +4021,20 @@ Route::get('/customer', function () {
             Log::warning('Unable to load customer profile context for customer portal.', [
                 'error' => $e->getMessage(),
             ]);
+        }
+    }
+
+    if (is_string($customerUserId) || is_numeric($customerUserId)) {
+        $profileMeta = cache()->get(customerProfileMetaCacheKey((string) $customerUserId));
+        if (is_array($profileMeta)) {
+            $customerProfile['phone'] = trim((string) ($profileMeta['phone'] ?? ''));
+            $customerProfile['dob'] = trim((string) ($profileMeta['dob'] ?? ''));
+            $customerProfile['nationality'] = trim((string) ($profileMeta['nationality'] ?? ''));
+            $customerProfile['gender'] = trim((string) ($profileMeta['gender'] ?? ''));
+            $customerProfile['preferred_language'] = trim((string) ($profileMeta['preferred_language'] ?? 'en'));
+            $customerProfile['address_line'] = trim((string) ($profileMeta['address_line'] ?? ''));
+            $customerProfile['address_atoll_id'] = trim((string) ($profileMeta['address_atoll_id'] ?? ''));
+            $customerProfile['address_island_id'] = trim((string) ($profileMeta['address_island_id'] ?? ''));
         }
     }
 
@@ -5622,7 +5733,8 @@ Route::post('/portal/admin/blog', function (Request $request) {
         'content' => ['required', 'string', 'min:50'],
         'blog_category_slug' => ['nullable', Rule::in(array_keys(blogCategoryDefinitions()))],
         'blog_tag_slugs' => ['nullable', 'array'],
-        'blog_tag_slugs.*' => [Rule::in(array_keys(blogTagDefinitions()))],
+        'blog_tag_slugs.*' => ['string', 'max:80'],
+        'blog_tag_input' => ['nullable', 'string', 'max:600'],
         'is_published' => ['nullable', 'boolean'],
         'is_featured' => ['nullable', 'boolean'],
         'cover_image' => ['nullable', 'image', 'max:6144'],
@@ -5641,7 +5753,7 @@ Route::post('/portal/admin/blog', function (Request $request) {
         $post->blog_category_slug = trim(Str::lower((string) ($validated['blog_category_slug'] ?? '')));
     }
     if (Schema::hasColumn('blog_posts', 'blog_tag_slugs')) {
-        $post->blog_tag_slugs = blogNormalizeTagSlugs($validated['blog_tag_slugs'] ?? []);
+        $post->blog_tag_slugs = blogBuildTagSlugsFromInput($validated);
     }
     $post->is_published = $isMediaRole ? false : (bool) ($validated['is_published'] ?? false);
     $post->is_featured = (bool) ($validated['is_featured'] ?? false);
@@ -5731,7 +5843,8 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
         'content' => ['required', 'string', 'min:50'],
         'blog_category_slug' => ['nullable', Rule::in(array_keys(blogCategoryDefinitions()))],
         'blog_tag_slugs' => ['nullable', 'array'],
-        'blog_tag_slugs.*' => [Rule::in(array_keys(blogTagDefinitions()))],
+        'blog_tag_slugs.*' => ['string', 'max:80'],
+        'blog_tag_input' => ['nullable', 'string', 'max:600'],
         'is_published' => ['nullable', 'boolean'],
         'is_featured' => ['nullable', 'boolean'],
         'cover_image' => ['nullable', 'image', 'max:6144'],
@@ -5749,7 +5862,7 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
         $blogPost->blog_category_slug = trim(Str::lower((string) ($validated['blog_category_slug'] ?? '')));
     }
     if (Schema::hasColumn('blog_posts', 'blog_tag_slugs')) {
-        $blogPost->blog_tag_slugs = blogNormalizeTagSlugs($validated['blog_tag_slugs'] ?? []);
+        $blogPost->blog_tag_slugs = blogBuildTagSlugsFromInput($validated);
     }
     $blogPost->is_published = $isMediaRole ? false : (bool) ($validated['is_published'] ?? false);
     $blogPost->is_featured = (bool) ($validated['is_featured'] ?? false);
@@ -5860,6 +5973,515 @@ Route::post('/portal/admin/blog/{post}/review', function (Request $request, int 
     ]);
 
     return redirect('/portal/admin/blog')->with('portal_notice', $validated['decision'] === 'approve' ? 'Blog post approved.' : 'Blog post rejected with editorial notes.');
+});
+
+Route::get('/portal/admin/atlas', function () {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can manage island atlas data.']);
+    }
+
+    if (!Schema::hasTable('atolls') || !Schema::hasTable('islands')) {
+        return redirect('/admin')->withErrors(['auth' => 'Atolls/Islands tables are not ready. Run migrations first.']);
+    }
+
+    $atolls = \App\Models\Atoll::query()->orderBy('name')->get();
+    $islands = \App\Models\Island::query()->with('atoll')->orderBy('name')->limit(1200)->get();
+
+    return view('admin-atlas-index', [
+        'atolls' => $atolls,
+        'islands' => $islands,
+    ]);
+});
+
+Route::get('/portal/admin/atlas/atolls/create', function () {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can create atolls.']);
+    }
+
+    return view('admin-atlas-form', [
+        'mode' => 'create',
+        'entity' => 'atoll',
+        'record' => null,
+        'atolls' => collect(),
+    ]);
+});
+
+Route::post('/portal/admin/atlas/atolls', function (Request $request) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can create atolls.']);
+    }
+
+    $validated = $request->validate([
+        'name' => ['required', 'string', 'max:120'],
+        'slug' => ['nullable', 'string', 'max:140'],
+        'code' => ['nullable', 'string', 'max:20'],
+        'description' => ['nullable', 'string', 'max:2000'],
+        'wikipedia_title' => ['nullable', 'string', 'max:220'],
+        'photo' => ['nullable', 'image', 'max:6144'],
+    ]);
+
+    $atoll = new \App\Models\Atoll();
+    $atoll->name = trim((string) $validated['name']);
+    if (Schema::hasColumn('atolls', 'slug')) {
+        $baseSlug = trim((string) ($validated['slug'] ?? ''));
+        if ($baseSlug === '') {
+            $baseSlug = Str::slug($atoll->name);
+        }
+        $slug = $baseSlug;
+        $counter = 2;
+        while (\App\Models\Atoll::query()->where('slug', $slug)->exists()) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+        $atoll->slug = $slug;
+    }
+    if (Schema::hasColumn('atolls', 'code')) {
+        $atoll->code = trim((string) ($validated['code'] ?? '')) ?: null;
+    }
+    if (Schema::hasColumn('atolls', 'description')) {
+        $atoll->description = trim((string) ($validated['description'] ?? '')) ?: null;
+    }
+    if (Schema::hasColumn('atolls', 'wikipedia_title')) {
+        $atoll->wikipedia_title = trim((string) ($validated['wikipedia_title'] ?? '')) ?: null;
+    }
+    if (Schema::hasColumn('atolls', 'source')) {
+        $atoll->source = 'admin';
+    }
+    $atoll->save();
+
+    if ($request->hasFile('photo') && Schema::hasColumn('atolls', 'photo_path')) {
+        $photo = $request->file('photo');
+        if ($photo && $photo->isValid()) {
+            $extension = strtolower((string) $photo->getClientOriginalExtension());
+            if ($extension === '') {
+                $extension = 'jpg';
+            }
+            $storagePath = 'atlas/atolls/' . (int) $atoll->id . '/cover.' . $extension;
+            Storage::disk('public')->putFileAs('atlas/atolls/' . (int) $atoll->id, $photo, 'cover.' . $extension);
+            $atoll->photo_path = $storagePath;
+            $atoll->save();
+        }
+    }
+
+    portalAdminAuditLog('atlas_atoll_created', [
+        'target_role' => 'ADMIN',
+        'atoll_id' => (int) $atoll->id,
+        'atoll_name' => (string) $atoll->name,
+    ]);
+
+    return redirect('/portal/admin/atlas')->with('portal_notice', 'Atoll created successfully.');
+});
+
+Route::get('/portal/admin/atlas/atolls/{atoll}/edit', function (int $atoll) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can edit atolls.']);
+    }
+
+    $record = \App\Models\Atoll::query()->findOrFail($atoll);
+
+    return view('admin-atlas-form', [
+        'mode' => 'edit',
+        'entity' => 'atoll',
+        'record' => $record,
+        'atolls' => collect(),
+    ]);
+});
+
+Route::post('/portal/admin/atlas/atolls/{atoll}', function (Request $request, int $atoll) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can edit atolls.']);
+    }
+
+    $record = \App\Models\Atoll::query()->findOrFail($atoll);
+
+    $validated = $request->validate([
+        'name' => ['required', 'string', 'max:120'],
+        'slug' => ['nullable', 'string', 'max:140'],
+        'code' => ['nullable', 'string', 'max:20'],
+        'description' => ['nullable', 'string', 'max:2000'],
+        'wikipedia_title' => ['nullable', 'string', 'max:220'],
+        'photo' => ['nullable', 'image', 'max:6144'],
+        'remove_photo' => ['nullable', 'boolean'],
+    ]);
+
+    $record->name = trim((string) $validated['name']);
+    if (Schema::hasColumn('atolls', 'slug')) {
+        $baseSlug = trim((string) ($validated['slug'] ?? ''));
+        if ($baseSlug === '') {
+            $baseSlug = Str::slug($record->name);
+        }
+        $slug = $baseSlug;
+        $counter = 2;
+        while (\App\Models\Atoll::query()->where('slug', $slug)->where('id', '!=', (int) $record->id)->exists()) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+        $record->slug = $slug;
+    }
+    if (Schema::hasColumn('atolls', 'code')) {
+        $record->code = trim((string) ($validated['code'] ?? '')) ?: null;
+    }
+    if (Schema::hasColumn('atolls', 'description')) {
+        $record->description = trim((string) ($validated['description'] ?? '')) ?: null;
+    }
+    if (Schema::hasColumn('atolls', 'wikipedia_title')) {
+        $record->wikipedia_title = trim((string) ($validated['wikipedia_title'] ?? '')) ?: null;
+    }
+
+    if ((bool) ($validated['remove_photo'] ?? false) && Schema::hasColumn('atolls', 'photo_path')) {
+        $existingPath = trim((string) ($record->photo_path ?? ''));
+        if ($existingPath !== '') {
+            Storage::disk('public')->delete($existingPath);
+        }
+        $record->photo_path = null;
+    }
+
+    if ($request->hasFile('photo') && Schema::hasColumn('atolls', 'photo_path')) {
+        $photo = $request->file('photo');
+        if ($photo && $photo->isValid()) {
+            $existingPath = trim((string) ($record->photo_path ?? ''));
+            if ($existingPath !== '') {
+                Storage::disk('public')->delete($existingPath);
+            }
+            $extension = strtolower((string) $photo->getClientOriginalExtension());
+            if ($extension === '') {
+                $extension = 'jpg';
+            }
+            $storagePath = 'atlas/atolls/' . (int) $record->id . '/cover.' . $extension;
+            Storage::disk('public')->putFileAs('atlas/atolls/' . (int) $record->id, $photo, 'cover.' . $extension);
+            $record->photo_path = $storagePath;
+        }
+    }
+
+    $record->save();
+
+    portalAdminAuditLog('atlas_atoll_updated', [
+        'target_role' => 'ADMIN',
+        'atoll_id' => (int) $record->id,
+        'atoll_name' => (string) $record->name,
+    ]);
+
+    return redirect('/portal/admin/atlas')->with('portal_notice', 'Atoll updated successfully.');
+});
+
+Route::post('/portal/admin/atlas/atolls/{atoll}/delete', function (int $atoll) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can delete atolls.']);
+    }
+
+    $record = \App\Models\Atoll::query()->findOrFail($atoll);
+
+    if (\App\Models\Island::query()->where('atoll_id', (int) $record->id)->exists()) {
+        return redirect('/portal/admin/atlas')->withErrors(['auth' => 'Cannot delete atoll while islands are assigned. Reassign or delete islands first.']);
+    }
+
+    if (Schema::hasColumn('atolls', 'photo_path')) {
+        $existingPath = trim((string) ($record->photo_path ?? ''));
+        if ($existingPath !== '') {
+            Storage::disk('public')->delete($existingPath);
+        }
+    }
+
+    $recordName = (string) $record->name;
+    $recordId = (int) $record->id;
+    $record->delete();
+
+    portalAdminAuditLog('atlas_atoll_deleted', [
+        'target_role' => 'ADMIN',
+        'atoll_id' => $recordId,
+        'atoll_name' => $recordName,
+    ]);
+
+    return redirect('/portal/admin/atlas')->with('portal_notice', 'Atoll deleted successfully.');
+});
+
+Route::get('/portal/admin/atlas/islands/create', function () {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can create islands.']);
+    }
+
+    $atolls = \App\Models\Atoll::query()->orderBy('name')->get();
+
+    return view('admin-atlas-form', [
+        'mode' => 'create',
+        'entity' => 'island',
+        'record' => null,
+        'atolls' => $atolls,
+    ]);
+});
+
+Route::post('/portal/admin/atlas/islands', function (Request $request) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can create islands.']);
+    }
+
+    $validated = $request->validate([
+        'name' => ['required', 'string', 'max:160'],
+        'slug' => ['nullable', 'string', 'max:180'],
+        'local_name' => ['nullable', 'string', 'max:180'],
+        'atoll_id' => ['required', 'integer'],
+        'description' => ['nullable', 'string', 'max:3000'],
+        'island_type' => ['required', Rule::in(['inhabited', 'uninhabited', 'resort'])],
+        'is_inhabited' => ['nullable', 'boolean'],
+        'wikipedia_title' => ['nullable', 'string', 'max:220'],
+        'photo' => ['nullable', 'image', 'max:6144'],
+    ]);
+
+    $atollExists = \App\Models\Atoll::query()->where('id', (int) $validated['atoll_id'])->exists();
+    if (!$atollExists) {
+        return back()->withErrors(['atoll_id' => 'Selected atoll does not exist.'])->withInput();
+    }
+
+    $island = new \App\Models\Island();
+    $island->name = trim((string) $validated['name']);
+    $island->atoll_id = (int) $validated['atoll_id'];
+    if (Schema::hasColumn('islands', 'slug')) {
+        $baseSlug = trim((string) ($validated['slug'] ?? ''));
+        if ($baseSlug === '') {
+            $baseSlug = Str::slug($island->name);
+        }
+        $slug = $baseSlug;
+        $counter = 2;
+        while (\App\Models\Island::query()->where('slug', $slug)->exists()) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+        $island->slug = $slug;
+    }
+    if (Schema::hasColumn('islands', 'local_name')) {
+        $island->local_name = trim((string) ($validated['local_name'] ?? '')) ?: null;
+    }
+    if (Schema::hasColumn('islands', 'description')) {
+        $island->description = trim((string) ($validated['description'] ?? '')) ?: null;
+    }
+    if (Schema::hasColumn('islands', 'island_type')) {
+        $island->island_type = trim((string) $validated['island_type']);
+    }
+    if (Schema::hasColumn('islands', 'is_inhabited')) {
+        if ($island->island_type === 'inhabited') {
+            $island->is_inhabited = true;
+        } elseif ($island->island_type === 'resort') {
+            $island->is_inhabited = false;
+        } else {
+            $island->is_inhabited = (bool) ($validated['is_inhabited'] ?? false);
+        }
+    }
+    if (Schema::hasColumn('islands', 'wikipedia_title')) {
+        $island->wikipedia_title = trim((string) ($validated['wikipedia_title'] ?? '')) ?: null;
+    }
+    if (Schema::hasColumn('islands', 'source')) {
+        $island->source = 'admin';
+    }
+    $island->save();
+
+    if ($request->hasFile('photo') && Schema::hasColumn('islands', 'photo_path')) {
+        $photo = $request->file('photo');
+        if ($photo && $photo->isValid()) {
+            $extension = strtolower((string) $photo->getClientOriginalExtension());
+            if ($extension === '') {
+                $extension = 'jpg';
+            }
+            $storagePath = 'atlas/islands/' . (int) $island->id . '/cover.' . $extension;
+            Storage::disk('public')->putFileAs('atlas/islands/' . (int) $island->id, $photo, 'cover.' . $extension);
+            $island->photo_path = $storagePath;
+            $island->save();
+        }
+    }
+
+    portalAdminAuditLog('atlas_island_created', [
+        'target_role' => 'ADMIN',
+        'island_id' => (int) $island->id,
+        'island_name' => (string) $island->name,
+        'atoll_id' => (int) $island->atoll_id,
+    ]);
+
+    return redirect('/portal/admin/atlas')->with('portal_notice', 'Island created successfully.');
+});
+
+Route::get('/portal/admin/atlas/islands/{island}/edit', function (int $island) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can edit islands.']);
+    }
+
+    $record = \App\Models\Island::query()->findOrFail($island);
+    $atolls = \App\Models\Atoll::query()->orderBy('name')->get();
+
+    return view('admin-atlas-form', [
+        'mode' => 'edit',
+        'entity' => 'island',
+        'record' => $record,
+        'atolls' => $atolls,
+    ]);
+});
+
+Route::post('/portal/admin/atlas/islands/{island}', function (Request $request, int $island) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can edit islands.']);
+    }
+
+    $record = \App\Models\Island::query()->findOrFail($island);
+
+    $validated = $request->validate([
+        'name' => ['required', 'string', 'max:160'],
+        'slug' => ['nullable', 'string', 'max:180'],
+        'local_name' => ['nullable', 'string', 'max:180'],
+        'atoll_id' => ['required', 'integer'],
+        'description' => ['nullable', 'string', 'max:3000'],
+        'island_type' => ['required', Rule::in(['inhabited', 'uninhabited', 'resort'])],
+        'is_inhabited' => ['nullable', 'boolean'],
+        'wikipedia_title' => ['nullable', 'string', 'max:220'],
+        'photo' => ['nullable', 'image', 'max:6144'],
+        'remove_photo' => ['nullable', 'boolean'],
+    ]);
+
+    $atollExists = \App\Models\Atoll::query()->where('id', (int) $validated['atoll_id'])->exists();
+    if (!$atollExists) {
+        return back()->withErrors(['atoll_id' => 'Selected atoll does not exist.'])->withInput();
+    }
+
+    $record->name = trim((string) $validated['name']);
+    $record->atoll_id = (int) $validated['atoll_id'];
+    if (Schema::hasColumn('islands', 'slug')) {
+        $baseSlug = trim((string) ($validated['slug'] ?? ''));
+        if ($baseSlug === '') {
+            $baseSlug = Str::slug($record->name);
+        }
+        $slug = $baseSlug;
+        $counter = 2;
+        while (\App\Models\Island::query()->where('slug', $slug)->where('id', '!=', (int) $record->id)->exists()) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+        $record->slug = $slug;
+    }
+    if (Schema::hasColumn('islands', 'local_name')) {
+        $record->local_name = trim((string) ($validated['local_name'] ?? '')) ?: null;
+    }
+    if (Schema::hasColumn('islands', 'description')) {
+        $record->description = trim((string) ($validated['description'] ?? '')) ?: null;
+    }
+    if (Schema::hasColumn('islands', 'island_type')) {
+        $record->island_type = trim((string) $validated['island_type']);
+    }
+    if (Schema::hasColumn('islands', 'is_inhabited')) {
+        if ($record->island_type === 'inhabited') {
+            $record->is_inhabited = true;
+        } elseif ($record->island_type === 'resort') {
+            $record->is_inhabited = false;
+        } else {
+            $record->is_inhabited = (bool) ($validated['is_inhabited'] ?? false);
+        }
+    }
+    if (Schema::hasColumn('islands', 'wikipedia_title')) {
+        $record->wikipedia_title = trim((string) ($validated['wikipedia_title'] ?? '')) ?: null;
+    }
+
+    if ((bool) ($validated['remove_photo'] ?? false) && Schema::hasColumn('islands', 'photo_path')) {
+        $existingPath = trim((string) ($record->photo_path ?? ''));
+        if ($existingPath !== '') {
+            Storage::disk('public')->delete($existingPath);
+        }
+        $record->photo_path = null;
+    }
+
+    if ($request->hasFile('photo') && Schema::hasColumn('islands', 'photo_path')) {
+        $photo = $request->file('photo');
+        if ($photo && $photo->isValid()) {
+            $existingPath = trim((string) ($record->photo_path ?? ''));
+            if ($existingPath !== '') {
+                Storage::disk('public')->delete($existingPath);
+            }
+            $extension = strtolower((string) $photo->getClientOriginalExtension());
+            if ($extension === '') {
+                $extension = 'jpg';
+            }
+            $storagePath = 'atlas/islands/' . (int) $record->id . '/cover.' . $extension;
+            Storage::disk('public')->putFileAs('atlas/islands/' . (int) $record->id, $photo, 'cover.' . $extension);
+            $record->photo_path = $storagePath;
+        }
+    }
+
+    $record->save();
+
+    portalAdminAuditLog('atlas_island_updated', [
+        'target_role' => 'ADMIN',
+        'island_id' => (int) $record->id,
+        'island_name' => (string) $record->name,
+        'atoll_id' => (int) $record->atoll_id,
+    ]);
+
+    return redirect('/portal/admin/atlas')->with('portal_notice', 'Island updated successfully.');
+});
+
+Route::post('/portal/admin/atlas/islands/{island}/delete', function (int $island) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can delete islands.']);
+    }
+
+    $record = \App\Models\Island::query()->findOrFail($island);
+
+    if (Schema::hasColumn('islands', 'photo_path')) {
+        $existingPath = trim((string) ($record->photo_path ?? ''));
+        if ($existingPath !== '') {
+            Storage::disk('public')->delete($existingPath);
+        }
+    }
+
+    $recordName = (string) $record->name;
+    $recordId = (int) $record->id;
+    $record->delete();
+
+    portalAdminAuditLog('atlas_island_deleted', [
+        'target_role' => 'ADMIN',
+        'island_id' => $recordId,
+        'island_name' => $recordName,
+    ]);
+
+    return redirect('/portal/admin/atlas')->with('portal_notice', 'Island deleted successfully.');
 });
 
 Route::get('/portal/admin/newsletter', function () {
@@ -7462,6 +8084,93 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
     }
 });
 
+Route::post('/portal/customer/profile/update', function (Request $request) {
+    if (!(bool) session('portal_customer_authenticated', false)) {
+        return redirect('/portal/customer/login')->withErrors([
+            'username' => 'Please sign in to update your profile.',
+        ]);
+    }
+
+    $customerUserId = (string) session('portal_customer_user_id', '');
+    if ($customerUserId === '') {
+        return back()->withErrors([
+            'profile' => 'Unable to resolve your profile. Please sign in again.',
+        ]);
+    }
+
+    $validated = $request->validate([
+        'first_name' => ['nullable', 'string', 'max:80'],
+        'last_name' => ['nullable', 'string', 'max:80'],
+        'email' => ['nullable', 'email', 'max:160'],
+        'phone' => ['nullable', 'string', 'max:60'],
+        'dob' => ['nullable', 'date'],
+        'nationality' => ['nullable', 'string', 'max:120'],
+        'gender' => ['nullable', 'string', 'max:32'],
+        'preferred_language' => ['nullable', 'string', 'max:16'],
+        'address_line' => ['nullable', 'string', 'max:220'],
+        'address_atoll_id' => ['nullable', 'string', 'max:64'],
+        'address_island_id' => ['nullable', 'string', 'max:64'],
+    ]);
+
+    $customer = \App\Models\Customer::query()->where('id', $customerUserId)->first();
+    if (!$customer) {
+        return back()->withErrors([
+            'profile' => 'Profile not found. Please sign in again.',
+        ]);
+    }
+
+    $firstName = trim((string) ($validated['first_name'] ?? ''));
+    $lastName = trim((string) ($validated['last_name'] ?? ''));
+    $fullName = trim($firstName . ' ' . $lastName);
+    if ($fullName === '') {
+        $fullName = trim((string) ($customer->name ?? 'Customer'));
+    }
+
+    $email = strtolower(trim((string) ($validated['email'] ?? (string) ($customer->email ?? ''))));
+    if ($email !== '') {
+        $existingWithEmail = \App\Models\Customer::query()
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->where('id', '!=', $customerUserId)
+            ->first();
+
+        if ($existingWithEmail) {
+            return back()->withErrors([
+                'email' => 'This email is already used by another account.',
+            ])->withInput();
+        }
+    }
+
+    $customer->name = $fullName;
+    if ($email !== '') {
+        $customer->email = $email;
+    }
+    if (customerSchemaHasColumn('updatedAt')) {
+        $customer->updatedAt = now();
+    }
+    if (customerSchemaHasColumn('updated_at')) {
+        $customer->updated_at = now();
+    }
+    $customer->save();
+
+    cache()->forever(customerProfileMetaCacheKey($customerUserId), [
+        'phone' => trim((string) ($validated['phone'] ?? '')),
+        'dob' => trim((string) ($validated['dob'] ?? '')),
+        'nationality' => trim((string) ($validated['nationality'] ?? '')),
+        'gender' => trim((string) ($validated['gender'] ?? '')),
+        'preferred_language' => trim((string) ($validated['preferred_language'] ?? 'en')),
+        'address_line' => trim((string) ($validated['address_line'] ?? '')),
+        'address_atoll_id' => trim((string) ($validated['address_atoll_id'] ?? '')),
+        'address_island_id' => trim((string) ($validated['address_island_id'] ?? '')),
+    ]);
+
+    session([
+        'portal_customer_user' => $fullName,
+        'portal_customer_email' => $email,
+    ]);
+
+    return redirect('/customer#profile')->with('status', 'Profile updated successfully.');
+});
+
 Route::post('/portal/customer/register', function (Request $request) {
     $validated = $request->validate([
         'name' => ['required', 'string', 'max:120'],
@@ -7698,10 +8407,10 @@ Route::post('/portal/{portal}/forgot-password', function (Request $request, stri
     if ($allowedRoles->isNotEmpty()) {
         $portalUser = \App\Models\User::query()
             ->where(function ($query) use ($identifierLower) {
-                $query->whereRaw('LOWER(email) = ?', [$identifierLower]);
+                $query->whereRaw('LOWER(TRIM(email)) = ?', [$identifierLower]);
 
                 if (Schema::hasColumn('users', 'username')) {
-                    $query->orWhereRaw('LOWER(username) = ?', [$identifierLower]);
+                    $query->orWhereRaw('LOWER(TRIM(username)) = ?', [$identifierLower]);
                 }
             })
             ->first();
@@ -7748,8 +8457,8 @@ Route::post('/portal/{portal}/forgot-password', function (Request $request, stri
             $portalUser->sendPasswordResetNotification($token);
             $mailSent = true;
 
-            // Debug link available in local/testing environments.
-            if (app()->environment(['local', 'testing'])) {
+            // Debug link available only in testing.
+            if (app()->environment('testing')) {
                 $response->with('password_reset_debug_link', $resetUrl);
             }
         } catch (\Throwable $e) {
@@ -7817,12 +8526,17 @@ Route::post('/portal/{portal}/reset-password', function (Request $request, strin
     $portalUser = null;
     if ($allowedRoles->isNotEmpty()) {
         $portalUser = \App\Models\User::query()
-            ->whereRaw('LOWER(email) = ?', [$email])
+            ->whereRaw('LOWER(TRIM(email)) = ?', [$email])
             ->first();
 
         if ($portalUser instanceof \App\Models\User) {
             $resolvedRole = normalizePortalRoleValue((string) $portalUser->portal_role);
-            if (!$allowedRoles->contains($resolvedRole)) {
+            $isAllowedRole = $allowedRoles->contains($resolvedRole);
+            if (!$isAllowedRole && $portal === 'admin' && Str::startsWith($resolvedRole, 'ADMIN')) {
+                $isAllowedRole = true;
+            }
+
+            if (!$isAllowedRole) {
                 $portalUser = null;
             }
         }
@@ -7895,10 +8609,7 @@ Route::post('/portal/{portal}/reset-password', function (Request $request, strin
         }
 
         $portalUser->forceFill($updates)->save();
-        $deleteQuery = $tokenConnection
-            ? DB::connection($tokenConnection)->table($tokenTable)
-            : DB::table($tokenTable);
-        $deleteQuery->whereRaw('LOWER(email) = ?', [$email])->delete();
+        DB::table($tokenTable)->whereRaw('LOWER(email) = ?', [$email])->delete();
 
         return redirect('/portal/' . $portal . '/login')->with('status', __('passwords.reset'));
     } catch (\Throwable $e) {
@@ -8825,6 +9536,15 @@ Route::post('/portal/admin/listings/{listing}/reject', function (Request $reques
     ]);
 
     return back()->with('portal_notice', 'Listing rejected. The vendor will be notified to make corrections.');
+});
+
+// Atoll & Island shared data API endpoints
+Route::prefix('api/atoll-island')->group(function () {
+    Route::get('atolls', [\App\Http\Controllers\AtollIslandApiController::class, 'getAllAtolls']);
+    Route::get('atolls/{atoll}/islands', [\App\Http\Controllers\AtollIslandApiController::class, 'getIslandsByAtoll']);
+    Route::get('atolls/{atoll}/stats', [\App\Http\Controllers\AtollIslandApiController::class, 'getAtollStats']);
+    Route::get('islands/{island}', [\App\Http\Controllers\AtollIslandApiController::class, 'getIslandWithMedia']);
+    Route::get('islands', [\App\Http\Controllers\AtollIslandApiController::class, 'getFeaturedIslands']);
 });
 
 // Keep these endpoints available only in testing for legacy feature-test coverage.

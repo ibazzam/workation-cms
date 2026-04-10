@@ -187,15 +187,6 @@
     </style>
 </head>
 <body>
-    @php
-        $navLabels = [
-            'things-to-do' => 'Trip Ideas',
-            'attractions' => 'Blue Trails',
-            'stay' => 'Sleep + Slow',
-            'islands' => 'Island Atlas',
-        ];
-    @endphp
-
     <main class="page">
         <header class="header-bar" aria-label="Blog category header">
             <a class="brand" href="/blog">
@@ -206,8 +197,8 @@
                 <a href="/blog">All Stories</a>
                 @foreach ($blogCategories as $slug => $meta)
                     @php
-                        $href = '/blog/category/' . $slug;
-                        $navLabel = (string) ($navLabels[$slug] ?? ($meta['label'] ?? \Illuminate\Support\Str::headline($slug)));
+                        $href = $slug === 'islands' ? '/islands' : ('/blog/category/' . $slug);
+                        $navLabel = (string) ($meta['label'] ?? \Illuminate\Support\Str::headline($slug));
                     @endphp
                     <a href="{{ $href }}">{{ $navLabel }}</a>
                 @endforeach

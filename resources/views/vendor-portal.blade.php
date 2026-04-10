@@ -3237,15 +3237,77 @@
                         return;
                     }
 
-                    fetch("{{ asset('data/location-tree.json') }}", { cache: "force-cache" })
+                    // Source Maldives Atoll/Island data from shared API so vendor listings stay in sync
+                    // with the same atlas used by blog and customer-facing forms.
+                    fetch('/api/atoll-island/atolls', { cache: 'no-store' })
                         .then(function (response) {
                             if (!response.ok) {
-                                throw new Error("Location tree request failed with status " + response.status);
+                                throw new Error('Atoll list request failed with status ' + response.status);
                             }
                             return response.json();
                         })
-                        .then(function (payload) {
-                            resolve(applyLocationTree(payload));
+                        .then(function (atolls) {
+                            if (!Array.isArray(atolls) || atolls.length === 0) {
+                                throw new Error('No atolls returned from API');
+                            }
+
+                            const atollRequests = atolls.map(function (atoll) {
+                                const atollId = Number(atoll && atoll.id ? atoll.id : 0);
+                                const atollName = String(atoll && atoll.name ? atoll.name : '').trim();
+                                if (atollId <= 0 || atollName === '') {
+                                    return Promise.resolve(null);
+                                }
+
+                                return fetch('/api/atoll-island/atolls/' + atollId + '/islands', { cache: 'no-store' })
+                                    .then(function (islandsResponse) {
+                                        if (!islandsResponse.ok) {
+                                            return [];
+                                        }
+                                        return islandsResponse.json();
+                                    })
+                                    .then(function (islands) {
+                                        const islandNames = Array.isArray(islands)
+                                            ? islands
+                                                .map(function (island) {
+                                                    return String(island && island.name ? island.name : '').trim();
+                                                })
+                                                .filter(function (name) { return name !== ''; })
+                                            : [];
+
+                                        return {
+                                            atollName: atollName,
+                                            islandNames: islandNames,
+                                        };
+                                    })
+                                    .catch(function () {
+                                        return {
+                                            atollName: atollName,
+                                            islandNames: [],
+                                        };
+                                    });
+                            });
+
+                            return Promise.all(atollRequests);
+                        })
+                        .then(function (atollIslandRows) {
+                            const maldivesTree = {};
+                            (atollIslandRows || []).forEach(function (row) {
+                                if (!row || !row.atollName) {
+                                    return;
+                                }
+                                maldivesTree[row.atollName] = Array.isArray(row.islandNames) ? row.islandNames : [];
+                            });
+
+                            if (Object.keys(maldivesTree).length === 0) {
+                                resolve(getCurrentLocationTree());
+                                return;
+                            }
+
+                            const mergedTree = {
+                                ...FALLBACK_LOCATION_TREE,
+                                Maldives: maldivesTree,
+                            };
+                            resolve(applyLocationTree(mergedTree));
                         })
                         .catch(function () {
                             resolve(getCurrentLocationTree());

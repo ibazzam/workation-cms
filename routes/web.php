@@ -133,6 +133,25 @@ if (!function_exists('generatePortalUsernameFromEmail')) {
     }
 }
 
+if (!function_exists('sendPortalPasswordResetFallbackMail')) {
+    function sendPortalPasswordResetFallbackMail(string $email, string $portal, string $resetUrl, ?string $displayName = null): bool
+    {
+        $normalizedPortal = in_array($portal, ['admin', 'vendor', 'customer'], true) ? $portal : 'admin';
+        $portalLabel = ucfirst($normalizedPortal);
+        $name = trim((string) $displayName);
+        $greeting = $name !== '' ? "Hi {$name}," : 'Hello,';
+
+        Mail::raw(
+            "{$greeting}\n\nWe received a request to reset your {$portalLabel} account password on Workation.\n\nUse the link below to set a new password. This link expires in 60 minutes:\n\n{$resetUrl}\n\nIf you did not request a password reset, you can safely ignore this email. Your password will not change.\n\n— Workation Support",
+            static function ($message) use ($email, $portalLabel) {
+                $message->to($email)->subject('Reset Your ' . $portalLabel . ' Password | Workation');
+            }
+        );
+
+        return true;
+    }
+}
+
 if (!function_exists('supportedVendorSocialProviders')) {
     function supportedVendorSocialProviders(): array
     {
@@ -6169,17 +6188,28 @@ Route::post('/portal/admin/announcement/{id}/delete', function (int $id) {
         $resetEmailSent = false;
         $resetEmailError = null;
         if ((bool) $user->portal_enabled) {
+            $roleForReset = normalizePortalRoleValue((string) $user->portal_role);
+            $portalForReset = $roleForReset === 'VENDOR' ? 'vendor' : 'admin';
             try {
                 $token = Password::broker('backend_users')->createToken($user);
+                $resetUrl = url('/portal/' . $portalForReset . '/reset-password/' . $token . '?email=' . rawurlencode((string) $user->email));
                 $user->sendPasswordResetNotification($token);
                 $resetEmailSent = true;
             } catch (\Throwable $e) {
-                $resetEmailError = $e->getMessage();
-                Log::error('Failed to send portal user reset email after creation.', [
-                    'user_id' => $user->id,
-                    'email' => $user->email,
-                    'error' => $e->getMessage(),
-                ]);
+                try {
+                    if (isset($resetUrl) && $resetUrl !== '') {
+                        sendPortalPasswordResetFallbackMail((string) $user->email, $portalForReset, $resetUrl, (string) ($user->name ?? ''));
+                        $resetEmailSent = true;
+                    }
+                } catch (\Throwable $mailFallbackError) {
+                    $resetEmailError = $mailFallbackError->getMessage();
+                    Log::error('Failed to send portal user reset email after creation.', [
+                        'user_id' => $user->id,
+                        'email' => $user->email,
+                        'error' => $e->getMessage(),
+                        'fallback_error' => $mailFallbackError->getMessage(),
+                    ]);
+                }
             }
         }
 
@@ -7701,13 +7731,21 @@ Route::post('/portal/{portal}/forgot-password', function (Request $request, stri
                 $response->with('password_reset_debug_link', $resetUrl);
             }
         } catch (\Throwable $e) {
-            Log::warning('Portal forgot-password mail failed.', [
-                'portal' => $portal,
-                'broker' => $brokerName,
-                'email' => $email,
-                'mail_sent' => $mailSent,
-                'error' => $e->getMessage(),
-            ]);
+            try {
+                if (isset($resetUrl) && $resetUrl !== '') {
+                    sendPortalPasswordResetFallbackMail($email, $portal, $resetUrl, (string) ($portalUser->name ?? ''));
+                    $mailSent = true;
+                }
+            } catch (\Throwable $mailFallbackError) {
+                Log::warning('Portal forgot-password mail failed.', [
+                    'portal' => $portal,
+                    'broker' => $brokerName,
+                    'email' => $email,
+                    'mail_sent' => $mailSent,
+                    'error' => $e->getMessage(),
+                    'fallback_error' => $mailFallbackError->getMessage(),
+                ]);
+            }
         }
     }
 

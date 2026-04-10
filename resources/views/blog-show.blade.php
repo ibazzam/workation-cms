@@ -3,17 +3,18 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $post->title }} - Workation Blog</title>
+    <title>{{ $post->title }} | Workation Blog</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
     <style>
         :root {
-            --bg: #f5f8fb;
-            --ink: #172a3b;
-            --muted: #5a7388;
-            --line: #d1deea;
-            --brand: #0f6079;
-            --card: #ffffff;
+            --bg: #eceeef;
+            --surface: #ffffff;
+            --ink: #111f2a;
+            --muted: #52697d;
+            --line: #d7dfe4;
+            --brand: #44be66;
+            --chip-line: #5ad176;
         }
 
         * { box-sizing: border-box; }
@@ -22,153 +23,687 @@
             margin: 0;
             font-family: "Outfit", "Trebuchet MS", sans-serif;
             color: var(--ink);
-            background: linear-gradient(180deg, #f8fbff 0%, #f1f7fb 100%);
+            background: var(--bg);
         }
 
         .page {
-            width: min(1180px, calc(100% - 24px));
-            margin: 14px auto 28px;
-            padding: 18px 0 0;
+            width: min(1280px, calc(100% - 30px));
+            margin: 0 auto 30px;
         }
 
-        .topbar {
+        .header-bar {
+            min-height: 98px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--line);
+            position: sticky;
+            top: 0;
+            z-index: 25;
+            padding: 0 8px;
+        }
+
+        .brand {
+            margin: 0;
+            text-decoration: none;
+            font-size: 2.15rem;
+            line-height: 1;
+            letter-spacing: -0.045em;
+            color: #52be72;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .brand small {
+            color: #1b2832;
+            font-size: 0.86rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            font-weight: 700;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #152632;
+            font-size: 1.02rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.01em;
+            padding: 8px 10px;
+            border-radius: 8px;
+        }
+
+        .nav-links a.is-active {
+            color: var(--brand);
+        }
+
+        .nav-links a:hover {
+            background: #ebf7ef;
+            color: #27964a;
+        }
+
+        .hero {
+            margin-top: 14px;
+            position: relative;
+            min-height: 720px;
+            overflow: hidden;
+            border: 1px solid #cadbe6;
+        }
+
+        .hero img {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            inset: 0;
+            object-fit: cover;
+            display: block;
+        }
+
+        .hero-fallback {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, #c8ddea 0%, #b4cedf 100%);
+        }
+
+        .hero-title-card {
+            position: absolute;
+            z-index: 2;
+            left: 16%;
+            top: 18px;
+            width: min(760px, calc(100% - 60px));
+            background: #f6f8fa;
+            padding: 18px 30px 28px;
+            box-shadow: 0 14px 26px rgba(15, 37, 51, 0.16);
+        }
+
+        .meta-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 0 0 9px;
+            color: #4b6175;
+            font-size: 0.92rem;
+        }
+
+        .meta-row strong {
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #1f3342;
+            font-size: 0.89rem;
+        }
+
+        .hero-title-card h1 {
+            margin: 0;
+            font-size: clamp(2rem, 4vw, 4.05rem);
+            line-height: 1.08;
+            letter-spacing: -0.02em;
+        }
+
+        .content-wrap {
+            margin: 0 auto;
+            max-width: 1160px;
+            border-top: 1px solid #d6dde3;
+            padding-top: 6px;
+        }
+
+        .tag-share-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: start;
+            margin: 0 0 12px;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag-chip {
+            text-decoration: none;
+            border: 1px solid var(--chip-line);
+            border-radius: 11px;
+            color: #46bd66;
+            font-size: 0.86rem;
+            font-weight: 700;
+            padding: 7px 14px;
+            line-height: 1;
+            background: rgba(255,255,255,0.7);
+        }
+
+        .tag-chip.muted {
+            border-color: #aebfcd;
+            color: #8a9eaf;
+        }
+
+        .tag-chip:hover {
+            background: #ebf8ef;
+            color: #2f9f4f;
+        }
+
+        .share-row {
+            display: inline-flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .share-button {
+            width: 44px;
+            height: 44px;
+            border: 1px solid #aab9c6;
+            border-radius: 0;
+            background: #f7fafc;
+            color: #0f1f2b;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.36rem;
+            line-height: 1;
+        }
+
+        .share-button:hover {
+            background: #edf4f9;
+            border-color: #8ca3b5;
+        }
+
+        .article-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 360px;
+            gap: 34px;
+        }
+
+        .content {
+            font-size: 1.26rem;
+            line-height: 1.62;
+            color: #172a38;
+        }
+
+        .content p {
+            margin: 0 0 22px;
+        }
+
+        .content h2,
+        .content h3 {
+            margin: 30px 0 12px;
+            line-height: 1.22;
+            letter-spacing: -0.01em;
+            color: #111f2b;
+        }
+
+        .content h2 { font-size: clamp(1.65rem, 3vw, 2.35rem); }
+        .content h3 { font-size: clamp(1.35rem, 2.3vw, 1.95rem); }
+
+        .content figure {
+            margin: 24px 0 26px;
+        }
+
+        .content figure img {
+            width: 100%;
+            display: block;
+            border-radius: 0;
+            border: 1px solid #cfdae3;
+            background: #d4e3ee;
+        }
+
+        .content figcaption {
+            margin-top: 7px;
+            color: #657d8f;
+            font-size: 0.9rem;
+        }
+
+        .sidebar {
+            padding-top: 0;
+        }
+
+        .ad-label {
+            margin: 0 0 8px;
+            color: #9ca7b2;
+            font-size: 1.05rem;
+            font-weight: 500;
+        }
+
+        .ad-card {
+            position: sticky;
+            top: 114px;
+            min-height: 700px;
+            border: 1px solid #c2d3de;
+            background: #b8f113;
+            display: grid;
+            align-content: space-between;
+            padding: 24px;
+            color: #163048;
+        }
+
+        .ad-head {
+            margin: 0;
+            font-size: clamp(2rem, 4.2vw, 3.8rem);
+            line-height: 0.98;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            max-width: 250px;
+        }
+
+        .ad-media {
+            width: 100%;
+            border-radius: 14px;
+            border: 1px solid rgba(22, 48, 72, 0.25);
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.65);
+        }
+
+        .ad-media img {
+            width: 100%;
+            display: block;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+        }
+
+        .ad-foot {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 10px;
-            border: 1px solid var(--line);
-            border-radius: 14px;
-            padding: 11px 13px;
-            background: rgba(255, 255, 255, 0.94);
+            flex-wrap: wrap;
         }
 
-        .topbar a {
-            text-decoration: none;
-            color: #1d4760;
-            font-weight: 700;
-            font-size: 0.86rem;
-            border: 1px solid #d3e1ec;
-            border-radius: 10px;
-            padding: 7px 10px;
-            background: #f8fbff;
-        }
-
-        .article {
-            margin-top: 15px;
-            border: 1px solid #c8dbe8;
-            border-radius: 18px;
-            background: var(--card);
-            overflow: hidden;
-        }
-
-        .cover {
-            display: block;
-            width: 100%;
-            max-height: 450px;
-            object-fit: cover;
-            background: linear-gradient(140deg, #d8e8f3 0%, #c3dcee 100%);
-        }
-
-        .article-body {
-            padding: 18px;
-        }
-
-        .eyebrow {
+        .ad-brand {
             margin: 0;
-            font-size: 0.74rem;
-            text-transform: uppercase;
-            letter-spacing: 0.09em;
-            color: #4a6983;
-            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            font-size: 3rem;
+            line-height: 1;
+            font-weight: 800;
+            letter-spacing: -0.03em;
         }
 
-        h1 {
-            margin: 7px 0 8px;
-            font-size: clamp(1.5rem, 3.8vw, 2.3rem);
-            line-height: 1.14;
+        .ad-stores {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
         }
 
-        .meta {
-            margin: 0 0 16px;
-            color: var(--muted);
-            font-size: 0.83rem;
+        .ad-cta {
+            border: 1px solid #1f3344;
+            border-radius: 12px;
+            padding: 8px 12px;
+            font-size: 0.82rem;
+            font-weight: 800;
+            background: rgba(255,255,255,0.7);
+            color: #143147;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .content {
-            color: #213d52;
-            line-height: 1.75;
-            font-size: 1rem;
-            white-space: normal;
+        .ad-store {
+            border: 1px solid #1f3344;
+            border-radius: 10px;
+            padding: 6px 10px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            background: rgba(255,255,255,0.55);
         }
 
         .related {
-            margin-top: 15px;
-            border: 1px solid #cbdcea;
-            border-radius: 14px;
-            background: #f9fcff;
-            padding: 14px;
+            margin-top: 34px;
+            padding-top: 34px;
+            border-top: 1px solid #d6dde3;
         }
 
         .related h2 {
-            margin: 0 0 8px;
-            font-size: 1rem;
+            margin: 0 0 20px;
+            font-size: clamp(2rem, 3.3vw, 3.1rem);
+            letter-spacing: -0.02em;
+            line-height: 1.08;
         }
 
         .related-grid {
             display: grid;
-            gap: 8px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 18px;
         }
 
-        .related-item {
-            border: 1px solid #d7e4ee;
-            border-radius: 11px;
-            padding: 9px 10px;
-            background: #fff;
+        .related-card {
             text-decoration: none;
-            color: #16374f;
-            font-weight: 600;
+            color: inherit;
         }
 
-        .related-item:hover {
-            border-color: #aac8de;
-            color: #0f6079;
+        .related-media {
+            width: 100%;
+            border-radius: 18px;
+            overflow: hidden;
+            aspect-ratio: 1.2 / 1;
+            background: linear-gradient(145deg, #cfdeea 0%, #bdd2e0 100%);
+        }
+
+        .related-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .related-card h3 {
+            margin: 10px 0 0;
+            font-size: clamp(1.2rem, 2vw, 1.85rem);
+            line-height: 1.22;
+            letter-spacing: -0.01em;
+        }
+
+        @media (max-width: 1100px) {
+            .hero {
+                min-height: 560px;
+            }
+
+            .hero-title-card {
+                left: 6%;
+                width: min(760px, calc(100% - 30px));
+            }
+
+            .article-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .ad-card {
+                position: relative;
+                top: auto;
+                min-height: 340px;
+            }
+
+            .related-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 860px) {
+            .header-bar {
+                min-height: auto;
+                padding: 14px 8px;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .brand {
+                font-size: 1.82rem;
+            }
+
+            .nav-links {
+                justify-content: flex-start;
+            }
+
+            .hero {
+                min-height: 420px;
+            }
+
+            .hero-title-card {
+                position: static;
+                width: calc(100% - 20px);
+                margin: 10px;
+            }
+
+            .tag-share-row {
+                grid-template-columns: 1fr;
+            }
+
+            .share-row {
+                justify-content: flex-start;
+            }
+
+            .related-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .content {
+                font-size: 1.12rem;
+            }
         }
     </style>
 </head>
 <body>
+    @php
+        $postCoverPath = trim((string) ($post->cover_image_path ?? ''));
+        $postCoverUrl = $postCoverPath !== '' ? (string) \Illuminate\Support\Facades\Storage::disk('public')->url($postCoverPath) : '';
+        $postCategorySlug = (string) ($post->blog_category_slug ?? 'things-to-do');
+        $postCategoryLabel = (string) ($post->blog_category_label ?? 'Things to Do');
+
+        $sidebarAd = is_array($blogSidebarAd ?? null) ? $blogSidebarAd : [];
+        $sidebarAdTitle = trim((string) ($sidebarAd['title'] ?? 'Charter a vessel?'));
+        $sidebarAdBrand = trim((string) ($sidebarAd['brand'] ?? 'workation'));
+        $sidebarAdCtaLabel = trim((string) ($sidebarAd['cta_label'] ?? 'Explore now'));
+        $sidebarAdCtaUrl = trim((string) ($sidebarAd['cta_url'] ?? '/catalog/marine-transport'));
+        $sidebarAdImageUrl = trim((string) ($sidebarAd['image_url'] ?? ''));
+
+        $postDate = optional($post->published_at)->format('M, Y - l')
+            ?? optional($post->created_at)->format('M, Y - l')
+            ?? 'Upcoming';
+
+        $currentUrl = url('/blog/' . $post->slug);
+        $encodedUrl = urlencode($currentUrl);
+        $encodedTitle = urlencode((string) $post->title);
+
+        $shareLinks = [
+            ['label' => 'f', 'href' => 'https://www.facebook.com/sharer/sharer.php?u=' . $encodedUrl, 'title' => 'Share on Facebook'],
+            ['label' => 'X', 'href' => 'https://twitter.com/intent/tweet?url=' . $encodedUrl . '&text=' . $encodedTitle, 'title' => 'Share on X'],
+            ['label' => 'in', 'href' => 'https://www.linkedin.com/sharing/share-offsite/?url=' . $encodedUrl, 'title' => 'Share on LinkedIn'],
+            ['label' => '↗', 'href' => 'mailto:?subject=' . $encodedTitle . '&body=' . $encodedUrl, 'title' => 'Share by Email'],
+        ];
+
+        $rawContent = trim((string) ($post->content ?? ''));
+        $rawBlocks = preg_split('/\R{2,}/', $rawContent) ?: [];
+
+        $normalizeImageUrl = function (string $candidate): string {
+            $value = trim($candidate);
+            if ($value === '') {
+                return '';
+            }
+
+            if (\Illuminate\Support\Str::startsWith($value, ['https://', 'http://', '/'])) {
+                return $value;
+            }
+
+            return (string) \Illuminate\Support\Facades\Storage::disk('public')->url($value);
+        };
+
+        $contentBlocks = [];
+        foreach ($rawBlocks as $block) {
+            $trimmed = trim($block);
+            if ($trimmed === '') {
+                continue;
+            }
+
+            if (preg_match('/^!\[(.*?)\]\(([^\)]+)\)$/', $trimmed, $matches) === 1) {
+                $imageUrl = $normalizeImageUrl((string) ($matches[2] ?? ''));
+                if ($imageUrl !== '') {
+                    $contentBlocks[] = [
+                        'type' => 'image',
+                        'alt' => (string) ($matches[1] ?? ''),
+                        'url' => $imageUrl,
+                    ];
+                    continue;
+                }
+            }
+
+            if (preg_match('/^\[image:\s*(.+?)\]$/i', $trimmed, $matches) === 1) {
+                $imageUrl = $normalizeImageUrl((string) ($matches[1] ?? ''));
+                if ($imageUrl !== '') {
+                    $contentBlocks[] = [
+                        'type' => 'image',
+                        'alt' => (string) ($post->title ?? 'Blog image'),
+                        'url' => $imageUrl,
+                    ];
+                    continue;
+                }
+            }
+
+            if (preg_match('/^##\s+(.+)$/', $trimmed, $matches) === 1) {
+                $contentBlocks[] = ['type' => 'h2', 'text' => (string) ($matches[1] ?? '')];
+                continue;
+            }
+
+            if (preg_match('/^###\s+(.+)$/', $trimmed, $matches) === 1) {
+                $contentBlocks[] = ['type' => 'h3', 'text' => (string) ($matches[1] ?? '')];
+                continue;
+            }
+
+            $contentBlocks[] = ['type' => 'p', 'text' => $trimmed];
+        }
+
+        $relatedCards = $relatedPosts->take(3)->values();
+        $topicTags = collect($post->blog_tags ?? [])->take(5)->values();
+        $contextChips = collect(preg_split('/\s+/', (string) ($post->title ?? '')) ?: [])
+            ->map(function ($word): string {
+                return trim(preg_replace('/[^A-Za-z]/', '', (string) $word));
+            })
+            ->filter(function (string $word): bool {
+                return strlen($word) >= 5;
+            })
+            ->map(function (string $word): string {
+                return \Illuminate\Support\Str::headline(\Illuminate\Support\Str::lower($word));
+            })
+            ->unique()
+            ->take(4)
+            ->values();
+    @endphp
+
     <main class="page">
-        <header class="topbar" aria-label="Blog nav">
-            <a href="/">Workation Home</a>
-            <a href="/blog">Back to Blog</a>
+        <header class="header-bar" aria-label="Blog category header">
+            <a class="brand" href="/">
+                Workation
+                <small>Blog</small>
+            </a>
+            <nav class="nav-links" aria-label="Blog categories">
+                @foreach ($blogCategories as $slug => $meta)
+                    @php
+                        $href = $slug === 'things-to-do' ? '/blog' : '/blog/category/' . $slug;
+                    @endphp
+                    <a class="{{ $slug === $postCategorySlug ? 'is-active' : '' }}" href="{{ $href }}">{{ $meta['label'] ?? \Illuminate\Support\Str::headline($slug) }}</a>
+                @endforeach
+                <a href="/islands">Islands</a>
+            </nav>
         </header>
 
-        <article class="article" aria-label="Blog post">
-            @php
-                $coverPath = trim((string) ($post->cover_image_path ?? ''));
-                $coverUrl = $coverPath !== '' ? (string) \Illuminate\Support\Facades\Storage::disk('public')->url($coverPath) : '';
-            @endphp
-
-            @if ($coverUrl !== '')
-                <img class="cover" src="{{ $coverUrl }}" alt="{{ $post->title }} cover image" loading="lazy">
+        <section class="hero" aria-label="Article hero">
+            @if ($postCoverUrl !== '')
+                <img src="{{ $postCoverUrl }}" alt="{{ $post->title }} cover image" loading="eager" fetchpriority="high">
+            @else
+                <div class="hero-fallback" aria-hidden="true"></div>
             @endif
 
-            <div class="article-body">
-                <p class="eyebrow">Workation Journal</p>
+            <div class="hero-title-card">
+                <p class="meta-row">
+                    <strong>{{ $postCategoryLabel }}</strong>
+                    <span>{{ $postDate }}</span>
+                </p>
                 <h1>{{ $post->title }}</h1>
-                <p class="meta">Published {{ optional($post->published_at)->format('M d, Y') ?? optional($post->created_at)->format('M d, Y') }}</p>
-                <div class="content">{!! nl2br(e((string) $post->content)) !!}</div>
             </div>
-        </article>
+        </section>
 
-        @if ($relatedPosts->isNotEmpty())
-            <aside class="related" aria-label="Related stories">
-                <h2>Related stories</h2>
-                <div class="related-grid">
-                    @foreach ($relatedPosts as $relatedPost)
-                        <a class="related-item" href="{{ '/blog/' . $relatedPost->slug }}">{{ $relatedPost->title }}</a>
+        <section class="content-wrap" aria-label="Article content and actions">
+            <div class="tag-share-row">
+                <div class="tags" aria-label="Article tags">
+                    @foreach ($contextChips as $chip)
+                        <span class="tag-chip muted">{{ $chip }}</span>
+                    @endforeach
+                    @foreach ($topicTags as $tag)
+                        <a class="tag-chip" href="{{ '/blog/tag/' . ($tag['slug'] ?? '') }}">{{ $tag['label'] ?? 'Tag' }}</a>
                     @endforeach
                 </div>
-            </aside>
+
+                <div class="share-row" aria-label="Share article">
+                    @foreach ($shareLinks as $share)
+                        <a class="share-button" href="{{ $share['href'] }}" target="_blank" rel="noopener noreferrer" title="{{ $share['title'] }}">{{ $share['label'] }}</a>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="article-layout">
+                <article class="content" aria-label="Article body">
+                    @forelse ($contentBlocks as $block)
+                        @if ($block['type'] === 'h2')
+                            <h2>{{ $block['text'] }}</h2>
+                        @elseif ($block['type'] === 'h3')
+                            <h3>{{ $block['text'] }}</h3>
+                        @elseif ($block['type'] === 'image')
+                            <figure>
+                                <img src="{{ $block['url'] }}" alt="{{ $block['alt'] !== '' ? $block['alt'] : $post->title }}" loading="lazy">
+                                @if ($block['alt'] !== '')
+                                    <figcaption>{{ $block['alt'] }}</figcaption>
+                                @endif
+                            </figure>
+                        @else
+                            <p>{!! nl2br(e((string) $block['text'])) !!}</p>
+                        @endif
+                    @empty
+                        <p>{{ $rawContent !== '' ? $rawContent : 'No content was provided for this article yet.' }}</p>
+                    @endforelse
+                </article>
+
+                <aside class="sidebar" aria-label="Article side panel">
+                    <p class="ad-label">Ad by Workation</p>
+                    <div class="ad-card">
+                        @if ($sidebarAdImageUrl !== '')
+                            <div class="ad-media">
+                                <img src="{{ $sidebarAdImageUrl }}" alt="{{ $sidebarAdTitle !== '' ? $sidebarAdTitle : 'Promotional ad' }}" loading="lazy">
+                            </div>
+                        @endif
+                        <p class="ad-head">{{ $sidebarAdTitle !== '' ? $sidebarAdTitle : 'Charter a vessel?' }}</p>
+                        <div class="ad-foot">
+                            <p class="ad-brand">{{ $sidebarAdBrand !== '' ? $sidebarAdBrand : 'workation' }}</p>
+                            <div class="ad-stores">
+                                <a class="ad-cta" href="{{ $sidebarAdCtaUrl !== '' ? $sidebarAdCtaUrl : '/catalog/marine-transport' }}">
+                                    {{ $sidebarAdCtaLabel !== '' ? $sidebarAdCtaLabel : 'Explore now' }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </section>
+
+        @if ($relatedCards->isNotEmpty())
+            <section class="related" aria-label="More stories in category">
+                <h2>More Stories About {{ $postCategoryLabel }}</h2>
+                <div class="related-grid">
+                    @foreach ($relatedCards as $relatedPost)
+                        @php
+                            $relatedCoverPath = trim((string) ($relatedPost->cover_image_path ?? ''));
+                            $relatedCoverUrl = $relatedCoverPath !== '' ? (string) \Illuminate\Support\Facades\Storage::disk('public')->url($relatedCoverPath) : '';
+                            $relatedCategoryLabel = (string) ($relatedPost->blog_category_label ?? $postCategoryLabel);
+                            $relatedDate = optional($relatedPost->published_at)->format('M d, Y - l')
+                                ?? optional($relatedPost->created_at)->format('M d, Y - l')
+                                ?? 'Upcoming';
+                        @endphp
+                        <a class="related-card" href="{{ '/blog/' . $relatedPost->slug }}">
+                            <div class="related-media">
+                                @if ($relatedCoverUrl !== '')
+                                    <img src="{{ $relatedCoverUrl }}" alt="{{ $relatedPost->title }} image" loading="lazy">
+                                @endif
+                            </div>
+                            <p class="meta-row" style="margin-top:10px; margin-bottom:7px;">
+                                <strong>{{ $relatedCategoryLabel }}</strong>
+                                <span>{{ $relatedDate }}</span>
+                            </p>
+                            <h3>{{ $relatedPost->title }}</h3>
+                        </a>
+                    @endforeach
+                </div>
+            </section>
         @endif
 
         @include('partials.global-site-footer')

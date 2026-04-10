@@ -1537,6 +1537,65 @@
                         @endforelse
                     </div>
                 </div>
+
+                @php
+                    $blogAd = is_array($blogSidebarAdSettings ?? null) ? $blogSidebarAdSettings : [];
+                    $blogAdTitle = (string) ($blogAd['title'] ?? 'Charter a vessel?');
+                    $blogAdBrand = (string) ($blogAd['brand'] ?? 'workation');
+                    $blogAdCtaLabel = (string) ($blogAd['cta_label'] ?? 'Explore now');
+                    $blogAdCtaUrl = (string) ($blogAd['cta_url'] ?? '/catalog/marine-transport');
+                    $blogAdImageUrl = (string) ($blogAd['image_url'] ?? '');
+                @endphp
+                <div style="padding:16px;border:1px solid #d7e0e6;border-radius:12px;background:#f9fbfc;margin-top:18px;">
+                    <p style="font-weight:600;margin:0 0 8px;">Blog Article Sidebar Ad</p>
+                    <p class="small" style="margin:0 0 12px;line-height:1.5;">Configure the ad card shown on blog article pages. Supports custom title, brand text, CTA label, CTA link, and image.</p>
+
+                    @if ($blogAdImageUrl !== '')
+                        <img src="{{ $blogAdImageUrl }}" alt="Blog sidebar ad preview" style="display:block;width:100%;max-width:320px;aspect-ratio:1/1;object-fit:cover;border-radius:10px;border:1px solid #d7e0e6;margin-bottom:10px;background:#eef4f7;">
+                    @endif
+
+                    <form method="POST" action="/portal/admin/media-blog-ad/update" enctype="multipart/form-data" style="margin-bottom:12px;">
+                        @csrf
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;align-items:end;">
+                            <div>
+                                <label for="blog_sidebar_ad_title" style="display:block;margin-bottom:4px;font-size:0.85rem;">Headline</label>
+                                <input id="blog_sidebar_ad_title" name="blog_sidebar_ad_title" type="text" maxlength="190" value="{{ old('blog_sidebar_ad_title', $blogAdTitle) }}" placeholder="Charter a vessel?" style="display:block;width:100%;">
+                            </div>
+                            <div>
+                                <label for="blog_sidebar_ad_brand" style="display:block;margin-bottom:4px;font-size:0.85rem;">Brand Label</label>
+                                <input id="blog_sidebar_ad_brand" name="blog_sidebar_ad_brand" type="text" maxlength="120" value="{{ old('blog_sidebar_ad_brand', $blogAdBrand) }}" placeholder="workation" style="display:block;width:100%;">
+                            </div>
+                            <div>
+                                <label for="blog_sidebar_ad_cta_label" style="display:block;margin-bottom:4px;font-size:0.85rem;">CTA Label</label>
+                                <input id="blog_sidebar_ad_cta_label" name="blog_sidebar_ad_cta_label" type="text" maxlength="120" value="{{ old('blog_sidebar_ad_cta_label', $blogAdCtaLabel) }}" placeholder="Explore now" style="display:block;width:100%;">
+                            </div>
+                            <div>
+                                <label for="blog_sidebar_ad_cta_url" style="display:block;margin-bottom:4px;font-size:0.85rem;">CTA URL</label>
+                                <input id="blog_sidebar_ad_cta_url" name="blog_sidebar_ad_cta_url" type="text" maxlength="2048" value="{{ old('blog_sidebar_ad_cta_url', $blogAdCtaUrl) }}" placeholder="/catalog/marine-transport" style="display:block;width:100%;">
+                            </div>
+                        </div>
+
+                        <label for="blog_sidebar_ad_image_file" style="display:block;margin:12px 0 4px;font-size:0.85rem;">Upload ad image (JPG, PNG, WebP · max 4 MB)</label>
+                        <input id="blog_sidebar_ad_image_file" name="blog_sidebar_ad_image_file" type="file" accept="image/png,image/jpeg,image/webp" style="display:block;margin-bottom:12px;">
+
+                        <label for="blog_sidebar_ad_image_url" style="display:block;margin-bottom:4px;font-size:0.85rem;">Or paste an external HTTPS image URL</label>
+                        <input id="blog_sidebar_ad_image_url" name="blog_sidebar_ad_image_url" type="text" maxlength="2048" value="{{ old('blog_sidebar_ad_image_url') }}" placeholder="https://cdn.example.com/blog/sidebar-ad.jpg" style="display:block;width:100%;max-width:640px;margin-bottom:12px;">
+
+                        <button class="btn btn-primary" type="submit">Save Blog Ad Settings</button>
+                    </form>
+
+                    @if ($blogAdImageUrl !== '')
+                        <form method="POST" action="/portal/admin/media-blog-ad/update" style="display:inline;">
+                            @csrf
+                            <input type="hidden" name="blog_sidebar_ad_title" value="{{ $blogAdTitle }}">
+                            <input type="hidden" name="blog_sidebar_ad_brand" value="{{ $blogAdBrand }}">
+                            <input type="hidden" name="blog_sidebar_ad_cta_label" value="{{ $blogAdCtaLabel }}">
+                            <input type="hidden" name="blog_sidebar_ad_cta_url" value="{{ $blogAdCtaUrl }}">
+                            <input type="hidden" name="blog_sidebar_ad_image_clear" value="1">
+                            <button class="btn" type="submit" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;" onclick="return confirm('Remove the blog sidebar ad image?')">Remove Ad Image</button>
+                        </form>
+                    @endif
+                </div>
             @endif
         </section>
 
@@ -1922,6 +1981,7 @@
                                     <option value="ADMIN_SUPER">ADMIN_SUPER</option>
                                     <option value="ADMIN_CARE">ADMIN_CARE</option>
                                     <option value="ADMIN_FINANCE">ADMIN_FINANCE</option>
+                                    <option value="ADMIN_MEDIA">ADMIN_MEDIA</option>
                                 @endif
                                 <option value="VENDOR">VENDOR</option>
                             </select>
@@ -1999,6 +2059,7 @@
                                         <option value="ADMIN_SUPER" @selected($managedUser->portal_role === 'ADMIN_SUPER')>ADMIN_SUPER</option>
                                         <option value="ADMIN_CARE" @selected($managedUser->portal_role === 'ADMIN_CARE')>ADMIN_CARE</option>
                                         <option value="ADMIN_FINANCE" @selected(in_array($managedUser->portal_role, ['ADMIN_FINANCE', 'ADMIN_FINACE'], true))>ADMIN_FINANCE</option>
+                                        <option value="ADMIN_MEDIA" @selected($managedUser->portal_role === 'ADMIN_MEDIA')>ADMIN_MEDIA</option>
                                         <option value="VENDOR" @selected($managedUser->portal_role === 'VENDOR')>VENDOR</option>
                                     </select>
                                 </div>
@@ -2083,6 +2144,7 @@
                                             <option value="ADMIN_SUPER" @selected($managedUser->portal_role === 'ADMIN_SUPER')>ADMIN_SUPER</option>
                                             <option value="ADMIN_CARE" @selected($managedUser->portal_role === 'ADMIN_CARE')>ADMIN_CARE</option>
                                             <option value="ADMIN_FINANCE" @selected(in_array($managedUser->portal_role, ['ADMIN_FINANCE', 'ADMIN_FINACE'], true))>ADMIN_FINANCE</option>
+                                            <option value="ADMIN_MEDIA" @selected($managedUser->portal_role === 'ADMIN_MEDIA')>ADMIN_MEDIA</option>
                                             <option value="VENDOR" @selected($managedUser->portal_role === 'VENDOR')>VENDOR</option>
                                         </select>
                                     @else

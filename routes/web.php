@@ -1143,6 +1143,62 @@ Route::get('/', function () {
         'dhigurah_island' => '/images/home/destinations/dhigurah-island.svg',
     ];
 
+    $homeDatabaseDestinationImages = [];
+    if (Schema::hasTable('islands')) {
+        $islandRows = DB::table('islands')
+            ->select(['name', 'slug', 'photo_path'])
+            ->whereNotNull('photo_path')
+            ->where('photo_path', '!=', '')
+            ->limit(1500)
+            ->get();
+
+        foreach ($islandRows as $row) {
+            $imageUrl = portalManagedMediaUrlFromPath((string) ($row->photo_path ?? ''));
+            if ($imageUrl === null || $imageUrl === '') {
+                continue;
+            }
+
+            $nameKey = portalNormalizeDestinationMediaKey((string) ($row->name ?? ''));
+            $slugKey = portalNormalizeDestinationMediaKey((string) ($row->slug ?? ''));
+            $islandNameKey = $nameKey !== '' ? portalNormalizeDestinationMediaKey((string) ($row->name ?? '') . ' island') : '';
+
+            foreach ([$nameKey, $slugKey, $islandNameKey] as $candidateKey) {
+                if ($candidateKey === '' || array_key_exists($candidateKey, $homeDatabaseDestinationImages)) {
+                    continue;
+                }
+                $homeDatabaseDestinationImages[$candidateKey] = $imageUrl;
+            }
+        }
+    }
+
+    if (Schema::hasTable('atolls')) {
+        $atollRows = DB::table('atolls')
+            ->select(['name', 'slug', 'code', 'photo_path'])
+            ->whereNotNull('photo_path')
+            ->where('photo_path', '!=', '')
+            ->limit(300)
+            ->get();
+
+        foreach ($atollRows as $row) {
+            $imageUrl = portalManagedMediaUrlFromPath((string) ($row->photo_path ?? ''));
+            if ($imageUrl === null || $imageUrl === '') {
+                continue;
+            }
+
+            $nameKey = portalNormalizeDestinationMediaKey((string) ($row->name ?? ''));
+            $slugKey = portalNormalizeDestinationMediaKey((string) ($row->slug ?? ''));
+            $atollNameKey = $nameKey !== '' ? portalNormalizeDestinationMediaKey((string) ($row->name ?? '') . ' atoll') : '';
+            $codeKey = portalNormalizeDestinationMediaKey((string) ($row->code ?? ''));
+
+            foreach ([$nameKey, $slugKey, $atollNameKey, $codeKey] as $candidateKey) {
+                if ($candidateKey === '' || array_key_exists($candidateKey, $homeDatabaseDestinationImages)) {
+                    continue;
+                }
+                $homeDatabaseDestinationImages[$candidateKey] = $imageUrl;
+            }
+        }
+    }
+
     $homeDestinationMediaOverrides = collect();
     if (Schema::hasTable('portal_destination_media_overrides')) {
         $homeDestinationMediaOverrides = DB::table('portal_destination_media_overrides')
@@ -1183,10 +1239,14 @@ Route::get('/', function () {
         return '';
     };
 
-    $resolveHomeCuratedDestinationImage = static function (array $card) use ($homeCuratedDestinationImages, $resolveHomeDestinationKey): ?string {
+    $resolveHomeCuratedDestinationImage = static function (array $card) use ($homeCuratedDestinationImages, $homeDatabaseDestinationImages, $resolveHomeDestinationKey): ?string {
         $destinationKey = $resolveHomeDestinationKey($card);
         if ($destinationKey === '') {
             return null;
+        }
+
+        if (array_key_exists($destinationKey, $homeDatabaseDestinationImages)) {
+            return $homeDatabaseDestinationImages[$destinationKey] ?? null;
         }
 
         return $homeCuratedDestinationImages[$destinationKey] ?? null;
@@ -1789,6 +1849,7 @@ if (!function_exists('blogHydratePostsWithMeta')) {
         return $posts->map(function ($post) use ($categories, $tagDefinitions) {
             $categorySlug = blogInferCategorySlug($post);
             $tagSlugs = blogInferTagSlugs($post);
+            $post->cover_image_url = blogResolveCoverImageUrl((string) ($post->cover_image_path ?? ''));
 
             $post->blog_category_slug = $categorySlug;
             $post->blog_category_label = (string) ($categories[$categorySlug]['label'] ?? 'Things to Do');
@@ -1805,6 +1866,26 @@ if (!function_exists('blogHydratePostsWithMeta')) {
 
             return $post;
         })->values();
+    }
+}
+
+if (!function_exists('blogResolveCoverImageUrl')) {
+    function blogResolveCoverImageUrl(?string $coverImagePath): string
+    {
+        $value = trim((string) $coverImagePath);
+        if ($value === '') {
+            return '';
+        }
+
+        if (Str::startsWith($value, ['https://', 'http://', '//'])) {
+            return $value;
+        }
+
+        if (Str::startsWith($value, ['/storage/', '/'])) {
+            return $value;
+        }
+
+        return (string) Storage::disk('public')->url($value);
     }
 }
 
@@ -2010,8 +2091,14 @@ Route::get('/blog/{slug}', function (string $slug) {
 // ─────────────────────────────────────────────────────────────
 
 if (!function_exists('buildIslandsIndexPayload')) {
-    function buildIslandsIndexPayload(?string $activeAtollSlug): array
+    function buildIslandsIndexPayload(?string $activeAtollSlug, ?string $activeIslandType = null): array
     {
+        $allowedIslandTypes = ['inhabited', 'uninhabited', 'resort'];
+        $activeIslandType = is_string($activeIslandType) ? strtolower(trim($activeIslandType)) : null;
+        if ($activeIslandType !== null && !in_array($activeIslandType, $allowedIslandTypes, true)) {
+            $activeIslandType = null;
+        }
+
         $atolls  = \App\Models\Atoll::orderBy('name')->get();
         $query   = \App\Models\Island::with('atoll')->orderBy('name');
 
@@ -2025,23 +2112,46 @@ if (!function_exists('buildIslandsIndexPayload')) {
             }
         }
 
+        if ($activeIslandType !== null) {
+            if ($activeIslandType === 'resort') {
+                $query->where('island_type', 'resort');
+            } elseif ($activeIslandType === 'inhabited') {
+                $query->where(function ($typeQuery) {
+                    $typeQuery->where('island_type', 'inhabited')
+                        ->orWhere(function ($fallbackQuery) {
+                            $fallbackQuery->whereNull('island_type')
+                                ->where('is_inhabited', true);
+                        });
+                });
+            } elseif ($activeIslandType === 'uninhabited') {
+                $query->where(function ($typeQuery) {
+                    $typeQuery->where('island_type', 'uninhabited')
+                        ->orWhere(function ($fallbackQuery) {
+                            $fallbackQuery->whereNull('island_type')
+                                ->where('is_inhabited', false);
+                        });
+                });
+            }
+        }
+
         $islands = $query->get();
 
         return [
             'atolls'          => $atolls,
             'islands'         => $islands,
             'activeAtollSlug' => $activeAtollSlug,
+            'activeIslandType' => $activeIslandType,
         ];
     }
 }
 
 // must be before /islands/{slug} wildcard
-Route::get('/islands/atoll/{atoll}', function (string $atoll) {
-    return view('islands-index', buildIslandsIndexPayload($atoll));
+Route::get('/islands/atoll/{atoll}', function (Request $request, string $atoll) {
+    return view('islands-index', buildIslandsIndexPayload($atoll, $request->query('type')));
 });
 
-Route::get('/islands', function () {
-    return view('islands-index', buildIslandsIndexPayload(null));
+Route::get('/islands', function (Request $request) {
+    return view('islands-index', buildIslandsIndexPayload(null, $request->query('type')));
 });
 
 Route::get('/islands/{slug}', function (string $slug) {

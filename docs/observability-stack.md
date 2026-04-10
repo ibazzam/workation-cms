@@ -13,6 +13,22 @@ This document describes the external observability stack for Workation API runti
 - Prometheus scrape template: `infra/observability/prometheus/workation-scrape.example.yml`
 - KPI definition and event contract: `docs/kpi-instrumentation-framework.md`
 
+## SLO Target Snapshot
+Operational targets used for alert calibration and readiness gates:
+
+- Availability:
+   - web/API monthly target: `99.9%`
+- API latency:
+   - read endpoints (`GET`) `p95 < 350ms`
+   - write endpoints `p95 < 700ms`
+- Error rate:
+   - `5xx < 0.5%` in any rolling 5-minute window
+- Database performance:
+   - top query families `p95 < 120ms`
+   - slow-query triage threshold `>= 300ms`
+- Queue delay:
+   - critical `< 30s`, standard `< 2m`
+
 ## Tracing Correlation
 The request middleware now propagates and emits trace context:
 - Accepts inbound `traceparent` or `x-trace-id`
@@ -87,3 +103,22 @@ npm run perf:peak-season
 
 Output artifact:
 - `artifacts/perf/booking-payments-peak-season-<timestamp>.json`
+
+## Pre-Peak Load Test Checklist
+Run 2-3 weeks before known high-demand windows.
+
+1. Preparation
+   - Freeze risky schema changes for test window.
+   - Capture baseline (`p50/p95/p99`, error rate, queue delay, DB metrics).
+   - Confirm representative traffic mix (search, listing, booking, checkout, blog/public pages).
+2. Execution
+   - Run at `1x`, `2x`, and `3x` expected peak.
+   - Include write-heavy flows and webhook/background activity.
+   - Record Cloudflare edge hit ratio and origin saturation signals.
+3. Pass criteria
+   - SLO targets hold at least at `2x` expected peak.
+   - No sustained queue backlog growth.
+   - No sustained DB connection saturation.
+4. Recovery and closeout
+   - Verify service returns to baseline within 15 minutes after load stop.
+   - Log bottlenecks, owner, fix ETA, and re-test date.

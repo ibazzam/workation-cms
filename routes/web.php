@@ -1693,30 +1693,276 @@ Route::get('/things-to-do', function () {
     return redirect('/catalog/excursion?sort=most_wanted');
 });
 
-Route::get('/blog', function () {
-    $posts = collect();
+if (!function_exists('blogCategoryDefinitions')) {
+    function blogCategoryDefinitions(): array
+    {
+        return [
+            'things-to-do' => ['label' => 'Things to Do'],
+            'attractions' => ['label' => 'Attractions'],
+            'stay' => ['label' => 'Stay'],
+            'islands' => ['label' => 'Islands'],
+        ];
+    }
+}
 
-    if (Schema::hasTable('blog_posts')) {
-        $posts = BlogPost::query()
+if (!function_exists('blogTagDefinitions')) {
+    function blogTagDefinitions(): array
+    {
+        return [
+            'snorkeling' => ['label' => 'Snorkeling', 'keywords' => ['snorkel', 'snorkeling', 'reef']],
+            'scuba-diving' => ['label' => 'Scuba Diving', 'keywords' => ['scuba', 'diving', 'dive']],
+            'nature-and-outdoors' => ['label' => 'Nature and outdoors', 'keywords' => ['nature', 'outdoor', 'mangrove', 'biosphere']],
+            'beach' => ['label' => 'Beach', 'keywords' => ['beach', 'shore', 'coast']],
+            'island' => ['label' => 'Island', 'keywords' => ['island', 'atoll']],
+            'hotel' => ['label' => 'Hotel', 'keywords' => ['hotel', 'resort', 'guesthouse', 'villa', 'stay']],
+            'culture' => ['label' => 'Culture', 'keywords' => ['culture', 'local', 'eid', 'heritage']],
+            'wildlife' => ['label' => 'Wildlife', 'keywords' => ['wildlife', 'shark', 'manta', 'whale', 'fish']],
+            'excursion' => ['label' => 'Excursion', 'keywords' => ['excursion', 'trip', 'tour', 'adventure']],
+        ];
+    }
+}
+
+if (!function_exists('blogInferCategorySlug')) {
+    function blogInferCategorySlug($post): string
+    {
+        $haystack = Str::lower(trim(implode(' ', [
+            (string) ($post->title ?? ''),
+            (string) ($post->excerpt ?? ''),
+            (string) Str::limit(strip_tags((string) ($post->content ?? '')), 400),
+        ])));
+
+        if ($haystack !== '') {
+            if (Str::contains($haystack, ['hotel', 'resort', 'guesthouse', 'villa', 'stay', 'accommodation'])) {
+                return 'stay';
+            }
+
+            if (Str::contains($haystack, ['reef', 'snorkel', 'dive', 'diving', 'shark', 'manta', 'whale', 'mangrove', 'biosphere', 'nature', 'excursion'])) {
+                return 'attractions';
+            }
+
+            if (Str::contains($haystack, ['island', 'atoll', 'islets'])) {
+                return 'islands';
+            }
+        }
+
+        return 'things-to-do';
+    }
+}
+
+if (!function_exists('blogInferTagSlugs')) {
+    function blogInferTagSlugs($post): array
+    {
+        $tagDefinitions = blogTagDefinitions();
+        $haystack = Str::lower(trim(implode(' ', [
+            (string) ($post->title ?? ''),
+            (string) ($post->excerpt ?? ''),
+            (string) Str::limit(strip_tags((string) ($post->content ?? '')), 650),
+        ])));
+
+        $matchedTags = [];
+        foreach ($tagDefinitions as $slug => $meta) {
+            $keywords = is_array($meta['keywords'] ?? null) ? $meta['keywords'] : [];
+            foreach ($keywords as $keyword) {
+                if ($keyword !== '' && Str::contains($haystack, Str::lower((string) $keyword))) {
+                    $matchedTags[] = $slug;
+                    break;
+                }
+            }
+        }
+
+        $matchedTags = array_values(array_unique($matchedTags));
+        if (count($matchedTags) === 0) {
+            $fallback = blogInferCategorySlug($post) === 'stay' ? 'hotel' : 'nature-and-outdoors';
+            $matchedTags[] = $fallback;
+        }
+
+        return array_slice($matchedTags, 0, 4);
+    }
+}
+
+if (!function_exists('blogHydratePostsWithMeta')) {
+    function blogHydratePostsWithMeta($posts)
+    {
+        $categories = blogCategoryDefinitions();
+        $tagDefinitions = blogTagDefinitions();
+
+        return $posts->map(function ($post) use ($categories, $tagDefinitions) {
+            $categorySlug = blogInferCategorySlug($post);
+            $tagSlugs = blogInferTagSlugs($post);
+
+            $post->blog_category_slug = $categorySlug;
+            $post->blog_category_label = (string) ($categories[$categorySlug]['label'] ?? 'Things to Do');
+            $post->blog_tag_slugs = $tagSlugs;
+            $post->blog_tags = collect($tagSlugs)
+                ->map(function (string $slug) use ($tagDefinitions): array {
+                    return [
+                        'slug' => $slug,
+                        'label' => (string) ($tagDefinitions[$slug]['label'] ?? Str::headline(str_replace('-', ' ', $slug))),
+                    ];
+                })
+                ->values()
+                ->all();
+
+            return $post;
+        })->values();
+    }
+}
+
+if (!function_exists('queryPublishedBlogPosts')) {
+    function queryPublishedBlogPosts()
+    {
+        return BlogPost::query()
             ->where('is_published', true)
             ->where(function ($query) {
                 $query->whereNull('published_at')->orWhere('published_at', '<=', now());
             })
             ->orderByDesc('is_featured')
             ->orderByDesc('published_at')
-            ->orderByDesc('created_at')
-            ->limit(30)
-            ->get();
+            ->orderByDesc('created_at');
     }
+}
 
-    $featuredPost = $posts->first(function ($post) {
-        return (bool) ($post->is_featured ?? false);
-    });
+if (!function_exists('buildBlogIndexPayload')) {
+    function buildBlogIndexPayload(?string $activeCategory = null, ?string $activeTag = null): array
+    {
+        $activeCategory = is_string($activeCategory) ? trim(Str::lower($activeCategory)) : null;
+        $activeTag = is_string($activeTag) ? trim(Str::lower($activeTag)) : null;
+        $categories = blogCategoryDefinitions();
+        $tagDefinitions = blogTagDefinitions();
 
-    return view('blog-index', [
-        'apiBase' => workationApiBase(),
-        'posts' => $posts,
-        'featuredPost' => $featuredPost,
+        if ($activeCategory !== null && !array_key_exists($activeCategory, $categories)) {
+            abort(404);
+        }
+
+        if ($activeTag !== null && !array_key_exists($activeTag, $tagDefinitions)) {
+            abort(404);
+        }
+
+        $posts = collect();
+        if (Schema::hasTable('blog_posts')) {
+            $posts = queryPublishedBlogPosts()->limit(80)->get();
+            $posts = blogHydratePostsWithMeta($posts);
+        }
+
+        if ($activeCategory !== null) {
+            $posts = $posts->filter(function ($post) use ($activeCategory) {
+                return (string) ($post->blog_category_slug ?? '') === $activeCategory;
+            })->values();
+        }
+
+        if ($activeTag !== null) {
+            $posts = $posts->filter(function ($post) use ($activeTag) {
+                $tagSlugs = is_array($post->blog_tag_slugs ?? null) ? $post->blog_tag_slugs : [];
+
+                return in_array($activeTag, $tagSlugs, true);
+            })->values();
+        }
+
+        $featuredPost = $posts->first(function ($post) {
+            return (bool) ($post->is_featured ?? false);
+        }) ?? $posts->first();
+
+        $tagStats = [];
+        foreach ($posts as $post) {
+            $tags = is_array($post->blog_tags ?? null) ? $post->blog_tags : [];
+            foreach ($tags as $tag) {
+                $tagSlug = (string) ($tag['slug'] ?? '');
+                if ($tagSlug === '') {
+                    continue;
+                }
+
+                if (!array_key_exists($tagSlug, $tagStats)) {
+                    $tagStats[$tagSlug] = [
+                        'slug' => $tagSlug,
+                        'label' => (string) ($tag['label'] ?? Str::headline(str_replace('-', ' ', $tagSlug))),
+                        'count' => 0,
+                    ];
+                }
+                $tagStats[$tagSlug]['count']++;
+            }
+        }
+
+        usort($tagStats, function (array $a, array $b): int {
+            if ($a['count'] === $b['count']) {
+                return strcmp((string) $a['label'], (string) $b['label']);
+            }
+
+            return $b['count'] <=> $a['count'];
+        });
+
+        return [
+            'apiBase' => workationApiBase(),
+            'posts' => $posts,
+            'featuredPost' => $featuredPost,
+            'blogCategories' => $categories,
+            'activeCategory' => $activeCategory,
+            'activeTag' => $activeTag,
+            'activeTagLabel' => $activeTag !== null ? (string) ($tagDefinitions[$activeTag]['label'] ?? Str::headline(str_replace('-', ' ', $activeTag))) : null,
+            'tagDirectory' => $tagStats,
+        ];
+    }
+}
+
+if (!function_exists('blogSidebarAdSettings')) {
+    function blogSidebarAdSettings(): array
+    {
+        $defaults = [
+            'title' => 'Charter a vessel?',
+            'brand' => 'workation',
+            'cta_label' => 'Explore now',
+            'cta_url' => '/catalog/marine-transport',
+            'image_url' => '',
+        ];
+
+        if (!Schema::hasTable('portal_finance_settings')) {
+            return $defaults;
+        }
+
+        $settings = DB::table('portal_finance_settings')
+            ->whereIn('setting_key', [
+                'blog_sidebar_ad_title',
+                'blog_sidebar_ad_brand',
+                'blog_sidebar_ad_cta_label',
+                'blog_sidebar_ad_cta_url',
+                'blog_sidebar_ad_image',
+            ])
+            ->pluck('value_string', 'setting_key');
+
+        $title = trim((string) ($settings->get('blog_sidebar_ad_title') ?? $defaults['title']));
+        $brand = trim((string) ($settings->get('blog_sidebar_ad_brand') ?? $defaults['brand']));
+        $ctaLabel = trim((string) ($settings->get('blog_sidebar_ad_cta_label') ?? $defaults['cta_label']));
+        $ctaUrl = trim((string) ($settings->get('blog_sidebar_ad_cta_url') ?? $defaults['cta_url']));
+        $imageStoredValue = trim((string) ($settings->get('blog_sidebar_ad_image') ?? ''));
+
+        return [
+            'title' => $title !== '' ? $title : $defaults['title'],
+            'brand' => $brand !== '' ? $brand : $defaults['brand'],
+            'cta_label' => $ctaLabel !== '' ? $ctaLabel : $defaults['cta_label'],
+            'cta_url' => $ctaUrl !== '' ? $ctaUrl : $defaults['cta_url'],
+            'image_url' => portalManagedMediaUrlFromPath($imageStoredValue) ?? '',
+        ];
+    }
+}
+
+Route::get('/blog', function () {
+    return view('blog-index', buildBlogIndexPayload());
+});
+
+Route::get('/blog/category/{category}', function (string $category) {
+    return view('blog-index', buildBlogIndexPayload($category, null));
+});
+
+Route::get('/blog/tag/{tag}', function (string $tag) {
+    return view('blog-index', buildBlogIndexPayload(null, $tag));
+});
+
+Route::get('/blog/tags', function () {
+    $payload = buildBlogIndexPayload();
+
+    return view('blog-tags', [
+        'apiBase' => $payload['apiBase'] ?? workationApiBase(),
+        'tagDirectory' => $payload['tagDirectory'] ?? [],
+        'blogCategories' => $payload['blogCategories'] ?? blogCategoryDefinitions(),
     ]);
 });
 
@@ -1744,10 +1990,91 @@ Route::get('/blog/{slug}', function (string $slug) {
         ->limit(3)
         ->get();
 
+    $post = blogHydratePostsWithMeta(collect([$post]))->first();
+    $relatedPosts = blogHydratePostsWithMeta($relatedPosts);
+
     return view('blog-show', [
         'apiBase' => workationApiBase(),
         'post' => $post,
         'relatedPosts' => $relatedPosts,
+        'blogCategories' => blogCategoryDefinitions(),
+        'blogSidebarAd' => blogSidebarAdSettings(),
+    ]);
+});
+
+// ─────────────────────────────────────────────────────────────
+// Islands & Atolls Directory
+// /islands              – full index with atoll filter chips
+// /islands/atoll/{slug} – atoll-filtered index
+// /islands/{slug}       – individual island page
+// ─────────────────────────────────────────────────────────────
+
+if (!function_exists('buildIslandsIndexPayload')) {
+    function buildIslandsIndexPayload(?string $activeAtollSlug): array
+    {
+        $atolls  = \App\Models\Atoll::orderBy('name')->get();
+        $query   = \App\Models\Island::with('atoll')->orderBy('name');
+
+        if ($activeAtollSlug !== null) {
+            // Match by atoll slug column first, fall back to name-slug
+            $atoll = $atolls->first(fn ($a) =>
+                ($a->slug ?? \Illuminate\Support\Str::slug($a->name)) === $activeAtollSlug
+            );
+            if ($atoll) {
+                $query->where('atoll_id', $atoll->id);
+            }
+        }
+
+        $islands = $query->get();
+
+        return [
+            'atolls'          => $atolls,
+            'islands'         => $islands,
+            'activeAtollSlug' => $activeAtollSlug,
+        ];
+    }
+}
+
+// must be before /islands/{slug} wildcard
+Route::get('/islands/atoll/{atoll}', function (string $atoll) {
+    return view('islands-index', buildIslandsIndexPayload($atoll));
+});
+
+Route::get('/islands', function () {
+    return view('islands-index', buildIslandsIndexPayload(null));
+});
+
+Route::get('/islands/{slug}', function (string $slug) {
+    // Try slug column first; fall back to name-derived slug match
+    $island = \App\Models\Island::with('atoll')
+        ->where('slug', $slug)
+        ->first();
+
+    if (!$island) {
+        // Attempt name-based slug match (no DB index, iterate only when slug not set)
+        $island = \App\Models\Island::with('atoll')
+            ->whereNull('slug')
+            ->get()
+            ->first(fn ($i) => \Illuminate\Support\Str::slug($i->name) === $slug);
+    }
+
+    if (!$island) {
+        abort(404);
+    }
+
+    $relatedIslands = collect();
+    if ($island->atoll_id) {
+        $relatedIslands = \App\Models\Island::with('atoll')
+            ->where('atoll_id', $island->atoll_id)
+            ->where('id', '!=', $island->id)
+            ->orderBy('name')
+            ->limit(5)
+            ->get();
+    }
+
+    return view('island-show', [
+        'island'         => $island,
+        'relatedIslands' => $relatedIslands,
     ]);
 });
 
@@ -4231,10 +4558,24 @@ Route::get('/admin', function (Request $request) {
         ->mapWithKeys(static fn ($label, $key) => [$key => '']);
     $destinationMediaOverrides = collect();
 
+    $blogSidebarAdSettings = [
+        'title' => 'Charter a vessel?',
+        'brand' => 'workation',
+        'cta_label' => 'Explore now',
+        'cta_url' => '/catalog/marine-transport',
+        'image_stored_value' => '',
+        'image_url' => '',
+    ];
+
     if (Schema::hasTable('portal_finance_settings')) {
         $mediaSettingKeys = collect(array_keys($catalogHeroAdminCategories))
             ->map(static fn ($key) => 'catalog_hero_image_' . str_replace('-', '_', $key))
             ->prepend('home_hero_image_url')
+            ->push('blog_sidebar_ad_title')
+            ->push('blog_sidebar_ad_brand')
+            ->push('blog_sidebar_ad_cta_label')
+            ->push('blog_sidebar_ad_cta_url')
+            ->push('blog_sidebar_ad_image')
             ->values();
 
         $mediaSettings = DB::table('portal_finance_settings')
@@ -4254,6 +4595,15 @@ Route::get('/admin', function (Request $request) {
             ->mapWithKeys(static function ($storedValue, $key) {
                 return [$key => portalManagedMediaUrlFromPath((string) $storedValue) ?? ''];
             });
+
+        $blogSidebarAdSettings = [
+            'title' => trim((string) ($mediaSettings->get('blog_sidebar_ad_title') ?? 'Charter a vessel?')) ?: 'Charter a vessel?',
+            'brand' => trim((string) ($mediaSettings->get('blog_sidebar_ad_brand') ?? 'workation')) ?: 'workation',
+            'cta_label' => trim((string) ($mediaSettings->get('blog_sidebar_ad_cta_label') ?? 'Explore now')) ?: 'Explore now',
+            'cta_url' => trim((string) ($mediaSettings->get('blog_sidebar_ad_cta_url') ?? '/catalog/marine-transport')) ?: '/catalog/marine-transport',
+            'image_stored_value' => trim((string) ($mediaSettings->get('blog_sidebar_ad_image') ?? '')),
+            'image_url' => portalManagedMediaUrlFromPath(trim((string) ($mediaSettings->get('blog_sidebar_ad_image') ?? ''))) ?? '',
+        ];
     }
 
     if (Schema::hasTable('portal_destination_media_overrides')) {
@@ -4435,6 +4785,7 @@ Route::get('/admin', function (Request $request) {
         'catalogHeroAdminStoredValues' => $catalogHeroAdminStoredValues,
         'catalogHeroAdminCategories' => $catalogHeroAdminCategories,
         'destinationMediaOverrides' => $destinationMediaOverrides,
+        'blogSidebarAdSettings' => $blogSidebarAdSettings,
         'vendorCategoryMap' => vendorPortalCategoryMap(),
         'canModerateListings' => $canModerateListings,
         'pendingModerationListings' => $pendingModerationListings,
@@ -4932,6 +5283,93 @@ Route::post('/portal/admin/media-destination/update', function (Request $request
     ]);
 
     return redirect('/admin?page=media')->with('portal_notice', 'Destination image override saved.');
+});
+
+Route::post('/portal/admin/media-blog-ad/update', function (Request $request) {
+    if (!canManageVendorUsers()) {
+        return redirect('/admin?page=media')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can update blog ad settings.']);
+    }
+
+    if (!Schema::hasTable('portal_finance_settings')) {
+        return redirect('/admin?page=media')->withErrors(['auth' => 'Settings table is not ready. Run migrations first.']);
+    }
+
+    $validated = $request->validate([
+        'blog_sidebar_ad_title' => ['nullable', 'string', 'max:190'],
+        'blog_sidebar_ad_brand' => ['nullable', 'string', 'max:120'],
+        'blog_sidebar_ad_cta_label' => ['nullable', 'string', 'max:120'],
+        'blog_sidebar_ad_cta_url' => ['nullable', 'string', 'max:2048'],
+        'blog_sidebar_ad_image_url' => ['nullable', 'string', 'max:2048'],
+        'blog_sidebar_ad_image_file' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        'blog_sidebar_ad_image_clear' => ['nullable', 'boolean'],
+    ]);
+
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+
+    $existingImageValue = trim((string) (DB::table('portal_finance_settings')
+        ->where('setting_key', 'blog_sidebar_ad_image')
+        ->value('value_string') ?? ''));
+
+    $nextImageValue = $existingImageValue;
+    $shouldClear = $request->boolean('blog_sidebar_ad_image_clear');
+    $uploadedFile = $request->file('blog_sidebar_ad_image_file');
+    $submittedImageUrl = trim((string) ($validated['blog_sidebar_ad_image_url'] ?? ''));
+
+    if ($shouldClear) {
+        portalDeleteManagedPublicAsset($existingImageValue);
+        $nextImageValue = '';
+    } elseif ($uploadedFile) {
+        $storedPath = portalStoreAdminHeroImage($uploadedFile, 'blog_ad');
+        if ($storedPath === null) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'blog_sidebar_ad_image_file' => 'Unable to process and store the uploaded image. Use a valid JPG, PNG, or WebP file.',
+            ]);
+        }
+
+        if ($existingImageValue !== '' && $existingImageValue !== $storedPath) {
+            portalDeleteManagedPublicAsset($existingImageValue);
+        }
+
+        $nextImageValue = $storedPath;
+    } elseif ($submittedImageUrl !== '') {
+        if (str_starts_with($submittedImageUrl, 'http://')) {
+            $submittedImageUrl = 'https://' . ltrim(substr($submittedImageUrl, 7), '/');
+        }
+
+        if ($existingImageValue !== '' && $existingImageValue !== $submittedImageUrl) {
+            portalDeleteManagedPublicAsset($existingImageValue);
+        }
+
+        $nextImageValue = $submittedImageUrl;
+    }
+
+    $persistSetting = static function (string $settingKey, ?string $value, ?int $updatedByUserId): void {
+        $storedValue = trim((string) ($value ?? ''));
+        DB::table('portal_finance_settings')->updateOrInsert(
+            ['setting_key' => $settingKey],
+            [
+                'value_decimal' => null,
+                'value_string' => $storedValue !== '' ? $storedValue : null,
+                'value_json' => null,
+                'updated_by_user_id' => $updatedByUserId,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+    };
+
+    $persistSetting('blog_sidebar_ad_title', $validated['blog_sidebar_ad_title'] ?? null, $actorUserId);
+    $persistSetting('blog_sidebar_ad_brand', $validated['blog_sidebar_ad_brand'] ?? null, $actorUserId);
+    $persistSetting('blog_sidebar_ad_cta_label', $validated['blog_sidebar_ad_cta_label'] ?? null, $actorUserId);
+    $persistSetting('blog_sidebar_ad_cta_url', $validated['blog_sidebar_ad_cta_url'] ?? null, $actorUserId);
+    $persistSetting('blog_sidebar_ad_image', $nextImageValue, $actorUserId);
+
+    portalAdminAuditLog('media_blog_sidebar_ad.updated', [
+        'target_role' => 'ADMIN_MEDIA',
+        'has_image' => $nextImageValue !== '',
+    ]);
+
+    return redirect('/admin?page=media')->with('portal_notice', 'Blog article ad settings updated.');
 });
 
 Route::get('/portal/admin/blog', function () {

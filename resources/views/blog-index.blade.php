@@ -8,14 +8,13 @@
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
     <style>
         :root {
-            --bg: #f4f8fb;
-            --ink: #152738;
-            --muted: #587084;
-            --line: #cfdeea;
-            --brand: #0d5f7b;
-            --brand-soft: #e3f0f6;
-            --card: #ffffff;
-            --accent: #f3a13a;
+            --bg: #eceeef;
+            --ink: #111f2a;
+            --muted: #4e6679;
+            --line: #d8dfe4;
+            --surface: #ffffff;
+            --brand: #43be66;
+            --chip-line: #5ad176;
         }
 
         * { box-sizing: border-box; }
@@ -24,312 +23,437 @@
             margin: 0;
             font-family: "Outfit", "Trebuchet MS", sans-serif;
             color: var(--ink);
-            background: radial-gradient(circle at 12% 4%, #fef9ef 0%, #f4f8fb 36%, #eef6fb 100%);
+            background: var(--bg);
         }
 
         .page {
-            width: min(1180px, calc(100% - 24px));
-            margin: 14px auto 28px;
-            padding: 18px 0 0;
+            width: min(1180px, calc(100% - 30px));
+            margin: 0 auto 30px;
         }
 
-        .topbar {
+        .header-bar {
+            min-height: 98px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 12px;
-            border: 1px solid var(--line);
-            border-radius: 14px;
-            padding: 12px 14px;
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(9px);
+            gap: 18px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--line);
+            position: sticky;
+            top: 0;
+            z-index: 25;
+            padding: 0 8px;
         }
 
         .brand {
             margin: 0;
-            font-size: 1.45rem;
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            color: var(--brand);
             text-decoration: none;
+            font-size: 2.15rem;
+            line-height: 1;
+            letter-spacing: -0.045em;
+            color: #52be72;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .topnav {
+        .brand small {
+            color: #1b2832;
+            font-size: 0.86rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            font-weight: 700;
+        }
+
+        .nav-links {
             display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #152632;
+            font-size: 1.02rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.01em;
+            padding: 8px 10px;
+            border-radius: 8px;
+        }
+
+        .nav-links a.is-active {
+            color: var(--brand);
+        }
+
+        .nav-links a:hover {
+            background: #ebf7ef;
+            color: #27964a;
+        }
+
+        .hero-grid {
+            margin-top: 0;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            min-height: 680px;
+        }
+
+        .hero-card {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(145deg, #c3d6e4 0%, #a9c4d7 100%);
+        }
+
+        .hero-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .hero-card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(7, 18, 24, 0.2) 16%, rgba(6, 14, 18, 0.57) 100%);
+        }
+
+        .hero-card h1,
+        .hero-card h2 {
+            margin: 0;
+            position: absolute;
+            left: 28px;
+            right: 28px;
+            bottom: 110px;
+            z-index: 2;
+            color: #ffffff;
+            font-size: clamp(1.6rem, 2.85vw, 3rem);
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            text-align: center;
+            text-shadow: 0 6px 26px rgba(0, 0, 0, 0.33);
+        }
+
+        .hero-card a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .hero-empty {
+            display: grid;
+            place-items: center;
+            text-align: center;
+            padding: 20px;
+            color: #33566e;
+            border: 1px dashed #b5c8d8;
+            background: #f6fbff;
+            min-height: 380px;
+        }
+
+        .list-section {
+            margin: 66px auto 0;
+            max-width: 980px;
+        }
+
+        .list-title {
+            margin: 0 0 24px;
+            font-size: clamp(2rem, 3.4vw, 3.25rem);
+            line-height: 1.08;
+            letter-spacing: -0.02em;
+        }
+
+        .list-title small {
+            display: block;
+            margin-top: 8px;
+            font-size: 1rem;
+            color: var(--muted);
+            font-weight: 500;
+            letter-spacing: 0;
+        }
+
+        .story-list {
+            display: grid;
+            gap: 40px;
+        }
+
+        .story-item {
+            display: grid;
+            grid-template-columns: 126px minmax(0, 1fr);
+            gap: 16px;
+            align-items: start;
+        }
+
+        .story-thumb {
+            width: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            aspect-ratio: 1 / 1;
+            background: linear-gradient(145deg, #cee0eb 0%, #c0d6e4 100%);
+        }
+
+        .story-thumb img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+
+        .meta-row {
+            display: flex;
+            align-items: center;
             gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 7px;
+            color: #3f5b71;
+            font-size: 0.84rem;
+        }
+
+        .meta-row strong {
+            text-transform: uppercase;
+            font-size: 0.83rem;
+            letter-spacing: 0.04em;
+            color: #1c3140;
+        }
+
+        .story-item h3 {
+            margin: 0;
+            font-size: clamp(1.15rem, 2.1vw, 2rem);
+            line-height: 1.2;
+            letter-spacing: -0.01em;
+        }
+
+        .story-item h3 a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .tags {
+            margin-top: 11px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag-chip {
+            text-decoration: none;
+            border: 1px solid var(--chip-line);
+            border-radius: 12px;
+            color: #44bd65;
+            font-size: 0.86rem;
+            font-weight: 700;
+            padding: 6px 14px;
+            line-height: 1.1;
+            background: rgba(255, 255, 255, 0.55);
+        }
+
+        .tag-chip:hover {
+            background: #e8f8ed;
+            color: #2e9f4d;
+        }
+
+        .toolbar {
+            margin: 16px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
             flex-wrap: wrap;
         }
 
-        .topnav a {
+        .toolbar a {
             text-decoration: none;
-            color: #20445b;
-            border: 1px solid #d3e0ea;
-            border-radius: 10px;
-            padding: 7px 11px;
-            font-size: 0.85rem;
-            font-weight: 700;
-            background: #f8fbff;
-        }
-
-        .hero {
-            margin-top: 14px;
-            border-radius: 18px;
-            border: 1px solid #c8dce9;
-            background: linear-gradient(140deg, #0f6079 0%, #123f5b 100%);
-            color: #eaf7ff;
-            padding: 24px;
-        }
-
-        .eyebrow {
-            margin: 0;
-            font-size: 0.74rem;
-            text-transform: uppercase;
-            letter-spacing: 0.09em;
-            color: #d0ebf9;
-            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
-        }
-
-        .hero h1 {
-            margin: 8px 0 10px;
-            font-size: clamp(1.6rem, 4vw, 2.3rem);
-            line-height: 1.1;
-        }
-
-        .hero p {
-            margin: 0;
-            max-width: 680px;
-            color: #d9edf8;
-        }
-
-        .feature {
-            margin-top: 16px;
-            border: 1px solid #c7dcec;
-            border-radius: 16px;
-            overflow: hidden;
-            background: var(--card);
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
-        }
-
-        .feature-media {
-            min-height: 280px;
-            background: linear-gradient(135deg, #dbeaf4 0%, #c5dff0 100%);
-        }
-
-        .feature-media img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        .feature-body {
-            padding: 18px;
-            display: grid;
-            gap: 10px;
-            align-content: start;
-        }
-
-        .chip {
-            display: inline-flex;
-            width: fit-content;
-            padding: 4px 9px;
-            border-radius: 999px;
-            background: #e7f2f8;
-            color: #185070;
-            font-size: 0.73rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.07em;
-        }
-
-        .feature-title {
-            margin: 0;
-            font-size: 1.48rem;
-            line-height: 1.22;
-        }
-
-        .feature-meta {
-            margin: 0;
-            color: var(--muted);
-            font-size: 0.83rem;
-        }
-
-        .feature-excerpt {
-            margin: 0;
-            color: #294861;
-            line-height: 1.6;
-        }
-
-        .feature-cta {
-            width: fit-content;
-            text-decoration: none;
-            border: 0;
+            border: 1px solid #c7d7e3;
             border-radius: 11px;
-            background: var(--brand);
-            color: #fff;
+            color: #1e3850;
+            font-size: 0.84rem;
             font-weight: 700;
-            padding: 10px 15px;
+            padding: 8px 11px;
+            background: #f7fbff;
         }
 
-        .grid {
-            margin-top: 16px;
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
+        .toolbar a:hover {
+            border-color: #95bad1;
+            background: #edf6fd;
         }
 
-        .card {
-            border: 1px solid #cdddea;
-            border-radius: 14px;
-            overflow: hidden;
-            background: var(--card);
-            display: grid;
-            min-height: 100%;
+        @media (max-width: 1160px) {
+            .hero-grid {
+                min-height: 560px;
+            }
+
+            .hero-card h1,
+            .hero-card h2 {
+                bottom: 76px;
+            }
         }
 
-        .card-media {
-            display: block;
-            height: 178px;
-            background: linear-gradient(145deg, #e6eef6 0%, #d2e5f1 100%);
-        }
-
-        .card-media img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        .card-body {
-            padding: 13px;
-            display: grid;
-            gap: 8px;
-            align-content: start;
-        }
-
-        .card-title {
-            margin: 0;
-            font-size: 1.03rem;
-            line-height: 1.3;
-        }
-
-        .card-title a {
-            text-decoration: none;
-            color: #112f45;
-        }
-
-        .card-title a:hover {
-            color: #0d5f7b;
-            text-decoration: underline;
-            text-underline-offset: 2px;
-        }
-
-        .card-meta {
-            margin: 0;
-            color: var(--muted);
-            font-size: 0.8rem;
-        }
-
-        .card-excerpt {
-            margin: 0;
-            color: #34536a;
-            font-size: 0.89rem;
-            line-height: 1.55;
-        }
-
-        .empty {
-            margin-top: 18px;
-            border: 1px dashed #c6d8e6;
-            border-radius: 13px;
-            background: #f6fbff;
-            padding: 16px;
-            color: #49647a;
-        }
-
-        @media (max-width: 960px) {
-            .feature {
+        @media (max-width: 920px) {
+            .hero-grid {
                 grid-template-columns: 1fr;
+                min-height: 0;
             }
 
-            .grid {
-                grid-template-columns: 1fr 1fr;
+            .hero-card {
+                min-height: 380px;
+            }
+
+            .hero-card h1,
+            .hero-card h2 {
+                bottom: 34px;
+                left: 16px;
+                right: 16px;
+                text-align: left;
+            }
+
+            .story-item {
+                grid-template-columns: 98px minmax(0, 1fr);
+                gap: 10px;
             }
         }
 
-        @media (max-width: 640px) {
-            .topbar {
-                align-items: flex-start;
+        @media (max-width: 740px) {
+            .header-bar {
+                min-height: auto;
+                padding: 14px 8px;
                 flex-direction: column;
+                align-items: flex-start;
             }
 
-            .grid {
-                grid-template-columns: 1fr;
+            .brand {
+                font-size: 1.82rem;
+            }
+
+            .nav-links {
+                justify-content: flex-start;
+            }
+
+            .list-section {
+                margin-top: 34px;
+            }
+
+            .story-list {
+                gap: 20px;
             }
         }
     </style>
 </head>
 <body>
+    @php
+        $allPosts = $posts->values();
+        $activeCategorySlug = $activeCategory ?: 'things-to-do';
+        $activeCategoryLabel = (string) ($blogCategories[$activeCategorySlug]['label'] ?? 'Things to Do');
+        $contextLabel = $activeTag ? ('Tag: ' . ($activeTagLabel ?: \Illuminate\Support\Str::headline(str_replace('-', ' ', (string) $activeTag)))) : $activeCategoryLabel;
+        $heroPosts = $allPosts->take(3)->values();
+        $listPosts = $allPosts->skip(3)->values();
+
+        if ($listPosts->isEmpty()) {
+            $listPosts = $allPosts->values();
+        }
+
+        $postImageUrl = function ($post): string {
+            $coverPath = trim((string) ($post->cover_image_path ?? ''));
+            if ($coverPath === '') {
+                return '';
+            }
+
+            return (string) \Illuminate\Support\Facades\Storage::disk('public')->url($coverPath);
+        };
+
+        $postDate = function ($post): string {
+            return optional($post->published_at)->format('M d, Y - l')
+                ?? optional($post->created_at)->format('M d, Y - l')
+                ?? 'Upcoming';
+        };
+
+        $postCategoryLabel = function ($post) use ($activeCategoryLabel): string {
+            return (string) ($post->blog_category_label ?? $activeCategoryLabel);
+        };
+    @endphp
+
     <main class="page">
-        <header class="topbar" aria-label="Blog navigation">
-            <a class="brand" href="/">Workation Blog</a>
-            <nav class="topnav" aria-label="Blog top links">
-                <a href="/">Home</a>
-                <a href="/blog">Things to Do</a>
-                <a href="/catalog/accommodation">Stays</a>
+        <header class="header-bar" aria-label="Blog category header">
+            <a class="brand" href="/">
+                Workation
+                <small>Blog</small>
+            </a>
+            <nav class="nav-links" aria-label="Blog categories">
+                @foreach ($blogCategories as $slug => $meta)
+                    @php
+                        $isActiveCategory = !$activeTag && ($activeCategorySlug === $slug);
+                        $categoryHref = $slug === 'things-to-do' ? '/blog' : '/blog/category/' . $slug;
+                    @endphp
+                    <a class="{{ $isActiveCategory ? 'is-active' : '' }}" href="{{ $categoryHref }}">{{ $meta['label'] ?? \Illuminate\Support\Str::headline($slug) }}</a>
+                @endforeach
+                <a href="/islands">Islands</a>
             </nav>
         </header>
 
-        <section class="hero" aria-label="Blog heading">
-            <p class="eyebrow">Travel Journal</p>
-            <h1>Stories, guides, and hand-picked island ideas for your next Maldives escape.</h1>
-            <p>Read curated itineraries, local insights, and practical tips from the Workation team.</p>
-        </section>
-
-        @if ($featuredPost)
-            @php
-                $featuredImageUrl = trim((string) \Illuminate\Support\Facades\Storage::disk('public')->url((string) ($featuredPost->cover_image_path ?? '')));
-            @endphp
-            <article class="feature" aria-label="Featured story">
-                <div class="feature-media">
-                    @if (trim((string) ($featuredPost->cover_image_path ?? '')) !== '')
-                        <img src="{{ $featuredImageUrl }}" alt="{{ $featuredPost->title }} cover image" loading="lazy">
-                    @endif
-                </div>
-                <div class="feature-body">
-                    <span class="chip">Featured</span>
-                    <h2 class="feature-title">{{ $featuredPost->title }}</h2>
-                    <p class="feature-meta">Published {{ optional($featuredPost->published_at)->format('M d, Y') ?? optional($featuredPost->created_at)->format('M d, Y') }}</p>
-                    <p class="feature-excerpt">{{ $featuredPost->excerpt ?: \Illuminate\Support\Str::limit(strip_tags((string) $featuredPost->content), 220) }}</p>
-                    <a class="feature-cta" href="{{ '/blog/' . $featuredPost->slug }}">Read story</a>
-                </div>
-            </article>
-        @endif
-
-        @if ($posts->isEmpty())
-            <div class="empty">No stories are published yet. Check back soon for guides and island inspiration.</div>
-        @else
-            <section class="grid" aria-label="Published blog posts">
-                @foreach ($posts as $post)
+        @if ($heroPosts->isNotEmpty())
+            <section class="hero-grid" aria-label="Top stories in this category">
+                @foreach ($heroPosts as $post)
                     @php
-                        $coverPath = trim((string) ($post->cover_image_path ?? ''));
-                        $coverUrl = $coverPath !== '' ? (string) \Illuminate\Support\Facades\Storage::disk('public')->url($coverPath) : '';
+                        $coverUrl = $postImageUrl($post);
                     @endphp
-                    <article class="card">
-                        <a class="card-media" href="{{ '/blog/' . $post->slug }}" aria-label="{{ $post->title }}">
-                            @if ($coverUrl !== '')
-                                <img src="{{ $coverUrl }}" alt="{{ $post->title }} cover image" loading="lazy">
-                            @endif
-                        </a>
-                        <div class="card-body">
-                            <h3 class="card-title"><a href="{{ '/blog/' . $post->slug }}">{{ $post->title }}</a></h3>
-                            <p class="card-meta">{{ optional($post->published_at)->format('M d, Y') ?? optional($post->created_at)->format('M d, Y') }}</p>
-                            <p class="card-excerpt">{{ $post->excerpt ?: \Illuminate\Support\Str::limit(strip_tags((string) $post->content), 140) }}</p>
-                        </div>
+                    <article class="hero-card">
+                        @if ($coverUrl !== '')
+                            <img src="{{ $coverUrl }}" alt="{{ $post->title }} hero image" loading="eager">
+                        @endif
+                        <h{{ $loop->first ? '1' : '2' }}><a href="{{ '/blog/' . $post->slug }}">{{ $post->title }}</a></h{{ $loop->first ? '1' : '2' }}>
                     </article>
                 @endforeach
             </section>
+        @else
+            <div class="hero-empty">No stories are currently available for this filter.</div>
         @endif
+
+        <section class="list-section" aria-label="Story listing">
+            <h2 class="list-title">
+                {{ $activeTag ? 'Stories for ' . ($activeTagLabel ?: \Illuminate\Support\Str::headline(str_replace('-', ' ', (string) $activeTag))) : 'More Stories About ' . $contextLabel }}
+                <small>{{ $activeTag ? 'Browse stories tagged in this topic.' : 'Curated picks across ' . $contextLabel . '.' }}</small>
+            </h2>
+
+            <div class="toolbar">
+                <a href="/blog">All stories</a>
+                <a href="/blog/tags">Explore all tags</a>
+                @if ($activeTag)
+                    <a href="{{ '/blog/tag/' . $activeTag }}">Current tag: {{ $activeTagLabel ?: \Illuminate\Support\Str::headline(str_replace('-', ' ', (string) $activeTag)) }}</a>
+                @endif
+            </div>
+
+            <div class="story-list">
+                @forelse ($listPosts as $post)
+                    @php
+                        $thumbUrl = $postImageUrl($post);
+                        $tags = collect($post->blog_tags ?? [])->take(5)->values();
+                    @endphp
+                    <article class="story-item">
+                        <a class="story-thumb" href="{{ '/blog/' . $post->slug }}" aria-label="{{ $post->title }}">
+                            @if ($thumbUrl !== '')
+                                <img src="{{ $thumbUrl }}" alt="{{ $post->title }} thumbnail" loading="lazy">
+                            @endif
+                        </a>
+                        <div>
+                            <div class="meta-row">
+                                <strong>{{ $postCategoryLabel($post) }}</strong>
+                                <span>{{ $postDate($post) }}</span>
+                            </div>
+                            <h3><a href="{{ '/blog/' . $post->slug }}">{{ $post->title }}</a></h3>
+                            @if ($tags->isNotEmpty())
+                                <div class="tags" aria-label="Blog tags">
+                                    @foreach ($tags as $tag)
+                                        <a class="tag-chip" href="{{ '/blog/tag/' . ($tag['slug'] ?? '') }}">{{ $tag['label'] ?? \Illuminate\Support\Str::headline(str_replace('-', ' ', (string) ($tag['slug'] ?? 'tag'))) }}</a>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    </article>
+                @empty
+                    <div class="hero-empty">No matching stories found for this view yet.</div>
+                @endforelse
+            </div>
+        </section>
 
         @include('partials.global-site-footer')
     </main>

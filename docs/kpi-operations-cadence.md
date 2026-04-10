@@ -7,6 +7,31 @@ This runbook operationalizes KPI review and action ownership for launch.
 - Route completion rate
 - Failed checkout reasons
 
+## Production Topology Context
+- Frontend web: Laravel Cloud (`www.workation.mv`)
+- API: Render (`api.workation.mv`)
+- Database: Neon PostgreSQL
+- Media: S3 (+ Cloudflare edge)
+- Blog: same web domain path (`/blog`) unless organization or security boundaries require separation
+
+## Core SLO Targets (Start Here)
+- Availability SLO:
+  - Web and API monthly uptime target: `99.9%`
+- API latency SLO:
+  - Read-heavy endpoints (`GET` search/list/detail): `p95 < 350ms`
+  - Write-heavy endpoints (`POST/PUT/PATCH/DELETE`): `p95 < 700ms`
+- Error budget:
+  - `5xx < 0.5%` over any 5-minute rolling window
+- Database responsiveness:
+  - Top 20 critical query patterns `p95 < 120ms`
+  - Slow query triage threshold: `>= 300ms`
+- Queue health:
+  - Critical queue delay `< 30s`
+  - Standard queue delay `< 2m`
+- Cache efficiency:
+  - Cloudflare edge hit ratio for static/media `> 85%`
+  - Application cache hit ratio for read-heavy pages `> 70%`
+
 ## Dashboard Ownership
 - Dashboard artifact: `infra/observability/grafana/workation-launch-kpi-dashboard.json`
 - Primary owner: Product Analytics Lead
@@ -48,6 +73,36 @@ This runbook operationalizes KPI review and action ownership for launch.
   - prioritized remediation list (top 3)
   - owner + ETA for each remediation
   - risk/impact note for launch command thread
+
+## Weekly and Monthly Ops Checklist
+### Weekly (mandatory)
+- Review top 20 slow SQL statements from Neon query insights.
+- Review API `p95` latency and `5xx` spikes by endpoint family.
+- Review queue depth, retry rate, and oldest-job age.
+- Review Cloudflare edge hit ratio and origin egress trend.
+- Review S3 growth trend and candidate orphaned media list.
+- Confirm cache invalidation behavior after content publish/update.
+
+### Monthly (mandatory)
+- Run SQL index audit against top filter/sort/search endpoints.
+- Archive old high-volume operational rows from hot tables.
+- Run restore drill on Neon branch/PITR and verify application health.
+- Run pre-peak load test profile and compare against baseline SLOs.
+- Validate Cloudflare WAF/rate-limit thresholds against current traffic.
+- Review retention windows (session/token/temp/log/audit) with product + compliance owners.
+
+## SQL Index Review Template
+Use this template for each high-traffic endpoint query path.
+
+| Endpoint | Query Pattern | Filters | Sort | Current Index | p95(ms) | Rows Scanned | Rows Returned | Candidate Index | Owner | ETA |
+|---|---|---|---|---|---:|---:|---:|---|---|---|
+| `/api/v1/...` | `SELECT ...` | `status, atoll_id` | `created_at DESC` | `idx_old` | 0 | 0 | 0 | `(status, atoll_id, created_at DESC)` | TBD | TBD |
+
+Index review rules:
+- Every high-volume `WHERE + ORDER BY` path must have a measured index strategy.
+- Avoid unbounded scans; enforce pagination and practical limits.
+- Re-check execution plans after major data growth milestones.
+- Prioritize indexes based on measured impact, not assumptions.
 
 ## Action Ownership Matrix
 - Funnel conversion anomalies: Product Analytics Lead

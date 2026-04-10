@@ -219,7 +219,7 @@
                 <div class="field wide">
                     <label for="blog_content">Content</label>
                     <textarea id="blog_content" name="content" required>{{ old('content', $isEdit ? $post->content : '') }}</textarea>
-                    <p class="hint">Use plain text with line breaks. The frontend renders this in a clean long-form reading layout.</p>
+                    <p class="hint">Use plain text with line breaks. For mid-article images use <code>![Caption](https://...)</code> or <code>[image:storage/path.jpg]</code>. Use <code>## Heading</code> for section titles.</p>
                 </div>
 
                 <div class="field">

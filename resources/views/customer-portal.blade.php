@@ -1026,33 +1026,50 @@
                             </div>
                             <div class="form-field">
                                 <label for="profilePhone">Phone</label>
-                                <input id="profilePhone" name="phone" type="tel" placeholder="Phone number">
+                                <input id="profilePhone" name="phone" type="tel" value="{{ old('phone', (string) ($customerProfile['phone'] ?? '')) }}" placeholder="Phone number">
                             </div>
                             <div class="form-field">
                                 <label for="profileDob">Date of birth</label>
-                                <input id="profileDob" name="dob" type="date">
+                                <input id="profileDob" name="dob" type="date" value="{{ old('dob', (string) ($customerProfile['dob'] ?? '')) }}">
                             </div>
                             <div class="form-field">
                                 <label for="profileNationality">Nationality</label>
-                                <input id="profileNationality" name="nationality" type="text" placeholder="Your nationality">
+                                <input id="profileNationality" name="nationality" type="text" value="{{ old('nationality', (string) ($customerProfile['nationality'] ?? '')) }}" placeholder="Your nationality">
                             </div>
                             <div class="form-field">
                                 <label for="profileGender">Gender</label>
                                 <select id="profileGender" name="gender">
-                                    <option value="">Prefer not to say</option>
-                                    <option value="male">Male</option>
-                                    <option value="female">Female</option>
-                                    <option value="other">Other</option>
+                                    <option value="" @selected(old('gender', (string) ($customerProfile['gender'] ?? '')) === '')>Prefer not to say</option>
+                                    <option value="male" @selected(old('gender', (string) ($customerProfile['gender'] ?? '')) === 'male')>Male</option>
+                                    <option value="female" @selected(old('gender', (string) ($customerProfile['gender'] ?? '')) === 'female')>Female</option>
+                                    <option value="other" @selected(old('gender', (string) ($customerProfile['gender'] ?? '')) === 'other')>Other</option>
                                 </select>
                             </div>
                             <div class="form-field">
                                 <label for="profileLanguage">Preferred language</label>
                                 <select id="profileLanguage" name="preferred_language">
-                                    <option value="en">English</option>
-                                    <option value="dv">Dhivehi</option>
-                                    <option value="ar">Arabic</option>
-                                    <option value="zh">Chinese</option>
+                                    <option value="en" @selected(old('preferred_language', (string) ($customerProfile['preferred_language'] ?? 'en')) === 'en')>English</option>
+                                    <option value="dv" @selected(old('preferred_language', (string) ($customerProfile['preferred_language'] ?? 'en')) === 'dv')>Dhivehi</option>
+                                    <option value="ar" @selected(old('preferred_language', (string) ($customerProfile['preferred_language'] ?? 'en')) === 'ar')>Arabic</option>
+                                    <option value="zh" @selected(old('preferred_language', (string) ($customerProfile['preferred_language'] ?? 'en')) === 'zh')>Chinese</option>
                                 </select>
+                            </div>
+                            <div class="form-field full-width">
+                                <label for="profileAddressLine">Address Line</label>
+                                <input id="profileAddressLine" name="address_line" type="text" value="{{ old('address_line', (string) ($customerProfile['address_line'] ?? '')) }}" placeholder="Street / House / Building">
+                            </div>
+                            <div class="form-field full-width">
+                                @include('components.atoll-island-select', [
+                                    'fieldNameAtoll' => 'address_atoll_id',
+                                    'fieldNameIsland' => 'address_island_id',
+                                    'labelAtoll' => 'Address Atoll',
+                                    'labelIsland' => 'Address Island',
+                                    'selectedAtoll' => old('address_atoll_id', (string) ($customerProfile['address_atoll_id'] ?? '')),
+                                    'selectedIsland' => old('address_island_id', (string) ($customerProfile['address_island_id'] ?? '')),
+                                    'requiredAtoll' => false,
+                                    'requiredIsland' => false,
+                                    'cssClass' => 'profile-input',
+                                ])
                             </div>
                         </div>
                         <div class="form-footer">

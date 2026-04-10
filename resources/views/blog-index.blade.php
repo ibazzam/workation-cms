@@ -603,31 +603,12 @@
         $allPosts = $posts->values();
 
         $postImageUrl = function ($post): string {
-            $resolved = trim((string) ($post->cover_image_url ?? ''));
-            if ($resolved !== '') {
-                return $resolved;
+            $candidate = trim((string) ($post->cover_image_url ?? ''));
+            if ($candidate === '') {
+                $candidate = trim((string) ($post->cover_image_path ?? ''));
             }
 
-            $coverPath = trim((string) ($post->cover_image_path ?? ''));
-            if ($coverPath === '') {
-                return '';
-            }
-
-            $coverPath = str_replace('\\\\', '/', $coverPath);
-
-            if (\Illuminate\Support\Str::startsWith($coverPath, ['storage/'])) {
-                return '/' . ltrim($coverPath, '/');
-            }
-
-            if (\Illuminate\Support\Str::startsWith($coverPath, ['public/'])) {
-                $coverPath = (string) \Illuminate\Support\Str::after($coverPath, 'public/');
-            }
-
-            if (\Illuminate\Support\Str::startsWith($coverPath, ['https://', 'http://', '//', '/'])) {
-                return $coverPath;
-            }
-
-            return (string) \Illuminate\Support\Facades\Storage::disk('public')->url($coverPath);
+            return blogResolveCoverImageUrl($candidate);
         };
 
         $activeCategorySlug = $activeCategory ?: 'all';
@@ -668,13 +649,6 @@
             $archivePosts = $allPosts->skip(2)->take(8)->values();
         }
 
-        $navLabels = [
-            'things-to-do' => 'Trip Ideas',
-            'attractions' => 'Blue Trails',
-            'stay' => 'Sleep + Slow',
-            'islands' => 'Island Atlas',
-        ];
-
         $postDate = function ($post): string {
             return optional($post->published_at)->format('M d, Y - l')
                 ?? optional($post->created_at)->format('M d, Y - l')
@@ -704,8 +678,8 @@
                 @foreach ($blogCategories as $slug => $meta)
                     @php
                         $isActiveCategory = !$activeTag && ($activeCategorySlug === $slug);
-                        $categoryHref = '/blog/category/' . $slug;
-                        $navLabel = (string) ($navLabels[$slug] ?? ($meta['label'] ?? \Illuminate\Support\Str::headline($slug)));
+                        $categoryHref = $slug === 'islands' ? '/islands' : ('/blog/category/' . $slug);
+                        $navLabel = (string) ($meta['label'] ?? \Illuminate\Support\Str::headline($slug));
                     @endphp
                     <a class="{{ $isActiveCategory ? 'is-active' : '' }}" href="{{ $categoryHref }}">{{ $navLabel }}</a>
                 @endforeach

@@ -1917,6 +1917,20 @@
                                 </div>
                             </div>
 
+                            <div class="field">
+                                <label for="homeSearchAtoll">Atoll</label>
+                                <select id="homeSearchAtoll" name="atoll">
+                                    <option value="">All Atolls</option>
+                                </select>
+                            </div>
+
+                            <div class="field">
+                                <label for="homeSearchIsland">Island</label>
+                                <select id="homeSearchIsland" name="island">
+                                    <option value="">All Islands</option>
+                                </select>
+                            </div>
+
                             <!-- Accommodation Fields -->
                             <div id="accommodationFields" class="search-dynamic-fields is-active" role="tabpanel" aria-labelledby="searchTab-accommodation" data-fields-for="accommodation" aria-hidden="false">
                                 <div class="field"><label for="checkin">Check-in</label><input id="checkin" name="checkin" type="date"></div>
@@ -2524,6 +2538,97 @@
                     setMenuOpen(false);
                 }
             });
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const atollSelect = document.getElementById('homeSearchAtoll');
+            const islandSelect = document.getElementById('homeSearchIsland');
+            if (!atollSelect || !islandSelect) {
+                return;
+            }
+
+            async function fetchJson(url) {
+                const response = await fetch(url, { cache: 'no-store' });
+                if (!response.ok) {
+                    throw new Error('Request failed: ' + response.status);
+                }
+                return response.json();
+            }
+
+            function rebuildSelect(selectEl, values, placeholder, selected) {
+                const selectedValue = String(selected || '').trim();
+                selectEl.innerHTML = '';
+
+                const emptyOption = document.createElement('option');
+                emptyOption.value = '';
+                emptyOption.textContent = placeholder;
+                selectEl.appendChild(emptyOption);
+
+                (values || []).forEach(function (value) {
+                    const normalized = String(value || '').trim();
+                    if (normalized === '') {
+                        return;
+                    }
+                    const option = document.createElement('option');
+                    option.value = normalized;
+                    option.textContent = normalized;
+                    if (selectedValue !== '' && selectedValue === normalized) {
+                        option.selected = true;
+                    }
+                    selectEl.appendChild(option);
+                });
+            }
+
+            async function init() {
+                try {
+                    const atolls = await fetchJson('/api/atoll-island/atolls');
+                    const atollRows = Array.isArray(atolls) ? atolls : [];
+                    const atollNames = atollRows
+                        .map(function (atoll) { return String(atoll && atoll.name ? atoll.name : '').trim(); })
+                        .filter(function (name) { return name !== ''; });
+
+                    rebuildSelect(atollSelect, atollNames, 'All Atolls', '');
+
+                    const islandsByAtoll = new Map();
+                    const allIslands = new Set();
+
+                    await Promise.all(atollRows.map(async function (atoll) {
+                        const atollId = Number(atoll && atoll.id ? atoll.id : 0);
+                        const atollName = String(atoll && atoll.name ? atoll.name : '').trim();
+                        if (atollId <= 0 || atollName === '') {
+                            return;
+                        }
+
+                        try {
+                            const islands = await fetchJson('/api/atoll-island/atolls/' + atollId + '/islands');
+                            const islandNames = (Array.isArray(islands) ? islands : [])
+                                .map(function (island) { return String(island && island.name ? island.name : '').trim(); })
+                                .filter(function (name) { return name !== ''; });
+                            islandsByAtoll.set(atollName, islandNames);
+                            islandNames.forEach(function (name) { allIslands.add(name); });
+                        } catch (error) {
+                            islandsByAtoll.set(atollName, []);
+                        }
+                    }));
+
+                    function updateIslandSelect() {
+                        const selectedAtoll = String(atollSelect.value || '').trim();
+                        const islandNames = selectedAtoll === ''
+                            ? Array.from(allIslands)
+                            : (islandsByAtoll.get(selectedAtoll) || []);
+                        rebuildSelect(islandSelect, islandNames, 'All Islands', '');
+                    }
+
+                    atollSelect.addEventListener('change', updateIslandSelect);
+                    updateIslandSelect();
+                } catch (error) {
+                    // Keep search usable even when location API is unavailable.
+                }
+            }
+
+            init();
         })();
     </script>
 </body>

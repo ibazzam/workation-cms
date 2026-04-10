@@ -1584,5 +1584,169 @@
             });
         })();
     </script>
+
+    <script>
+        (function () {
+            async function fetchJson(url) {
+                const response = await fetch(url, { cache: 'no-store' });
+                if (!response.ok) {
+                    throw new Error('Request failed: ' + response.status);
+                }
+                return response.json();
+            }
+
+            function rebuildSelect(selectEl, options, placeholder, selectedValue) {
+                if (!selectEl) {
+                    return;
+                }
+
+                const selected = String(selectedValue || '').trim();
+                selectEl.innerHTML = '';
+
+                const emptyOption = document.createElement('option');
+                emptyOption.value = '';
+                emptyOption.textContent = placeholder;
+                selectEl.appendChild(emptyOption);
+
+                (options || []).forEach(function (value) {
+                    const normalized = String(value || '').trim();
+                    if (normalized === '') {
+                        return;
+                    }
+                    const option = document.createElement('option');
+                    option.value = normalized;
+                    option.textContent = normalized;
+                    if (selected !== '' && normalized === selected) {
+                        option.selected = true;
+                    }
+                    selectEl.appendChild(option);
+                });
+
+                if (selected !== '' && !Array.from(selectEl.options).some(function (opt) { return opt.value === selected; })) {
+                    const fallbackOption = document.createElement('option');
+                    fallbackOption.value = selected;
+                    fallbackOption.textContent = selected;
+                    fallbackOption.selected = true;
+                    selectEl.appendChild(fallbackOption);
+                }
+            }
+
+            async function initAtollIslandSearch() {
+                const primaryAtoll = document.getElementById('atoll');
+                const primaryIsland = document.getElementById('island');
+                const restaurantAtoll = document.getElementById('atoll_restaurant');
+                const restaurantIsland = document.getElementById('current_island');
+                const rentalAtoll = document.getElementById('atoll_rental');
+                const rentalIsland = document.getElementById('pickup_island');
+
+                const atollSelectors = [primaryAtoll, restaurantAtoll, rentalAtoll].filter(Boolean);
+                const islandSelectors = [primaryIsland, restaurantIsland, rentalIsland].filter(Boolean);
+
+                if (atollSelectors.length === 0 && islandSelectors.length === 0) {
+                    return;
+                }
+
+                let atolls = [];
+                try {
+                    atolls = await fetchJson('/api/atoll-island/atolls');
+                } catch (error) {
+                    return;
+                }
+
+                const atollNameById = new Map();
+                const atollIdByName = new Map();
+                (Array.isArray(atolls) ? atolls : []).forEach(function (atoll) {
+                    const id = Number(atoll && atoll.id ? atoll.id : 0);
+                    const name = String(atoll && atoll.name ? atoll.name : '').trim();
+                    if (id <= 0 || name === '') {
+                        return;
+                    }
+                    atollNameById.set(id, name);
+                    atollIdByName.set(name, id);
+                });
+
+                atollSelectors.forEach(function (selectEl) {
+                    const selected = String(selectEl.value || '').trim();
+                    rebuildSelect(
+                        selectEl,
+                        Array.from(atollIdByName.keys()),
+                        'All Atolls',
+                        selected
+                    );
+                });
+
+                const islandsByAtollName = new Map();
+                const allIslandNames = new Set();
+
+                await Promise.all(Array.from(atollIdByName.entries()).map(async function (entry) {
+                    const atollName = entry[0];
+                    const atollId = entry[1];
+                    try {
+                        const islands = await fetchJson('/api/atoll-island/atolls/' + atollId + '/islands');
+                        const names = (Array.isArray(islands) ? islands : [])
+                            .map(function (island) { return String(island && island.name ? island.name : '').trim(); })
+                            .filter(function (name) { return name !== ''; });
+                        islandsByAtollName.set(atollName, names);
+                        names.forEach(function (name) { allIslandNames.add(name); });
+                    } catch (error) {
+                        islandsByAtollName.set(atollName, []);
+                    }
+                }));
+
+                function updatePrimaryIslandOptions() {
+                    if (!primaryIsland || !primaryAtoll) {
+                        return;
+                    }
+                    const selectedAtollName = String(primaryAtoll.value || '').trim();
+                    const selectedIsland = String(primaryIsland.value || '').trim();
+                    const islandNames = selectedAtollName !== ''
+                        ? (islandsByAtollName.get(selectedAtollName) || [])
+                        : Array.from(allIslandNames);
+                    rebuildSelect(primaryIsland, islandNames, 'All Islands/Cities', selectedIsland);
+                }
+
+                function updateRestaurantIslandOptions() {
+                    if (!restaurantIsland || !restaurantAtoll) {
+                        return;
+                    }
+                    const selectedAtollName = String(restaurantAtoll.value || '').trim();
+                    const selectedIsland = String(restaurantIsland.value || '').trim();
+                    const islandNames = selectedAtollName !== ''
+                        ? (islandsByAtollName.get(selectedAtollName) || [])
+                        : Array.from(allIslandNames);
+                    rebuildSelect(restaurantIsland, islandNames, 'All Islands', selectedIsland);
+                }
+
+                function updateRentalIslandOptions() {
+                    if (!rentalIsland || !rentalAtoll) {
+                        return;
+                    }
+                    const selectedAtollName = String(rentalAtoll.value || '').trim();
+                    const selectedIsland = String(rentalIsland.value || '').trim();
+                    const islandNames = selectedAtollName !== ''
+                        ? (islandsByAtollName.get(selectedAtollName) || [])
+                        : Array.from(allIslandNames);
+                    rebuildSelect(rentalIsland, islandNames, 'All Islands', selectedIsland);
+                }
+
+                if (primaryAtoll) {
+                    primaryAtoll.addEventListener('change', updatePrimaryIslandOptions);
+                    updatePrimaryIslandOptions();
+                }
+
+                if (restaurantAtoll) {
+                    restaurantAtoll.addEventListener('change', updateRestaurantIslandOptions);
+                    updateRestaurantIslandOptions();
+                }
+
+                if (rentalAtoll) {
+                    rentalAtoll.addEventListener('change', updateRentalIslandOptions);
+                    updateRentalIslandOptions();
+                }
+            }
+
+            initAtollIslandSearch();
+        })();
+    </script>
 </body>
 </html>

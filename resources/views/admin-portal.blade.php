@@ -1020,6 +1020,7 @@
             <p class="nav-group-title">Content &amp; Media</p>
             <a class="{{ $adminPage === 'content' ? 'prominent' : '' }}" href="/admin/content">Content Hub</a>
             <a href="/portal/admin/blog">Blog Manager</a>
+            <a href="/portal/admin/atlas">Island Atlas Manager</a>
             <a href="/portal/admin/newsletter">Newsletter Manager</a>
             <a href="/portal/admin/announcement">Announcement Manager</a>
             @endif
@@ -1122,6 +1123,8 @@
             <div class="quick-actions" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:10px;">
                 <a class="btn-link" href="/portal/admin/blog">Open Blog Manager</a>
                 <a class="btn-link" href="/portal/admin/blog/create">Write Blog Post</a>
+                <a class="btn-link" href="/portal/admin/atlas">Open Island Atlas Manager</a>
+                <a class="btn-link" href="/portal/admin/atlas/islands/create">Create Island Record</a>
                 <a class="btn-link" href="/portal/admin/newsletter">Open Newsletters</a>
                 <a class="btn-link" href="/portal/admin/newsletter/create">Create Newsletter</a>
                 <a class="btn-link" href="/portal/admin/announcement">Open Announcements</a>

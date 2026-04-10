@@ -1821,7 +1821,6 @@ if (!function_exists('blogTagDefinitions')) {
         if (Schema::hasTable('blog_posts') && Schema::hasColumn('blog_posts', 'blog_tag_slugs')) {
             $storedTagValues = DB::table('blog_posts')
                 ->whereNotNull('blog_tag_slugs')
-                ->where('blog_tag_slugs', '!=', '')
                 ->limit(500)
                 ->pluck('blog_tag_slugs');
 
@@ -8652,20 +8651,36 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
         $username = trim((string) $validated['username']);
         $password = (string) $validated['password'];
         $usernameLower = strtolower($username);
+        $normalizedAllowedRoles = collect($config['allowed_roles'])
+            ->map(function ($role) {
+                return normalizePortalRoleValue((string) $role);
+            })
+            ->unique()
+            ->values()
+            ->all();
 
         $portalUser = null;
 
         // Admin/vendor login: users table; customer login: User table with vendor bridge.
         if (in_array('ADMIN', $config['allowed_roles'], true) || in_array('VENDOR', $config['allowed_roles'], true)) {
             if (Schema::hasColumns('users', ['username', 'portal_enabled', 'portal_role'])) {
-                $portalUser = \App\Models\User::query()
+                $portalCandidates = \App\Models\User::query()
                     ->where(function ($query) use ($usernameLower) {
                         $query->whereRaw('LOWER(username) = ?', [$usernameLower])
                             ->orWhereRaw('LOWER(email) = ?', [$usernameLower]);
                     })
                     ->where('portal_enabled', true)
-                    ->whereIn('portal_role', $config['allowed_roles'])
-                    ->first();
+                    ->get();
+
+                $portalUser = $portalCandidates->first(function (\App\Models\User $candidate) use ($portal, $normalizedAllowedRoles) {
+                    $resolvedRole = normalizePortalRoleValue((string) $candidate->portal_role);
+
+                    if ($portal === 'admin' && Str::startsWith($resolvedRole, 'ADMIN')) {
+                        return true;
+                    }
+
+                    return in_array($resolvedRole, $normalizedAllowedRoles, true);
+                });
 
                 if (
                     $portal === 'vendor'

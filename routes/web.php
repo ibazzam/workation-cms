@@ -6123,17 +6123,19 @@ Route::post('/portal/admin/announcement/{id}/delete', function (int $id) {
             return back()->withErrors(['auth' => 'Insufficient privileges to create portal users.']);
         }
 
+        $request->merge([
+            'portal_role' => normalizePortalRoleValue((string) $request->input('portal_role', '')),
+        ]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'email' => 'required|email|max:100|unique:users,email',
-            'portal_role' => 'required|in:ADMIN,ADMIN_SUPER,ADMIN_CARE,ADMIN_FINANCE,ADMIN_FINACE,ADMIN_MEDIA,VENDOR',
+            'portal_role' => 'required|in:ADMIN,ADMIN_SUPER,ADMIN_CARE,ADMIN_FINANCE,ADMIN_MEDIA,VENDOR',
             'portal_enabled' => 'required|boolean',
             'portal_vendor_id' => 'nullable|string|max:255',
         ]);
 
-        $normalizedRole = $validated['portal_role'] === 'ADMIN_FINACE'
-            ? 'ADMIN_FINANCE'
-            : $validated['portal_role'];
+        $normalizedRole = normalizePortalRoleValue((string) $validated['portal_role']);
 
         if (!$canManageUsers && $normalizedRole !== 'VENDOR') {
             if ($request->expectsJson()) {
@@ -7689,16 +7691,9 @@ Route::post('/portal/{portal}/forgot-password', function (Request $request, stri
         try {
             $token = $broker->createToken($portalUser);
             $resetUrl = url('/portal/' . $portal . '/reset-password/' . $token . '?email=' . rawurlencode($email));
-            $portalLabel = ucfirst($portal);
-            $displayName = trim((string) ($portalUser->name ?? ''));
-            $greeting = $displayName !== '' ? "Hi {$displayName}," : 'Hello,';
 
-            Mail::raw(
-                "{$greeting}\n\nWe received a request to reset your {$portalLabel} account password on Workation.\n\nUse the link below to set a new password. This link expires in 60 minutes:\n\n{$resetUrl}\n\nIf you did not request a password reset, you can safely ignore this email. Your password will not change.\n\n— Workation Support",
-                static function ($message) use ($email, $portalLabel) {
-                    $message->to($email)->subject('Reset Your ' . $portalLabel . ' Password | Workation');
-                }
-            );
+            // Use Laravel's reset notification pipeline so all portal users share one reliable delivery path.
+            $portalUser->sendPasswordResetNotification($token);
             $mailSent = true;
 
             // Debug link available in local/testing environments.
@@ -8099,8 +8094,12 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
         abort(403);
     }
 
+    $request->merge([
+        'portal_role' => normalizePortalRoleValue((string) $request->input('portal_role', '')),
+    ]);
+
     $validated = $request->validate([
-        'portal_role' => ['required', 'in:ADMIN,ADMIN_SUPER,ADMIN_CARE,ADMIN_FINANCE,ADMIN_FINACE,VENDOR'],
+        'portal_role' => ['required', 'in:ADMIN,ADMIN_SUPER,ADMIN_CARE,ADMIN_FINANCE,ADMIN_MEDIA,VENDOR'],
         'portal_enabled' => ['required', 'in:1,0'],
         'portal_vendor_id' => ['nullable', 'string', 'max:255'],
         'vendor_verification_status' => ['nullable', 'in:pending,under_review,approved,rejected,suspended'],
@@ -8118,10 +8117,7 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
         ]);
     }
 
-    $nextRole = (string) $validated['portal_role'];
-    if ($nextRole === 'ADMIN_FINACE') {
-        $nextRole = 'ADMIN_FINANCE';
-    }
+    $nextRole = normalizePortalRoleValue((string) $validated['portal_role']);
 
     if (!$canManageUsers && $nextRole !== 'VENDOR') {
         return back()->withErrors([

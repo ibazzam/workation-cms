@@ -108,8 +108,13 @@ Use this checklist to gate milestone completion and launch progression.
 ## Milestone M8: Launch Readiness
 ### Blockers
 - [ ] External observability stack operational with dashboards and alert routes.
+- [ ] KPI/SLO targets approved and alert thresholds mapped to owners.
 - [ ] Security and data-governance controls validated in latest release window.
+- [ ] Cache policy + invalidation rules validated in production-like staging.
+- [ ] Data cleanup and retention jobs verified (dry-run + execution evidence).
+- [ ] SQL index review completed for top critical endpoints.
 - [ ] Load/performance and live preflight gates pass for launch target.
+- [ ] Pre-peak load test checklist executed with pass criteria met.
 - [ ] Support tooling and compensation governance in active operations.
 - [ ] Go/no-go decision recorded with rollback owner and procedure.
 ### Readiness

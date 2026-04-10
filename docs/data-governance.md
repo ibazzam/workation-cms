@@ -24,6 +24,47 @@ This document defines operational data governance controls for Workation (Render
 - Operational logs and metrics:
   - keep according to observability storage policy and cost/compliance constraints
 
+## Cache Policy Matrix
+Use targeted invalidation and TTL strategy. Avoid full-cache flushes in production unless incident response explicitly requires it.
+
+| Layer | Typical Data | TTL Guideline | Invalidation Trigger | Notes |
+|---|---|---|---|---|
+| Cloudflare edge | Static assets + cacheable public pages | Long for versioned assets, short for HTML | Deploy/version change or content publish | Keep `/api/*` dynamic unless explicitly cache-safe |
+| Application cache | Read-heavy list/detail payloads | `60-300s` (by endpoint volatility) | Event-based invalidation (publish/update/delete) | Prefer key prefix/tag invalidation over global clear |
+| Browser cache | CSS/JS/image assets | Long for hashed assets | Asset filename/version change | Ensure immutable caching for versioned files |
+| S3 + CDN media | Image/video objects | Long (versioned object key) | New object version upload | Never overwrite in place without cache-busting strategy |
+
+## Data Cleanup and Junk Control
+Minimum cleanup controls for scale growth:
+
+- Sessions/tokens/temp rows:
+  - prune expired rows daily
+- Queue artifacts:
+  - prune failed job history and stale batches on cadence
+- Temporary files:
+  - delete stale temporary uploads and generated transient files
+- Orphan media in S3:
+  - run weekly orphan-report, monthly delete after grace period
+- Historical high-volume rows:
+  - archive old data before delete for compliance-sensitive tables
+
+## Recommended Cleanup Cadence
+- Daily:
+  - expired sessions/tokens/temp records
+  - queue maintenance checks
+- Weekly:
+  - orphan media report
+  - cache key-space and hit ratio review
+- Monthly:
+  - archive/prune run with signoff
+  - retention window review
+
+## Operational Safety Rules
+- Use dry-run mode where available before destructive prune/archive.
+- Record row/object counts before and after cleanup.
+- Execute heavy prune/archive during low-traffic windows.
+- Keep rollback/restore path validated (Neon restore branch/PITR).
+
 ## Backup and Restore Drill (Neon)
 Run at least quarterly.
 

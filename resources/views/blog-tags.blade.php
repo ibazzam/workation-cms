@@ -198,14 +198,15 @@
 
     <main class="page">
         <header class="header-bar" aria-label="Blog category header">
-            <a class="brand" href="/">
+            <a class="brand" href="/blog">
                 Workation
                 <small>Blog</small>
             </a>
             <nav class="nav-links" aria-label="Blog categories">
+                <a href="/blog">All Stories</a>
                 @foreach ($blogCategories as $slug => $meta)
                     @php
-                        $href = $slug === 'things-to-do' ? '/blog' : '/blog/category/' . $slug;
+                        $href = '/blog/category/' . $slug;
                         $navLabel = (string) ($navLabels[$slug] ?? ($meta['label'] ?? \Illuminate\Support\Str::headline($slug)));
                     @endphp
                     <a href="{{ $href }}">{{ $navLabel }}</a>

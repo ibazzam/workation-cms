@@ -15,6 +15,8 @@ class BlogPost extends Model
         'excerpt',
         'content',
         'cover_image_path',
+        'blog_category_slug',
+        'blog_tag_slugs',
         'is_featured',
         'is_published',
         'published_at',
@@ -29,6 +31,7 @@ class BlogPost extends Model
     protected $casts = [
         'is_featured' => 'boolean',
         'is_published' => 'boolean',
+        'blog_tag_slugs' => 'array',
         'published_at' => 'datetime',
         'reviewed_at' => 'datetime',
     ];

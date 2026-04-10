@@ -534,6 +534,13 @@
         if ($postCoverUrl === '') {
             $postCoverPath = trim((string) ($post->cover_image_path ?? ''));
             if ($postCoverPath !== '') {
+                $postCoverPath = str_replace('\\', '/', $postCoverPath);
+                if (\Illuminate\Support\Str::startsWith($postCoverPath, ['storage/'])) {
+                    $postCoverPath = '/' . ltrim($postCoverPath, '/');
+                }
+                if (\Illuminate\Support\Str::startsWith($postCoverPath, ['public/'])) {
+                    $postCoverPath = (string) \Illuminate\Support\Str::after($postCoverPath, 'public/');
+                }
                 $postCoverUrl = \Illuminate\Support\Str::startsWith($postCoverPath, ['https://', 'http://', '//', '/'])
                     ? $postCoverPath
                     : (string) \Illuminate\Support\Facades\Storage::disk('public')->url($postCoverPath);
@@ -649,14 +656,15 @@
 
     <main class="page">
         <header class="header-bar" aria-label="Blog category header">
-            <a class="brand" href="/">
+            <a class="brand" href="/blog">
                 Workation
                 <small>Blog</small>
             </a>
             <nav class="nav-links" aria-label="Blog categories">
+                <a href="/blog">All Stories</a>
                 @foreach ($blogCategories as $slug => $meta)
                     @php
-                        $href = $slug === 'things-to-do' ? '/blog' : '/blog/category/' . $slug;
+                        $href = '/blog/category/' . $slug;
                         $navLabel = (string) ($navLabels[$slug] ?? ($meta['label'] ?? \Illuminate\Support\Str::headline($slug)));
                     @endphp
                     <a class="{{ $slug === $postCategorySlug ? 'is-active' : '' }}" href="{{ $href }}">{{ $navLabel }}</a>
@@ -761,6 +769,13 @@
                             if ($relatedCoverUrl === '') {
                                 $relatedCoverPath = trim((string) ($relatedPost->cover_image_path ?? ''));
                                 if ($relatedCoverPath !== '') {
+                                    $relatedCoverPath = str_replace('\\', '/', $relatedCoverPath);
+                                    if (\Illuminate\Support\Str::startsWith($relatedCoverPath, ['storage/'])) {
+                                        $relatedCoverPath = '/' . ltrim($relatedCoverPath, '/');
+                                    }
+                                    if (\Illuminate\Support\Str::startsWith($relatedCoverPath, ['public/'])) {
+                                        $relatedCoverPath = (string) \Illuminate\Support\Str::after($relatedCoverPath, 'public/');
+                                    }
                                     $relatedCoverUrl = \Illuminate\Support\Str::startsWith($relatedCoverPath, ['https://', 'http://', '//', '/'])
                                         ? $relatedCoverPath
                                         : (string) \Illuminate\Support\Facades\Storage::disk('public')->url($relatedCoverPath);

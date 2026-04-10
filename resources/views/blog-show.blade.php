@@ -8,13 +8,15 @@
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
     <style>
         :root {
-            --bg: #eceeef;
-            --surface: #ffffff;
-            --ink: #111f2a;
-            --muted: #52697d;
-            --line: #d7dfe4;
-            --brand: #44be66;
-            --chip-line: #5ad176;
+            --bg: #e9efec;
+            --surface: #f8fbf9;
+            --surface-soft: #eaf3f1;
+            --ink: #0d1f2a;
+            --muted: #5c6f7d;
+            --line: #ccd8de;
+            --brand: #007e7a;
+            --chip-line: #8fd38a;
+            --tag-ink: #1a7034;
         }
 
         * { box-sizing: border-box; }
@@ -23,35 +25,38 @@
             margin: 0;
             font-family: "Outfit", "Trebuchet MS", sans-serif;
             color: var(--ink);
-            background: var(--bg);
+            background:
+                radial-gradient(circle at 20% -10%, #f8ffde 0%, rgba(248, 255, 222, 0) 33%),
+                linear-gradient(180deg, #f1f5f2 0%, var(--bg) 100%);
         }
 
         .page {
-            width: min(1280px, calc(100% - 30px));
-            margin: 0 auto 30px;
+            width: min(1180px, calc(100% - 24px));
+            margin: 0 auto 28px;
         }
 
         .header-bar {
-            min-height: 98px;
+            min-height: 84px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 18px;
-            background: var(--surface);
-            border-bottom: 1px solid var(--line);
+            gap: 16px;
             position: sticky;
             top: 0;
-            z-index: 25;
-            padding: 0 8px;
+            z-index: 30;
+            padding: 0 10px;
+            backdrop-filter: blur(8px);
+            background: rgba(249, 252, 250, 0.92);
+            border-bottom: 1px solid rgba(182, 200, 208, 0.55);
         }
 
         .brand {
             margin: 0;
             text-decoration: none;
-            font-size: 2.15rem;
+            font-size: 2rem;
             line-height: 1;
-            letter-spacing: -0.045em;
-            color: #52be72;
+            letter-spacing: -0.04em;
+            color: var(--brand);
             font-weight: 800;
             display: inline-flex;
             align-items: center;
@@ -59,10 +64,10 @@
         }
 
         .brand small {
-            color: #1b2832;
-            font-size: 0.86rem;
+            color: var(--ink);
+            font-size: 0.8rem;
             text-transform: uppercase;
-            letter-spacing: 0.2em;
+            letter-spacing: 0.18em;
             font-weight: 700;
         }
 
@@ -76,22 +81,25 @@
 
         .nav-links a {
             text-decoration: none;
-            color: #152632;
-            font-size: 1.02rem;
+            color: #1a3241;
+            font-size: 0.84rem;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.01em;
-            padding: 8px 10px;
-            border-radius: 8px;
+            letter-spacing: 0.08em;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid transparent;
         }
 
         .nav-links a.is-active {
-            color: var(--brand);
+            color: #0a3e50;
+            border-color: #9ac9c6;
+            background: #e7f6f4;
         }
 
         .nav-links a:hover {
-            background: #ebf7ef;
-            color: #27964a;
+            border-color: #b5cdd9;
+            background: #f2f8fd;
         }
 
         .hero {
@@ -177,22 +185,23 @@
             text-decoration: none;
             border: 1px solid var(--chip-line);
             border-radius: 11px;
-            color: #46bd66;
+            color: var(--tag-ink);
             font-size: 0.86rem;
             font-weight: 700;
             padding: 7px 14px;
             line-height: 1;
-            background: rgba(255,255,255,0.7);
+            background: #f0faf3;
         }
 
         .tag-chip.muted {
             border-color: #aebfcd;
             color: #8a9eaf;
+            background: #f8fbfe;
         }
 
         .tag-chip:hover {
-            background: #ebf8ef;
-            color: #2f9f4f;
+            background: #e2f3e7;
+            color: #146a31;
         }
 
         .share-row {
@@ -227,6 +236,50 @@
             display: grid;
             grid-template-columns: minmax(0, 1fr) 360px;
             gap: 34px;
+        }
+
+        .work-event-callout {
+            margin: 10px 0 24px;
+            border: 1px solid #cad8e1;
+            border-radius: 14px;
+            padding: 16px;
+            background: linear-gradient(130deg, #eef8f6 0%, #edf4fb 55%, #f7faef 100%);
+        }
+
+        .work-event-callout h2 {
+            margin: 0;
+            font-size: clamp(1.2rem, 2.1vw, 1.72rem);
+            line-height: 1.14;
+            letter-spacing: -0.02em;
+        }
+
+        .work-event-callout p {
+            margin: 8px 0 0;
+            color: #3b5c6f;
+            font-size: 0.95rem;
+        }
+
+        .work-event-links {
+            margin-top: 12px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .work-event-links a {
+            text-decoration: none;
+            border: 1px solid #9ebbc8;
+            border-radius: 999px;
+            padding: 8px 13px;
+            color: #0f3448;
+            background: #f8fcff;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .work-event-links a:hover {
+            border-color: #7da2b6;
+            background: #eef7fd;
         }
 
         .content {
@@ -477,10 +530,23 @@
 </head>
 <body>
     @php
-        $postCoverPath = trim((string) ($post->cover_image_path ?? ''));
-        $postCoverUrl = $postCoverPath !== '' ? (string) \Illuminate\Support\Facades\Storage::disk('public')->url($postCoverPath) : '';
+        $postCoverUrl = trim((string) ($post->cover_image_url ?? ''));
+        if ($postCoverUrl === '') {
+            $postCoverPath = trim((string) ($post->cover_image_path ?? ''));
+            if ($postCoverPath !== '') {
+                $postCoverUrl = \Illuminate\Support\Str::startsWith($postCoverPath, ['https://', 'http://', '//', '/'])
+                    ? $postCoverPath
+                    : (string) \Illuminate\Support\Facades\Storage::disk('public')->url($postCoverPath);
+            }
+        }
         $postCategorySlug = (string) ($post->blog_category_slug ?? 'things-to-do');
         $postCategoryLabel = (string) ($post->blog_category_label ?? 'Things to Do');
+        $navLabels = [
+            'things-to-do' => 'Trip Ideas',
+            'attractions' => 'Blue Trails',
+            'stay' => 'Sleep + Slow',
+            'islands' => 'Island Atlas',
+        ];
 
         $sidebarAd = is_array($blogSidebarAd ?? null) ? $blogSidebarAd : [];
         $sidebarAdTitle = trim((string) ($sidebarAd['title'] ?? 'Charter a vessel?'));
@@ -591,10 +657,10 @@
                 @foreach ($blogCategories as $slug => $meta)
                     @php
                         $href = $slug === 'things-to-do' ? '/blog' : '/blog/category/' . $slug;
+                        $navLabel = (string) ($navLabels[$slug] ?? ($meta['label'] ?? \Illuminate\Support\Str::headline($slug)));
                     @endphp
-                    <a class="{{ $slug === $postCategorySlug ? 'is-active' : '' }}" href="{{ $href }}">{{ $meta['label'] ?? \Illuminate\Support\Str::headline($slug) }}</a>
+                    <a class="{{ $slug === $postCategorySlug ? 'is-active' : '' }}" href="{{ $href }}">{{ $navLabel }}</a>
                 @endforeach
-                <a href="/islands">Islands</a>
             </nav>
         </header>
 
@@ -634,6 +700,15 @@
 
             <div class="article-layout">
                 <article class="content" aria-label="Article body">
+                    <section class="work-event-callout" aria-label="Conference and workspace planning links">
+                        <h2>Planning a team retreat, workshop, or conference in Maldives?</h2>
+                        <p>Pair this story context with live venue discovery for island workspaces and event-ready conference facilities.</p>
+                        <div class="work-event-links">
+                            <a href="/catalog/remote_workspace">Open Remote Workspace Listings</a>
+                            <a href="/catalog/conference_room">Open Conference & Event Spaces</a>
+                        </div>
+                    </section>
+
                     @forelse ($contentBlocks as $block)
                         @if ($block['type'] === 'h2')
                             <h2>{{ $block['text'] }}</h2>
@@ -682,8 +757,15 @@
                 <div class="related-grid">
                     @foreach ($relatedCards as $relatedPost)
                         @php
-                            $relatedCoverPath = trim((string) ($relatedPost->cover_image_path ?? ''));
-                            $relatedCoverUrl = $relatedCoverPath !== '' ? (string) \Illuminate\Support\Facades\Storage::disk('public')->url($relatedCoverPath) : '';
+                            $relatedCoverUrl = trim((string) ($relatedPost->cover_image_url ?? ''));
+                            if ($relatedCoverUrl === '') {
+                                $relatedCoverPath = trim((string) ($relatedPost->cover_image_path ?? ''));
+                                if ($relatedCoverPath !== '') {
+                                    $relatedCoverUrl = \Illuminate\Support\Str::startsWith($relatedCoverPath, ['https://', 'http://', '//', '/'])
+                                        ? $relatedCoverPath
+                                        : (string) \Illuminate\Support\Facades\Storage::disk('public')->url($relatedCoverPath);
+                                }
+                            }
                             $relatedCategoryLabel = (string) ($relatedPost->blog_category_label ?? $postCategoryLabel);
                             $relatedDate = optional($relatedPost->published_at)->format('M d, Y - l')
                                 ?? optional($relatedPost->created_at)->format('M d, Y - l')

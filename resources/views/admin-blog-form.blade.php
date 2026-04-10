@@ -195,7 +195,12 @@
             $isEdit = $mode === 'edit' && $post;
             $formAction = $isEdit ? ('/portal/admin/blog/' . $post->id) : '/portal/admin/blog';
             $coverPath = $isEdit ? trim((string) ($post->cover_image_path ?? '')) : '';
-            $coverUrl = $coverPath !== '' ? (string) \Illuminate\Support\Facades\Storage::disk('public')->url($coverPath) : '';
+            $coverUrl = '';
+            if ($coverPath !== '') {
+                $coverUrl = \Illuminate\Support\Str::startsWith($coverPath, ['https://', 'http://', '//', '/'])
+                    ? $coverPath
+                    : (string) \Illuminate\Support\Facades\Storage::disk('public')->url($coverPath);
+            }
             $portalRole = strtoupper((string) session('portal_admin_role', ''));
             $isMediaRole = $portalRole === 'ADMIN_MEDIA';
             $canReview = (bool) ($canEditorialReview ?? false);

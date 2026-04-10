@@ -161,6 +161,13 @@
             margin-bottom: 32px;
         }
 
+        .type-filter {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
         .atoll-chip {
             padding: 6px 18px;
             border-radius: 40px;
@@ -183,6 +190,29 @@
             background: var(--ink);
             color: #fff;
             border-color: var(--ink);
+        }
+
+        .type-chip {
+            padding: 6px 16px;
+            border-radius: 40px;
+            border: 1.5px solid var(--line);
+            background: var(--surface);
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--muted);
+            text-decoration: none;
+            transition: background .15s, color .15s, border-color .15s;
+        }
+
+        .type-chip:hover {
+            border-color: var(--brand);
+            color: var(--brand);
+        }
+
+        .type-chip.is-active {
+            background: #e7f7ed;
+            color: #127a33;
+            border-color: #7fce95;
         }
 
         /* ── Islands grid ── */
@@ -294,12 +324,30 @@
     /** @var \Illuminate\Support\Collection $atolls */
     /** @var \Illuminate\Support\Collection $islands */
     /** @var string|null $activeAtollSlug */
+    /** @var string|null $activeIslandType */
 
     $activeAtoll = $atolls->first(fn ($a) => ($a->slug ?? Str::slug($a->name)) === $activeAtollSlug);
+    $typeLabelMap = [
+        'inhabited' => 'Inhabited',
+        'uninhabited' => 'Uninhabited',
+        'resort' => 'Resort',
+    ];
+    $activeTypeLabel = $activeIslandType !== null ? ($typeLabelMap[$activeIslandType] ?? null) : null;
     $pageTitle = $activeAtoll ? 'Islands of ' . $activeAtoll->name . ' Atoll' : 'Islands of Maldives';
+    if ($activeTypeLabel !== null) {
+        $pageTitle .= ' · ' . $activeTypeLabel . ' Islands';
+    }
     $pageSubtitle = $activeAtoll
         ? 'Explore all islands within the ' . $activeAtoll->name . ' administrative atoll.'
         : 'Discover the inhabited and uninhabited islands across all atolls of the Maldives.';
+
+    $islandFilterHref = function (?string $atollSlug, ?string $islandType) {
+        $basePath = $atollSlug ? '/islands/atoll/' . $atollSlug : '/islands';
+        if ($islandType === null || trim($islandType) === '') {
+            return $basePath;
+        }
+        return $basePath . '?type=' . urlencode($islandType);
+    };
 @endphp
 
 <header class="header-bar" aria-label="Site navigation">
@@ -335,11 +383,19 @@
         >
     </div>
 
+    {{-- Island type filter chips --}}
+    <div class="type-filter" role="navigation" aria-label="Filter by island type">
+        <a class="type-chip {{ $activeIslandType === null ? 'is-active' : '' }}" href="{{ $islandFilterHref($activeAtollSlug, null) }}">All Types</a>
+        <a class="type-chip {{ $activeIslandType === 'inhabited' ? 'is-active' : '' }}" href="{{ $islandFilterHref($activeAtollSlug, 'inhabited') }}">Inhabited</a>
+        <a class="type-chip {{ $activeIslandType === 'uninhabited' ? 'is-active' : '' }}" href="{{ $islandFilterHref($activeAtollSlug, 'uninhabited') }}">Uninhabited</a>
+        <a class="type-chip {{ $activeIslandType === 'resort' ? 'is-active' : '' }}" href="{{ $islandFilterHref($activeAtollSlug, 'resort') }}">Resort</a>
+    </div>
+
     {{-- Atoll filter chips --}}
     <div class="atoll-filter" role="navigation" aria-label="Filter by atoll">
         <a
             class="atoll-chip {{ $activeAtollSlug === null ? 'is-active' : '' }}"
-            href="/islands"
+            href="{{ $islandFilterHref(null, $activeIslandType) }}"
         >All Atolls</a>
         @foreach ($atolls as $atoll)
             @php
@@ -347,7 +403,7 @@
             @endphp
             <a
                 class="atoll-chip {{ $activeAtollSlug === $atollSlug ? 'is-active' : '' }}"
-                href="/islands/atoll/{{ $atollSlug }}"
+                href="{{ $islandFilterHref($atollSlug, $activeIslandType) }}"
             >{{ $atoll->name }}</a>
         @endforeach
     </div>

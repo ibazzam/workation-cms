@@ -1370,6 +1370,32 @@
             align-items: center;
         }
 
+        .listing-actions-compact {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .listing-actions-row {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .listing-actions-compact .btn {
+            margin: 0;
+            padding: 4px 10px;
+            font-size: 0.78rem;
+            line-height: 1.4;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+
+        .listing-actions-compact form {
+            margin: 0;
+        }
+
         .listing-status-chip.is-active {
             border-color: #9fd4b3;
             background: #edf9f1;

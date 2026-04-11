@@ -317,19 +317,24 @@
                                                     </td>
                                                     <td class="listing-cell-actions-cell">
                                                         <div class="listing-cell-actions">
-                                                            <div class="inline-actions listing-actions-inline">
-                                                                <button class="btn btn-secondary" type="button" data-open-property-edit data-property-edit-id="{{ $propertyId }}" data-property-edit-category="{{ $editCategory }}">Edit Listing</button>
-                                                                @if ($categoryKey === 'accommodation')
-                                                                    <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ $propertyId }}">Add Room</button>
-                                                                @endif
-                                                                <button class="btn btn-secondary" type="button" data-toggle-property-media="{{ $propertyId }}">Manage Media</button>
+                                                            <div class="listing-actions-compact">
+                                                                <div class="listing-actions-row">
+                                                                    <button class="btn btn-secondary" type="button" data-open-property-edit data-property-edit-id="{{ $propertyId }}" data-property-edit-category="{{ $editCategory }}">Edit</button>
                                                                     @if ($listingModerationStatus === 'pending_review')
-                                                                    <span class="ops-chip is-pending" style="padding:7px 10px;">Under Review</span>
-                                                                @endif
-                                                                <form method="POST" action="/portal/vendor/properties/{{ $propertyId }}/delete" onsubmit="return confirm('Remove this listing?');">
-                                                                    @csrf
-                                                                    <button class="btn btn-danger" type="submit">Remove Listing</button>
-                                                                </form>
+                                                                        <span class="ops-chip is-pending">Under Review</span>
+                                                                    @else
+                                                                        <form method="POST" action="/portal/vendor/properties/{{ $propertyId }}/delete" onsubmit="return confirm('Remove this listing?');">
+                                                                            @csrf
+                                                                            <button class="btn btn-danger" type="submit">Remove</button>
+                                                                        </form>
+                                                                    @endif
+                                                                </div>
+                                                                <div class="listing-actions-row">
+                                                                    <button class="btn btn-secondary" type="button" data-toggle-property-media="{{ $propertyId }}">Manage Media</button>
+                                                                    @if ($categoryKey === 'accommodation')
+                                                                        <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ $propertyId }}">Add Room</button>
+                                                                    @endif
+                                                                </div>
                                                             </div>
                                                             @php
                                                                 $editFormPartialMap = [

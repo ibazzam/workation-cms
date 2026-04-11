@@ -4810,7 +4810,7 @@
             applyPropertyCategoryFilter('all');
             applyCategorySectionFilter('all');
 
-            if (forcedPanelKey === 'listings') {
+            if (serverPanelKey === 'listings') {
                 if (forcedListingMode === 'create') {
                     openPropertyFlowWithCategory(forcedListingCategory || 'accommodation');
                 } else if (forcedListingMode === 'manage') {
@@ -5112,6 +5112,8 @@
                     }
                 }
 
+                document.querySelectorAll('[data-listing-category-shortcut]').forEach((button) => {
+                    button.addEventListener('click', function () {
                         const categoryKey = normalizeCategoryKey(button.getAttribute('data-listing-category-shortcut') || '');
                         if (propertyCategorySelect && categoryKey) {
                             let option = Array.from(propertyCategorySelect.options).find((item) => normalizeCategoryKey(item.value) === categoryKey);
@@ -5126,6 +5128,10 @@
                         }
 
                         window.location.hash = 'listings';
+                        if (propertyCreateForm) {
+                            propertyCreateForm.hidden = false;
+                            propertyCreateForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
                         if (typeof window.__vendorPortalRefreshLocationMap === 'function') {
                             window.__vendorPortalRefreshLocationMap();
                         }

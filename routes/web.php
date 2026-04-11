@@ -1987,6 +1987,23 @@ if (!function_exists('blogResolveCoverImageUrl')) {
             return '';
         }
 
+        // Handle accidentally serialized or quoted values from older writes.
+        if (in_array(Str::lower($value), ['null', 'undefined', 'false'], true)) {
+            return '';
+        }
+        if ((Str::startsWith($value, '"') && Str::endsWith($value, '"')) || (Str::startsWith($value, "'") && Str::endsWith($value, "'"))) {
+            $value = trim($value, "\"'");
+        }
+        if (Str::startsWith($value, '[') && Str::endsWith($value, ']')) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded) && isset($decoded[0]) && is_string($decoded[0])) {
+                $value = trim($decoded[0]);
+            }
+        }
+        if ($value === '') {
+            return '';
+        }
+
         if (Str::startsWith($value, ['https://', 'http://', '//'])) {
             return $value;
         }
@@ -2012,14 +2029,27 @@ if (!function_exists('blogResolveCoverImageUrl')) {
         }
 
         if (Str::startsWith($value, ['storage/'])) {
-            return '/' . ltrim($value, '/');
+            $relativePath = ltrim(Str::after($value, 'storage/'), '/');
+
+            return Storage::disk('public')->exists($relativePath)
+                ? ('/storage/' . $relativePath)
+                : '';
         }
 
         if (Str::startsWith($value, ['blog/'])) {
-            return '/storage/' . ltrim($value, '/');
+            $relativePath = ltrim($value, '/');
+
+            return Storage::disk('public')->exists($relativePath)
+                ? ('/storage/' . $relativePath)
+                : '';
         }
 
-        return (string) Storage::disk('public')->url($value);
+        $relativePath = ltrim($value, '/');
+        if ($relativePath === '' || !Storage::disk('public')->exists($relativePath)) {
+            return '';
+        }
+
+        return (string) Storage::disk('public')->url($relativePath);
     }
 }
 

@@ -201,6 +201,12 @@ if (!function_exists('blogResolveCoverImageUrl')) {
         }
         $diskNames = array_values(array_unique(array_filter([$portalMediaDisk, 'public'])));
 
+        $portalMediaDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
+        if ($portalMediaDisk === '') {
+            $portalMediaDisk = 'public';
+        }
+        $diskNames = array_values(array_unique(array_filter([$portalMediaDisk, 'public'])));
+
         if (preg_match('#(?:^|/)blog/(\d+)/cover\.[a-z0-9]+$#i', $value, $matches) === 1) {
             $postId = (int) ($matches[1] ?? 0);
             if ($postId > 0) {

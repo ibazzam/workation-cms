@@ -14,7 +14,7 @@ class AtollIslandApiController extends Controller
     public function getAllAtolls(): JsonResponse
     {
         $atolls = Atoll::select('id', 'name', 'slug', 'code')
-            ->orderBy('name')
+            ->orderedByCode()
             ->get();
 
         return response()->json($atolls);

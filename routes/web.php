@@ -2459,7 +2459,7 @@ if (!function_exists('buildIslandsIndexPayload')) {
             $activeIslandType = null;
         }
 
-        $atolls  = \App\Models\Atoll::orderBy('name')->get();
+        $atolls  = \App\Models\Atoll::query()->orderedByCode()->get();
         $query   = \App\Models\Island::with('atoll')->orderBy('atoll_id')->orderBy('name');
 
         if ($activeAtollSlug !== null) {
@@ -6379,7 +6379,7 @@ Route::get('/portal/admin/atlas', function () {
         return redirect('/admin')->withErrors(['auth' => 'Atolls/Islands tables are not ready. Run migrations first.']);
     }
 
-    $atolls = \App\Models\Atoll::query()->orderBy('name')->get();
+    $atolls = \App\Models\Atoll::query()->orderedByCode()->get();
     $islands = \App\Models\Island::query()->with('atoll')->orderBy('name')->limit(1200)->get();
 
     return view('admin-atlas-index', [
@@ -6619,7 +6619,7 @@ Route::get('/portal/admin/atlas/islands/create', function () {
         return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can create islands.']);
     }
 
-    $atolls = \App\Models\Atoll::query()->orderBy('name')->get();
+    $atolls = \App\Models\Atoll::query()->orderedByCode()->get();
 
     return view('admin-atlas-form', [
         'mode' => 'create',
@@ -6731,7 +6731,7 @@ Route::get('/portal/admin/atlas/islands/{island}/edit', function (int $island) {
     }
 
     $record = \App\Models\Island::query()->findOrFail($island);
-    $atolls = \App\Models\Atoll::query()->orderBy('name')->get();
+    $atolls = \App\Models\Atoll::query()->orderedByCode()->get();
 
     return view('admin-atlas-form', [
         'mode' => 'edit',

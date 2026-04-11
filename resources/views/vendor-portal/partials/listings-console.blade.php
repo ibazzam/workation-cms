@@ -202,26 +202,6 @@
                         @php
                             $categoryProperties = $propertiesByCategory->get($categoryKey, collect());
                             $categoryLabel = $listingCategoryLabelMap[$categoryKey] ?? strtoupper(str_replace('_', ' ', $categoryKey));
-                            $categoryPropertyIds = $categoryProperties
-                                ->pluck('id')
-                                ->map(static fn ($id) => (int) $id)
-                                ->filter(static fn (int $id): bool => $id > 0)
-                                ->values();
-                            $categoryReservations = $vendorReservations
-                                ->filter(static function ($reservation) use ($categoryPropertyIds): bool {
-                                    return $categoryPropertyIds->contains((int) ($reservation->vendor_property_id ?? 0));
-                                })
-                                ->values();
-                            $categoryConfirmedReservations = $categoryReservations
-                                ->filter(static function ($reservation): bool {
-                                    return strtolower((string) ($reservation->status ?? 'pending')) === 'confirmed';
-                                })
-                                ->count();
-                            $categoryGrossRevenue = (float) $categoryReservations
-                                ->sum(static fn ($reservation) => (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0));
-                            $categoryPendingReviewCount = $categoryProperties
-                                ->filter(static fn ($property): bool => strtolower(trim((string) ($property->listing_moderation_status ?? 'draft'))) === 'pending_review')
-                                ->count();
                         @endphp
                         <article class="category-listing-section" id="category-view-{{ $categoryKey }}" data-category-view="{{ $categoryKey }}">
                             @if ($categoryProperties->isEmpty())
@@ -291,13 +271,6 @@
                                                     $listingStatus = strtoupper((string) ($property->status ?? 'active'));
                                                     $listingType = strtoupper((string) ($property->property_type ?? 'N/A'));
                                                     $propertyMediaItems = $propertyMediaByPropertyId->get($propertyId, collect());
-                                                    $publishChecklist = portalVendorListingPublishChecklist($property, $propertyDetails, $propertyMediaItems->count(), $propertyRooms->count());
-                                                    $publishMissing = (array) ($publishChecklist['missing'] ?? []);
-                                                    $publishReady = (bool) ($publishChecklist['ready'] ?? false);
-                                                    $publishReadinessLabel = $publishReady
-                                                        ? 'Publish Ready'
-                                                        : (($publishChecklist['missing_count'] ?? count($publishMissing)) . ' items missing');
-                                                    $publishReadinessChipClass = $publishReady ? 'is-active' : 'is-pending';
                                                     $listingStatusClass = 'is-neutral';
                                                     if (strtolower($listingStatus) === 'active') {
                                                         $listingStatusClass = 'is-active';
@@ -332,14 +305,10 @@
                                                             <span class="ops-chip">{{ $listingType }}</span>
                                                             <span class="ops-chip listing-status-chip {{ $listingStatusClass }}">{{ $listingStatus }}</span>
                                                             <span class="ops-chip listing-status-chip {{ $moderationChipClass }}" title="Moderation status">{{ $moderationLabel }}</span>
-                                                            <span class="ops-chip listing-status-chip {{ $publishReadinessChipClass }}" title="Publishing readiness">{{ $publishReadinessLabel }}</span>
                                                             @if ($categoryKey === 'accommodation')
                                                                 <span class="ops-chip">Rooms: {{ $propertyRooms->count() }}</span>
                                                             @endif
                                                         </div>
-                                                        @if (!$publishReady)
-                                                            <p class="listing-publish-hint">Complete before publishing: {{ implode(' • ', array_slice($publishMissing, 0, 4)) }}</p>
-                                                        @endif
                                                         @if ($listingModerationStatus === 'rejected' && !empty($property->listing_admin_notes))
                                                             <p style="margin:6px 0 0;font-size:0.78rem;color:#7a2020;background:#fff0ef;border:1px solid #f0b7b3;border-radius:8px;padding:6px 9px;">Admin note: {{ $property->listing_admin_notes }}</p>
                                                         @endif
@@ -360,6 +329,16 @@
                                                                             @csrf
                                                                             <button class="btn btn-danger" type="submit">Remove</button>
                                                                         </form>
+                                                                    @endif
+                                                                    @if (in_array($listingModerationStatus, ['draft', 'rejected'], true))
+                                                                        <form method="POST" action="/portal/vendor/properties/{{ $propertyId }}/submit-for-review">
+                                                                            @csrf
+                                                                            <button class="btn btn-primary" type="submit">Publish Listing</button>
+                                                                        </form>
+                                                                    @elseif ($listingModerationStatus === 'approved')
+                                                                        <span class="ops-chip is-active">Live for bookings</span>
+                                                                    @elseif ($listingModerationStatus === 'suspended')
+                                                                        <span class="ops-chip is-inactive">Publishing suspended</span>
                                                                     @endif
                                                                 </div>
                                                             </div>
@@ -448,38 +427,6 @@
                                                                     </div>
                                                                     </form>
                                                                 @endif
-                                                            </div>
-                                                            <div class="publish-readiness-box">
-                                                                <div class="publish-readiness-head">
-                                                                    <strong>Publishing</strong>
-                                                                    <span class="ops-chip {{ $publishReadinessChipClass }}">{{ $publishReadinessLabel }}</span>
-                                                                </div>
-                                                                @if ($publishReady)
-                                                                    <p class="small" style="margin:0;">This listing is complete enough to be submitted for admin approval.</p>
-                                                                @else
-                                                                    <ul class="publish-readiness-list">
-                                                                        @foreach ($publishMissing as $missingItem)
-                                                                            <li>{{ $missingItem }}</li>
-                                                                        @endforeach
-                                                                    </ul>
-                                                                @endif
-
-                                                                <div class="publish-readiness-actions">
-                                                                    @if (in_array($listingModerationStatus, ['draft', 'rejected'], true) && $publishReady)
-                                                                        <form method="POST" action="/portal/vendor/properties/{{ $propertyId }}/submit-for-review">
-                                                                            @csrf
-                                                                            <button class="btn btn-primary" type="submit">Publish Listing</button>
-                                                                        </form>
-                                                                    @elseif (in_array($listingModerationStatus, ['draft', 'rejected'], true))
-                                                                        <button class="btn btn-secondary" type="button" disabled>Complete Checklist to Publish</button>
-                                                                    @elseif ($listingModerationStatus === 'pending_review')
-                                                                        <span class="ops-chip is-pending" style="padding:7px 10px;">Publishing request submitted</span>
-                                                                    @elseif ($listingModerationStatus === 'approved')
-                                                                        <span class="ops-chip is-active" style="padding:7px 10px;">Live for bookings</span>
-                                                                    @elseif ($listingModerationStatus === 'suspended')
-                                                                        <span class="ops-chip is-inactive" style="padding:7px 10px;">Publishing suspended</span>
-                                                                    @endif
-                                                                </div>
                                                             </div>
                                                         </div>
                                                     </td>

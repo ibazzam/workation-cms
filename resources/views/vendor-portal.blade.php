@@ -294,6 +294,10 @@
             width: 100%;
         }
 
+        .portal-content > .ops-section:first-child {
+            margin-top: 0;
+        }
+
         .portal-nav a,
         .nav-item-link,
         .nav-sub-link {

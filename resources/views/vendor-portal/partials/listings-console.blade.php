@@ -11,14 +11,6 @@
             @if (!$vendorCanManageListings)
                 <p class="wizard-note" style="margin-bottom:10px;">Listings, operations, and pricing are currently locked. Complete My Account compliance details and wait for admin verification approval.</p>
             @endif
-            <div class="inline-actions" style="margin-bottom:10px;">
-                <a class="btn btn-secondary" href="/vendor/reservations">Manage Reservations</a>
-                <a class="btn btn-secondary" href="/vendor/pricing">Change Pricing</a>
-                <a class="btn btn-secondary" href="/vendor/billing">Billing &amp; Refunds</a>
-                    @if ($consoleCategoryLabel !== '')
-                        <a class="btn btn-primary" href="/vendor/listings/create/{{ $forcedListingCategory }}">Add {{ $consoleCategoryLabel }}</a>
-                    @endif
-            </div>
             @if (!$hasSelectedCategories)
                 <p class="wizard-note">Select at least one category in Category Wizard before creating listings.</p>
             @endif
@@ -168,6 +160,12 @@
                                 <h4>{{ $categoryLabel }} Listings</h4>
                                 <div class="inline-actions">
                                     <span class="ops-chip">{{ $categoryProperties->count() }} listed</span>
+                                    @if ($forcedListingCategory === $categoryKey)
+                                        <a class="btn btn-secondary" href="/vendor/reservations">Manage Reservations</a>
+                                        <a class="btn btn-secondary" href="/vendor/pricing">Change Pricing</a>
+                                        <a class="btn btn-secondary" href="/vendor/billing">Billing &amp; Refunds</a>
+                                        <a class="btn btn-primary" href="/vendor/listings/create/{{ $categoryKey }}">Add {{ $categoryLabel }}</a>
+                                    @endif
                                 </div>
                             </div>
                             <div class="ops-metrics" style="margin:0 0 10px;">

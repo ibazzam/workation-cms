@@ -1794,10 +1794,10 @@ if (!function_exists('blogCategoryDefinitions')) {
     function blogCategoryDefinitions(): array
     {
         return [
-            'things-to-do' => ['label' => 'Things to Do'],
-            'attractions' => ['label' => 'Attractions'],
-            'stay' => ['label' => 'Stay'],
-            'islands' => ['label' => 'Islands'],
+            'things-to-do' => ['label' => 'Travel picks'],
+            'attractions' => ['label' => 'Ocean Paths'],
+            'stay' => ['label' => 'Calm Escapes'],
+            'islands' => ['label' => 'Islands Guide'],
         ];
     }
 }

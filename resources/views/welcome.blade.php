@@ -1733,7 +1733,7 @@
             ['icon' => 'fa-solid fa-car-side', 'title' => 'Vehicle Rentals', 'url' => '/catalog/vehicle_rental', 'divider_after' => true],
             ['icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'url' => '/catalog/remote_workspace'],
             ['icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'url' => '/catalog/conference_room'],
-            ['icon' => 'fa-solid fa-map-location-dot', 'title' => 'Things To Do', 'url' => '/blog', 'section_start' => true],
+            ['icon' => 'fa-solid fa-map-location-dot', 'title' => 'Travel picks', 'url' => '/blog', 'section_start' => true],
         ])->map(function (array $link) use ($homeSidebarLinkSourceByUrl) {
             $source = $homeSidebarLinkSourceByUrl->get((string) ($link['url'] ?? ''), []);
             if (!is_array($source)) {

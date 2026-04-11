@@ -537,7 +537,7 @@
             $postCoverUrl = blogResolveCoverImageUrl((string) ($post->cover_image_path ?? ''));
         }
         $postCategorySlug = (string) ($post->blog_category_slug ?? 'things-to-do');
-        $postCategoryLabel = (string) ($post->blog_category_label ?? 'Things to Do');
+        $postCategoryLabel = (string) ($post->blog_category_label ?? 'Travel picks');
         $sidebarAd = is_array($blogSidebarAd ?? null) ? $blogSidebarAd : [];
         $sidebarAdTitle = trim((string) ($sidebarAd['title'] ?? 'Charter a vessel?'));
         $sidebarAdBrand = trim((string) ($sidebarAd['brand'] ?? 'workation'));
@@ -587,7 +587,7 @@
                 <small>Blog</small>
             </a>
             <nav class="nav-links" aria-label="Blog categories">
-                <a href="/blog">All Stories</a>
+                <a href="/blog">The collection</a>
                 @foreach ($blogCategories as $slug => $meta)
                     @php
                         $href = $slug === 'islands' ? '/islands' : ('/blog/category/' . $slug);

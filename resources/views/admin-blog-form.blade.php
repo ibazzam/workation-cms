@@ -270,7 +270,7 @@
                             </option>
                         @endforeach
                     </select>
-                    <p class="hint">Choose category manually to control where this article appears (Trip Ideas, Blue Trails, Sleep + Slow, Island Atlas).</p>
+                    <p class="hint">Choose category manually to control where this article appears (Travel picks, Ocean Paths, Calm Escapes, Islands Guide).</p>
                 </div>
 
                 <div class="field">

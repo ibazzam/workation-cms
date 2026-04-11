@@ -194,7 +194,7 @@
                 <small>Blog</small>
             </a>
             <nav class="nav-links" aria-label="Blog categories">
-                <a href="/blog">All Stories</a>
+                <a href="/blog">The collection</a>
                 @foreach ($blogCategories as $slug => $meta)
                     @php
                         $href = $slug === 'islands' ? '/islands' : ('/blog/category/' . $slug);

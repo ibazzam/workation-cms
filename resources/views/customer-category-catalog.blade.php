@@ -1101,7 +1101,7 @@
                         @foreach ($catalogCategoryLinks as $item)
                             <a class="header-link{{ $categoryKey === ($item['key'] ?? '') ? ' is-active' : '' }}" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">{{ $item['title'] ?? 'Category' }}</a>
                         @endforeach
-                        <a class="header-link" href="/blog">Things to Do</a>
+                        <a class="header-link" href="/blog">Travel picks</a>
                     </nav>
                     <div class="header-search-mini" aria-label="Quick destination search">
                         <input type="search" value="{{ $filters['q'] ?? '' }}" placeholder="Destinations, islands, hotels, and experiences">

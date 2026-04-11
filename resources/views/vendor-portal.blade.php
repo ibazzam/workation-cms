@@ -242,6 +242,12 @@
             text-overflow: ellipsis;
         }
 
+        .nav-group + .nav-group {
+            margin-top: 4px;
+            padding-top: 4px;
+            border-top: 1px solid #edf3f7;
+        }
+
         .nav-group-header {
             width: 100%;
             border: none;
@@ -330,7 +336,8 @@
         }
 
         .nav-sub-link {
-            margin-left: 12px;
+            margin-left: 0;
+            padding-left: 18px;
             font-size: 0.79rem;
             font-weight: 600;
             color: #35566f;
@@ -2016,18 +2023,10 @@
 
             .portal-nav {
                 position: static;
-                overflow-x: auto;
-                white-space: nowrap;
-                flex-direction: row;
-                flex-wrap: wrap;
-            }
-
-            .portal-nav .menu-title {
-                width: 100%;
-            }
-
-            .portal-nav a.menu-sub {
-                margin-left: 0;
+                overflow: visible;
+                white-space: normal;
+                flex-direction: column;
+                flex-wrap: nowrap;
             }
 
             .billing-ledger-grid {

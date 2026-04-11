@@ -1479,11 +1479,44 @@
         }
 
         .update-row-form .btn,
-        .media-upload-row .btn,
         .inline-table-form .btn {
             margin-top: 0;
             width: 100%;
             margin-left: 0;
+        }
+
+        .media-panel-form {
+            display: grid;
+            gap: 6px;
+        }
+
+        .media-panel-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            width: 100%;
+        }
+
+        .media-panel-bar .btn {
+            width: auto;
+            margin: 0;
+        }
+
+        .media-panel-bar.gallery-toolbar {
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .media-panel-hint {
+            margin: 0;
+            font-size: 0.73rem;
+            color: #5a7a8e;
+        }
+
+        .gallery-media-form {
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .inline-table-form .ops-input,
@@ -1588,10 +1621,12 @@
         }
 
         .gallery-grid {
-            margin-top: 10px;
+            margin-top: 6px;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 8px;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .media-dropzone {
@@ -2066,10 +2101,6 @@
                 min-width: 0;
             }
 
-            .media-upload-row .inline-table-form {
-                grid-template-columns: 1fr;
-            }
-
             .gallery-card-actions,
             .publish-readiness-actions {
                 justify-content: stretch;
@@ -2155,7 +2186,6 @@
             .room-management-table .inline-actions form,
             .gallery-card-actions form,
             .gallery-card-actions .btn,
-            .media-upload-row .btn,
             .publish-readiness-actions form,
             .publish-readiness-actions .btn {
                 width: 100%;
@@ -2166,8 +2196,7 @@
                 font-size: 0.76rem;
             }
 
-            .media-upload-preview,
-            .gallery-grid {
+            .media-upload-preview {
                 grid-template-columns: 1fr;
             }
 

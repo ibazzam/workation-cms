@@ -1794,10 +1794,10 @@ if (!function_exists('blogCategoryDefinitions')) {
     function blogCategoryDefinitions(): array
     {
         return [
-            'things-to-do' => ['label' => 'Things to Do'],
-            'attractions' => ['label' => 'Attractions'],
-            'stay' => ['label' => 'Stay'],
-            'islands' => ['label' => 'Islands'],
+            'things-to-do' => ['label' => 'Travel picks'],
+            'attractions' => ['label' => 'Ocean Paths'],
+            'stay' => ['label' => 'Calm Escapes'],
+            'islands' => ['label' => 'Islands Guide'],
         ];
     }
 }
@@ -1976,80 +1976,6 @@ if (!function_exists('blogHydratePostsWithMeta')) {
 
             return $post;
         })->values();
-    }
-}
-
-if (!function_exists('blogResolveCoverImageUrl')) {
-    function blogResolveCoverImageUrl(?string $coverImagePath): string
-    {
-        $value = str_replace('\\', '/', trim((string) $coverImagePath));
-        if ($value === '') {
-            return '';
-        }
-
-        // Handle accidentally serialized or quoted values from older writes.
-        if (in_array(Str::lower($value), ['null', 'undefined', 'false'], true)) {
-            return '';
-        }
-        if ((Str::startsWith($value, '"') && Str::endsWith($value, '"')) || (Str::startsWith($value, "'") && Str::endsWith($value, "'"))) {
-            $value = trim($value, "\"'");
-        }
-        if (Str::startsWith($value, '[') && Str::endsWith($value, ']')) {
-            $decoded = json_decode($value, true);
-            if (is_array($decoded) && isset($decoded[0]) && is_string($decoded[0])) {
-                $value = trim($decoded[0]);
-            }
-        }
-        if ($value === '') {
-            return '';
-        }
-
-        if (Str::startsWith($value, ['https://', 'http://', '//'])) {
-            return $value;
-        }
-
-        if (preg_match('#/storage/app/public/(.+)$#i', $value, $matches) === 1) {
-            $value = (string) ($matches[1] ?? '');
-        } elseif (preg_match('#/public/storage/(.+)$#i', $value, $matches) === 1) {
-            $value = (string) ($matches[1] ?? '');
-        }
-
-        if (Str::startsWith($value, ['/storage/'])) {
-            return '/' . ltrim($value, '/');
-        }
-
-        $value = ltrim($value, '/');
-
-        if (Str::startsWith($value, ['storage/'])) {
-            return '/' . ltrim($value, '/');
-        }
-
-        if (Str::startsWith($value, ['public/'])) {
-            $value = Str::after($value, 'public/');
-        }
-
-        if (Str::startsWith($value, ['storage/'])) {
-            $relativePath = ltrim(Str::after($value, 'storage/'), '/');
-
-            return Storage::disk('public')->exists($relativePath)
-                ? ('/storage/' . $relativePath)
-                : '';
-        }
-
-        if (Str::startsWith($value, ['blog/'])) {
-            $relativePath = ltrim($value, '/');
-
-            return Storage::disk('public')->exists($relativePath)
-                ? ('/storage/' . $relativePath)
-                : '';
-        }
-
-        $relativePath = ltrim($value, '/');
-        if ($relativePath === '' || !Storage::disk('public')->exists($relativePath)) {
-            return '';
-        }
-
-        return (string) Storage::disk('public')->url($relativePath);
     }
 }
 
@@ -2254,6 +2180,135 @@ Route::get('/blog/{slug}', function (string $slug) {
         'relatedPosts' => $relatedPosts,
         'blogCategories' => blogCategoryDefinitions(),
         'blogSidebarAd' => blogSidebarAdSettings(),
+    ]);
+});
+
+Route::get('/media/blog/{post}/cover', function (int $post) {
+    $placeholderResponse = static function () {
+        $svg = <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+    <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#dce8ef"/>
+            <stop offset="100%" stop-color="#c5d7e3"/>
+        </linearGradient>
+    </defs>
+    <rect width="1200" height="720" fill="url(#g)"/>
+    <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#40607a" font-family="Arial" font-size="34">Blog image unavailable</text>
+</svg>
+SVG;
+
+        return response($svg, 404, [
+            'Content-Type' => 'image/svg+xml; charset=UTF-8',
+            'Cache-Control' => 'no-store',
+        ]);
+    };
+
+    if (!Schema::hasTable('blog_posts')) {
+        return $placeholderResponse();
+    }
+
+    $blogPost = BlogPost::query()->find($post, ['id', 'cover_image_path']);
+    if (!$blogPost) {
+        return $placeholderResponse();
+    }
+
+    $originalPath = trim(str_replace('\\', '/', (string) ($blogPost->cover_image_path ?? '')));
+    if ($originalPath === '') {
+        return $placeholderResponse();
+    }
+
+    if (Str::startsWith($originalPath, ['http://', 'https://'])) {
+        try {
+            $remoteResponse = Http::retry(1, 200)
+                ->timeout(10)
+                ->withHeaders([
+                    'Accept' => 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                    'User-Agent' => 'WorkationBlogMediaProxy/1.0',
+                ])
+                ->get($originalPath);
+        } catch (\Throwable $exception) {
+            return $placeholderResponse();
+        }
+
+        if (!$remoteResponse->successful() || $remoteResponse->body() === '') {
+            return $placeholderResponse();
+        }
+
+        return response($remoteResponse->body(), 200, [
+            'Content-Type' => trim((string) $remoteResponse->header('Content-Type', 'image/jpeg')),
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
+    }
+
+    $normalizeDiskPath = static function (string $path): string {
+        $normalized = trim(str_replace('\\', '/', $path));
+        if ($normalized === '') {
+            return '';
+        }
+
+        if (preg_match('#/storage/app/public/(.+)$#i', $normalized, $matches) === 1) {
+            $normalized = (string) ($matches[1] ?? '');
+        } elseif (preg_match('#/public/storage/(.+)$#i', $normalized, $matches) === 1) {
+            $normalized = (string) ($matches[1] ?? '');
+        }
+
+        $normalized = ltrim($normalized, '/');
+        if (Str::startsWith($normalized, 'public/')) {
+            $normalized = Str::after($normalized, 'public/');
+        }
+        if (Str::startsWith($normalized, 'storage/')) {
+            $normalized = Str::after($normalized, 'storage/');
+        }
+
+        return ltrim($normalized, '/');
+    };
+
+    $candidatePaths = collect([
+        $originalPath,
+        $normalizeDiskPath($originalPath),
+    ])->map(static fn ($path) => trim((string) $path))
+      ->filter(static fn ($path) => $path !== '')
+      ->unique()
+      ->values()
+      ->all();
+
+    $resolvedBinary = null;
+    $resolvedMimeType = '';
+
+    $publicDisk = Storage::disk('public');
+    foreach ($candidatePaths as $path) {
+        if (!$publicDisk->exists($path)) {
+            continue;
+        }
+
+        $resolvedBinary = $publicDisk->get($path);
+        $resolvedMimeType = (string) ($publicDisk->mimeType($path) ?: '');
+        break;
+    }
+
+    if ($resolvedBinary === null) {
+        $localDisk = Storage::disk('local');
+        foreach ($candidatePaths as $path) {
+            foreach ([$path, 'public/' . ltrim($path, '/')] as $localPath) {
+                if (!$localDisk->exists($localPath)) {
+                    continue;
+                }
+
+                $resolvedBinary = $localDisk->get($localPath);
+                $resolvedMimeType = (string) ($localDisk->mimeType($localPath) ?: '');
+                break 2;
+            }
+        }
+    }
+
+    if ($resolvedBinary === null) {
+        return $placeholderResponse();
+    }
+
+    return response($resolvedBinary, 200, [
+        'Content-Type' => $resolvedMimeType !== '' ? $resolvedMimeType : 'image/jpeg',
+        'Cache-Control' => 'public, max-age=31536000, immutable',
     ]);
 });
 
@@ -5969,6 +6024,41 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
     ]);
 
     return redirect('/portal/admin/blog')->with('portal_notice', 'Blog post updated successfully.');
+});
+
+Route::post('/portal/admin/blog/{post}/delete', function (int $post) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return redirect('/portal/admin/login');
+    }
+
+    if (!canManageContent()) {
+        return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can delete blog posts.']);
+    }
+
+    if (!Schema::hasTable('blog_posts')) {
+        return redirect('/portal/admin/blog')->withErrors(['auth' => 'Blog table is not ready. Run migrations first.']);
+    }
+
+    $blogPost = BlogPost::query()->findOrFail($post);
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+    $postId = (int) $blogPost->id;
+    $postSlug = (string) $blogPost->slug;
+    $coverPath = trim((string) ($blogPost->cover_image_path ?? ''));
+    if ($coverPath !== '') {
+        Storage::disk('public')->delete($coverPath);
+    }
+    Storage::disk('public')->deleteDirectory('blog/' . $postId);
+
+    $blogPost->delete();
+
+    portalAdminAuditLog('blog_post_deleted', [
+        'target_role' => 'ADMIN',
+        'post_id' => $postId,
+        'post_slug' => $postSlug,
+        'deleted_by_user_id' => $actorUserId,
+    ]);
+
+    return redirect('/portal/admin/blog')->with('portal_notice', 'Blog post deleted successfully.');
 });
 
 Route::post('/portal/admin/blog/{post}/review', function (Request $request, int $post) {

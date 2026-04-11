@@ -410,10 +410,10 @@
         <small>Blog</small>
     </a>
     <nav class="nav-links" aria-label="Site sections">
-        <a href="/blog">Things to Do</a>
-        <a href="/blog/category/attractions">Attractions</a>
-        <a href="/blog/category/stay">Stay</a>
-        <a class="is-active" href="/islands">Islands</a>
+        <a href="/blog">Travel picks</a>
+        <a href="/blog/category/attractions">Ocean Paths</a>
+        <a href="/blog/category/stay">Calm Escapes</a>
+        <a class="is-active" href="/islands">Islands Guide</a>
     </nav>
 </header>
 

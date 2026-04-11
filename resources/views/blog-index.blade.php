@@ -613,7 +613,7 @@
 
         $activeCategorySlug = $activeCategory ?: 'all';
         $activeCategoryLabel = $activeCategorySlug === 'all'
-            ? 'All Stories'
+            ? 'The collection'
             : (string) ($blogCategories[$activeCategorySlug]['label'] ?? 'Stories');
         $contextLabel = $activeTag ? ('Tag: ' . ($activeTagLabel ?: \Illuminate\Support\Str::headline(str_replace('-', ' ', (string) $activeTag)))) : $activeCategoryLabel;
         $heroLead = $allPosts->first();
@@ -674,7 +674,7 @@
                 @php
                     $isAllActive = !$activeTag && $activeCategorySlug === 'all';
                 @endphp
-                <a class="{{ $isAllActive ? 'is-active' : '' }}" href="/blog">All Stories</a>
+                <a class="{{ $isAllActive ? 'is-active' : '' }}" href="/blog">The collection</a>
                 @foreach ($blogCategories as $slug => $meta)
                     @php
                         $isActiveCategory = !$activeTag && ($activeCategorySlug === $slug);

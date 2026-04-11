@@ -169,7 +169,7 @@
             <h2 class="wf-footer-title">Explore</h2>
             <ul class="wf-footer-links">
                 <li><a href="/">Home</a></li>
-                <li><a href="/blog">Things to Do</a></li>
+                <li><a href="/blog">Travel picks</a></li>
             </ul>
         </section>
 

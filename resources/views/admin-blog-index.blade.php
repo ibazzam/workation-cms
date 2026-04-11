@@ -72,6 +72,12 @@
             color: #fff;
         }
 
+        .btn.danger {
+            border-color: #e4b5bb;
+            background: #fff1f3;
+            color: #982a35;
+        }
+
         .notice {
             margin-top: 12px;
             border-radius: 11px;
@@ -151,6 +157,10 @@
             gap: 8px;
             flex-wrap: wrap;
         }
+
+        .post-actions form {
+            margin: 0;
+        }
     </style>
 </head>
 <body>
@@ -219,6 +229,10 @@
                                     @if ((bool) ($post->is_published ?? false))
                                         <a class="btn" href="{{ '/blog/' . $post->slug }}" target="_blank" rel="noopener">View</a>
                                     @endif
+                                    <form method="POST" action="{{ '/portal/admin/blog/' . $post->id . '/delete' }}" onsubmit="return confirm('Delete this blog post permanently?');">
+                                        @csrf
+                                        <button class="btn danger" type="submit">Delete</button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>

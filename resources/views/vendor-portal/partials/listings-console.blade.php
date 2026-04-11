@@ -11,16 +11,6 @@
             @if (!$vendorCanManageListings)
                 <p class="wizard-note" style="margin-bottom:10px;">Listings, operations, and pricing are currently locked. Complete My Account compliance details and wait for admin verification approval.</p>
             @endif
-            <div class="inline-actions" style="margin-bottom:10px;">
-                <a class="btn btn-secondary" href="/vendor/reservations">Manage Reservations</a>
-                <a class="btn btn-secondary" href="/vendor/pricing">Change Pricing</a>
-                <a class="btn btn-secondary" href="/vendor/billing">Billing &amp; Refunds</a>
-                @if ($consoleCategoryLabel !== '')
-                    <a class="btn btn-primary" href="/vendor/listings/create/{{ $forcedListingCategory }}">Add {{ $consoleCategoryLabel }}</a>
-                @else
-                    <a class="btn btn-primary" href="/vendor/listings/create">Add New Listing</a>
-                @endif
-            </div>
             @if (!$hasSelectedCategories)
                 <p class="wizard-note">Select at least one category in Category Wizard before creating listings.</p>
             @endif
@@ -170,7 +160,12 @@
                                 <h4>{{ $categoryLabel }} Listings</h4>
                                 <div class="inline-actions">
                                     <span class="ops-chip">{{ $categoryProperties->count() }} listed</span>
-                                    <a class="btn btn-secondary" href="/vendor/listings/create/{{ $categoryKey }}">Add {{ $categoryLabel }}</a>
+                                    @if ($forcedListingCategory === $categoryKey)
+                                        <a class="btn btn-primary" href="/vendor/listings/create/{{ $categoryKey }}">Add {{ $categoryLabel }}</a>
+                                        <a class="btn btn-secondary" href="/vendor/reservations">Reservations</a>
+                                        <a class="btn btn-secondary" href="/vendor/pricing">Pricing</a>
+                                        <a class="btn btn-secondary" href="/vendor/billing">Billing</a>
+                                    @endif
                                 </div>
                             </div>
                             <div class="ops-metrics" style="margin:0 0 10px;">
@@ -320,6 +315,10 @@
                                                             <div class="listing-actions-compact">
                                                                 <div class="listing-actions-row">
                                                                     <button class="btn btn-secondary" type="button" data-open-property-edit data-property-edit-id="{{ $propertyId }}" data-property-edit-category="{{ $editCategory }}">Edit</button>
+                                                                    <button class="btn btn-secondary" type="button" data-toggle-property-media="{{ $propertyId }}">Manage Media</button>
+                                                                    @if ($categoryKey === 'accommodation')
+                                                                        <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ $propertyId }}">Add Room</button>
+                                                                    @endif
                                                                     @if ($listingModerationStatus === 'pending_review')
                                                                         <span class="ops-chip is-pending">Under Review</span>
                                                                     @else
@@ -327,12 +326,6 @@
                                                                             @csrf
                                                                             <button class="btn btn-danger" type="submit">Remove</button>
                                                                         </form>
-                                                                    @endif
-                                                                </div>
-                                                                <div class="listing-actions-row">
-                                                                    <button class="btn btn-secondary" type="button" data-toggle-property-media="{{ $propertyId }}">Manage Media</button>
-                                                                    @if ($categoryKey === 'accommodation')
-                                                                        <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ $propertyId }}">Add Room</button>
                                                                     @endif
                                                                 </div>
                                                             </div>
@@ -501,13 +494,15 @@
                                                                                             <span class="room-summary-line">Qty: {{ (int) ($room->quantity ?? 0) }} | Max: {{ (int) ($room->max_occupancy ?? 0) }} | {{ (int) ($room->room_size_sqm ?? 0) > 0 ? ((int) ($room->room_size_sqm ?? 0) . 'sqm') : 'Size n/a' }} | Floor: {{ trim((string) ($room->floor_info ?? '')) !== '' ? (string) ($room->floor_info ?? '') : 'n/a' }} | Base: {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->base_price ?? 0), 2) }}</span>
                                                                                         </td>
                                                                                         <td>
-                                                                                            <div class="inline-actions listing-actions-inline">
-                                                                                                <button class="btn btn-secondary" type="button" data-open-room-edit data-room-edit-id="{{ $roomId }}">Edit Room</button>
-                                                                                                <button class="btn btn-secondary" type="button" data-toggle-room-media="{{ $roomId }}">Manage Media</button>
-                                                                                                <form method="POST" action="/portal/vendor/rooms/{{ $roomId }}/delete" onsubmit="return confirm('Remove this room category?');">
-                                                                                                    @csrf
-                                                                                                    <button class="btn btn-danger" type="submit">Remove Room</button>
-                                                                                                </form>
+                                                                                            <div class="inline-actions listing-actions-inline listing-actions-compact">
+                                                                                                <div class="listing-actions-row">
+                                                                                                    <button class="btn btn-secondary" type="button" data-open-room-edit data-room-edit-id="{{ $roomId }}">Edit Room</button>
+                                                                                                    <button class="btn btn-secondary" type="button" data-toggle-room-media="{{ $roomId }}">Manage Media</button>
+                                                                                                    <form method="POST" action="/portal/vendor/rooms/{{ $roomId }}/delete" onsubmit="return confirm('Remove this room category?');">
+                                                                                                        @csrf
+                                                                                                        <button class="btn btn-danger" type="submit">Remove Room</button>
+                                                                                                    </form>
+                                                                                                </div>
                                                                                             </div>
                                                                                             <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/rooms/{{ $roomId }}/update" data-room-edit-form="{{ $roomId }}" hidden>
                                                                                                 @csrf
@@ -831,6 +826,3 @@
                 </div>
             </div>
         </section>
-
-        
-

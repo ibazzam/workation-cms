@@ -2307,15 +2307,27 @@ SVG;
     $resolvedBinary = null;
     $resolvedMimeType = '';
 
-    $publicDisk = Storage::disk('public');
-    foreach ($candidatePaths as $path) {
-        if (!$publicDisk->exists($path)) {
+    $blogCoverPortalDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
+    if ($blogCoverPortalDisk === '') {
+        $blogCoverPortalDisk = 'public';
+    }
+    $blogCoverDiskNames = array_values(array_unique(array_filter([$blogCoverPortalDisk, 'public'])));
+
+    foreach ($blogCoverDiskNames as $diskName) {
+        try {
+            $candidateDisk = Storage::disk($diskName);
+        } catch (\Throwable $e) {
             continue;
         }
+        foreach ($candidatePaths as $path) {
+            if (!$candidateDisk->exists($path)) {
+                continue;
+            }
 
-        $resolvedBinary = $publicDisk->get($path);
-        $resolvedMimeType = (string) ($publicDisk->mimeType($path) ?: '');
-        break;
+            $resolvedBinary = $candidateDisk->get($path);
+            $resolvedMimeType = (string) ($candidateDisk->mimeType($path) ?: '');
+            break 2;
+        }
     }
 
     if ($resolvedBinary === null) {
@@ -5905,8 +5917,13 @@ Route::post('/portal/admin/blog', function (Request $request) {
                 $extension = 'jpg';
             }
 
+            $blogMediaDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
+            if ($blogMediaDisk === '') {
+                $blogMediaDisk = 'public';
+            }
+
             $storagePath = 'blog/' . (int) $post->id . '/cover.' . $extension;
-            Storage::disk('public')->putFileAs('blog/' . (int) $post->id, $coverFile, 'cover.' . $extension);
+            Storage::disk($blogMediaDisk)->putFileAs('blog/' . (int) $post->id, $coverFile, 'cover.' . $extension);
             $post->cover_image_path = $storagePath;
             $post->save();
         }
@@ -5954,11 +5971,17 @@ Route::post('/portal/admin/blog/upload-image', function (Request $request) {
 
     $directory = 'blog/inline/' . now()->format('Y/m');
     $filename = (string) Str::uuid() . '.' . $extension;
-    Storage::disk('public')->putFileAs($directory, $imageFile, $filename);
+
+    $mediaDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
+    if ($mediaDisk === '') {
+        $mediaDisk = 'public';
+    }
+
+    Storage::disk($mediaDisk)->putFileAs($directory, $imageFile, $filename);
     $storedPath = $directory . '/' . $filename;
 
     return response()->json([
-        'url' => '/storage/' . $storedPath,
+        'url' => Storage::disk($mediaDisk)->url($storedPath),
         'path' => $storedPath,
     ]);
 });
@@ -6044,10 +6067,15 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
         $blogPost->published_at = null;
     }
 
+    $blogMediaDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
+    if ($blogMediaDisk === '') {
+        $blogMediaDisk = 'public';
+    }
+
     if ((bool) ($validated['remove_cover_image'] ?? false)) {
         $existingPath = trim((string) ($blogPost->cover_image_path ?? ''));
         if ($existingPath !== '') {
-            Storage::disk('public')->delete($existingPath);
+            Storage::disk($blogMediaDisk)->delete($existingPath);
         }
         $blogPost->cover_image_path = null;
     }
@@ -6057,7 +6085,7 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
         if ($coverFile !== null && $coverFile->isValid()) {
             $existingPath = trim((string) ($blogPost->cover_image_path ?? ''));
             if ($existingPath !== '') {
-                Storage::disk('public')->delete($existingPath);
+                Storage::disk($blogMediaDisk)->delete($existingPath);
             }
 
             $extension = strtolower((string) $coverFile->getClientOriginalExtension());
@@ -6066,7 +6094,7 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
             }
 
             $storagePath = 'blog/' . (int) $blogPost->id . '/cover.' . $extension;
-            Storage::disk('public')->putFileAs('blog/' . (int) $blogPost->id, $coverFile, 'cover.' . $extension);
+            Storage::disk($blogMediaDisk)->putFileAs('blog/' . (int) $blogPost->id, $coverFile, 'cover.' . $extension);
             $blogPost->cover_image_path = $storagePath;
         }
     }

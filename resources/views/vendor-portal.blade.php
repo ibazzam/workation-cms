@@ -4187,13 +4187,7 @@
                     const categoryTarget = normalizeVendorOpsCategoryKey(String(link.getAttribute('data-vendor-category-target') || ''));
                     const listingAction = String(link.getAttribute('data-vendor-listing-action') || '').trim().toLowerCase();
 
-                    const isInPanelListingsAction = panelKey === 'listings' && (
-                        listingAction === 'create'
-                        || categoryTarget !== ''
-                        || href.includes('/vendor/listings')
-                    );
-
-                    if (href !== "" && !href.startsWith("#") && !isInPanelListingsAction) {
+                    if (href !== "" && !href.startsWith("#")) {
                         return;
                     }
 

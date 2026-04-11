@@ -179,6 +179,12 @@ if (!function_exists('blogResolveCoverImageUrl')) {
             return $value;
         }
 
+        $portalMediaDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
+        if ($portalMediaDisk === '') {
+            $portalMediaDisk = 'public';
+        }
+        $diskNames = array_values(array_unique(array_filter([$portalMediaDisk, 'public'])));
+
         if (preg_match('#(?:^|/)blog/(\d+)/cover\.[a-z0-9]+$#i', $value, $matches) === 1) {
             $postId = (int) ($matches[1] ?? 0);
             if ($postId > 0) {
@@ -193,41 +199,84 @@ if (!function_exists('blogResolveCoverImageUrl')) {
         }
 
         if (Str::startsWith($value, ['/storage/'])) {
-            return '/' . ltrim($value, '/');
+            $storageRelative = ltrim(Str::after($value, '/storage/'), '/');
+            if ($storageRelative !== '') {
+                foreach ($diskNames as $diskName) {
+                    try {
+                        $disk = Storage::disk($diskName);
+                    } catch (\Throwable $exception) {
+                        continue;
+                    }
+
+                    if ($disk->exists($storageRelative)) {
+                        return (string) $disk->url($storageRelative);
+                    }
+                }
+
+                return '/storage/' . $storageRelative;
+            }
         }
 
         $value = ltrim($value, '/');
 
         if (Str::startsWith($value, ['storage/'])) {
-            return '/' . ltrim($value, '/');
+            $storageRelative = ltrim(Str::after($value, 'storage/'), '/');
+            if ($storageRelative !== '') {
+                foreach ($diskNames as $diskName) {
+                    try {
+                        $disk = Storage::disk($diskName);
+                    } catch (\Throwable $exception) {
+                        continue;
+                    }
+
+                    if ($disk->exists($storageRelative)) {
+                        return (string) $disk->url($storageRelative);
+                    }
+                }
+
+                return '/storage/' . $storageRelative;
+            }
         }
 
         if (Str::startsWith($value, ['public/'])) {
             $value = Str::after($value, 'public/');
         }
 
-        if (Str::startsWith($value, ['storage/'])) {
-            $relativePath = ltrim(Str::after($value, 'storage/'), '/');
-
-            return Storage::disk('public')->exists($relativePath)
-                ? ('/storage/' . $relativePath)
-                : '';
-        }
-
         if (Str::startsWith($value, ['blog/'])) {
             $relativePath = ltrim($value, '/');
+            foreach ($diskNames as $diskName) {
+                try {
+                    $disk = Storage::disk($diskName);
+                } catch (\Throwable $exception) {
+                    continue;
+                }
 
-            return Storage::disk('public')->exists($relativePath)
-                ? ('/storage/' . $relativePath)
-                : '';
-        }
+                if ($disk->exists($relativePath)) {
+                    return (string) $disk->url($relativePath);
+                }
+            }
 
-        $relativePath = ltrim($value, '/');
-        if ($relativePath === '' || !Storage::disk('public')->exists($relativePath)) {
             return '';
         }
 
-        return (string) Storage::disk('public')->url($relativePath);
+        $relativePath = ltrim($value, '/');
+        if ($relativePath === '') {
+            return '';
+        }
+
+        foreach ($diskNames as $diskName) {
+            try {
+                $disk = Storage::disk($diskName);
+            } catch (\Throwable $exception) {
+                continue;
+            }
+
+            if ($disk->exists($relativePath)) {
+                return (string) $disk->url($relativePath);
+            }
+        }
+
+        return '';
     }
 }
 

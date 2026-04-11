@@ -2357,7 +2357,81 @@ SVG;
 
 // ─────────────────────────────────────────────────────────────
 // Islands & Atolls Directory
-// /islands              – full index with atoll filter chips
+    // Blog inline image proxy
+    // /media/blog-inline/{path} — streams inline images uploaded via EasyMDE
+    // ─────────────────────────────────────────────────────────────
+    Route::get('/media/blog-inline/{path}', function (string $path) {
+        // Normalise and guard against path traversal
+        $cleanPath = ltrim(str_replace(['..', '\\'], '', $path), '/');
+        if (!Str::startsWith($cleanPath, 'blog/inline/')) {
+            abort(404);
+        }
+
+        $mediaDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
+        if ($mediaDisk === '') {
+            $mediaDisk = 'public';
+        }
+
+        try {
+            $disk = Storage::disk($mediaDisk);
+        } catch (\Throwable $exception) {
+            abort(404);
+        }
+
+        if (!$disk->exists($cleanPath)) {
+            abort(404);
+        }
+
+        $mimeType = (string) ($disk->mimeType($cleanPath) ?: 'image/jpeg');
+        $fileSize = $disk->size($cleanPath);
+
+        return response()->stream(static function () use ($disk, $cleanPath) {
+            $stream = $disk->readStream($cleanPath);
+            fpassthru($stream);
+            fclose($stream);
+        }, 200, [
+            'Content-Type'  => $mimeType,
+            'Content-Length' => $fileSize,
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
+    })->where('path', '.+');
+
+    Route::post('/portal/admin/blog/delete-inline-image', function (Request $request) {
+        if (!session()->get('portal_admin_authenticated', false)) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        if (!canManageContent()) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $path = trim((string) ($request->input('path') ?? ''));
+        if (
+            $path === '' ||
+            !Str::startsWith($path, 'blog/inline/') ||
+            str_contains($path, '..') ||
+            str_contains($path, '\\')
+        ) {
+            return response()->json(['message' => 'Invalid path.'], 422);
+        }
+
+        $mediaDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
+        if ($mediaDisk === '') {
+            $mediaDisk = 'public';
+        }
+
+        try {
+            Storage::disk($mediaDisk)->delete($path);
+        } catch (\Throwable $exception) {
+            return response()->json(['message' => 'Delete failed.'], 500);
+        }
+
+        return response()->json(['deleted' => true]);
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // Islands & Atolls Directory
+    // /islands              – full index with atoll filter chips
 // /islands/atoll/{slug} – atoll-filtered index
 // /islands/{slug}       – individual island page
 // ─────────────────────────────────────────────────────────────
@@ -5989,7 +6063,7 @@ Route::post('/portal/admin/blog/upload-image', function (Request $request) {
     $storedPath = $directory . '/' . $filename;
 
     return response()->json([
-        'url' => Storage::disk($mediaDisk)->url($storedPath),
+           'url' => '/media/blog-inline/' . $storedPath,
         'path' => $storedPath,
     ]);
 });

@@ -2902,15 +2902,59 @@
             }
 
             function setActiveNavLink(panelKey) {
-                navLinks.forEach((link) => {
-                    const isActive = (link.dataset.panelKey || "") === panelKey;
-                    link.classList.toggle("is-active", isActive);
+                const candidates = navLinks.filter((link) => {
+                    return (link.dataset.panelKey || "") === panelKey;
                 });
+
+                if (candidates.length === 0) {
+                    setExactActiveNavLink(null);
+                    return;
+                }
+
+                const currentUrl = new URL(window.location.href);
+                const currentPath = currentUrl.pathname.replace(/\/+$/, "") || "/";
+                const currentSearch = currentUrl.search;
+                let bestLink = candidates[0];
+                let bestScore = -1;
+
+                candidates.forEach((link) => {
+                    let score = 0;
+                    let linkUrl = null;
+                    try {
+                        linkUrl = new URL(String(link.getAttribute("href") || ""), window.location.origin);
+                    } catch (error) {
+                        linkUrl = null;
+                    }
+
+                    if (linkUrl) {
+                        const linkPath = linkUrl.pathname.replace(/\/+$/, "") || "/";
+                        const linkSearch = linkUrl.search;
+                        if (linkPath === currentPath) {
+                            score += 3;
+                        }
+                        if (linkSearch === currentSearch) {
+                            score += 2;
+                        }
+
+                        const linkPage = linkUrl.searchParams.get("page");
+                        const currentPage = currentUrl.searchParams.get("page");
+                        if (linkPage && currentPage && linkPage === currentPage) {
+                            score += 1;
+                        }
+                    }
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestLink = link;
+                    }
+                });
+
+                setExactActiveNavLink(bestLink);
             }
 
             function setExactActiveNavLink(activeLink) {
                 navLinks.forEach((link) => {
-                    link.classList.toggle("is-active", link === activeLink);
+                    link.classList.toggle("is-active", !!activeLink && link === activeLink);
                 });
             }
 

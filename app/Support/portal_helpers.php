@@ -241,6 +241,37 @@ if (!function_exists('blogRenderInlineMarkup')) {
 
         $value = e($value);
 
+        // Render markdown image syntax within regular paragraph blocks.
+        $value = preg_replace_callback('/!\[(.*?)\]\((https?:\/\/[^\s\)]+|\/[^\s\)]+|storage\/[^\s\)]+|blog\/[^\s\)]+)\)/', static function (array $matches): string {
+            $alt = trim((string) ($matches[1] ?? ''));
+            $source = trim((string) ($matches[2] ?? ''));
+            if ($source === '') {
+                return $matches[0];
+            }
+
+            $resolved = blogResolveCoverImageUrl($source);
+            if ($resolved === '') {
+                return $matches[0];
+            }
+
+            return '<img class="inline-image" src="' . e($resolved) . '" alt="' . e($alt) . '" loading="lazy">';
+        }, $value) ?? $value;
+
+        $value = preg_replace_callback('/\[image:\s*([^\]|]+?)(?:\s*\|\s*(.+?))?\]/i', static function (array $matches): string {
+            $source = trim((string) ($matches[1] ?? ''));
+            $alt = trim((string) ($matches[2] ?? ''));
+            if ($source === '') {
+                return $matches[0];
+            }
+
+            $resolved = blogResolveCoverImageUrl($source);
+            if ($resolved === '') {
+                return $matches[0];
+            }
+
+            return '<img class="inline-image" src="' . e($resolved) . '" alt="' . e($alt) . '" loading="lazy">';
+        }, $value) ?? $value;
+
         $value = preg_replace_callback('/\[(.+?)\]\((https?:\/\/[^\s\)]+|\/[^\s\)]+)\)/', static function (array $matches): string {
             $label = trim((string) ($matches[1] ?? ''));
             $href = trim((string) ($matches[2] ?? ''));

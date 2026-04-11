@@ -293,6 +293,15 @@
             margin: 0 0 22px;
         }
 
+        .content .inline-image {
+            display: block;
+            width: 100%;
+            margin: 14px 0;
+            border: 1px solid #cfdae3;
+            background: #d4e3ee;
+            border-radius: 0;
+        }
+
         .content h4 { font-size: clamp(1.1rem, 1.9vw, 1.45rem); }
         .content h2,
         .content h3 {

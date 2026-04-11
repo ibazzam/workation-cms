@@ -5929,6 +5929,40 @@ Route::post('/portal/admin/blog', function (Request $request) {
     return redirect('/portal/admin/blog')->with('portal_notice', 'Blog post created successfully.');
 });
 
+Route::post('/portal/admin/blog/upload-image', function (Request $request) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return response()->json(['message' => 'Unauthenticated.'], 401);
+    }
+
+    if (!canManageContent()) {
+        return response()->json(['message' => 'Only ADMIN_SUPER or ADMIN_MEDIA can upload blog images.'], 403);
+    }
+
+    $validated = $request->validate([
+        'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:6144'],
+    ]);
+
+    $imageFile = $request->file('image');
+    if ($imageFile === null || !$imageFile->isValid()) {
+        return response()->json(['message' => 'Invalid image upload.'], 422);
+    }
+
+    $extension = strtolower((string) $imageFile->getClientOriginalExtension());
+    if ($extension === '') {
+        $extension = 'jpg';
+    }
+
+    $directory = 'blog/inline/' . now()->format('Y/m');
+    $filename = (string) Str::uuid() . '.' . $extension;
+    Storage::disk('public')->putFileAs($directory, $imageFile, $filename);
+    $storedPath = $directory . '/' . $filename;
+
+    return response()->json([
+        'url' => '/storage/' . $storedPath,
+        'path' => $storedPath,
+    ]);
+});
+
 Route::get('/portal/admin/blog/{post}/edit', function (int $post) {
     if (!session()->get('portal_admin_authenticated', false)) {
         return redirect('/portal/admin/login');

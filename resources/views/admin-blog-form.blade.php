@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $mode === 'edit' ? 'Edit Blog Post' : 'Create Blog Post' }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
@@ -414,6 +415,7 @@
                     element: contentElement,
                     autofocus: false,
                     spellChecker: false,
+                    uploadImage: true,
                     autosave: {
                         enabled: false,
                     },
@@ -441,6 +443,39 @@
                         '|',
                         'guide',
                     ],
+                    imageUploadFunction: function (file, onSuccess, onError) {
+                        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                        const formData = new FormData();
+                        formData.append('image', file);
+
+                        fetch('/portal/admin/blog/upload-image', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': token,
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: formData,
+                            credentials: 'same-origin',
+                        })
+                            .then(function (response) {
+                                if (!response.ok) {
+                                    throw new Error('Upload failed (' + response.status + ')');
+                                }
+
+                                return response.json();
+                            })
+                            .then(function (payload) {
+                                const imageUrl = String(payload?.url || '').trim();
+                                if (!imageUrl) {
+                                    throw new Error('Upload did not return an image URL.');
+                                }
+
+                                onSuccess(imageUrl);
+                            })
+                            .catch(function (error) {
+                                onError(error?.message || 'Unable to upload image.');
+                            });
+                    },
                 });
 
                 const form = contentElement.closest('form');

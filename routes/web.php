@@ -2517,6 +2517,9 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         abort(404);
     }
 
+    // Map URL slug (hyphens) to DB listing_category value (underscores)
+    $dbCategoryKey = str_replace('-', '_', $categoryKey);
+
     if (Schema::hasTable('portal_finance_settings')) {
         $categorySettingKey = 'catalog_hero_image_' . str_replace('-', '_', $categoryKey);
         $managedCategoryHeroImage = DB::table('portal_finance_settings')
@@ -2575,7 +2578,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     if (Schema::hasTable('vendor_properties')) {
         $propertiesQuery = DB::table('vendor_properties')->where('status', 'active');
         if (Schema::hasColumn('vendor_properties', 'listing_category')) {
-            $propertiesQuery->whereRaw('LOWER(listing_category) = ?', [$categoryKey]);
+            $propertiesQuery->whereRaw('LOWER(listing_category) = ?', [$dbCategoryKey]);
         }
 
         $searchColumns = [];
@@ -2668,8 +2671,8 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         if (Schema::hasColumn('vendor_properties', 'atoll')) {
             $atollOptions = DB::table('vendor_properties')
                 ->where('status', 'active')
-                ->when(Schema::hasColumn('vendor_properties', 'listing_category'), function ($query) use ($categoryKey) {
-                    $query->whereRaw('LOWER(listing_category) = ?', [$categoryKey]);
+                ->when(Schema::hasColumn('vendor_properties', 'listing_category'), function ($query) use ($dbCategoryKey) {
+                    $query->whereRaw('LOWER(listing_category) = ?', [$dbCategoryKey]);
                 })
                 ->whereNotNull('atoll')
                 ->where('atoll', '!=', '')
@@ -2682,8 +2685,8 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         if (Schema::hasColumn('vendor_properties', 'island')) {
             $islandOptions = DB::table('vendor_properties')
                 ->where('status', 'active')
-                ->when(Schema::hasColumn('vendor_properties', 'listing_category'), function ($query) use ($categoryKey) {
-                    $query->whereRaw('LOWER(listing_category) = ?', [$categoryKey]);
+                ->when(Schema::hasColumn('vendor_properties', 'listing_category'), function ($query) use ($dbCategoryKey) {
+                    $query->whereRaw('LOWER(listing_category) = ?', [$dbCategoryKey]);
                 })
                 ->whereNotNull('island')
                 ->where('island', '!=', '')
@@ -3366,6 +3369,9 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         abort(404);
     }
 
+    // Map URL slug to DB value (hyphens -> underscores)
+    $dbCategoryKey = str_replace('-', '_', $categoryKey);
+
     $categoryFields = collect($categoryFieldMap[$categoryKey] ?? [])->values();
 
     if (!Schema::hasTable('vendor_properties')) {
@@ -3377,7 +3383,7 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         ->where('status', 'active');
 
     if (Schema::hasColumn('vendor_properties', 'listing_category')) {
-        $propertyQuery->whereRaw('LOWER(listing_category) = ?', [$categoryKey]);
+        $propertyQuery->whereRaw('LOWER(listing_category) = ?', [$dbCategoryKey]);
     }
 
     $propertyRow = $propertyQuery->first();
@@ -3665,12 +3671,14 @@ Route::post('/booking/reserve-category', function (Request $request) {
     }
 
     $categoryKey = strtolower(trim((string) $payload['category_key']));
+    // Normalise hyphenated keys (from URL) to underscored DB values
+    $dbCategoryKey = str_replace('-', '_', $categoryKey);
     $propertyQuery = DB::table('vendor_properties')
         ->where('id', (int) $payload['property_id'])
         ->where('status', 'active');
 
     if (Schema::hasColumn('vendor_properties', 'listing_category')) {
-        $propertyQuery->whereRaw('LOWER(listing_category) = ?', [$categoryKey]);
+        $propertyQuery->whereRaw('LOWER(listing_category) = ?', [$dbCategoryKey]);
     }
 
     $propertyRow = $propertyQuery->first();
@@ -5923,7 +5931,7 @@ Route::post('/portal/admin/blog', function (Request $request) {
             }
 
             $storagePath = 'blog/' . (int) $post->id . '/cover.' . $extension;
-            Storage::disk($blogMediaDisk)->putFileAs('blog/' . (int) $post->id, $coverFile, 'cover.' . $extension);
+            Storage::disk($blogMediaDisk)->putFileAs('blog/' . (int) $post->id, $coverFile, 'cover.' . $extension, ['visibility' => 'public']);
             $post->cover_image_path = $storagePath;
             $post->save();
         }
@@ -5977,7 +5985,7 @@ Route::post('/portal/admin/blog/upload-image', function (Request $request) {
         $mediaDisk = 'public';
     }
 
-    Storage::disk($mediaDisk)->putFileAs($directory, $imageFile, $filename);
+    Storage::disk($mediaDisk)->putFileAs($directory, $imageFile, $filename, ['visibility' => 'public']);
     $storedPath = $directory . '/' . $filename;
 
     return response()->json([
@@ -6094,7 +6102,7 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
             }
 
             $storagePath = 'blog/' . (int) $blogPost->id . '/cover.' . $extension;
-            Storage::disk($blogMediaDisk)->putFileAs('blog/' . (int) $blogPost->id, $coverFile, 'cover.' . $extension);
+            Storage::disk($blogMediaDisk)->putFileAs('blog/' . (int) $blogPost->id, $coverFile, 'cover.' . $extension, ['visibility' => 'public']);
             $blogPost->cover_image_path = $storagePath;
         }
     }

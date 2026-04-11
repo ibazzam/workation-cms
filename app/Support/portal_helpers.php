@@ -151,6 +151,189 @@ if (!function_exists('generateUniqueBlogSlug')) {
     }
 }
 
+if (!function_exists('blogResolveCoverImageUrl')) {
+    function blogResolveCoverImageUrl(?string $coverImagePath): string
+    {
+        $value = str_replace('\\', '/', trim((string) $coverImagePath));
+        if ($value === '') {
+            return '';
+        }
+
+        if (in_array(Str::lower($value), ['null', 'undefined', 'false'], true)) {
+            return '';
+        }
+        if ((Str::startsWith($value, '"') && Str::endsWith($value, '"')) || (Str::startsWith($value, "'") && Str::endsWith($value, "'"))) {
+            $value = trim($value, "\"'");
+        }
+        if (Str::startsWith($value, '[') && Str::endsWith($value, ']')) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded) && isset($decoded[0]) && is_string($decoded[0])) {
+                $value = trim($decoded[0]);
+            }
+        }
+        if ($value === '') {
+            return '';
+        }
+
+        if (Str::startsWith($value, ['https://', 'http://', '//'])) {
+            return $value;
+        }
+
+        if (preg_match('#(?:^|/)blog/(\d+)/cover\.[a-z0-9]+$#i', $value, $matches) === 1) {
+            $postId = (int) ($matches[1] ?? 0);
+            if ($postId > 0) {
+                return '/media/blog/' . $postId . '/cover';
+            }
+        }
+
+        if (preg_match('#/storage/app/public/(.+)$#i', $value, $matches) === 1) {
+            $value = (string) ($matches[1] ?? '');
+        } elseif (preg_match('#/public/storage/(.+)$#i', $value, $matches) === 1) {
+            $value = (string) ($matches[1] ?? '');
+        }
+
+        if (Str::startsWith($value, ['/storage/'])) {
+            return '/' . ltrim($value, '/');
+        }
+
+        $value = ltrim($value, '/');
+
+        if (Str::startsWith($value, ['storage/'])) {
+            return '/' . ltrim($value, '/');
+        }
+
+        if (Str::startsWith($value, ['public/'])) {
+            $value = Str::after($value, 'public/');
+        }
+
+        if (Str::startsWith($value, ['storage/'])) {
+            $relativePath = ltrim(Str::after($value, 'storage/'), '/');
+
+            return Storage::disk('public')->exists($relativePath)
+                ? ('/storage/' . $relativePath)
+                : '';
+        }
+
+        if (Str::startsWith($value, ['blog/'])) {
+            $relativePath = ltrim($value, '/');
+
+            return Storage::disk('public')->exists($relativePath)
+                ? ('/storage/' . $relativePath)
+                : '';
+        }
+
+        $relativePath = ltrim($value, '/');
+        if ($relativePath === '' || !Storage::disk('public')->exists($relativePath)) {
+            return '';
+        }
+
+        return (string) Storage::disk('public')->url($relativePath);
+    }
+}
+
+if (!function_exists('blogRenderInlineMarkup')) {
+    function blogRenderInlineMarkup(?string $text): string
+    {
+        $value = trim((string) $text);
+        if ($value === '') {
+            return '';
+        }
+
+        $value = e($value);
+
+        $value = preg_replace_callback('/\[(.+?)\]\((https?:\/\/[^\s\)]+|\/[^\s\)]+)\)/', static function (array $matches): string {
+            $label = trim((string) ($matches[1] ?? ''));
+            $href = trim((string) ($matches[2] ?? ''));
+            if ($label === '' || $href === '') {
+                return $matches[0];
+            }
+
+            $safeHref = e($href);
+            $isExternal = Str::startsWith($href, ['http://', 'https://']);
+
+            return '<a href="' . $safeHref . '"' . ($isExternal ? ' target="_blank" rel="noopener noreferrer"' : '') . '>' . $label . '</a>';
+        }, $value) ?? $value;
+
+        $value = preg_replace('/\*\*(.+?)\*\*/s', '<strong>$1</strong>', $value) ?? $value;
+        $value = preg_replace('/__(.+?)__/s', '<strong>$1</strong>', $value) ?? $value;
+        $value = preg_replace('/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/s', '<em>$1</em>', $value) ?? $value;
+        $value = preg_replace('/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/s', '<em>$1</em>', $value) ?? $value;
+
+        return nl2br($value, false);
+    }
+}
+
+if (!function_exists('blogBuildRenderableContentBlocks')) {
+    function blogBuildRenderableContentBlocks(?string $content, ?string $fallbackAlt = null): array
+    {
+        $rawContent = trim((string) $content);
+        if ($rawContent === '') {
+            return [];
+        }
+
+        $normalizeImageUrl = static function (string $candidate): string {
+            $value = trim($candidate);
+            if ($value === '') {
+                return '';
+            }
+
+            return blogResolveCoverImageUrl($value);
+        };
+
+        $rawBlocks = preg_split('/\R{2,}/', $rawContent) ?: [];
+        $blocks = [];
+        foreach ($rawBlocks as $block) {
+            $trimmed = trim((string) $block);
+            if ($trimmed === '') {
+                continue;
+            }
+
+            if (preg_match('/^!\[(.*?)\]\(([^\)]+)\)$/', $trimmed, $matches) === 1) {
+                $imageUrl = $normalizeImageUrl((string) ($matches[2] ?? ''));
+                if ($imageUrl !== '') {
+                    $blocks[] = [
+                        'type' => 'image',
+                        'alt' => trim((string) ($matches[1] ?? '')),
+                        'url' => $imageUrl,
+                    ];
+                    continue;
+                }
+            }
+
+            if (preg_match('/^\[image:\s*([^\]|]+?)(?:\s*\|\s*(.+?))?\]$/i', $trimmed, $matches) === 1) {
+                $imageUrl = $normalizeImageUrl((string) ($matches[1] ?? ''));
+                if ($imageUrl !== '') {
+                    $blocks[] = [
+                        'type' => 'image',
+                        'alt' => trim((string) ($matches[2] ?? $fallbackAlt ?? '')),
+                        'url' => $imageUrl,
+                    ];
+                    continue;
+                }
+            }
+
+            if (preg_match('/^####\s+(.+)$/', $trimmed, $matches) === 1) {
+                $blocks[] = ['type' => 'h4', 'text' => (string) ($matches[1] ?? '')];
+                continue;
+            }
+
+            if (preg_match('/^###\s+(.+)$/', $trimmed, $matches) === 1) {
+                $blocks[] = ['type' => 'h3', 'text' => (string) ($matches[1] ?? '')];
+                continue;
+            }
+
+            if (preg_match('/^#{1,2}\s+(.+)$/', $trimmed, $matches) === 1) {
+                $blocks[] = ['type' => 'h2', 'text' => (string) ($matches[1] ?? '')];
+                continue;
+            }
+
+            $blocks[] = ['type' => 'p', 'text' => $trimmed];
+        }
+
+        return $blocks;
+    }
+}
+
 if (!function_exists('supportedVendorSocialProviders')) {
     function supportedVendorSocialProviders(): array
     {

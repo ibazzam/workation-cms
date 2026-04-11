@@ -145,6 +145,12 @@
             color: #fff;
         }
 
+        .btn.danger {
+            border-color: #e2b4bb;
+            background: #fff1f3;
+            color: #982a35;
+        }
+
         .error {
             margin-top: 12px;
             border: 1px solid #efc4c9;
@@ -284,7 +290,7 @@
                 <div class="field wide">
                     <label for="blog_content">Content</label>
                     <textarea id="blog_content" name="content" required>{{ old('content', $isEdit ? $post->content : '') }}</textarea>
-                    <p class="hint">Use plain text with line breaks. For mid-article images use <code>![Caption](https://...)</code> or <code>[image:/storage/path.jpg]</code>. Use <code>## Heading</code> for section titles.</p>
+                    <p class="hint">Use markdown-style content. Supported: <code>## Heading</code>, <code>### Subheading</code>, <code>**bold**</code>, <code>*italic*</code>, <code>[Link](https://example.com)</code>, <code>![Caption](https://...)</code>, and <code>[image:/storage/path.jpg|Caption]</code> for full-width article images.</p>
                 </div>
 
                 <div class="field">
@@ -336,6 +342,16 @@
                 <button class="btn primary" type="submit">{{ $isEdit ? 'Save Changes' : 'Create Post' }}</button>
             </div>
         </form>
+
+        @if ($isEdit)
+            <form class="card" method="POST" action="{{ '/portal/admin/blog/' . $post->id . '/delete' }}" onsubmit="return confirm('Delete this blog post permanently?');">
+                @csrf
+                <p class="hint">Delete removes the article and its uploaded cover image.</p>
+                <div class="actions">
+                    <button class="btn danger" type="submit">Delete Post</button>
+                </div>
+            </form>
+        @endif
 
         @if ($isEdit && $canReview)
             <form class="card" method="POST" action="{{ '/portal/admin/blog/' . $post->id . '/review' }}">

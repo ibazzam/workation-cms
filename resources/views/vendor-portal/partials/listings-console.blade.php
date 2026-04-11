@@ -4,9 +4,56 @@
                     ? (string) ($listingCategoryLabelMap[$forcedListingCategory] ?? ucwords(str_replace('_', ' ', $forcedListingCategory)))
                     : '';
                 $consoleTitleLabel = $consoleCategoryLabel !== '' ? $consoleCategoryLabel . ' Listings' : 'My Listings';
+                $overviewPropertyCount = $vendorProperties->count();
+                $overviewReservationCount = $vendorReservations->count();
+                $overviewConfirmedCount = $vendorReservations
+                    ->filter(static function ($reservation): bool {
+                        return strtolower((string) ($reservation->status ?? 'pending')) === 'confirmed';
+                    })
+                    ->count();
+                $overviewGrossRevenue = (float) $vendorReservations
+                    ->sum(static fn ($reservation) => (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0));
+                $overviewPendingReviewCount = $vendorProperties
+                    ->filter(static fn ($property): bool => strtolower(trim((string) ($property->listing_moderation_status ?? 'draft'))) === 'pending_review')
+                    ->count();
+
+                if ($forcedListingCategory !== '') {
+                    $forcedCategoryProperties = $propertiesByCategory->get($forcedListingCategory, collect());
+                    $forcedCategoryPropertyIds = $forcedCategoryProperties
+                        ->pluck('id')
+                        ->map(static fn ($id) => (int) $id)
+                        ->filter(static fn (int $id): bool => $id > 0)
+                        ->values();
+                    $forcedCategoryReservations = $vendorReservations
+                        ->filter(static function ($reservation) use ($forcedCategoryPropertyIds): bool {
+                            return $forcedCategoryPropertyIds->contains((int) ($reservation->vendor_property_id ?? 0));
+                        })
+                        ->values();
+
+                    $overviewPropertyCount = $forcedCategoryProperties->count();
+                    $overviewReservationCount = $forcedCategoryReservations->count();
+                    $overviewConfirmedCount = $forcedCategoryReservations
+                        ->filter(static function ($reservation): bool {
+                            return strtolower((string) ($reservation->status ?? 'pending')) === 'confirmed';
+                        })
+                        ->count();
+                    $overviewGrossRevenue = (float) $forcedCategoryReservations
+                        ->sum(static fn ($reservation) => (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0));
+                    $overviewPendingReviewCount = $forcedCategoryProperties
+                        ->filter(static fn ($property): bool => strtolower(trim((string) ($property->listing_moderation_status ?? 'draft'))) === 'pending_review')
+                        ->count();
+                }
             @endphp
             <div class="ops-header">
                 <p class="ops-title">{{ $consoleTitleLabel }}</p>
+                @if ($forcedListingCategory !== '')
+                    <div class="inline-actions">
+                        <a class="btn btn-primary" href="/vendor/listings/create/{{ $forcedListingCategory }}">Add {{ $consoleCategoryLabel }}</a>
+                        <a class="btn btn-secondary" href="/vendor/reservations">Reservations</a>
+                        <a class="btn btn-secondary" href="/vendor/pricing">Pricing</a>
+                        <a class="btn btn-secondary" href="/vendor/billing">Billing</a>
+                    </div>
+                @endif
             </div>
             @if (!$vendorCanManageListings)
                 <p class="wizard-note" style="margin-bottom:10px;">Listings, operations, and pricing are currently locked. Complete My Account compliance details and wait for admin verification approval.</p>
@@ -15,30 +62,53 @@
                 <p class="wizard-note">Select at least one category in Category Wizard before creating listings.</p>
             @endif
             <div class="ops-metrics">
-                <article class="ops-metric">
-                    <p class="metric-label">Properties</p>
-                    <p class="metric-value">{{ $vendorProperties->count() }}</p>
-                </article>
-                <article class="ops-metric">
-                    <p class="metric-label">Services</p>
-                    <p class="metric-value">{{ $vendorServices->count() }}</p>
-                </article>
-                <article class="ops-metric">
-                    <p class="metric-label">Availability Days</p>
-                    <p class="metric-value">{{ $vendorAvailability->count() }}</p>
-                </article>
-                <article class="ops-metric">
-                    <p class="metric-label">Reservations</p>
-                    <p class="metric-value">{{ $vendorReservations->count() }}</p>
-                </article>
-                <article class="ops-metric">
-                    <p class="metric-label">Pricing Rules</p>
-                    <p class="metric-value">{{ $vendorPricingRules->count() }}</p>
-                </article>
-                <article class="ops-metric">
-                    <p class="metric-label">Billing Profile</p>
-                    <p class="metric-value">{{ $vendorBilling ? 'Ready' : 'Missing' }}</p>
-                </article>
+                @if ($forcedListingCategory !== '')
+                    <article class="ops-metric">
+                        <p class="metric-label">Listings</p>
+                        <p class="metric-value">{{ $overviewPropertyCount }}</p>
+                    </article>
+                    <article class="ops-metric">
+                        <p class="metric-label">Reservations</p>
+                        <p class="metric-value">{{ $overviewReservationCount }}</p>
+                    </article>
+                    <article class="ops-metric">
+                        <p class="metric-label">Confirmed</p>
+                        <p class="metric-value">{{ $overviewConfirmedCount }}</p>
+                    </article>
+                    <article class="ops-metric">
+                        <p class="metric-label">Gross Revenue</p>
+                        <p class="metric-value">{{ number_format($overviewGrossRevenue, 2) }} MVR</p>
+                    </article>
+                    <article class="ops-metric">
+                        <p class="metric-label">Pending Review</p>
+                        <p class="metric-value">{{ $overviewPendingReviewCount }}</p>
+                    </article>
+                @else
+                    <article class="ops-metric">
+                        <p class="metric-label">Properties</p>
+                        <p class="metric-value">{{ $vendorProperties->count() }}</p>
+                    </article>
+                    <article class="ops-metric">
+                        <p class="metric-label">Services</p>
+                        <p class="metric-value">{{ $vendorServices->count() }}</p>
+                    </article>
+                    <article class="ops-metric">
+                        <p class="metric-label">Availability Days</p>
+                        <p class="metric-value">{{ $vendorAvailability->count() }}</p>
+                    </article>
+                    <article class="ops-metric">
+                        <p class="metric-label">Reservations</p>
+                        <p class="metric-value">{{ $vendorReservations->count() }}</p>
+                    </article>
+                    <article class="ops-metric">
+                        <p class="metric-label">Pricing Rules</p>
+                        <p class="metric-value">{{ $vendorPricingRules->count() }}</p>
+                    </article>
+                    <article class="ops-metric">
+                        <p class="metric-label">Billing Profile</p>
+                        <p class="metric-value">{{ $vendorBilling ? 'Ready' : 'Missing' }}</p>
+                    </article>
+                @endif
             </div>
         </section>
 
@@ -154,39 +224,6 @@
                                 ->count();
                         @endphp
                         <article class="category-listing-section" id="category-view-{{ $categoryKey }}" data-category-view="{{ $categoryKey }}">
-                            <div class="category-listing-header">
-                                <h4>{{ $categoryLabel }} Listings</h4>
-                                <div class="inline-actions">
-                                    @if ($forcedListingCategory === $categoryKey)
-                                        <a class="btn btn-primary" href="/vendor/listings/create/{{ $categoryKey }}">Add {{ $categoryLabel }}</a>
-                                        <a class="btn btn-secondary" href="/vendor/reservations">Reservations</a>
-                                        <a class="btn btn-secondary" href="/vendor/pricing">Pricing</a>
-                                        <a class="btn btn-secondary" href="/vendor/billing">Billing</a>
-                                    @endif
-                                </div>
-                            </div>
-                            <div class="ops-metrics" style="margin:0 0 10px;">
-                                <article class="ops-metric">
-                                    <p class="metric-label">Listings</p>
-                                    <p class="metric-value">{{ $categoryProperties->count() }}</p>
-                                </article>
-                                <article class="ops-metric">
-                                    <p class="metric-label">Reservations</p>
-                                    <p class="metric-value">{{ $categoryReservations->count() }}</p>
-                                </article>
-                                <article class="ops-metric">
-                                    <p class="metric-label">Confirmed</p>
-                                    <p class="metric-value">{{ $categoryConfirmedReservations }}</p>
-                                </article>
-                                <article class="ops-metric">
-                                    <p class="metric-label">Gross Revenue</p>
-                                    <p class="metric-value">{{ number_format($categoryGrossRevenue, 2) }} MVR</p>
-                                </article>
-                                <article class="ops-metric">
-                                    <p class="metric-label">Pending Review</p>
-                                    <p class="metric-value">{{ $categoryPendingReviewCount }}</p>
-                                </article>
-                            </div>
                             @if ($categoryProperties->isEmpty())
                                 <p class="ops-empty">No {{ strtolower((string) $categoryLabel) }} listings yet.</p>
                             @else

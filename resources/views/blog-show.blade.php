@@ -282,8 +282,9 @@
             background: #eef7fd;
         }
 
-        .content {
-            font-size: 1.26rem;
+        .content h2,
+        .content h3,
+        .content h4 {
             line-height: 1.62;
             color: #172a38;
         }
@@ -292,6 +293,7 @@
             margin: 0 0 22px;
         }
 
+        .content h4 { font-size: clamp(1.1rem, 1.9vw, 1.45rem); }
         .content h2,
         .content h3 {
             margin: 30px 0 12px;
@@ -559,60 +561,7 @@
         ];
 
         $rawContent = trim((string) ($post->content ?? ''));
-        $rawBlocks = preg_split('/\R{2,}/', $rawContent) ?: [];
-
-        $normalizeImageUrl = function (string $candidate): string {
-            $value = trim($candidate);
-            if ($value === '') {
-                return '';
-            }
-
-            return blogResolveCoverImageUrl($value);
-        };
-
-        $contentBlocks = [];
-        foreach ($rawBlocks as $block) {
-            $trimmed = trim($block);
-            if ($trimmed === '') {
-                continue;
-            }
-
-            if (preg_match('/^!\[(.*?)\]\(([^\)]+)\)$/', $trimmed, $matches) === 1) {
-                $imageUrl = $normalizeImageUrl((string) ($matches[2] ?? ''));
-                if ($imageUrl !== '') {
-                    $contentBlocks[] = [
-                        'type' => 'image',
-                        'alt' => (string) ($matches[1] ?? ''),
-                        'url' => $imageUrl,
-                    ];
-                    continue;
-                }
-            }
-
-            if (preg_match('/^\[image:\s*(.+?)\]$/i', $trimmed, $matches) === 1) {
-                $imageUrl = $normalizeImageUrl((string) ($matches[1] ?? ''));
-                if ($imageUrl !== '') {
-                    $contentBlocks[] = [
-                        'type' => 'image',
-                        'alt' => (string) ($post->title ?? 'Blog image'),
-                        'url' => $imageUrl,
-                    ];
-                    continue;
-                }
-            }
-
-            if (preg_match('/^##\s+(.+)$/', $trimmed, $matches) === 1) {
-                $contentBlocks[] = ['type' => 'h2', 'text' => (string) ($matches[1] ?? '')];
-                continue;
-            }
-
-            if (preg_match('/^###\s+(.+)$/', $trimmed, $matches) === 1) {
-                $contentBlocks[] = ['type' => 'h3', 'text' => (string) ($matches[1] ?? '')];
-                continue;
-            }
-
-            $contentBlocks[] = ['type' => 'p', 'text' => $trimmed];
-        }
+        $contentBlocks = blogBuildRenderableContentBlocks($rawContent, (string) ($post->title ?? 'Blog image'));
 
         $relatedCards = $relatedPosts->take(3)->values();
         $topicTags = collect($post->blog_tags ?? [])->take(5)->values();
@@ -696,9 +645,11 @@
 
                     @forelse ($contentBlocks as $block)
                         @if ($block['type'] === 'h2')
-                            <h2>{{ $block['text'] }}</h2>
+                            <h2>{!! blogRenderInlineMarkup((string) ($block['text'] ?? '')) !!}</h2>
                         @elseif ($block['type'] === 'h3')
-                            <h3>{{ $block['text'] }}</h3>
+                            <h3>{!! blogRenderInlineMarkup((string) ($block['text'] ?? '')) !!}</h3>
+                        @elseif ($block['type'] === 'h4')
+                            <h4>{!! blogRenderInlineMarkup((string) ($block['text'] ?? '')) !!}</h4>
                         @elseif ($block['type'] === 'image')
                             <figure>
                                 <img src="{{ $block['url'] }}" alt="{{ $block['alt'] !== '' ? $block['alt'] : $post->title }}" loading="lazy">
@@ -707,7 +658,7 @@
                                 @endif
                             </figure>
                         @else
-                            <p>{!! nl2br(e((string) $block['text'])) !!}</p>
+                            <p>{!! blogRenderInlineMarkup((string) ($block['text'] ?? '')) !!}</p>
                         @endif
                     @empty
                         <p>{{ $rawContent !== '' ? $rawContent : 'No content was provided for this article yet.' }}</p>

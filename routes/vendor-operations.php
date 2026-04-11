@@ -4,6 +4,7 @@ use App\Models\User;
 use App\Support\ReservationPricingPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -74,6 +75,48 @@ if (!function_exists('vendorPortalCategoryAliases')) {
             'watersport' => 'water_sports',
             'watersports' => 'water_sports',
         ];
+    }
+}
+
+if (!function_exists('vendorPortalCategoryRequiredDocumentChecklist')) {
+    function vendorPortalCategoryRequiredDocumentChecklist(): array
+    {
+        return [
+            'marine_transport' => ['Valid marine transport operating license', 'Vessel registration or operator permit'],
+            'land_transport' => ['Valid transport operator license', 'Vehicle registration/commercial permit'],
+            'water_sports' => ['Activity safety/compliance certification', 'Operator or instructor certification'],
+            'excursion' => ['Tour/excursion operator permit', 'Public liability or compliance certificate'],
+            'remote_workspace' => ['Business/trade registration for workspace operations'],
+            'conference_room' => ['Venue operation approval or business permit'],
+            'resort_day_visit' => ['Resort partnership authorization or operating permit'],
+            'restaurant' => ['Food service license', 'Health/sanitation compliance certificate'],
+            'vehicle_rental' => ['Vehicle rental operator permit', 'Vehicle fleet registration evidence'],
+            'accommodation' => ['Tourism or accommodation operating license'],
+        ];
+    }
+}
+
+if (!function_exists('vendorPortalRequiredDocumentsForCategories')) {
+    function vendorPortalRequiredDocumentsForCategories(array $categories): array
+    {
+        $checklist = vendorPortalCategoryRequiredDocumentChecklist();
+        $required = [];
+
+        foreach ($categories as $categoryKey) {
+            $canonical = vendorPortalCanonicalCategory((string) $categoryKey);
+            if ($canonical === null) {
+                continue;
+            }
+
+            foreach ((array) ($checklist[$canonical] ?? []) as $item) {
+                $label = trim((string) $item);
+                if ($label !== '') {
+                    $required[] = $label;
+                }
+            }
+        }
+
+        return array_values(array_unique($required));
     }
 }
 
@@ -2075,6 +2118,89 @@ Route::get('/vendor/listings/create/{category}', function (string $category) {
         ->with('portal_listing_category', $normalizedCategory);
 });
 
+$vendorListingCategoryAliases = [
+    'accommodation',
+    'marine_transport',
+    'land_transport',
+    'water_sports',
+    'excursion',
+    'remote_workspace',
+    'conference_room',
+    'resort_day_visit',
+    'restaurant',
+    'vehicle_rental',
+];
+
+foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
+    Route::get('/vendor/listings/' . $listingCategoryAlias, function () use ($listingCategoryAlias) {
+        if (!session()->get('portal_vendor_authenticated', false)) {
+            return redirect('/portal/vendor/login');
+        }
+
+        $vendorUserId = (int) session('portal_vendor_user_id', 0);
+        $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+        if (!vendorPortalCanManageListings($vendorUser)) {
+            return redirect('/vendor?page=profile')
+                ->with('portal_active_panel', 'profile')
+                ->withErrors(['profile' => 'Listings are locked until your vendor profile is verified by admin.']);
+        }
+
+        return redirect('/vendor?page=listings')
+            ->with('portal_active_panel', 'listings')
+            ->with('listing_wizard_step', 1)
+            ->with('portal_listing_mode', 'manage')
+            ->with('portal_listing_category', $listingCategoryAlias);
+    })->name('vendor.listings.category.' . $listingCategoryAlias);
+
+    Route::get('/vendor/listings/' . $listingCategoryAlias . '/create', function () use ($listingCategoryAlias) {
+        if (!session()->get('portal_vendor_authenticated', false)) {
+            return redirect('/portal/vendor/login');
+        }
+
+        $vendorUserId = (int) session('portal_vendor_user_id', 0);
+        $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+        if (!vendorPortalCanManageListings($vendorUser)) {
+            return redirect('/vendor?page=profile')
+                ->with('portal_active_panel', 'profile')
+                ->withErrors(['profile' => 'Complete compliance verification in My Account and wait for admin approval before creating listings.']);
+        }
+
+        return redirect('/vendor?page=listings')
+            ->with('portal_active_panel', 'listings')
+            ->with('listing_wizard_step', 1)
+            ->with('portal_listing_mode', 'create')
+            ->with('portal_listing_category', $listingCategoryAlias);
+    })->name('vendor.listings.category.create.' . $listingCategoryAlias);
+}
+
+Route::get('/vendor/listings/{category}', function (string $category) {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+    if (!vendorPortalCanManageListings($vendorUser)) {
+        return redirect('/vendor?page=profile')
+            ->with('portal_active_panel', 'profile')
+            ->withErrors(['profile' => 'Listings are locked until your vendor profile is verified by admin.']);
+    }
+
+    $normalizedCategory = vendorPortalNormalizeCategoryToken($category);
+    $allowedCategories = array_merge(array_keys(vendorPortalCategoryMap()), ['marine_transport', 'land_transport']);
+    if (!in_array($normalizedCategory, $allowedCategories, true)) {
+        return redirect('/vendor?page=listings')->withErrors([
+            'profile' => 'Unsupported listing category route.',
+        ]);
+    }
+
+    return redirect('/vendor?page=listings')
+        ->with('portal_active_panel', 'listings')
+        ->with('listing_wizard_step', 1)
+        ->with('portal_listing_mode', 'manage')
+        ->with('portal_listing_category', $normalizedCategory);
+});
+
 Route::get('/vendor/listings/manage', function () {
     if (!session()->get('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');
@@ -2315,6 +2441,10 @@ Route::post('/portal/vendor/categories/update', function (Request $request) {
         'categories' => ['required', 'array', 'min:1'],
         'categories.*' => ['required', 'string', 'max:80'],
         'onboarding_step' => ['nullable', 'integer', 'min:1', 'max:4'],
+        'request_action' => ['nullable', Rule::in(['subscribe', 'open', 'release'])],
+        'request_note' => ['nullable', 'string', 'max:2000'],
+        'supporting_documents' => ['nullable', 'array'],
+        'supporting_documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:4096'],
     ]);
 
     $allowedCategoryKeys = array_keys(vendorPortalCategoryMap());
@@ -2330,6 +2460,14 @@ Route::post('/portal/vendor/categories/update', function (Request $request) {
         $normalizedCategories[] = $canonicalCategory;
     }
     $normalizedCategories = array_values(array_unique($normalizedCategories));
+    $requestAction = (string) ($validated['request_action'] ?? 'subscribe');
+    $requiredDocuments = vendorPortalRequiredDocumentsForCategories($normalizedCategories);
+
+    if (in_array($requestAction, ['subscribe', 'open'], true) && $requiredDocuments !== [] && empty($validated['supporting_documents'])) {
+        return back()->withErrors([
+            'profile' => 'Supporting documents are required for the selected categories: ' . implode('; ', $requiredDocuments),
+        ])->withInput();
+    }
 
     if (Schema::hasColumn('users', 'portal_service_categories')) {
         $vendorUser->portal_service_categories = json_encode($normalizedCategories);
@@ -2339,9 +2477,45 @@ Route::post('/portal/vendor/categories/update', function (Request $request) {
         $vendorUser->vendor_onboarding_step = (int) ($validated['onboarding_step'] ?? 1);
     }
 
+    $uploadedDocuments = [];
+    foreach ((array) ($validated['supporting_documents'] ?? []) as $document) {
+        if ($document instanceof \Illuminate\Http\UploadedFile) {
+            $storedPath = $document->store('vendor/compliance-documents/' . (int) $vendorUser->id, 'public');
+            if (is_string($storedPath) && $storedPath !== '') {
+                $uploadedDocuments[] = [
+                    'name' => (string) $document->getClientOriginalName(),
+                    'path' => $storedPath,
+                    'url' => Storage::disk('public')->url($storedPath),
+                ];
+            }
+        }
+    }
+
+    if ($uploadedDocuments !== [] && Schema::hasColumn('users', 'vendor_verification_documents')) {
+        $vendorUser->vendor_verification_documents = json_encode($uploadedDocuments);
+    }
+
     $vendorUser->save();
 
-    return back()->with('portal_notice', 'Vendor categories and onboarding step updated.');
+    if (function_exists('portalActionRequestsEnabled') && function_exists('createPortalActionRequest') && portalActionRequestsEnabled()) {
+        $requestReason = trim((string) ($validated['request_note'] ?? ''));
+        createPortalActionRequest(
+            'vendor.category_request',
+            (int) $vendorUser->id,
+            null,
+            (string) ($vendorUser->username ?: $vendorUser->email),
+            $requestReason !== '' ? $requestReason : 'Vendor category request submitted from portal.',
+            [
+                'request_action' => $requestAction,
+                'categories' => $normalizedCategories,
+                'documents' => $uploadedDocuments,
+                'required_documents' => $requiredDocuments,
+                'requested_via' => 'vendor_portal',
+            ]
+        );
+    }
+
+    return back()->with('portal_notice', 'Category request saved and sent for admin validation review.');
 });
 
 Route::post('/portal/vendor/profile/update', function (Request $request) {
@@ -4536,4 +4710,77 @@ Route::post('/portal/vendor/billing/update', function (Request $request) {
     );
 
     return back()->with('portal_notice', 'Billing details updated.');
+});
+
+Route::post('/portal/vendor/address/update', function (Request $request) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+    if (!Schema::hasTable('vendor_billing_details')) {
+        return back()->withErrors(['profile' => 'Vendor billing details table is not ready. Run migrations first.']);
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $validated = $request->validate([
+        'billing_street_name' => ['required', 'string', 'max:255'],
+        'billing_country' => ['required', 'string', 'max:90'],
+        'billing_state' => ['required', 'string', 'max:120'],
+        'billing_city' => ['required', 'string', 'max:120'],
+        'billing_address' => ['nullable', 'string', 'max:2000'],
+    ]);
+
+    $streetName = trim((string) $validated['billing_street_name']);
+    $billingCountry = trim((string) $validated['billing_country']);
+    $billingState = trim((string) $validated['billing_state']);
+    $billingCity = trim((string) $validated['billing_city']);
+    $manualAddress = trim((string) ($validated['billing_address'] ?? ''));
+    $locationSuffix = implode(', ', array_values(array_filter([$billingCity, $billingState, $billingCountry], static fn (string $value): bool => $value !== '')));
+    $resolvedAddress = $manualAddress !== '' ? $manualAddress : trim($streetName . ($locationSuffix !== '' ? ', ' . $locationSuffix : ''));
+
+    $payload = [
+        'billing_street_name' => $streetName,
+        'billing_country' => $billingCountry,
+        'billing_state' => $billingState,
+        'billing_city' => $billingCity,
+        'billing_address' => $resolvedAddress,
+        'updated_at' => now(),
+        'created_at' => now(),
+    ];
+
+    DB::table('vendor_billing_details')->updateOrInsert(
+        ['vendor_user_id' => $vendorUserId],
+        $payload
+    );
+
+    return back()->with('portal_notice', 'Address details updated.');
+});
+
+Route::post('/portal/vendor/password/update', function (Request $request) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+    if (!$vendorUser instanceof User || normalizePortalRoleValue((string) $vendorUser->portal_role) !== 'VENDOR') {
+        return back()->withErrors([
+            'profile' => 'Unable to resolve your vendor account. Please sign in again.',
+        ]);
+    }
+
+    $validated = $request->validate([
+        'current_password' => ['required', 'string', 'min:8'],
+        'password' => ['required', 'string', 'min:8', 'confirmed'],
+    ]);
+
+    if (!Hash::check((string) $validated['current_password'], (string) $vendorUser->password)) {
+        return back()->withErrors([
+            'profile' => 'Current password is incorrect.',
+        ])->withInput();
+    }
+
+    $vendorUser->password = (string) $validated['password'];
+    $vendorUser->save();
+
+    return back()->with('portal_notice', 'Password updated successfully.');
 });

@@ -877,6 +877,16 @@
             resize: vertical;
         }
 
+        .form-error-banner {
+            background: #fff0ef;
+            border: 1px solid #f0b7b3;
+            border-radius: 8px;
+            color: #7a2020;
+            font-size: 0.84rem;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+        }
+
         .ops-table-wrap {
             margin-top: 10px;
             border: 1px solid #d7e0e6;
@@ -3985,6 +3995,7 @@
 
                 let firstInvalid = null;
                 let allValid = true;
+                let invalidCount = 0;
 
                 requiredFields.forEach((field) => {
                     const valid = applyFieldValidationState(field);
@@ -3993,8 +4004,20 @@
                     }
                     if (!valid) {
                         allValid = false;
+                        invalidCount++;
                     }
                 });
+
+                const errorBanner = document.getElementById('propertyCreateFormError');
+                if (errorBanner) {
+                    if (!allValid) {
+                        const noun = invalidCount === 1 ? 'field' : 'fields';
+                        errorBanner.textContent = invalidCount + ' required ' + noun + ' must be completed before saving.';
+                        errorBanner.hidden = false;
+                    } else {
+                        errorBanner.hidden = true;
+                    }
+                }
 
                 if (!allValid && firstInvalid) {
                     firstInvalid.focus();

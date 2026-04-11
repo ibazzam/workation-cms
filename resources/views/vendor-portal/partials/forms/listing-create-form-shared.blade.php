@@ -93,7 +93,7 @@
                             <input id="map_place_id" name="map_place_id" type="hidden" value="{{ old('map_place_id') }}">
                             <div class="ops-field" data-category-scope="capacity">
                                 <label for="property_base_price">Base Price (MVR)</label>
-                                <input id="property_base_price" name="base_price" class="ops-input" type="number" min="0" step="0.01" value="{{ old('base_price') }}">
+                                <input id="property_base_price" name="base_price" class="ops-input" type="number" min="0" step="0.01" value="{{ old('base_price') }}" required>
                             </div>
                             <div class="ops-field" data-category-scope="capacity">
                                 <label for="property_max_guests">Max Guests</label>
@@ -101,7 +101,7 @@
                             </div>
                             <div class="ops-field ops-field-wide">
                                 <label for="property_description">Description</label>
-                                <textarea id="property_description" name="description" class="ops-textarea" maxlength="3000">{{ old('description') }}</textarea>
+                                <textarea id="property_description" name="description" class="ops-textarea" maxlength="3000" required>{{ old('description') }}</textarea>
                             </div>
 
                             <div class="ops-field" data-category-scope="stay">
@@ -135,7 +135,7 @@
                                         ->values()
                                         ->all();
                                 @endphp
-                                <select id="property_transport_mode" name="transport_mode" class="ops-select">
+                                <select id="property_transport_mode" name="transport_mode" class="ops-select" required>
                                     <option value="" @selected($transportModeOld === '')>Select transport mode</option>
                                     @if ($transportModeOld !== '' && !in_array($transportModeOld, $knownTransportModes, true))
                                         <option value="{{ $transportModeOld }}" selected>{{ ucfirst($transportModeOld) }} (existing)</option>
@@ -170,11 +170,11 @@
                             </div>
                             <div class="ops-field" data-category-scope="transport">
                                 <label for="property_contact_name">Contact Name</label>
-                                <input id="property_contact_name" name="contact_name" class="ops-input" type="text" maxlength="120" value="{{ old('contact_name') }}" placeholder="Dispatcher / Driver / Captain">
+                                <input id="property_contact_name" name="contact_name" class="ops-input" type="text" maxlength="120" value="{{ old('contact_name') }}" placeholder="Dispatcher / Driver / Captain" required>
                             </div>
                             <div class="ops-field" data-category-scope="transport">
                                 <label for="property_contact_number">Contact Number</label>
-                                <input id="property_contact_number" name="contact_number" class="ops-input" type="text" maxlength="60" value="{{ old('contact_number') }}" placeholder="+960 7xxxxxx">
+                                <input id="property_contact_number" name="contact_number" class="ops-input" type="text" maxlength="60" value="{{ old('contact_number') }}" placeholder="+960 7xxxxxx" required>
                             </div>
                             <div class="ops-field" data-category-scope="transport">
                                 <label for="property_transport_trip_type">Trip Type</label>
@@ -186,11 +186,11 @@
                             </div>
                             <div class="ops-field" data-category-scope="transport">
                                 <label for="property_pickup_location">Pickup Location</label>
-                                <input id="property_pickup_location" name="pickup_location" class="ops-input" type="text" maxlength="190" value="{{ old('pickup_location') }}" placeholder="Airport, Jetty, Hotel">
+                                <input id="property_pickup_location" name="pickup_location" class="ops-input" type="text" maxlength="190" value="{{ old('pickup_location') }}" placeholder="Airport, Jetty, Hotel" required>
                             </div>
                             <div class="ops-field" data-category-scope="transport">
                                 <label for="property_dropoff_location">Dropoff Location</label>
-                                <input id="property_dropoff_location" name="dropoff_location" class="ops-input" type="text" maxlength="190" value="{{ old('dropoff_location') }}" placeholder="Resort, Island, City center">
+                                <input id="property_dropoff_location" name="dropoff_location" class="ops-input" type="text" maxlength="190" value="{{ old('dropoff_location') }}" placeholder="Resort, Island, City center" required>
                             </div>
                             <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
                                 <label for="property_transport_departure_state">Departure State / Atoll</label>
@@ -226,23 +226,23 @@
                             </div>
                             <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
                                 <label for="property_trip_duration_minutes">Trip Duration Estimate (minutes)</label>
-                                <input id="property_trip_duration_minutes" name="trip_duration_minutes" class="ops-input" type="number" min="5" max="1440" value="{{ old('trip_duration_minutes') }}" placeholder="e.g. 90">
+                                <input id="property_trip_duration_minutes" name="trip_duration_minutes" class="ops-input" type="number" min="5" max="1440" value="{{ old('trip_duration_minutes') }}" placeholder="e.g. 90" required>
                             </div>
                             <div class="ops-field" data-category-scope="transport">
                                 <label for="property_schedule_start_time">Operating Schedule Starts</label>
-                                <input id="property_schedule_start_time" name="schedule_start_time" class="ops-input" type="time" value="{{ old('schedule_start_time') }}">
+                                <input id="property_schedule_start_time" name="schedule_start_time" class="ops-input" type="time" value="{{ old('schedule_start_time') }}" required>
                             </div>
                             <div class="ops-field" data-category-scope="transport">
                                 <label for="property_schedule_end_time">Operating Schedule Ends</label>
-                                <input id="property_schedule_end_time" name="schedule_end_time" class="ops-input" type="time" value="{{ old('schedule_end_time') }}">
+                                <input id="property_schedule_end_time" name="schedule_end_time" class="ops-input" type="time" value="{{ old('schedule_end_time') }}" required>
                             </div>
                             <div class="ops-field" data-category-scope="transport">
                                 <label for="property_booking_cutoff_minutes">Booking Cutoff (minutes before departure)</label>
-                                <input id="property_booking_cutoff_minutes" name="booking_cutoff_minutes" class="ops-input" type="number" min="0" max="10080" value="{{ old('booking_cutoff_minutes', 120) }}" placeholder="e.g. 120">
+                                <input id="property_booking_cutoff_minutes" name="booking_cutoff_minutes" class="ops-input" type="number" min="0" max="10080" value="{{ old('booking_cutoff_minutes', 120) }}" placeholder="e.g. 120" required>
                             </div>
                             <div class="ops-field ops-field-wide" data-category-scope="transport">
                                 <label for="property_boarding_instructions">Boarding Instructions</label>
-                                <textarea id="property_boarding_instructions" name="boarding_instructions" class="ops-textarea" rows="2" maxlength="1000" placeholder="Where to wait, ID requirements, baggage check, boarding gate/jetty info...">{{ old('boarding_instructions') }}</textarea>
+                                <textarea id="property_boarding_instructions" name="boarding_instructions" class="ops-textarea" rows="2" maxlength="1000" placeholder="Where to wait, ID requirements, baggage check, boarding gate/jetty info..." required>{{ old('boarding_instructions') }}</textarea>
                             </div>
                             <div class="ops-field" data-category-scope="transport" data-transport-land-only>
                                 <label for="property_transport_pricing_model">Land Pricing Model</label>
@@ -281,7 +281,7 @@
                             </div>
                             <div class="ops-field" data-category-scope="excursion">
                                 <label for="property_excursion_duration_minutes">Duration (minutes)</label>
-                                <input id="property_excursion_duration_minutes" name="excursion_duration_minutes" class="ops-input" type="number" min="30" max="1440" value="{{ old('excursion_duration_minutes') }}">
+                                <input id="property_excursion_duration_minutes" name="excursion_duration_minutes" class="ops-input" type="number" min="30" max="1440" value="{{ old('excursion_duration_minutes') }}" required>
                             </div>
                             <div class="ops-field" data-category-scope="excursion">
                                 <label for="property_excursion_difficulty">Difficulty</label>
@@ -302,7 +302,7 @@
                                         ->values()
                                         ->all();
                                 @endphp
-                                <select id="property_excursion_type" name="excursion_type" class="ops-select">
+                                <select id="property_excursion_type" name="excursion_type" class="ops-select" required>
                                     <option value="" @selected($excursionTypeOld === '')>Select</option>
                                     @if ($excursionTypeOld !== '' && !in_array($excursionTypeOld, $knownExcursionTypes, true))
                                         <option value="{{ $excursionTypeOld }}" selected>{{ ucfirst(str_replace('_', ' ', $excursionTypeOld)) }} (existing)</option>
@@ -344,7 +344,7 @@
                             </div>
                             <div class="ops-field" data-category-scope="excursion">
                                 <label for="property_safety_waiver_required">Safety Waiver Required</label>
-                                <select id="property_safety_waiver_required" name="safety_waiver_required" class="ops-select">
+                                <select id="property_safety_waiver_required" name="safety_waiver_required" class="ops-select" required>
                                     <option value="" @selected(old('safety_waiver_required') === '')>Select</option>
                                     <option value="yes" @selected(old('safety_waiver_required') === 'yes')>Yes</option>
                                     <option value="no" @selected(old('safety_waiver_required') === 'no')>No</option>
@@ -368,11 +368,11 @@
                             </div>
                             <div class="ops-field ops-field-wide" data-category-scope="excursion">
                                 <label for="property_weather_cancellation_policy">Weather Cancellation Policy</label>
-                                <textarea id="property_weather_cancellation_policy" name="weather_cancellation_policy" class="ops-textarea" rows="3" maxlength="2000" placeholder="Trips may be rescheduled or refunded in case of unsafe sea/weather conditions...">{{ old('weather_cancellation_policy') }}</textarea>
+                                <textarea id="property_weather_cancellation_policy" name="weather_cancellation_policy" class="ops-textarea" rows="3" maxlength="2000" placeholder="Trips may be rescheduled or refunded in case of unsafe sea/weather conditions..." required>{{ old('weather_cancellation_policy') }}</textarea>
                             </div>
                             <div class="ops-field" data-category-scope="workspace">
                                 <label for="property_workspace_type">Workspace Type</label>
-                                <select id="property_workspace_type" name="workspace_type" class="ops-select">
+                                <select id="property_workspace_type" name="workspace_type" class="ops-select" required>
                                     <option value="" @selected(old('workspace_type') === null)>Select</option>
                                     <option value="shared" @selected(old('workspace_type') === 'shared')>Shared</option>
                                     <option value="private" @selected(old('workspace_type') === 'private')>Private</option>
@@ -381,7 +381,7 @@
                             </div>
                             <div class="ops-field" data-category-scope="workspace">
                                 <label for="property_internet_speed_mbps">Internet Speed (Mbps)</label>
-                                <input id="property_internet_speed_mbps" name="internet_speed_mbps" class="ops-input" type="number" min="1" max="10000" step="1" value="{{ old('internet_speed_mbps') }}">
+                                <input id="property_internet_speed_mbps" name="internet_speed_mbps" class="ops-input" type="number" min="1" max="10000" step="1" value="{{ old('internet_speed_mbps') }}" required>
                             </div>
                             <div class="ops-field ops-field-wide" data-category-scope="workspace">
                                 <label>Workspace Amenities (information only)</label>
@@ -463,11 +463,11 @@
                             </div>
                             <div class="ops-field" data-category-scope="day_visit">
                                 <label for="property_day_visit_start_time">Day Visit Start Time</label>
-                                <input id="property_day_visit_start_time" name="day_visit_start_time" class="ops-input" type="time" value="{{ old('day_visit_start_time') }}">
+                                <input id="property_day_visit_start_time" name="day_visit_start_time" class="ops-input" type="time" value="{{ old('day_visit_start_time') }}" required>
                             </div>
                             <div class="ops-field" data-category-scope="day_visit">
                                 <label for="property_day_visit_end_time">Day Visit End Time</label>
-                                <input id="property_day_visit_end_time" name="day_visit_end_time" class="ops-input" type="time" value="{{ old('day_visit_end_time') }}">
+                                <input id="property_day_visit_end_time" name="day_visit_end_time" class="ops-input" type="time" value="{{ old('day_visit_end_time') }}" required>
                             </div>
                             <div class="ops-field ops-field-wide" data-category-scope="day_visit">
                                 <label for="property_included_access">Included Access</label>
@@ -483,7 +483,7 @@
                             </div>
                             <div class="ops-field" data-category-scope="restaurant">
                                 <label for="property_cuisine_type">Cuisine Type</label>
-                                <input id="property_cuisine_type" name="cuisine_type" class="ops-input" type="text" maxlength="120" value="{{ old('cuisine_type') }}" placeholder="Maldivian, Asian Fusion, Seafood">
+                                <input id="property_cuisine_type" name="cuisine_type" class="ops-input" type="text" maxlength="120" value="{{ old('cuisine_type') }}" placeholder="Maldivian, Asian Fusion, Seafood" required>
                             </div>
                             <div class="ops-field" data-category-scope="restaurant">
                                 <label for="property_meal_service">Meal Service</label>
@@ -495,7 +495,7 @@
                                         ->values()
                                         ->all();
                                 @endphp
-                                <select id="property_meal_service" name="meal_service" class="ops-select">
+                                <select id="property_meal_service" name="meal_service" class="ops-select" required>
                                     <option value="" @selected($mealServiceOld === '')>Select</option>
                                     @if ($mealServiceOld !== '' && !in_array($mealServiceOld, $knownMealServices, true))
                                         <option value="{{ $mealServiceOld }}" selected>{{ ucfirst(str_replace('_', ' ', $mealServiceOld)) }} (existing)</option>
@@ -565,7 +565,7 @@
                                         ->values()
                                         ->all();
                                 @endphp
-                                <select id="property_vehicle_type" name="vehicle_type" class="ops-select">
+                                <select id="property_vehicle_type" name="vehicle_type" class="ops-select" required>
                                     <option value="" @selected($vehicleTypeOld === '')>Select Vehicle Type</option>
                                     @if ($vehicleTypeOld !== '' && !in_array($vehicleTypeOld, $knownVehicleTypes, true))
                                         <option value="{{ $vehicleTypeOld }}" selected>{{ ucfirst(str_replace('_', ' ', $vehicleTypeOld)) }} (existing)</option>
@@ -592,7 +592,7 @@
                             </div>
                             <div class="ops-field" data-category-scope="rental">
                                 <label for="property_transmission_type">Transmission</label>
-                                <select id="property_transmission_type" name="transmission_type" class="ops-select">
+                                <select id="property_transmission_type" name="transmission_type" class="ops-select" required>
                                     <option value="" @selected(old('transmission_type') === null)>Select</option>
                                     <option value="automatic" @selected(old('transmission_type') === 'automatic')>Automatic</option>
                                     <option value="manual" @selected(old('transmission_type') === 'manual')>Manual</option>
@@ -600,7 +600,7 @@
                             </div>
                             <div class="ops-field" data-category-scope="rental">
                                 <label for="property_fuel_type">Fuel Type</label>
-                                <select id="property_fuel_type" name="fuel_type" class="ops-select">
+                                <select id="property_fuel_type" name="fuel_type" class="ops-select" required>
                                     <option value="" @selected(old('fuel_type') === null)>Select</option>
                                     <option value="petrol" @selected(old('fuel_type') === 'petrol')>Petrol</option>
                                     <option value="diesel" @selected(old('fuel_type') === 'diesel')>Diesel</option>
@@ -707,7 +707,7 @@
                             </div>
                             <div class="ops-field" data-category-scope="accommodation">
                                 <label for="property_meal_plan">Meal Plan</label>
-                                <select id="property_meal_plan" name="meal_plan" class="ops-select">
+                                <select id="property_meal_plan" name="meal_plan" class="ops-select" required>
                                     <option value="" @selected(old('meal_plan') === '')>Select meal plan</option>
                                     <option value="room_only" @selected(old('meal_plan') === 'room_only')>Room Only</option>
                                     <option value="bed_breakfast" @selected(old('meal_plan') === 'bed_breakfast')>Bed &amp; Breakfast</option>
@@ -805,6 +805,7 @@
                             </div>
                         </div>
                         <p class="standards-note">International listing standard: fields adapt to selected category. Create one property at a time, then add rooms under that property.</p>
+                        <div id="propertyCreateFormError" class="form-error-banner" hidden></div>
                         <div class="inline-actions">
                             <button class="btn btn-primary" id="propertyCreateSubmitButton" type="submit">Save Listing</button>
                             <button class="btn btn-secondary" id="closePropertyCreateForm" type="button">Cancel</button>

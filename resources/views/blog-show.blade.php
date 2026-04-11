@@ -314,6 +314,30 @@
         .content h2 { font-size: clamp(1.65rem, 3vw, 2.35rem); }
         .content h3 { font-size: clamp(1.35rem, 2.3vw, 1.95rem); }
 
+        .article-gallery {
+            display: grid;
+            gap: 8px;
+            margin: 22px 0 28px;
+        }
+        .article-gallery.has-1 { grid-template-columns: 1fr; }
+        .article-gallery.has-2 { grid-template-columns: 1fr 1fr; }
+        .article-gallery.has-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .article-gallery figure {
+            margin: 0;
+        }
+        .article-gallery figure img {
+            display: block;
+            width: 100%;
+            aspect-ratio: 4/3;
+            object-fit: cover;
+            border: 1px solid #cfdae3;
+            border-radius: 4px;
+            background: #d4e3ee;
+        }
+        @media (max-width: 640px) {
+            .article-gallery.has-3 { grid-template-columns: 1fr 1fr; }
+        }
+
         .content figure {
             margin: 24px 0 26px;
         }
@@ -653,6 +677,16 @@
                     </section>
 
                     @forelse ($contentBlocks as $block)
+                                            @if (isset($articleImages) && $articleImages->isNotEmpty())
+                                                <div class="article-gallery has-{{ $articleImages->count() }}" aria-label="Article photos">
+                                                    @foreach ($articleImages as $imgUrl)
+                                                        <figure>
+                                                            <img src="{{ $imgUrl }}" alt="{{ $post->title }}" loading="lazy">
+                                                        </figure>
+                                                    @endforeach
+                                                </div>
+                                            @endif
+
                         @if ($block['type'] === 'h2')
                             <h2>{!! blogRenderInlineMarkup((string) ($block['text'] ?? '')) !!}</h2>
                         @elseif ($block['type'] === 'h3')

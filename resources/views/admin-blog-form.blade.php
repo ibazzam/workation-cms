@@ -257,6 +257,16 @@
             if ($selectedTagInput === '' && count($selectedTagSlugs) > 0) {
                 $selectedTagInput = implode(', ', $selectedTagSlugs);
             }
+            $articleImageRaw = $isEdit ? (array) ($post->article_images ?? []) : [];
+            $articleImagePaths = [
+                trim((string) ($articleImageRaw[0] ?? '')),
+                trim((string) ($articleImageRaw[1] ?? '')),
+                trim((string) ($articleImageRaw[2] ?? '')),
+            ];
+            $articleImageUrls = array_map(
+                static fn (string $p) => $p !== '' ? blogResolveCoverImageUrl($p) : '',
+                $articleImagePaths
+            );
 
             foreach ($selectedTagSlugs as $selectedSlug) {
                 if (!array_key_exists($selectedSlug, $blogTagOptions)) {
@@ -337,6 +347,29 @@
 
                 <div class="field">
                     <label>Publishing</label>
+                                    <div class="field wide">
+                                        <label>Article images (optional — up to 3)</label>
+                                        <p class="hint">These images render as a photo gallery inside the article, after the intro section. Leave a slot empty to skip it.</p>
+                                        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px; margin-top:4px;">
+                                            @foreach ([0, 1, 2] as $slot)
+                                                @php $slotUrl = $articleImageUrls[$slot] ?? ''; @endphp
+                                                <div style="border:1px solid #ccd8e4; border-radius:10px; padding:10px; background:#f8fbff;">
+                                                    <label style="font-size:0.82rem; font-weight:700; color:#4a6678; display:block; margin-bottom:6px;">Image {{ $slot + 1 }}</label>
+                                                    @if ($slotUrl !== '')
+                                                        <div style="margin-bottom:6px;">
+                                                            <img src="{{ $slotUrl }}" alt="Article image {{ $slot + 1 }}" loading="lazy" style="display:block; width:100%; height:130px; object-fit:cover; border-radius:6px; border:1px solid #ccd8e4;">
+                                                        </div>
+                                                        <label class="check" style="font-size:0.78rem; margin-bottom:6px;">
+                                                            <input type="checkbox" name="remove_article_image_{{ $slot }}" value="1" @checked(old('remove_article_image_' . $slot) == '1')>
+                                                            Remove
+                                                        </label>
+                                                    @endif
+                                                    <input type="file" name="article_image_{{ $slot }}" accept="image/*" style="font-size:0.82rem;">
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+
                     <div class="checks">
                         @if (!$isMediaRole)
                             <label class="check">

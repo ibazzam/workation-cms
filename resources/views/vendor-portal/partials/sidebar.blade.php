@@ -21,56 +21,46 @@
         </div>
     </div>
 
-    <a class="nav-item-link is-active" href="/vendor?page=overview" data-panel-key="overview">Dashboard Home</a>
-    <a class="nav-item-link" href="/vendor/reports" data-panel-key="overview">Reports &amp; Performance</a>
+    <p class="nav-group-title">Overview</p>
+    <a class="nav-item-link {{ in_array($activePortalPage ?? 'overview', ['overview', 'reports'], true) ? 'prominent' : '' }}" href="/vendor?page=overview" data-panel-key="overview">Dashboard</a>
+    <a class="nav-item-link {{ ($activePortalPage ?? '') === 'reports' ? 'prominent' : '' }}" href="/vendor/reports" data-panel-key="overview">Reports &amp; Performance</a>
 
-    <button class="nav-group-header" type="button" data-vendor-nav-toggle="vendor-listings-group" aria-expanded="true">
-        <span>My Listings</span>
-        <span class="nav-chevron" aria-hidden="true">▾</span>
-    </button>
-    <div class="nav-group-body is-open" data-vendor-nav-group="vendor-listings-group">
-        <a class="nav-item-link" href="/vendor/listings" data-panel-key="listings">All Listings</a>
-        <a class="nav-item-link" href="/vendor/listings/create" data-panel-key="listings" data-vendor-listing-action="create">Create Listing</a>
-        @foreach ($sidebarCategoryLinks as $categoryKey)
-            @php
-                $categoryLabel = (string) ($sidebarVendorCategoryMap[$categoryKey] ?? ucwords(str_replace('_', ' ', $categoryKey)));
-            @endphp
-            <a
-                class="nav-sub-link"
-                href="{{ '/vendor/listings/manage/' . $categoryKey }}"
-                data-panel-key="listings"
-                data-vendor-category-target="{{ $categoryKey }}"
-            >{{ $categoryLabel }}</a>
-        @endforeach
-    </div>
+    <p class="nav-group-title">Listings</p>
+    <a class="nav-item-link {{ ($activePortalPage ?? '') === 'listings' ? 'prominent' : '' }}" href="/vendor/listings" data-panel-key="listings">All Listings</a>
+    @foreach ($sidebarCategoryLinks as $categoryKey)
+        @php
+            $categoryLabel = (string) ($sidebarVendorCategoryMap[$categoryKey] ?? ucwords(str_replace('_', ' ', $categoryKey)));
+            $isActiveCategory = ($activePortalPage ?? '') === 'listings' && (($forcedListingCategory ?? '') === $categoryKey);
+        @endphp
+        <a
+            class="nav-sub-link {{ $isActiveCategory ? 'prominent' : '' }}"
+            href="{{ '/vendor/listings/' . $categoryKey }}"
+            data-panel-key="listings"
+            data-vendor-category-target="{{ $categoryKey }}"
+        >{{ $categoryLabel }}</a>
+    @endforeach
 
-    <button class="nav-group-header" type="button" data-vendor-nav-toggle="vendor-reservations-group" aria-expanded="true">
-        <span>Reservations, Availability &amp; Pricing</span>
-        <span class="nav-chevron" aria-hidden="true">▾</span>
-    </button>
-    <div class="nav-group-body is-open" data-vendor-nav-group="vendor-reservations-group">
-        <a class="nav-item-link" href="/vendor/reservations" data-panel-key="reservations">Manage Reservations</a>
-        <a class="nav-item-link" href="/vendor/availability" data-panel-key="reservations">Update Availability</a>
-        <a class="nav-item-link" href="/vendor/pricing" data-panel-key="reservations">Change Pricing</a>
-        @foreach ($sidebarCategoryLinks as $categoryKey)
-            @php
-                $categoryLabel = (string) ($sidebarVendorCategoryMap[$categoryKey] ?? ucwords(str_replace('_', ' ', $categoryKey)));
-            @endphp
-            <a
-                class="nav-sub-link"
-                href="{{ '/vendor/reservations?category=' . urlencode($categoryKey) }}"
-                data-panel-key="reservations"
-                data-vendor-category-target="{{ $categoryKey }}"
-            >{{ $categoryLabel }} Reservations</a>
-        @endforeach
-    </div>
+    <p class="nav-group-title">Reservations &amp; Pricing</p>
+    <a class="nav-item-link {{ in_array($activePortalPage ?? '', ['reservations', 'operations', 'availability'], true) ? 'prominent' : '' }}" href="/vendor/reservations" data-panel-key="reservations">Manage Reservations</a>
+    <a class="nav-item-link {{ ($activePortalPage ?? '') === 'pricing' ? 'prominent' : '' }}" href="/vendor/pricing" data-panel-key="reservations">Pricing Rules</a>
+    <a class="nav-item-link" href="/vendor/availability" data-panel-key="reservations">Availability Calendar</a>
+    @foreach ($sidebarCategoryLinks as $categoryKey)
+        @php
+            $categoryLabel = (string) ($sidebarVendorCategoryMap[$categoryKey] ?? ucwords(str_replace('_', ' ', $categoryKey)));
+        @endphp
+        <a
+            class="nav-sub-link"
+            href="{{ '/vendor/reservations?category=' . urlencode($categoryKey) }}"
+            data-panel-key="reservations"
+            data-vendor-category-target="{{ $categoryKey }}"
+        >{{ $categoryLabel }} Reservations</a>
+    @endforeach
 
-    <a class="nav-item-link" href="/vendor/promotions" data-panel-key="engagement">Promotions &amp; Loyalty</a>
-    <a class="nav-item-link" href="/vendor/billing" data-panel-key="billing">Billing &amp; Refunds</a>
+    <p class="nav-group-title">Engagement &amp; Billing</p>
+    <a class="nav-item-link {{ in_array($activePortalPage ?? '', ['engagement', 'promotions'], true) ? 'prominent' : '' }}" href="/vendor/promotions" data-panel-key="engagement">Promotions &amp; Loyalty</a>
+    <a class="nav-item-link {{ ($activePortalPage ?? '') === 'billing' ? 'prominent' : '' }}" href="/vendor/billing" data-panel-key="billing">Billing &amp; Refunds</a>
 
-    <div class="nav-divider"></div>
-
-    <a class="nav-item-link" href="/vendor/profile" data-panel-key="profile">Partner Profile</a>
-    <a class="nav-item-link" href="/vendor/billing" data-panel-key="billing">Billing Setup</a>
+    <p class="nav-group-title">Account</p>
+    <a class="nav-item-link {{ ($activePortalPage ?? '') === 'profile' ? 'prominent' : '' }}" href="/vendor/profile" data-panel-key="profile">Partner Profile</a>
     <a class="nav-item-link" href="#api" data-panel-key="api">API Tools</a>
 </nav>

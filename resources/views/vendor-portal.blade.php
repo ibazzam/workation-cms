@@ -308,6 +308,23 @@
             transition: all 0.15s ease;
         }
 
+        .nav-group-title {
+            margin: 10px 4px 4px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #6a7f93;
+        }
+
+        .portal-nav a.prominent,
+        .nav-item-link.prominent,
+        .nav-sub-link.prominent {
+            border-color: #0f6b74;
+            background: #e8f7f8;
+            color: #0d4f56;
+        }
+
         .nav-sub-link {
             margin-left: 12px;
             font-size: 0.79rem;
@@ -2526,7 +2543,6 @@
                         panel: "listings",
                         targetId: "vendorPropertiesSection",
                         wizardStep: 1,
-                        openPropertyForm: true,
                     },
                     {
                         title: "Review and refine",
@@ -4165,15 +4181,23 @@
             navLinks.forEach((link) => {
                 link.addEventListener("click", function (event) {
                     const href = String(link.getAttribute("href") || "").trim();
-                    if (href !== "" && !href.startsWith("#")) {
-                        return;
-                    }
-                    event.preventDefault();
                     const panelKey = String(link.dataset.panelKey || "").trim().toLowerCase();
                     if (!panelKey) return;
 
                     const categoryTarget = normalizeVendorOpsCategoryKey(String(link.getAttribute('data-vendor-category-target') || ''));
                     const listingAction = String(link.getAttribute('data-vendor-listing-action') || '').trim().toLowerCase();
+
+                    const isInPanelListingsAction = panelKey === 'listings' && (
+                        listingAction === 'create'
+                        || categoryTarget !== ''
+                        || href.includes('/vendor/listings')
+                    );
+
+                    if (href !== "" && !href.startsWith("#") && !isInPanelListingsAction) {
+                        return;
+                    }
+
+                    event.preventDefault();
 
                     window.location.hash = panelKey;
                     showPanelGroup(panelKey);
@@ -4792,6 +4816,9 @@
                 } else if (forcedListingMode === 'manage') {
                     applyPropertyCategoryFilter(forcedListingCategory || 'all');
                     applyCategorySectionFilter(forcedListingCategory || 'all');
+                } else if (forcedListingCategory !== '') {
+                    applyPropertyCategoryFilter(forcedListingCategory);
+                    applyCategorySectionFilter(forcedListingCategory);
                 }
             }
 

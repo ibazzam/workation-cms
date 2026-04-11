@@ -161,10 +161,10 @@
                                 <div class="inline-actions">
                                     <span class="ops-chip">{{ $categoryProperties->count() }} listed</span>
                                     @if ($forcedListingCategory === $categoryKey)
-                                        <a class="btn btn-secondary" href="/vendor/reservations">Manage Reservations</a>
-                                        <a class="btn btn-secondary" href="/vendor/pricing">Change Pricing</a>
-                                        <a class="btn btn-secondary" href="/vendor/billing">Billing &amp; Refunds</a>
                                         <a class="btn btn-primary" href="/vendor/listings/create/{{ $categoryKey }}">Add {{ $categoryLabel }}</a>
+                                        <a class="btn btn-secondary" href="/vendor/reservations">Reservations</a>
+                                        <a class="btn btn-secondary" href="/vendor/pricing">Pricing</a>
+                                        <a class="btn btn-secondary" href="/vendor/billing">Billing</a>
                                     @endif
                                 </div>
                             </div>

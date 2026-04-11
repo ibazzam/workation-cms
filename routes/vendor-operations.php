@@ -2050,7 +2050,15 @@ Route::get('/vendor/profile', function () {
         return redirect('/portal/vendor/login');
     }
 
-    return redirect('/vendor?page=profile')->with('portal_active_panel', 'profile');
+    $section = strtolower(trim((string) request()->query('section', '')));
+    $allowedSections = ['profile', 'categories', 'banking', 'address', 'password', 'all'];
+
+    $target = '/vendor?page=profile';
+    if ($section !== '' && in_array($section, $allowedSections, true)) {
+        $target .= '&section=' . urlencode($section);
+    }
+
+    return redirect($target)->with('portal_active_panel', 'profile');
 });
 
 Route::get('/vendor/listings', function () {

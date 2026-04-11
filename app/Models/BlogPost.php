@@ -15,6 +15,7 @@ class BlogPost extends Model
         'excerpt',
         'content',
         'cover_image_path',
+        'article_images',
         'blog_category_slug',
         'blog_tag_slugs',
         'is_featured',
@@ -34,5 +35,6 @@ class BlogPost extends Model
         'blog_tag_slugs' => 'array',
         'published_at' => 'datetime',
         'reviewed_at' => 'datetime',
+        'article_images' => 'array',
     ];
 }

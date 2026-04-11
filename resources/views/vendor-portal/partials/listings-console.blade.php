@@ -360,7 +360,7 @@
                                                             @endphp
                                                             @include($activeEditFormPartial)
                                                             <div class="media-upload-row" data-property-media-panel="{{ $propertyId }}" hidden>
-                                                                <form class="inline-table-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data" data-media-upload-form>
+                                                                <form class="media-panel-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data" data-media-upload-form>
                                                                     @csrf
                                                                     <input type="hidden" name="entity_type" value="property">
                                                                     <input type="hidden" name="entity_id" value="{{ $propertyId }}">
@@ -371,47 +371,49 @@
                                                                     <div class="media-dropzone" data-media-dropzone>Drag and drop photos here, or click to choose files.</div>
                                                                     <input class="ops-input" name="photos[]" type="file" accept="image/png,image/jpeg,image/webp" multiple required data-media-input>
                                                                     <div class="media-upload-preview" data-media-preview></div>
-                                                                    <p class="small" style="grid-column:1 / -1; margin:0;">Upload standard: JPG/PNG/WebP, any dimensions accepted, max 2MB per image. Recommended quality source: around 1600x900.</p>
-                                                                    <button class="btn btn-secondary" type="submit">Upload</button>
-                                                                    <button class="btn btn-secondary" type="button" data-close-property-media="{{ $propertyId }}">Close</button>
+                                                                    <p class="media-panel-hint">JPG/PNG/WebP · max 2 MB · recommended 1600×900</p>
+                                                                    <div class="media-panel-bar">
+                                                                        <button class="btn btn-secondary" type="submit">Upload</button>
+                                                                        <button class="btn btn-secondary" type="button" data-close-property-media="{{ $propertyId }}">Close</button>
+                                                                    </div>
                                                                 </form>
                                                                 @if ($propertyMediaItems->isEmpty())
                                                                     <p class="ops-empty">No listing photos uploaded yet.</p>
                                                                 @else
-                                                                    <form class="inline-table-form" method="POST" action="/portal/vendor/media/bulk-delete" onsubmit="return confirm('Remove selected photos?');" data-gallery-selection-form>
+                                                                    <form class="gallery-media-form" method="POST" action="/portal/vendor/media/bulk-delete" onsubmit="return confirm('Remove selected photos?');" data-gallery-selection-form>
                                                                         @csrf
                                                                         <input type="hidden" name="panel_entity_type" value="property">
                                                                         <input type="hidden" name="panel_entity_id" value="{{ $propertyId }}">
-                                                                        <div class="inline-actions gallery-toolbar" style="justify-content:space-between; margin-bottom:0.75rem;">
+                                                                        <div class="media-panel-bar gallery-toolbar">
                                                                             <label class="feature-item" style="margin:0;"><input type="checkbox" data-gallery-select-all> Select all</label>
                                                                             <button class="btn btn-danger" type="submit" data-gallery-bulk-delete-button disabled>Delete Selected (0)</button>
                                                                         </div>
-                                                                    <div class="gallery-grid">
-                                                                        @foreach ($propertyMediaItems as $media)
-                                                                            @php
-                                                                                $mediaUrl = '/media/vendor/' . (int) ($media->id ?? 0) . '/banner';
-                                                                                $mediaFallbackUrl = vendorMediaStorageUrlFromPath((string) ($media->file_path ?? '')) ?? '';
-                                                                            @endphp
-                                                                            <article class="gallery-card">
-                                                                                <img src="{{ $mediaUrl }}" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $mediaFallbackUrl }}';}" alt="{{ (string) ($media->alt_text ?? $property->name) }}" loading="lazy">
-                                                                                <div class="gallery-card-body">
-                                                                                    <label class="feature-item" style="margin:0;"><input type="checkbox" name="media_ids[]" value="{{ (int) ($media->id ?? 0) }}" data-gallery-select-item> Select</label>
-                                                                                    <div class="gallery-card-actions">
-                                                                                        @if ((bool) ($media->is_primary ?? false))
-                                                                                            <span class="ops-chip">Primary</span>
-                                                                                        @else
-                                                                                            <form method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/primary">
-                                                                                                @csrf
-                                                                                                <input type="hidden" name="panel_entity_type" value="property">
-                                                                                                <input type="hidden" name="panel_entity_id" value="{{ $propertyId }}">
-                                                                                                <button class="btn btn-secondary" type="submit">Set Primary</button>
-                                                                                            </form>
-                                                                                        @endif
+                                                                        <div class="gallery-grid">
+                                                                            @foreach ($propertyMediaItems as $media)
+                                                                                @php
+                                                                                    $mediaUrl = '/media/vendor/' . (int) ($media->id ?? 0) . '/banner';
+                                                                                    $mediaFallbackUrl = vendorMediaStorageUrlFromPath((string) ($media->file_path ?? '')) ?? '';
+                                                                                @endphp
+                                                                                <article class="gallery-card">
+                                                                                    <img src="{{ $mediaUrl }}" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $mediaFallbackUrl }}';}" alt="{{ (string) ($media->alt_text ?? $property->name) }}" loading="lazy">
+                                                                                    <div class="gallery-card-body">
+                                                                                        <label class="feature-item" style="margin:0;"><input type="checkbox" name="media_ids[]" value="{{ (int) ($media->id ?? 0) }}" data-gallery-select-item> Select</label>
+                                                                                        <div class="gallery-card-actions">
+                                                                                            @if ((bool) ($media->is_primary ?? false))
+                                                                                                <span class="ops-chip">Primary</span>
+                                                                                            @else
+                                                                                                <form method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/primary">
+                                                                                                    @csrf
+                                                                                                    <input type="hidden" name="panel_entity_type" value="property">
+                                                                                                    <input type="hidden" name="panel_entity_id" value="{{ $propertyId }}">
+                                                                                                    <button class="btn btn-secondary" type="submit">Set Primary</button>
+                                                                                                </form>
+                                                                                            @endif
+                                                                                        </div>
                                                                                     </div>
-                                                                                </div>
-                                                                            </article>
-                                                                        @endforeach
-                                                                    </div>
+                                                                                </article>
+                                                                            @endforeach
+                                                                        </div>
                                                                     </form>
                                                                 @endif
                                                             </div>
@@ -552,7 +554,7 @@
                                                                                                 </div>
                                                                                             </form>
                                                                                             <div class="media-upload-row" data-room-media-panel="{{ $roomId }}" hidden>
-                                                                                                <form class="inline-table-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data" data-media-upload-form>
+                                                                                                <form class="media-panel-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data" data-media-upload-form>
                                                                                                     @csrf
                                                                                                     <input type="hidden" name="entity_type" value="room">
                                                                                                     <input type="hidden" name="entity_id" value="{{ $roomId }}">
@@ -563,47 +565,49 @@
                                                                                                     <div class="media-dropzone" data-media-dropzone>Drag and drop photos here, or click to choose files.</div>
                                                                                                     <input class="ops-input" name="photos[]" type="file" accept="image/png,image/jpeg,image/webp" multiple required data-media-input>
                                                                                                     <div class="media-upload-preview" data-media-preview></div>
-                                                                                                    <p class="small" style="grid-column:1 / -1; margin:0;">Upload standard: JPG/PNG/WebP, any dimensions accepted, max 2MB per image. Recommended quality source: around 1600x900.</p>
-                                                                                                    <button class="btn btn-secondary" type="submit">Upload</button>
-                                                                                                    <button class="btn btn-secondary" type="button" data-close-room-media="{{ $roomId }}">Close</button>
+                                                                                                    <p class="media-panel-hint">JPG/PNG/WebP · max 2 MB · recommended 1600×900</p>
+                                                                                                    <div class="media-panel-bar">
+                                                                                                        <button class="btn btn-secondary" type="submit">Upload</button>
+                                                                                                        <button class="btn btn-secondary" type="button" data-close-room-media="{{ $roomId }}">Close</button>
+                                                                                                    </div>
                                                                                                 </form>
                                                                                                 @if ($roomMediaItems->isEmpty())
                                                                                                     <p class="ops-empty">No room photos uploaded yet.</p>
                                                                                                 @else
-                                                                                                    <form class="inline-table-form" method="POST" action="/portal/vendor/media/bulk-delete" onsubmit="return confirm('Remove selected photos?');" data-gallery-selection-form>
+                                                                                                    <form class="gallery-media-form" method="POST" action="/portal/vendor/media/bulk-delete" onsubmit="return confirm('Remove selected photos?');" data-gallery-selection-form>
                                                                                                         @csrf
                                                                                                         <input type="hidden" name="panel_entity_type" value="room">
                                                                                                         <input type="hidden" name="panel_entity_id" value="{{ $roomId }}">
-                                                                                                        <div class="inline-actions gallery-toolbar" style="justify-content:space-between; margin-bottom:0.75rem;">
+                                                                                                        <div class="media-panel-bar gallery-toolbar">
                                                                                                             <label class="feature-item" style="margin:0;"><input type="checkbox" data-gallery-select-all> Select all</label>
                                                                                                             <button class="btn btn-danger" type="submit" data-gallery-bulk-delete-button disabled>Delete Selected (0)</button>
                                                                                                         </div>
-                                                                                                    <div class="gallery-grid">
-                                                                                                        @foreach ($roomMediaItems as $media)
-                                                                                                            @php
-                                                                                                                $roomMediaUrl = '/media/vendor/' . (int) ($media->id ?? 0) . '/banner';
-                                                                                                                $roomMediaFallbackUrl = vendorMediaStorageUrlFromPath((string) ($media->file_path ?? '')) ?? '';
-                                                                                                            @endphp
-                                                                                                            <article class="gallery-card">
-                                                                                                                <img src="{{ $roomMediaUrl }}" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $roomMediaFallbackUrl }}';}" alt="{{ (string) ($media->alt_text ?? $room->name) }}" loading="lazy">
-                                                                                                                <div class="gallery-card-body">
-                                                                                                                    <label class="feature-item" style="margin:0;"><input type="checkbox" name="media_ids[]" value="{{ (int) ($media->id ?? 0) }}" data-gallery-select-item> Select</label>
-                                                                                                                    <div class="gallery-card-actions">
-                                                                                                                        @if ((bool) ($media->is_primary ?? false))
-                                                                                                                            <span class="ops-chip">Primary</span>
-                                                                                                                        @else
-                                                                                                                            <form method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/primary">
-                                                                                                                                @csrf
-                                                                                                                                <input type="hidden" name="panel_entity_type" value="room">
-                                                                                                                                <input type="hidden" name="panel_entity_id" value="{{ $roomId }}">
-                                                                                                                                <button class="btn btn-secondary" type="submit">Set Primary</button>
-                                                                                                                            </form>
-                                                                                                                        @endif
+                                                                                                        <div class="gallery-grid">
+                                                                                                            @foreach ($roomMediaItems as $media)
+                                                                                                                @php
+                                                                                                                    $roomMediaUrl = '/media/vendor/' . (int) ($media->id ?? 0) . '/banner';
+                                                                                                                    $roomMediaFallbackUrl = vendorMediaStorageUrlFromPath((string) ($media->file_path ?? '')) ?? '';
+                                                                                                                @endphp
+                                                                                                                <article class="gallery-card">
+                                                                                                                    <img src="{{ $roomMediaUrl }}" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $roomMediaFallbackUrl }}';}" alt="{{ (string) ($media->alt_text ?? $room->name) }}" loading="lazy">
+                                                                                                                    <div class="gallery-card-body">
+                                                                                                                        <label class="feature-item" style="margin:0;"><input type="checkbox" name="media_ids[]" value="{{ (int) ($media->id ?? 0) }}" data-gallery-select-item> Select</label>
+                                                                                                                        <div class="gallery-card-actions">
+                                                                                                                            @if ((bool) ($media->is_primary ?? false))
+                                                                                                                                <span class="ops-chip">Primary</span>
+                                                                                                                            @else
+                                                                                                                                <form method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/primary">
+                                                                                                                                    @csrf
+                                                                                                                                    <input type="hidden" name="panel_entity_type" value="room">
+                                                                                                                                    <input type="hidden" name="panel_entity_id" value="{{ $roomId }}">
+                                                                                                                                    <button class="btn btn-secondary" type="submit">Set Primary</button>
+                                                                                                                                </form>
+                                                                                                                            @endif
+                                                                                                                        </div>
                                                                                                                     </div>
-                                                                                                                </div>
-                                                                                                            </article>
-                                                                                                        @endforeach
-                                                                                                    </div>
+                                                                                                                </article>
+                                                                                                            @endforeach
+                                                                                                        </div>
                                                                                                     </form>
                                                                                                 @endif
                                                                                             </div>

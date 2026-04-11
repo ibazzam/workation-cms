@@ -175,25 +175,27 @@ if (!function_exists('blogResolveCoverImageUrl')) {
             return '';
         }
 
+        // Our own proxy URLs — serve as-is
+        if (Str::startsWith($value, '/media/')) {
+            return $value;
+        }
+
+        // Rewrite legacy direct S3 inline-image URLs to go through our proxy
+        // e.g. https://bucket.s3.region.amazonaws.com/blog/inline/… → /media/blog-inline/blog/inline/…
+        $s3BucketName = trim((string) (config('filesystems.disks.s3.bucket') ?? ''));
+        if (
+            $s3BucketName !== '' &&
+            Str::startsWith($value, ['https://', 'http://']) &&
+            str_contains($value, $s3BucketName) &&
+            preg_match('#/blog/inline/[^?#\s]+#', $value, $inlineMatch) === 1
+        ) {
+            return '/media/blog-inline' . $inlineMatch[0];
+        }
+
+        // All other external URLs — return as-is
         if (Str::startsWith($value, ['https://', 'http://', '//'])) {
             return $value;
         }
-            // Our own proxy URLs — serve as-is
-            if (Str::startsWith($value, '/media/')) {
-                return $value;
-            }
-
-            // Rewrite legacy direct S3 inline-image URLs to go through our proxy
-            // e.g. https://bucket.s3.region.amazonaws.com/blog/inline/… → /media/blog-inline/blog/inline/…
-            $s3BucketName = trim((string) (config('filesystems.disks.s3.bucket') ?? ''));
-            if (
-                $s3BucketName !== '' &&
-                Str::startsWith($value, ['https://', 'http://']) &&
-                str_contains($value, $s3BucketName) &&
-                preg_match('#/blog/inline/[^?#\s]+#', $value, $inlineMatch) === 1
-            ) {
-                return '/media/blog-inline' . $inlineMatch[0];
-            }
 
         $portalMediaDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
         if ($portalMediaDisk === '') {

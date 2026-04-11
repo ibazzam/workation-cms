@@ -2207,12 +2207,18 @@ Route::get('/blog/{slug}', function (string $slug) {
     $post = blogHydratePostsWithMeta(collect([$post]))->first();
     $relatedPosts = blogHydratePostsWithMeta($relatedPosts);
 
+    $articleImages = collect(array_filter((array) ($post->article_images ?? [])))
+        ->map(static fn ($path) => blogResolveCoverImageUrl((string) $path))
+        ->filter(static fn ($url) => $url !== '')
+        ->values();
+
     return view('blog-show', [
         'apiBase' => workationApiBase(),
         'post' => $post,
         'relatedPosts' => $relatedPosts,
         'blogCategories' => blogCategoryDefinitions(),
         'blogSidebarAd' => blogSidebarAdSettings(),
+        'articleImages' => $articleImages,
     ]);
 });
 
@@ -2453,7 +2459,7 @@ if (!function_exists('buildIslandsIndexPayload')) {
             $activeIslandType = null;
         }
 
-        $atolls  = \App\Models\Atoll::orderBy('name')->get();
+        $atolls  = \App\Models\Atoll::query()->orderedByCode()->get();
         $query   = \App\Models\Island::with('atoll')->orderBy('atoll_id')->orderBy('name');
 
         if ($activeAtollSlug !== null) {
@@ -5965,6 +5971,12 @@ Route::post('/portal/admin/blog', function (Request $request) {
         'is_published' => ['nullable', 'boolean'],
         'is_featured' => ['nullable', 'boolean'],
         'cover_image' => ['nullable', 'image', 'max:6144'],
+        'article_image_0' => ['nullable', 'image', 'max:6144'],
+        'article_image_1' => ['nullable', 'image', 'max:6144'],
+        'article_image_2' => ['nullable', 'image', 'max:6144'],
+        'remove_article_image_0' => ['nullable', 'boolean'],
+        'remove_article_image_1' => ['nullable', 'boolean'],
+        'remove_article_image_2' => ['nullable', 'boolean'],
     ]);
 
     $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
@@ -6014,6 +6026,32 @@ Route::post('/portal/admin/blog', function (Request $request) {
     }
 
     if ($post->is_featured) {
+            if (Schema::hasColumn('blog_posts', 'article_images')) {
+                $blogMediaDiskForArticle = trim((string) config('filesystems.portal_media_disk', 'public'));
+                if ($blogMediaDiskForArticle === '') {
+                    $blogMediaDiskForArticle = 'public';
+                }
+                $existingRawArticleImages = (array) ($post->article_images ?? []);
+                $existingArticleImages = [];
+                foreach ([0, 1, 2] as $slot) {
+                    $existingArticleImages[$slot] = trim((string) ($existingRawArticleImages[$slot] ?? ''));
+                }
+                foreach ([0, 1, 2] as $slot) {
+                    $fileKey = 'article_image_' . $slot;
+                    if ($request->hasFile($fileKey)) {
+                        $articleFile = $request->file($fileKey);
+                        if ($articleFile !== null && $articleFile->isValid()) {
+                            $ext = strtolower((string) $articleFile->getClientOriginalExtension()) ?: 'jpg';
+                            $articlePath = 'blog/' . (int) $post->id . '/article_' . $slot . '.' . $ext;
+                            Storage::disk($blogMediaDiskForArticle)->putFileAs('blog/' . (int) $post->id, $articleFile, 'article_' . $slot . '.' . $ext, ['visibility' => 'public']);
+                            $existingArticleImages[$slot] = $articlePath;
+                        }
+                    }
+                }
+                $post->article_images = [$existingArticleImages[0], $existingArticleImages[1], $existingArticleImages[2]];
+                $post->save();
+            }
+
         BlogPost::query()
             ->where('id', '!=', (int) $post->id)
             ->update(['is_featured' => false, 'updated_at' => now()]);
@@ -6121,6 +6159,12 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
         'is_featured' => ['nullable', 'boolean'],
         'cover_image' => ['nullable', 'image', 'max:6144'],
         'remove_cover_image' => ['nullable', 'boolean'],
+        'article_image_0' => ['nullable', 'image', 'max:6144'],
+        'article_image_1' => ['nullable', 'image', 'max:6144'],
+        'article_image_2' => ['nullable', 'image', 'max:6144'],
+        'remove_article_image_0' => ['nullable', 'boolean'],
+        'remove_article_image_1' => ['nullable', 'boolean'],
+        'remove_article_image_2' => ['nullable', 'boolean'],
     ]);
 
     $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
@@ -6187,6 +6231,41 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
     $blogPost->save();
 
     if ($blogPost->is_featured) {
+            if (Schema::hasColumn('blog_posts', 'article_images')) {
+                $blogMediaDiskForArticle = trim((string) config('filesystems.portal_media_disk', 'public'));
+                if ($blogMediaDiskForArticle === '') {
+                    $blogMediaDiskForArticle = 'public';
+                }
+                $existingRawArticleImages = (array) ($blogPost->article_images ?? []);
+                $existingArticleImages = [];
+                foreach ([0, 1, 2] as $slot) {
+                    $existingArticleImages[$slot] = trim((string) ($existingRawArticleImages[$slot] ?? ''));
+                }
+                foreach ([0, 1, 2] as $slot) {
+                    if ((bool) ($validated['remove_article_image_' . $slot] ?? false)) {
+                        if ($existingArticleImages[$slot] !== '') {
+                            Storage::disk($blogMediaDiskForArticle)->delete($existingArticleImages[$slot]);
+                        }
+                        $existingArticleImages[$slot] = '';
+                    }
+                    $fileKey = 'article_image_' . $slot;
+                    if ($request->hasFile($fileKey)) {
+                        $articleFile = $request->file($fileKey);
+                        if ($articleFile !== null && $articleFile->isValid()) {
+                            if ($existingArticleImages[$slot] !== '') {
+                                Storage::disk($blogMediaDiskForArticle)->delete($existingArticleImages[$slot]);
+                            }
+                            $ext = strtolower((string) $articleFile->getClientOriginalExtension()) ?: 'jpg';
+                            $articlePath = 'blog/' . (int) $blogPost->id . '/article_' . $slot . '.' . $ext;
+                            Storage::disk($blogMediaDiskForArticle)->putFileAs('blog/' . (int) $blogPost->id, $articleFile, 'article_' . $slot . '.' . $ext, ['visibility' => 'public']);
+                            $existingArticleImages[$slot] = $articlePath;
+                        }
+                    }
+                }
+                $blogPost->article_images = [$existingArticleImages[0], $existingArticleImages[1], $existingArticleImages[2]];
+                $blogPost->save();
+            }
+
         BlogPost::query()
             ->where('id', '!=', (int) $blogPost->id)
             ->update(['is_featured' => false, 'updated_at' => now()]);
@@ -6300,7 +6379,7 @@ Route::get('/portal/admin/atlas', function () {
         return redirect('/admin')->withErrors(['auth' => 'Atolls/Islands tables are not ready. Run migrations first.']);
     }
 
-    $atolls = \App\Models\Atoll::query()->orderBy('name')->get();
+    $atolls = \App\Models\Atoll::query()->orderedByCode()->get();
     $islands = \App\Models\Island::query()->with('atoll')->orderBy('name')->limit(1200)->get();
 
     return view('admin-atlas-index', [
@@ -6540,7 +6619,7 @@ Route::get('/portal/admin/atlas/islands/create', function () {
         return redirect('/admin')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_MEDIA can create islands.']);
     }
 
-    $atolls = \App\Models\Atoll::query()->orderBy('name')->get();
+    $atolls = \App\Models\Atoll::query()->orderedByCode()->get();
 
     return view('admin-atlas-form', [
         'mode' => 'create',
@@ -6652,7 +6731,7 @@ Route::get('/portal/admin/atlas/islands/{island}/edit', function (int $island) {
     }
 
     $record = \App\Models\Island::query()->findOrFail($island);
-    $atolls = \App\Models\Atoll::query()->orderBy('name')->get();
+    $atolls = \App\Models\Atoll::query()->orderedByCode()->get();
 
     return view('admin-atlas-form', [
         'mode' => 'edit',

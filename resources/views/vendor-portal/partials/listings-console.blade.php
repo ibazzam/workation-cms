@@ -224,6 +224,40 @@
                                 ->count();
                         @endphp
                         <article class="category-listing-section" id="category-view-{{ $categoryKey }}" data-category-view="{{ $categoryKey }}">
+                            <div class="category-listing-header">
+                                <h4>{{ $categoryLabel }} Listings</h4>
+                                <div class="inline-actions">
+                                    @if ($forcedListingCategory === $categoryKey)
+                                        <a class="btn btn-primary" href="/vendor/listings/create/{{ $categoryKey }}">Add {{ $categoryLabel }}</a>
+                                        <a class="btn btn-secondary" href="/vendor/reservations">Reservations</a>
+                                        <a class="btn btn-secondary" href="/vendor/pricing">Pricing</a>
+                                        <a class="btn btn-secondary" href="/vendor/billing">Billing</a>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="ops-metrics" style="margin:0 0 10px;">
+                                <article class="ops-metric">
+                                    <p class="metric-label">Listings</p>
+                                    <p class="metric-value">{{ $categoryProperties->count() }}</p>
+                                </article>
+                                <article class="ops-metric">
+                                    <p class="metric-label">Reservations</p>
+                                    <p class="metric-value">{{ $categoryReservations->count() }}</p>
+                                </article>
+                                <article class="ops-metric">
+                                    <p class="metric-label">Confirmed</p>
+                                    <p class="metric-value">{{ $categoryConfirmedReservations }}</p>
+                                </article>
+                                <article class="ops-metric">
+                                    <p class="metric-label">Gross Revenue</p>
+                                    <p class="metric-value">{{ number_format($categoryGrossRevenue, 2) }} MVR</p>
+                                </article>
+                                <article class="ops-metric">
+                                    <p class="metric-label">Pending Review</p>
+                                    <p class="metric-value">{{ $categoryPendingReviewCount }}</p>
+                                </article>
+                            </div>
+
                             @if ($categoryProperties->isEmpty())
                                 <p class="ops-empty">No {{ strtolower((string) $categoryLabel) }} listings yet.</p>
                             @else

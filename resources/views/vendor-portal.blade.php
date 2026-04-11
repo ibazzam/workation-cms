@@ -1328,6 +1328,7 @@
         .listing-cell-actions {
             display: grid;
             gap: 8px;
+            min-width: 0;
         }
 
         .listing-summary-line {
@@ -1402,6 +1403,11 @@
             flex-wrap: nowrap;
             gap: 5px;
             align-items: center;
+            min-width: 0;
+        }
+
+        .listing-actions-row > * {
+            min-width: 0;
         }
 
         .listing-actions-compact .btn {
@@ -1457,6 +1463,7 @@
         .update-row-form.inline-table-form {
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 8px;
+            min-width: 0;
         }
 
         .update-row-form .ops-textarea,
@@ -1523,6 +1530,12 @@
         .update-row-form[data-property-edit-category="transport"] [data-property-edit-scope="capacity"],
         .update-row-form[data-property-edit-category="transport"] [data-property-edit-scope="transport"],
         .update-row-form[data-property-edit-category="transport"] [data-property-edit-scope="geo"],
+        .update-row-form[data-property-edit-category="marine_transport"] [data-property-edit-scope="capacity"],
+        .update-row-form[data-property-edit-category="marine_transport"] [data-property-edit-scope="transport"],
+        .update-row-form[data-property-edit-category="marine_transport"] [data-property-edit-scope="geo"],
+        .update-row-form[data-property-edit-category="land_transport"] [data-property-edit-scope="capacity"],
+        .update-row-form[data-property-edit-category="land_transport"] [data-property-edit-scope="transport"],
+        .update-row-form[data-property-edit-category="land_transport"] [data-property-edit-scope="geo"],
         .update-row-form[data-property-edit-category="excursion"] [data-property-edit-scope="capacity"],
         .update-row-form[data-property-edit-category="excursion"] [data-property-edit-scope="service"],
         .update-row-form[data-property-edit-category="excursion"] [data-property-edit-scope="excursion"],
@@ -1559,6 +1572,8 @@
         /* Policies scope: cancellation policy shown per bookable category */
         .update-row-form[data-property-edit-category="accommodation"] [data-property-edit-scope="policies"],
         .update-row-form[data-property-edit-category="transport"] [data-property-edit-scope="policies"],
+        .update-row-form[data-property-edit-category="marine_transport"] [data-property-edit-scope="policies"],
+        .update-row-form[data-property-edit-category="land_transport"] [data-property-edit-scope="policies"],
         .update-row-form[data-property-edit-category="excursion"] [data-property-edit-scope="policies"],
         .update-row-form[data-property-edit-category="water_sports"] [data-property-edit-scope="policies"],
         .update-row-form[data-property-edit-category="resort_day_visit"] [data-property-edit-scope="policies"],
@@ -1994,7 +2009,35 @@
             }
 
             .update-row-form.inline-table-form {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-columns: 1fr;
+            }
+
+            .update-row-form .ops-form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .listing-management-table,
+            .room-management-table {
+                table-layout: fixed;
+            }
+
+            .listing-cell-main,
+            .listing-cell-actions-cell,
+            .listing-cell-actions {
+                min-width: 0;
+            }
+
+            .listing-summary-line {
+                overflow-wrap: anywhere;
+            }
+
+            .listing-actions-row {
+                flex-wrap: wrap;
+                row-gap: 6px;
+            }
+
+            .listing-actions-compact .btn {
+                max-width: 100%;
             }
 
             .guided-steps {
@@ -2035,6 +2078,7 @@
 
             .media-upload-row {
                 padding: 10px;
+                min-width: 0;
             }
 
             .media-upload-row .inline-table-form {
@@ -2110,6 +2154,18 @@
             .publish-readiness-actions {
                 flex-direction: column;
                 align-items: stretch;
+            }
+
+            .listing-actions-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .listing-actions-row > form,
+            .listing-actions-row > .btn,
+            .listing-actions-row > .ops-chip {
+                width: 100%;
+                text-align: center;
             }
 
             .listing-management-table .inline-actions .btn,

@@ -1590,8 +1590,8 @@
         .gallery-grid {
             margin-top: 10px;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+            gap: 8px;
         }
 
         .media-dropzone {
@@ -1666,12 +1666,12 @@
             background: #fff;
             display: grid;
             grid-template-rows: auto 1fr;
-            box-shadow: 0 6px 18px rgba(17, 43, 68, 0.08);
+            box-shadow: 0 2px 8px rgba(17, 43, 68, 0.08);
         }
 
         .gallery-card img {
             width: 100%;
-            aspect-ratio: 4 / 3;
+            aspect-ratio: 1 / 1;
             height: auto;
             object-fit: cover;
             display: block;
@@ -1679,16 +1679,9 @@
         }
 
         .gallery-card-body {
-            padding: 8px;
+            padding: 6px;
             display: grid;
-            gap: 8px;
-        }
-
-        .gallery-card-title {
-            margin: 0;
-            font-size: 0.76rem;
-            color: #35506a;
-            line-height: 1.35;
+            gap: 6px;
         }
 
         .gallery-card-actions {
@@ -1702,21 +1695,13 @@
             margin: 0;
         }
 
-        .gallery-edit-form {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 6px;
-            width: 100%;
+        .gallery-toolbar {
+            align-items: center;
         }
 
-        .gallery-edit-form input {
-            border: 1px solid #c8d3df;
-            border-radius: 8px;
-            padding: 6px 8px;
-            font-size: 0.75rem;
-            font-family: "Outfit", "Trebuchet MS", sans-serif;
-            color: #1d3045;
-            background: #fff;
+        .gallery-toolbar .feature-item {
+            font-size: 0.76rem;
+            color: #31506a;
         }
 
         .gallery-delete-form .btn-danger {
@@ -2085,17 +2070,12 @@
                 grid-template-columns: 1fr;
             }
 
-            .gallery-edit-form {
-                grid-template-columns: 1fr;
-            }
-
             .gallery-card-actions,
             .publish-readiness-actions {
                 justify-content: stretch;
             }
 
             .gallery-card-actions form,
-            .gallery-edit-form .btn,
             .publish-readiness-actions form,
             .publish-readiness-actions .btn {
                 width: 100%;
@@ -2151,6 +2131,7 @@
             .listing-management-table .inline-status-form,
             .room-management-table .inline-status-form,
             .gallery-card-actions,
+            .gallery-toolbar,
             .publish-readiness-actions {
                 flex-direction: column;
                 align-items: stretch;
@@ -2608,6 +2589,7 @@
             const propertyMediaCloseButtons = Array.from(document.querySelectorAll('[data-close-property-media]'));
             const roomMediaToggleButtons = Array.from(document.querySelectorAll('[data-toggle-room-media]'));
             const roomMediaCloseButtons = Array.from(document.querySelectorAll('[data-close-room-media]'));
+            const gallerySelectionForms = Array.from(document.querySelectorAll('[data-gallery-selection-form]'));
             const listingCategoryShortcutButtons = Array.from(document.querySelectorAll('[data-listing-category-shortcut]'));
             const propertyListingRows = Array.from(document.querySelectorAll('[data-property-row]'));
             const guidedTrackProperty = document.getElementById("guidedTrackProperty");
@@ -2629,6 +2611,44 @@
             const vendorRoomsCount = Number("{{ $vendorRooms->count() }}") || 0;
             const vendorBillingReady = "{{ $vendorBilling ? '1' : '0' }}" === "1";
             const GUIDED_WIZARD_STORAGE_KEY = "workation_vendor_guided_wizard";
+
+            function bindGallerySelection(form) {
+                const selectAll = form.querySelector('[data-gallery-select-all]');
+                const deleteButton = form.querySelector('[data-gallery-bulk-delete-button]');
+                const items = Array.from(form.querySelectorAll('[data-gallery-select-item]'));
+
+                if (!deleteButton || items.length === 0) {
+                    return;
+                }
+
+                const sync = function () {
+                    const selectedCount = items.filter(function (item) { return item.checked; }).length;
+                    deleteButton.disabled = selectedCount === 0;
+                    deleteButton.textContent = 'Delete Selected (' + selectedCount + ')';
+                    if (selectAll) {
+                        selectAll.checked = selectedCount > 0 && selectedCount === items.length;
+                        selectAll.indeterminate = selectedCount > 0 && selectedCount < items.length;
+                    }
+                };
+
+                if (selectAll) {
+                    selectAll.addEventListener('change', function () {
+                        const checked = !!selectAll.checked;
+                        items.forEach(function (item) {
+                            item.checked = checked;
+                        });
+                        sync();
+                    });
+                }
+
+                items.forEach(function (item) {
+                    item.addEventListener('change', sync);
+                });
+
+                sync();
+            }
+
+            gallerySelectionForms.forEach(bindGallerySelection);
 
             const guidedWizardFlows = {
                 property: [

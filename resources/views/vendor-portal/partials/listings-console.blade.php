@@ -378,12 +378,13 @@
                                                                 @if ($propertyMediaItems->isEmpty())
                                                                     <p class="ops-empty">No listing photos uploaded yet.</p>
                                                                 @else
-                                                                    <form class="inline-table-form" method="POST" action="/portal/vendor/media/bulk-delete" onsubmit="return confirm('Remove selected photos?');">
+                                                                    <form class="inline-table-form" method="POST" action="/portal/vendor/media/bulk-delete" onsubmit="return confirm('Remove selected photos?');" data-gallery-selection-form>
                                                                         @csrf
                                                                         <input type="hidden" name="panel_entity_type" value="property">
                                                                         <input type="hidden" name="panel_entity_id" value="{{ $propertyId }}">
-                                                                        <div class="inline-actions" style="justify-content:flex-start; margin-bottom:0.75rem;">
-                                                                            <button class="btn btn-danger" type="submit">Delete Selected</button>
+                                                                        <div class="inline-actions gallery-toolbar" style="justify-content:space-between; margin-bottom:0.75rem;">
+                                                                            <label class="feature-item" style="margin:0;"><input type="checkbox" data-gallery-select-all> Select all</label>
+                                                                            <button class="btn btn-danger" type="submit" data-gallery-bulk-delete-button disabled>Delete Selected (0)</button>
                                                                         </div>
                                                                     <div class="gallery-grid">
                                                                         @foreach ($propertyMediaItems as $media)
@@ -394,15 +395,7 @@
                                                                             <article class="gallery-card">
                                                                                 <img src="{{ $mediaUrl }}" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $mediaFallbackUrl }}';}" alt="{{ (string) ($media->alt_text ?? $property->name) }}" loading="lazy">
                                                                                 <div class="gallery-card-body">
-                                                                                    <label class="feature-item" style="margin-bottom:0.5rem;"><input type="checkbox" name="media_ids[]" value="{{ (int) ($media->id ?? 0) }}"> Select</label>
-                                                                                    <p class="gallery-card-title">{{ (string) ($media->alt_text ?? 'Listing photo') }}</p>
-                                                                                    <form class="gallery-edit-form" method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/update">
-                                                                                        @csrf
-                                                                                        <input type="hidden" name="panel_entity_type" value="property">
-                                                                                        <input type="hidden" name="panel_entity_id" value="{{ $propertyId }}">
-                                                                                        <input name="alt_text" type="text" maxlength="190" value="{{ (string) ($media->alt_text ?? 'Listing photo') }}" aria-label="Edit listing photo text">
-                                                                                        <button class="btn btn-secondary" type="submit">Save</button>
-                                                                                    </form>
+                                                                                    <label class="feature-item" style="margin:0;"><input type="checkbox" name="media_ids[]" value="{{ (int) ($media->id ?? 0) }}" data-gallery-select-item> Select</label>
                                                                                     <div class="gallery-card-actions">
                                                                                         @if ((bool) ($media->is_primary ?? false))
                                                                                             <span class="ops-chip">Primary</span>
@@ -414,12 +407,6 @@
                                                                                                 <button class="btn btn-secondary" type="submit">Set Primary</button>
                                                                                             </form>
                                                                                         @endif
-                                                                                        <form class="gallery-delete-form" method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/delete" onsubmit="return confirm('Remove this photo?');">
-                                                                                            @csrf
-                                                                                            <input type="hidden" name="panel_entity_type" value="property">
-                                                                                            <input type="hidden" name="panel_entity_id" value="{{ $propertyId }}">
-                                                                                            <button class="btn btn-danger" type="submit">Remove</button>
-                                                                                        </form>
                                                                                     </div>
                                                                                 </div>
                                                                             </article>
@@ -583,12 +570,13 @@
                                                                                                 @if ($roomMediaItems->isEmpty())
                                                                                                     <p class="ops-empty">No room photos uploaded yet.</p>
                                                                                                 @else
-                                                                                                    <form class="inline-table-form" method="POST" action="/portal/vendor/media/bulk-delete" onsubmit="return confirm('Remove selected photos?');">
+                                                                                                    <form class="inline-table-form" method="POST" action="/portal/vendor/media/bulk-delete" onsubmit="return confirm('Remove selected photos?');" data-gallery-selection-form>
                                                                                                         @csrf
                                                                                                         <input type="hidden" name="panel_entity_type" value="room">
                                                                                                         <input type="hidden" name="panel_entity_id" value="{{ $roomId }}">
-                                                                                                        <div class="inline-actions" style="justify-content:flex-start; margin-bottom:0.75rem;">
-                                                                                                            <button class="btn btn-danger" type="submit">Delete Selected</button>
+                                                                                                        <div class="inline-actions gallery-toolbar" style="justify-content:space-between; margin-bottom:0.75rem;">
+                                                                                                            <label class="feature-item" style="margin:0;"><input type="checkbox" data-gallery-select-all> Select all</label>
+                                                                                                            <button class="btn btn-danger" type="submit" data-gallery-bulk-delete-button disabled>Delete Selected (0)</button>
                                                                                                         </div>
                                                                                                     <div class="gallery-grid">
                                                                                                         @foreach ($roomMediaItems as $media)
@@ -599,15 +587,7 @@
                                                                                                             <article class="gallery-card">
                                                                                                                 <img src="{{ $roomMediaUrl }}" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';this.src='{{ $roomMediaFallbackUrl }}';}" alt="{{ (string) ($media->alt_text ?? $room->name) }}" loading="lazy">
                                                                                                                 <div class="gallery-card-body">
-                                                                                                                    <label class="feature-item" style="margin-bottom:0.5rem;"><input type="checkbox" name="media_ids[]" value="{{ (int) ($media->id ?? 0) }}"> Select</label>
-                                                                                                                    <p class="gallery-card-title">{{ (string) ($media->alt_text ?? 'Room photo') }}</p>
-                                                                                                                    <form class="gallery-edit-form" method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/update">
-                                                                                                                        @csrf
-                                                                                                                        <input type="hidden" name="panel_entity_type" value="room">
-                                                                                                                        <input type="hidden" name="panel_entity_id" value="{{ $roomId }}">
-                                                                                                                        <input name="alt_text" type="text" maxlength="190" value="{{ (string) ($media->alt_text ?? 'Room photo') }}" aria-label="Edit room photo text">
-                                                                                                                        <button class="btn btn-secondary" type="submit">Save</button>
-                                                                                                                    </form>
+                                                                                                                    <label class="feature-item" style="margin:0;"><input type="checkbox" name="media_ids[]" value="{{ (int) ($media->id ?? 0) }}" data-gallery-select-item> Select</label>
                                                                                                                     <div class="gallery-card-actions">
                                                                                                                         @if ((bool) ($media->is_primary ?? false))
                                                                                                                             <span class="ops-chip">Primary</span>
@@ -619,12 +599,6 @@
                                                                                                                                 <button class="btn btn-secondary" type="submit">Set Primary</button>
                                                                                                                             </form>
                                                                                                                         @endif
-                                                                                                                        <form class="gallery-delete-form" method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/delete" onsubmit="return confirm('Remove this photo?');">
-                                                                                                                            @csrf
-                                                                                                                            <input type="hidden" name="panel_entity_type" value="room">
-                                                                                                                            <input type="hidden" name="panel_entity_id" value="{{ $roomId }}">
-                                                                                                                            <button class="btn btn-danger" type="submit">Remove</button>
-                                                                                                                        </form>
                                                                                                                     </div>
                                                                                                                 </div>
                                                                                                             </article>

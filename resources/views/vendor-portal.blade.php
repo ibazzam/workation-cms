@@ -2915,6 +2915,14 @@
             }
 
             function showPanelGroup(panelKey) {
+                const hasMatchingPanel = panelGroups.some((panel) => {
+                    return (panel.getAttribute("data-panel-group") || "") === panelKey;
+                });
+                if (!hasMatchingPanel) {
+                    setActiveNavLink(panelKey);
+                    return;
+                }
+
                 panelGroups.forEach((panel) => {
                     panel.hidden = (panel.getAttribute("data-panel-group") || "") !== panelKey;
                 });
@@ -4904,6 +4912,13 @@
                 }
 
                 function showPanel(panelKey) {
+                    const hasMatchingPanel = panelGroups.some((panel) => {
+                        return (panel.getAttribute('data-panel-group') || '') === panelKey;
+                    });
+                    if (!hasMatchingPanel) {
+                        return;
+                    }
+
                     panelGroups.forEach((panel) => {
                         panel.hidden = (panel.getAttribute('data-panel-group') || '') !== panelKey;
                     });

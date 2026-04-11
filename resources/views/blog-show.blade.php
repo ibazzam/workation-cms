@@ -744,19 +744,7 @@
                         @php
                             $relatedCoverUrl = trim((string) ($relatedPost->cover_image_url ?? ''));
                             if ($relatedCoverUrl === '') {
-                                $relatedCoverPath = trim((string) ($relatedPost->cover_image_path ?? ''));
-                                if ($relatedCoverPath !== '') {
-                                    $relatedCoverPath = str_replace('\\', '/', $relatedCoverPath);
-                                    if (\Illuminate\Support\Str::startsWith($relatedCoverPath, ['storage/'])) {
-                                        $relatedCoverPath = '/' . ltrim($relatedCoverPath, '/');
-                                    }
-                                    if (\Illuminate\Support\Str::startsWith($relatedCoverPath, ['public/'])) {
-                                        $relatedCoverPath = (string) \Illuminate\Support\Str::after($relatedCoverPath, 'public/');
-                                    }
-                                    $relatedCoverUrl = \Illuminate\Support\Str::startsWith($relatedCoverPath, ['https://', 'http://', '//', '/'])
-                                        ? $relatedCoverPath
-                                        : (string) \Illuminate\Support\Facades\Storage::disk('public')->url($relatedCoverPath);
-                                }
+                                $relatedCoverUrl = blogResolveCoverImageUrl((string) ($relatedPost->cover_image_path ?? ''));
                             }
                             $relatedCategoryLabel = (string) ($relatedPost->blog_category_label ?? $postCategoryLabel);
                             $relatedDate = optional($relatedPost->published_at)->format('M d, Y - l')

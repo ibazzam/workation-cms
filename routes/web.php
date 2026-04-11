@@ -1991,6 +1991,18 @@ if (!function_exists('blogResolveCoverImageUrl')) {
             return $value;
         }
 
+        if (preg_match('#/storage/app/public/(.+)$#i', $value, $matches) === 1) {
+            $value = (string) ($matches[1] ?? '');
+        } elseif (preg_match('#/public/storage/(.+)$#i', $value, $matches) === 1) {
+            $value = (string) ($matches[1] ?? '');
+        }
+
+        if (Str::startsWith($value, ['/storage/'])) {
+            return '/' . ltrim($value, '/');
+        }
+
+        $value = ltrim($value, '/');
+
         if (Str::startsWith($value, ['storage/'])) {
             return '/' . ltrim($value, '/');
         }
@@ -1999,8 +2011,12 @@ if (!function_exists('blogResolveCoverImageUrl')) {
             $value = Str::after($value, 'public/');
         }
 
-        if (Str::startsWith($value, ['/storage/', '/'])) {
-            return $value;
+        if (Str::startsWith($value, ['storage/'])) {
+            return '/' . ltrim($value, '/');
+        }
+
+        if (Str::startsWith($value, ['blog/'])) {
+            return '/storage/' . ltrim($value, '/');
         }
 
         return (string) Storage::disk('public')->url($value);

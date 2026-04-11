@@ -1500,21 +1500,23 @@ Route::get('/', function () {
         if (Schema::hasColumn('vendor_properties', 'listing_category')) {
             $categoryCounts = DB::table('vendor_properties')
                 ->where('status', 'active')
-                ->selectRaw('LOWER(listing_category) as category_key, COUNT(*) as total')
+                ->selectRaw("REPLACE(LOWER(listing_category), '-', '_') as category_key, COUNT(*) as total")
                 ->groupBy('category_key')
                 ->pluck('total', 'category_key');
 
+            $normalizeHomeCategoryKey = static fn (?string $value): string => str_replace('-', '_', strtolower(trim((string) $value)));
+
             $categorySamples = $allProperties
                 ->filter(static fn ($property) => trim((string) ($property->listing_category ?? '')) !== '')
-                ->groupBy(static fn ($property) => strtolower(trim((string) ($property->listing_category ?? '')))
+                ->groupBy(static fn ($property) => $normalizeHomeCategoryKey((string) ($property->listing_category ?? ''))
                 )->map(static fn ($group) => $group->first());
 
             $homeTopCategoryLinks = $homeTopCategoryLinks->map(function (array $card) use ($categoryCounts) {
                 $key = strtolower(trim((string) ($card['title'] ?? '')));
                 $categoryHint = match ($key) {
                     'accommodation' => 'accommodation',
-                    'marine transport' => 'marine-transport',
-                    'land transport' => 'land-transport',
+                    'marine transport' => 'marine_transport',
+                    'land transport' => 'land_transport',
                     'excursions' => 'excursion',
                     'remote workspace' => 'remote_workspace',
                     'conference rooms' => 'conference_room',
@@ -1539,8 +1541,8 @@ Route::get('/', function () {
             $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categoryCounts) {
                 $categoryHint = match ($card['title']) {
                     'Stay Options' => 'accommodation',
-                    'Marine Transport' => 'marine-transport',
-                    'Land Transport' => 'land-transport',
+                    'Marine Transport' => 'marine_transport',
+                    'Land Transport' => 'land_transport',
                     'Experiences' => 'excursion',
                     'Work-Friendly' => 'remote_workspace',
                     'Conference Rooms' => 'conference_room',
@@ -1562,8 +1564,8 @@ Route::get('/', function () {
             $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categorySamples, $resolvePropertyImage, $resolvePropertyFallbackImage, $propertyLocationLabel) {
                 $categoryHint = match ($card['title']) {
                     'Stay Options' => 'accommodation',
-                    'Marine Transport' => 'marine-transport',
-                    'Land Transport' => 'land-transport',
+                    'Marine Transport' => 'marine_transport',
+                    'Land Transport' => 'land_transport',
                     'Experiences' => 'excursion',
                     'Work-Friendly' => 'remote_workspace',
                     'Conference Rooms' => 'conference_room',

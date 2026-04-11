@@ -1949,6 +1949,10 @@ if (!function_exists('blogHydratePostsWithMeta')) {
 
         return $posts->map(function ($post) use ($categories, $tagDefinitions) {
             $explicitCategorySlug = trim(Str::lower((string) ($post->blog_category_slug ?? '')));
+            $explicitCategorySlug = str_replace('_', '-', $explicitCategorySlug);
+            if ($explicitCategorySlug === 'things-to-do' || $explicitCategorySlug === 'things-to-dos') {
+                $explicitCategorySlug = 'things-to-do';
+            }
             $categorySlug = in_array($explicitCategorySlug, array_keys($categories), true)
                 ? $explicitCategorySlug
                 : blogInferCategorySlug($post);
@@ -2029,6 +2033,31 @@ if (!function_exists('buildBlogIndexPayload')) {
             return (bool) ($post->is_featured ?? false);
         }) ?? $posts->first();
 
+        $featuredPosts = $posts
+            ->filter(static function ($post): bool {
+                return (bool) ($post->is_featured ?? false);
+            })
+            ->values();
+
+        if ($featuredPosts->isEmpty()) {
+            $featuredPosts = $posts->take(5)->values();
+        }
+
+        $categoryStoryPosts = collect(array_keys($categories))
+            ->map(function (string $slug) use ($posts) {
+                return $posts->first(function ($post) use ($slug) {
+                    return (string) ($post->blog_category_slug ?? '') === $slug;
+                });
+            })
+            ->filter(static function ($post): bool {
+                return $post !== null;
+            })
+            ->values();
+
+        if ($categoryStoryPosts->isEmpty()) {
+            $categoryStoryPosts = $posts->take(4)->values();
+        }
+
         $tagStats = [];
         foreach ($posts as $post) {
             $tags = is_array($post->blog_tags ?? null) ? $post->blog_tags : [];
@@ -2075,6 +2104,8 @@ if (!function_exists('buildBlogIndexPayload')) {
             'apiBase' => workationApiBase(),
             'posts' => $posts,
             'featuredPost' => $featuredPost,
+            'featuredPosts' => $featuredPosts,
+            'categoryStoryPosts' => $categoryStoryPosts,
             'blogCategories' => $categories,
             'activeCategory' => $activeCategory,
             'activeTag' => $activeTag,

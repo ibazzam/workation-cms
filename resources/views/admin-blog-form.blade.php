@@ -6,6 +6,7 @@
     <title>{{ $mode === 'edit' ? 'Edit Blog Post' : 'Create Blog Post' }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
     <style>
         :root {
             --bg: #f4f8fb;
@@ -104,6 +105,25 @@
             min-height: 320px;
             resize: vertical;
             line-height: 1.6;
+        }
+
+        .EasyMDEContainer {
+            border: 1px solid #cbdbe8;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .EasyMDEContainer .CodeMirror {
+            min-height: 360px;
+            font-family: "Outfit", "Trebuchet MS", sans-serif;
+            color: #1c3e56;
+        }
+
+        .EasyMDEContainer .editor-toolbar {
+            border: 0;
+            border-bottom: 1px solid #d8e6f0;
+            background: #f8fbff;
         }
 
         .checks {
@@ -290,7 +310,7 @@
                 <div class="field wide">
                     <label for="blog_content">Content</label>
                     <textarea id="blog_content" name="content" required>{{ old('content', $isEdit ? $post->content : '') }}</textarea>
-                    <p class="hint">Use markdown-style content. Supported: <code>## Heading</code>, <code>### Subheading</code>, <code>**bold**</code>, <code>*italic*</code>, <code>[Link](https://example.com)</code>, <code>![Caption](https://...)</code>, and <code>[image:/storage/path.jpg|Caption]</code> for full-width article images.</p>
+                    <p class="hint">Paragraph editor is enabled with formatting toolbar. Content is saved as markdown and supports: <code>## Heading</code>, <code>### Subheading</code>, <code>**bold**</code>, <code>*italic*</code>, <code>[Link](https://example.com)</code>, <code>![Caption](https://...)</code>, and <code>[image:/storage/path.jpg|Caption]</code>.</p>
                 </div>
 
                 <div class="field">
@@ -381,6 +401,56 @@
                 </div>
             </form>
         @endif
+
+        <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+        <script>
+            (function () {
+                const contentElement = document.getElementById('blog_content');
+                if (!contentElement || typeof EasyMDE === 'undefined') {
+                    return;
+                }
+
+                const editor = new EasyMDE({
+                    element: contentElement,
+                    autofocus: false,
+                    spellChecker: false,
+                    autosave: {
+                        enabled: false,
+                    },
+                    status: ['lines', 'words'],
+                    minHeight: '360px',
+                    placeholder: 'Write your story in paragraphs, headings, and rich text...',
+                    toolbar: [
+                        'heading-2',
+                        'heading-3',
+                        '|',
+                        'bold',
+                        'italic',
+                        'strikethrough',
+                        '|',
+                        'quote',
+                        'unordered-list',
+                        'ordered-list',
+                        '|',
+                        'link',
+                        'image',
+                        '|',
+                        'preview',
+                        'side-by-side',
+                        'fullscreen',
+                        '|',
+                        'guide',
+                    ],
+                });
+
+                const form = contentElement.closest('form');
+                if (form) {
+                    form.addEventListener('submit', function () {
+                        contentElement.value = editor.value();
+                    });
+                }
+            })();
+        </script>
     </main>
 </body>
 </html>

@@ -601,8 +601,15 @@
 <body>
     @php
         $allPosts = $posts->values();
+        $featuredPosts = collect($featuredPosts ?? [])->values();
+        $categoryStoryPosts = collect($categoryStoryPosts ?? [])->values();
 
         $postImageUrl = function ($post): string {
+            $postId = (int) ($post->id ?? 0);
+            if ($postId > 0) {
+                return '/media/blog/' . $postId . '/cover';
+            }
+
             $candidate = trim((string) ($post->cover_image_url ?? ''));
             if ($candidate === '') {
                 $candidate = trim((string) ($post->cover_image_path ?? ''));
@@ -622,9 +629,9 @@
             ->shuffle()
             ->first();
         $teaserPosts = $allPosts->slice(1, 3)->values();
-        $featureLead = $allPosts->get(4) ?? $heroLead;
-        $featureList = $allPosts->slice(5, 4)->values();
-        $driftPosts = $allPosts->slice(9, 3)->values();
+        $featureLead = $featuredPosts->first() ?? $heroLead;
+        $featureList = $featuredPosts->slice(1, 4)->values();
+        $driftPosts = $categoryStoryPosts->take(3)->values();
         $archivePosts = $allPosts->slice(12, 8)->values();
         $loopPosts = $allPosts->filter(function ($post) {
             $isIslandsCategory = (string) ($post->blog_category_slug ?? '') === 'islands';
@@ -638,11 +645,28 @@
         }
 
         if ($featureList->isEmpty()) {
-            $featureList = $allPosts->skip(1)->take(4)->values();
+            $featureList = $allPosts
+                ->filter(function ($post) use ($featureLead) {
+                    return !$featureLead || (int) ($post->id ?? 0) !== (int) ($featureLead->id ?? 0);
+                })
+                ->take(4)
+                ->values();
         }
 
         if ($driftPosts->isEmpty()) {
-            $driftPosts = $allPosts->skip(1)->take(3)->values();
+            $driftPosts = $allPosts
+                ->groupBy(function ($post) {
+                    return (string) ($post->blog_category_slug ?? '');
+                })
+                ->map(function ($group) {
+                    return $group->first();
+                })
+                ->values()
+                ->take(3);
+
+            if ($driftPosts->isEmpty()) {
+                $driftPosts = $allPosts->skip(1)->take(3)->values();
+            }
         }
 
         if ($archivePosts->isEmpty()) {

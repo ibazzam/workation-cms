@@ -4966,10 +4966,7 @@
                     panelGroups.forEach((panel) => {
                         panel.hidden = (panel.getAttribute('data-panel-group') || '') !== panelKey;
                     });
-                    navLinks.forEach((link) => {
-                        const isActive = String(link.dataset.panelKey || '') === panelKey;
-                        link.classList.toggle('is-active', isActive);
-                    });
+                    // Nav link highlighting is handled exclusively by the primary script's setActiveNavLink
                 }
 
                 navLinks.forEach((link) => {

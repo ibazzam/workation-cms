@@ -40,22 +40,6 @@
         >{{ $categoryLabel }}</a>
     @endforeach
 
-    <p class="nav-group-title">Reservations &amp; Pricing</p>
-    <a class="nav-item-link {{ in_array($activePortalPage ?? '', ['reservations', 'operations', 'availability'], true) ? 'prominent' : '' }}" href="/vendor/reservations" data-panel-key="reservations">Manage Reservations</a>
-    <a class="nav-item-link {{ ($activePortalPage ?? '') === 'pricing' ? 'prominent' : '' }}" href="/vendor/pricing" data-panel-key="reservations">Pricing Rules</a>
-    <a class="nav-item-link" href="/vendor/availability" data-panel-key="reservations">Availability Calendar</a>
-    @foreach ($sidebarCategoryLinks as $categoryKey)
-        @php
-            $categoryLabel = (string) ($sidebarVendorCategoryMap[$categoryKey] ?? ucwords(str_replace('_', ' ', $categoryKey)));
-        @endphp
-        <a
-            class="nav-sub-link"
-            href="{{ '/vendor/reservations?category=' . urlencode($categoryKey) }}"
-            data-panel-key="reservations"
-            data-vendor-category-target="{{ $categoryKey }}"
-        >{{ $categoryLabel }} Reservations</a>
-    @endforeach
-
     <p class="nav-group-title">Engagement &amp; Billing</p>
     <a class="nav-item-link {{ in_array($activePortalPage ?? '', ['engagement', 'promotions'], true) ? 'prominent' : '' }}" href="/vendor/promotions" data-panel-key="engagement">Promotions &amp; Loyalty</a>
     <a class="nav-item-link {{ ($activePortalPage ?? '') === 'billing' ? 'prominent' : '' }}" href="/vendor/billing" data-panel-key="billing">Billing &amp; Refunds</a>

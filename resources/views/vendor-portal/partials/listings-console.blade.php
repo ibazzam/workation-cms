@@ -1,15 +1,25 @@
 <section id="vendorOperationsOverview" class="card ops-section" aria-label="Vendor operations overview" data-panel-group="listings">
+            @php
+                $consoleCategoryLabel = $forcedListingCategory !== ''
+                    ? (string) ($listingCategoryLabelMap[$forcedListingCategory] ?? ucwords(str_replace('_', ' ', $forcedListingCategory)))
+                    : '';
+                $consoleTitleLabel = $consoleCategoryLabel !== '' ? $consoleCategoryLabel . ' Listings' : 'My Listings';
+            @endphp
             <div class="ops-header">
-                <p class="ops-title">My Listings Console</p>
-                <span class="ops-chip">Database-backed</span>
+                <p class="ops-title">{{ $consoleTitleLabel }}</p>
             </div>
             @if (!$vendorCanManageListings)
                 <p class="wizard-note" style="margin-bottom:10px;">Listings, operations, and pricing are currently locked. Complete My Account compliance details and wait for admin verification approval.</p>
             @endif
             <div class="inline-actions" style="margin-bottom:10px;">
-                <a class="btn btn-secondary" href="#vendorAvailabilitySection">Manage Reservations</a>
-                <a class="btn btn-secondary" href="#vendorPricingSection">Change Pricing</a>
-                <a class="btn btn-secondary" href="#vendorDailyCollectionSection">Billing &amp; Refunds</a>
+                <a class="btn btn-secondary" href="/vendor/reservations">Manage Reservations</a>
+                <a class="btn btn-secondary" href="/vendor/pricing">Change Pricing</a>
+                <a class="btn btn-secondary" href="/vendor/billing">Billing &amp; Refunds</a>
+                @if ($consoleCategoryLabel !== '')
+                    <a class="btn btn-primary" href="/vendor/listings/create/{{ $forcedListingCategory }}">Add {{ $consoleCategoryLabel }}</a>
+                @else
+                    <a class="btn btn-primary" href="/vendor/listings/create">Add New Listing</a>
+                @endif
             </div>
             @if (!$hasSelectedCategories)
                 <p class="wizard-note">Select at least one category in Category Wizard before creating listings.</p>
@@ -160,7 +170,7 @@
                                 <h4>{{ $categoryLabel }} Listings</h4>
                                 <div class="inline-actions">
                                     <span class="ops-chip">{{ $categoryProperties->count() }} listed</span>
-                                    <button type="button" class="btn btn-secondary" data-listing-category-shortcut="{{ $categoryKey }}">Add {{ $categoryLabel }}</button>
+                                    <a class="btn btn-secondary" href="/vendor/listings/create/{{ $categoryKey }}">Add {{ $categoryLabel }}</a>
                                 </div>
                             </div>
                             <div class="ops-metrics" style="margin:0 0 10px;">

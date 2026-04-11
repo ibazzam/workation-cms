@@ -43,10 +43,6 @@
         </section>
 
         <section id="vendorPropertiesSection" class="card ops-section" aria-label="Vendor properties" data-panel-group="listings" data-listing-step="1">
-            <div class="ops-header">
-                <p class="ops-title">My Listings by Category</p>
-                <span class="ops-chip">{{ $vendorProperties->count() }} total</span>
-            </div>
             <div class="ops-grid properties-grid">
                 @php
                     $oldPropertyAmenities = collect(old('property_amenities', []))->map(fn ($item) => (string) $item)->all();
@@ -125,10 +121,12 @@
                     $activeCreateCategory = vendorPortalCanonicalCategory((string) ($forcedListingCategory !== '' ? $forcedListingCategory : $createCategoryFallback));
                     $activeCreateFormPartial = $createFormPartialMap[$activeCreateCategory] ?? 'vendor-portal.partials.forms.create.accommodation';
                 @endphp
-                <article class="ops-form ops-field-wide">
-                    @include($activeCreateFormPartial)
+                @if ($showCreatePropertyForm)
+                    <article class="ops-form ops-field-wide">
+                        @include($activeCreateFormPartial)
 
-                </article>
+                    </article>
+                @endif
                 <div class="category-listings-stack" aria-label="Category listing views">
                     @foreach ($listingCategoryViewOrder as $categoryKey)
                         @php
@@ -159,7 +157,6 @@
                             <div class="category-listing-header">
                                 <h4>{{ $categoryLabel }} Listings</h4>
                                 <div class="inline-actions">
-                                    <span class="ops-chip">{{ $categoryProperties->count() }} listed</span>
                                     @if ($forcedListingCategory === $categoryKey)
                                         <a class="btn btn-primary" href="/vendor/listings/create/{{ $categoryKey }}">Add {{ $categoryLabel }}</a>
                                         <a class="btn btn-secondary" href="/vendor/reservations">Reservations</a>

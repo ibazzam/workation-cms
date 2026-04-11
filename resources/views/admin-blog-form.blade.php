@@ -314,6 +314,11 @@
                     <p class="hint">Paragraph editor is enabled with formatting toolbar. Content is saved as markdown and supports: <code>## Heading</code>, <code>### Subheading</code>, <code>**bold**</code>, <code>*italic*</code>, <code>[Link](https://example.com)</code>, <code>![Caption](https://...)</code>, and <code>[image:/storage/path.jpg|Caption]</code>.</p>
                 </div>
 
+                    <div id="blog-inline-image-manager" style="display:none; margin-top:-8px;">
+                        <p class="hint" style="font-weight:600; margin-bottom:6px;">Inline images uploaded this session — click Delete to remove from storage:</p>
+                        <div id="blog-inline-images-list" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
+                    </div>
+
                 <div class="field">
                     <label for="blog_cover">Cover image (optional)</label>
                     <input id="blog_cover" name="cover_image" type="file" accept="image/*">
@@ -471,6 +476,10 @@
                                 }
 
                                 onSuccess(imageUrl);
+                                    const storedPath = String(payload?.path || '').trim();
+                                    if (storedPath) {
+                                        addInlineImageToManager(imageUrl, storedPath);
+                                    }
                             })
                             .catch(function (error) {
                                 onError(error?.message || 'Unable to upload image.');
@@ -484,6 +493,65 @@
                         contentElement.value = editor.value();
                     });
                 }
+
+                    function addInlineImageToManager(imageUrl, storedPath) {
+                        const manager = document.getElementById('blog-inline-image-manager');
+                        const list    = document.getElementById('blog-inline-images-list');
+                        if (!manager || !list) return;
+
+                        manager.style.display = '';
+
+                        const item = document.createElement('div');
+                        item.style.cssText = 'position:relative;border:1px solid #ccc;border-radius:4px;overflow:hidden;width:90px;text-align:center;background:#f9f9f9;';
+                        item.dataset.storedPath = storedPath;
+
+                        const img = document.createElement('img');
+                        img.src = imageUrl;
+                        img.alt = '';
+                        img.style.cssText = 'display:block;width:90px;height:70px;object-fit:cover;';
+
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.textContent = 'Delete';
+                        btn.style.cssText = 'display:block;width:100%;background:#c53030;color:#fff;border:none;padding:3px 0;font-size:11px;cursor:pointer;';
+                        btn.addEventListener('click', function () {
+                            if (!confirm('Delete this image from storage?\n\nAny existing references to it in the content will become broken images.')) return;
+                            deleteInlineImage(storedPath, item);
+                        });
+
+                        item.appendChild(img);
+                        item.appendChild(btn);
+                        list.appendChild(item);
+                    }
+
+                    function deleteInlineImage(storedPath, itemEl) {
+                        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                        fetch('/portal/admin/blog/delete-inline-image', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': token,
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: JSON.stringify({ path: storedPath }),
+                            credentials: 'same-origin',
+                        })
+                        .then(function (resp) {
+                            if (resp.ok) {
+                                itemEl.remove();
+                                const list = document.getElementById('blog-inline-images-list');
+                                const manager = document.getElementById('blog-inline-image-manager');
+                                if (list && manager && list.children.length === 0) {
+                                    manager.style.display = 'none';
+                                }
+                            } else {
+                                alert('Could not delete the image. Please try again.');
+                            }
+                        })
+                        .catch(function () {
+                            alert('Network error while deleting. Please try again.');
+                        });
+                    }
             })();
         </script>
     </main>

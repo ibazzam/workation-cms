@@ -1500,21 +1500,23 @@ Route::get('/', function () {
         if (Schema::hasColumn('vendor_properties', 'listing_category')) {
             $categoryCounts = DB::table('vendor_properties')
                 ->where('status', 'active')
-                ->selectRaw('LOWER(listing_category) as category_key, COUNT(*) as total')
+                ->selectRaw("REPLACE(LOWER(listing_category), '-', '_') as category_key, COUNT(*) as total")
                 ->groupBy('category_key')
                 ->pluck('total', 'category_key');
 
+            $normalizeHomeCategoryKey = static fn (?string $value): string => str_replace('-', '_', strtolower(trim((string) $value)));
+
             $categorySamples = $allProperties
                 ->filter(static fn ($property) => trim((string) ($property->listing_category ?? '')) !== '')
-                ->groupBy(static fn ($property) => strtolower(trim((string) ($property->listing_category ?? '')))
+                ->groupBy(static fn ($property) => $normalizeHomeCategoryKey((string) ($property->listing_category ?? ''))
                 )->map(static fn ($group) => $group->first());
 
             $homeTopCategoryLinks = $homeTopCategoryLinks->map(function (array $card) use ($categoryCounts) {
                 $key = strtolower(trim((string) ($card['title'] ?? '')));
                 $categoryHint = match ($key) {
                     'accommodation' => 'accommodation',
-                    'marine transport' => 'marine-transport',
-                    'land transport' => 'land-transport',
+                    'marine transport' => 'marine_transport',
+                    'land transport' => 'land_transport',
                     'excursions' => 'excursion',
                     'remote workspace' => 'remote_workspace',
                     'conference rooms' => 'conference_room',
@@ -1539,8 +1541,8 @@ Route::get('/', function () {
             $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categoryCounts) {
                 $categoryHint = match ($card['title']) {
                     'Stay Options' => 'accommodation',
-                    'Marine Transport' => 'marine-transport',
-                    'Land Transport' => 'land-transport',
+                    'Marine Transport' => 'marine_transport',
+                    'Land Transport' => 'land_transport',
                     'Experiences' => 'excursion',
                     'Work-Friendly' => 'remote_workspace',
                     'Conference Rooms' => 'conference_room',
@@ -1562,8 +1564,8 @@ Route::get('/', function () {
             $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categorySamples, $resolvePropertyImage, $resolvePropertyFallbackImage, $propertyLocationLabel) {
                 $categoryHint = match ($card['title']) {
                     'Stay Options' => 'accommodation',
-                    'Marine Transport' => 'marine-transport',
-                    'Land Transport' => 'land-transport',
+                    'Marine Transport' => 'marine_transport',
+                    'Land Transport' => 'land_transport',
                     'Experiences' => 'excursion',
                     'Work-Friendly' => 'remote_workspace',
                     'Conference Rooms' => 'conference_room',
@@ -2357,7 +2359,81 @@ SVG;
 
 // ─────────────────────────────────────────────────────────────
 // Islands & Atolls Directory
-// /islands              – full index with atoll filter chips
+    // Blog inline image proxy
+    // /media/blog-inline/{path} — streams inline images uploaded via EasyMDE
+    // ─────────────────────────────────────────────────────────────
+    Route::get('/media/blog-inline/{path}', function (string $path) {
+        // Normalise and guard against path traversal
+        $cleanPath = ltrim(str_replace(['..', '\\'], '', $path), '/');
+        if (!Str::startsWith($cleanPath, 'blog/inline/')) {
+            abort(404);
+        }
+
+        $mediaDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
+        if ($mediaDisk === '') {
+            $mediaDisk = 'public';
+        }
+
+        try {
+            $disk = Storage::disk($mediaDisk);
+        } catch (\Throwable $exception) {
+            abort(404);
+        }
+
+        if (!$disk->exists($cleanPath)) {
+            abort(404);
+        }
+
+        $mimeType = (string) ($disk->mimeType($cleanPath) ?: 'image/jpeg');
+        $fileSize = $disk->size($cleanPath);
+
+        return response()->stream(static function () use ($disk, $cleanPath) {
+            $stream = $disk->readStream($cleanPath);
+            fpassthru($stream);
+            fclose($stream);
+        }, 200, [
+            'Content-Type'  => $mimeType,
+            'Content-Length' => $fileSize,
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
+    })->where('path', '.+');
+
+    Route::post('/portal/admin/blog/delete-inline-image', function (Request $request) {
+        if (!session()->get('portal_admin_authenticated', false)) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        if (!canManageContent()) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $path = trim((string) ($request->input('path') ?? ''));
+        if (
+            $path === '' ||
+            !Str::startsWith($path, 'blog/inline/') ||
+            str_contains($path, '..') ||
+            str_contains($path, '\\')
+        ) {
+            return response()->json(['message' => 'Invalid path.'], 422);
+        }
+
+        $mediaDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
+        if ($mediaDisk === '') {
+            $mediaDisk = 'public';
+        }
+
+        try {
+            Storage::disk($mediaDisk)->delete($path);
+        } catch (\Throwable $exception) {
+            return response()->json(['message' => 'Delete failed.'], 500);
+        }
+
+        return response()->json(['deleted' => true]);
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // Islands & Atolls Directory
+    // /islands              – full index with atoll filter chips
 // /islands/atoll/{slug} – atoll-filtered index
 // /islands/{slug}       – individual island page
 // ─────────────────────────────────────────────────────────────
@@ -5989,7 +6065,7 @@ Route::post('/portal/admin/blog/upload-image', function (Request $request) {
     $storedPath = $directory . '/' . $filename;
 
     return response()->json([
-        'url' => Storage::disk($mediaDisk)->url($storedPath),
+           'url' => '/media/blog-inline/' . $storedPath,
         'path' => $storedPath,
     ]);
 });

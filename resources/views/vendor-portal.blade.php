@@ -4939,7 +4939,11 @@
                     showPanel(resolvePanelKey(window.location.hash));
                 });
 
-                showPanel(resolvePanelKey(window.location.hash || '#overview'));
+                const fallbackInitialKey =
+                    (typeof serverPanelKey !== 'undefined' && serverPanelKey && validKeys.has(serverPanelKey))
+                        ? serverPanelKey
+                        : resolvePanelKey(window.location.hash);
+                showPanel(fallbackInitialKey);
             }
 
             function initFallbackListingActions() {

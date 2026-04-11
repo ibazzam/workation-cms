@@ -194,23 +194,23 @@
                             </div>
                             <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
                                 <label for="property_transport_departure_state">Departure State / Atoll</label>
-                                <input id="property_transport_departure_state" name="transport_departure_state" class="ops-input" type="text" maxlength="120" value="{{ old('transport_departure_state') }}" placeholder="e.g. Kaafu Atoll">
+                                <input id="property_transport_departure_state" name="transport_departure_state" class="ops-input" type="text" maxlength="120" value="{{ old('transport_departure_state') }}" placeholder="e.g. Kaafu Atoll" required>
                             </div>
                             <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
                                 <label for="property_transport_departure_city">Departure City / Island</label>
-                                <input id="property_transport_departure_city" name="transport_departure_city" class="ops-input" type="text" maxlength="120" value="{{ old('transport_departure_city') }}" placeholder="e.g. Male">
+                                <input id="property_transport_departure_city" name="transport_departure_city" class="ops-input" type="text" maxlength="120" value="{{ old('transport_departure_city') }}" placeholder="e.g. Male" required>
                             </div>
                             <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
                                 <label for="property_transport_arrival_state">Arrival State / Atoll</label>
-                                <input id="property_transport_arrival_state" name="transport_arrival_state" class="ops-input" type="text" maxlength="120" value="{{ old('transport_arrival_state') }}" placeholder="e.g. Alif Dhaal Atoll">
+                                <input id="property_transport_arrival_state" name="transport_arrival_state" class="ops-input" type="text" maxlength="120" value="{{ old('transport_arrival_state') }}" placeholder="e.g. Alif Dhaal Atoll" required>
                             </div>
                             <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
                                 <label for="property_transport_arrival_city">Arrival City / Island</label>
-                                <input id="property_transport_arrival_city" name="transport_arrival_city" class="ops-input" type="text" maxlength="120" value="{{ old('transport_arrival_city') }}" placeholder="e.g. Dhigurah">
+                                <input id="property_transport_arrival_city" name="transport_arrival_city" class="ops-input" type="text" maxlength="120" value="{{ old('transport_arrival_city') }}" placeholder="e.g. Dhigurah" required>
                             </div>
                             <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
                                 <label for="property_departure_area_port_jetty">Departure Area / Port / Jetty</label>
-                                <input id="property_departure_area_port_jetty" name="departure_area_port_jetty" class="ops-input" type="text" maxlength="190" value="{{ old('departure_area_port_jetty') }}" placeholder="Jetty / Harbor / Terminal">
+                                <input id="property_departure_area_port_jetty" name="departure_area_port_jetty" class="ops-input" type="text" maxlength="190" value="{{ old('departure_area_port_jetty') }}" placeholder="Jetty / Harbor / Terminal" required>
                             </div>
                             <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
                                 <label for="property_departure_date">Departure Date</label>
@@ -218,11 +218,11 @@
                             </div>
                             <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
                                 <label for="property_departure_time">Departure Time</label>
-                                <input id="property_departure_time" name="departure_time" class="ops-input" type="time" value="{{ old('departure_time') }}">
+                                <input id="property_departure_time" name="departure_time" class="ops-input" type="time" value="{{ old('departure_time') }}" required>
                             </div>
                             <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
                                 <label for="property_reporting_lead_minutes">Report Before Departure (minutes)</label>
-                                <input id="property_reporting_lead_minutes" name="reporting_lead_minutes" class="ops-input" type="number" min="0" max="720" step="1" value="{{ old('reporting_lead_minutes') }}" placeholder="e.g. 15 or 20">
+                                <input id="property_reporting_lead_minutes" name="reporting_lead_minutes" class="ops-input" type="number" min="0" max="720" step="1" value="{{ old('reporting_lead_minutes') }}" placeholder="e.g. 15 or 20" required>
                             </div>
                             <div class="ops-field" data-category-scope="transport" data-transport-marine-only>
                                 <label for="property_trip_duration_minutes">Trip Duration Estimate (minutes)</label>

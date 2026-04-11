@@ -3851,28 +3851,14 @@ Route::post('/portal/vendor/properties/{property}/submit-for-review', function (
         }
     }
 
-    $mediaCount = 0;
-    if (Schema::hasTable('vendor_listing_media')) {
-        $mediaCount = (int) DB::table('vendor_listing_media')
-            ->where('vendor_user_id', $vendorUserId)
-            ->where('entity_type', 'property')
-            ->where('entity_id', $property)
-            ->count();
-    }
-
-    $roomCount = 0;
-    if (Schema::hasTable('vendor_property_room_categories')) {
-        $roomCount = (int) DB::table('vendor_property_room_categories')
-            ->where('vendor_user_id', $vendorUserId)
-            ->where('vendor_property_id', $property)
-            ->count();
-    }
-
-    $publishChecklist = portalVendorListingPublishChecklist($listing, $listingDetails, $mediaCount, $roomCount);
-    if (!($publishChecklist['ready'] ?? false)) {
-        return back()->withErrors([
-            'profile' => 'Complete the publishing checklist before submitting this listing: ' . implode('; ', array_slice((array) ($publishChecklist['missing'] ?? []), 0, 8)),
-        ]);
+    $canonicalListingCategory = vendorPortalCanonicalCategory((string) ($listing->listing_category ?? ''));
+    if ($canonicalListingCategory !== null) {
+        $detailErrors = vendorPortalValidatePropertyDetails($canonicalListingCategory, $listingDetails);
+        if (!empty($detailErrors)) {
+            return back()->withErrors([
+                'profile' => implode(' ', $detailErrors),
+            ]);
+        }
     }
 
     $updatePayload = [

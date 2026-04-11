@@ -826,6 +826,3 @@
                 </div>
             </div>
         </section>
-
-        
-

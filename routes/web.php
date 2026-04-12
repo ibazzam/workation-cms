@@ -2265,60 +2265,7 @@ SVG;
         return $placeholderResponse();
     }
 
-    if (Str::startsWith($originalPath, ['http://', 'https://'])) {
-        try {
-            $remoteResponse = Http::retry(1, 200)
-                ->timeout(10)
-                ->withHeaders([
-                    'Accept' => 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-                    'User-Agent' => 'WorkationBlogMediaProxy/1.0',
-                ])
-                ->get($originalPath);
-        } catch (\Throwable $exception) {
-            return $placeholderResponse();
-        }
-
-        if (!$remoteResponse->successful() || $remoteResponse->body() === '') {
-            return $placeholderResponse();
-        }
-
-        return response($remoteResponse->body(), 200, [
-            'Content-Type' => trim((string) $remoteResponse->header('Content-Type', 'image/jpeg')),
-            'Cache-Control' => 'public, max-age=86400',
-        ]);
-    }
-
-    $normalizeDiskPath = static function (string $path): string {
-        $normalized = trim(str_replace('\\', '/', $path));
-        if ($normalized === '') {
-            return '';
-        }
-
-        if (preg_match('#/storage/app/public/(.+)$#i', $normalized, $matches) === 1) {
-            $normalized = (string) ($matches[1] ?? '');
-        } elseif (preg_match('#/public/storage/(.+)$#i', $normalized, $matches) === 1) {
-            $normalized = (string) ($matches[1] ?? '');
-        }
-
-        $normalized = ltrim($normalized, '/');
-        if (Str::startsWith($normalized, 'public/')) {
-            $normalized = Str::after($normalized, 'public/');
-        }
-        if (Str::startsWith($normalized, 'storage/')) {
-            $normalized = Str::after($normalized, 'storage/');
-        }
-
-        return ltrim($normalized, '/');
-    };
-
-    $candidatePaths = collect([
-        $originalPath,
-        $normalizeDiskPath($originalPath),
-    ])->map(static fn ($path) => trim((string) $path))
-      ->filter(static fn ($path) => $path !== '')
-      ->unique()
-      ->values()
-      ->all();
+    $candidatePaths = blogMediaCandidatePaths($originalPath);
 
     $resolvedBinary = null;
     $resolvedMimeType = '';
@@ -2359,6 +2306,29 @@ SVG;
                 break 2;
             }
         }
+    }
+
+    if ($resolvedBinary === null && Str::startsWith($originalPath, ['http://', 'https://'])) {
+        try {
+            $remoteResponse = Http::retry(1, 200)
+                ->timeout(10)
+                ->withHeaders([
+                    'Accept' => 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                    'User-Agent' => 'WorkationBlogMediaProxy/1.0',
+                ])
+                ->get($originalPath);
+        } catch (\Throwable $exception) {
+            return $placeholderResponse();
+        }
+
+        if (!$remoteResponse->successful() || $remoteResponse->body() === '') {
+            return $placeholderResponse();
+        }
+
+        return response($remoteResponse->body(), 200, [
+            'Content-Type' => trim((string) $remoteResponse->header('Content-Type', 'image/jpeg')),
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
     }
 
     if ($resolvedBinary === null) {
@@ -2403,21 +2373,40 @@ Route::get('/media/blog/{post}/article/{slot}', function (int $post, int $slot) 
     }
     $diskNames = array_values(array_unique(array_filter([$blogArticleDisk, 'public'])));
 
+    $candidatePaths = blogMediaCandidatePaths($storedPath);
+
     foreach ($diskNames as $diskName) {
         try {
             $disk = Storage::disk($diskName);
         } catch (\Throwable $e) {
             continue;
         }
-        if (!$disk->exists($storedPath)) {
-            continue;
+        foreach ($candidatePaths as $candidatePath) {
+            if (!$disk->exists($candidatePath)) {
+                continue;
+            }
+            $binary = $disk->get($candidatePath);
+            $mime = (string) ($disk->mimeType($candidatePath) ?: 'image/jpeg');
+            return response($binary, 200, [
+                'Content-Type' => $mime,
+                'Cache-Control' => 'public, max-age=31536000, immutable',
+            ]);
         }
-        $binary = $disk->get($storedPath);
-        $mime = (string) ($disk->mimeType($storedPath) ?: 'image/jpeg');
-        return response($binary, 200, [
-            'Content-Type' => $mime,
-            'Cache-Control' => 'public, max-age=31536000, immutable',
-        ]);
+    }
+
+    if (Str::startsWith($storedPath, ['http://', 'https://'])) {
+        try {
+            $remoteResponse = Http::retry(1, 200)->timeout(10)->get($storedPath);
+        } catch (\Throwable $exception) {
+            return $placeholderResponse();
+        }
+
+        if ($remoteResponse->successful() && $remoteResponse->body() !== '') {
+            return response($remoteResponse->body(), 200, [
+                'Content-Type' => trim((string) $remoteResponse->header('Content-Type', 'image/jpeg')),
+                'Cache-Control' => 'public, max-age=86400',
+            ]);
+        }
     }
 
     return $placeholderResponse();

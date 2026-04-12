@@ -80,4 +80,27 @@ class AdminBlogFlowTest extends TestCase
         $this->assertDatabaseMissing('blog_posts', ['id' => $post->id]);
         Storage::disk('public')->assertMissing('blog/' . $post->id . '/cover.jpg');
     }
+
+    public function test_blog_cover_proxy_reads_legacy_url_style_cover_value_from_storage_disk(): void
+    {
+        Storage::fake('public');
+
+        $post = BlogPost::query()->create([
+            'title' => 'Legacy Cover URL Post',
+            'slug' => 'legacy-cover-url-post',
+            'excerpt' => 'Legacy cover path.',
+            'content' => '## Heading' . PHP_EOL . PHP_EOL . 'Enough content to satisfy the minimum content length for rendering this post in tests.',
+            'cover_image_path' => 'https://media.example.test/blog/77/cover.jpg',
+            'is_published' => true,
+            'published_at' => now(),
+        ]);
+
+        Storage::disk('public')->put('blog/77/cover.jpg', 'fake-image-binary');
+
+        $response = $this->get('/media/blog/' . $post->id . '/cover');
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type');
+        $response->assertSee('fake-image-binary', false);
+    }
 }

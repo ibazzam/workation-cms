@@ -2441,6 +2441,20 @@ SVG;
     }
 
     if (!is_string($resolvedBinary) || $resolvedBinary === '') {
+        foreach ($candidatePaths as $candidatePath) {
+            $managedUrl = portalManagedMediaUrlFromPath($candidatePath);
+            if (is_string($managedUrl) && trim($managedUrl) !== '' && !Str::startsWith($managedUrl, ['/media/'])) {
+                return redirect()->away($managedUrl, 302);
+            }
+        }
+
+        foreach ($coverSources as $source) {
+            $managedUrl = portalManagedMediaUrlFromPath($source);
+            if (is_string($managedUrl) && trim($managedUrl) !== '' && !Str::startsWith($managedUrl, ['/media/'])) {
+                return redirect()->away($managedUrl, 302);
+            }
+        }
+
         return $placeholderResponse();
     }
 
@@ -2612,6 +2626,18 @@ Route::get('/media/blog/{post}/article/{slot}', function (int $post, int $slot) 
                 'Cache-Control' => 'public, max-age=86400',
             ]);
         }
+    }
+
+    foreach ($candidatePaths as $candidatePath) {
+        $managedUrl = portalManagedMediaUrlFromPath($candidatePath);
+        if (is_string($managedUrl) && trim($managedUrl) !== '' && !Str::startsWith($managedUrl, ['/media/'])) {
+            return redirect()->away($managedUrl, 302);
+        }
+    }
+
+    $managedFromStoredPath = portalManagedMediaUrlFromPath($storedPath);
+    if (is_string($managedFromStoredPath) && trim($managedFromStoredPath) !== '' && !Str::startsWith($managedFromStoredPath, ['/media/'])) {
+        return redirect()->away($managedFromStoredPath, 302);
     }
 
     return $placeholderResponse();

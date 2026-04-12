@@ -822,7 +822,8 @@
                                     return resp.json();
                                 })
                                 .then(function (payload) {
-                                    const savedUrl = String(payload?.url || '').trim();
+                                    const fallbackUrl = '/media/blog/' + postId + '/article/' + slot;
+                                    const savedUrl = String(payload?.url || fallbackUrl).trim();
                                     if (!savedUrl) {
                                         throw new Error('Image saved but URL is missing.');
                                     }

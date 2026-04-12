@@ -2257,15 +2257,22 @@ SVG;
         return $placeholderResponse();
     }
 
-    $originalPath = trim(str_replace('\\', '/', (string) ($blogPost->cover_image_path ?? '')));
-    if ($originalPath === '' && isset($blogPost->cover_image_url)) {
-        $originalPath = trim(str_replace('\\', '/', (string) ($blogPost->cover_image_url ?? '')));
+    $coverSources = [];
+    if (isset($blogPost->cover_image_url)) {
+        $coverSources[] = trim(str_replace('\\', '/', (string) ($blogPost->cover_image_url ?? '')));
     }
-    if ($originalPath === '') {
+    $coverSources[] = trim(str_replace('\\', '/', (string) ($blogPost->cover_image_path ?? '')));
+    $coverSources = array_values(array_unique(array_filter($coverSources, static fn ($value) => $value !== '')));
+
+    if ($coverSources === []) {
         return $placeholderResponse();
     }
 
-    $candidatePaths = blogMediaCandidatePaths($originalPath);
+    $candidatePaths = [];
+    foreach ($coverSources as $source) {
+        $candidatePaths = array_merge($candidatePaths, blogMediaCandidatePaths($source));
+    }
+    $candidatePaths = array_values(array_unique(array_filter($candidatePaths)));
 
     // Legacy records can hold extension-less or proxy-style cover values.
     // Probe the conventional cover filename on disk so mobile/desktop render consistently.
@@ -2316,27 +2323,33 @@ SVG;
         }
     }
 
-    if ($resolvedBinary === null && Str::startsWith($originalPath, ['http://', 'https://'])) {
-        try {
-            $remoteResponse = Http::retry(1, 200)
-                ->timeout(10)
-                ->withHeaders([
-                    'Accept' => 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-                    'User-Agent' => 'WorkationBlogMediaProxy/1.0',
-                ])
-                ->get($originalPath);
-        } catch (\Throwable $exception) {
-            return $placeholderResponse();
-        }
+    if ($resolvedBinary === null) {
+        foreach ($coverSources as $source) {
+            if (!Str::startsWith($source, ['http://', 'https://'])) {
+                continue;
+            }
 
-        if (!$remoteResponse->successful() || $remoteResponse->body() === '') {
-            return $placeholderResponse();
-        }
+            try {
+                $remoteResponse = Http::retry(1, 200)
+                    ->timeout(10)
+                    ->withHeaders([
+                        'Accept' => 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                        'User-Agent' => 'WorkationBlogMediaProxy/1.0',
+                    ])
+                    ->get($source);
+            } catch (\Throwable $exception) {
+                continue;
+            }
 
-        return response($remoteResponse->body(), 200, [
-            'Content-Type' => trim((string) $remoteResponse->header('Content-Type', 'image/jpeg')),
-            'Cache-Control' => 'public, max-age=86400',
-        ]);
+            if (!$remoteResponse->successful() || $remoteResponse->body() === '') {
+                continue;
+            }
+
+            return response($remoteResponse->body(), 200, [
+                'Content-Type' => trim((string) $remoteResponse->header('Content-Type', 'image/jpeg')),
+                'Cache-Control' => 'public, max-age=86400',
+            ]);
+        }
     }
 
     if ($resolvedBinary === null) {

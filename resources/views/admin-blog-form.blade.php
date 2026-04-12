@@ -355,6 +355,7 @@
                                                 @php
                                                     $slotUrl = $articleImageUrls[$slot] ?? '';
                                                     $slotHasExisting = $slotUrl !== '';
+                                                    $slotResolvedUrl = ($slotHasExisting && $isEdit) ? $slotUrl : '';
                                                 @endphp
                                                 <div data-article-image-slot style="border:1px solid #ccd8e4; border-radius:10px; padding:10px; background:#f8fbff; display:grid; gap:8px;">
                                                     <label style="font-size:0.82rem; font-weight:700; color:#4a6678; display:block;">Image {{ $slot + 1 }}</label>
@@ -382,7 +383,7 @@
                                                                 type="text"
                                                                 data-article-image-url
                                                                 readonly
-                                                                value="{{ ($slotHasExisting && $isEdit) ? '/media/blog/' . $post->id . '/article/' . $slot : '' }}"
+                                                                value="{{ $slotResolvedUrl }}"
                                                                 style="flex:1; font-size:0.75rem; font-family:monospace; padding:4px 8px; border:1px solid #ccd8e4; border-radius:6px; background:#eef4fa; color:#1a3a4f; cursor:text;"
                                                             >
                                                             <button type="button" class="btn-link" data-article-image-copy style="padding:4px 10px; font-size:0.75rem; white-space:nowrap;">Copy</button>
@@ -401,7 +402,7 @@
                                                             type="button"
                                                             class="btn-link"
                                                             data-article-image-insert
-                                                            data-insert-url="/media/blog/{{ $post->id }}/article/{{ $slot }}"
+                                                            data-insert-url="{{ $slotResolvedUrl }}"
                                                             data-insert-label="Gallery image {{ $slot + 1 }}"
                                                             style="width:max-content; padding:6px 10px; color:#1a6694;"
                                                         >↗ Insert into article</button>

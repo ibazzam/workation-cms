@@ -1965,7 +1965,11 @@ if (!function_exists('blogHydratePostsWithMeta')) {
                 $tagSlugs = blogInferTagSlugs($post);
             }
 
-            $post->cover_image_url = blogResolveCoverImageUrl((string) ($post->cover_image_path ?? ''));
+            $rawCoverSource = trim((string) ($post->cover_image_url ?? ''));
+            if ($rawCoverSource === '') {
+                $rawCoverSource = trim((string) ($post->cover_image_path ?? ''));
+            }
+            $post->cover_image_url = blogResolveCoverImageUrl($rawCoverSource);
 
             $post->blog_category_slug = $categorySlug;
             $post->blog_category_label = (string) ($categories[$categorySlug]['label'] ?? 'Things to Do');
@@ -6279,6 +6283,9 @@ Route::post('/portal/admin/blog', function (Request $request) {
                 \Illuminate\Support\Facades\Log::error('blog_cover_upload: putFileAs failed (create)', ['disk' => $blogMediaDisk, 'path' => $storagePath, 'post_id' => (int) $post->id]);
             }
             $post->cover_image_path = $storagePath;
+            if (Schema::hasColumn('blog_posts', 'cover_image_url')) {
+                $post->cover_image_url = blogResolveCoverImageUrl($storagePath);
+            }
             $post->save();
         }
     }
@@ -6468,6 +6475,9 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
             Storage::disk($blogMediaDisk)->delete($existingPath);
         }
         $blogPost->cover_image_path = null;
+        if (Schema::hasColumn('blog_posts', 'cover_image_url')) {
+            $blogPost->cover_image_url = null;
+        }
     }
 
     if ($request->hasFile('cover_image')) {
@@ -6489,6 +6499,9 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
                 \Illuminate\Support\Facades\Log::error('blog_cover_upload: putFileAs failed (edit)', ['disk' => $blogMediaDisk, 'path' => $storagePath, 'post_id' => (int) $blogPost->id]);
             }
             $blogPost->cover_image_path = $storagePath;
+            if (Schema::hasColumn('blog_posts', 'cover_image_url')) {
+                $blogPost->cover_image_url = blogResolveCoverImageUrl($storagePath);
+            }
         }
     }
 

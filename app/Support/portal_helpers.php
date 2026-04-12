@@ -1206,7 +1206,7 @@ if (!function_exists('portalManagedMediaUrlFromPath')) {
         }
 
         try {
-            $useTemporaryUrls = (bool) config('filesystems.portal_media_use_temporary_urls', $diskName === 's3');
+            $useTemporaryUrls = (bool) config('filesystems.portal_media_use_temporary_urls', false);
             if ($useTemporaryUrls) {
                 $ttlMinutes = max(1, (int) config('filesystems.portal_media_temporary_url_ttl_minutes', 30));
                 return Storage::disk($diskName)->temporaryUrl($relativePath, now()->addMinutes($ttlMinutes));

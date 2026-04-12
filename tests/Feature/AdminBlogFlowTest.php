@@ -14,9 +14,28 @@ class AdminBlogFlowTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function fakeJpegUpload(string $name = 'cover.jpg'): UploadedFile
+    {
+        $jpegBytes = base64_decode('/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxAQEBAQEBAVFRUVFRUVFRUVFRUVFRUVFhUVFRUYHSggGBolGxUVITEhJSkrLi4uFx8zODMsNygtLisBCgoKDg0OGhAQGi0fHyUtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLf/AABEIAAEAAgMBIgACEQEDEQH/xAAVAAEBAAAAAAAAAAAAAAAAAAAAAf/EABQBAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhADEAAAAdM//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABBQL/xAAVEQEBAAAAAAAAAAAAAAAAAAABAP/aAAgBAwEBPwF//8QAFBEBAAAAAAAAAAAAAAAAAAAAEP/aAAgBAgEBPwF//8QAFBABAAAAAAAAAAAAAAAAAAAAEP/aAAgBAQAGPwJ//8QAFBABAAAAAAAAAAAAAAAAAAAAEP/aAAgBAQABPyF//9k=', true);
+
+        return UploadedFile::fake()->createWithContent($name, $jpegBytes !== false ? $jpegBytes : 'jpeg');
+    }
+
+    private function fakeBlogMediaDisks(): void
+    {
+        $portalMediaDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
+        if ($portalMediaDisk === '') {
+            $portalMediaDisk = 'public';
+        }
+
+        foreach (array_values(array_unique([$portalMediaDisk, 'public'])) as $diskName) {
+            Storage::fake($diskName);
+        }
+    }
+
     public function test_admin_can_create_render_and_delete_blog_post_with_cover_image(): void
     {
-        Storage::fake('public');
+        $this->fakeBlogMediaDisks();
 
         $admin = User::factory()->create([
             'username' => 'content_admin',
@@ -40,7 +59,7 @@ class AdminBlogFlowTest extends TestCase
                 'content' => $content,
                 'is_published' => '1',
                 'is_featured' => '0',
-                'cover_image' => UploadedFile::fake()->create('cover.jpg', 120, 'image/jpeg'),
+                'cover_image' => $this->fakeJpegUpload('cover.jpg'),
             ]);
 
         $createResponse
@@ -83,7 +102,7 @@ class AdminBlogFlowTest extends TestCase
 
     public function test_blog_cover_proxy_reads_legacy_url_style_cover_value_from_storage_disk(): void
     {
-        Storage::fake('public');
+        $this->fakeBlogMediaDisks();
 
         $post = BlogPost::query()->create([
             'title' => 'Legacy Cover URL Post',

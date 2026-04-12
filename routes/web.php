@@ -2311,11 +2311,17 @@ SVG;
 
             try {
                 $resolvedBinary = $candidateDisk->get($path);
-                $resolvedMimeType = (string) ($candidateDisk->mimeType($path) ?: '');
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::error('blog_cover_proxy: get() failed', ['disk' => $diskName, 'path' => $path, 'error' => $e->getMessage()]);
                 $resolvedBinary = null;
                 continue;
+            }
+
+            try {
+                $resolvedMimeType = (string) ($candidateDisk->mimeType($path) ?: '');
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('blog_cover_proxy: mimeType() failed', ['disk' => $diskName, 'path' => $path, 'error' => $e->getMessage()]);
+                $resolvedMimeType = '';
             }
             break 2;
         }
@@ -2330,7 +2336,11 @@ SVG;
                 }
 
                 $resolvedBinary = $localDisk->get($localPath);
-                $resolvedMimeType = (string) ($localDisk->mimeType($localPath) ?: '');
+                try {
+                    $resolvedMimeType = (string) ($localDisk->mimeType($localPath) ?: '');
+                } catch (\Throwable $e) {
+                    $resolvedMimeType = '';
+                }
                 break 2;
             }
         }
@@ -2366,7 +2376,11 @@ SVG;
                 }
 
                 $resolvedBinary = $disk->get($file);
-                $resolvedMimeType = (string) ($disk->mimeType($file) ?: '');
+                try {
+                    $resolvedMimeType = (string) ($disk->mimeType($file) ?: '');
+                } catch (\Throwable $e) {
+                    $resolvedMimeType = '';
+                }
                 break 2;
             }
 
@@ -2383,7 +2397,11 @@ SVG;
                 }
 
                 $resolvedBinary = $disk->get($file);
-                $resolvedMimeType = (string) ($disk->mimeType($file) ?: '');
+                try {
+                    $resolvedMimeType = (string) ($disk->mimeType($file) ?: '');
+                } catch (\Throwable $e) {
+                    $resolvedMimeType = '';
+                }
                 break 2;
             }
         }

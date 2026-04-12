@@ -333,7 +333,7 @@ if (!function_exists('blogRenderInlineMarkup')) {
         $value = e($value);
 
         // Render markdown image syntax within regular paragraph blocks.
-        $value = preg_replace_callback('/!\[(.*?)\]\((https?:\/\/[^\s\)]+|\/[^\s\)]+|storage\/[^\s\)]+|blog\/[^\s\)]+)\)/', static function (array $matches): string {
+        $value = preg_replace_callback('/!\[(.*?)\]\(((?:https?:\/\/|\/|storage\/|blog\/|media\/)[^\s\)]+)(?:\s+"[^"]*")?\)/i', static function (array $matches): string {
             $alt = trim((string) ($matches[1] ?? ''));
             $source = trim((string) ($matches[2] ?? ''));
             if ($source === '') {
@@ -410,7 +410,7 @@ if (!function_exists('blogBuildRenderableContentBlocks')) {
                 continue;
             }
 
-            if (preg_match('/^!\[(.*?)\]\(([^\)]+)\)$/', $trimmed, $matches) === 1) {
+            if (preg_match('/^!\[(.*?)\]\(((?:https?:\/\/|\/|storage\/|blog\/|media\/)[^\s\)]+)(?:\s+"[^"]*")?\)$/i', $trimmed, $matches) === 1) {
                 $imageUrl = $normalizeImageUrl((string) ($matches[2] ?? ''));
                 if ($imageUrl !== '') {
                     $blocks[] = [

@@ -2247,12 +2247,20 @@ SVG;
         return $placeholderResponse();
     }
 
-    $blogPost = BlogPost::query()->find($post, ['id', 'cover_image_path']);
+    $coverColumns = ['id', 'cover_image_path'];
+    if (Schema::hasColumn('blog_posts', 'cover_image_url')) {
+        $coverColumns[] = 'cover_image_url';
+    }
+
+    $blogPost = BlogPost::query()->find($post, $coverColumns);
     if (!$blogPost) {
         return $placeholderResponse();
     }
 
     $originalPath = trim(str_replace('\\', '/', (string) ($blogPost->cover_image_path ?? '')));
+    if ($originalPath === '' && isset($blogPost->cover_image_url)) {
+        $originalPath = trim(str_replace('\\', '/', (string) ($blogPost->cover_image_url ?? '')));
+    }
     if ($originalPath === '') {
         return $placeholderResponse();
     }

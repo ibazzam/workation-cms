@@ -1106,7 +1106,7 @@ if (!function_exists('portalWriteMediaVariant')) {
         $disk = Storage::disk($diskName);
         $contentType = $ext === 'webp' ? 'image/webp' : 'image/jpeg';
 
-        // Some S3 buckets disable ACLs (Bucket Owner Enforced), which can reject
+        // Some S3 buckets disable ACLs (Bucket Owner Enforced), which rejects
         // writes when visibility is explicitly set. Retry with progressively safer options.
         $writeAttempts = [
             ['visibility' => 'public', 'ContentType' => $contentType],
@@ -1120,12 +1120,7 @@ if (!function_exists('portalWriteMediaVariant')) {
                     return true;
                 }
             } catch (\Throwable $e) {
-                Log::warning('Managed media write attempt failed.', [
-                    'disk' => $diskName,
-                    'path' => $relativePath,
-                    'options' => $options,
-                    'error' => $e->getMessage(),
-                ]);
+                // try next option set
             }
         }
 
@@ -1195,6 +1190,16 @@ if (!function_exists('portalManagedMediaUrlFromPath')) {
             return $value;
         }
 
+        // Paths stored with '__public__/' prefix were written to the local public disk
+        // as a fallback when the managed (S3) disk was unavailable.
+        if (str_starts_with($value, '__public__/')) {
+            $localPath = ltrim(substr($value, strlen('__public__/')), '/');
+            if ($localPath === '') {
+                return null;
+            }
+            return Storage::disk('public')->url($localPath);
+        }
+
         $relativePath = portalManagedMediaRelativePath($value);
         if ($relativePath === null) {
             return null;
@@ -1230,6 +1235,19 @@ if (!function_exists('portalDeleteManagedPublicAsset')) {
     {
         $value = trim((string) ($storedValue ?? ''));
         if ($value === '') {
+            return;
+        }
+
+        // Files stored with '__public__/' prefix live on the local public disk.
+        if (str_starts_with($value, '__public__/')) {
+            $localPath = ltrim(substr($value, strlen('__public__/')), '/');
+            if ($localPath !== '' && str_starts_with($localPath, $managedPrefix)) {
+                try {
+                    Storage::disk('public')->delete($localPath);
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to delete public disk portal media asset.', ['path' => $localPath, 'error' => $e->getMessage()]);
+                }
+            }
             return;
         }
 
@@ -1306,6 +1324,24 @@ if (!function_exists('portalStoreAdminHeroImage')) {
                         'disk' => $diskName,
                         'path' => $relativePath,
                         'options' => $options,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            // Final fallback: write to local public disk when the managed (S3) disk is
+            // unavailable. Path is prefixed with '__public__/' so URL resolution and
+            // delete helpers know which disk owns the file.
+            if ($diskName !== 'public') {
+                $publicDisk = Storage::disk('public');
+                try {
+                    $result = $publicDisk->putFileAs($directory, $file, $filename, []);
+                    if ($result !== false) {
+                        return '__public__/' . $relativePath;
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('Managed media original upload: public disk fallback also failed.', [
+                        'path' => $relativePath,
                         'error' => $e->getMessage(),
                     ]);
                 }

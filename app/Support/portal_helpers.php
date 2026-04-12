@@ -159,6 +159,15 @@ if (!function_exists('blogResolveCoverImageUrl')) {
             return '';
         }
 
+        // Normalize any inline blog image path to proxy route.
+        // Handles values like:
+        // - blog/inline/2026/..jpg
+        // - /storage/blog/inline/..jpg
+        // - https://.../blog/inline/..jpg
+        if (preg_match('~(?:^|/)(blog/inline/[^?#\s]+)~i', $value, $inlineMatch) === 1) {
+            return '/media/blog-inline/' . ltrim((string) ($inlineMatch[1] ?? ''), '/');
+        }
+
         if (in_array(Str::lower($value), ['null', 'undefined', 'false'], true)) {
             return '';
         }
@@ -187,7 +196,7 @@ if (!function_exists('blogResolveCoverImageUrl')) {
             $s3BucketName !== '' &&
             Str::startsWith($value, ['https://', 'http://']) &&
             str_contains($value, $s3BucketName) &&
-            preg_match('#/blog/inline/[^?#\s]+#', $value, $inlineMatch) === 1
+            preg_match('~/blog/inline/[^?#\s]+~', $value, $inlineMatch) === 1
         ) {
             return '/media/blog-inline' . $inlineMatch[0];
         }
@@ -209,7 +218,7 @@ if (!function_exists('blogResolveCoverImageUrl')) {
         }
         $diskNames = array_values(array_unique(array_filter([$portalMediaDisk, 'public'])));
 
-        if (preg_match('#(?:^|/)blog/(\d+)/cover\.[a-z0-9]+$#i', $value, $matches) === 1) {
+        if (preg_match('~(?:^|/)blog/(\d+)/cover\.[a-z0-9]+(?:[?#].*)?$~i', $value, $matches) === 1) {
             $postId = (int) ($matches[1] ?? 0);
             if ($postId > 0) {
                 return '/media/blog/' . $postId . '/cover';
@@ -217,7 +226,7 @@ if (!function_exists('blogResolveCoverImageUrl')) {
         }
 
         // Rewrite article gallery image paths: blog/{id}/article_{slot}.{ext} → proxy route
-        if (preg_match('#(?:^|/)blog/(\d+)/article_([0-2])\.[a-z0-9]+$#i', $value, $matches) === 1) {
+        if (preg_match('~(?:^|/)blog/(\d+)/article_([0-2])\.[a-z0-9]+(?:[?#].*)?$~i', $value, $matches) === 1) {
             $postId = (int) ($matches[1] ?? 0);
             $slot   = (int) ($matches[2] ?? 0);
             if ($postId > 0) {
@@ -324,7 +333,7 @@ if (!function_exists('blogRenderInlineMarkup')) {
         $value = e($value);
 
         // Render markdown image syntax within regular paragraph blocks.
-        $value = preg_replace_callback('/!\[(.*?)\]\((https?:\/\/[^\s\)]+|\/[^\s\)]+|storage\/[^\s\)]+|blog\/[^\s\)]+)\)/', static function (array $matches): string {
+        $value = preg_replace_callback('/!\[(.*?)\]\(((?:https?:\/\/|\/|storage\/|blog\/|media\/)[^\s\)]+)(?:\s+"[^"]*")?\)/i', static function (array $matches): string {
             $alt = trim((string) ($matches[1] ?? ''));
             $source = trim((string) ($matches[2] ?? ''));
             if ($source === '') {
@@ -401,7 +410,7 @@ if (!function_exists('blogBuildRenderableContentBlocks')) {
                 continue;
             }
 
-            if (preg_match('/^!\[(.*?)\]\(([^\)]+)\)$/', $trimmed, $matches) === 1) {
+            if (preg_match('/^!\[(.*?)\]\(((?:https?:\/\/|\/|storage\/|blog\/|media\/)[^\s\)]+)(?:\s+"[^"]*")?\)$/i', $trimmed, $matches) === 1) {
                 $imageUrl = $normalizeImageUrl((string) ($matches[2] ?? ''));
                 if ($imageUrl !== '') {
                     $blocks[] = [

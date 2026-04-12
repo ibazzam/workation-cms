@@ -606,13 +606,17 @@
 
         $postImageUrl = function ($post): string {
             $postId = (int) ($post->id ?? 0);
-            if ($postId > 0) {
-                return '/media/blog/' . $postId . '/cover';
-            }
-
             $candidate = trim((string) ($post->cover_image_url ?? ''));
             if ($candidate === '') {
                 $candidate = trim((string) ($post->cover_image_path ?? ''));
+            }
+
+            if ($postId > 0 && $candidate !== '') {
+                return '/media/blog/' . $postId . '/cover';
+            }
+
+            if ($candidate === '') {
+                return '';
             }
 
             return blogResolveCoverImageUrl($candidate);

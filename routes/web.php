@@ -1965,7 +1965,11 @@ if (!function_exists('blogHydratePostsWithMeta')) {
                 $tagSlugs = blogInferTagSlugs($post);
             }
 
-            $post->cover_image_url = blogResolveCoverImageUrl((string) ($post->cover_image_path ?? ''));
+            $rawCoverSource = trim((string) ($post->cover_image_url ?? ''));
+            if ($rawCoverSource === '') {
+                $rawCoverSource = trim((string) ($post->cover_image_path ?? ''));
+            }
+            $post->cover_image_url = blogResolveCoverImageUrl($rawCoverSource);
 
             $post->blog_category_slug = $categorySlug;
             $post->blog_category_label = (string) ($categories[$categorySlug]['label'] ?? 'Things to Do');
@@ -6279,6 +6283,9 @@ Route::post('/portal/admin/blog', function (Request $request) {
                 \Illuminate\Support\Facades\Log::error('blog_cover_upload: putFileAs failed (create)', ['disk' => $blogMediaDisk, 'path' => $storagePath, 'post_id' => (int) $post->id]);
             }
             $post->cover_image_path = $storagePath;
+            if (Schema::hasColumn('blog_posts', 'cover_image_url')) {
+                $post->cover_image_url = blogResolveCoverImageUrl($storagePath);
+            }
             $post->save();
         }
     }
@@ -6366,6 +6373,97 @@ Route::post('/portal/admin/blog/upload-image', function (Request $request) {
     return response()->json([
            'url' => '/media/blog-inline/' . $storedPath,
         'path' => $storedPath,
+    ]);
+});
+
+Route::post('/portal/admin/blog/{post}/article/{slot}/upload', function (Request $request, int $post, int $slot) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return response()->json(['message' => 'Unauthenticated.'], 401);
+    }
+
+    if (!canManageContent()) {
+        return response()->json(['message' => 'Only ADMIN_SUPER or ADMIN_MEDIA can manage blog article images.'], 403);
+    }
+
+    if ($slot < 0 || $slot > 2) {
+        return response()->json(['message' => 'Invalid article image slot.'], 422);
+    }
+
+    if (!Schema::hasTable('blog_posts') || !Schema::hasColumn('blog_posts', 'article_images')) {
+        return response()->json(['message' => 'Article image storage is not configured.'], 422);
+    }
+
+    $blogPost = BlogPost::query()->find($post);
+    if (!$blogPost) {
+        return response()->json(['message' => 'Blog post not found.'], 404);
+    }
+
+    $validated = $request->validate([
+        'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp,gif,avif', 'max:6144'],
+    ]);
+
+    $imageFile = $request->file('image');
+    if ($imageFile === null || !$imageFile->isValid()) {
+        return response()->json(['message' => 'Invalid image upload.'], 422);
+    }
+
+    $extension = strtolower((string) $imageFile->getClientOriginalExtension());
+    if ($extension === '') {
+        $extension = 'jpg';
+    }
+
+    $blogMediaDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
+    if ($blogMediaDisk === '') {
+        $blogMediaDisk = 'public';
+    }
+
+    $articlePath = 'blog/' . (int) $blogPost->id . '/article_' . $slot . '.' . $extension;
+
+    $existingRawArticleImages = (array) ($blogPost->article_images ?? []);
+    $existingArticleImages = [];
+    foreach ([0, 1, 2] as $index) {
+        $existingArticleImages[$index] = trim((string) ($existingRawArticleImages[$index] ?? ''));
+    }
+
+    $existingPath = trim((string) ($existingArticleImages[$slot] ?? ''));
+    if ($existingPath !== '' && $existingPath !== $articlePath) {
+        try {
+            Storage::disk($blogMediaDisk)->delete($existingPath);
+        } catch (\Throwable $exception) {
+            \Illuminate\Support\Facades\Log::warning('blog_article_upload: failed to delete previous slot image', [
+                'disk' => $blogMediaDisk,
+                'path' => $existingPath,
+                'post_id' => (int) $blogPost->id,
+                'slot' => $slot,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    $uploadResult = Storage::disk($blogMediaDisk)->putFileAs('blog/' . (int) $blogPost->id, $imageFile, 'article_' . $slot . '.' . $extension, ['visibility' => 'public']);
+    if ($uploadResult === false) {
+        \Illuminate\Support\Facades\Log::error('blog_article_upload: putFileAs failed', [
+            'disk' => $blogMediaDisk,
+            'path' => $articlePath,
+            'post_id' => (int) $blogPost->id,
+            'slot' => $slot,
+        ]);
+
+        return response()->json(['message' => 'Unable to store article image.'], 500);
+    }
+
+    $existingArticleImages[$slot] = $articlePath;
+    $blogPost->article_images = [$existingArticleImages[0], $existingArticleImages[1], $existingArticleImages[2]];
+    if (Schema::hasColumn('blog_posts', 'updated_by_user_id')) {
+        $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+        $blogPost->updated_by_user_id = $actorUserId;
+    }
+    $blogPost->save();
+
+    return response()->json([
+        'url' => '/media/blog/' . (int) $blogPost->id . '/article/' . $slot,
+        'path' => $articlePath,
+        'slot' => $slot,
     ]);
 });
 
@@ -6468,6 +6566,9 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
             Storage::disk($blogMediaDisk)->delete($existingPath);
         }
         $blogPost->cover_image_path = null;
+        if (Schema::hasColumn('blog_posts', 'cover_image_url')) {
+            $blogPost->cover_image_url = null;
+        }
     }
 
     if ($request->hasFile('cover_image')) {
@@ -6489,6 +6590,9 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
                 \Illuminate\Support\Facades\Log::error('blog_cover_upload: putFileAs failed (edit)', ['disk' => $blogMediaDisk, 'path' => $storagePath, 'post_id' => (int) $blogPost->id]);
             }
             $blogPost->cover_image_path = $storagePath;
+            if (Schema::hasColumn('blog_posts', 'cover_image_url')) {
+                $blogPost->cover_image_url = blogResolveCoverImageUrl($storagePath);
+            }
         }
     }
 

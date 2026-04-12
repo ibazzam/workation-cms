@@ -6304,9 +6304,22 @@ Route::post('/portal/admin/blog', function (Request $request) {
             }
 
             $storagePath = 'blog/' . (int) $post->id . '/cover.' . $extension;
-            $uploadResult = Storage::disk($blogMediaDisk)->putFileAs('blog/' . (int) $post->id, $coverFile, 'cover.' . $extension, ['visibility' => 'public']);
+            $uploadResult = false;
+            foreach (array_values(array_unique([$blogMediaDisk, 'public'])) as $candidateDisk) {
+                try {
+                    $uploadResult = Storage::disk($candidateDisk)->putFileAs('blog/' . (int) $post->id, $coverFile, 'cover.' . $extension, ['visibility' => 'public']);
+                } catch (\Throwable $exception) {
+                    $uploadResult = false;
+                }
+                if ($uploadResult !== false) {
+                    break;
+                }
+            }
             if ($uploadResult === false) {
                 \Illuminate\Support\Facades\Log::error('blog_cover_upload: putFileAs failed (create)', ['disk' => $blogMediaDisk, 'path' => $storagePath, 'post_id' => (int) $post->id]);
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'cover_image' => 'Unable to store cover image right now. Please try again.',
+                ]);
             }
             $post->cover_image_path = $storagePath;
             if (Schema::hasColumn('blog_posts', 'cover_image_url')) {
@@ -6334,7 +6347,22 @@ Route::post('/portal/admin/blog', function (Request $request) {
                         if ($articleFile !== null && $articleFile->isValid()) {
                             $ext = strtolower((string) $articleFile->getClientOriginalExtension()) ?: 'jpg';
                             $articlePath = 'blog/' . (int) $post->id . '/article_' . $slot . '.' . $ext;
-                            Storage::disk($blogMediaDiskForArticle)->putFileAs('blog/' . (int) $post->id, $articleFile, 'article_' . $slot . '.' . $ext, ['visibility' => 'public']);
+                            $articleUploadOk = false;
+                            foreach (array_values(array_unique([$blogMediaDiskForArticle, 'public'])) as $candidateDisk) {
+                                try {
+                                    $articleUploadOk = Storage::disk($candidateDisk)->putFileAs('blog/' . (int) $post->id, $articleFile, 'article_' . $slot . '.' . $ext, ['visibility' => 'public']) !== false;
+                                } catch (\Throwable $exception) {
+                                    $articleUploadOk = false;
+                                }
+                                if ($articleUploadOk) {
+                                    break;
+                                }
+                            }
+                            if (!$articleUploadOk) {
+                                throw \Illuminate\Validation\ValidationException::withMessages([
+                                    $fileKey => 'Unable to store article image right now. Please try again.',
+                                ]);
+                            }
                             $existingArticleImages[$slot] = $articlePath;
                         }
                     }
@@ -6466,7 +6494,17 @@ Route::post('/portal/admin/blog/{post}/article/{slot}/upload', function (Request
         }
     }
 
-    $uploadResult = Storage::disk($blogMediaDisk)->putFileAs('blog/' . (int) $blogPost->id, $imageFile, 'article_' . $slot . '.' . $extension, ['visibility' => 'public']);
+    $uploadResult = false;
+    foreach (array_values(array_unique([$blogMediaDisk, 'public'])) as $candidateDisk) {
+        try {
+            $uploadResult = Storage::disk($candidateDisk)->putFileAs('blog/' . (int) $blogPost->id, $imageFile, 'article_' . $slot . '.' . $extension, ['visibility' => 'public']);
+        } catch (\Throwable $exception) {
+            $uploadResult = false;
+        }
+        if ($uploadResult !== false) {
+            break;
+        }
+    }
     if ($uploadResult === false) {
         \Illuminate\Support\Facades\Log::error('blog_article_upload: putFileAs failed', [
             'disk' => $blogMediaDisk,
@@ -6611,9 +6649,22 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
             }
 
             $storagePath = 'blog/' . (int) $blogPost->id . '/cover.' . $extension;
-            $uploadResult = Storage::disk($blogMediaDisk)->putFileAs('blog/' . (int) $blogPost->id, $coverFile, 'cover.' . $extension, ['visibility' => 'public']);
+            $uploadResult = false;
+            foreach (array_values(array_unique([$blogMediaDisk, 'public'])) as $candidateDisk) {
+                try {
+                    $uploadResult = Storage::disk($candidateDisk)->putFileAs('blog/' . (int) $blogPost->id, $coverFile, 'cover.' . $extension, ['visibility' => 'public']);
+                } catch (\Throwable $exception) {
+                    $uploadResult = false;
+                }
+                if ($uploadResult !== false) {
+                    break;
+                }
+            }
             if ($uploadResult === false) {
                 \Illuminate\Support\Facades\Log::error('blog_cover_upload: putFileAs failed (edit)', ['disk' => $blogMediaDisk, 'path' => $storagePath, 'post_id' => (int) $blogPost->id]);
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'cover_image' => 'Unable to store cover image right now. Please try again.',
+                ]);
             }
             $blogPost->cover_image_path = $storagePath;
             if (Schema::hasColumn('blog_posts', 'cover_image_url')) {
@@ -6652,7 +6703,22 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
                             }
                             $ext = strtolower((string) $articleFile->getClientOriginalExtension()) ?: 'jpg';
                             $articlePath = 'blog/' . (int) $blogPost->id . '/article_' . $slot . '.' . $ext;
-                            Storage::disk($blogMediaDiskForArticle)->putFileAs('blog/' . (int) $blogPost->id, $articleFile, 'article_' . $slot . '.' . $ext, ['visibility' => 'public']);
+                            $articleUploadOk = false;
+                            foreach (array_values(array_unique([$blogMediaDiskForArticle, 'public'])) as $candidateDisk) {
+                                try {
+                                    $articleUploadOk = Storage::disk($candidateDisk)->putFileAs('blog/' . (int) $blogPost->id, $articleFile, 'article_' . $slot . '.' . $ext, ['visibility' => 'public']) !== false;
+                                } catch (\Throwable $exception) {
+                                    $articleUploadOk = false;
+                                }
+                                if ($articleUploadOk) {
+                                    break;
+                                }
+                            }
+                            if (!$articleUploadOk) {
+                                throw \Illuminate\Validation\ValidationException::withMessages([
+                                    $fileKey => 'Unable to store article image right now. Please try again.',
+                                ]);
+                            }
                             $existingArticleImages[$slot] = $articlePath;
                         }
                     }

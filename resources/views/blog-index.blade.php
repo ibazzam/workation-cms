@@ -332,10 +332,17 @@
         }
 
         .feature-photo {
+            position: relative;
             border-radius: 22px;
             overflow: hidden;
             min-height: 640px;
             background: linear-gradient(145deg, #cee0eb 0%, #b8d3e5 100%);
+        }
+
+        .feature-photo a {
+            display: block;
+            position: absolute;
+            inset: 0;
         }
 
         .feature-photo img {

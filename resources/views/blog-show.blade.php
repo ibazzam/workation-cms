@@ -347,9 +347,11 @@
         }
 
         .content figure img {
-            width: 100%;
             display: block;
-            border-radius: 0;
+            width: 100%;
+            aspect-ratio: 16/9;
+            object-fit: cover;
+            border-radius: 4px;
             border: 1px solid #cfdae3;
             background: #d4e3ee;
         }
@@ -569,10 +571,11 @@
 </head>
 <body>
     @php
-        $postCoverUrl = trim((string) ($post->cover_image_url ?? ''));
-        if ($postCoverUrl === '') {
-            $postCoverUrl = blogResolveCoverImageUrl((string) ($post->cover_image_path ?? ''));
+        $rawCoverSrc = trim((string) ($post->cover_image_url ?? ''));
+        if ($rawCoverSrc === '') {
+            $rawCoverSrc = trim((string) ($post->cover_image_path ?? ''));
         }
+        $postCoverUrl = $rawCoverSrc !== '' ? blogResolveCoverImageUrl($rawCoverSrc) : '';
         $postCategorySlug = (string) ($post->blog_category_slug ?? 'things-to-do');
         $postCategoryLabel = (string) ($post->blog_category_label ?? 'Travel picks');
         $sidebarAd = is_array($blogSidebarAd ?? null) ? $blogSidebarAd : [];
@@ -764,10 +767,11 @@
                 <div class="related-grid">
                     @foreach ($relatedCards as $relatedPost)
                         @php
-                            $relatedCoverUrl = trim((string) ($relatedPost->cover_image_url ?? ''));
-                            if ($relatedCoverUrl === '') {
-                                $relatedCoverUrl = blogResolveCoverImageUrl((string) ($relatedPost->cover_image_path ?? ''));
+                            $rawRelatedSrc = trim((string) ($relatedPost->cover_image_url ?? ''));
+                            if ($rawRelatedSrc === '') {
+                                $rawRelatedSrc = trim((string) ($relatedPost->cover_image_path ?? ''));
                             }
+                            $relatedCoverUrl = $rawRelatedSrc !== '' ? blogResolveCoverImageUrl($rawRelatedSrc) : '';
                             $relatedCategoryLabel = (string) ($relatedPost->blog_category_label ?? $postCategoryLabel);
                             $relatedDate = optional($relatedPost->published_at)->format('M d, Y - l')
                                 ?? optional($relatedPost->created_at)->format('M d, Y - l')

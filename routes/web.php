@@ -2267,6 +2267,14 @@ SVG;
 
     $candidatePaths = blogMediaCandidatePaths($originalPath);
 
+    // Legacy records can hold extension-less or proxy-style cover values.
+    // Probe the conventional cover filename on disk so mobile/desktop render consistently.
+    $coverFallbackCandidates = [];
+    foreach (['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'] as $ext) {
+        $coverFallbackCandidates[] = 'blog/' . $post . '/cover.' . $ext;
+    }
+    $candidatePaths = array_values(array_unique(array_filter(array_merge($candidatePaths, $coverFallbackCandidates))));
+
     $resolvedBinary = null;
     $resolvedMimeType = '';
 

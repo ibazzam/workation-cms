@@ -170,7 +170,7 @@ if (!function_exists('blogResolveCoverImageUrl')) {
                     $normalized = (string) ($matches[1] ?? '');
                 } elseif (preg_match('#/public/storage/(.+)$#i', $normalized, $matches) === 1) {
                     $normalized = (string) ($matches[1] ?? '');
-                } elseif (preg_match('~/(blog/(?:inline/[^?#\s]+|\d+/(?:cover|article_[0-2])\.[^/?#]+))~i', $normalized, $matches) === 1) {
+                } elseif (preg_match('~/(blog/(?:inline/[^?#\s]+|\d+/(?:cover|article_[0-2])(?:\.[^/?#]+)?))~i', $normalized, $matches) === 1) {
                     $normalized = (string) ($matches[1] ?? '');
                 }
 

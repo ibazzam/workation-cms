@@ -375,6 +375,19 @@
                                                             No image selected for this slot yet.
                                                         @endif
                                                     </p>
+                                                    <div data-article-image-url-row @if (!($slotHasExisting && $isEdit)) hidden @endif style="display:grid; gap:4px;">
+                                                        <span style="font-size:0.72rem; font-weight:700; color:#4a6678; text-transform:uppercase; letter-spacing:.04em;">Image URL</span>
+                                                        <div style="display:flex; gap:6px; align-items:center;">
+                                                            <input
+                                                                type="text"
+                                                                data-article-image-url
+                                                                readonly
+                                                                value="{{ ($slotHasExisting && $isEdit) ? '/media/blog/' . $post->id . '/article/' . $slot : '' }}"
+                                                                style="flex:1; font-size:0.75rem; font-family:monospace; padding:4px 8px; border:1px solid #ccd8e4; border-radius:6px; background:#eef4fa; color:#1a3a4f; cursor:text;"
+                                                            >
+                                                            <button type="button" class="btn-link" data-article-image-copy style="padding:4px 10px; font-size:0.75rem; white-space:nowrap;">Copy</button>
+                                                        </div>
+                                                    </div>
                                                     @if ($slotHasExisting)
                                                         <label class="check" data-article-image-remove-row style="font-size:0.78rem; margin:0;">
                                                             <input type="checkbox" name="remove_article_image_{{ $slot }}" value="1" @checked(old('remove_article_image_' . $slot) == '1') data-article-image-remove>
@@ -383,6 +396,16 @@
                                                     @endif
                                                     <input type="file" name="article_image_{{ $slot }}" accept="image/*" data-article-image-input style="font-size:0.82rem;">
                                                     <button type="button" class="btn-link" data-article-image-clear hidden style="width:max-content; padding:6px 10px;">Clear selected file</button>
+                                                    @if ($slotHasExisting && $isEdit)
+                                                        <button
+                                                            type="button"
+                                                            class="btn-link"
+                                                            data-article-image-insert
+                                                            data-insert-url="/media/blog/{{ $post->id }}/article/{{ $slot }}"
+                                                            data-insert-label="Gallery image {{ $slot + 1 }}"
+                                                            style="width:max-content; padding:6px 10px; color:#1a6694;"
+                                                        >↗ Insert into article</button>
+                                                    @endif
                                                 </div>
                                             @endforeach
                                         </div>
@@ -625,7 +648,37 @@
                         const statusText = slotEl.querySelector('[data-article-image-status]');
                         const clearButton = slotEl.querySelector('[data-article-image-clear]');
                         const removeCheckbox = slotEl.querySelector('[data-article-image-remove]');
-                        const originalSrc = previewImage ? String(previewImage.getAttribute('data-original-src') || '').trim() : '';
+                        const insertButton = slotEl.querySelector('[data-article-image-insert]');
+                        const urlRow       = slotEl.querySelector('[data-article-image-url-row]');
+                        const urlInput     = slotEl.querySelector('[data-article-image-url]');
+                        const copyButton   = slotEl.querySelector('[data-article-image-copy]');
+                        const originalSrc  = previewImage ? String(previewImage.getAttribute('data-original-src') || '').trim() : '';
+                        const stableUrl    = urlInput ? String(urlInput.getAttribute('value') || '').trim() : '';
+
+                        if (insertButton) {
+                            insertButton.addEventListener('click', function () {
+                                const url   = String(insertButton.getAttribute('data-insert-url')   || '').trim();
+                                const label = String(insertButton.getAttribute('data-insert-label') || 'Gallery image').trim();
+                                if (!url || typeof editor === 'undefined') return;
+                                editor.codemirror.focus();
+                                editor.codemirror.replaceSelection('![' + label + '](' + url + ')');
+                            });
+                        }
+
+                        if (copyButton && urlInput) {
+                            copyButton.addEventListener('click', function () {
+                                const val = String(urlInput.value || '').trim();
+                                if (!val) return;
+                                navigator.clipboard.writeText(val).then(function () {
+                                    const prev = copyButton.textContent;
+                                    copyButton.textContent = 'Copied!';
+                                    setTimeout(function () { copyButton.textContent = prev; }, 1500);
+                                }).catch(function () {
+                                    urlInput.select();
+                                    document.execCommand('copy');
+                                });
+                            });
+                        }
 
                         if (!fileInput || !previewWrapper || !statusText || !clearButton) {
                             return;
@@ -659,6 +712,15 @@
                                 previewWrapper.hidden = true;
                                 statusText.textContent = 'No image selected for this slot yet.';
                             }
+                            if (urlRow && urlInput) {
+                                if (stableUrl !== '') {
+                                    urlInput.value = stableUrl;
+                                    urlRow.hidden = false;
+                                } else {
+                                    urlInput.value = '';
+                                    urlRow.hidden = true;
+                                }
+                            }
                         }
 
                         fileInput.addEventListener('change', function () {
@@ -680,6 +742,17 @@
                                 removeCheckbox.disabled = true;
                             }
                             statusText.textContent = 'Selected: ' + file.name + '. Saving will replace this slot image.';
+                            if (urlRow && urlInput) {
+                                if (stableUrl !== '') {
+                                    // replacing an existing image — URL stays the same after save
+                                    urlInput.value = stableUrl;
+                                    urlRow.hidden = false;
+                                } else {
+                                    // brand-new slot — URL only exists after saving
+                                    urlInput.value = '(save the post to get the URL)';
+                                    urlRow.hidden = false;
+                                }
+                            }
                         });
 
                         clearButton.addEventListener('click', function () {

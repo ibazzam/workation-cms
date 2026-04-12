@@ -355,7 +355,7 @@
                                                 @php
                                                     $slotUrl = $articleImageUrls[$slot] ?? '';
                                                     $slotHasExisting = $slotUrl !== '';
-                                                    $slotResolvedUrl = ($slotHasExisting && $isEdit) ? $slotUrl : '';
+                                                    $slotResolvedUrl = ($slotHasExisting && $isEdit) ? ('/media/blog/' . $post->id . '/article/' . $slot) : '';
                                                 @endphp
                                                 <div data-article-image-slot style="border:1px solid #ccd8e4; border-radius:10px; padding:10px; background:#f8fbff; display:grid; gap:8px;">
                                                     <label style="font-size:0.82rem; font-weight:700; color:#4a6678; display:block;">Image {{ $slot + 1 }}</label>
@@ -397,6 +397,17 @@
                                                     @endif
                                                     <input type="file" name="article_image_{{ $slot }}" accept="image/*" data-article-image-input style="font-size:0.82rem;">
                                                     <button type="button" class="btn-link" data-article-image-clear hidden style="width:max-content; padding:6px 10px;">Clear selected file</button>
+                                                    @if ($isEdit)
+                                                        <button
+                                                            type="button"
+                                                            class="btn-link"
+                                                            data-article-image-save-now
+                                                            data-post-id="{{ $post->id }}"
+                                                            data-slot="{{ $slot }}"
+                                                            disabled
+                                                            style="width:max-content; padding:6px 10px; color:#0f6079;"
+                                                        >Save image now</button>
+                                                    @endif
                                                     @if ($slotHasExisting && $isEdit)
                                                         <button
                                                             type="button"
@@ -650,11 +661,12 @@
                         const clearButton = slotEl.querySelector('[data-article-image-clear]');
                         const removeCheckbox = slotEl.querySelector('[data-article-image-remove]');
                         const insertButton = slotEl.querySelector('[data-article-image-insert]');
+                        const saveNowButton = slotEl.querySelector('[data-article-image-save-now]');
                         const urlRow       = slotEl.querySelector('[data-article-image-url-row]');
                         const urlInput     = slotEl.querySelector('[data-article-image-url]');
                         const copyButton   = slotEl.querySelector('[data-article-image-copy]');
-                        const originalSrc  = previewImage ? String(previewImage.getAttribute('data-original-src') || '').trim() : '';
-                        const stableUrl    = urlInput ? String(urlInput.getAttribute('value') || '').trim() : '';
+                        let originalSrc    = previewImage ? String(previewImage.getAttribute('data-original-src') || '').trim() : '';
+                        let stableUrl      = urlInput ? String(urlInput.getAttribute('value') || '').trim() : '';
 
                         if (insertButton) {
                             insertButton.addEventListener('click', function () {
@@ -694,10 +706,17 @@
                             }
                         }
 
+                        function updateSaveNowState() {
+                            if (!saveNowButton) return;
+                            const hasFile = !!(fileInput.files && fileInput.files[0]);
+                            saveNowButton.disabled = !hasFile;
+                        }
+
                         function restoreOriginalState() {
                             releaseObjectUrl();
                             fileInput.value = '';
                             clearButton.hidden = true;
+                            updateSaveNowState();
                             if (removeCheckbox) {
                                 removeCheckbox.disabled = false;
                             }
@@ -733,6 +752,7 @@
 
                             releaseObjectUrl();
                             currentObjectUrl = URL.createObjectURL(file);
+                            updateSaveNowState();
                             if (previewImage) {
                                 previewImage.src = currentObjectUrl;
                             }
@@ -759,6 +779,96 @@
                         clearButton.addEventListener('click', function () {
                             restoreOriginalState();
                         });
+
+                        if (saveNowButton) {
+                            saveNowButton.addEventListener('click', function () {
+                                const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+                                if (!file) {
+                                    return;
+                                }
+
+                                const postId = String(saveNowButton.getAttribute('data-post-id') || '').trim();
+                                const slot = String(saveNowButton.getAttribute('data-slot') || '').trim();
+                                if (!postId || slot === '') {
+                                    return;
+                                }
+
+                                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                                const formData = new FormData();
+                                formData.append('image', file);
+
+                                const previousLabel = saveNowButton.textContent || 'Save image now';
+                                saveNowButton.textContent = 'Saving...';
+                                saveNowButton.disabled = true;
+
+                                fetch('/portal/admin/blog/' + encodeURIComponent(postId) + '/article/' + encodeURIComponent(slot) + '/upload', {
+                                    method: 'POST',
+                                    headers: {
+                                        'X-CSRF-TOKEN': token,
+                                        'X-Requested-With': 'XMLHttpRequest',
+                                    },
+                                    body: formData,
+                                    credentials: 'same-origin',
+                                })
+                                .then(function (resp) {
+                                    if (!resp.ok) {
+                                        return resp.json().catch(function () {
+                                            return { message: 'Could not save slot image.' };
+                                        }).then(function (payload) {
+                                            throw new Error(String(payload?.message || 'Could not save slot image.'));
+                                        });
+                                    }
+
+                                    return resp.json();
+                                })
+                                .then(function (payload) {
+                                    const savedUrl = String(payload?.url || '').trim();
+                                    if (!savedUrl) {
+                                        throw new Error('Image saved but URL is missing.');
+                                    }
+
+                                    releaseObjectUrl();
+                                    fileInput.value = '';
+                                    clearButton.hidden = true;
+                                    updateSaveNowState();
+
+                                    stableUrl = savedUrl;
+                                    originalSrc = savedUrl;
+
+                                    if (previewImage) {
+                                        previewImage.src = savedUrl;
+                                        previewImage.setAttribute('data-original-src', savedUrl);
+                                    }
+                                    previewWrapper.hidden = false;
+
+                                    if (urlRow && urlInput) {
+                                        urlInput.value = savedUrl;
+                                        urlRow.hidden = false;
+                                    }
+
+                                    if (insertButton) {
+                                        insertButton.setAttribute('data-insert-url', savedUrl);
+                                        insertButton.hidden = false;
+                                    }
+
+                                    if (removeCheckbox) {
+                                        removeCheckbox.checked = false;
+                                        removeCheckbox.disabled = false;
+                                    }
+
+                                    statusText.textContent = 'Saved. URL is now ready to copy or insert into the article.';
+                                })
+                                .catch(function (error) {
+                                    statusText.textContent = error?.message || 'Could not save image now. Please try again.';
+                                })
+                                .finally(function () {
+                                    saveNowButton.textContent = previousLabel;
+                                    updateSaveNowState();
+                                });
+                            });
+                        }
+
+                        updateSaveNowState();
                     });
             })();
         </script>

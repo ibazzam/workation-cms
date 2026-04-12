@@ -349,7 +349,7 @@
                     <label>Publishing</label>
                                     <div class="field wide">
                                         <label>Article images (optional — up to 3)</label>
-                                        <p class="hint">These images render as a photo gallery inside the article, after the intro section. Leave a slot empty to skip it.</p>
+                                        <p class="hint">Upload up to 3 images. They render as a photo gallery inside the article. Use <strong>Gallery position</strong> below to choose exactly where they appear. Leave a slot empty to skip it.</p>
                                         <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px; margin-top:4px;">
                                             @foreach ([0, 1, 2] as $slot)
                                                 @php $slotUrl = $articleImageUrls[$slot] ?? ''; @endphp
@@ -361,12 +361,26 @@
                                                         </div>
                                                         <label class="check" style="font-size:0.78rem; margin-bottom:6px;">
                                                             <input type="checkbox" name="remove_article_image_{{ $slot }}" value="1" @checked(old('remove_article_image_' . $slot) == '1')>
-                                                            Remove
+                                                            Remove image {{ $slot + 1 }}
                                                         </label>
                                                     @endif
                                                     <input type="file" name="article_image_{{ $slot }}" accept="image/*" style="font-size:0.82rem;">
                                                 </div>
                                             @endforeach
+                                        </div>
+
+                                        @php
+                                            $currentGalleryPos = old('gallery_position', $isEdit ? ($post->gallery_position ?? 'after_intro') : 'after_intro');
+                                        @endphp
+                                        <div style="margin-top:12px;">
+                                            <label for="gallery_position" style="font-size:0.82rem; font-weight:700; color:#4a6678; display:block; margin-bottom:4px;">Gallery position</label>
+                                            <select id="gallery_position" name="gallery_position" style="font-size:0.84rem; padding:6px 10px; border:1px solid #ccd8e4; border-radius:8px; background:#fff; color:#334a5e; width:100%; max-width:320px;">
+                                                <option value="after_intro"      @selected($currentGalleryPos === 'after_intro')>After intro / before article body</option>
+                                                <option value="after_first_h2"  @selected($currentGalleryPos === 'after_first_h2')>After first section heading (H2)</option>
+                                                <option value="after_second_h2" @selected($currentGalleryPos === 'after_second_h2')>After second section heading (H2)</option>
+                                                <option value="end"             @selected($currentGalleryPos === 'end')>At the end of the article</option>
+                                            </select>
+                                            <p class="hint" style="margin-top:4px;">Controls where the photo gallery appears inside the article on the reader-facing page.</p>
                                         </div>
                                     </div>
 

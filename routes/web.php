@@ -2363,6 +2363,58 @@ SVG;
     ]);
 });
 
+// /media/blog/{post}/article/{slot} — proxy for per-post article gallery images (slot 0-2)
+Route::get('/media/blog/{post}/article/{slot}', function (int $post, int $slot) {
+    $placeholderResponse = static function () {
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><rect width="800" height="600" fill="#d4e3ee"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#607d8b" font-family="Arial" font-size="24">Image unavailable</text></svg>';
+        return response($svg, 404, ['Content-Type' => 'image/svg+xml; charset=UTF-8', 'Cache-Control' => 'no-store']);
+    };
+
+    if ($slot < 0 || $slot > 2) {
+        return $placeholderResponse();
+    }
+
+    if (!Schema::hasTable('blog_posts')) {
+        return $placeholderResponse();
+    }
+
+    $blogPost = BlogPost::query()->find($post, ['id', 'article_images']);
+    if (!$blogPost) {
+        return $placeholderResponse();
+    }
+
+    $articleImages = (array) ($blogPost->article_images ?? []);
+    $storedPath = trim((string) ($articleImages[$slot] ?? ''));
+    if ($storedPath === '') {
+        return $placeholderResponse();
+    }
+
+    $blogArticleDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
+    if ($blogArticleDisk === '') {
+        $blogArticleDisk = 'public';
+    }
+    $diskNames = array_values(array_unique(array_filter([$blogArticleDisk, 'public'])));
+
+    foreach ($diskNames as $diskName) {
+        try {
+            $disk = Storage::disk($diskName);
+        } catch (\Throwable $e) {
+            continue;
+        }
+        if (!$disk->exists($storedPath)) {
+            continue;
+        }
+        $binary = $disk->get($storedPath);
+        $mime = (string) ($disk->mimeType($storedPath) ?: 'image/jpeg');
+        return response($binary, 200, [
+            'Content-Type' => $mime,
+            'Cache-Control' => 'public, max-age=31536000, immutable',
+        ]);
+    }
+
+    return $placeholderResponse();
+});
+
 // ─────────────────────────────────────────────────────────────
 // Islands & Atolls Directory
     // Blog inline image proxy
@@ -5977,6 +6029,7 @@ Route::post('/portal/admin/blog', function (Request $request) {
         'remove_article_image_0' => ['nullable', 'boolean'],
         'remove_article_image_1' => ['nullable', 'boolean'],
         'remove_article_image_2' => ['nullable', 'boolean'],
+        'gallery_position'         => ['nullable', 'string', 'in:after_intro,after_first_h2,after_second_h2,end'],
     ]);
 
     $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
@@ -6049,6 +6102,9 @@ Route::post('/portal/admin/blog', function (Request $request) {
                     }
                 }
                 $post->article_images = [$existingArticleImages[0], $existingArticleImages[1], $existingArticleImages[2]];
+                if (Schema::hasColumn('blog_posts', 'gallery_position')) {
+                    $post->gallery_position = $validated['gallery_position'] ?? 'after_intro';
+                }
                 $post->save();
             }
 
@@ -6165,6 +6221,7 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
         'remove_article_image_0' => ['nullable', 'boolean'],
         'remove_article_image_1' => ['nullable', 'boolean'],
         'remove_article_image_2' => ['nullable', 'boolean'],
+        'gallery_position'         => ['nullable', 'string', 'in:after_intro,after_first_h2,after_second_h2,end'],
     ]);
 
     $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
@@ -6263,6 +6320,9 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
                     }
                 }
                 $blogPost->article_images = [$existingArticleImages[0], $existingArticleImages[1], $existingArticleImages[2]];
+                if (Schema::hasColumn('blog_posts', 'gallery_position')) {
+                    $blogPost->gallery_position = $validated['gallery_position'] ?? 'after_intro';
+                }
                 $blogPost->save();
             }
 

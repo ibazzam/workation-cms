@@ -216,6 +216,15 @@ if (!function_exists('blogResolveCoverImageUrl')) {
             }
         }
 
+        // Rewrite article gallery image paths: blog/{id}/article_{slot}.{ext} → proxy route
+        if (preg_match('#(?:^|/)blog/(\d+)/article_([0-2])\.[a-z0-9]+$#i', $value, $matches) === 1) {
+            $postId = (int) ($matches[1] ?? 0);
+            $slot   = (int) ($matches[2] ?? 0);
+            if ($postId > 0) {
+                return '/media/blog/' . $postId . '/article/' . $slot;
+            }
+        }
+
         if (preg_match('#/storage/app/public/(.+)$#i', $value, $matches) === 1) {
             $value = (string) ($matches[1] ?? '');
         } elseif (preg_match('#/public/storage/(.+)$#i', $value, $matches) === 1) {

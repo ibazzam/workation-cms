@@ -16,6 +16,7 @@ class BlogPost extends Model
         'content',
         'cover_image_path',
         'article_images',
+        'gallery_position',
         'blog_category_slug',
         'blog_tag_slugs',
         'is_featured',

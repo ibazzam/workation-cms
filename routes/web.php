@@ -5977,6 +5977,7 @@ Route::post('/portal/admin/blog', function (Request $request) {
         'remove_article_image_0' => ['nullable', 'boolean'],
         'remove_article_image_1' => ['nullable', 'boolean'],
         'remove_article_image_2' => ['nullable', 'boolean'],
+        'gallery_position'         => ['nullable', 'string', 'in:after_intro,after_first_h2,after_second_h2,end'],
     ]);
 
     $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
@@ -6049,6 +6050,9 @@ Route::post('/portal/admin/blog', function (Request $request) {
                     }
                 }
                 $post->article_images = [$existingArticleImages[0], $existingArticleImages[1], $existingArticleImages[2]];
+                if (Schema::hasColumn('blog_posts', 'gallery_position')) {
+                    $post->gallery_position = $validated['gallery_position'] ?? 'after_intro';
+                }
                 $post->save();
             }
 
@@ -6165,6 +6169,7 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
         'remove_article_image_0' => ['nullable', 'boolean'],
         'remove_article_image_1' => ['nullable', 'boolean'],
         'remove_article_image_2' => ['nullable', 'boolean'],
+        'gallery_position'         => ['nullable', 'string', 'in:after_intro,after_first_h2,after_second_h2,end'],
     ]);
 
     $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
@@ -6263,6 +6268,9 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
                     }
                 }
                 $blogPost->article_images = [$existingArticleImages[0], $existingArticleImages[1], $existingArticleImages[2]];
+                if (Schema::hasColumn('blog_posts', 'gallery_position')) {
+                    $blogPost->gallery_position = $validated['gallery_position'] ?? 'after_intro';
+                }
                 $blogPost->save();
             }
 

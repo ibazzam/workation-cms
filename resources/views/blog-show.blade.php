@@ -676,19 +676,38 @@
                         </div>
                     </section>
 
-                    @forelse ($contentBlocks as $block)
-                                            @if (isset($articleImages) && $articleImages->isNotEmpty())
-                                                <div class="article-gallery has-{{ $articleImages->count() }}" aria-label="Article photos">
-                                                    @foreach ($articleImages as $imgUrl)
-                                                        <figure>
-                                                            <img src="{{ $imgUrl }}" alt="{{ $post->title }}" loading="lazy">
-                                                        </figure>
-                                                    @endforeach
-                                                </div>
-                                            @endif
+                    @php
+                        $galleryRendered  = false;
+                        $galleryPos       = $post->gallery_position ?? 'after_intro';
+                        $hasGallery       = isset($articleImages) && $articleImages->isNotEmpty();
+                        $galleryHtml      = '';
+                        if ($hasGallery) {
+                            $cnt = $articleImages->count();
+                            $galleryHtml = '<div class="article-gallery has-' . $cnt . '" aria-label="Article photos">';
+                            foreach ($articleImages as $imgUrl) {
+                                $galleryHtml .= '<figure><img src="' . e($imgUrl) . '" alt="' . e($post->title) . '" loading="lazy"></figure>';
+                            }
+                            $galleryHtml .= '</div>';
+                        }
+                        $h2Seen = 0;
+                    @endphp
 
+                    {{-- Position: after_intro (before content body) --}}
+                    @if ($hasGallery && $galleryPos === 'after_intro')
+                        {!! $galleryHtml !!}
+                        @php $galleryRendered = true; @endphp
+                    @endif
+
+                    @forelse ($contentBlocks as $block)
                         @if ($block['type'] === 'h2')
                             <h2>{!! blogRenderInlineMarkup((string) ($block['text'] ?? '')) !!}</h2>
+                            @if ($hasGallery && !$galleryRendered)
+                                @php $h2Seen++; @endphp
+                                @if (($galleryPos === 'after_first_h2' && $h2Seen === 1) || ($galleryPos === 'after_second_h2' && $h2Seen === 2))
+                                    {!! $galleryHtml !!}
+                                    @php $galleryRendered = true; @endphp
+                                @endif
+                            @endif
                         @elseif ($block['type'] === 'h3')
                             <h3>{!! blogRenderInlineMarkup((string) ($block['text'] ?? '')) !!}</h3>
                         @elseif ($block['type'] === 'h4')
@@ -706,6 +725,11 @@
                     @empty
                         <p>{{ $rawContent !== '' ? $rawContent : 'No content was provided for this article yet.' }}</p>
                     @endforelse
+
+                    {{-- Position: end — or fallback if targeted H2 was never found --}}
+                    @if ($hasGallery && !$galleryRendered)
+                        {!! $galleryHtml !!}
+                    @endif
                 </article>
 
                 <aside class="sidebar" aria-label="Article side panel">

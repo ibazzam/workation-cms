@@ -2443,15 +2443,19 @@ Route::get('/media/blog/{post}/article/{slot}', function (int $post, int $slot) 
         }
 
         $mimeType = (string) ($disk->mimeType($cleanPath) ?: 'image/jpeg');
-        $fileSize = $disk->size($cleanPath);
 
         return response()->stream(static function () use ($disk, $cleanPath) {
             $stream = $disk->readStream($cleanPath);
-            fpassthru($stream);
-            fclose($stream);
+            if (is_resource($stream)) {
+                fpassthru($stream);
+                fclose($stream);
+                return;
+            }
+
+            // Fallback for drivers where readStream may return false unexpectedly.
+            echo (string) $disk->get($cleanPath);
         }, 200, [
             'Content-Type'  => $mimeType,
-            'Content-Length' => $fileSize,
             'Cache-Control' => 'public, max-age=86400',
         ]);
     })->where('path', '.+');

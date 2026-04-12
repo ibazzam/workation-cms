@@ -159,6 +159,15 @@ if (!function_exists('blogResolveCoverImageUrl')) {
             return '';
         }
 
+        // Normalize any inline blog image path to proxy route.
+        // Handles values like:
+        // - blog/inline/2026/..jpg
+        // - /storage/blog/inline/..jpg
+        // - https://.../blog/inline/..jpg
+        if (preg_match('#(?:^|/)(blog/inline/[^?#\s]+)#i', $value, $inlineMatch) === 1) {
+            return '/media/blog-inline/' . ltrim((string) ($inlineMatch[1] ?? ''), '/');
+        }
+
         if (in_array(Str::lower($value), ['null', 'undefined', 'false'], true)) {
             return '';
         }
@@ -209,7 +218,7 @@ if (!function_exists('blogResolveCoverImageUrl')) {
         }
         $diskNames = array_values(array_unique(array_filter([$portalMediaDisk, 'public'])));
 
-        if (preg_match('#(?:^|/)blog/(\d+)/cover\.[a-z0-9]+$#i', $value, $matches) === 1) {
+        if (preg_match('#(?:^|/)blog/(\d+)/cover\.[a-z0-9]+(?:[?#].*)?$#i', $value, $matches) === 1) {
             $postId = (int) ($matches[1] ?? 0);
             if ($postId > 0) {
                 return '/media/blog/' . $postId . '/cover';
@@ -217,7 +226,7 @@ if (!function_exists('blogResolveCoverImageUrl')) {
         }
 
         // Rewrite article gallery image paths: blog/{id}/article_{slot}.{ext} → proxy route
-        if (preg_match('#(?:^|/)blog/(\d+)/article_([0-2])\.[a-z0-9]+$#i', $value, $matches) === 1) {
+        if (preg_match('#(?:^|/)blog/(\d+)/article_([0-2])\.[a-z0-9]+(?:[?#].*)?$#i', $value, $matches) === 1) {
             $postId = (int) ($matches[1] ?? 0);
             $slot   = (int) ($matches[2] ?? 0);
             if ($postId > 0) {

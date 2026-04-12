@@ -253,36 +253,20 @@ if (!function_exists('blogResolveCoverImageUrl')) {
             return '/media/blog-inline' . $inlineMatch[0];
         }
 
-        // Rewrite cover image paths before generic external URL passthrough.
-        // Prefer managed media URL resolution (same strategy as hero images),
-        // then fall back to proxy for legacy/missing-path cases.
+        // Rewrite cover image paths to stable proxy URLs.
+        // Do not return direct/signed S3 links for blog media, because they can expire.
         if (preg_match('~(?:^|/)(blog/(\d+)/cover\.[a-z0-9]+)(?:[?#].*)?$~i', $value, $matches) === 1) {
-            $relativePath = trim((string) ($matches[1] ?? ''));
             $postId = (int) ($matches[2] ?? 0);
-            if ($relativePath !== '') {
-                $managedUrl = portalManagedMediaUrlFromPath($relativePath);
-                if (is_string($managedUrl) && trim($managedUrl) !== '') {
-                    return $managedUrl;
-                }
-            }
             if ($postId > 0) {
                 return '/media/blog/' . $postId . '/cover';
             }
         }
 
-        // Rewrite article gallery image paths before generic external URL passthrough.
-        // Prefer managed media URL resolution (same strategy as hero images),
-        // then fall back to proxy for legacy/missing-path cases.
+        // Rewrite article gallery image paths to stable proxy URLs.
+        // Do not return direct/signed S3 links for blog media, because they can expire.
         if (preg_match('~(?:^|/)(blog/(\d+)/article_([0-2])\.[a-z0-9]+)(?:[?#].*)?$~i', $value, $matches) === 1) {
-            $relativePath = trim((string) ($matches[1] ?? ''));
             $postId = (int) ($matches[2] ?? 0);
             $slot   = (int) ($matches[3] ?? 0);
-            if ($relativePath !== '') {
-                $managedUrl = portalManagedMediaUrlFromPath($relativePath);
-                if (is_string($managedUrl) && trim($managedUrl) !== '') {
-                    return $managedUrl;
-                }
-            }
             if ($postId > 0) {
                 return '/media/blog/' . $postId . '/article/' . $slot;
             }
@@ -357,9 +341,20 @@ if (!function_exists('blogResolveCoverImageUrl')) {
 
         if (Str::startsWith($value, ['blog/'])) {
             $relativePath = ltrim($value, '/');
-            $managedUrl = portalManagedMediaUrlFromPath($relativePath);
-            if (is_string($managedUrl) && trim($managedUrl) !== '') {
-                return $managedUrl;
+
+            if (preg_match('~^blog/(\d+)/cover\.[a-z0-9]+$~i', $relativePath, $matches) === 1) {
+                $postId = (int) ($matches[1] ?? 0);
+                if ($postId > 0) {
+                    return '/media/blog/' . $postId . '/cover';
+                }
+            }
+
+            if (preg_match('~^blog/(\d+)/article_([0-2])\.[a-z0-9]+$~i', $relativePath, $matches) === 1) {
+                $postId = (int) ($matches[1] ?? 0);
+                $slot = (int) ($matches[2] ?? 0);
+                if ($postId > 0) {
+                    return '/media/blog/' . $postId . '/article/' . $slot;
+                }
             }
 
             foreach ($diskNames as $diskName) {

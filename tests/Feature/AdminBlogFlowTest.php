@@ -124,12 +124,12 @@ class AdminBlogFlowTest extends TestCase
         $response->assertSee('fake-image-binary', false);
     }
 
-    public function test_blog_helper_resolves_full_url_cover_and_article_values_to_managed_media_urls(): void
+    public function test_blog_helper_resolves_full_url_cover_and_article_values_to_proxy_urls(): void
     {
         $coverResolved = blogResolveCoverImageUrl('https://cdn.example.test/blog/42/cover.jpg');
-        $this->assertStringContainsString('/storage/blog/42/cover.jpg', $coverResolved);
+        $this->assertSame('/media/blog/42/cover', $coverResolved);
 
         $articleResolved = blogResolveCoverImageUrl('https://cdn.example.test/blog/42/article_1.webp?version=2');
-        $this->assertStringContainsString('/storage/blog/42/article_1.webp', $articleResolved);
+        $this->assertSame('/media/blog/42/article/1', $articleResolved);
     }
 }

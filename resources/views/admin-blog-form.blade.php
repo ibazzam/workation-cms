@@ -349,22 +349,63 @@
                     <label>Publishing</label>
                                     <div class="field wide">
                                         <label>Article images (optional — up to 3)</label>
-                                        <p class="hint">Upload up to 3 images. They render as a photo gallery inside the article. Use <strong>Gallery position</strong> below to choose exactly where they appear. Leave a slot empty to skip it.</p>
-                                        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px; margin-top:4px;">
+                                        <p class="hint">Upload up to 3 images. Each slot now shows a thumbnail as soon as you choose a file. Existing images can be removed, and choosing a new file replaces that slot on save.</p>
+                                        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px; margin-top:4px;">
                                             @foreach ([0, 1, 2] as $slot)
-                                                @php $slotUrl = $articleImageUrls[$slot] ?? ''; @endphp
-                                                <div style="border:1px solid #ccd8e4; border-radius:10px; padding:10px; background:#f8fbff;">
-                                                    <label style="font-size:0.82rem; font-weight:700; color:#4a6678; display:block; margin-bottom:6px;">Image {{ $slot + 1 }}</label>
-                                                    @if ($slotUrl !== '')
-                                                        <div style="margin-bottom:6px;">
-                                                            <img src="{{ $slotUrl }}" alt="Article image {{ $slot + 1 }}" loading="lazy" style="display:block; width:100%; height:130px; object-fit:cover; border-radius:6px; border:1px solid #ccd8e4;">
+                                                @php
+                                                    $slotUrl = $articleImageUrls[$slot] ?? '';
+                                                    $slotHasExisting = $slotUrl !== '';
+                                                @endphp
+                                                <div data-article-image-slot style="border:1px solid #ccd8e4; border-radius:10px; padding:10px; background:#f8fbff; display:grid; gap:8px;">
+                                                    <label style="font-size:0.82rem; font-weight:700; color:#4a6678; display:block;">Image {{ $slot + 1 }}</label>
+                                                    <div data-article-image-preview-wrapper @if (!$slotHasExisting) hidden @endif style="border:1px solid #ccd8e4; border-radius:6px; overflow:hidden; background:#dfeaf2;">
+                                                        <img
+                                                            data-article-image-preview
+                                                            src="{{ $slotUrl }}"
+                                                            data-original-src="{{ $slotUrl }}"
+                                                            alt="Article image {{ $slot + 1 }}"
+                                                            loading="lazy"
+                                                            style="display:block; width:100%; height:140px; object-fit:cover;"
+                                                        >
+                                                    </div>
+                                                    <p class="hint" data-article-image-status style="margin:0; min-height:32px;">
+                                                        @if ($slotHasExisting)
+                                                            Current image loaded. Choose a new file below to replace it.
+                                                        @else
+                                                            No image selected for this slot yet.
+                                                        @endif
+                                                    </p>
+                                                    <div data-article-image-url-row @if (!($slotHasExisting && $isEdit)) hidden @endif style="display:grid; gap:4px;">
+                                                        <span style="font-size:0.72rem; font-weight:700; color:#4a6678; text-transform:uppercase; letter-spacing:.04em;">Image URL</span>
+                                                        <div style="display:flex; gap:6px; align-items:center;">
+                                                            <input
+                                                                type="text"
+                                                                data-article-image-url
+                                                                readonly
+                                                                value="{{ ($slotHasExisting && $isEdit) ? '/media/blog/' . $post->id . '/article/' . $slot : '' }}"
+                                                                style="flex:1; font-size:0.75rem; font-family:monospace; padding:4px 8px; border:1px solid #ccd8e4; border-radius:6px; background:#eef4fa; color:#1a3a4f; cursor:text;"
+                                                            >
+                                                            <button type="button" class="btn-link" data-article-image-copy style="padding:4px 10px; font-size:0.75rem; white-space:nowrap;">Copy</button>
                                                         </div>
-                                                        <label class="check" style="font-size:0.78rem; margin-bottom:6px;">
-                                                            <input type="checkbox" name="remove_article_image_{{ $slot }}" value="1" @checked(old('remove_article_image_' . $slot) == '1')>
-                                                            Remove image {{ $slot + 1 }}
+                                                    </div>
+                                                    @if ($slotHasExisting)
+                                                        <label class="check" data-article-image-remove-row style="font-size:0.78rem; margin:0;">
+                                                            <input type="checkbox" name="remove_article_image_{{ $slot }}" value="1" @checked(old('remove_article_image_' . $slot) == '1') data-article-image-remove>
+                                                            Remove current image {{ $slot + 1 }} on save
                                                         </label>
                                                     @endif
-                                                    <input type="file" name="article_image_{{ $slot }}" accept="image/*" style="font-size:0.82rem;">
+                                                    <input type="file" name="article_image_{{ $slot }}" accept="image/*" data-article-image-input style="font-size:0.82rem;">
+                                                    <button type="button" class="btn-link" data-article-image-clear hidden style="width:max-content; padding:6px 10px;">Clear selected file</button>
+                                                    @if ($slotHasExisting && $isEdit)
+                                                        <button
+                                                            type="button"
+                                                            class="btn-link"
+                                                            data-article-image-insert
+                                                            data-insert-url="/media/blog/{{ $post->id }}/article/{{ $slot }}"
+                                                            data-insert-label="Gallery image {{ $slot + 1 }}"
+                                                            style="width:max-content; padding:6px 10px; color:#1a6694;"
+                                                        >↗ Insert into article</button>
+                                                    @endif
                                                 </div>
                                             @endforeach
                                         </div>
@@ -599,6 +640,125 @@
                             alert('Network error while deleting. Please try again.');
                         });
                     }
+
+                    document.querySelectorAll('[data-article-image-slot]').forEach(function (slotEl) {
+                        const fileInput = slotEl.querySelector('[data-article-image-input]');
+                        const previewWrapper = slotEl.querySelector('[data-article-image-preview-wrapper]');
+                        const previewImage = slotEl.querySelector('[data-article-image-preview]');
+                        const statusText = slotEl.querySelector('[data-article-image-status]');
+                        const clearButton = slotEl.querySelector('[data-article-image-clear]');
+                        const removeCheckbox = slotEl.querySelector('[data-article-image-remove]');
+                        const insertButton = slotEl.querySelector('[data-article-image-insert]');
+                        const urlRow       = slotEl.querySelector('[data-article-image-url-row]');
+                        const urlInput     = slotEl.querySelector('[data-article-image-url]');
+                        const copyButton   = slotEl.querySelector('[data-article-image-copy]');
+                        const originalSrc  = previewImage ? String(previewImage.getAttribute('data-original-src') || '').trim() : '';
+                        const stableUrl    = urlInput ? String(urlInput.getAttribute('value') || '').trim() : '';
+
+                        if (insertButton) {
+                            insertButton.addEventListener('click', function () {
+                                const url   = String(insertButton.getAttribute('data-insert-url')   || '').trim();
+                                const label = String(insertButton.getAttribute('data-insert-label') || 'Gallery image').trim();
+                                if (!url || typeof editor === 'undefined') return;
+                                editor.codemirror.focus();
+                                editor.codemirror.replaceSelection('![' + label + '](' + url + ')');
+                            });
+                        }
+
+                        if (copyButton && urlInput) {
+                            copyButton.addEventListener('click', function () {
+                                const val = String(urlInput.value || '').trim();
+                                if (!val) return;
+                                navigator.clipboard.writeText(val).then(function () {
+                                    const prev = copyButton.textContent;
+                                    copyButton.textContent = 'Copied!';
+                                    setTimeout(function () { copyButton.textContent = prev; }, 1500);
+                                }).catch(function () {
+                                    urlInput.select();
+                                    document.execCommand('copy');
+                                });
+                            });
+                        }
+
+                        if (!fileInput || !previewWrapper || !statusText || !clearButton) {
+                            return;
+                        }
+
+                        let currentObjectUrl = '';
+
+                        function releaseObjectUrl() {
+                            if (currentObjectUrl !== '') {
+                                URL.revokeObjectURL(currentObjectUrl);
+                                currentObjectUrl = '';
+                            }
+                        }
+
+                        function restoreOriginalState() {
+                            releaseObjectUrl();
+                            fileInput.value = '';
+                            clearButton.hidden = true;
+                            if (removeCheckbox) {
+                                removeCheckbox.disabled = false;
+                            }
+
+                            if (previewImage && originalSrc !== '') {
+                                previewImage.src = originalSrc;
+                                previewWrapper.hidden = false;
+                                statusText.textContent = 'Current image loaded. Choose a new file below to replace it.';
+                            } else {
+                                if (previewImage) {
+                                    previewImage.removeAttribute('src');
+                                }
+                                previewWrapper.hidden = true;
+                                statusText.textContent = 'No image selected for this slot yet.';
+                            }
+                            if (urlRow && urlInput) {
+                                if (stableUrl !== '') {
+                                    urlInput.value = stableUrl;
+                                    urlRow.hidden = false;
+                                } else {
+                                    urlInput.value = '';
+                                    urlRow.hidden = true;
+                                }
+                            }
+                        }
+
+                        fileInput.addEventListener('change', function () {
+                            const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+                            if (!file) {
+                                restoreOriginalState();
+                                return;
+                            }
+
+                            releaseObjectUrl();
+                            currentObjectUrl = URL.createObjectURL(file);
+                            if (previewImage) {
+                                previewImage.src = currentObjectUrl;
+                            }
+                            previewWrapper.hidden = false;
+                            clearButton.hidden = false;
+                            if (removeCheckbox) {
+                                removeCheckbox.checked = false;
+                                removeCheckbox.disabled = true;
+                            }
+                            statusText.textContent = 'Selected: ' + file.name + '. Saving will replace this slot image.';
+                            if (urlRow && urlInput) {
+                                if (stableUrl !== '') {
+                                    // replacing an existing image — URL stays the same after save
+                                    urlInput.value = stableUrl;
+                                    urlRow.hidden = false;
+                                } else {
+                                    // brand-new slot — URL only exists after saving
+                                    urlInput.value = '(save the post to get the URL)';
+                                    urlRow.hidden = false;
+                                }
+                            }
+                        });
+
+                        clearButton.addEventListener('click', function () {
+                            restoreOriginalState();
+                        });
+                    });
             })();
         </script>
     </main>

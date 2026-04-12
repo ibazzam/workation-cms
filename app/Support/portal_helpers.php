@@ -170,7 +170,7 @@ if (!function_exists('blogResolveCoverImageUrl')) {
                     $normalized = (string) ($matches[1] ?? '');
                 } elseif (preg_match('#/public/storage/(.+)$#i', $normalized, $matches) === 1) {
                     $normalized = (string) ($matches[1] ?? '');
-                } elseif (preg_match('~/(blog/(?:inline/[^?#\s]+|\d+/(?:cover|article_[0-2])\.[^/?#]+))~i', $normalized, $matches) === 1) {
+                } elseif (preg_match('~/(blog/(?:inline/[^?#\s]+|\d+/(?:cover|article_[0-2])(?:\.[^/?#]+)?))~i', $normalized, $matches) === 1) {
                     $normalized = (string) ($matches[1] ?? '');
                 }
 
@@ -253,6 +253,23 @@ if (!function_exists('blogResolveCoverImageUrl')) {
             return '/media/blog-inline' . $inlineMatch[0];
         }
 
+        // Rewrite cover image paths before generic external URL passthrough.
+        if (preg_match('~(?:^|/)blog/(\d+)/cover\.[a-z0-9]+(?:[?#].*)?$~i', $value, $matches) === 1) {
+            $postId = (int) ($matches[1] ?? 0);
+            if ($postId > 0) {
+                return '/media/blog/' . $postId . '/cover';
+            }
+        }
+
+        // Rewrite article gallery image paths before generic external URL passthrough.
+        if (preg_match('~(?:^|/)blog/(\d+)/article_([0-2])\.[a-z0-9]+(?:[?#].*)?$~i', $value, $matches) === 1) {
+            $postId = (int) ($matches[1] ?? 0);
+            $slot   = (int) ($matches[2] ?? 0);
+            if ($postId > 0) {
+                return '/media/blog/' . $postId . '/article/' . $slot;
+            }
+        }
+
         // All other external URLs — return as-is
         if (Str::startsWith($value, ['https://', 'http://', '//'])) {
             return $value;
@@ -269,22 +286,6 @@ if (!function_exists('blogResolveCoverImageUrl')) {
             $portalMediaDisk = 'public';
         }
         $diskNames = array_values(array_unique(array_filter([$portalMediaDisk, 'public'])));
-
-        if (preg_match('~(?:^|/)blog/(\d+)/cover\.[a-z0-9]+(?:[?#].*)?$~i', $value, $matches) === 1) {
-            $postId = (int) ($matches[1] ?? 0);
-            if ($postId > 0) {
-                return '/media/blog/' . $postId . '/cover';
-            }
-        }
-
-        // Rewrite article gallery image paths: blog/{id}/article_{slot}.{ext} → proxy route
-        if (preg_match('~(?:^|/)blog/(\d+)/article_([0-2])\.[a-z0-9]+(?:[?#].*)?$~i', $value, $matches) === 1) {
-            $postId = (int) ($matches[1] ?? 0);
-            $slot   = (int) ($matches[2] ?? 0);
-            if ($postId > 0) {
-                return '/media/blog/' . $postId . '/article/' . $slot;
-            }
-        }
 
         if (preg_match('#/storage/app/public/(.+)$#i', $value, $matches) === 1) {
             $value = (string) ($matches[1] ?? '');

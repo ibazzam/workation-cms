@@ -152,6 +152,58 @@ if (!function_exists('generateUniqueBlogSlug')) {
 }
 
 if (!function_exists('blogResolveCoverImageUrl')) {
+    if (!function_exists('blogMediaCandidatePaths')) {
+        function blogMediaCandidatePaths(?string $storedValue): array
+        {
+            $value = trim(str_replace('\\', '/', (string) ($storedValue ?? '')));
+            if ($value === '') {
+                return [];
+            }
+
+            $normalizeDiskPath = static function (string $path): string {
+                $normalized = trim(str_replace('\\', '/', $path));
+                if ($normalized === '') {
+                    return '';
+                }
+
+                if (preg_match('#/storage/app/public/(.+)$#i', $normalized, $matches) === 1) {
+                    $normalized = (string) ($matches[1] ?? '');
+                } elseif (preg_match('#/public/storage/(.+)$#i', $normalized, $matches) === 1) {
+                    $normalized = (string) ($matches[1] ?? '');
+                } elseif (preg_match('~/(blog/(?:inline/[^?#\s]+|\d+/(?:cover|article_[0-2])\.[^/?#]+))~i', $normalized, $matches) === 1) {
+                    $normalized = (string) ($matches[1] ?? '');
+                }
+
+                $normalized = ltrim($normalized, '/');
+                if (Str::startsWith($normalized, 'public/')) {
+                    $normalized = Str::after($normalized, 'public/');
+                }
+                if (Str::startsWith($normalized, 'storage/')) {
+                    $normalized = Str::after($normalized, 'storage/');
+                }
+
+                return ltrim($normalized, '/');
+            };
+
+            $paths = [$value, $normalizeDiskPath($value)];
+
+            if (Str::startsWith($value, ['http://', 'https://'])) {
+                $urlPath = trim((string) parse_url($value, PHP_URL_PATH));
+                if ($urlPath !== '') {
+                    $paths[] = $urlPath;
+                    $paths[] = $normalizeDiskPath($urlPath);
+                }
+            }
+
+            return collect($paths)
+                ->map(static fn ($path) => trim((string) $path))
+                ->filter(static fn ($path) => $path !== '')
+                ->unique()
+                ->values()
+                ->all();
+        }
+    }
+
     function blogResolveCoverImageUrl(?string $coverImagePath): string
     {
         $value = str_replace('\\', '/', trim((string) $coverImagePath));

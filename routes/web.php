@@ -2295,20 +2295,33 @@ SVG;
         try {
             $candidateDisk = Storage::disk($diskName);
         } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('blog_cover_proxy: disk init failed', ['disk' => $diskName, 'error' => $e->getMessage()]);
             continue;
         }
         foreach ($candidatePaths as $path) {
-            if (!$candidateDisk->exists($path)) {
+            try {
+                $pathExists = $candidateDisk->exists($path);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('blog_cover_proxy: exists() failed', ['disk' => $diskName, 'path' => $path, 'error' => $e->getMessage()]);
+                continue;
+            }
+            if (!$pathExists) {
                 continue;
             }
 
-            $resolvedBinary = $candidateDisk->get($path);
-            $resolvedMimeType = (string) ($candidateDisk->mimeType($path) ?: '');
+            try {
+                $resolvedBinary = $candidateDisk->get($path);
+                $resolvedMimeType = (string) ($candidateDisk->mimeType($path) ?: '');
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('blog_cover_proxy: get() failed', ['disk' => $diskName, 'path' => $path, 'error' => $e->getMessage()]);
+                $resolvedBinary = null;
+                continue;
+            }
             break 2;
         }
     }
 
-    if ($resolvedBinary === null) {
+    if (!is_string($resolvedBinary) || $resolvedBinary === '') {
         $localDisk = Storage::disk('local');
         foreach ($candidatePaths as $path) {
             foreach ([$path, 'public/' . ltrim($path, '/')] as $localPath) {
@@ -2323,7 +2336,7 @@ SVG;
         }
     }
 
-    if ($resolvedBinary === null) {
+    if (!is_string($resolvedBinary) || $resolvedBinary === '') {
         $postFolder = 'blog/' . $post;
         foreach ($blogCoverDiskNames as $diskName) {
             try {
@@ -2376,7 +2389,7 @@ SVG;
         }
     }
 
-    if ($resolvedBinary === null) {
+    if (!is_string($resolvedBinary) || $resolvedBinary === '') {
         foreach ($coverSources as $source) {
             if (!Str::startsWith($source, ['http://', 'https://'])) {
                 continue;
@@ -2405,13 +2418,109 @@ SVG;
         }
     }
 
-    if ($resolvedBinary === null) {
+    if (!is_string($resolvedBinary) || $resolvedBinary === '') {
         return $placeholderResponse();
     }
 
     return response($resolvedBinary, 200, [
         'Content-Type' => $resolvedMimeType !== '' ? $resolvedMimeType : 'image/jpeg',
         'Cache-Control' => 'public, max-age=31536000, immutable',
+    ]);
+});
+
+// /portal/admin/blog/{post}/cover-debug — admin-only diagnostic for cover proxy failures
+Route::get('/portal/admin/blog/{post}/cover-debug', function (int $post) {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+
+    $coverColumns = ['id', 'cover_image_path'];
+    if (Schema::hasColumn('blog_posts', 'cover_image_url')) {
+        $coverColumns[] = 'cover_image_url';
+    }
+
+    $blogPost = BlogPost::query()->find($post, $coverColumns);
+    if (!$blogPost) {
+        return response()->json(['error' => 'Post not found', 'post_id' => $post]);
+    }
+
+    $portalDiskName = trim((string) config('filesystems.portal_media_disk', 'public'));
+    if ($portalDiskName === '') {
+        $portalDiskName = 'public';
+    }
+
+    $coverSources = [];
+    if (isset($blogPost->cover_image_url)) {
+        $v = trim(str_replace('\\', '/', (string) ($blogPost->cover_image_url ?? '')));
+        if ($v !== '') { $coverSources[] = $v; }
+    }
+    $v = trim(str_replace('\\', '/', (string) ($blogPost->cover_image_path ?? '')));
+    if ($v !== '') { $coverSources[] = $v; }
+    $coverSources = array_values(array_unique($coverSources));
+
+    $candidatePaths = [];
+    foreach ($coverSources as $source) {
+        $candidatePaths = array_merge($candidatePaths, blogMediaCandidatePaths($source));
+    }
+    foreach (['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'] as $ext) {
+        $candidatePaths[] = 'blog/' . $post . '/cover.' . $ext;
+    }
+    $candidatePaths = array_values(array_unique(array_filter($candidatePaths)));
+
+    $diskNames = array_values(array_unique(array_filter([$portalDiskName, 'public', 'local'])));
+    $diskResults = [];
+
+    foreach ($diskNames as $diskName) {
+        $diskResults[$diskName] = ['status' => 'unknown', 'paths_checked' => []];
+        try {
+            $disk = Storage::disk($diskName);
+            $diskResults[$diskName]['status'] = 'disk_ok';
+        } catch (\Throwable $e) {
+            $diskResults[$diskName]['status'] = 'disk_init_failed: ' . $e->getMessage();
+            continue;
+        }
+        foreach ($candidatePaths as $path) {
+            try {
+                $exists = $disk->exists($path);
+                $diskResults[$diskName]['paths_checked'][$path] = $exists ? 'EXISTS' : 'not_found';
+                if ($exists) {
+                    try {
+                        $size = $disk->size($path);
+                        $diskResults[$diskName]['paths_checked'][$path] = 'EXISTS (size=' . $size . ')';
+                    } catch (\Throwable $e) {
+                        // ignore size error
+                    }
+                }
+            } catch (\Throwable $e) {
+                $diskResults[$diskName]['paths_checked'][$path] = 'error: ' . $e->getMessage();
+            }
+        }
+        try {
+            $postFolder = 'blog/' . $post;
+            if ($disk->exists($postFolder)) {
+                $files = $disk->files($postFolder);
+                $diskResults[$diskName]['folder_files'] = $files;
+            } else {
+                $diskResults[$diskName]['folder_exists'] = false;
+            }
+        } catch (\Throwable $e) {
+            $diskResults[$diskName]['folder_error'] = $e->getMessage();
+        }
+    }
+
+    return response()->json([
+        'post_id' => $post,
+        'cover_image_path' => $blogPost->cover_image_path,
+        'cover_image_url' => $blogPost->cover_image_url ?? '(no column)',
+        'portal_media_disk_config' => $portalDiskName,
+        'env_PORTAL_MEDIA_DISK' => env('PORTAL_MEDIA_DISK', '(not set)'),
+        'env_VENDOR_MEDIA_DISK' => env('VENDOR_MEDIA_DISK', '(not set)'),
+        'env_AWS_BUCKET' => env('AWS_BUCKET', '(not set)'),
+        'env_AWS_DEFAULT_REGION' => env('AWS_DEFAULT_REGION', '(not set)'),
+        'env_AWS_ENDPOINT' => env('AWS_ENDPOINT', '(not set)'),
+        'cover_sources' => $coverSources,
+        'candidate_paths' => $candidatePaths,
+        'disk_results' => $diskResults,
     ]);
 });
 
@@ -6147,7 +6256,10 @@ Route::post('/portal/admin/blog', function (Request $request) {
             }
 
             $storagePath = 'blog/' . (int) $post->id . '/cover.' . $extension;
-            Storage::disk($blogMediaDisk)->putFileAs('blog/' . (int) $post->id, $coverFile, 'cover.' . $extension, ['visibility' => 'public']);
+            $uploadResult = Storage::disk($blogMediaDisk)->putFileAs('blog/' . (int) $post->id, $coverFile, 'cover.' . $extension, ['visibility' => 'public']);
+            if ($uploadResult === false) {
+                \Illuminate\Support\Facades\Log::error('blog_cover_upload: putFileAs failed (create)', ['disk' => $blogMediaDisk, 'path' => $storagePath, 'post_id' => (int) $post->id]);
+            }
             $post->cover_image_path = $storagePath;
             $post->save();
         }
@@ -6354,7 +6466,10 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
             }
 
             $storagePath = 'blog/' . (int) $blogPost->id . '/cover.' . $extension;
-            Storage::disk($blogMediaDisk)->putFileAs('blog/' . (int) $blogPost->id, $coverFile, 'cover.' . $extension, ['visibility' => 'public']);
+            $uploadResult = Storage::disk($blogMediaDisk)->putFileAs('blog/' . (int) $blogPost->id, $coverFile, 'cover.' . $extension, ['visibility' => 'public']);
+            if ($uploadResult === false) {
+                \Illuminate\Support\Facades\Log::error('blog_cover_upload: putFileAs failed (edit)', ['disk' => $blogMediaDisk, 'path' => $storagePath, 'post_id' => (int) $blogPost->id]);
+            }
             $blogPost->cover_image_path = $storagePath;
         }
     }

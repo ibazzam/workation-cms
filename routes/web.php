@@ -2324,6 +2324,37 @@ SVG;
     }
 
     if ($resolvedBinary === null) {
+        $postFolder = 'blog/' . $post;
+        foreach ($blogCoverDiskNames as $diskName) {
+            try {
+                $disk = Storage::disk($diskName);
+            } catch (\Throwable $e) {
+                continue;
+            }
+
+            if (!$disk->exists($postFolder)) {
+                continue;
+            }
+
+            $files = (array) $disk->files($postFolder);
+            foreach ($files as $file) {
+                $basename = Str::lower((string) basename((string) $file));
+                if (!Str::startsWith($basename, 'cover.')) {
+                    continue;
+                }
+
+                if (!$disk->exists($file)) {
+                    continue;
+                }
+
+                $resolvedBinary = $disk->get($file);
+                $resolvedMimeType = (string) ($disk->mimeType($file) ?: '');
+                break 2;
+            }
+        }
+    }
+
+    if ($resolvedBinary === null) {
         foreach ($coverSources as $source) {
             if (!Str::startsWith($source, ['http://', 'https://'])) {
                 continue;

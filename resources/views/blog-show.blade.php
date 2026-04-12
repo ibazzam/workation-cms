@@ -335,7 +335,11 @@
             background: #d4e3ee;
         }
         @media (max-width: 640px) {
+            .article-gallery.has-2 { grid-template-columns: 1fr; }
             .article-gallery.has-3 { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 400px) {
+            .article-gallery.has-3 { grid-template-columns: 1fr; }
         }
 
         .content figure {
@@ -685,7 +689,7 @@
                             $cnt = $articleImages->count();
                             $galleryHtml = '<div class="article-gallery has-' . $cnt . '" aria-label="Article photos">';
                             foreach ($articleImages as $imgUrl) {
-                                $galleryHtml .= '<figure><img src="' . e($imgUrl) . '" alt="' . e($post->title) . '" loading="lazy"></figure>';
+                                $galleryHtml .= '<figure><img src="' . e($imgUrl) . '" alt="' . e($post->title) . '" loading="eager"></figure>';
                             }
                             $galleryHtml .= '</div>';
                         }

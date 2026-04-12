@@ -103,4 +103,17 @@ class AdminBlogFlowTest extends TestCase
         $response->assertHeader('Content-Type');
         $response->assertSee('fake-image-binary', false);
     }
+
+    public function test_blog_helper_rewrites_full_url_cover_and_article_values_to_proxy_routes(): void
+    {
+        $this->assertSame(
+            '/media/blog/42/cover',
+            blogResolveCoverImageUrl('https://cdn.example.test/blog/42/cover.jpg')
+        );
+
+        $this->assertSame(
+            '/media/blog/42/article/1',
+            blogResolveCoverImageUrl('https://cdn.example.test/blog/42/article_1.webp?version=2')
+        );
+    }
 }

@@ -2337,9 +2337,31 @@ SVG;
             }
 
             $files = (array) $disk->files($postFolder);
-            foreach ($files as $file) {
-                $basename = Str::lower((string) basename((string) $file));
+            $normalizedFiles = collect($files)
+                ->map(static fn ($file) => trim((string) $file))
+                ->filter(static fn ($file) => $file !== '')
+                ->values();
+
+            foreach ($normalizedFiles as $file) {
+                $basename = Str::lower((string) basename($file));
                 if (!Str::startsWith($basename, 'cover.')) {
+                    continue;
+                }
+
+                if (!$disk->exists($file)) {
+                    continue;
+                }
+
+                $resolvedBinary = $disk->get($file);
+                $resolvedMimeType = (string) ($disk->mimeType($file) ?: '');
+                break 2;
+            }
+
+            // Legacy fallback: some older records store arbitrary image names in blog/{postId}.
+            // If no cover.* exists, serve the first image-like file to avoid total image loss.
+            foreach ($normalizedFiles as $file) {
+                $basename = Str::lower((string) basename($file));
+                if (!preg_match('/\.(jpg|jpeg|png|webp|gif|avif)$/i', $basename)) {
                     continue;
                 }
 

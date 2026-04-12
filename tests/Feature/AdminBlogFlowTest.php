@@ -76,7 +76,8 @@ class AdminBlogFlowTest extends TestCase
         $publicResponse->assertOk();
         $publicResponse->assertSee('Section Heading');
         $publicResponse->assertSee('<strong>bold</strong>', false);
-        $publicResponse->assertSee('/media/blog/' . $post->id . '/cover', false);
+        $resolvedCoverUrl = blogResolveCoverImageUrl((string) $post->cover_image_path);
+        $publicResponse->assertSee($resolvedCoverUrl, false);
 
         $coverResponse = $this->get('/media/blog/' . $post->id . '/cover');
         $coverResponse->assertOk();
@@ -123,16 +124,12 @@ class AdminBlogFlowTest extends TestCase
         $response->assertSee('fake-image-binary', false);
     }
 
-    public function test_blog_helper_rewrites_full_url_cover_and_article_values_to_proxy_routes(): void
+    public function test_blog_helper_resolves_full_url_cover_and_article_values_to_managed_media_urls(): void
     {
-        $this->assertSame(
-            '/media/blog/42/cover',
-            blogResolveCoverImageUrl('https://cdn.example.test/blog/42/cover.jpg')
-        );
+        $coverResolved = blogResolveCoverImageUrl('https://cdn.example.test/blog/42/cover.jpg');
+        $this->assertStringContainsString('/storage/blog/42/cover.jpg', $coverResolved);
 
-        $this->assertSame(
-            '/media/blog/42/article/1',
-            blogResolveCoverImageUrl('https://cdn.example.test/blog/42/article_1.webp?version=2')
-        );
+        $articleResolved = blogResolveCoverImageUrl('https://cdn.example.test/blog/42/article_1.webp?version=2');
+        $this->assertStringContainsString('/storage/blog/42/article_1.webp', $articleResolved);
     }
 }

@@ -1267,6 +1267,54 @@ if (!function_exists('portalNormalizeDestinationMediaKey')) {
 }
 
 if (!function_exists('portalStoreAdminHeroImage')) {
+    if (!function_exists('portalStoreManagedOriginalImage')) {
+        function portalStoreManagedOriginalImage($file, string $baseDirectory, string $slot): ?string
+        {
+            if (!$file || !method_exists($file, 'getPathname')) {
+                return null;
+            }
+
+            $directory = trim($baseDirectory, '/') . '/' . trim($slot, '/');
+            $extension = strtolower(trim((string) $file->getClientOriginalExtension()));
+            if (!in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+                $mime = strtolower(trim((string) ($file->getMimeType() ?? '')));
+                $extension = match ($mime) {
+                    'image/png' => 'png',
+                    'image/webp' => 'webp',
+                    default => 'jpg',
+                };
+            }
+
+            $filename = now()->format('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.' . $extension;
+            $relativePath = $directory . '/' . $filename;
+            $diskName = portalManagedMediaDiskName();
+            $disk = Storage::disk($diskName);
+
+            $writeAttempts = [
+                ['visibility' => 'public'],
+                [],
+            ];
+
+            foreach ($writeAttempts as $options) {
+                try {
+                    $result = $disk->putFileAs($directory, $file, $filename, $options);
+                    if ($result !== false) {
+                        return $relativePath;
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('Managed media original upload fallback failed.', [
+                        'disk' => $diskName,
+                        'path' => $relativePath,
+                        'options' => $options,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            return null;
+        }
+    }
+
     function portalStoreAdminHeroImage($file, string $slot): ?string
     {
         if (!$file || !method_exists($file, 'getPathname')) {
@@ -1286,7 +1334,7 @@ if (!function_exists('portalStoreAdminHeroImage')) {
         );
 
         if ($sourceImage === null) {
-            return null;
+            return portalStoreManagedOriginalImage($file, 'portal-admin/hero-images', $slot);
         }
 
         $format = portalPreferredMediaOutputFormat();
@@ -1303,7 +1351,7 @@ if (!function_exists('portalStoreAdminHeroImage')) {
         }
 
         if (!$written) {
-            return null;
+            return portalStoreManagedOriginalImage($file, 'portal-admin/hero-images', $slot);
         }
 
         return $relativePath;
@@ -1330,7 +1378,7 @@ if (!function_exists('portalStoreAdminDestinationImage')) {
         );
 
         if ($sourceImage === null) {
-            return null;
+            return portalStoreManagedOriginalImage($file, 'portal-admin/destination-images', $slot);
         }
 
         $format = portalPreferredMediaOutputFormat();
@@ -1347,7 +1395,7 @@ if (!function_exists('portalStoreAdminDestinationImage')) {
         }
 
         if (!$written) {
-            return null;
+            return portalStoreManagedOriginalImage($file, 'portal-admin/destination-images', $slot);
         }
 
         return $relativePath;

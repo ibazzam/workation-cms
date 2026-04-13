@@ -6262,6 +6262,15 @@ Route::post('/portal/admin/media-hero/update', function (Request $request) {
                 ]);
             }
 
+            // In production, managed hero media must not silently fall back to
+            // ephemeral local storage because that causes broken homepage images.
+            $managedDisk = portalManagedMediaDiskName();
+            if ($managedDisk !== 'public' && str_starts_with($storedPath, '__public__/')) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    $fileField => 'Image upload reached local fallback storage. Managed media disk write failed; please retry and contact support if this persists.',
+                ]);
+            }
+
             if ($currentValue !== '' && $currentValue !== $storedPath) {
                 portalDeleteManagedPublicAsset($currentValue);
             }

@@ -1247,10 +1247,23 @@ if (!function_exists('portalDeleteManagedPublicAsset')) {
             return;
         }
 
+        $allowedPrefixes = [
+            $managedPrefix,
+            'blog/inline/' . ltrim($managedPrefix, '/'),
+        ];
+
         // Files stored with '__public__/' prefix live on the local public disk.
         if (str_starts_with($value, '__public__/')) {
             $localPath = ltrim(substr($value, strlen('__public__/')), '/');
-            if ($localPath !== '' && str_starts_with($localPath, $managedPrefix)) {
+            $localMatches = false;
+            foreach ($allowedPrefixes as $prefix) {
+                if ($localPath !== '' && str_starts_with($localPath, $prefix)) {
+                    $localMatches = true;
+                    break;
+                }
+            }
+
+            if ($localMatches) {
                 try {
                     Storage::disk('public')->delete($localPath);
                 } catch (\Throwable $e) {
@@ -1262,7 +1275,15 @@ if (!function_exists('portalDeleteManagedPublicAsset')) {
 
         $relativePath = portalManagedMediaRelativePath($value) ?? '';
 
-        if ($relativePath === '' || !str_starts_with($relativePath, $managedPrefix)) {
+        $matchesManagedPrefix = false;
+        foreach ($allowedPrefixes as $prefix) {
+            if (str_starts_with($relativePath, $prefix)) {
+                $matchesManagedPrefix = true;
+                break;
+            }
+        }
+
+        if ($relativePath === '' || !$matchesManagedPrefix) {
             return;
         }
 
@@ -1275,19 +1296,6 @@ if (!function_exists('portalDeleteManagedPublicAsset')) {
             ]);
         }
     }
-
-            $allowedPrefixes = [$managedPrefix, 'blog/inline/' . ltrim($managedPrefix, '/')];
-            $matchesManagedPrefix = false;
-            foreach ($allowedPrefixes as $prefix) {
-                if (str_starts_with($relativePath, $prefix)) {
-                    $matchesManagedPrefix = true;
-                    break;
-                }
-            }
-
-            if ($relativePath === '' || !$matchesManagedPrefix) {
-                return;
-            }
 }
 
 if (!function_exists('portalNormalizeDestinationMediaKey')) {
@@ -1343,18 +1351,26 @@ if (!function_exists('portalStoreAdminHeroImage')) {
                     [],
                 ];
 
-                foreach ($writeAttempts as $options) {
-                    try {
-                        if ($disk->put($relativePath, $binary, $options)) {
-                            return $relativePath;
+                $candidatePaths = [$relativePath];
+                if (str_starts_with($relativePath, 'portal-admin/')) {
+                    $candidatePaths[] = 'blog/inline/' . ltrim($relativePath, '/');
+                }
+                $candidatePaths = array_values(array_unique($candidatePaths));
+
+                foreach ($candidatePaths as $candidatePath) {
+                    foreach ($writeAttempts as $options) {
+                        try {
+                            if ($disk->put($candidatePath, $binary, $options)) {
+                                return $candidatePath;
+                            }
+                        } catch (\Throwable $e) {
+                            Log::warning('Managed media original upload fallback failed.', [
+                                'disk' => $diskName,
+                                'path' => $candidatePath,
+                                'options' => $options,
+                                'error' => $e->getMessage(),
+                            ]);
                         }
-                    } catch (\Throwable $e) {
-                        Log::warning('Managed media original upload fallback failed.', [
-                            'disk' => $diskName,
-                            'path' => $relativePath,
-                            'options' => $options,
-                            'error' => $e->getMessage(),
-                        ]);
                     }
                 }
             }

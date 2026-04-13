@@ -5663,7 +5663,8 @@ Route::get('/admin', function (Request $request) {
             ->pluck('value_string', 'setting_key');
 
         $homeHeroAdminStoredValue = trim((string) ($mediaSettings->get('home_hero_image_url') ?? ''));
-        $homeHeroAdminImageUrl = portalManagedMediaUrlFromPath($homeHeroAdminStoredValue) ?? '';
+        // Use canonical hero proxy for admin preview to ensure reliable playback on ephemeral filesystems.
+        $homeHeroAdminImageUrl = ($homeHeroAdminStoredValue !== '' ? '/media/portal/hero/home' : '');
 
         $catalogHeroAdminStoredValues = collect($catalogHeroAdminCategories)
             ->mapWithKeys(function ($label, $key) use ($mediaSettings) {
@@ -5673,7 +5674,8 @@ Route::get('/admin', function (Request $request) {
 
         $catalogHeroAdminImages = $catalogHeroAdminStoredValues
             ->mapWithKeys(static function ($storedValue, $key) {
-                return [$key => portalManagedMediaUrlFromPath((string) $storedValue) ?? ''];
+                // Use canonical hero proxy for admin preview to ensure reliable playback.
+                return [$key => ($storedValue !== '' ? '/media/portal/hero/' . $key : '')];
             });
 
         $blogSidebarAdSettings = [

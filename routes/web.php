@@ -2226,6 +2226,49 @@ Route::get('/blog/{slug}', function (string $slug) {
     ]);
 });
 
+Route::get('/media/portal-public/{path}', function (string $path) {
+    $cleanPath = ltrim(str_replace(['..', '\\'], '', $path), '/');
+    if ($cleanPath === '') {
+        abort(404);
+    }
+
+    $binary = null;
+    $mime = '';
+
+    try {
+        $publicDisk = Storage::disk('public');
+        if ($publicDisk->exists($cleanPath)) {
+            $binary = $publicDisk->get($cleanPath);
+            try {
+                $mime = (string) ($publicDisk->mimeType($cleanPath) ?: '');
+            } catch (\Throwable $e) {
+                $mime = '';
+            }
+        }
+    } catch (\Throwable $e) {
+        $binary = null;
+    }
+
+    if ((!is_string($binary) || $binary === '') && Storage::disk('local')->exists('public/' . $cleanPath)) {
+        $localPath = 'public/' . $cleanPath;
+        $binary = Storage::disk('local')->get($localPath);
+        try {
+            $mime = (string) (Storage::disk('local')->mimeType($localPath) ?: '');
+        } catch (\Throwable $e) {
+            $mime = '';
+        }
+    }
+
+    if (!is_string($binary) || $binary === '') {
+        abort(404);
+    }
+
+    return response($binary, 200, [
+        'Content-Type' => $mime !== '' ? $mime : 'image/jpeg',
+        'Cache-Control' => 'public, max-age=31536000, immutable',
+    ]);
+})->where('path', '.*');
+
 Route::get('/media/blog/{post}/cover', function (int $post) {
     $placeholderResponse = static function () {
         $svg = <<<'SVG'

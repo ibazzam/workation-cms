@@ -3085,29 +3085,54 @@ Route::get('/media/blog/{post}/article/{slot}', function (int $post, int $slot) 
     Route::get('/media/blog-inline/{path}', function (string $path) {
         // Normalise and guard against path traversal
         $cleanPath = ltrim(str_replace(['..', '\\'], '', $path), '/');
-        if (!Str::startsWith($cleanPath, 'blog/inline/')) {
+        if ($cleanPath === '') {
             abort(404);
         }
+
+        $candidatePaths = [];
+        if (Str::startsWith($cleanPath, 'blog/inline/')) {
+            $candidatePaths[] = $cleanPath;
+        } elseif (Str::startsWith($cleanPath, 'blog-inline/')) {
+            $candidatePaths[] = 'blog/inline/' . ltrim(Str::after($cleanPath, 'blog-inline/'), '/');
+            $candidatePaths[] = $cleanPath;
+        } else {
+            // Legacy payloads may store only date/file segments (e.g. 2026/04/file.jpg).
+            $candidatePaths[] = 'blog/inline/' . ltrim($cleanPath, '/');
+            $candidatePaths[] = $cleanPath;
+        }
+        $candidatePaths = array_values(array_unique(array_filter($candidatePaths, static fn ($v) => trim((string) $v) !== '')));
 
         $mediaDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
         if ($mediaDisk === '') {
             $mediaDisk = 'public';
         }
 
-        try {
-            $disk = Storage::disk($mediaDisk);
-        } catch (\Throwable $exception) {
+        $resolvedDisk = null;
+        $resolvedPath = '';
+        foreach (array_values(array_unique([$mediaDisk, 'public'])) as $candidateDiskName) {
+            try {
+                $candidateDisk = Storage::disk($candidateDiskName);
+            } catch (\Throwable $exception) {
+                continue;
+            }
+
+            foreach ($candidatePaths as $candidatePath) {
+                if ($candidateDisk->exists($candidatePath)) {
+                    $resolvedDisk = $candidateDisk;
+                    $resolvedPath = $candidatePath;
+                    break 2;
+                }
+            }
+        }
+
+        if ($resolvedDisk === null) {
             abort(404);
         }
 
-        if (!$disk->exists($cleanPath)) {
-            abort(404);
-        }
+        $mimeType = (string) ($resolvedDisk->mimeType($resolvedPath) ?: 'image/jpeg');
 
-        $mimeType = (string) ($disk->mimeType($cleanPath) ?: 'image/jpeg');
-
-        return response()->stream(static function () use ($disk, $cleanPath) {
-            $stream = $disk->readStream($cleanPath);
+        return response()->stream(static function () use ($resolvedDisk, $resolvedPath) {
+            $stream = $resolvedDisk->readStream($resolvedPath);
             if (is_resource($stream)) {
                 fpassthru($stream);
                 fclose($stream);
@@ -3115,7 +3140,7 @@ Route::get('/media/blog/{post}/article/{slot}', function (int $post, int $slot) 
             }
 
             // Fallback for drivers where readStream may return false unexpectedly.
-            echo (string) $disk->get($cleanPath);
+            echo (string) $resolvedDisk->get($resolvedPath);
         }, 200, [
             'Content-Type'  => $mimeType,
             'Cache-Control' => 'public, max-age=86400',
@@ -3132,23 +3157,40 @@ Route::get('/media/blog/{post}/article/{slot}', function (int $post, int $slot) 
         }
 
         $path = trim((string) ($request->input('path') ?? ''));
-        if (
-            $path === '' ||
-            !Str::startsWith($path, 'blog/inline/') ||
-            str_contains($path, '..') ||
-            str_contains($path, '\\')
-        ) {
+        if ($path === '' || str_contains($path, '..') || str_contains($path, '\\')) {
             return response()->json(['message' => 'Invalid path.'], 422);
         }
+
+        $normalizedDeletePaths = [];
+        if (Str::startsWith($path, 'blog/inline/')) {
+            $normalizedDeletePaths[] = $path;
+        } elseif (Str::startsWith($path, 'blog-inline/')) {
+            $normalizedDeletePaths[] = 'blog/inline/' . ltrim(Str::after($path, 'blog-inline/'), '/');
+            $normalizedDeletePaths[] = $path;
+        } else {
+            $normalizedDeletePaths[] = 'blog/inline/' . ltrim($path, '/');
+            $normalizedDeletePaths[] = ltrim($path, '/');
+        }
+        $normalizedDeletePaths = array_values(array_unique(array_filter($normalizedDeletePaths, static fn ($v) => trim((string) $v) !== '')));
 
         $mediaDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
         if ($mediaDisk === '') {
             $mediaDisk = 'public';
         }
 
-        try {
-            Storage::disk($mediaDisk)->delete($path);
-        } catch (\Throwable $exception) {
+        $deleteAttempted = false;
+        foreach (array_values(array_unique([$mediaDisk, 'public'])) as $candidateDiskName) {
+            foreach ($normalizedDeletePaths as $candidatePath) {
+                try {
+                    Storage::disk($candidateDiskName)->delete($candidatePath);
+                    $deleteAttempted = true;
+                } catch (\Throwable $exception) {
+                    continue;
+                }
+            }
+        }
+
+        if (!$deleteAttempted) {
             return response()->json(['message' => 'Delete failed.'], 500);
         }
 
@@ -6868,7 +6910,27 @@ Route::post('/portal/admin/blog/upload-image', function (Request $request) {
         $mediaDisk = 'public';
     }
 
-    Storage::disk($mediaDisk)->putFileAs($directory, $imageFile, $filename);
+    $uploadOk = false;
+    foreach (array_values(array_unique([$mediaDisk, 'public'])) as $candidateDisk) {
+        try {
+            $uploadOk = Storage::disk($candidateDisk)->putFileAs($directory, $imageFile, $filename) !== false;
+        } catch (\Throwable $exception) {
+            $uploadOk = false;
+        }
+        if ($uploadOk) {
+            break;
+        }
+    }
+
+    if (!$uploadOk) {
+        \Illuminate\Support\Facades\Log::error('blog_inline_upload: putFileAs failed', [
+            'disk' => $mediaDisk,
+            'directory' => $directory,
+            'filename' => $filename,
+        ]);
+
+        return response()->json(['message' => 'Unable to store inline image right now. Please try again.'], 500);
+    }
     $storedPath = $directory . '/' . $filename;
 
     return response()->json([

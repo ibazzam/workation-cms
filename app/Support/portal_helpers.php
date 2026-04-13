@@ -1340,18 +1340,28 @@ if (!function_exists('portalStoreAdminHeroImage')) {
                     [],
                 ];
 
-                foreach ($writeAttempts as $options) {
-                    try {
-                        if ($disk->put($relativePath, $binary, $options)) {
-                            return $relativePath;
+                $candidatePaths = [$relativePath];
+                if (str_starts_with($relativePath, 'portal-admin/')) {
+                    // Some buckets allow blog/* keys but deny portal-admin/* keys.
+                    // Retry under an alternate managed prefix and persist the successful path.
+                    $candidatePaths[] = 'blog/inline/' . ltrim($relativePath, '/');
+                }
+                $candidatePaths = array_values(array_unique($candidatePaths));
+
+                foreach ($candidatePaths as $candidatePath) {
+                    foreach ($writeAttempts as $options) {
+                        try {
+                            if ($disk->put($candidatePath, $binary, $options)) {
+                                return $candidatePath;
+                            }
+                        } catch (\Throwable $e) {
+                            Log::warning('Managed media original upload fallback failed.', [
+                                'disk' => $diskName,
+                                'path' => $candidatePath,
+                                'options' => $options,
+                                'error' => $e->getMessage(),
+                            ]);
                         }
-                    } catch (\Throwable $e) {
-                        Log::warning('Managed media original upload fallback failed.', [
-                            'disk' => $diskName,
-                            'path' => $relativePath,
-                            'options' => $options,
-                            'error' => $e->getMessage(),
-                        ]);
                     }
                 }
             }

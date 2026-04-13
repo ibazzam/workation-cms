@@ -2796,6 +2796,15 @@ Route::get('/portal/admin/s3-test', function () {
     if ($diskName === 's3') {
         try {
             $disk = Storage::disk('s3');
+            $throwingDisk = null;
+            try {
+                $s3Config = (array) config('filesystems.disks.s3', []);
+                $s3Config['throw'] = true;
+                $throwingDisk = Storage::build($s3Config);
+            } catch (\Throwable $e) {
+                $result['throw_probe_init_error'] = $e->getMessage();
+                $result['throw_probe_init_exception'] = get_class($e);
+            }
 
             $testCases = [
                 ['path' => 's3-test-' . now()->timestamp . '.txt', 'options' => []],
@@ -2810,11 +2819,24 @@ Route::get('/portal/admin/s3-test', function () {
                 $options = (array) ($case['options'] ?? []);
                 try {
                     $ok = $disk->put($path, 's3 test payload', $options);
-                    $writes[] = [
+                    $row = [
                         'path' => $path,
                         'ok' => (bool) $ok,
                         'options' => $options,
                     ];
+
+                    if (!$ok && $throwingDisk !== null) {
+                        try {
+                            $throwingDisk->put($path, 's3 test payload', $options);
+                            $row['throw_probe_ok'] = true;
+                        } catch (\Throwable $e) {
+                            $row['throw_probe_ok'] = false;
+                            $row['throw_probe_error'] = $e->getMessage();
+                            $row['throw_probe_exception'] = get_class($e);
+                        }
+                    }
+
+                    $writes[] = $row;
                     if ($ok) {
                         try {
                             $disk->delete($path);

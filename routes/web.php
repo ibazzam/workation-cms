@@ -2378,7 +2378,8 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
             $mime = (string) ($disk->mimeType($relativePath) ?: 'image/jpeg');
             return response($binary, 200, [
                 'Content-Type' => $mime,
-                'Cache-Control' => 'public, max-age=31536000, immutable',
+                'Cache-Control' => 'no-cache, max-age=0, must-revalidate',
+                'Pragma' => 'no-cache',
             ]);
         } catch (\Throwable $e) {
             continue;
@@ -2443,7 +2444,8 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
 
             return response($binary, 200, [
                 'Content-Type' => $mime,
-                'Cache-Control' => 'public, max-age=31536000, immutable',
+                'Cache-Control' => 'no-cache, max-age=0, must-revalidate',
+                'Pragma' => 'no-cache',
             ]);
         }
     }
@@ -3305,7 +3307,9 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             ->where('setting_key', $categorySettingKey)
             ->value('value_string');
         if (is_string($managedCategoryHeroImage) && trim($managedCategoryHeroImage) !== '') {
-            $categoryMap[$categoryKey]['hero_image_url'] = trim($managedCategoryHeroImage);
+            // Always use the slot proxy URL so category hero updates/removals are
+            // reflected immediately without stale direct-object cache artifacts.
+            $categoryMap[$categoryKey]['hero_image_url'] = '/media/portal/hero/' . $categoryKey;
         }
     }
 

@@ -1197,8 +1197,10 @@ if (!function_exists('portalManagedMediaUrlFromPath')) {
             if ($localPath === '') {
                 return null;
             }
+
             $encodedPath = implode('/', array_map('rawurlencode', explode('/', $localPath)));
             return '/media/portal-public/' . $encodedPath;
+            return Storage::disk('public')->url($localPath);
         }
 
         $relativePath = portalManagedMediaRelativePath($value);

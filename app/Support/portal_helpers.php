@@ -1108,18 +1108,18 @@ if (!function_exists('portalWriteMediaVariant')) {
 
         // Bucket Owner Enforced buckets reject requests that set an ACL, so do not
         // include 'visibility' in the options. Try with ContentType first, then bare.
-        $writeAttempts = [
+            $writeAttempts = [
             ['ContentType' => $contentType],
             [],
         ];
 
-        foreach ($writeAttempts as $options) {
-            try {
-                if ($disk->put($relativePath, $binary, $options)) {
-                    return true;
-                }
-            } catch (\Throwable $e) {
-                // try next option set
+            foreach ($writeAttempts as $options) {
+                try {
+                    if ($disk->put($relativePath, $binary, $options)) {
+                        return true;
+                    }
+                } catch (\Throwable $e) {
+                    // try next option set
             }
         }
 
@@ -1240,9 +1240,19 @@ if (!function_exists('portalDeleteManagedPublicAsset')) {
         }
 
         // Files stored with '__public__/' prefix live on the local public disk.
+        $allowedPrefixes = [$managedPrefix, 'blog/inline/' . ltrim($managedPrefix, '/')];
+
         if (str_starts_with($value, '__public__/')) {
             $localPath = ltrim(substr($value, strlen('__public__/')), '/');
-            if ($localPath !== '' && str_starts_with($localPath, $managedPrefix)) {
+            $localMatches = false;
+            foreach ($allowedPrefixes as $prefix) {
+                if ($localPath !== '' && str_starts_with($localPath, $prefix)) {
+                    $localMatches = true;
+                    break;
+                }
+            }
+
+            if ($localMatches) {
                 try {
                     Storage::disk('public')->delete($localPath);
                 } catch (\Throwable $e) {
@@ -1254,7 +1264,15 @@ if (!function_exists('portalDeleteManagedPublicAsset')) {
 
         $relativePath = portalManagedMediaRelativePath($value) ?? '';
 
-        if ($relativePath === '' || !str_starts_with($relativePath, $managedPrefix)) {
+        $matchesManagedPrefix = false;
+        foreach ($allowedPrefixes as $prefix) {
+            if (str_starts_with($relativePath, $prefix)) {
+                $matchesManagedPrefix = true;
+                break;
+            }
+        }
+
+        if ($relativePath === '' || !$matchesManagedPrefix) {
             return;
         }
 

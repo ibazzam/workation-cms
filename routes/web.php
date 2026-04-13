@@ -2312,10 +2312,54 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
         if (!Schema::hasTable('portal_finance_settings')) {
             return $placeholderResponse();
         }
-        $settingKey = 'catalog_hero_image_' . str_replace('-', '_', $normalizedSlot);
-        $storedValue = trim((string) (DB::table('portal_finance_settings')
-            ->where('setting_key', $settingKey)
-            ->value('value_string') ?? ''));
+        $normalizeSettingSuffix = static function (string $value): string {
+            return strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $value));
+        };
+
+        $slotVariants = array_values(array_unique(array_filter([
+            $normalizedSlot,
+            str_replace('-', '_', $normalizedSlot),
+            str_replace('_', '-', $normalizedSlot),
+        ], static fn ($value) => is_string($value) && trim($value) !== '')));
+        $settingKeys = array_map(static fn (string $variant) => 'catalog_hero_image_' . $variant, $slotVariants);
+
+        $storedValuesByKey = DB::table('portal_finance_settings')
+            ->whereIn('setting_key', $settingKeys)
+            ->pluck('value_string', 'setting_key');
+
+        foreach ($settingKeys as $key) {
+            $candidateValue = trim((string) ($storedValuesByKey[$key] ?? ''));
+            if ($candidateValue !== '') {
+                $storedValue = $candidateValue;
+                break;
+            }
+        }
+
+        // Legacy compatibility: match odd historical key shapes by normalized suffix.
+        if ($storedValue === '') {
+            $targetSuffix = $normalizeSettingSuffix($normalizedSlot);
+            $allCategoryHeroRows = DB::table('portal_finance_settings')
+                ->where('setting_key', 'like', 'catalog_hero_image_%')
+                ->get(['setting_key', 'value_string']);
+
+            foreach ($allCategoryHeroRows as $row) {
+                $rowKey = trim((string) ($row->setting_key ?? ''));
+                $rowValue = trim((string) ($row->value_string ?? ''));
+                if ($rowKey === '' || $rowValue === '') {
+                    continue;
+                }
+
+                $rowSuffix = trim((string) Str::after($rowKey, 'catalog_hero_image_'));
+                if ($rowSuffix === '') {
+                    continue;
+                }
+
+                if ($normalizeSettingSuffix($rowSuffix) === $targetSuffix) {
+                    $storedValue = $rowValue;
+                    break;
+                }
+            }
+        }
     }
 
     if ($storedValue === '') {
@@ -3363,11 +3407,56 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     $dbCategoryKey = str_replace('-', '_', $categoryKey);
 
     if (Schema::hasTable('portal_finance_settings')) {
-        $categorySettingKey = 'catalog_hero_image_' . str_replace('-', '_', $categoryKey);
-        $managedCategoryHeroImage = DB::table('portal_finance_settings')
-            ->where('setting_key', $categorySettingKey)
-            ->value('value_string');
-        if (is_string($managedCategoryHeroImage) && trim($managedCategoryHeroImage) !== '') {
+        $normalizeSettingSuffix = static function (string $value): string {
+            return strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $value));
+        };
+
+        $categoryKeyVariants = array_values(array_unique(array_filter([
+            $categoryKey,
+            str_replace('-', '_', $categoryKey),
+            str_replace('_', '-', $categoryKey),
+        ], static fn ($value) => is_string($value) && trim($value) !== '')));
+        $categorySettingKeys = array_map(static fn (string $variant) => 'catalog_hero_image_' . $variant, $categoryKeyVariants);
+        $managedCategoryHeroValues = DB::table('portal_finance_settings')
+            ->whereIn('setting_key', $categorySettingKeys)
+            ->pluck('value_string', 'setting_key');
+
+        $managedCategoryHeroImage = '';
+        foreach ($categorySettingKeys as $settingKey) {
+            $candidateValue = trim((string) ($managedCategoryHeroValues[$settingKey] ?? ''));
+            if ($candidateValue !== '') {
+                $managedCategoryHeroImage = $candidateValue;
+                break;
+            }
+        }
+
+        // Legacy compatibility: tolerate historical key formats beyond _ / - variants.
+        if ($managedCategoryHeroImage === '') {
+            $targetSuffix = $normalizeSettingSuffix($categoryKey);
+            $allCategoryHeroRows = DB::table('portal_finance_settings')
+                ->where('setting_key', 'like', 'catalog_hero_image_%')
+                ->get(['setting_key', 'value_string']);
+
+            foreach ($allCategoryHeroRows as $row) {
+                $rowKey = trim((string) ($row->setting_key ?? ''));
+                $rowValue = trim((string) ($row->value_string ?? ''));
+                if ($rowKey === '' || $rowValue === '') {
+                    continue;
+                }
+
+                $rowSuffix = trim((string) Str::after($rowKey, 'catalog_hero_image_'));
+                if ($rowSuffix === '') {
+                    continue;
+                }
+
+                if ($normalizeSettingSuffix($rowSuffix) === $targetSuffix) {
+                    $managedCategoryHeroImage = $rowValue;
+                    break;
+                }
+            }
+        }
+
+        if ($managedCategoryHeroImage !== '') {
             // Always use the slot proxy URL so category hero updates/removals are
             // reflected immediately without stale direct-object cache artifacts.
             $categoryMap[$categoryKey]['hero_image_url'] = '/media/portal/hero/' . $categoryKey;

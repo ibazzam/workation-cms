@@ -2266,10 +2266,13 @@ Route::get('/media/portal-public/{path}', function (string $path) {
     }
 
     if (!is_string($binary) || $binary === '') {
-        // For legacy/stale home hero URLs, fall back to the canonical hero proxy
+        // For legacy/stale managed hero URLs, redirect to canonical hero proxy
         // so the browser does not keep hard-failing on a removed file path.
-        if (str_starts_with($cleanPath, 'portal-admin/hero-images/home/')) {
-            return redirect('/media/portal/hero/home', 302);
+        if (preg_match('#^portal-admin/hero-images/([a-z0-9_-]+)/#i', $cleanPath, $m) === 1) {
+            $slot = strtolower(trim((string) ($m[1] ?? '')));
+            if ($slot !== '') {
+                return redirect('/media/portal/hero/' . $slot, 302);
+            }
         }
 
         abort(404);

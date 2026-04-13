@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\User;
 use App\Models\BlogPost;
@@ -1197,6 +1197,9 @@ if (!function_exists('portalManagedMediaUrlFromPath')) {
             if ($localPath === '') {
                 return null;
             }
+
+            $encodedPath = implode('/', array_map('rawurlencode', explode('/', $localPath)));
+            return '/media/portal-public/' . $encodedPath;
             return Storage::disk('public')->url($localPath);
         }
 

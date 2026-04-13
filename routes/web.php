@@ -2312,10 +2312,24 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
         if (!Schema::hasTable('portal_finance_settings')) {
             return $placeholderResponse();
         }
-        $settingKey = 'catalog_hero_image_' . str_replace('-', '_', $normalizedSlot);
-        $storedValue = trim((string) (DB::table('portal_finance_settings')
-            ->where('setting_key', $settingKey)
-            ->value('value_string') ?? ''));
+        $slotVariants = array_values(array_unique(array_filter([
+            $normalizedSlot,
+            str_replace('-', '_', $normalizedSlot),
+            str_replace('_', '-', $normalizedSlot),
+        ], static fn ($value) => is_string($value) && trim($value) !== '')));
+        $settingKeys = array_map(static fn (string $variant) => 'catalog_hero_image_' . $variant, $slotVariants);
+
+        $storedValuesByKey = DB::table('portal_finance_settings')
+            ->whereIn('setting_key', $settingKeys)
+            ->pluck('value_string', 'setting_key');
+
+        foreach ($settingKeys as $key) {
+            $candidateValue = trim((string) ($storedValuesByKey[$key] ?? ''));
+            if ($candidateValue !== '') {
+                $storedValue = $candidateValue;
+                break;
+            }
+        }
     }
 
     if ($storedValue === '') {
@@ -3363,11 +3377,26 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     $dbCategoryKey = str_replace('-', '_', $categoryKey);
 
     if (Schema::hasTable('portal_finance_settings')) {
-        $categorySettingKey = 'catalog_hero_image_' . str_replace('-', '_', $categoryKey);
-        $managedCategoryHeroImage = DB::table('portal_finance_settings')
-            ->where('setting_key', $categorySettingKey)
-            ->value('value_string');
-        if (is_string($managedCategoryHeroImage) && trim($managedCategoryHeroImage) !== '') {
+        $categoryKeyVariants = array_values(array_unique(array_filter([
+            $categoryKey,
+            str_replace('-', '_', $categoryKey),
+            str_replace('_', '-', $categoryKey),
+        ], static fn ($value) => is_string($value) && trim($value) !== '')));
+        $categorySettingKeys = array_map(static fn (string $variant) => 'catalog_hero_image_' . $variant, $categoryKeyVariants);
+        $managedCategoryHeroValues = DB::table('portal_finance_settings')
+            ->whereIn('setting_key', $categorySettingKeys)
+            ->pluck('value_string', 'setting_key');
+
+        $managedCategoryHeroImage = '';
+        foreach ($categorySettingKeys as $settingKey) {
+            $candidateValue = trim((string) ($managedCategoryHeroValues[$settingKey] ?? ''));
+            if ($candidateValue !== '') {
+                $managedCategoryHeroImage = $candidateValue;
+                break;
+            }
+        }
+
+        if ($managedCategoryHeroImage !== '') {
             // Always use the slot proxy URL so category hero updates/removals are
             // reflected immediately without stale direct-object cache artifacts.
             $categoryMap[$categoryKey]['hero_image_url'] = '/media/portal/hero/' . $categoryKey;

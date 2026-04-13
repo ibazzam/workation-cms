@@ -28,6 +28,21 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+            $s3Disk = (array) config('filesystems.disks.s3', []);
+            if (($s3Disk['driver'] ?? '') === 's3') {
+                unset($s3Disk['visibility'], $s3Disk['directory_visibility']);
+
+                $s3Options = (array) ($s3Disk['options'] ?? []);
+                unset($s3Options['ACL'], $s3Options['acl']);
+                if ($s3Options !== []) {
+                    $s3Disk['options'] = $s3Options;
+                } else {
+                    unset($s3Disk['options']);
+                }
+
+                config(['filesystems.disks.s3' => $s3Disk]);
+            }
+
             ResetPassword::createUrlUsing(function (object $notifiable, string $token): string {
                 $portal = 'admin';
                 if ($notifiable instanceof Customer) {

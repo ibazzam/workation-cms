@@ -2378,7 +2378,8 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
             $mime = (string) ($disk->mimeType($relativePath) ?: 'image/jpeg');
             return response($binary, 200, [
                 'Content-Type' => $mime,
-                'Cache-Control' => 'public, max-age=31536000, immutable',
+                'Cache-Control' => 'no-cache, max-age=0, must-revalidate',
+                'Pragma' => 'no-cache',
             ]);
         } catch (\Throwable $e) {
             continue;
@@ -2443,7 +2444,8 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
 
             return response($binary, 200, [
                 'Content-Type' => $mime,
-                'Cache-Control' => 'public, max-age=31536000, immutable',
+                'Cache-Control' => 'no-cache, max-age=0, must-revalidate',
+                'Pragma' => 'no-cache',
             ]);
         }
     }
@@ -2791,10 +2793,21 @@ Route::get('/portal/admin/s3-test', function () {
         'aws_bucket' => env('AWS_BUCKET', '(not set)'),
         'aws_region' => env('AWS_DEFAULT_REGION', '(not set)'),
         'has_credentials' => (env('AWS_ACCESS_KEY_ID') && env('AWS_SECRET_ACCESS_KEY')) ? true : false,
+        'app_config_cached' => app()->configurationIsCached(),
     ];
 
     if ($diskName === 's3') {
         try {
+            $loadedS3Config = (array) config('filesystems.disks.s3', []);
+            $result['loaded_s3_visibility'] = array_key_exists('visibility', $loadedS3Config)
+                ? $loadedS3Config['visibility']
+                : '(unset)';
+            $result['loaded_s3_directory_visibility'] = array_key_exists('directory_visibility', $loadedS3Config)
+                ? $loadedS3Config['directory_visibility']
+                : '(unset)';
+            $loadedOptions = (array) ($loadedS3Config['options'] ?? []);
+            $result['loaded_s3_options_acl'] = $loadedOptions['ACL'] ?? ($loadedOptions['acl'] ?? '(unset)');
+
             $disk = Storage::disk('s3');
             $throwingDisk = null;
             try {
@@ -3294,7 +3307,9 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             ->where('setting_key', $categorySettingKey)
             ->value('value_string');
         if (is_string($managedCategoryHeroImage) && trim($managedCategoryHeroImage) !== '') {
-            $categoryMap[$categoryKey]['hero_image_url'] = trim($managedCategoryHeroImage);
+            // Always use the slot proxy URL so category hero updates/removals are
+            // reflected immediately without stale direct-object cache artifacts.
+            $categoryMap[$categoryKey]['hero_image_url'] = '/media/portal/hero/' . $categoryKey;
         }
     }
 

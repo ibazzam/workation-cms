@@ -2630,6 +2630,81 @@ SVG;
     ]);
 });
 
+// /portal/admin/hero-debug — admin-only diagnostic for hero media proxy failures
+Route::get('/portal/admin/hero-debug', function () {
+    if (!session()->get('portal_admin_authenticated', false)) {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+
+    $slot = 'home';
+    $storedValue = '';
+    if (Schema::hasTable('portal_finance_settings')) {
+        $storedValue = trim((string) (DB::table('portal_finance_settings')
+            ->where('setting_key', 'home_hero_image_url')
+            ->value('value_string') ?? ''));
+    }
+    if ($storedValue === '') {
+        $storedValue = trim((string) env('HOME_HERO_IMAGE_URL', ''));
+    }
+
+    $portalDiskName = trim((string) config('filesystems.portal_media_disk', 'public'));
+    if ($portalDiskName === '') {
+        $portalDiskName = 'public';
+    }
+
+    $relativePath = null;
+    if ($storedValue !== '') {
+        $relativePath = portalManagedMediaRelativePath($storedValue);
+        if ($relativePath === null && str_starts_with($storedValue, '__public__/')) {
+            $relativePath = ltrim(substr($storedValue, strlen('__public__/')), '/');
+        }
+    }
+
+    $diskNames = array_values(array_unique(array_filter([$portalDiskName, 'public', 'local'])));
+    $diskResults = [];
+
+    if ($relativePath !== null && $relativePath !== '') {
+        foreach ($diskNames as $diskName) {
+            $diskResults[$diskName] = ['status' => 'unknown', 'paths_checked' => []];
+            try {
+                $disk = Storage::disk($diskName);
+                $diskResults[$diskName]['status'] = 'disk_ok';
+            } catch (\Throwable $e) {
+                $diskResults[$diskName]['status'] = 'disk_init_failed: ' . $e->getMessage();
+                continue;
+            }
+
+            try {
+                $exists = $disk->exists($relativePath);
+                $diskResults[$diskName]['paths_checked'][$relativePath] = $exists ? 'EXISTS' : 'not_found';
+                if ($exists) {
+                    try {
+                        $size = $disk->size($relativePath);
+                        $diskResults[$diskName]['paths_checked'][$relativePath] = 'EXISTS (size=' . $size . ')';
+                    } catch (\Throwable $e) {
+                        // ignore size error
+                    }
+                }
+            } catch (\Throwable $e) {
+                $diskResults[$diskName]['paths_checked'][$relativePath] = 'error: ' . $e->getMessage();
+            }
+        }
+    }
+
+    return response()->json([
+        'slot' => $slot,
+        'stored_value' => $storedValue,
+        'is_external_url' => Str::startsWith($storedValue, ['http://', 'https://']) ? true : false,
+        'relative_path' => $relativePath,
+        'portal_media_disk_config' => $portalDiskName,
+        'env_PORTAL_MEDIA_DISK' => env('PORTAL_MEDIA_DISK', '(not set)'),
+        'env_VENDOR_MEDIA_DISK' => env('VENDOR_MEDIA_DISK', '(not set)'),
+        'env_HOME_HERO_IMAGE_URL' => env('HOME_HERO_IMAGE_URL', '(not set)'),
+        'disk_results' => $diskResults,
+        'proxy_route' => '/media/portal/hero/' . $slot,
+    ]);
+});
+
 // /portal/admin/blog/{post}/cover-debug — admin-only diagnostic for cover proxy failures
 Route::get('/portal/admin/blog/{post}/cover-debug', function (int $post) {
     if (!session()->get('portal_admin_authenticated', false)) {

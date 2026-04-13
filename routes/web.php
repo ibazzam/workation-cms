@@ -1121,16 +1121,22 @@ if (!function_exists('getAvailableCategories')) {
 Route::get('/', function () {
     $apiBase = workationApiBase();
     $homeHeroBackgroundUrl = trim((string) env('HOME_HERO_IMAGE_URL', ''));
+    $hasManagedHomeHeroImage = false;
     if (Schema::hasTable('portal_finance_settings')) {
         $managedHomeHeroImage = DB::table('portal_finance_settings')
             ->where('setting_key', 'home_hero_image_url')
             ->value('value_string');
         if (is_string($managedHomeHeroImage) && trim($managedHomeHeroImage) !== '') {
             $homeHeroBackgroundUrl = trim($managedHomeHeroImage);
+            $hasManagedHomeHeroImage = true;
         }
     }
 
-    $homeHeroBackgroundUrl = portalManagedMediaUrlFromPath($homeHeroBackgroundUrl) ?? $homeHeroBackgroundUrl;
+    if ($hasManagedHomeHeroImage) {
+        $homeHeroBackgroundUrl = '/media/portal/hero/home';
+    } else {
+        $homeHeroBackgroundUrl = portalManagedMediaUrlFromPath($homeHeroBackgroundUrl) ?? $homeHeroBackgroundUrl;
+    }
 
     if ($homeHeroBackgroundUrl === '') {
         $seasonalHeroPath = public_path('images/home-hero-seasonal.jpg');
@@ -2268,6 +2274,123 @@ Route::get('/media/portal-public/{path}', function (string $path) {
         'Cache-Control' => 'public, max-age=31536000, immutable',
     ]);
 })->where('path', '.*');
+
+Route::get('/media/portal/hero/{slot}', function (string $slot) {
+    $placeholderResponse = static function () {
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900"><defs><linearGradient id="gh" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#dce8ef"/><stop offset="100%" stop-color="#c5d7e3"/></linearGradient></defs><rect width="1600" height="900" fill="url(#gh)"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#40607a" font-family="Arial" font-size="34">Hero image unavailable</text></svg>';
+        return response($svg, 404, [
+            'Content-Type' => 'image/svg+xml; charset=UTF-8',
+            'Cache-Control' => 'no-store',
+        ]);
+    };
+
+    $normalizedSlot = strtolower(trim((string) $slot));
+    if (!preg_match('/^[a-z0-9_-]+$/', $normalizedSlot)) {
+        return $placeholderResponse();
+    }
+
+    $storedValue = '';
+    if ($normalizedSlot === 'home') {
+        if (Schema::hasTable('portal_finance_settings')) {
+            $storedValue = trim((string) (DB::table('portal_finance_settings')
+                ->where('setting_key', 'home_hero_image_url')
+                ->value('value_string') ?? ''));
+        }
+        if ($storedValue === '') {
+            $storedValue = trim((string) env('HOME_HERO_IMAGE_URL', ''));
+        }
+    } else {
+        if (!Schema::hasTable('portal_finance_settings')) {
+            return $placeholderResponse();
+        }
+        $settingKey = 'catalog_hero_image_' . str_replace('-', '_', $normalizedSlot);
+        $storedValue = trim((string) (DB::table('portal_finance_settings')
+            ->where('setting_key', $settingKey)
+            ->value('value_string') ?? ''));
+    }
+
+    if ($storedValue === '') {
+        return $placeholderResponse();
+    }
+
+    if (Str::startsWith($storedValue, ['http://', 'https://'])) {
+        try {
+            $remoteResponse = Http::retry(1, 200)
+                ->timeout(10)
+                ->withHeaders([
+                    'Accept' => 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                    'User-Agent' => 'WorkationHeroMediaProxy/1.0',
+                ])
+                ->get($storedValue);
+            if ($remoteResponse->successful() && $remoteResponse->body() !== '') {
+                return response($remoteResponse->body(), 200, [
+                    'Content-Type' => trim((string) $remoteResponse->header('Content-Type', 'image/jpeg')),
+                    'Cache-Control' => 'public, max-age=86400',
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // fall through to placeholder
+        }
+
+        return $placeholderResponse();
+    }
+
+    $relativePath = portalManagedMediaRelativePath($storedValue);
+    if ($relativePath === null && str_starts_with($storedValue, '__public__/')) {
+        $relativePath = ltrim(substr($storedValue, strlen('__public__/')), '/');
+    }
+
+    if ($relativePath === null || $relativePath === '') {
+        return $placeholderResponse();
+    }
+
+    $portalDiskName = trim((string) config('filesystems.portal_media_disk', 'public'));
+    if ($portalDiskName === '') {
+        $portalDiskName = 'public';
+    }
+    $diskNames = array_values(array_unique(array_filter([$portalDiskName, 'public'])));
+
+    foreach ($diskNames as $diskName) {
+        try {
+            $disk = Storage::disk($diskName);
+            if (!$disk->exists($relativePath)) {
+                continue;
+            }
+
+            $binary = $disk->get($relativePath);
+            if (!is_string($binary) || $binary === '') {
+                continue;
+            }
+
+            $mime = (string) ($disk->mimeType($relativePath) ?: 'image/jpeg');
+            return response($binary, 200, [
+                'Content-Type' => $mime,
+                'Cache-Control' => 'public, max-age=31536000, immutable',
+            ]);
+        } catch (\Throwable $e) {
+            continue;
+        }
+    }
+
+    $localPublicPath = 'public/' . ltrim($relativePath, '/');
+    if (Storage::disk('local')->exists($localPublicPath)) {
+        $binary = Storage::disk('local')->get($localPublicPath);
+        if (is_string($binary) && $binary !== '') {
+            $mime = (string) (Storage::disk('local')->mimeType($localPublicPath) ?: 'image/jpeg');
+            return response($binary, 200, [
+                'Content-Type' => $mime,
+                'Cache-Control' => 'public, max-age=31536000, immutable',
+            ]);
+        }
+    }
+
+    $managedUrl = portalManagedMediaUrlFromPath($storedValue);
+    if (is_string($managedUrl) && trim($managedUrl) !== '' && !Str::startsWith($managedUrl, ['/media/'])) {
+        return redirect()->away($managedUrl, 302);
+    }
+
+    return $placeholderResponse();
+})->where('slot', '[A-Za-z0-9_-]+');
 
 Route::get('/media/blog/{post}/cover', function (int $post) {
     $placeholderResponse = static function () {

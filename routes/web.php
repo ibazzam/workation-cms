@@ -2390,6 +2390,57 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
         $binary = Storage::disk('local')->get($localPublicPath);
         if (is_string($binary) && $binary !== '') {
             $mime = (string) (Storage::disk('local')->mimeType($localPublicPath) ?: 'image/jpeg');
+
+            // Self-heal legacy fallback records: when a hero points to __public__/..., try
+            // promoting the local file into managed storage and update the settings row.
+            if (str_starts_with($storedValue, '__public__/') && $portalDiskName !== 'public' && Schema::hasTable('portal_finance_settings')) {
+                try {
+                    $managedDisk = Storage::disk($portalDiskName);
+                    $candidatePaths = [$relativePath];
+                    if (str_starts_with($relativePath, 'portal-admin/')) {
+                        $candidatePaths[] = 'blog/inline/' . ltrim($relativePath, '/');
+                    }
+                    $candidatePaths = array_values(array_unique($candidatePaths));
+
+                    $writeOptions = [
+                        ['ContentType' => $mime],
+                        [],
+                    ];
+
+                    $promotedPath = null;
+                    foreach ($candidatePaths as $candidatePath) {
+                        foreach ($writeOptions as $options) {
+                            try {
+                                if ($managedDisk->put($candidatePath, $binary, $options)) {
+                                    $promotedPath = $candidatePath;
+                                    break 2;
+                                }
+                            } catch (\Throwable $e) {
+                                // try next option/path
+                            }
+                        }
+                    }
+
+                    if (is_string($promotedPath) && $promotedPath !== '') {
+                        $settingKey = $normalizedSlot === 'home'
+                            ? 'home_hero_image_url'
+                            : 'catalog_hero_image_' . str_replace('-', '_', $normalizedSlot);
+
+                        DB::table('portal_finance_settings')->updateOrInsert(
+                            ['setting_key' => $settingKey],
+                            [
+                                'value_string' => $promotedPath,
+                                'updated_by_user_id' => is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null,
+                                'updated_at' => now(),
+                                'created_at' => now(),
+                            ]
+                        );
+                    }
+                } catch (\Throwable $e) {
+                    // keep serving local file even if promotion fails
+                }
+            }
+
             return response($binary, 200, [
                 'Content-Type' => $mime,
                 'Cache-Control' => 'public, max-age=31536000, immutable',

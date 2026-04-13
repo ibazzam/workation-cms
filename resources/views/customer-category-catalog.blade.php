@@ -1083,6 +1083,12 @@
             return '/media/vendor/' . $mediaId . '/' . $normalizedVariant;
         };
         $categoryHeroImageUrl = trim((string) ($categoryMeta['hero_image_url'] ?? ''));
+        if ($categoryHeroImageUrl === '') {
+            $categoryHeroKey = trim((string) ($categoryKey ?? ''));
+            if ($categoryHeroKey !== '') {
+                $categoryHeroImageUrl = '/media/portal/hero/' . $categoryHeroKey;
+            }
+        }
         $categoryHeroFallback = "data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%271800%27 height=%27720%27 viewBox=%270 0 1800 720%27%3E%3Cdefs%3E%3ClinearGradient id=%27g%27 x1=%270%27 y1=%270%27 x2=%271%27 y2=%271%27%3E%3Cstop offset=%270%25%27 stop-color=%27%230f6d8f%27/%3E%3Cstop offset=%2748%25%27 stop-color=%27%231d88a8%27/%3E%3Cstop offset=%27100%25%27 stop-color=%27%233fb8d1%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%271800%27 height=%27720%27 fill=%27url(%23g)%27/%3E%3Cpath d=%27M0 490 C260 440 430 565 700 520 C930 482 1150 350 1410 400 C1580 432 1700 505 1800 548 L1800 720 L0 720 Z%27 fill=%27rgba(255,255,255,0.22)%27/%3E%3Cpath d=%27M0 560 C200 510 410 610 640 588 C860 567 1020 500 1240 515 C1490 532 1670 606 1800 655 L1800 720 L0 720 Z%27 fill=%27rgba(255,255,255,0.30)%27/%3E%3C/svg%3E";
         if ($categoryHeroImageUrl === '') {
             $categoryHeroImageUrl = $categoryHeroFallback;

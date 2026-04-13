@@ -6720,7 +6720,7 @@ Route::post('/portal/admin/blog', function (Request $request) {
             $uploadResult = false;
             foreach (array_values(array_unique([$blogMediaDisk, 'public'])) as $candidateDisk) {
                 try {
-                    $uploadResult = Storage::disk($candidateDisk)->putFileAs('blog/' . (int) $post->id, $coverFile, 'cover.' . $extension, ['visibility' => 'public']);
+                    $uploadResult = Storage::disk($candidateDisk)->putFileAs('blog/' . (int) $post->id, $coverFile, 'cover.' . $extension);
                 } catch (\Throwable $exception) {
                     $uploadResult = false;
                 }
@@ -6763,7 +6763,7 @@ Route::post('/portal/admin/blog', function (Request $request) {
                             $articleUploadOk = false;
                             foreach (array_values(array_unique([$blogMediaDiskForArticle, 'public'])) as $candidateDisk) {
                                 try {
-                                    $articleUploadOk = Storage::disk($candidateDisk)->putFileAs('blog/' . (int) $post->id, $articleFile, 'article_' . $slot . '.' . $ext, ['visibility' => 'public']) !== false;
+                                    $articleUploadOk = Storage::disk($candidateDisk)->putFileAs('blog/' . (int) $post->id, $articleFile, 'article_' . $slot . '.' . $ext) !== false;
                                 } catch (\Throwable $exception) {
                                     $articleUploadOk = false;
                                 }
@@ -6834,7 +6834,7 @@ Route::post('/portal/admin/blog/upload-image', function (Request $request) {
         $mediaDisk = 'public';
     }
 
-    Storage::disk($mediaDisk)->putFileAs($directory, $imageFile, $filename, ['visibility' => 'public']);
+    Storage::disk($mediaDisk)->putFileAs($directory, $imageFile, $filename);
     $storedPath = $directory . '/' . $filename;
 
     return response()->json([
@@ -6910,7 +6910,7 @@ Route::post('/portal/admin/blog/{post}/article/{slot}/upload', function (Request
     $uploadResult = false;
     foreach (array_values(array_unique([$blogMediaDisk, 'public'])) as $candidateDisk) {
         try {
-            $uploadResult = Storage::disk($candidateDisk)->putFileAs('blog/' . (int) $blogPost->id, $imageFile, 'article_' . $slot . '.' . $extension, ['visibility' => 'public']);
+            $uploadResult = Storage::disk($candidateDisk)->putFileAs('blog/' . (int) $blogPost->id, $imageFile, 'article_' . $slot . '.' . $extension);
         } catch (\Throwable $exception) {
             $uploadResult = false;
         }
@@ -7065,7 +7065,7 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
             $uploadResult = false;
             foreach (array_values(array_unique([$blogMediaDisk, 'public'])) as $candidateDisk) {
                 try {
-                    $uploadResult = Storage::disk($candidateDisk)->putFileAs('blog/' . (int) $blogPost->id, $coverFile, 'cover.' . $extension, ['visibility' => 'public']);
+                    $uploadResult = Storage::disk($candidateDisk)->putFileAs('blog/' . (int) $blogPost->id, $coverFile, 'cover.' . $extension);
                 } catch (\Throwable $exception) {
                     $uploadResult = false;
                 }
@@ -7119,7 +7119,7 @@ Route::post('/portal/admin/blog/{post}', function (Request $request, int $post) 
                             $articleUploadOk = false;
                             foreach (array_values(array_unique([$blogMediaDiskForArticle, 'public'])) as $candidateDisk) {
                                 try {
-                                    $articleUploadOk = Storage::disk($candidateDisk)->putFileAs('blog/' . (int) $blogPost->id, $articleFile, 'article_' . $slot . '.' . $ext, ['visibility' => 'public']) !== false;
+                                    $articleUploadOk = Storage::disk($candidateDisk)->putFileAs('blog/' . (int) $blogPost->id, $articleFile, 'article_' . $slot . '.' . $ext) !== false;
                                 } catch (\Throwable $exception) {
                                     $articleUploadOk = false;
                                 }

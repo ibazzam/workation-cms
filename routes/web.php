@@ -3094,20 +3094,28 @@ Route::get('/media/blog/{post}/article/{slot}', function (int $post, int $slot) 
             $mediaDisk = 'public';
         }
 
-        try {
-            $disk = Storage::disk($mediaDisk);
-        } catch (\Throwable $exception) {
+        $resolvedDisk = null;
+        foreach (array_values(array_unique([$mediaDisk, 'public'])) as $candidateDiskName) {
+            try {
+                $candidateDisk = Storage::disk($candidateDiskName);
+            } catch (\Throwable $exception) {
+                continue;
+            }
+
+            if ($candidateDisk->exists($cleanPath)) {
+                $resolvedDisk = $candidateDisk;
+                break;
+            }
+        }
+
+        if ($resolvedDisk === null) {
             abort(404);
         }
 
-        if (!$disk->exists($cleanPath)) {
-            abort(404);
-        }
+        $mimeType = (string) ($resolvedDisk->mimeType($cleanPath) ?: 'image/jpeg');
 
-        $mimeType = (string) ($disk->mimeType($cleanPath) ?: 'image/jpeg');
-
-        return response()->stream(static function () use ($disk, $cleanPath) {
-            $stream = $disk->readStream($cleanPath);
+        return response()->stream(static function () use ($resolvedDisk, $cleanPath) {
+            $stream = $resolvedDisk->readStream($cleanPath);
             if (is_resource($stream)) {
                 fpassthru($stream);
                 fclose($stream);
@@ -3115,7 +3123,7 @@ Route::get('/media/blog/{post}/article/{slot}', function (int $post, int $slot) 
             }
 
             // Fallback for drivers where readStream may return false unexpectedly.
-            echo (string) $disk->get($cleanPath);
+            echo (string) $resolvedDisk->get($cleanPath);
         }, 200, [
             'Content-Type'  => $mimeType,
             'Cache-Control' => 'public, max-age=86400',
@@ -3146,9 +3154,17 @@ Route::get('/media/blog/{post}/article/{slot}', function (int $post, int $slot) 
             $mediaDisk = 'public';
         }
 
-        try {
-            Storage::disk($mediaDisk)->delete($path);
-        } catch (\Throwable $exception) {
+        $deleteAttempted = false;
+        foreach (array_values(array_unique([$mediaDisk, 'public'])) as $candidateDiskName) {
+            try {
+                Storage::disk($candidateDiskName)->delete($path);
+                $deleteAttempted = true;
+            } catch (\Throwable $exception) {
+                continue;
+            }
+        }
+
+        if (!$deleteAttempted) {
             return response()->json(['message' => 'Delete failed.'], 500);
         }
 
@@ -6868,7 +6884,27 @@ Route::post('/portal/admin/blog/upload-image', function (Request $request) {
         $mediaDisk = 'public';
     }
 
-    Storage::disk($mediaDisk)->putFileAs($directory, $imageFile, $filename);
+    $uploadOk = false;
+    foreach (array_values(array_unique([$mediaDisk, 'public'])) as $candidateDisk) {
+        try {
+            $uploadOk = Storage::disk($candidateDisk)->putFileAs($directory, $imageFile, $filename) !== false;
+        } catch (\Throwable $exception) {
+            $uploadOk = false;
+        }
+        if ($uploadOk) {
+            break;
+        }
+    }
+
+    if (!$uploadOk) {
+        \Illuminate\Support\Facades\Log::error('blog_inline_upload: putFileAs failed', [
+            'disk' => $mediaDisk,
+            'directory' => $directory,
+            'filename' => $filename,
+        ]);
+
+        return response()->json(['message' => 'Unable to store inline image right now. Please try again.'], 500);
+    }
     $storedPath = $directory . '/' . $filename;
 
     return response()->json([

@@ -2335,9 +2335,13 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
         return $placeholderResponse();
     }
 
-    $relativePath = portalManagedMediaRelativePath($storedValue);
-    if ($relativePath === null && str_starts_with($storedValue, '__public__/')) {
+    // Paths stored with '__public__/' prefix were written to the local public disk
+    // as a fallback when the managed (S3) disk was unavailable. Strip the prefix
+    // FIRST so disk existence checks use the correct relative path.
+    if (str_starts_with($storedValue, '__public__/')) {
         $relativePath = ltrim(substr($storedValue, strlen('__public__/')), '/');
+    } else {
+        $relativePath = portalManagedMediaRelativePath($storedValue);
     }
 
     if ($relativePath === null || $relativePath === '') {

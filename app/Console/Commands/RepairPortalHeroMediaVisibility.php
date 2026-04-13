@@ -164,7 +164,6 @@ class RepairPortalHeroMediaVisibility extends Command
             };
 
             return (bool) $disk->put($path, $binary, [
-                'visibility' => 'public',
                 'ContentType' => $contentType,
             ]);
         } catch (\Throwable $exception) {

@@ -1309,23 +1309,32 @@ if (!function_exists('portalStoreAdminHeroImage')) {
             $diskName = portalManagedMediaDiskName();
             $disk = Storage::disk($diskName);
 
-            $writeAttempts = [
-                [],
-            ];
+            $binary = @file_get_contents((string) $file->getPathname());
+            if (is_string($binary) && $binary !== '') {
+                $contentType = match ($extension) {
+                    'png' => 'image/png',
+                    'webp' => 'image/webp',
+                    default => 'image/jpeg',
+                };
 
-            foreach ($writeAttempts as $options) {
-                try {
-                    $result = $disk->putFileAs($directory, $file, $filename, $options);
-                    if ($result !== false) {
-                        return $relativePath;
+                $writeAttempts = [
+                    ['ContentType' => $contentType],
+                    [],
+                ];
+
+                foreach ($writeAttempts as $options) {
+                    try {
+                        if ($disk->put($relativePath, $binary, $options)) {
+                            return $relativePath;
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning('Managed media original upload fallback failed.', [
+                            'disk' => $diskName,
+                            'path' => $relativePath,
+                            'options' => $options,
+                            'error' => $e->getMessage(),
+                        ]);
                     }
-                } catch (\Throwable $e) {
-                    Log::warning('Managed media original upload fallback failed.', [
-                        'disk' => $diskName,
-                        'path' => $relativePath,
-                        'options' => $options,
-                        'error' => $e->getMessage(),
-                    ]);
                 }
             }
 
@@ -1335,8 +1344,7 @@ if (!function_exists('portalStoreAdminHeroImage')) {
             if ($diskName !== 'public') {
                 $publicDisk = Storage::disk('public');
                 try {
-                    $result = $publicDisk->putFileAs($directory, $file, $filename, []);
-                    if ($result !== false) {
+                    if (is_string($binary) && $binary !== '' && $publicDisk->put($relativePath, $binary, [])) {
                         return '__public__/' . $relativePath;
                     }
                 } catch (\Throwable $e) {

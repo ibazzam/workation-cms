@@ -2357,6 +2357,28 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
         return $placeholderResponse();
     }
 
+    // ETag derived from the stored path — unique per upload (path includes timestamp+random bytes).
+    // Allows browsers to skip re-downloading the same image bytes without serving stale content
+    // after an upload (new path → new ETag → cache miss → full download).
+    $etag = '"' . md5($storedValue) . '"';
+    $ifNoneMatch = request()->header('If-None-Match', '');
+    if ($ifNoneMatch !== '' && $ifNoneMatch === $etag) {
+        return response('', 304, [
+            'ETag' => $etag,
+            'Cache-Control' => 'public, max-age=300, stale-while-revalidate=3600',
+        ]);
+    }
+
+    // Infer MIME from extension — avoids a second S3 HeadObject call per request.
+    $inferMime = static function (string $path): string {
+        return match (strtolower((string) pathinfo($path, PATHINFO_EXTENSION))) {
+            'png'  => 'image/png',
+            'webp' => 'image/webp',
+            'gif'  => 'image/gif',
+            default => 'image/jpeg',
+        };
+    };
+
     $portalDiskName = trim((string) config('filesystems.portal_media_disk', 'public'));
     if ($portalDiskName === '') {
         $portalDiskName = 'public';
@@ -2366,20 +2388,17 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
     foreach ($diskNames as $diskName) {
         try {
             $disk = Storage::disk($diskName);
-            if (!$disk->exists($relativePath)) {
-                continue;
-            }
-
+            // Skip exists() check (separate HeadObject) — get() returns null when absent.
             $binary = $disk->get($relativePath);
             if (!is_string($binary) || $binary === '') {
                 continue;
             }
 
-            $mime = (string) ($disk->mimeType($relativePath) ?: 'image/jpeg');
+            $mime = $inferMime($relativePath);
             return response($binary, 200, [
                 'Content-Type' => $mime,
-                'Cache-Control' => 'no-cache, max-age=0, must-revalidate',
-                'Pragma' => 'no-cache',
+                'Cache-Control' => 'public, max-age=300, stale-while-revalidate=3600',
+                'ETag' => $etag,
             ]);
         } catch (\Throwable $e) {
             continue;
@@ -2390,7 +2409,7 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
     if (Storage::disk('local')->exists($localPublicPath)) {
         $binary = Storage::disk('local')->get($localPublicPath);
         if (is_string($binary) && $binary !== '') {
-            $mime = (string) (Storage::disk('local')->mimeType($localPublicPath) ?: 'image/jpeg');
+            $mime = $inferMime($localPublicPath);
 
             // Self-heal legacy fallback records: when a hero points to __public__/..., try
             // promoting the local file into managed storage and update the settings row.
@@ -2444,8 +2463,8 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
 
             return response($binary, 200, [
                 'Content-Type' => $mime,
-                'Cache-Control' => 'no-cache, max-age=0, must-revalidate',
-                'Pragma' => 'no-cache',
+                'Cache-Control' => 'public, max-age=300, stale-while-revalidate=3600',
+                'ETag' => $etag,
             ]);
         }
     }

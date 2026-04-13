@@ -1352,10 +1352,6 @@ if (!function_exists('portalStoreAdminHeroImage')) {
                 ];
 
                 $candidatePaths = [$relativePath];
-                if (str_starts_with($relativePath, 'portal-admin/')) {
-                    $candidatePaths[] = 'blog/inline/' . ltrim($relativePath, '/');
-                }
-                $candidatePaths = array_values(array_unique($candidatePaths));
 
                 foreach ($candidatePaths as $candidatePath) {
                     foreach ($writeAttempts as $options) {

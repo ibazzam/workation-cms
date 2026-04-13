@@ -2728,6 +2728,32 @@ Route::get('/portal/admin/hero-debug', function () {
     ]);
 });
 
+Route::get('/portal/admin/s3-test', function () {
+    $diskName = trim((string) config('filesystems.portal_media_disk', 'public'));
+    if ($diskName === '') $diskName = 'public';
+    
+    $result = [
+        'configured_disk' => $diskName,
+        'aws_bucket' => env('AWS_BUCKET', '(not set)'),
+        'aws_region' => env('AWS_DEFAULT_REGION', '(not set)'),
+        'has_credentials' => (env('AWS_ACCESS_KEY_ID') && env('AWS_SECRET_ACCESS_KEY')) ? true : false,
+    ];
+    
+    if ($diskName === 's3') {
+        try {
+            $disk = Storage::disk('s3');
+            $testPath = 's3-test-' . now()->timestamp . '.txt';
+            $disk->put($testPath, 'test', []);
+            $result['write_status'] = 'SUCCESS';
+            try { $disk->delete($testPath); } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+            $result['write_error'] = $e->getMessage();
+            $result['exception'] = get_class($e);
+        }
+    }
+    return response()->json($result);
+});
+
 // /portal/admin/blog/{post}/cover-debug — admin-only diagnostic for cover proxy failures
 Route::get('/portal/admin/blog/{post}/cover-debug', function (int $post) {
     if (!session()->get('portal_admin_authenticated', false)) {

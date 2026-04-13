@@ -1351,26 +1351,18 @@ if (!function_exists('portalStoreAdminHeroImage')) {
                     [],
                 ];
 
-                $candidatePaths = [$relativePath];
-                if (str_starts_with($relativePath, 'portal-admin/')) {
-                    $candidatePaths[] = 'blog/inline/' . ltrim($relativePath, '/');
-                }
-                $candidatePaths = array_values(array_unique($candidatePaths));
-
-                foreach ($candidatePaths as $candidatePath) {
-                    foreach ($writeAttempts as $options) {
-                        try {
-                            if ($disk->put($candidatePath, $binary, $options)) {
-                                return $candidatePath;
-                            }
-                        } catch (\Throwable $e) {
-                            Log::warning('Managed media original upload fallback failed.', [
-                                'disk' => $diskName,
-                                'path' => $candidatePath,
-                                'options' => $options,
-                                'error' => $e->getMessage(),
-                            ]);
+                foreach ($writeAttempts as $options) {
+                    try {
+                        if ($disk->put($relativePath, $binary, $options)) {
+                            return $relativePath;
                         }
+                    } catch (\Throwable $e) {
+                        Log::warning('Managed media original upload fallback failed.', [
+                            'disk' => $diskName,
+                            'path' => $relativePath,
+                            'options' => $options,
+                            'error' => $e->getMessage(),
+                        ]);
                     }
                 }
             }

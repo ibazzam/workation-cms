@@ -2677,9 +2677,10 @@ Route::get('/portal/admin/hero-debug', function () {
 
     $relativePath = null;
     if ($storedValue !== '') {
-        $relativePath = portalManagedMediaRelativePath($storedValue);
-        if ($relativePath === null && str_starts_with($storedValue, '__public__/')) {
+        if (str_starts_with($storedValue, '__public__/')) {
             $relativePath = ltrim(substr($storedValue, strlen('__public__/')), '/');
+        } else {
+            $relativePath = portalManagedMediaRelativePath($storedValue);
         }
     }
 

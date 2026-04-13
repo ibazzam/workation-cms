@@ -2266,6 +2266,12 @@ Route::get('/media/portal-public/{path}', function (string $path) {
     }
 
     if (!is_string($binary) || $binary === '') {
+        // For legacy/stale home hero URLs, fall back to the canonical hero proxy
+        // so the browser does not keep hard-failing on a removed file path.
+        if (str_starts_with($cleanPath, 'portal-admin/hero-images/home/')) {
+            return redirect('/media/portal/hero/home', 302);
+        }
+
         abort(404);
     }
 
@@ -2278,7 +2284,7 @@ Route::get('/media/portal-public/{path}', function (string $path) {
 Route::get('/media/portal/hero/{slot}', function (string $slot) {
     $placeholderResponse = static function () {
         $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900"><defs><linearGradient id="gh" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#dce8ef"/><stop offset="100%" stop-color="#c5d7e3"/></linearGradient></defs><rect width="1600" height="900" fill="url(#gh)"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#40607a" font-family="Arial" font-size="34">Hero image unavailable</text></svg>';
-        return response($svg, 404, [
+        return response($svg, 200, [
             'Content-Type' => 'image/svg+xml; charset=UTF-8',
             'Cache-Control' => 'no-store',
         ]);

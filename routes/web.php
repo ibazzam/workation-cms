@@ -2312,6 +2312,10 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
         if (!Schema::hasTable('portal_finance_settings')) {
             return $placeholderResponse();
         }
+        $normalizeSettingSuffix = static function (string $value): string {
+            return strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $value));
+        };
+
         $slotVariants = array_values(array_unique(array_filter([
             $normalizedSlot,
             str_replace('-', '_', $normalizedSlot),
@@ -2328,6 +2332,32 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
             if ($candidateValue !== '') {
                 $storedValue = $candidateValue;
                 break;
+            }
+        }
+
+        // Legacy compatibility: match odd historical key shapes by normalized suffix.
+        if ($storedValue === '') {
+            $targetSuffix = $normalizeSettingSuffix($normalizedSlot);
+            $allCategoryHeroRows = DB::table('portal_finance_settings')
+                ->where('setting_key', 'like', 'catalog_hero_image_%')
+                ->get(['setting_key', 'value_string']);
+
+            foreach ($allCategoryHeroRows as $row) {
+                $rowKey = trim((string) ($row->setting_key ?? ''));
+                $rowValue = trim((string) ($row->value_string ?? ''));
+                if ($rowKey === '' || $rowValue === '') {
+                    continue;
+                }
+
+                $rowSuffix = trim((string) Str::after($rowKey, 'catalog_hero_image_'));
+                if ($rowSuffix === '') {
+                    continue;
+                }
+
+                if ($normalizeSettingSuffix($rowSuffix) === $targetSuffix) {
+                    $storedValue = $rowValue;
+                    break;
+                }
             }
         }
     }
@@ -3377,6 +3407,10 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     $dbCategoryKey = str_replace('-', '_', $categoryKey);
 
     if (Schema::hasTable('portal_finance_settings')) {
+        $normalizeSettingSuffix = static function (string $value): string {
+            return strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $value));
+        };
+
         $categoryKeyVariants = array_values(array_unique(array_filter([
             $categoryKey,
             str_replace('-', '_', $categoryKey),
@@ -3393,6 +3427,32 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             if ($candidateValue !== '') {
                 $managedCategoryHeroImage = $candidateValue;
                 break;
+            }
+        }
+
+        // Legacy compatibility: tolerate historical key formats beyond _ / - variants.
+        if ($managedCategoryHeroImage === '') {
+            $targetSuffix = $normalizeSettingSuffix($categoryKey);
+            $allCategoryHeroRows = DB::table('portal_finance_settings')
+                ->where('setting_key', 'like', 'catalog_hero_image_%')
+                ->get(['setting_key', 'value_string']);
+
+            foreach ($allCategoryHeroRows as $row) {
+                $rowKey = trim((string) ($row->setting_key ?? ''));
+                $rowValue = trim((string) ($row->value_string ?? ''));
+                if ($rowKey === '' || $rowValue === '') {
+                    continue;
+                }
+
+                $rowSuffix = trim((string) Str::after($rowKey, 'catalog_hero_image_'));
+                if ($rowSuffix === '') {
+                    continue;
+                }
+
+                if ($normalizeSettingSuffix($rowSuffix) === $targetSuffix) {
+                    $managedCategoryHeroImage = $rowValue;
+                    break;
+                }
             }
         }
 

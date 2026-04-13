@@ -1106,10 +1106,9 @@ if (!function_exists('portalWriteMediaVariant')) {
         $disk = Storage::disk($diskName);
         $contentType = $ext === 'webp' ? 'image/webp' : 'image/jpeg';
 
-        // Some S3 buckets disable ACLs (Bucket Owner Enforced), which rejects
-        // writes when visibility is explicitly set. Retry with progressively safer options.
+        // Bucket Owner Enforced buckets reject requests that set an ACL, so do not
+        // include 'visibility' in the options. Try with ContentType first, then bare.
         $writeAttempts = [
-            ['visibility' => 'public', 'ContentType' => $contentType],
             ['ContentType' => $contentType],
             [],
         ];
@@ -1200,7 +1199,6 @@ if (!function_exists('portalManagedMediaUrlFromPath')) {
 
             $encodedPath = implode('/', array_map('rawurlencode', explode('/', $localPath)));
             return '/media/portal-public/' . $encodedPath;
-            return Storage::disk('public')->url($localPath);
         }
 
         $relativePath = portalManagedMediaRelativePath($value);
@@ -1312,7 +1310,6 @@ if (!function_exists('portalStoreAdminHeroImage')) {
             $disk = Storage::disk($diskName);
 
             $writeAttempts = [
-                ['visibility' => 'public'],
                 [],
             ];
 

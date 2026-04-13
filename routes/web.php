@@ -3085,9 +3085,22 @@ Route::get('/media/blog/{post}/article/{slot}', function (int $post, int $slot) 
     Route::get('/media/blog-inline/{path}', function (string $path) {
         // Normalise and guard against path traversal
         $cleanPath = ltrim(str_replace(['..', '\\'], '', $path), '/');
-        if (!Str::startsWith($cleanPath, 'blog/inline/')) {
+        if ($cleanPath === '') {
             abort(404);
         }
+
+        $candidatePaths = [];
+        if (Str::startsWith($cleanPath, 'blog/inline/')) {
+            $candidatePaths[] = $cleanPath;
+        } elseif (Str::startsWith($cleanPath, 'blog-inline/')) {
+            $candidatePaths[] = 'blog/inline/' . ltrim(Str::after($cleanPath, 'blog-inline/'), '/');
+            $candidatePaths[] = $cleanPath;
+        } else {
+            // Legacy payloads may store only date/file segments (e.g. 2026/04/file.jpg).
+            $candidatePaths[] = 'blog/inline/' . ltrim($cleanPath, '/');
+            $candidatePaths[] = $cleanPath;
+        }
+        $candidatePaths = array_values(array_unique(array_filter($candidatePaths, static fn ($v) => trim((string) $v) !== '')));
 
         $mediaDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
         if ($mediaDisk === '') {
@@ -3095,6 +3108,7 @@ Route::get('/media/blog/{post}/article/{slot}', function (int $post, int $slot) 
         }
 
         $resolvedDisk = null;
+        $resolvedPath = '';
         foreach (array_values(array_unique([$mediaDisk, 'public'])) as $candidateDiskName) {
             try {
                 $candidateDisk = Storage::disk($candidateDiskName);
@@ -3102,9 +3116,12 @@ Route::get('/media/blog/{post}/article/{slot}', function (int $post, int $slot) 
                 continue;
             }
 
-            if ($candidateDisk->exists($cleanPath)) {
-                $resolvedDisk = $candidateDisk;
-                break;
+            foreach ($candidatePaths as $candidatePath) {
+                if ($candidateDisk->exists($candidatePath)) {
+                    $resolvedDisk = $candidateDisk;
+                    $resolvedPath = $candidatePath;
+                    break 2;
+                }
             }
         }
 
@@ -3112,10 +3129,10 @@ Route::get('/media/blog/{post}/article/{slot}', function (int $post, int $slot) 
             abort(404);
         }
 
-        $mimeType = (string) ($resolvedDisk->mimeType($cleanPath) ?: 'image/jpeg');
+        $mimeType = (string) ($resolvedDisk->mimeType($resolvedPath) ?: 'image/jpeg');
 
-        return response()->stream(static function () use ($resolvedDisk, $cleanPath) {
-            $stream = $resolvedDisk->readStream($cleanPath);
+        return response()->stream(static function () use ($resolvedDisk, $resolvedPath) {
+            $stream = $resolvedDisk->readStream($resolvedPath);
             if (is_resource($stream)) {
                 fpassthru($stream);
                 fclose($stream);
@@ -3123,7 +3140,7 @@ Route::get('/media/blog/{post}/article/{slot}', function (int $post, int $slot) 
             }
 
             // Fallback for drivers where readStream may return false unexpectedly.
-            echo (string) $resolvedDisk->get($cleanPath);
+            echo (string) $resolvedDisk->get($resolvedPath);
         }, 200, [
             'Content-Type'  => $mimeType,
             'Cache-Control' => 'public, max-age=86400',
@@ -3140,14 +3157,21 @@ Route::get('/media/blog/{post}/article/{slot}', function (int $post, int $slot) 
         }
 
         $path = trim((string) ($request->input('path') ?? ''));
-        if (
-            $path === '' ||
-            !Str::startsWith($path, 'blog/inline/') ||
-            str_contains($path, '..') ||
-            str_contains($path, '\\')
-        ) {
+        if ($path === '' || str_contains($path, '..') || str_contains($path, '\\')) {
             return response()->json(['message' => 'Invalid path.'], 422);
         }
+
+        $normalizedDeletePaths = [];
+        if (Str::startsWith($path, 'blog/inline/')) {
+            $normalizedDeletePaths[] = $path;
+        } elseif (Str::startsWith($path, 'blog-inline/')) {
+            $normalizedDeletePaths[] = 'blog/inline/' . ltrim(Str::after($path, 'blog-inline/'), '/');
+            $normalizedDeletePaths[] = $path;
+        } else {
+            $normalizedDeletePaths[] = 'blog/inline/' . ltrim($path, '/');
+            $normalizedDeletePaths[] = ltrim($path, '/');
+        }
+        $normalizedDeletePaths = array_values(array_unique(array_filter($normalizedDeletePaths, static fn ($v) => trim((string) $v) !== '')));
 
         $mediaDisk = trim((string) config('filesystems.portal_media_disk', 'public'));
         if ($mediaDisk === '') {
@@ -3156,11 +3180,13 @@ Route::get('/media/blog/{post}/article/{slot}', function (int $post, int $slot) 
 
         $deleteAttempted = false;
         foreach (array_values(array_unique([$mediaDisk, 'public'])) as $candidateDiskName) {
-            try {
-                Storage::disk($candidateDiskName)->delete($path);
-                $deleteAttempted = true;
-            } catch (\Throwable $exception) {
-                continue;
+            foreach ($normalizedDeletePaths as $candidatePath) {
+                try {
+                    Storage::disk($candidateDiskName)->delete($candidatePath);
+                    $deleteAttempted = true;
+                } catch (\Throwable $exception) {
+                    continue;
+                }
             }
         }
 

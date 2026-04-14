@@ -1189,6 +1189,12 @@ if (!function_exists('portalManagedMediaUrlFromPath')) {
             return null;
         }
 
+        // Keep application media proxy routes untouched.
+        // Rewriting these to Storage::url() can produce private S3 URLs that 403.
+        if (str_starts_with($value, '/media/')) {
+            return $value;
+        }
+
         if (str_starts_with($value, 'http://')) {
             return 'https://' . ltrim(substr($value, 7), '/');
         }

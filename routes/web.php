@@ -3394,6 +3394,113 @@ Route::get('/islands/{slug}', function (string $slug) {
     ]);
 });
 
+Route::get('/portal/admin/category-hero-debug/{categoryKey}', function (string $categoryKey) {
+        if (!function_exists('isPortalAdmin')) {
+            return response()->json(['error' => 'Portal admin context required'], 403);
+        }
+
+        $normalizeSettingSuffix = static function (string $value): string {
+            return strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $value));
+        };
+
+        $debug = [
+            'requested_category_key' => $categoryKey,
+            'normalized_key' => strtolower(trim($categoryKey)),
+            'db_lookup' => [],
+            'matched_setting_key' => null,
+            'matched_value' => null,
+            'proxy_url' => null,
+            'path_resolution' => [],
+        ];
+
+        if (!Schema::hasTable('portal_finance_settings')) {
+            return response()->json(['error' => 'Table portal_finance_settings not found'], 404);
+        }
+
+        $normalizedKey = strtolower(trim($categoryKey));
+        $categoryKeyVariants = array_values(array_unique(array_filter([
+            $normalizedKey,
+            str_replace('-', '_', $normalizedKey),
+            str_replace('_', '-', $normalizedKey),
+        ], static fn ($v) => is_string($v) && trim($v) !== '')));
+
+        $categorySettingKeys = array_map(static fn ($variant) => 'catalog_hero_image_' . $variant, $categoryKeyVariants);
+        $debug['category_keys_to_try'] = $categorySettingKeys;
+
+        $allRows = DB::table('portal_finance_settings')
+            ->where('setting_key', 'like', 'catalog_hero_image_%')
+            ->get(['setting_key', 'value_string']);
+    
+        $debug['all_catalog_hero_rows'] = $allRows->map(fn ($r) => [
+            'key' => $r->setting_key,
+            'value_preview' => strlen($r->value_string ?? '') > 100 ? substr($r->value_string, 0, 100) . '...' : $r->value_string,
+        ])->values();
+
+        $managedCategoryHeroValues = DB::table('portal_finance_settings')
+            ->whereIn('setting_key', $categorySettingKeys)
+            ->pluck('value_string', 'setting_key');
+
+        $debug['db_lookup'] = $managedCategoryHeroValues->toArray();
+
+        $managedCategoryHeroImage = '';
+        foreach ($categorySettingKeys as $settingKey) {
+            $candidateValue = trim((string) ($managedCategoryHeroValues[$settingKey] ?? ''));
+            if ($candidateValue !== '') {
+                $managedCategoryHeroImage = $candidateValue;
+                $debug['matched_setting_key'] = $settingKey;
+                $debug['matched_value'] = $candidateValue;
+                break;
+            }
+        }
+
+        // Legacy compatibility
+        if ($managedCategoryHeroImage === '') {
+            $targetSuffix = $normalizeSettingSuffix($normalizedKey);
+            foreach ($allRows as $row) {
+                $rowKey = trim((string) ($row->setting_key ?? ''));
+                $rowValue = trim((string) ($row->value_string ?? ''));
+                if ($rowKey === '' || $rowValue === '') {
+                    continue;
+                }
+
+                $rowSuffix = trim((string) Str::after($rowKey, 'catalog_hero_image_'));
+                if ($rowSuffix === '' || $normalizeSettingSuffix($rowSuffix) !== $targetSuffix) {
+                    continue;
+                }
+
+                $managedCategoryHeroImage = $rowValue;
+                $debug['matched_setting_key'] = $rowKey;
+                $debug['matched_value'] = $rowValue;
+                $debug['match_type'] = 'legacy_alphanumeric';
+                break;
+            }
+        }
+
+        if ($managedCategoryHeroImage !== '') {
+            $debug['proxy_url'] = '/media/portal/hero/' . $normalizedKey;
+        
+            // Simulate what the proxy will try
+            $relativeValue = trim($managedCategoryHeroImage);
+            $candidatePaths = [];
+            if (preg_match('~^portal-admin/hero-images/~', $relativeValue)) {
+                $candidatePaths[] = $relativeValue;
+                $candidatePaths[] = 'blog/inline/' . $relativeValue;
+            } else {
+                $candidatePaths[] = $relativeValue;
+            }
+        
+            $debug['path_resolution'] = [
+                'stored_value' => $relativeValue,
+                'candidate_paths' => $candidatePaths,
+                'will_try_disks' => ['managed (s3)', 'public', 'local public storage'],
+            ];
+        } else {
+            $debug['no_match_found'] = true;
+        }
+
+        return response()->json($debug);
+    })->name('category-hero-debug');
+
 Route::get('/catalog/{category}', function (Request $request, string $category) {
     $categoryMap = [
         'accommodation' => ['label' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas, and guesthouses.', 'hero_image_url' => ''],

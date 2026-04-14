@@ -3391,8 +3391,10 @@ Route::get('/islands/{slug}', function (string $slug) {
     return view('island-show', [
         'island'         => $island,
         'relatedIslands' => $relatedIslands,
+    ]);
+});
 
-    Route::get('/portal/admin/category-hero-debug/{categoryKey}', function (string $categoryKey) {
+Route::get('/portal/admin/category-hero-debug/{categoryKey}', function (string $categoryKey) {
         if (!function_exists('isPortalAdmin')) {
             return response()->json(['error' => 'Portal admin context required'], 403);
         }
@@ -3498,8 +3500,6 @@ Route::get('/islands/{slug}', function (string $slug) {
 
         return response()->json($debug);
     })->name('category-hero-debug');
-    ]);
-});
 
 Route::get('/catalog/{category}', function (Request $request, string $category) {
     $categoryMap = [

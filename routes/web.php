@@ -2401,6 +2401,14 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
         return $placeholderResponse();
     }
 
+    $candidateRelativePaths = [$relativePath];
+    if (str_starts_with($relativePath, 'blog/inline/')) {
+        $candidateRelativePaths[] = ltrim(Str::after($relativePath, 'blog/inline/'), '/');
+    } else {
+        $candidateRelativePaths[] = 'blog/inline/' . ltrim($relativePath, '/');
+    }
+    $candidateRelativePaths = array_values(array_unique(array_filter($candidateRelativePaths, static fn ($path) => is_string($path) && trim($path) !== '')));
+
     // ETag derived from the stored path — unique per upload (path includes timestamp+random bytes).
     // Allows browsers to skip re-downloading the same image bytes without serving stale content
     // after an upload (new path → new ETag → cache miss → full download).
@@ -2432,25 +2440,31 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
     foreach ($diskNames as $diskName) {
         try {
             $disk = Storage::disk($diskName);
-            // Skip exists() check (separate HeadObject) — get() returns null when absent.
-            $binary = $disk->get($relativePath);
-            if (!is_string($binary) || $binary === '') {
-                continue;
-            }
+            foreach ($candidateRelativePaths as $candidatePath) {
+                // Skip exists() check (separate HeadObject) — get() returns null when absent.
+                $binary = $disk->get($candidatePath);
+                if (!is_string($binary) || $binary === '') {
+                    continue;
+                }
 
-            $mime = $inferMime($relativePath);
-            return response($binary, 200, [
-                'Content-Type' => $mime,
-                'Cache-Control' => 'public, max-age=300, stale-while-revalidate=3600',
-                'ETag' => $etag,
-            ]);
+                $mime = $inferMime($candidatePath);
+                return response($binary, 200, [
+                    'Content-Type' => $mime,
+                    'Cache-Control' => 'public, max-age=300, stale-while-revalidate=3600',
+                    'ETag' => $etag,
+                ]);
+            }
         } catch (\Throwable $e) {
             continue;
         }
     }
 
-    $localPublicPath = 'public/' . ltrim($relativePath, '/');
-    if (Storage::disk('local')->exists($localPublicPath)) {
+    foreach ($candidateRelativePaths as $candidatePath) {
+        $localPublicPath = 'public/' . ltrim($candidatePath, '/');
+        if (!Storage::disk('local')->exists($localPublicPath)) {
+            continue;
+        }
+
         $binary = Storage::disk('local')->get($localPublicPath);
         if (is_string($binary) && $binary !== '') {
             $mime = $inferMime($localPublicPath);
@@ -2460,11 +2474,7 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
             if (str_starts_with($storedValue, '__public__/') && $portalDiskName !== 'public' && Schema::hasTable('portal_finance_settings')) {
                 try {
                     $managedDisk = Storage::disk($portalDiskName);
-                    $candidatePaths = [$relativePath];
-                    if (str_starts_with($relativePath, 'portal-admin/')) {
-                        $candidatePaths[] = 'blog/inline/' . ltrim($relativePath, '/');
-                    }
-                    $candidatePaths = array_values(array_unique($candidatePaths));
+                    $candidatePaths = $candidateRelativePaths;
 
                     $writeOptions = [
                         ['ContentType' => $mime],

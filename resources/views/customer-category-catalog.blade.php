@@ -121,7 +121,7 @@
         }
 
         .header-brand-link {
-            color: inherit;
+            color: #f3fbff;
             text-decoration: none;
         }
 

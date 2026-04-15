@@ -566,15 +566,16 @@
 @endphp
 
 <header class="header-bar" aria-label="Site navigation">
-    <a class="brand" href="/">
-        Odiapp
-        <small>BLOG</small>
+    <a class="brand" href="/blog">
+        Workation
+        <small>Blog</small>
     </a>
     <nav class="nav-links" aria-label="Site sections">
-        <a href="/blog">THINGS TO DO</a>
-        <a href="/blog/category/attractions">ATTRACTIONS</a>
-        <a href="/blog/category/stay">STAY</a>
-        <a class="is-active" href="/islands">ISLANDS</a>
+        <a href="/blog">The collection</a>
+        <a href="/blog/category/things-to-do">Travel picks</a>
+        <a href="/blog/category/attractions">Ocean paths</a>
+        <a href="/blog/category/stay">Calm escapes</a>
+        <a class="is-active" href="/islands">Islands Guide</a>
     </nav>
 </header>
 

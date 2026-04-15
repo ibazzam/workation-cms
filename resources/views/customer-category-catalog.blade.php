@@ -121,7 +121,7 @@
         }
 
         .header-brand-link {
-            color: inherit;
+            color: #f3fbff;
             text-decoration: none;
         }
 
@@ -1117,7 +1117,7 @@
             <header class="header-bar" aria-label="Member account actions">
                 <div class="header-main">
                     <div class="header-brand-wrap">
-                        <a class="header-brand header-brand-link" href="/">Workation <small>Blog</small></a>
+                        <a class="header-brand header-brand-link" href="/">Workation</a>
                         <p class="header-subline">Maldives Travel Market</p>
                     </div>
                     <nav class="header-links header-category-tabs" aria-label="Category tabs in header">

@@ -4,26 +4,102 @@
 
 <style>
     .wf-site-footer {
-        margin-top: 16px;
-        border-top: 1px solid #c8d8e5;
-        padding-top: 14px;
+        margin-top: 28px;
+        width: 100vw;
+        margin-left: calc(50% - 50vw);
+        margin-right: calc(50% - 50vw);
+        background:
+            radial-gradient(circle at top left, rgba(62, 124, 173, 0.22) 0%, rgba(62, 124, 173, 0) 30%),
+            linear-gradient(180deg, #08213f 0%, #0d3157 58%, #0f3f69 100%);
+        border-top: 1px solid rgba(185, 217, 240, 0.18);
+        color: #e8f4ff;
     }
 
-    /* Single unified container — sections separated by vertical dividers, not individual cards */
+    .wf-footer-shell {
+        width: min(1240px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 18px;
+    }
+
+    .wf-footer-top {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 18px;
+        padding-bottom: 20px;
+    }
+
+    .wf-footer-brand-block {
+        display: grid;
+        gap: 6px;
+    }
+
+    .wf-footer-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: #ffffff;
+        text-decoration: none;
+        font-size: 1.7rem;
+        line-height: 1;
+        letter-spacing: -0.04em;
+        font-weight: 900;
+    }
+
+    .wf-footer-brand small {
+        color: rgba(218, 236, 255, 0.74);
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-weight: 800;
+    }
+
+    .wf-footer-kicker {
+        margin: 0;
+        font-size: 0.78rem;
+        color: rgba(224, 239, 255, 0.78);
+        letter-spacing: 0.06em;
+    }
+
+    .wf-footer-mini-nav {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .wf-footer-mini-nav a {
+        text-decoration: none;
+        color: #ffffff;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(214, 232, 247, 0.2);
+        background: rgba(255, 255, 255, 0.06);
+        transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+    }
+
+    .wf-footer-mini-nav a:hover {
+        border-color: rgba(214, 232, 247, 0.42);
+        background: rgba(255, 255, 255, 0.12);
+        transform: translateY(-1px);
+    }
+
     .wf-footer-grid {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 0;
-        background: linear-gradient(162deg, #ffffff 0%, #f3f8fc 100%);
-        border: 1px solid #d0e0eb;
-        border-radius: 12px;
-        box-shadow: 0 10px 20px rgba(21, 63, 94, 0.06);
-        overflow: hidden;
+        border-top: 1px solid rgba(191, 220, 241, 0.18);
+        border-bottom: 1px solid rgba(191, 220, 241, 0.18);
     }
 
     .wf-footer-col {
-        padding: 16px 20px;
-        border-left: 1px solid #d0e0eb;
+        padding: 18px 20px;
+        border-left: 1px solid rgba(191, 220, 241, 0.14);
     }
 
     .wf-footer-col:first-child {
@@ -35,7 +111,7 @@
         font-size: 0.78rem;
         text-transform: uppercase;
         letter-spacing: 0.09em;
-        color: #37526a;
+        color: rgba(220, 238, 255, 0.74);
         font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
         position: relative;
         padding-bottom: 7px;
@@ -49,7 +125,7 @@
         width: 44px;
         height: 2px;
         border-radius: 999px;
-        background: linear-gradient(90deg, #0f6179 0%, #2d8ea2 100%);
+        background: linear-gradient(90deg, #7ac5ff 0%, #d7ffef 100%);
     }
 
     .wf-footer-links {
@@ -62,34 +138,32 @@
 
     .wf-footer-links a {
         text-decoration: none;
-        color: #1c4666;
+        color: #f3f9ff;
         font-size: 0.84rem;
         font-weight: 600;
-        transition: color 0.18s ease;
+        transition: color 0.18s ease, opacity 0.18s ease;
     }
 
     .wf-footer-links a:hover {
-        color: #0f6179;
+        color: #ffffff;
+        opacity: 0.86;
         text-decoration: underline;
         text-underline-offset: 2px;
     }
 
     .wf-footer-note {
-        margin-top: 10px;
+        margin: 0;
         font-size: 0.78rem;
-        color: #567086;
-        text-align: center;
+        color: rgba(220, 238, 255, 0.72);
     }
 
-    /* Full-width social bar at the bottom of the unified container */
-    .wf-footer-social-bar {
-        grid-column: 1 / -1;
-        border-top: 1px solid #d0e0eb;
-        padding: 12px 20px;
+    .wf-footer-bottom {
         display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 8px;
+        justify-content: space-between;
+        gap: 14px;
+        padding-top: 16px;
+        flex-wrap: wrap;
     }
 
     .wf-social-links {
@@ -98,7 +172,7 @@
         list-style: none;
         display: flex;
         flex-wrap: wrap;
-        gap: 6px;
+        gap: 8px;
     }
 
     .wf-social-links a {
@@ -106,25 +180,34 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 36px;
-        height: 36px;
-        border: 1px solid #cfe0eb;
+        width: 38px;
+        height: 38px;
+        border: 1px solid rgba(214, 232, 247, 0.22);
         border-radius: 50%;
-        background: #ffffff;
-        color: #214b68;
+        background: rgba(255, 255, 255, 0.07);
+        color: #f3f9ff;
         font-size: 0.96rem;
         transition: border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
     }
 
     .wf-social-links a:hover {
-        border-color: #89adc5;
-        color: #0f6179;
-        box-shadow: 0 4px 10px rgba(21, 63, 94, 0.12);
+        border-color: rgba(214, 232, 247, 0.46);
+        color: #ffffff;
+        box-shadow: 0 8px 18px rgba(2, 15, 35, 0.2);
         transform: translateY(-1px);
     }
 
-    /* 2-column: vertical divider on even columns, horizontal divider between rows */
     @media (max-width: 980px) {
+        .wf-footer-top,
+        .wf-footer-bottom {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .wf-footer-mini-nav {
+            justify-content: flex-start;
+        }
+
         .wf-footer-grid {
             grid-template-columns: 1fr 1fr;
         }
@@ -134,16 +217,24 @@
         }
 
         .wf-footer-col:nth-child(even) {
-            border-left: 1px solid #d0e0eb;
+            border-left: 1px solid rgba(191, 220, 241, 0.14);
         }
 
         .wf-footer-col:nth-child(n+3) {
-            border-top: 1px solid #d0e0eb;
+            border-top: 1px solid rgba(191, 220, 241, 0.14);
         }
     }
 
-    /* Single column: only horizontal dividers between stacked sections */
     @media (max-width: 640px) {
+        .wf-footer-shell {
+            width: min(100%, calc(100% - 24px));
+            padding-top: 24px;
+        }
+
+        .wf-footer-brand {
+            font-size: 1.5rem;
+        }
+
         .wf-footer-grid {
             grid-template-columns: 1fr;
         }
@@ -158,49 +249,68 @@
         }
 
         .wf-footer-col:not(:first-child) {
-            border-top: 1px solid #d0e0eb;
+            border-top: 1px solid rgba(191, 220, 241, 0.14);
         }
     }
 </style>
 
 <footer class="wf-site-footer" aria-label="Global footer links">
-    <div class="wf-footer-grid">
-        <section class="wf-footer-col" aria-label="Explore links">
-            <h2 class="wf-footer-title">Explore</h2>
-            <ul class="wf-footer-links">
-                <li><a href="/">Home</a></li>
-                <li><a href="/blog">Travel picks</a></li>
-            </ul>
-        </section>
+    <div class="wf-footer-shell">
+        <div class="wf-footer-top">
+            <div class="wf-footer-brand-block">
+                <a class="wf-footer-brand" href="/">Workation <small>Market</small></a>
+                <p class="wf-footer-kicker">Maldives Travel Market</p>
+            </div>
+            <nav class="wf-footer-mini-nav" aria-label="Footer quick navigation">
+                <a href="/">Home</a>
+                <a href="/catalog/accommodation">Accommodation</a>
+                <a href="/islands">Islands</a>
+                <a href="/blog">Travel Picks</a>
+            </nav>
+        </div>
 
-        <section class="wf-footer-col" aria-label="Portal links">
-            <h2 class="wf-footer-title">Join Us</h2>
-            <ul class="wf-footer-links">
-                <li><a href="/vendor">Partner Login</a></li>
-                <li><a href="/admin">Admin Login</a></li>
-                <li><a href="/portal/vendor/register">Become a Partner</a></li>
-            </ul>
-        </section>
+        <div class="wf-footer-grid">
+            <section class="wf-footer-col" aria-label="Explore links">
+                <h2 class="wf-footer-title">Explore</h2>
+                <ul class="wf-footer-links">
+                    <li><a href="/catalog/accommodation">Accommodation</a></li>
+                    <li><a href="/catalog/excursion">Excursions</a></li>
+                    <li><a href="/islands">Island Directory</a></li>
+                    <li><a href="/blog">Travel Picks</a></li>
+                </ul>
+            </section>
 
-        <section class="wf-footer-col" aria-label="Company links">
-            <h2 class="wf-footer-title">About Us</h2>
-            <ul class="wf-footer-links">
-                <li><a href="/">Our Story</a></li>
-                <li><a href="/terms-of-service">Terms of Service</a></li>
-                <li><a href="/privacy-policy">Privacy Policy</a></li>
-            </ul>
-        </section>
+            <section class="wf-footer-col" aria-label="Portal links">
+                <h2 class="wf-footer-title">Join Us</h2>
+                <ul class="wf-footer-links">
+                    <li><a href="/vendor">Partner Login</a></li>
+                    <li><a href="/portal/vendor/register">Become a Partner</a></li>
+                    <li><a href="/portal/customer/register">Member Registration</a></li>
+                    <li><a href="/admin">Admin Login</a></li>
+                </ul>
+            </section>
 
-        <section class="wf-footer-col" aria-label="Support links">
-            <h2 class="wf-footer-title">Support</h2>
-            <ul class="wf-footer-links">
-                <li><a href="mailto:support@workation.mv">Email Support</a></li>
-                <li><a href="/portal/customer/forgot-password">Account Help</a></li>
-                <li><a href="/privacy-policy">Privacy and Data Requests</a></li>
-            </ul>
-        </section>
+            <section class="wf-footer-col" aria-label="Company links">
+                <h2 class="wf-footer-title">About Workation</h2>
+                <ul class="wf-footer-links">
+                    <li><a href="/">Our Story</a></li>
+                    <li><a href="/terms-of-service">Terms of Service</a></li>
+                    <li><a href="/privacy-policy">Privacy Policy</a></li>
+                </ul>
+            </section>
 
-        <div class="wf-footer-social-bar" aria-label="Social media links">
+            <section class="wf-footer-col" aria-label="Support links">
+                <h2 class="wf-footer-title">Support</h2>
+                <ul class="wf-footer-links">
+                    <li><a href="mailto:support@workation.mv">Email Support</a></li>
+                    <li><a href="/portal/customer/forgot-password">Account Help</a></li>
+                    <li><a href="/privacy-policy">Privacy and Data Requests</a></li>
+                </ul>
+            </section>
+        </div>
+
+        <div class="wf-footer-bottom">
+            <p class="wf-footer-note">&copy; 2024 WORKATION&trade; All rights reserved.</p>
             <ul class="wf-social-links">
                 <li><a href="https://www.facebook.com/" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a></li>
                 <li><a href="https://www.instagram.com/" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a></li>
@@ -210,5 +320,4 @@
             </ul>
         </div>
     </div>
-    <p class="wf-footer-note">&copy; 2024 WORKATION&trade; &mdash; All rights reserved.</p>
 </footer>

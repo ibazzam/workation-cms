@@ -9,8 +9,8 @@
         margin-left: calc(50% - 50vw);
         margin-right: calc(50% - 50vw);
         background:
-            radial-gradient(circle at top left, rgba(62, 124, 173, 0.22) 0%, rgba(62, 124, 173, 0) 30%),
-            linear-gradient(180deg, #08213f 0%, #0d3157 58%, #0f3f69 100%);
+            radial-gradient(circle at top left, rgba(122, 211, 236, 0.2) 0%, rgba(122, 211, 236, 0) 30%),
+            linear-gradient(135deg, #0f6179 0%, #1b7a9a 100%);
         border-top: 1px solid rgba(185, 217, 240, 0.18);
         color: #e8f4ff;
     }
@@ -22,10 +22,7 @@
     }
 
     .wf-footer-top {
-        display: flex;
-        align-items: flex-end;
-        justify-content: space-between;
-        gap: 18px;
+        display: block;
         padding-bottom: 20px;
     }
 
@@ -37,7 +34,6 @@
     .wf-footer-brand {
         display: inline-flex;
         align-items: center;
-        gap: 10px;
         color: #ffffff;
         text-decoration: none;
         font-size: 1.7rem;
@@ -46,47 +42,11 @@
         font-weight: 900;
     }
 
-    .wf-footer-brand small {
-        color: rgba(218, 236, 255, 0.74);
-        font-size: 0.78rem;
-        text-transform: uppercase;
-        letter-spacing: 0.18em;
-        font-weight: 800;
-    }
-
     .wf-footer-kicker {
         margin: 0;
         font-size: 0.78rem;
         color: rgba(224, 239, 255, 0.78);
         letter-spacing: 0.06em;
-    }
-
-    .wf-footer-mini-nav {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-
-    .wf-footer-mini-nav a {
-        text-decoration: none;
-        color: #ffffff;
-        font-size: 0.78rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        padding: 8px 12px;
-        border-radius: 999px;
-        border: 1px solid rgba(214, 232, 247, 0.2);
-        background: rgba(255, 255, 255, 0.06);
-        transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
-    }
-
-    .wf-footer-mini-nav a:hover {
-        border-color: rgba(214, 232, 247, 0.42);
-        background: rgba(255, 255, 255, 0.12);
-        transform: translateY(-1px);
     }
 
     .wf-footer-grid {
@@ -204,10 +164,6 @@
             flex-direction: column;
         }
 
-        .wf-footer-mini-nav {
-            justify-content: flex-start;
-        }
-
         .wf-footer-grid {
             grid-template-columns: 1fr 1fr;
         }
@@ -258,15 +214,9 @@
     <div class="wf-footer-shell">
         <div class="wf-footer-top">
             <div class="wf-footer-brand-block">
-                <a class="wf-footer-brand" href="/">Workation <small>Market</small></a>
+                <a class="wf-footer-brand" href="/">Workation</a>
                 <p class="wf-footer-kicker">Maldives Travel Market</p>
             </div>
-            <nav class="wf-footer-mini-nav" aria-label="Footer quick navigation">
-                <a href="/">Home</a>
-                <a href="/catalog/accommodation">Accommodation</a>
-                <a href="/islands">Islands</a>
-                <a href="/blog">Travel Picks</a>
-            </nav>
         </div>
 
         <div class="wf-footer-grid">

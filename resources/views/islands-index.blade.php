@@ -516,7 +516,39 @@
         }
 
         @media (max-width: 720px) {
-            .header-bar { padding: 0 16px; }
+            .header-bar {
+                min-height: auto;
+                padding: 10px 16px;
+                gap: 10px;
+                flex-direction: column;
+                align-items: stretch;
+                justify-content: flex-start;
+            }
+
+            .brand {
+                font-size: 1.58rem;
+            }
+
+            .nav-links {
+                width: 100%;
+                justify-content: flex-start;
+                overflow-x: auto;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                gap: 8px;
+                padding-bottom: 2px;
+            }
+
+            .nav-links::-webkit-scrollbar {
+                display: none;
+            }
+
+            .nav-links a {
+                flex: 0 0 auto;
+                white-space: nowrap;
+            }
+
             .stats-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .island-grid { grid-template-columns: repeat(2, 1fr); gap: 16px 12px; }
             .island-avatar { width: 90px; height: 90px; }
@@ -526,6 +558,19 @@
         }
 
         @media (max-width: 480px) {
+            .header-bar {
+                padding: 10px 12px;
+            }
+
+            .brand {
+                font-size: 1.5rem;
+            }
+
+            .nav-links a {
+                font-size: 0.76rem;
+                padding: 7px 9px;
+            }
+
             .island-grid { grid-template-columns: 1fr; }
             .island-avatar { width: 80px; height: 80px; }
             .atoll-header-content { flex-direction: column; align-items: flex-start; gap: 8px; }

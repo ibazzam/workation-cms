@@ -1783,7 +1783,7 @@
             <div class="header-main">
                 <div class="header-brand-wrap">
                     <div>
-                        <a class="header-brand header-brand-link" href="/">Workation</a>
+                        <a class="header-brand header-brand-link" href="/">Workation <small>Blog</small></a>
                         <p class="header-subline">Maldives Travel Market</p>
                     </div>
                 </div>

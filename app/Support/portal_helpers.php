@@ -1108,26 +1108,18 @@ if (!function_exists('portalWriteMediaVariant')) {
 
         // Bucket Owner Enforced buckets reject requests that set an ACL, so do not
         // include 'visibility' in the options. Try with ContentType first, then bare.
-            $writeAttempts = [
+        $writeAttempts = [
             ['ContentType' => $contentType],
             [],
         ];
 
-            $candidatePaths = [$relativePath];
-            if (str_starts_with($relativePath, 'portal-admin/')) {
-                $candidatePaths[] = 'blog/inline/' . ltrim($relativePath, '/');
-            }
-            $candidatePaths = array_values(array_unique($candidatePaths));
-
-            foreach ($candidatePaths as $candidatePath) {
-                foreach ($writeAttempts as $options) {
-                    try {
-                        if ($disk->put($candidatePath, $binary, $options)) {
-                            return true;
-                        }
-                    } catch (\Throwable $e) {
-                        // try next option set / path candidate
+        foreach ($writeAttempts as $options) {
+            try {
+                if ($disk->put($relativePath, $binary, $options)) {
+                    return true;
                 }
+            } catch (\Throwable $e) {
+                // try next option set
             }
         }
 
@@ -1178,6 +1170,115 @@ if (!function_exists('portalManagedMediaRelativePath')) {
         $value = ltrim($value, '/');
 
         return $value !== '' ? $value : null;
+    }
+}
+
+if (!function_exists('portalResolveHeroStoredValue')) {
+    function portalResolveHeroStoredValue(string $slot): string
+    {
+        $normalizedSlot = strtolower(trim($slot));
+        if ($normalizedSlot === '' || !preg_match('/^[a-z0-9_-]+$/', $normalizedSlot)) {
+            return '';
+        }
+
+        if ($normalizedSlot === 'home') {
+            if (Schema::hasTable('portal_finance_settings')) {
+                $storedValue = trim((string) (DB::table('portal_finance_settings')
+                    ->where('setting_key', 'home_hero_image_url')
+                    ->value('value_string') ?? ''));
+                if ($storedValue !== '') {
+                    return $storedValue;
+                }
+            }
+
+            return trim((string) env('HOME_HERO_IMAGE_URL', ''));
+        }
+
+        if (!Schema::hasTable('portal_finance_settings')) {
+            return '';
+        }
+
+        $normalizeSettingSuffix = static function (string $value): string {
+            return strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $value));
+        };
+
+        $slotVariants = array_values(array_unique(array_filter([
+            $normalizedSlot,
+            str_replace('-', '_', $normalizedSlot),
+            str_replace('_', '-', $normalizedSlot),
+        ], static fn ($value) => is_string($value) && trim($value) !== '')));
+        $settingKeys = array_map(static fn (string $variant) => 'catalog_hero_image_' . $variant, $slotVariants);
+
+        $storedValuesByKey = DB::table('portal_finance_settings')
+            ->whereIn('setting_key', $settingKeys)
+            ->pluck('value_string', 'setting_key');
+
+        foreach ($settingKeys as $key) {
+            $candidateValue = trim((string) ($storedValuesByKey[$key] ?? ''));
+            if ($candidateValue !== '') {
+                return $candidateValue;
+            }
+        }
+
+        $targetSuffix = $normalizeSettingSuffix($normalizedSlot);
+        $allCategoryHeroRows = DB::table('portal_finance_settings')
+            ->where('setting_key', 'like', 'catalog_hero_image_%')
+            ->get(['setting_key', 'value_string']);
+
+        foreach ($allCategoryHeroRows as $row) {
+            $rowKey = trim((string) ($row->setting_key ?? ''));
+            $rowValue = trim((string) ($row->value_string ?? ''));
+            if ($rowKey === '' || $rowValue === '') {
+                continue;
+            }
+
+            $rowSuffix = trim((string) Str::after($rowKey, 'catalog_hero_image_'));
+            if ($rowSuffix === '') {
+                continue;
+            }
+
+            if ($normalizeSettingSuffix($rowSuffix) === $targetSuffix) {
+                return $rowValue;
+            }
+        }
+
+        return '';
+    }
+}
+
+if (!function_exists('portalHeroStoredValueForSlot')) {
+    function portalHeroStoredValueForSlot(string $slot): string
+    {
+        $normalizedSlot = strtolower(trim($slot));
+        if ($normalizedSlot === '' || !preg_match('/^[a-z0-9_-]+$/', $normalizedSlot)) {
+            return '';
+        }
+
+        $cacheKey = 'portal-hero-slot:' . $normalizedSlot;
+
+        try {
+            return (string) cache()->remember($cacheKey, now()->addSeconds(60), static function () use ($normalizedSlot) {
+                return portalResolveHeroStoredValue($normalizedSlot);
+            });
+        } catch (\Throwable $e) {
+            return portalResolveHeroStoredValue($normalizedSlot);
+        }
+    }
+}
+
+if (!function_exists('portalForgetHeroSlotCache')) {
+    function portalForgetHeroSlotCache(?string $slot): void
+    {
+        $normalizedSlot = strtolower(trim((string) ($slot ?? '')));
+        if ($normalizedSlot === '' || !preg_match('/^[a-z0-9_-]+$/', $normalizedSlot)) {
+            return;
+        }
+
+        try {
+            cache()->forget('portal-hero-slot:' . $normalizedSlot);
+        } catch (\Throwable $e) {
+            // ignore cache store failures; DB remains source of truth
+        }
     }
 }
 

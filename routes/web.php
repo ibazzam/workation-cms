@@ -1120,17 +1120,8 @@ if (!function_exists('getAvailableCategories')) {
 
 Route::get('/', function () {
     $apiBase = workationApiBase();
-    $homeHeroBackgroundUrl = trim((string) env('HOME_HERO_IMAGE_URL', ''));
-    $hasManagedHomeHeroImage = false;
-    if (Schema::hasTable('portal_finance_settings')) {
-        $managedHomeHeroImage = DB::table('portal_finance_settings')
-            ->where('setting_key', 'home_hero_image_url')
-            ->value('value_string');
-        if (is_string($managedHomeHeroImage) && trim($managedHomeHeroImage) !== '') {
-            $homeHeroBackgroundUrl = trim($managedHomeHeroImage);
-            $hasManagedHomeHeroImage = true;
-        }
-    }
+    $homeHeroBackgroundUrl = portalHeroStoredValueForSlot('home');
+    $hasManagedHomeHeroImage = $homeHeroBackgroundUrl !== '';
 
     if ($hasManagedHomeHeroImage) {
         $homeHeroBackgroundUrl = '/media/portal/hero/home';
@@ -2298,69 +2289,7 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
         return $placeholderResponse();
     }
 
-    $storedValue = '';
-    if ($normalizedSlot === 'home') {
-        if (Schema::hasTable('portal_finance_settings')) {
-            $storedValue = trim((string) (DB::table('portal_finance_settings')
-                ->where('setting_key', 'home_hero_image_url')
-                ->value('value_string') ?? ''));
-        }
-        if ($storedValue === '') {
-            $storedValue = trim((string) env('HOME_HERO_IMAGE_URL', ''));
-        }
-    } else {
-        if (!Schema::hasTable('portal_finance_settings')) {
-            return $placeholderResponse();
-        }
-        $normalizeSettingSuffix = static function (string $value): string {
-            return strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $value));
-        };
-
-        $slotVariants = array_values(array_unique(array_filter([
-            $normalizedSlot,
-            str_replace('-', '_', $normalizedSlot),
-            str_replace('_', '-', $normalizedSlot),
-        ], static fn ($value) => is_string($value) && trim($value) !== '')));
-        $settingKeys = array_map(static fn (string $variant) => 'catalog_hero_image_' . $variant, $slotVariants);
-
-        $storedValuesByKey = DB::table('portal_finance_settings')
-            ->whereIn('setting_key', $settingKeys)
-            ->pluck('value_string', 'setting_key');
-
-        foreach ($settingKeys as $key) {
-            $candidateValue = trim((string) ($storedValuesByKey[$key] ?? ''));
-            if ($candidateValue !== '') {
-                $storedValue = $candidateValue;
-                break;
-            }
-        }
-
-        // Legacy compatibility: match odd historical key shapes by normalized suffix.
-        if ($storedValue === '') {
-            $targetSuffix = $normalizeSettingSuffix($normalizedSlot);
-            $allCategoryHeroRows = DB::table('portal_finance_settings')
-                ->where('setting_key', 'like', 'catalog_hero_image_%')
-                ->get(['setting_key', 'value_string']);
-
-            foreach ($allCategoryHeroRows as $row) {
-                $rowKey = trim((string) ($row->setting_key ?? ''));
-                $rowValue = trim((string) ($row->value_string ?? ''));
-                if ($rowKey === '' || $rowValue === '') {
-                    continue;
-                }
-
-                $rowSuffix = trim((string) Str::after($rowKey, 'catalog_hero_image_'));
-                if ($rowSuffix === '') {
-                    continue;
-                }
-
-                if ($normalizeSettingSuffix($rowSuffix) === $targetSuffix) {
-                    $storedValue = $rowValue;
-                    break;
-                }
-            }
-        }
-    }
+    $storedValue = portalHeroStoredValueForSlot($normalizedSlot);
 
     if ($storedValue === '') {
         return $placeholderResponse();
@@ -2421,6 +2350,39 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
         ]);
     }
 
+    $assetCacheKey = 'portal-hero-asset:' . md5($storedValue);
+    $cacheHeroAsset = static function (string $binary, string $mime) use ($assetCacheKey): void {
+        if ($binary === '' || strlen($binary) > 2500000) {
+            return;
+        }
+
+        try {
+            cache()->put($assetCacheKey, [
+                'binary' => $binary,
+                'mime' => $mime,
+            ], now()->addMinutes(10));
+        } catch (\Throwable $e) {
+            // ignore cache store failures; storage remains source of truth
+        }
+    };
+
+    try {
+        $cachedHeroAsset = cache()->get($assetCacheKey);
+        if (is_array($cachedHeroAsset)) {
+            $cachedBinary = (string) ($cachedHeroAsset['binary'] ?? '');
+            $cachedMime = trim((string) ($cachedHeroAsset['mime'] ?? 'image/jpeg'));
+            if ($cachedBinary !== '') {
+                return response($cachedBinary, 200, [
+                    'Content-Type' => $cachedMime !== '' ? $cachedMime : 'image/jpeg',
+                    'Cache-Control' => 'public, max-age=300, stale-while-revalidate=3600',
+                    'ETag' => $etag,
+                ]);
+            }
+        }
+    } catch (\Throwable $e) {
+        // ignore cache read failures and continue to storage lookup
+    }
+
     // Infer MIME from extension — avoids a second S3 HeadObject call per request.
     $inferMime = static function (string $path): string {
         return match (strtolower((string) pathinfo($path, PATHINFO_EXTENSION))) {
@@ -2448,6 +2410,7 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
                 }
 
                 $mime = $inferMime($candidatePath);
+                $cacheHeroAsset($binary, $mime);
                 return response($binary, 200, [
                     'Content-Type' => $mime,
                     'Cache-Control' => 'public, max-age=300, stale-while-revalidate=3600',
@@ -2509,12 +2472,15 @@ Route::get('/media/portal/hero/{slot}', function (string $slot) {
                                 'created_at' => now(),
                             ]
                         );
+
+                        portalForgetHeroSlotCache($normalizedSlot);
                     }
                 } catch (\Throwable $e) {
                     // keep serving local file even if promotion fails
                 }
             }
 
+            $cacheHeroAsset($binary, $mime);
             return response($binary, 200, [
                 'Content-Type' => $mime,
                 'Cache-Control' => 'public, max-age=300, stale-while-revalidate=3600',
@@ -2778,80 +2744,6 @@ Route::get('/portal/admin/hero-test', function () {
             : '(no table)',
         'timestamp' => now()->toIso8601String(),
         'proxy_url' => '/media/portal/hero/home',
-    ]);
-});
-
-// /portal/admin/hero-debug — diagnostic for hero media proxy failures
-Route::get('/portal/admin/hero-debug', function () {
-    // Temporarily no auth check for debugging
-
-    $slot = 'home';
-    $storedValue = '';
-    if (Schema::hasTable('portal_finance_settings')) {
-        $storedValue = trim((string) (DB::table('portal_finance_settings')
-            ->where('setting_key', 'home_hero_image_url')
-            ->value('value_string') ?? ''));
-    }
-    if ($storedValue === '') {
-        $storedValue = trim((string) env('HOME_HERO_IMAGE_URL', ''));
-    }
-
-    $portalDiskName = trim((string) config('filesystems.portal_media_disk', 'public'));
-    if ($portalDiskName === '') {
-        $portalDiskName = 'public';
-    }
-
-    $relativePath = null;
-    if ($storedValue !== '') {
-        if (str_starts_with($storedValue, '__public__/')) {
-            $relativePath = ltrim(substr($storedValue, strlen('__public__/')), '/');
-        } else {
-            $relativePath = portalManagedMediaRelativePath($storedValue);
-        }
-    }
-
-    $diskNames = array_values(array_unique(array_filter([$portalDiskName, 'public', 'local'])));
-    $diskResults = [];
-
-    if ($relativePath !== null && $relativePath !== '') {
-        foreach ($diskNames as $diskName) {
-            $diskResults[$diskName] = ['status' => 'unknown', 'paths_checked' => []];
-            try {
-                $disk = Storage::disk($diskName);
-                $diskResults[$diskName]['status'] = 'disk_ok';
-            } catch (\Throwable $e) {
-                $diskResults[$diskName]['status'] = 'disk_init_failed: ' . $e->getMessage();
-                continue;
-            }
-
-            try {
-                $exists = $disk->exists($relativePath);
-                $diskResults[$diskName]['paths_checked'][$relativePath] = $exists ? 'EXISTS' : 'not_found';
-                if ($exists) {
-                    try {
-                        $size = $disk->size($relativePath);
-                        $diskResults[$diskName]['paths_checked'][$relativePath] = 'EXISTS (size=' . $size . ')';
-                    } catch (\Throwable $e) {
-                        // ignore size error
-                    }
-                }
-            } catch (\Throwable $e) {
-                $diskResults[$diskName]['paths_checked'][$relativePath] = 'error: ' . $e->getMessage();
-            }
-        }
-    }
-
-    return response()->json([
-        'slot' => $slot,
-        'stored_value' => $storedValue,
-        'is_external_url' => Str::startsWith($storedValue, ['http://', 'https://']) ? true : false,
-        'relative_path' => $relativePath,
-        'portal_media_disk_config' => $portalDiskName,
-        'env_PORTAL_MEDIA_DISK' => env('PORTAL_MEDIA_DISK', '(not set)'),
-        'env_VENDOR_MEDIA_DISK' => env('VENDOR_MEDIA_DISK', '(not set)'),
-        'env_HOME_HERO_IMAGE_URL' => env('HOME_HERO_IMAGE_URL', '(not set)'),
-        'disk_results' => $diskResults,
-        'proxy_route' => '/media/portal/hero/' . $slot,
     ]);
 });
 
@@ -3394,113 +3286,6 @@ Route::get('/islands/{slug}', function (string $slug) {
     ]);
 });
 
-Route::get('/portal/admin/category-hero-debug/{categoryKey}', function (string $categoryKey) {
-        if (!function_exists('isPortalAdmin')) {
-            return response()->json(['error' => 'Portal admin context required'], 403);
-        }
-
-        $normalizeSettingSuffix = static function (string $value): string {
-            return strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $value));
-        };
-
-        $debug = [
-            'requested_category_key' => $categoryKey,
-            'normalized_key' => strtolower(trim($categoryKey)),
-            'db_lookup' => [],
-            'matched_setting_key' => null,
-            'matched_value' => null,
-            'proxy_url' => null,
-            'path_resolution' => [],
-        ];
-
-        if (!Schema::hasTable('portal_finance_settings')) {
-            return response()->json(['error' => 'Table portal_finance_settings not found'], 404);
-        }
-
-        $normalizedKey = strtolower(trim($categoryKey));
-        $categoryKeyVariants = array_values(array_unique(array_filter([
-            $normalizedKey,
-            str_replace('-', '_', $normalizedKey),
-            str_replace('_', '-', $normalizedKey),
-        ], static fn ($v) => is_string($v) && trim($v) !== '')));
-
-        $categorySettingKeys = array_map(static fn ($variant) => 'catalog_hero_image_' . $variant, $categoryKeyVariants);
-        $debug['category_keys_to_try'] = $categorySettingKeys;
-
-        $allRows = DB::table('portal_finance_settings')
-            ->where('setting_key', 'like', 'catalog_hero_image_%')
-            ->get(['setting_key', 'value_string']);
-    
-        $debug['all_catalog_hero_rows'] = $allRows->map(fn ($r) => [
-            'key' => $r->setting_key,
-            'value_preview' => strlen($r->value_string ?? '') > 100 ? substr($r->value_string, 0, 100) . '...' : $r->value_string,
-        ])->values();
-
-        $managedCategoryHeroValues = DB::table('portal_finance_settings')
-            ->whereIn('setting_key', $categorySettingKeys)
-            ->pluck('value_string', 'setting_key');
-
-        $debug['db_lookup'] = $managedCategoryHeroValues->toArray();
-
-        $managedCategoryHeroImage = '';
-        foreach ($categorySettingKeys as $settingKey) {
-            $candidateValue = trim((string) ($managedCategoryHeroValues[$settingKey] ?? ''));
-            if ($candidateValue !== '') {
-                $managedCategoryHeroImage = $candidateValue;
-                $debug['matched_setting_key'] = $settingKey;
-                $debug['matched_value'] = $candidateValue;
-                break;
-            }
-        }
-
-        // Legacy compatibility
-        if ($managedCategoryHeroImage === '') {
-            $targetSuffix = $normalizeSettingSuffix($normalizedKey);
-            foreach ($allRows as $row) {
-                $rowKey = trim((string) ($row->setting_key ?? ''));
-                $rowValue = trim((string) ($row->value_string ?? ''));
-                if ($rowKey === '' || $rowValue === '') {
-                    continue;
-                }
-
-                $rowSuffix = trim((string) Str::after($rowKey, 'catalog_hero_image_'));
-                if ($rowSuffix === '' || $normalizeSettingSuffix($rowSuffix) !== $targetSuffix) {
-                    continue;
-                }
-
-                $managedCategoryHeroImage = $rowValue;
-                $debug['matched_setting_key'] = $rowKey;
-                $debug['matched_value'] = $rowValue;
-                $debug['match_type'] = 'legacy_alphanumeric';
-                break;
-            }
-        }
-
-        if ($managedCategoryHeroImage !== '') {
-            $debug['proxy_url'] = '/media/portal/hero/' . $normalizedKey;
-        
-            // Simulate what the proxy will try
-            $relativeValue = trim($managedCategoryHeroImage);
-            $candidatePaths = [];
-            if (preg_match('~^portal-admin/hero-images/~', $relativeValue)) {
-                $candidatePaths[] = $relativeValue;
-                $candidatePaths[] = 'blog/inline/' . $relativeValue;
-            } else {
-                $candidatePaths[] = $relativeValue;
-            }
-        
-            $debug['path_resolution'] = [
-                'stored_value' => $relativeValue,
-                'candidate_paths' => $candidatePaths,
-                'will_try_disks' => ['managed (s3)', 'public', 'local public storage'],
-            ];
-        } else {
-            $debug['no_match_found'] = true;
-        }
-
-        return response()->json($debug);
-    })->name('category-hero-debug');
-
 Route::get('/catalog/{category}', function (Request $request, string $category) {
     $categoryMap = [
         'accommodation' => ['label' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas, and guesthouses.', 'hero_image_url' => ''],
@@ -3523,61 +3308,10 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     // Map URL slug (hyphens) to DB listing_category value (underscores)
     $dbCategoryKey = str_replace('-', '_', $categoryKey);
 
-    if (Schema::hasTable('portal_finance_settings')) {
-        $normalizeSettingSuffix = static function (string $value): string {
-            return strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $value));
-        };
-
-        $categoryKeyVariants = array_values(array_unique(array_filter([
-            $categoryKey,
-            str_replace('-', '_', $categoryKey),
-            str_replace('_', '-', $categoryKey),
-        ], static fn ($value) => is_string($value) && trim($value) !== '')));
-        $categorySettingKeys = array_map(static fn (string $variant) => 'catalog_hero_image_' . $variant, $categoryKeyVariants);
-        $managedCategoryHeroValues = DB::table('portal_finance_settings')
-            ->whereIn('setting_key', $categorySettingKeys)
-            ->pluck('value_string', 'setting_key');
-
-        $managedCategoryHeroImage = '';
-        foreach ($categorySettingKeys as $settingKey) {
-            $candidateValue = trim((string) ($managedCategoryHeroValues[$settingKey] ?? ''));
-            if ($candidateValue !== '') {
-                $managedCategoryHeroImage = $candidateValue;
-                break;
-            }
-        }
-
-        // Legacy compatibility: tolerate historical key formats beyond _ / - variants.
-        if ($managedCategoryHeroImage === '') {
-            $targetSuffix = $normalizeSettingSuffix($categoryKey);
-            $allCategoryHeroRows = DB::table('portal_finance_settings')
-                ->where('setting_key', 'like', 'catalog_hero_image_%')
-                ->get(['setting_key', 'value_string']);
-
-            foreach ($allCategoryHeroRows as $row) {
-                $rowKey = trim((string) ($row->setting_key ?? ''));
-                $rowValue = trim((string) ($row->value_string ?? ''));
-                if ($rowKey === '' || $rowValue === '') {
-                    continue;
-                }
-
-                $rowSuffix = trim((string) Str::after($rowKey, 'catalog_hero_image_'));
-                if ($rowSuffix === '') {
-                    continue;
-                }
-
-                if ($normalizeSettingSuffix($rowSuffix) === $targetSuffix) {
-                    $managedCategoryHeroImage = $rowValue;
-                    break;
-                }
-            }
-        }
-
-        if ($managedCategoryHeroImage !== '') {
-            // Always use the slot proxy URL so category hero updates/removals are
-            // reflected immediately without stale direct-object cache artifacts.
-            $categoryMap[$categoryKey]['hero_image_url'] = '/media/portal/hero/' . $categoryKey;
-        }
+    if (portalHeroStoredValueForSlot($categoryKey) !== '') {
+        // Always use the slot proxy URL so category hero updates/removals are
+        // reflected immediately without stale direct-object cache artifacts.
+        $categoryMap[$categoryKey]['hero_image_url'] = '/media/portal/hero/' . $categoryKey;
     }
 
     $resolvedCategoryHeroImage = trim((string) ($categoryMap[$categoryKey]['hero_image_url'] ?? ''));
@@ -6678,6 +6412,7 @@ Route::post('/portal/admin/media-hero/update', function (Request $request) {
         }
 
         $persistSetting($settingKey, $nextValue, $actorUserId);
+        portalForgetHeroSlotCache($slot);
     };
 
     $resolveMediaSetting('home_hero_image_url', 'home', 'home_hero_image_url', 'home_hero_image_file', 'home_hero_image_clear');

@@ -86,42 +86,81 @@
         }
 
         .header-bar {
-            min-height: 68px;
+            min-height: 84px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 18px;
-            background: var(--surface);
-            border-bottom: 1px solid var(--line);
+            gap: 16px;
             position: sticky;
             top: 0;
-            z-index: 25;
-            padding: 0 28px;
+            z-index: 40;
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
+            padding: 0 24px;
+            background: #ffffff;
+            border-bottom: 1px solid rgba(15, 23, 36, 0.06);
+        }
+
+        body.is-header-hidden .header-bar {
+            transform: translateY(calc(-100% - 2px));
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.22s ease, opacity 0.22s ease;
+        }
+
+        .brand {
+            margin: 0;
+            text-decoration: none;
+            font-size: 1.7rem;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            color: #02193f;
+            font-weight: 900;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand small {
+            color: #5b6672;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            font-weight: 800;
         }
 
         .nav-links {
             display: flex;
             align-items: center;
-            gap: 2px;
+            gap: 16px;
             margin: 0;
             padding: 0;
         }
 
         .nav-links a {
             display: block;
-            padding: 6px 14px;
-            font-size: 0.78rem;
-            font-weight: 600;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
             text-decoration: none;
-            color: var(--muted);
-            border-radius: 6px;
-            transition: color .15s;
+            color: #0f1724;
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 8px 10px;
+            border-radius: 999px;
+            border: 1px solid transparent;
         }
 
-        .nav-links a.is-active { color: var(--brand); }
-        .nav-links a:hover     { color: var(--ink); }
+        .nav-links a.is-active {
+            color: #02193f;
+            border-color: rgba(2, 25, 63, 0.14);
+            background: rgba(2, 25, 63, 0.06);
+        }
+
+        .nav-links a:hover {
+            border-color: rgba(2, 25, 63, 0.12);
+            background: rgba(2, 25, 63, 0.04);
+        }
 
         /* ── Breadcrumb ── */
         .breadcrumb {
@@ -622,6 +661,26 @@
 </div>
 
 @include('partials.global-site-footer')
+
+<script>
+    (function () {
+        const header = document.querySelector('.header-bar');
+        if (!header) return;
+
+        let lastY = window.scrollY || 0;
+        function syncHeaderState() {
+            const currentY = window.scrollY || 0;
+            const threshold = Math.max(56, header.offsetHeight - 4);
+            const hide = currentY > threshold && currentY > lastY;
+            document.body.classList.toggle('is-header-hidden', hide);
+            lastY = currentY;
+        }
+
+        window.addEventListener('scroll', syncHeaderState, { passive: true });
+        window.addEventListener('resize', syncHeaderState);
+        syncHeaderState();
+    })();
+</script>
 
 </body>
 </html>

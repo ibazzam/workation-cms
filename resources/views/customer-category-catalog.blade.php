@@ -34,12 +34,13 @@
         }
 
         .header-bar {
+            min-height: 84px;
             display: flex;
             flex-wrap: nowrap;
             align-items: center;
             justify-content: space-between;
             gap: 14px;
-            padding: 10px 24px;
+            padding: 0 24px;
             border: 0;
             border-radius: 0;
             background: transparent;
@@ -99,12 +100,24 @@
 
         .header-brand {
             margin: 0;
-            font-size: 2rem;
-            font-weight: 800;
+            font-size: 1.7rem;
+            font-weight: 900;
             color: #f3fbff;
             letter-spacing: -0.04em;
             line-height: 1;
             text-shadow: 0 4px 16px rgba(8, 30, 85, 0.35);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-brand small {
+            color: rgba(233, 248, 255, 0.82);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            font-weight: 800;
+            text-shadow: none;
         }
 
         .header-brand-link {
@@ -167,10 +180,13 @@
         .header-link {
             text-decoration: none;
             color: #e9f5ff;
-            font-size: 0.8rem;
-            font-weight: 600;
-            padding: 7px 9px;
-            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 8px 10px;
+            border-radius: 999px;
+            border: 1px solid transparent;
             white-space: nowrap;
         }
 
@@ -190,7 +206,8 @@
         }
 
         .header-link:hover {
-            background: rgba(255, 255, 255, 0.18);
+            border-color: rgba(233, 248, 255, 0.35);
+            background: rgba(255, 255, 255, 0.14);
             color: #ffffff;
         }
 
@@ -1100,7 +1117,7 @@
             <header class="header-bar" aria-label="Member account actions">
                 <div class="header-main">
                     <div class="header-brand-wrap">
-                        <a class="header-brand header-brand-link" href="/">Workation</a>
+                        <a class="header-brand header-brand-link" href="/">Workation <small>Blog</small></a>
                         <p class="header-subline">Maldives Travel Market</p>
                     </div>
                     <nav class="header-links header-category-tabs" aria-label="Category tabs in header">

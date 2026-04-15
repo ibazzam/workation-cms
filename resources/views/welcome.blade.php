@@ -54,11 +54,12 @@
         }
 
         .header-bar {
+            min-height: 84px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 14px;
-            padding: 10px 24px;
+            padding: 0 24px;
             border-top: 0;
             border-right: 0;
             border-bottom: 1px solid #d8e3ec;
@@ -114,11 +115,22 @@
 
         .header-brand {
             margin: 0;
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--brand);
+            font-size: 1.7rem;
+            font-weight: 900;
+            color: #02193f;
             letter-spacing: -0.04em;
             line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-brand small {
+            color: #5b6672;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            font-weight: 800;
         }
 
         .header-brand-link {
@@ -202,17 +214,21 @@
 
         .header-link {
             text-decoration: none;
-            color: #1d3449;
-            font-size: 0.8rem;
-            font-weight: 600;
-            padding: 7px 9px;
-            border-radius: 8px;
+            color: #0f1724;
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 8px 10px;
+            border-radius: 999px;
+            border: 1px solid transparent;
             white-space: nowrap;
         }
 
         .header-link:hover {
-            background: #f4f8fc;
-            color: #154e71;
+            border-color: rgba(2, 25, 63, 0.12);
+            background: rgba(2, 25, 63, 0.04);
+            color: #02193f;
         }
 
         .page-body-split {
@@ -1767,7 +1783,7 @@
             <div class="header-main">
                 <div class="header-brand-wrap">
                     <div>
-                        <a class="header-brand header-brand-link" href="/">Workation</a>
+                        <a class="header-brand header-brand-link" href="/">Workation <small>Blog</small></a>
                         <p class="header-subline">Maldives Travel Market</p>
                     </div>
                 </div>

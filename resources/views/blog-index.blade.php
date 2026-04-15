@@ -52,6 +52,13 @@
             border-bottom: 1px solid rgba(15, 23, 36, 0.06);
         }
 
+        .page.is-header-hidden .header-bar {
+            transform: translateY(calc(-100% - 2px));
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.22s ease, opacity 0.22s ease;
+        }
+
         .brand {
             margin: 0;
             text-decoration: none;
@@ -1012,5 +1019,26 @@
 
         @include('partials.global-site-footer')
     </main>
+<script>
+    (function () {
+        const page = document.querySelector('.page');
+        const header = document.querySelector('.header-bar');
+        if (!page || !header) return;
+
+        let lastY = window.scrollY || 0;
+        function syncHeaderState() {
+            const currentY = window.scrollY || 0;
+            const threshold = Math.max(56, header.offsetHeight - 4);
+            const hide = currentY > threshold && currentY > lastY;
+            page.classList.toggle('is-header-hidden', hide);
+            lastY = currentY;
+        }
+
+        window.addEventListener('scroll', syncHeaderState, { passive: true });
+        window.addEventListener('resize', syncHeaderState);
+        syncHeaderState();
+    })();
+</script>
+
 </body>
 </html>

@@ -43,57 +43,72 @@
             gap: 16px;
             position: sticky;
             top: 0;
-            z-index: 30;
-            padding: 0 10px;
-            backdrop-filter: blur(8px);
-            background: rgba(249, 252, 250, 0.92);
-            border-bottom: 1px solid rgba(182, 200, 208, 0.55);
+            z-index: 40;
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
+            padding: 0 24px;
+            background: #ffffff;
+            border-bottom: 1px solid rgba(15, 23, 36, 0.06);
+        }
+
+        .page.is-header-hidden .header-bar {
+            transform: translateY(calc(-100% - 2px));
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.22s ease, opacity 0.22s ease;
         }
 
         .brand {
             margin: 0;
             text-decoration: none;
-            font-size: 2rem;
+            font-size: 1.7rem;
             line-height: 1;
             letter-spacing: -0.04em;
-            color: var(--brand);
-            font-weight: 800;
+            color: #02193f;
+            font-weight: 900;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
 
         .brand small {
-            color: var(--ink);
-            font-size: 0.8rem;
+            color: #5b6672;
+            font-size: 0.78rem;
             text-transform: uppercase;
             letter-spacing: 0.18em;
-            font-weight: 700;
+            font-weight: 800;
         }
 
         .nav-links {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 16px;
             flex-wrap: wrap;
             justify-content: flex-end;
         }
 
         .nav-links a {
             text-decoration: none;
-            color: #1a3241;
-            font-size: 0.84rem;
-            font-weight: 800;
+            color: #0f1724;
+            font-size: 0.82rem;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.08em;
-            padding: 8px 12px;
+            padding: 8px 10px;
             border-radius: 999px;
             border: 1px solid transparent;
         }
 
+        .nav-links a.is-active {
+            color: #02193f;
+            border-color: rgba(2, 25, 63, 0.14);
+            background: rgba(2, 25, 63, 0.06);
+        }
+
         .nav-links a:hover {
-            border-color: #b5cdd9;
-            background: #f2f8fd;
+            border-color: rgba(2, 25, 63, 0.12);
+            background: rgba(2, 25, 63, 0.04);
         }
 
         .hero {
@@ -224,5 +239,26 @@
 
         @include('partials.global-site-footer')
     </main>
+<script>
+    (function () {
+        const page = document.querySelector('.page');
+        const header = document.querySelector('.header-bar');
+        if (!page || !header) return;
+
+        let lastY = window.scrollY || 0;
+        function syncHeaderState() {
+            const currentY = window.scrollY || 0;
+            const threshold = Math.max(56, header.offsetHeight - 4);
+            const hide = currentY > threshold && currentY > lastY;
+            page.classList.toggle('is-header-hidden', hide);
+            lastY = currentY;
+        }
+
+        window.addEventListener('scroll', syncHeaderState, { passive: true });
+        window.addEventListener('resize', syncHeaderState);
+        syncHeaderState();
+    })();
+</script>
+
 </body>
 </html>

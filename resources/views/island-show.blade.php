@@ -18,6 +18,32 @@
 
         * { box-sizing: border-box; }
 
+        .hero-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px 18px;
+            margin-bottom: 24px;
+        }
+
+        .hero-meta .hero-pill {
+            background: #edf7f1;
+            color: var(--brand);
+            border-radius: 999px;
+            padding: 10px 16px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hero-meta .hero-pill--main {
+            background: var(--brand);
+            color: #ffffff;
+        }
+
         body {
             margin: 0;
             font-family: "Outfit", "Trebuchet MS", sans-serif;
@@ -26,6 +52,39 @@
         }
 
         /* ── Header ── */
+        .fact-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .fact-card {
+            background: #f7fcf8;
+            border: 1px solid var(--line);
+            padding: 18px 20px;
+            border-radius: 18px;
+            min-height: 104px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .fact-label {
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: var(--muted);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .fact-value {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
         .header-bar {
             min-height: 68px;
             display: flex;
@@ -38,27 +97,6 @@
             top: 0;
             z-index: 25;
             padding: 0 28px;
-        }
-
-        .brand {
-            margin: 0;
-            text-decoration: none;
-            font-size: 1.65rem;
-            line-height: 1;
-            letter-spacing: -0.04em;
-            color: var(--brand);
-            font-weight: 800;
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-        }
-
-        .brand small {
-            font-size: 0.72rem;
-            font-weight: 600;
-            color: var(--ink);
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
         }
 
         .nav-links {
@@ -462,6 +500,24 @@
         @if ($atollCode)
             <p class="atoll-label">{{ $atollCode }}</p>
         @endif
+        <div class="hero-meta">
+            @if ($atollName)
+                <span class="hero-pill">{{ $atollName }} atoll</span>
+            @endif
+            <span class="hero-pill hero-pill--main">
+                @if ($island->island_type === 'resort')
+                    Resort island
+                @elseif ($island->island_type === 'inhabited')
+                    Inhabited island
+                @elseif ($island->island_type === 'uninhabited')
+                    Uninhabited island
+                @elseif ($island->is_inhabited)
+                    Inhabited island
+                @else
+                    Uninhabited island
+                @endif
+            </span>
+        </div>
         <h1 class="island-title">{{ $island->name }}</h1>
 
         @if ($island->description)
@@ -474,27 +530,35 @@
             </p>
         @endif
 
-        {{-- Stats --}}
-        <div class="island-stats">
-            @if ($island->distance_from_airport_km !== null)
-                <div class="stat-row">
-                    <span class="stat-label">Distance from Nearest Airport</span>
-                    <span class="stat-value">{{ $island->distance_from_airport_km }} km</span>
+        {{-- Island facts --}}
+        @if ($atollName || $island->population !== null || $island->nearest_airport_name || $island->distance_from_airport_km !== null)
+            <div class="fact-grid" aria-label="Island facts">
+            @if ($atollName)
+                <div class="fact-card">
+                    <span class="fact-label">Atoll</span>
+                    <span class="fact-value">{{ $atollName }}</span>
                 </div>
             @endif
             @if ($island->population !== null)
-                <div class="stat-row">
-                    <span class="stat-label">Island Population</span>
-                    <span class="stat-value">{{ number_format($island->population) }}</span>
+                <div class="fact-card">
+                    <span class="fact-label">Population</span>
+                    <span class="fact-value">{{ number_format($island->population) }}</span>
                 </div>
             @endif
             @if ($island->nearest_airport_name)
-                <div class="stat-row">
-                    <span class="stat-label">Nearest Airport</span>
-                    <span class="stat-value">{{ $island->nearest_airport_name }}</span>
+                <div class="fact-card">
+                    <span class="fact-label">Nearest Airport</span>
+                    <span class="fact-value">{{ $island->nearest_airport_name }}</span>
                 </div>
             @endif
-        </div>
+            @if ($island->distance_from_airport_km !== null)
+                <div class="fact-card">
+                    <span class="fact-label">Distance from airport</span>
+                    <span class="fact-value">{{ $island->distance_from_airport_km }} km</span>
+                </div>
+            @endif
+            </div>
+        @endif
 
     </div>
 </section>

@@ -528,43 +528,189 @@
         @media (max-width: 860px) {
             .header-bar {
                 min-height: auto;
-                padding: 14px 8px;
-                flex-direction: column;
-                align-items: flex-start;
+                padding: 12px 6px;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
             }
 
             .brand {
-                font-size: 1.82rem;
+                font-size: 1.5rem;
+            }
+
+            .brand small {
+                font-size: 0.68rem;
+                letter-spacing: 0.12em;
             }
 
             .nav-links {
-                justify-content: flex-start;
+                justify-content: flex-end;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                max-width: 62vw;
+                padding-bottom: 2px;
+                scrollbar-width: thin;
+            }
+
+            .nav-links a {
+                flex: 0 0 auto;
+                font-size: 0.72rem;
+                padding: 7px 10px;
+                letter-spacing: 0.06em;
             }
 
             .hero {
-                min-height: 420px;
+                min-height: 280px;
+                margin-top: 8px;
             }
 
             .hero-title-card {
                 position: static;
-                width: calc(100% - 20px);
-                margin: 10px;
+                width: calc(100% - 12px);
+                margin: 6px;
+                padding: 14px 14px 18px;
+                box-shadow: none;
+            }
+
+            .meta-row {
+                font-size: 0.82rem;
+                gap: 8px;
+            }
+
+            .meta-row strong {
+                font-size: 0.8rem;
+            }
+
+            .hero-title-card h1 {
+                font-size: clamp(1.55rem, 7vw, 2.15rem);
+                line-height: 1.14;
             }
 
             .tag-share-row {
                 grid-template-columns: 1fr;
+                gap: 10px;
+                margin-bottom: 10px;
+            }
+
+            .tags {
+                gap: 7px;
+            }
+
+            .tag-chip {
+                font-size: 0.78rem;
+                padding: 6px 11px;
+                border-radius: 9px;
+            }
+
+            .share-button {
+                width: 38px;
+                height: 38px;
+                font-size: 1.08rem;
             }
 
             .share-row {
                 justify-content: flex-start;
             }
 
+            .content-wrap {
+                padding-top: 4px;
+            }
+
+            .article-layout {
+                gap: 20px;
+            }
+
+            .work-event-callout {
+                margin: 8px 0 18px;
+                padding: 12px;
+            }
+
+            .content {
+                font-size: 1.03rem;
+                line-height: 1.7;
+            }
+
+            .content p {
+                margin-bottom: 18px;
+            }
+
+            .ad-label {
+                font-size: 0.88rem;
+            }
+
+            .ad-card {
+                min-height: 0;
+                padding: 16px;
+                gap: 12px;
+            }
+
+            .ad-head {
+                font-size: clamp(1.5rem, 8vw, 2.1rem);
+                max-width: none;
+            }
+
+            .ad-brand {
+                font-size: 2rem;
+            }
+
             .related-grid {
                 grid-template-columns: 1fr;
             }
 
-            .content {
-                font-size: 1.12rem;
+            .related {
+                margin-top: 26px;
+                padding-top: 24px;
+            }
+
+            .related h2 {
+                margin-bottom: 14px;
+                font-size: clamp(1.5rem, 7.5vw, 2.1rem);
+                line-height: 1.14;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .page {
+                width: min(1180px, calc(100% - 12px));
+                margin-bottom: 18px;
+            }
+
+            .header-bar {
+                top: 0;
+                padding: 10px 4px;
+                gap: 8px;
+            }
+
+            .brand {
+                font-size: 1.32rem;
+            }
+
+            .hero {
+                min-height: 220px;
+            }
+
+            .hero-title-card {
+                width: calc(100% - 8px);
+                margin: 4px;
+                padding: 12px;
+            }
+
+            .content-wrap {
+                border-top: none;
+                padding-top: 2px;
+            }
+
+            .share-row {
+                gap: 6px;
+            }
+
+            .related-media {
+                border-radius: 12px;
+                aspect-ratio: 1.15 / 1;
+            }
+
+            .related-card h3 {
+                font-size: clamp(1.08rem, 5vw, 1.4rem);
             }
         }
     </style>

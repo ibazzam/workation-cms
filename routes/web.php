@@ -2159,6 +2159,7 @@ if (!function_exists('blogSidebarAdSettings')) {
     }
 }
 
+// Blog article listing pages share the same template because categories and individual tag lists are visually aligned.
 Route::get('/blog', function () {
     return view('blog-index', buildBlogIndexPayload());
 });
@@ -2171,6 +2172,7 @@ Route::get('/blog/tag/{tag}', function (string $tag) {
     return view('blog-index', buildBlogIndexPayload(null, $tag));
 });
 
+// The tag directory overview page has its own dedicated layout.
 Route::get('/blog/tags', function () {
     $payload = buildBlogIndexPayload();
 
@@ -3168,13 +3170,14 @@ if (!function_exists('buildIslandsIndexPayload')) {
         $atolls  = \App\Models\Atoll::query()->orderedByCode()->get();
         $query   = \App\Models\Island::with('atoll')->orderBy('atoll_id')->orderBy('name');
 
+        $activeAtoll = null;
         if ($activeAtollSlug !== null) {
             // Match by atoll slug column first, fall back to name-slug
-            $atoll = $atolls->first(fn ($a) =>
+            $activeAtoll = $atolls->first(fn ($a) =>
                 ($a->slug ?? \Illuminate\Support\Str::slug($a->name)) === $activeAtollSlug
             );
-            if ($atoll) {
-                $query->where('atoll_id', $atoll->id);
+            if ($activeAtoll) {
+                $query->where('atoll_id', $activeAtoll->id);
             }
         }
 
@@ -3239,6 +3242,8 @@ if (!function_exists('buildIslandsIndexPayload')) {
             'atolls' => $atolls,
             'groupedIslands' => $groupedIslands,
             'activeIslandType' => $activeIslandType,
+            'activeAtollSlug' => $activeAtollSlug,
+            'activeAtollName' => $activeAtoll ? ($activeAtoll->name ?? null) : null,
         ];
     }
 }

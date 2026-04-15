@@ -98,9 +98,45 @@
             margin: 0 auto 60px;
         }
 
-        /* ── Directory header ── */
+        .hero-stage {
+            position: relative;
+            margin: 0 auto 28px;
+            min-height: 420px;
+            border-radius: 24px;
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(3, 27, 46, 0.28) 0%, rgba(3, 27, 46, 0.72) 100%),
+                url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=80');
+            background-size: cover;
+            background-position: center;
+            display: grid;
+            place-items: center;
+        }
+
+        .hero-stage::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(3, 27, 46, 0.12) 0%, rgba(3, 27, 46, 0.72) 100%);
+        }
+
+        .hero-copy {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            color: #ffffff;
+            padding: 0 24px;
+            max-width: 840px;
+        }
+
+        .hero-copy h1 {
+            margin: 0;
+            font-size: clamp(2.8rem, 5vw, 4.6rem);
+            line-height: 1.02;
+            letter-spacing: -0.04em;
+        }
+
         .dir-heading {
-            padding: 44px 0 6px;
+            padding: 12px 0 6px;
         }
 
         .dir-heading h1 {
@@ -133,16 +169,17 @@
 
         .search-input {
             flex: 1;
-            max-width: 360px;
-            padding: 10px 16px;
+            max-width: 540px;
+            width: 100%;
+            padding: 12px 18px;
             border: 1.5px solid var(--line);
             border-radius: 40px;
-            font-size: 0.88rem;
+            font-size: 0.95rem;
             font-family: inherit;
             outline: none;
             background: var(--surface);
             color: var(--ink);
-            transition: border-color .15s;
+            transition: border-color .15s, box-shadow .15s;
         }
 
         .search-input:focus {
@@ -530,18 +567,23 @@
 
 <header class="header-bar" aria-label="Site navigation">
     <a class="brand" href="/">
-        Workation
-        <small>Blog</small>
+        Odiapp
+        <small>BLOG</small>
     </a>
     <nav class="nav-links" aria-label="Site sections">
-        <a href="/blog">Travel picks</a>
-        <a href="/blog/category/attractions">Ocean Paths</a>
-        <a href="/blog/category/stay">Calm Escapes</a>
-        <a class="is-active" href="/islands">Islands Guide</a>
+        <a href="/blog">THINGS TO DO</a>
+        <a href="/blog/category/attractions">ATTRACTIONS</a>
+        <a href="/blog/category/stay">STAY</a>
+        <a class="is-active" href="/islands">ISLANDS</a>
     </nav>
 </header>
 
 <main class="page">
+    <section class="hero-stage" aria-label="Explore islands hero">
+        <div class="hero-copy">
+            <h1>Explore islands of the Maldives</h1>
+        </div>
+    </section>
 
     <div class="dir-heading">
         <h1>{{ $pageTitle }}</h1>
@@ -558,28 +600,53 @@
 
     {{-- Search --}}
     <div class="search-wrap">
-        <span class="search-label">Search for Islands or Atolls</span>
+        <span class="search-label">Search for Islands</span>
         <input
             class="search-input"
             type="search"
             id="island-search"
-            placeholder="Search islands, atolls..."
+            placeholder="Search islands..."
             autocomplete="off"
-            aria-label="Search islands and atolls"
+            aria-label="Search islands"
         >
     </div>
 
+    {{-- Atoll filter chips --}}
+    <section class="atoll-filter" role="navigation" aria-label="Filter by atoll">
+        @php
+            $currentTypeQuery = request()->query('type');
+            $typeQueryParam = $currentTypeQuery !== null ? ('?type=' . urlencode($currentTypeQuery)) : '';
+            $allAtollsHref = '/islands' . $typeQueryParam;
+            $activeAtollBase = $activeAtollSlug ? '/islands/atoll/' . urlencode($activeAtollSlug) : '/islands';
+        @endphp
+
+        <a class="atoll-chip {{ $activeAtollSlug === null ? 'is-active' : '' }}" href="{{ $allAtollsHref }}">All Atolls</a>
+        @foreach ($atolls as $atoll)
+            @php
+                $atollSlug = $atoll->slug ?? Str::slug($atoll->name);
+                $atollHref = '/islands/atoll/' . urlencode($atollSlug) . $typeQueryParam;
+            @endphp
+            <a class="atoll-chip {{ $activeAtollSlug === $atollSlug ? 'is-active' : '' }}" href="{{ $atollHref }}">{{ $atoll->name }}</a>
+        @endforeach
+    </section>
+
     {{-- Island type filter chips --}}
     <div class="type-filter" role="navigation" aria-label="Filter by island type">
-        <a class="type-chip {{ $activeIslandType === null ? 'is-active' : '' }}" href="/islands">All Types</a>
-        <a class="type-chip {{ $activeIslandType === 'inhabited' ? 'is-active' : '' }}" href="/islands?type=inhabited">Local / Inhabited</a>
-        <a class="type-chip {{ $activeIslandType === 'uninhabited' ? 'is-active' : '' }}" href="/islands?type=uninhabited">Uninhabited</a>
-        <a class="type-chip {{ $activeIslandType === 'resort' ? 'is-active' : '' }}" href="/islands?type=resort">Resort</a>
+        <a class="type-chip {{ $activeIslandType === null ? 'is-active' : '' }}" href="{{ $activeAtollBase }}">All Types</a>
+        <a class="type-chip {{ $activeIslandType === 'inhabited' ? 'is-active' : '' }}" href="{{ $activeAtollBase . '?type=inhabited' }}">Local / Inhabited</a>
+        <a class="type-chip {{ $activeIslandType === 'uninhabited' ? 'is-active' : '' }}" href="{{ $activeAtollBase . '?type=uninhabited' }}">Uninhabited</a>
+        <a class="type-chip {{ $activeIslandType === 'resort' ? 'is-active' : '' }}" href="{{ $activeAtollBase . '?type=resort' }}">Resort</a>
     </div>
 
     {{-- Atolls Container --}}
     <section class="atolls-container" id="atolls-container" aria-label="Island atolls">
-        @forelse ($atolls as $atoll)
+        @php
+            $atollSections = $activeAtollSlug !== null
+                ? $atolls->filter(fn ($a) => $groupedByAtoll->get($a->id, collect())->isNotEmpty())
+                : $atolls;
+        @endphp
+
+        @forelse ($atollSections as $atoll)
             @php
                 $atollSlug = $atoll->slug ?? Str::slug($atoll->name);
                 $islandsInAtoll = $groupedByAtoll->get($atoll->id, collect());

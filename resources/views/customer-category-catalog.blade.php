@@ -64,14 +64,16 @@
 
         .header-category-tabs {
             width: 100%;
-            margin-top: 0;
-            flex: 1 1 auto;
+            margin-top: 4px;
+            flex: 0 0 100%;
             min-width: 0;
+            order: 2;
         }
 
         .header-main {
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 16px;
             min-width: 0;
             flex: 1 1 auto;
@@ -944,21 +946,57 @@
                 border-radius: 0;
                 background: transparent;
                 box-shadow: none;
+                gap: 8px;
             }
 
             .customer-auth {
                 width: 100%;
                 justify-content: flex-start;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                padding-bottom: 2px;
+            }
+
+            .customer-auth::-webkit-scrollbar {
+                display: none;
             }
 
             .header-main {
                 width: 100%;
-                gap: 10px;
+                gap: 8px;
+                display: grid;
+                grid-template-columns: 1fr;
             }
 
             .header-category-tabs {
                 width: 100%;
                 flex: 0 0 100%;
+                margin-top: 0;
+                order: 2;
+            }
+
+            .header-links {
+                gap: 8px;
+                overflow-x: auto;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch;
+                flex-wrap: nowrap;
+                scrollbar-width: none;
+                padding-bottom: 2px;
+            }
+
+            .header-links::-webkit-scrollbar {
+                display: none;
+            }
+
+            .header-link,
+            .auth-link,
+            .account-menu {
+                flex: 0 0 auto;
+                white-space: nowrap;
             }
 
             .header-brand {

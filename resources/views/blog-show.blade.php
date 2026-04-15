@@ -43,11 +43,13 @@
             gap: 16px;
             position: sticky;
             top: 0;
-            z-index: 30;
-            padding: 0 10px;
-            backdrop-filter: blur(8px);
-            background: rgba(249, 252, 250, 0.92);
-            border-bottom: 1px solid rgba(182, 200, 208, 0.55);
+            z-index: 40;
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
+            padding: 0 24px;
+            background: #ffffff;
+            border-bottom: 1px solid rgba(15, 23, 36, 0.06);
         }
 
         .brand {

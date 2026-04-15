@@ -1005,6 +1005,7 @@
                     <a href="/islands">Open Island Atlas</a>
                 </div>
             </section>
+            @endif
         @else
             <div class="hero-empty">No stories are currently available for this filter.</div>
         @endif

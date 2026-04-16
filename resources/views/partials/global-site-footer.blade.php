@@ -9,9 +9,9 @@
         margin-left: calc(50% - 50vw);
         margin-right: calc(50% - 50vw);
         background:
-            radial-gradient(circle at top left, rgba(122, 211, 236, 0.2) 0%, rgba(122, 211, 236, 0) 30%),
-            linear-gradient(135deg, #0f6179 0%, #1b7a9a 100%);
-        border-top: 1px solid rgba(185, 217, 240, 0.18);
+            radial-gradient(circle at top left, rgba(178, 243, 224, 0.28) 0%, rgba(178, 243, 224, 0) 34%),
+            linear-gradient(135deg, #2a9bb2 0%, #58c6d3 100%);
+        border-top: 1px solid rgba(226, 246, 252, 0.42);
         color: #e8f4ff;
     }
 

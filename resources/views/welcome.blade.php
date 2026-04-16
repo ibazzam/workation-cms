@@ -126,11 +126,7 @@
         }
 
         .header-brand small {
-            color: #5b6672;
-            font-size: 0.78rem;
-            text-transform: uppercase;
-            letter-spacing: 0.18em;
-            font-weight: 800;
+            display: none !important;
         }
 
         .header-brand-link {

@@ -45,9 +45,9 @@
         .floating-sidebar {
             position: fixed;
             left: 0;
-            top: 0;
+            top: 84px;
             width: 250px;
-            height: 100dvh;
+            height: calc(100dvh - 84px);
             overflow-y: auto;
             scrollbar-width: thin;
             z-index: 200;
@@ -256,14 +256,7 @@
         }
 
         .sidebar-brand {
-            display: grid;
-            gap: 2px;
-            padding: 14px 18px;
-            border-bottom: 1px solid #d8e3ec;
-            background: #E2F7F2;
-            opacity: 1;
-            transform: none;
-            pointer-events: auto;
+            display: none;
         }
 
         .sidebar-brand-title {
@@ -323,9 +316,9 @@
         }
 
         .auth-link.primary {
-            background: #C8EDE6;
-            border-color: #9cccc3;
-            color: #1a3d47;
+            background: #1a7a68;
+            border-color: #136357;
+            color: #ffffff;
         }
 
         .auth-btn {
@@ -461,8 +454,8 @@
         .top-links {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 8px;
-            padding: 0 10px 10px;
+            gap: 2px;
+            padding: 10px 10px 10px;
             border: 0;
             background: transparent;
         }
@@ -481,11 +474,11 @@
 
         .top-link {
             text-decoration: none;
-            border: 1px solid #b7d8d1;
-            border-radius: 10px;
-            background: #C8EDE6;
-            color: #1a3d47;
-            padding: 8px 10px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            background: transparent;
+            color: #136357;
+            padding: 7px 10px;
             font-size: 0.78rem;
             line-height: 1.2;
             font-weight: 600;
@@ -493,26 +486,27 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            min-height: 44px;
-            transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+            min-height: 38px;
+            transition: background 0.18s ease, color 0.18s ease;
         }
 
         .top-link:hover {
-            border-color: #89c8bb;
-            background: #b4e2d9;
-            box-shadow: 0 6px 14px rgba(23, 80, 70, 0.1);
+            background: rgba(19, 99, 87, 0.07);
+            color: #0e4f43;
+            border-color: transparent;
+            box-shadow: none;
         }
 
         .top-link-head {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            color: #1a3d47;
+            color: inherit;
         }
 
         .top-link-head i {
-            font-size: 0.94rem;
-            color: #1a7a68;
+            font-size: 0.92rem;
+            color: #136357;
             width: 16px;
             text-align: center;
             flex: 0 0 16px;
@@ -603,10 +597,11 @@
         .search-section-full-width {
             margin-top: 10px;
             margin-bottom: 18px;
+            margin-left: -262px;
+            width: calc(100% + 262px);
             color: #e8f5f9;
-            padding: 20px 20px 54px;
+            padding: 20px 20px 54px 20px;
             min-height: 340px;
-            width: 100%;
             position: relative;
             overflow: visible;
             border: 0;
@@ -1364,6 +1359,11 @@
                 padding-left: 242px;
             }
 
+            .search-section-full-width {
+                margin-left: -242px;
+                width: calc(100% + 242px);
+            }
+
             .floating-sidebar {
                 width: 230px;
             }
@@ -1620,6 +1620,8 @@
 
             .search-section-full-width {
                 overflow: visible;
+                margin-left: 0;
+                width: 100%;
                 padding: 16px 14px 16px;
                 min-height: 0;
             }

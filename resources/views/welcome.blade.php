@@ -50,9 +50,9 @@
         .floating-sidebar {
             position: fixed;
             left: 0;
-            top: 0;
+            top: 84px;
             width: 200px;
-            height: 100dvh;
+            height: calc(100dvh - 84px);
             overflow-y: auto;
             scrollbar-width: thin;
             z-index: 200;
@@ -264,15 +264,15 @@
             display: grid;
             gap: 2px;
             align-content: center;
-            min-height: 84px;
+            min-height: 0;
             padding: 0 24px;
             border-bottom: 0;
             background: #E2F7F2;
-            max-height: 84px;
+            max-height: 0;
             opacity: 0;
-            overflow: clip;
+            overflow: hidden;
             pointer-events: none;
-            transition: opacity 0.2s ease;
+            transition: max-height 0.2s ease, opacity 0.2s ease;
         }
 
         .sidebar-brand-title {
@@ -299,7 +299,14 @@
             white-space: nowrap;
         }
 
+        .page.is-header-hidden .floating-sidebar {
+            top: 0;
+            height: 100dvh;
+        }
+
         .page.is-header-hidden .sidebar-brand {
+            min-height: 84px;
+            max-height: 84px;
             border-bottom: 1px solid #d7e4ee;
             opacity: 1;
             pointer-events: auto;

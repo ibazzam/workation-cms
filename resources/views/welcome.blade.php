@@ -36,8 +36,8 @@
         }
 
         .page {
-            width: min(1180px, calc(100% - 24px));
-            margin: 0 auto 28px;
+            width: 100%;
+            margin: 0 0 28px;
             max-width: none;
             position: relative;
         }

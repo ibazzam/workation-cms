@@ -1,8 +1,8 @@
 <style>
     :root {
-        --btn-primary-border: #0d566b;
-        --btn-primary-bg: linear-gradient(135deg, #0f6179 0%, #1d848c 100%);
-        --btn-primary-text: #ecfcff;
+        --btn-primary-border: #3a8a3c;
+        --btn-primary-bg: linear-gradient(135deg, #52B254 0%, #69CA68 100%);
+        --btn-primary-text: #ffffff;
         --btn-secondary-border: #c8d8e5;
         --btn-secondary-bg: #ffffff;
         --btn-secondary-text: #20415d;
@@ -140,14 +140,14 @@
     .endpoint button:focus-visible,
     .registration-actions button:focus-visible,
     .manage-form button:focus-visible {
-        outline: 2px solid #0f6179;
+        outline: 2px solid #3a8a3c;
         outline-offset: 2px;
     }
 
     .submit:focus-visible,
     .promo-apply:focus-visible,
     .hero-avail-btn:focus-visible {
-        outline: 2px solid #0f6179;
+        outline: 2px solid #3a8a3c;
         outline-offset: 2px;
     }
 
@@ -194,9 +194,9 @@
     }
 
     body:not(.category-display-page) .header-bar {
-        background: linear-gradient(135deg, #2a9bb2 0%, #58c6d3 100%) !important;
-        border-bottom-color: rgba(227, 246, 252, 0.42) !important;
-        box-shadow: 0 10px 24px rgba(27, 112, 131, 0.24) !important;
+        background: linear-gradient(135deg, #52B254 0%, #69CA68 100%) !important;
+        border-bottom-color: rgba(220, 248, 220, 0.42) !important;
+        box-shadow: 0 10px 24px rgba(50, 120, 50, 0.22) !important;
         backdrop-filter: none !important;
     }
 
@@ -218,7 +218,7 @@
     }
 
     body:not(.category-display-page) .header-search-mini {
-        border-color: rgba(227, 246, 252, 0.58) !important;
+        border-color: rgba(220, 248, 220, 0.58) !important;
         background: rgba(255, 255, 255, 0.2) !important;
     }
 

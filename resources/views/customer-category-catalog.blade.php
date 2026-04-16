@@ -114,12 +114,7 @@
         }
 
         .header-brand small {
-            color: rgba(233, 248, 255, 0.82);
-            font-size: 0.78rem;
-            text-transform: uppercase;
-            letter-spacing: 0.18em;
-            font-weight: 800;
-            text-shadow: none;
+            display: none !important;
         }
 
         .header-brand-link {
@@ -1155,7 +1150,7 @@
             <header class="header-bar" aria-label="Member account actions">
                 <div class="header-main">
                     <div class="header-brand-wrap">
-                        <a class="header-brand header-brand-link" href="/">Workation <small>Blog</small></a>
+                        <a class="header-brand header-brand-link" href="/">Workation</a>
                         <p class="header-subline">Maldives Travel Market</p>
                     </div>
                     <nav class="header-links header-category-tabs" aria-label="Category tabs in header">
@@ -1198,8 +1193,7 @@
                             </div>
                         </div>
                     @else
-                        <a class="auth-link" href="{{ '/portal/customer/login?continue=' . urlencode($customerContinueUrl) }}">Member Login</a>
-                        <a class="auth-link primary" href="{{ '/portal/customer/register?continue=' . urlencode($customerContinueUrl) }}">Member Registration</a>
+                        <a class="auth-link primary" href="{{ '/portal/customer/login?continue=' . urlencode($customerContinueUrl) }}">Sign in/register</a>
                     @endif
                 </div>
             </header>

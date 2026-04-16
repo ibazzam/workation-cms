@@ -10,7 +10,7 @@
         margin-right: calc(50% - 50vw);
         background:
             radial-gradient(circle at top left, rgba(178, 243, 224, 0.28) 0%, rgba(178, 243, 224, 0) 34%),
-            linear-gradient(135deg, #2a9bb2 0%, #58c6d3 100%);
+            linear-gradient(135deg, #52B254 0%, #69CA68 100%);
         border-top: 1px solid rgba(226, 246, 252, 0.42);
         color: #e8f4ff;
     }

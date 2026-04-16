@@ -36,8 +36,8 @@
         }
 
         .page {
-            width: 100%;
-            margin: 0 0 28px;
+            width: min(1180px, calc(100% - 24px));
+            margin: 0 auto;
             max-width: none;
             position: relative;
         }
@@ -46,7 +46,7 @@
             position: fixed;
             left: 0;
             top: 84px;
-            width: 250px;
+            width: 200px;
             height: calc(100dvh - 84px);
             overflow-y: auto;
             scrollbar-width: thin;
@@ -229,7 +229,7 @@
 
         .page-body-split {
             display: block;
-            padding-left: 262px;
+            padding-left: 212px;
         }
 
         .page-main-content {
@@ -705,6 +705,7 @@
             z-index: 1;
             margin: 14px auto 0;
             width: 100%;
+            max-width: 860px;
             background: #ffffff;
             border-radius: 18px;
             border: 1px solid #dde5ee;
@@ -797,13 +798,11 @@
             display: none;
         }
 
-        /* Divider-cell style for each field in accommodation row */
-        .search-form.is-accommodation .search-inline-row > .search-field-shell,
-        .search-form.is-accommodation .search-inline-row > .field {
-            flex: 1 1 0;
+        /* Destination field shell in accommodation row */
+        .search-form.is-accommodation .search-inline-row > .search-field-shell {
+            flex: 2 1 0;
             min-width: 0;
             border: 0;
-            border-right: 1px solid #e2eaf2;
             border-radius: 0;
             background: transparent;
             padding: 12px 14px;
@@ -814,14 +813,6 @@
             grid-template-rows: auto 1fr;
             gap: 2px;
             box-sizing: border-box;
-        }
-
-        .search-form.is-accommodation .search-inline-row > .search-field-shell {
-            flex: 2 1 0;
-        }
-
-        .search-form.is-accommodation .search-inline-row > .field:last-of-type {
-            border-right: 0;
         }
 
         /* Remove .search-primary-field own border inside accommodation row */
@@ -835,11 +826,16 @@
             max-height: none;
         }
 
-        /* Submit button sits flush with no extra padding */
+        /* Submit button: compact and right-aligned */
         .search-form.is-accommodation .search-submit-row {
-            padding: 10px 12px;
+            padding: 10px 14px;
             align-self: center;
             flex: 0 0 auto;
+        }
+
+        .search-form.is-accommodation .search-submit-row button {
+            white-space: nowrap;
+            min-width: 110px;
         }
 
         .search-inline-row {
@@ -916,8 +912,37 @@
             flex: 1 1 auto;
         }
 
+        /* accommodationFields flows as a flex row inside the single-row shell */
         .search-form.is-accommodation #accommodationFields.is-active {
-            display: contents;
+            display: flex;
+            flex: 3 1 0;
+            gap: 0;
+            align-items: stretch;
+            background: transparent;
+            padding: 0;
+        }
+
+        /* Each dynamic field cell inside accommodation row */
+        .search-form.is-accommodation #accommodationFields.is-active > .field {
+            flex: 1 1 0;
+            min-width: 0;
+            border: 0;
+            border-left: 1px solid #e2eaf2;
+            border-radius: 0;
+            background: transparent;
+            padding: 12px 14px;
+            height: auto;
+            min-height: 72px;
+            max-height: none;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 2px;
+            box-sizing: border-box;
+            overflow: visible;
+        }
+
+        .search-form.is-accommodation #accommodationFields.is-active > .field.guest-picker {
+            overflow: visible;
         }
 
         .guest-picker {
@@ -1230,6 +1255,9 @@
 
         .section {
             margin-top: 13px;
+            max-width: 860px;
+            margin-left: auto;
+            margin-right: auto;
             border: 1px solid var(--line);
             border-radius: 16px;
             background: var(--surface);
@@ -1433,7 +1461,7 @@
             }
 
             .floating-sidebar {
-                width: 230px;
+                width: 190px;
             }
 
             .sidebar-brand {

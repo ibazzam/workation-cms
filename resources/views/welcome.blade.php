@@ -328,9 +328,9 @@
         }
 
         .auth-link.primary {
-            background: linear-gradient(135deg, #0f6179 0%, #1e7d90 100%);
-            border-color: #0f6179;
-            color: #ffffff;
+            background: #E2F7F2;
+            border-color: #b7d8d1;
+            color: #1f3f49;
         }
 
         .auth-btn {
@@ -1820,8 +1820,7 @@
                         </div>
                     </div>
                 @else
-                    <a class="auth-link" href="{{ '/portal/customer/login?continue=' . urlencode($customerContinueUrl) }}">Member Login</a>
-                    <a class="auth-link primary" href="{{ '/portal/customer/register?continue=' . urlencode($customerContinueUrl) }}">Member Registration</a>
+                    <a class="auth-link primary" href="{{ '/portal/customer/login?continue=' . urlencode($customerContinueUrl) }}">Sign in/register</a>
                 @endif
             </div>
         </header>

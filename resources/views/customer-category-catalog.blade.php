@@ -63,18 +63,18 @@
         }
 
         .header-category-tabs {
-            width: 100%;
-            margin-top: 4px;
-            flex: 0 0 100%;
+            width: auto;
+            margin-top: 0;
+            flex: 1 1 auto;
             min-width: 0;
-            order: 2;
+            order: 0;
         }
 
         .header-main {
             display: flex;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 16px;
+            flex-wrap: nowrap;
+            gap: 12px;
             min-width: 0;
             flex: 1 1 auto;
         }
@@ -169,7 +169,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             justify-content: flex-end;
             flex-shrink: 0;
         }
@@ -177,10 +177,10 @@
         .header-link {
             text-decoration: none;
             color: #e9f5ff;
-            font-size: 0.82rem;
+            font-size: 0.74rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.06em;
             padding: 8px 10px;
             border-radius: 999px;
             border: 1px solid transparent;
@@ -226,9 +226,9 @@
         }
 
         .auth-link.primary {
-            background: linear-gradient(135deg, #0f6179 0%, #1e7d90 100%);
-            border-color: #0f6179;
-            color: #ffffff;
+            background: #E2F7F2;
+            border-color: #b7d8d1;
+            color: #1f3f49;
         }
 
         .account-menu {

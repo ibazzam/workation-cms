@@ -1,8 +1,8 @@
 <style>
     :root {
-        --btn-primary-border: #3a8a3c;
-        --btn-primary-bg: linear-gradient(135deg, #52B254 0%, #69CA68 100%);
-        --btn-primary-text: #ffffff;
+        --btn-primary-border: #b7d8d1;
+        --btn-primary-bg: #E2F7F2;
+        --btn-primary-text: #1f3f49;
         --btn-secondary-border: #c8d8e5;
         --btn-secondary-bg: #ffffff;
         --btn-secondary-text: #20415d;
@@ -194,9 +194,9 @@
     }
 
     body:not(.category-display-page) .header-bar {
-        background: linear-gradient(135deg, #52B254 0%, #69CA68 100%) !important;
-        border-bottom-color: rgba(220, 248, 220, 0.42) !important;
-        box-shadow: 0 10px 24px rgba(50, 120, 50, 0.22) !important;
+        background: #E2F7F2 !important;
+        border-bottom-color: rgba(162, 201, 192, 0.45) !important;
+        box-shadow: 0 10px 24px rgba(39, 93, 84, 0.12) !important;
         backdrop-filter: none !important;
     }
 
@@ -208,23 +208,23 @@
     body:not(.category-display-page) .customer-auth,
     body:not(.category-display-page) .customer-auth span,
     body:not(.category-display-page) .customer-auth i {
-        color: #ffffff !important;
+        color: #1f3f49 !important;
     }
 
     body:not(.category-display-page) .header-link:hover,
     body:not(.category-display-page) .header-brand-link:hover {
-        color: #ffffff !important;
-        background: rgba(255, 255, 255, 0.2) !important;
+        color: #17343d !important;
+        background: rgba(31, 63, 73, 0.08) !important;
     }
 
     body:not(.category-display-page) .header-search-mini {
-        border-color: rgba(220, 248, 220, 0.58) !important;
-        background: rgba(255, 255, 255, 0.2) !important;
+        border-color: rgba(162, 201, 192, 0.55) !important;
+        background: rgba(255, 255, 255, 0.74) !important;
     }
 
     body:not(.category-display-page) .header-search-mini input,
     body:not(.category-display-page) .header-search-mini input::placeholder {
-        color: #ffffff !important;
+        color: #1f3f49 !important;
     }
 
     body:not(.category-display-page) .header-search-mini input::placeholder {

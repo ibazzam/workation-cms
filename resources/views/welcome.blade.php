@@ -258,9 +258,9 @@
         .sidebar-brand {
             display: grid;
             gap: 2px;
-            padding: 10px 12px;
-            border-bottom: 1px solid #d6e4ef;
-            background: linear-gradient(180deg, #f8fcff 0%, #f1f8fd 100%);
+            padding: 14px 18px;
+            border-bottom: 1px solid #d8e3ec;
+            background: #E2F7F2;
             opacity: 1;
             transform: none;
             pointer-events: auto;
@@ -268,11 +268,11 @@
 
         .sidebar-brand-title {
             margin: 0;
-            font-size: 2rem;
-            font-weight: 800;
+            font-size: 1.7rem;
+            font-weight: 900;
             letter-spacing: -0.04em;
             line-height: 1;
-            color: var(--brand);
+            color: #02193f;
             text-decoration: none;
         }
 
@@ -281,7 +281,7 @@
         }
 
         .sidebar-brand-subline {
-            margin: 0;
+            margin: 1px 0 0;
             font-size: 0.7rem;
             color: #71869a;
             white-space: nowrap;
@@ -293,12 +293,7 @@
         }
 
         .sidebar-title {
-            margin: 10px 10px 8px;
-            font-size: 0.72rem;
-            text-transform: uppercase;
-            letter-spacing: 0.09em;
-            color: #4e6d83;
-            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            display: none;
         }
 
         .customer-auth {
@@ -328,9 +323,9 @@
         }
 
         .auth-link.primary {
-            background: #E2F7F2;
-            border-color: #b7d8d1;
-            color: #1f3f49;
+            background: #C8EDE6;
+            border-color: #9cccc3;
+            color: #1a3d47;
         }
 
         .auth-btn {
@@ -486,10 +481,10 @@
 
         .top-link {
             text-decoration: none;
-            border: 1px solid #edf3f7;
+            border: 1px solid #b7d8d1;
             border-radius: 10px;
-            background: #ffffff;
-            color: #19405b;
+            background: #C8EDE6;
+            color: #1a3d47;
             padding: 8px 10px;
             font-size: 0.78rem;
             line-height: 1.2;
@@ -503,21 +498,21 @@
         }
 
         .top-link:hover {
-            border-color: #8db5cf;
-            background: #f8fbff;
-            box-shadow: 0 6px 14px rgba(34, 86, 120, 0.08);
+            border-color: #89c8bb;
+            background: #b4e2d9;
+            box-shadow: 0 6px 14px rgba(23, 80, 70, 0.1);
         }
 
         .top-link-head {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            color: #19405b;
+            color: #1a3d47;
         }
 
         .top-link-head i {
             font-size: 0.94rem;
-            color: #0f6179;
+            color: #1a7a68;
             width: 16px;
             text-align: center;
             flex: 0 0 16px;
@@ -692,7 +687,7 @@
             position: relative;
             z-index: 1;
             margin: 14px auto 0;
-            width: min(960px, 100%);
+            width: 100%;
             background: #ffffff;
             border-radius: 18px;
             border: 1px solid #dde5ee;

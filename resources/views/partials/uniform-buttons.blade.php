@@ -1,8 +1,8 @@
 <style>
     :root {
-        --btn-primary-border: #b7d8d1;
-        --btn-primary-bg: #E2F7F2;
-        --btn-primary-text: #1f3f49;
+        --btn-primary-border: #9cccc3;
+        --btn-primary-bg: #C8EDE6;
+        --btn-primary-text: #1a3d47;
         --btn-secondary-border: #c8d8e5;
         --btn-secondary-bg: #ffffff;
         --btn-secondary-text: #20415d;
@@ -194,9 +194,9 @@
     }
 
     body:not(.category-display-page) .header-bar {
-        background: #E2F7F2 !important;
-        border-bottom-color: rgba(162, 201, 192, 0.45) !important;
-        box-shadow: 0 10px 24px rgba(39, 93, 84, 0.12) !important;
+        background: #C8EDE6 !important;
+        border-bottom-color: rgba(140, 185, 176, 0.5) !important;
+        box-shadow: 0 10px 24px rgba(26, 93, 82, 0.14) !important;
         backdrop-filter: none !important;
     }
 

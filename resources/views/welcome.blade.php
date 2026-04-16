@@ -785,15 +785,61 @@
         }
 
         .search-form.is-accommodation .search-inline-row {
-            display: grid;
-            grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(102px, 0.65fr);
-            gap: 7px;
+            display: flex;
+            gap: 0;
+            padding: 0;
             align-items: stretch;
-            padding: 12px 14px;
         }
 
-        .search-form.is-accommodation .search-inline-row > * {
+        /* Hide atoll/island dropdowns in accommodation single-row layout */
+        .search-form.is-accommodation .field:has(#homeSearchAtoll),
+        .search-form.is-accommodation .field:has(#homeSearchIsland) {
+            display: none;
+        }
+
+        /* Divider-cell style for each field in accommodation row */
+        .search-form.is-accommodation .search-inline-row > .search-field-shell,
+        .search-form.is-accommodation .search-inline-row > .field {
+            flex: 1 1 0;
             min-width: 0;
+            border: 0;
+            border-right: 1px solid #e2eaf2;
+            border-radius: 0;
+            background: transparent;
+            padding: 12px 14px;
+            height: auto;
+            min-height: 72px;
+            max-height: none;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 2px;
+            box-sizing: border-box;
+        }
+
+        .search-form.is-accommodation .search-inline-row > .search-field-shell {
+            flex: 2 1 0;
+        }
+
+        .search-form.is-accommodation .search-inline-row > .field:last-of-type {
+            border-right: 0;
+        }
+
+        /* Remove .search-primary-field own border inside accommodation row */
+        .search-form.is-accommodation .search-primary-field {
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            padding: 0;
+            height: auto;
+            min-height: 0;
+            max-height: none;
+        }
+
+        /* Submit button sits flush with no extra padding */
+        .search-form.is-accommodation .search-submit-row {
+            padding: 10px 12px;
+            align-self: center;
+            flex: 0 0 auto;
         }
 
         .search-inline-row {

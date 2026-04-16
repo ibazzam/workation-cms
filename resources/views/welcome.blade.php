@@ -259,7 +259,8 @@
             display: grid;
             gap: 2px;
             align-content: center;
-            padding: 14px 12px 10px;
+            min-height: 84px;
+            padding: 0 24px;
             border-bottom: 1px solid #d7e4ee;
             background: #E2F7F2;
         }
@@ -270,7 +271,7 @@
             font-weight: 900;
             letter-spacing: -0.04em;
             line-height: 1;
-            color: #02193f;
+            color: #1f3f49;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
@@ -278,13 +279,13 @@
         }
 
         .sidebar-brand-title:hover {
-            color: var(--brand-strong);
+            color: #17343d;
         }
 
         .sidebar-brand-subline {
             margin: 1px 0 0;
             font-size: 0.7rem;
-            color: #71869a;
+            color: #5f7488;
             white-space: nowrap;
         }
 
@@ -621,8 +622,8 @@
         .search-section-full-width::before {
             content: '';
             position: absolute;
-            inset: 0 auto 0 calc(50% - 50vw + 12px);
-            width: calc(100vw - 24px);
+            inset: 0;
+            width: 100%;
             background:
                 var(--home-hero-image, none),
                 linear-gradient(135deg, #1550be 0%, #3c78e0 52%, #89b0ff 100%),
@@ -639,8 +640,8 @@
         .search-section-full-width::after {
             content: '';
             position: absolute;
-            inset: 0 auto 0 calc(50% - 50vw + 12px);
-            width: calc(100vw - 24px);
+            inset: 0;
+            width: 100%;
             background: linear-gradient(180deg, rgba(10, 33, 88, 0.2) 0%, rgba(10, 33, 88, 0.36) 100%);
             border-radius: 14px;
             pointer-events: none;
@@ -1636,8 +1637,8 @@
 
             .search-section-full-width::before,
             .search-section-full-width::after {
-                inset: 0 auto 0 calc(50% - 50vw + 8px);
-                width: calc(100vw - 16px);
+                inset: 0;
+                width: 100%;
             }
 
             .search-field-shell {

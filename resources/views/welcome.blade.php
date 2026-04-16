@@ -624,10 +624,10 @@
         .search-section-full-width {
             margin-top: 10px;
             margin-bottom: 18px;
-            margin-left: -212px;
-            width: calc(100% + 212px);
+            margin-left: calc(50% - 50vw + 212px);
+            width: calc(100vw - 212px);
             color: #e8f5f9;
-            padding: 20px 20px 54px calc(212px + 20px);
+            padding: 20px 20px 54px;
             min-height: 340px;
             position: relative;
             overflow: visible;
@@ -1195,7 +1195,11 @@
 
         .search-form.is-accommodation .search-submit-row,
         .search-form.is-accommodation .search-submit-row button {
-            width: 100%;
+            width: auto;
+        }
+
+        .search-form.is-accommodation .search-submit-row button {
+            min-width: 136px;
         }
 
         .search-actions {
@@ -1468,9 +1472,9 @@
             }
 
             .search-section-full-width {
-                margin-left: -242px;
-                width: calc(100% + 242px);
-                padding-left: calc(242px + 20px);
+                margin-left: calc(50% - 50vw + 242px);
+                width: calc(100vw - 242px);
+                padding-left: 20px;
             }
 
             .floating-sidebar {

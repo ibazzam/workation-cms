@@ -27,8 +27,13 @@
             box-sizing: border-box;
         }
 
+        html,
         body {
             margin: 0;
+            overflow-x: hidden;
+        }
+
+        body {
             font-family: "Outfit", "Trebuchet MS", sans-serif;
             color: var(--ink);
             background:
@@ -619,10 +624,10 @@
         .search-section-full-width {
             margin-top: 10px;
             margin-bottom: 18px;
-            margin-left: 0;
-            width: 100%;
+            margin-left: -212px;
+            width: calc(100% + 212px);
             color: #e8f5f9;
-            padding: 20px 20px 54px 20px;
+            padding: 20px 20px 54px calc(212px + 20px);
             min-height: 340px;
             position: relative;
             overflow: visible;
@@ -645,7 +650,7 @@
             background-size: cover, cover, auto, auto;
             background-position: center center, center center, center center, center center;
             background-repeat: no-repeat;
-            border-radius: 14px;
+            border-radius: 0;
             pointer-events: none;
             z-index: 0;
         }
@@ -656,7 +661,7 @@
             inset: 0;
             width: 100%;
             background: linear-gradient(180deg, rgba(10, 33, 88, 0.2) 0%, rgba(10, 33, 88, 0.36) 100%);
-            border-radius: 14px;
+            border-radius: 0;
             pointer-events: none;
             z-index: 0;
         }
@@ -906,10 +911,14 @@
         }
 
         #accommodationFields.is-active {
+            display: flex;
+            flex: 1 1 auto;
+        }
+
+        .search-form:not(.is-accommodation) #accommodationFields.is-active {
             display: grid;
             grid-template-columns: repeat(3, minmax(150px, 1fr));
             gap: 8px;
-            flex: 1 1 auto;
         }
 
         /* accommodationFields flows as a flex row inside the single-row shell */
@@ -1226,6 +1235,9 @@
 
         .promo-banner {
             margin-top: 0;
+            max-width: 860px;
+            margin-left: auto;
+            margin-right: auto;
             border: 1px solid #f3d2a4;
             border-radius: 14px;
             background: linear-gradient(95deg, #fff6e4 0%, #ffefd6 48%, #ffe5bf 100%);
@@ -1456,8 +1468,9 @@
             }
 
             .search-section-full-width {
-                margin-left: 0;
-                width: 100%;
+                margin-left: -242px;
+                width: calc(100% + 242px);
+                padding-left: calc(242px + 20px);
             }
 
             .floating-sidebar {
@@ -1718,7 +1731,7 @@
                 overflow: visible;
                 margin-left: 0;
                 width: 100%;
-                padding: 16px 14px 16px;
+                padding: 16px 14px 40px;
                 min-height: 0;
             }
 

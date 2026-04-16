@@ -226,9 +226,9 @@
         }
 
         .auth-link.primary {
-            background: #C8EDE6;
-            border-color: #9cccc3;
-            color: #1a3d47;
+            background: #1a7a68;
+            border-color: #136357;
+            color: #ffffff;
         }
 
         .account-menu {

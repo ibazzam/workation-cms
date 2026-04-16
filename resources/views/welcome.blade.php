@@ -1722,10 +1722,20 @@
         $customerContinueUrl = request()->fullUrl();
         $homeHeroBackgroundUrl = trim((string) ($homeHeroBackgroundUrl ?? ''));
         $homeTopCategoryLinks = $homeTopCategoryLinks ?? collect();
+        $homeCatalogAllowedUrls = [
+            '/catalog/accommodation',
+            '/catalog/marine-transport',
+            '/catalog/land-transport',
+            '/catalog/excursion',
+            '/catalog/resort_day_visit',
+        ];
         $homeCatalogCategoryLinks = $homeTopCategoryLinks
-            ->filter(function ($link) {
+            ->filter(function ($link) use ($homeCatalogAllowedUrls) {
                 $url = (string) ($link['url'] ?? '');
-                return preg_match('#^/catalog/#', $url) === 1;
+                return in_array($url, $homeCatalogAllowedUrls, true);
+            })
+            ->sortBy(function ($link) use ($homeCatalogAllowedUrls) {
+                return array_search((string) ($link['url'] ?? ''), $homeCatalogAllowedUrls, true);
             })
             ->values();
         $homeSidebarLinkSourceByUrl = $homeTopCategoryLinks

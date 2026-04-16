@@ -624,7 +624,7 @@
         .search-section-full-width {
             margin-top: 10px;
             margin-bottom: 18px;
-            margin-left: calc(50% - 50vw + 212px);
+            margin-left: calc((min(1180px, calc(100vw - 24px)) - 100vw) / 2);
             width: calc(100vw - 212px);
             color: #e8f5f9;
             padding: 20px 20px 54px;
@@ -1472,7 +1472,7 @@
             }
 
             .search-section-full-width {
-                margin-left: calc(50% - 50vw + 242px);
+                margin-left: calc((calc(100vw - 28px) - 100vw) / 2);
                 width: calc(100vw - 242px);
                 padding-left: 20px;
             }

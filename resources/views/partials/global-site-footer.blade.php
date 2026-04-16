@@ -98,14 +98,14 @@
 
     .wf-footer-links a {
         text-decoration: none;
-        color: #1f3f49;
+        color: #1a7a68;
         font-size: 0.84rem;
         font-weight: 600;
         transition: color 0.18s ease, opacity 0.18s ease;
     }
 
     .wf-footer-links a:hover {
-        color: #17343d;
+        color: #115e51;
         opacity: 0.86;
         text-decoration: underline;
         text-underline-offset: 2px;

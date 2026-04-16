@@ -37,7 +37,7 @@
 
         .page {
             width: min(1180px, calc(100% - 24px));
-            margin: 0 auto 28px;
+            margin: 0 auto;
             max-width: none;
             position: relative;
         }
@@ -46,7 +46,7 @@
             position: fixed;
             left: 0;
             top: 84px;
-            width: 250px;
+            width: 200px;
             height: calc(100dvh - 84px);
             overflow-y: auto;
             scrollbar-width: thin;
@@ -229,7 +229,7 @@
 
         .page-body-split {
             display: block;
-            padding-left: 262px;
+            padding-left: 212px;
         }
 
         .page-main-content {
@@ -705,6 +705,7 @@
             z-index: 1;
             margin: 14px auto 0;
             width: 100%;
+            max-width: 860px;
             background: #ffffff;
             border-radius: 18px;
             border: 1px solid #dde5ee;
@@ -1254,6 +1255,9 @@
 
         .section {
             margin-top: 13px;
+            max-width: 860px;
+            margin-left: auto;
+            margin-right: auto;
             border: 1px solid var(--line);
             border-radius: 16px;
             background: var(--surface);
@@ -1457,7 +1461,7 @@
             }
 
             .floating-sidebar {
-                width: 230px;
+                width: 190px;
             }
 
             .sidebar-brand {

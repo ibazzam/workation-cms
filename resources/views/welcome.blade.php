@@ -259,8 +259,7 @@
             display: grid;
             gap: 2px;
             align-content: center;
-            min-height: 84px;
-            padding: 0 24px;
+            padding: 14px 12px 10px;
             border-bottom: 1px solid #d7e4ee;
             background: #E2F7F2;
         }
@@ -271,7 +270,7 @@
             font-weight: 900;
             letter-spacing: -0.04em;
             line-height: 1;
-            color: #1f3f49;
+            color: #02193f;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
@@ -279,13 +278,13 @@
         }
 
         .sidebar-brand-title:hover {
-            color: #17343d;
+            color: var(--brand-strong);
         }
 
         .sidebar-brand-subline {
             margin: 1px 0 0;
             font-size: 0.7rem;
-            color: #5f7488;
+            color: #71869a;
             white-space: nowrap;
         }
 

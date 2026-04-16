@@ -27,8 +27,13 @@
             box-sizing: border-box;
         }
 
+        html,
         body {
             margin: 0;
+            overflow-x: hidden;
+        }
+
+        body {
             font-family: "Outfit", "Trebuchet MS", sans-serif;
             color: var(--ink);
             background:

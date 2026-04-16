@@ -36,8 +36,8 @@
         }
 
         .page {
-            width: min(1180px, calc(100% - 24px));
-            margin: 0 auto 28px;
+            width: 100%;
+            margin: 0 0 28px;
             max-width: none;
             position: relative;
         }
@@ -259,10 +259,15 @@
             display: grid;
             gap: 2px;
             align-content: center;
-            min-height: 84px;
+            min-height: 0;
             padding: 0 24px;
-            border-bottom: 1px solid #d7e4ee;
+            border-bottom: 0;
             background: #E2F7F2;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            pointer-events: none;
+            transition: max-height 0.2s ease, opacity 0.2s ease;
         }
 
         .sidebar-brand-title {
@@ -292,6 +297,14 @@
         .page.is-header-hidden .floating-sidebar {
             top: 0;
             height: 100dvh;
+        }
+
+        .page.is-header-hidden .sidebar-brand {
+            min-height: 84px;
+            max-height: 84px;
+            border-bottom: 1px solid #d7e4ee;
+            opacity: 1;
+            pointer-events: auto;
         }
 
         .sidebar-title {
@@ -609,7 +622,7 @@
             margin-left: 0;
             width: 100%;
             color: #e8f5f9;
-            padding: 20px 20px 54px 20px;
+            padding: 20px 0 54px;
             min-height: 340px;
             position: relative;
             overflow: visible;
@@ -650,6 +663,7 @@
 
         .search-eyebrow {
             margin: 0;
+            padding: 0 20px;
             text-transform: uppercase;
             letter-spacing: 0.1em;
             font-size: 0.72rem;
@@ -661,6 +675,7 @@
 
         .search-title {
             margin: 7px 0 0;
+            padding: 0 20px;
             font-size: clamp(1.45rem, 2.4vw, 2.3rem);
             line-height: 1.08;
             max-width: 760px;
@@ -672,6 +687,7 @@
 
         .search-support-strip {
             margin-top: 8px;
+            padding: 0 20px;
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
@@ -1377,12 +1393,6 @@
                 width: 230px;
             }
 
-            .sidebar-brand {
-                opacity: 1;
-                transform: none;
-                pointer-events: auto;
-            }
-
             .header-bar {
                 border-bottom-color: #d8e3ec;
             }
@@ -1633,6 +1643,12 @@
                 width: 100%;
                 padding: 16px 14px 16px;
                 min-height: 0;
+            }
+
+            .search-eyebrow,
+            .search-title,
+            .search-support-strip {
+                padding: 0;
             }
 
             .search-section-full-width::before,

@@ -256,7 +256,12 @@
         }
 
         .sidebar-brand {
-            display: none;
+            display: grid;
+            gap: 2px;
+            align-content: center;
+            padding: 14px 12px 10px;
+            border-bottom: 1px solid #d7e4ee;
+            background: #E2F7F2;
         }
 
         .sidebar-brand-title {
@@ -267,6 +272,9 @@
             line-height: 1;
             color: #02193f;
             text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .sidebar-brand-title:hover {
@@ -597,8 +605,8 @@
         .search-section-full-width {
             margin-top: 10px;
             margin-bottom: 18px;
-            margin-left: -262px;
-            width: calc(100% + 262px);
+            margin-left: 0;
+            width: 100%;
             color: #e8f5f9;
             padding: 20px 20px 54px 20px;
             min-height: 340px;
@@ -1360,8 +1368,8 @@
             }
 
             .search-section-full-width {
-                margin-left: -242px;
-                width: calc(100% + 242px);
+                margin-left: 0;
+                width: 100%;
             }
 
             .floating-sidebar {
@@ -1722,10 +1730,20 @@
         $customerContinueUrl = request()->fullUrl();
         $homeHeroBackgroundUrl = trim((string) ($homeHeroBackgroundUrl ?? ''));
         $homeTopCategoryLinks = $homeTopCategoryLinks ?? collect();
+        $homeCatalogAllowedUrls = [
+            '/catalog/accommodation',
+            '/catalog/marine-transport',
+            '/catalog/land-transport',
+            '/catalog/excursion',
+            '/catalog/resort_day_visit',
+        ];
         $homeCatalogCategoryLinks = $homeTopCategoryLinks
-            ->filter(function ($link) {
+            ->filter(function ($link) use ($homeCatalogAllowedUrls) {
                 $url = (string) ($link['url'] ?? '');
-                return preg_match('#^/catalog/#', $url) === 1;
+                return in_array($url, $homeCatalogAllowedUrls, true);
+            })
+            ->sortBy(function ($link) use ($homeCatalogAllowedUrls) {
+                return array_search((string) ($link['url'] ?? ''), $homeCatalogAllowedUrls, true);
             })
             ->values();
         $homeSidebarLinkSourceByUrl = $homeTopCategoryLinks

@@ -114,12 +114,7 @@
         }
 
         .header-brand small {
-            color: rgba(233, 248, 255, 0.82);
-            font-size: 0.78rem;
-            text-transform: uppercase;
-            letter-spacing: 0.18em;
-            font-weight: 800;
-            text-shadow: none;
+            display: none !important;
         }
 
         .header-brand-link {
@@ -1198,8 +1193,7 @@
                             </div>
                         </div>
                     @else
-                        <a class="auth-link" href="{{ '/portal/customer/login?continue=' . urlencode($customerContinueUrl) }}">Member Login</a>
-                        <a class="auth-link primary" href="{{ '/portal/customer/register?continue=' . urlencode($customerContinueUrl) }}">Member Registration</a>
+                        <a class="auth-link primary" href="{{ '/portal/customer/login?continue=' . urlencode($customerContinueUrl) }}">Sign in/register</a>
                     @endif
                 </div>
             </header>

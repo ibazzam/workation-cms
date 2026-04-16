@@ -9,10 +9,10 @@
         margin-left: calc(50% - 50vw);
         margin-right: calc(50% - 50vw);
         background:
-            radial-gradient(circle at top left, rgba(178, 243, 224, 0.28) 0%, rgba(178, 243, 224, 0) 34%),
-            linear-gradient(135deg, #52B254 0%, #69CA68 100%);
-        border-top: 1px solid rgba(226, 246, 252, 0.42);
-        color: #e8f4ff;
+            radial-gradient(circle at top left, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 34%),
+            linear-gradient(135deg, #E2F7F2 0%, #D6EFE9 100%);
+        border-top: 1px solid rgba(162, 201, 192, 0.52);
+        color: #1f3f49;
     }
 
     .wf-footer-shell {
@@ -34,7 +34,7 @@
     .wf-footer-brand {
         display: inline-flex;
         align-items: center;
-        color: #ffffff;
+        color: #17343d;
         text-decoration: none;
         font-size: 1.7rem;
         line-height: 1;
@@ -45,7 +45,7 @@
     .wf-footer-kicker {
         margin: 0;
         font-size: 0.78rem;
-        color: rgba(224, 239, 255, 0.78);
+        color: rgba(31, 63, 73, 0.78);
         letter-spacing: 0.06em;
     }
 
@@ -53,13 +53,13 @@
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 0;
-        border-top: 1px solid rgba(191, 220, 241, 0.18);
-        border-bottom: 1px solid rgba(191, 220, 241, 0.18);
+        border-top: 1px solid rgba(162, 201, 192, 0.3);
+        border-bottom: 1px solid rgba(162, 201, 192, 0.3);
     }
 
     .wf-footer-col {
         padding: 18px 20px;
-        border-left: 1px solid rgba(191, 220, 241, 0.14);
+        border-left: 1px solid rgba(162, 201, 192, 0.24);
     }
 
     .wf-footer-col:first-child {
@@ -71,7 +71,7 @@
         font-size: 0.78rem;
         text-transform: uppercase;
         letter-spacing: 0.09em;
-        color: rgba(220, 238, 255, 0.74);
+        color: rgba(31, 63, 73, 0.78);
         font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
         position: relative;
         padding-bottom: 7px;
@@ -85,7 +85,7 @@
         width: 44px;
         height: 2px;
         border-radius: 999px;
-        background: linear-gradient(90deg, #7ac5ff 0%, #d7ffef 100%);
+        background: linear-gradient(90deg, #79b8a8 0%, #b7ddd4 100%);
     }
 
     .wf-footer-links {
@@ -98,14 +98,14 @@
 
     .wf-footer-links a {
         text-decoration: none;
-        color: #f3f9ff;
+        color: #1f3f49;
         font-size: 0.84rem;
         font-weight: 600;
         transition: color 0.18s ease, opacity 0.18s ease;
     }
 
     .wf-footer-links a:hover {
-        color: #ffffff;
+        color: #17343d;
         opacity: 0.86;
         text-decoration: underline;
         text-underline-offset: 2px;
@@ -114,7 +114,7 @@
     .wf-footer-note {
         margin: 0;
         font-size: 0.78rem;
-        color: rgba(220, 238, 255, 0.72);
+        color: rgba(31, 63, 73, 0.76);
     }
 
     .wf-footer-bottom {
@@ -142,18 +142,18 @@
         justify-content: center;
         width: 38px;
         height: 38px;
-        border: 1px solid rgba(214, 232, 247, 0.22);
+        border: 1px solid rgba(162, 201, 192, 0.35);
         border-radius: 50%;
-        background: rgba(255, 255, 255, 0.07);
-        color: #f3f9ff;
+        background: rgba(255, 255, 255, 0.58);
+        color: #1f3f49;
         font-size: 0.96rem;
         transition: border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
     }
 
     .wf-social-links a:hover {
-        border-color: rgba(214, 232, 247, 0.46);
-        color: #ffffff;
-        box-shadow: 0 8px 18px rgba(2, 15, 35, 0.2);
+        border-color: rgba(121, 166, 156, 0.6);
+        color: #17343d;
+        box-shadow: 0 8px 18px rgba(23, 52, 61, 0.12);
         transform: translateY(-1px);
     }
 
@@ -173,11 +173,11 @@
         }
 
         .wf-footer-col:nth-child(even) {
-            border-left: 1px solid rgba(191, 220, 241, 0.14);
+            border-left: 1px solid rgba(162, 201, 192, 0.24);
         }
 
         .wf-footer-col:nth-child(n+3) {
-            border-top: 1px solid rgba(191, 220, 241, 0.14);
+            border-top: 1px solid rgba(162, 201, 192, 0.24);
         }
     }
 
@@ -205,7 +205,7 @@
         }
 
         .wf-footer-col:not(:first-child) {
-            border-top: 1px solid rgba(191, 220, 241, 0.14);
+            border-top: 1px solid rgba(162, 201, 192, 0.24);
         }
     }
 </style>

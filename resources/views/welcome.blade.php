@@ -126,11 +126,7 @@
         }
 
         .header-brand small {
-            color: #5b6672;
-            font-size: 0.78rem;
-            text-transform: uppercase;
-            letter-spacing: 0.18em;
-            font-weight: 800;
+            display: none !important;
         }
 
         .header-brand-link {
@@ -1783,7 +1779,7 @@
             <div class="header-main">
                 <div class="header-brand-wrap">
                     <div>
-                        <a class="header-brand header-brand-link" href="/">Workation <small>Blog</small></a>
+                        <a class="header-brand header-brand-link" href="/">Workation</a>
                         <p class="header-subline">Maldives Travel Market</p>
                     </div>
                 </div>

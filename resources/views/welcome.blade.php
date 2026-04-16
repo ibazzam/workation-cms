@@ -622,7 +622,7 @@
             margin-left: 0;
             width: 100%;
             color: #e8f5f9;
-            padding: 20px 0 54px;
+            padding: 20px 20px 54px 20px;
             min-height: 340px;
             position: relative;
             overflow: visible;
@@ -663,7 +663,6 @@
 
         .search-eyebrow {
             margin: 0;
-            padding: 0 20px;
             text-transform: uppercase;
             letter-spacing: 0.1em;
             font-size: 0.72rem;
@@ -675,7 +674,6 @@
 
         .search-title {
             margin: 7px 0 0;
-            padding: 0 20px;
             font-size: clamp(1.45rem, 2.4vw, 2.3rem);
             line-height: 1.08;
             max-width: 760px;
@@ -687,7 +685,6 @@
 
         .search-support-strip {
             margin-top: 8px;
-            padding: 0 20px;
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
@@ -1393,6 +1390,12 @@
                 width: 230px;
             }
 
+            .sidebar-brand {
+                opacity: 1;
+                transform: none;
+                pointer-events: auto;
+            }
+
             .header-bar {
                 border-bottom-color: #d8e3ec;
             }
@@ -1643,12 +1646,6 @@
                 width: 100%;
                 padding: 16px 14px 16px;
                 min-height: 0;
-            }
-
-            .search-eyebrow,
-            .search-title,
-            .search-support-strip {
-                padding: 0;
             }
 
             .search-section-full-width::before,

@@ -266,14 +266,14 @@
             align-content: center;
             min-height: 84px;
             padding: 0 24px;
-            border-bottom: 0;
-            background: #E2F7F2;
+            border-bottom: 1px solid #d7e4ee;
+            background: linear-gradient(160deg, #ffffff 0%, #f5f9fc 100%);
             max-height: 84px;
-            opacity: 0;
-            visibility: hidden;
+            opacity: 1;
+            visibility: visible;
             overflow: clip;
-            pointer-events: none;
-            transition: opacity 0.2s ease, visibility 0.2s ease;
+            pointer-events: auto;
+            transition: none;
         }
 
         .sidebar-brand-title {
@@ -298,13 +298,7 @@
             font-size: 0.7rem;
             color: #5f7488;
             white-space: nowrap;
-        }
-
-        .page.is-header-hidden .sidebar-brand {
-            border-bottom: 1px solid #d7e4ee;
-            opacity: 1;
-            visibility: visible;
-            pointer-events: auto;
+            display: none;
         }
 
         .sidebar-title {

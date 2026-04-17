@@ -20,7 +20,7 @@
             --brand-soft: #dff1f6;
             --accent: #f3a337;
             --accent-soft: #fff3df;
-            --search-control-height: 50px;
+            --search-control-height: 52px;
         }
 
         * {
@@ -715,17 +715,18 @@
             border-radius: 18px;
             border: 1px solid #dde5ee;
             box-shadow: 0 20px 38px rgba(22, 49, 97, 0.2);
-            padding: 8px 10px;
+            padding: 10px 12px;
             overflow: visible;
         }
 
         .search-category-tabs {
             display: flex;
             flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
             gap: 8px;
             margin: 0;
             width: 100%;
-            justify-content: center;
             padding: 10px;
             border-radius: 14px 14px 0 0;
             background: linear-gradient(180deg, var(--brand-strong) 0%, var(--brand) 100%);
@@ -811,7 +812,7 @@
             border: 0;
             border-radius: 0;
             background: transparent;
-            padding: 10px 14px;
+            padding: 8px 12px;
             height: auto;
             min-height: 62px;
             max-height: none;
@@ -834,7 +835,7 @@
 
         /* Submit button: compact and right-aligned */
         .search-form.is-accommodation .search-submit-row {
-            padding: 8px 14px;
+            padding: 8px 12px;
             align-self: center;
             flex: 0 0 auto;
         }
@@ -871,7 +872,7 @@
             height: var(--search-control-height);
             min-height: var(--search-control-height);
             max-height: var(--search-control-height);
-            padding: 4px 9px;
+            padding: 4px 8px;
             box-sizing: border-box;
         }
 
@@ -890,7 +891,6 @@
         .search-primary-field input {
             border-radius: 0 !important;
             padding: 0 !important;
-            line-height: 1.1;
             font-size: 0.84rem;
         }
 
@@ -941,7 +941,7 @@
             border-left: 1px solid #e2eaf2;
             border-radius: 0;
             background: transparent;
-            padding: 10px 14px;
+            padding: 8px 12px;
             height: auto;
             min-height: 62px;
             max-height: none;
@@ -968,7 +968,7 @@
             color: #103247;
             font: inherit;
             font-size: 0.86rem;
-            padding: 0;
+            padding: 2px 0 0;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -1060,7 +1060,7 @@
 
         .search-dynamic-fields .field {
             display: grid;
-            grid-template-rows: auto minmax(0, 1fr);
+            grid-template-rows: auto auto;
             gap: 1px;
             min-width: 0;
             overflow: hidden;
@@ -1072,11 +1072,12 @@
             min-height: var(--search-control-height);
             max-height: var(--search-control-height);
             box-sizing: border-box;
+            align-content: center;
         }
 
         .search-dynamic-fields .field > input,
         .search-dynamic-fields .field > select {
-            align-self: end;
+            align-self: center;
             line-height: 1.15;
         }
 
@@ -1123,10 +1124,9 @@
             max-width: 100%;
             border: 0;
             border-radius: 0;
-            padding: 0;
+            padding: 2px 0 0;
             font-size: 0.86rem;
             font: inherit;
-            line-height: 1.1;
             color: #103247;
             background: transparent;
             box-sizing: border-box;
@@ -1145,10 +1145,10 @@
             min-width: 0;
             max-width: 100%;
             padding: 0;
-            line-height: 1.1;
             overflow: hidden;
             font-size: 0.86rem;
             cursor: pointer;
+            line-height: 1.1;
         }
 
         .search-form input[type="number"],
@@ -1609,6 +1609,7 @@
             .search-category-tabs {
                 position: static;
                 top: auto;
+                justify-content: flex-start;
                 flex-wrap: nowrap;
                 gap: 6px;
                 overflow-x: auto;

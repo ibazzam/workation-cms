@@ -20,7 +20,7 @@
             --brand-soft: #dff1f6;
             --accent: #f3a337;
             --accent-soft: #fff3df;
-            --search-control-height: 56px;
+            --search-control-height: 52px;
         }
 
         * {
@@ -722,6 +722,8 @@
         .search-category-tabs {
             display: flex;
             flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
             gap: 8px;
             margin: 0;
             width: 100%;
@@ -810,13 +812,13 @@
             border: 0;
             border-radius: 0;
             background: transparent;
-            padding: 12px 14px;
+            padding: 8px 12px;
             height: auto;
-            min-height: 72px;
+            min-height: 62px;
             max-height: none;
             display: grid;
             grid-template-rows: auto 1fr;
-            gap: 2px;
+            gap: 1px;
             box-sizing: border-box;
         }
 
@@ -833,7 +835,7 @@
 
         /* Submit button: compact and right-aligned */
         .search-form.is-accommodation .search-submit-row {
-            padding: 10px 14px;
+            padding: 8px 12px;
             align-self: center;
             flex: 0 0 auto;
         }
@@ -870,7 +872,7 @@
             height: var(--search-control-height);
             min-height: var(--search-control-height);
             max-height: var(--search-control-height);
-            padding: 5px 9px;
+            padding: 4px 8px;
             box-sizing: border-box;
         }
 
@@ -888,7 +890,7 @@
 
         .search-primary-field input {
             border-radius: 0 !important;
-            padding: 2px 0 0 !important;
+            padding: 0 !important;
             font-size: 0.84rem;
         }
 
@@ -939,13 +941,13 @@
             border-left: 1px solid #e2eaf2;
             border-radius: 0;
             background: transparent;
-            padding: 12px 14px;
+            padding: 8px 12px;
             height: auto;
-            min-height: 72px;
+            min-height: 62px;
             max-height: none;
             display: grid;
             grid-template-rows: auto 1fr;
-            gap: 2px;
+            gap: 1px;
             box-sizing: border-box;
             overflow: visible;
         }
@@ -1058,23 +1060,24 @@
 
         .search-dynamic-fields .field {
             display: grid;
-            grid-template-rows: auto minmax(0, 1fr);
-            gap: 2px;
+            grid-template-rows: auto auto;
+            gap: 1px;
             min-width: 0;
             overflow: hidden;
             border: 1px solid #d8e3ec;
             border-radius: 10px;
-            padding: 5px 8px;
+            padding: 4px 8px;
             background: #f9fbfd;
             height: var(--search-control-height);
             min-height: var(--search-control-height);
             max-height: var(--search-control-height);
             box-sizing: border-box;
+            align-content: center;
         }
 
         .search-dynamic-fields .field > input,
         .search-dynamic-fields .field > select {
-            align-self: end;
+            align-self: center;
             line-height: 1.15;
         }
 
@@ -1141,10 +1144,11 @@
             width: 100%;
             min-width: 0;
             max-width: 100%;
-            padding: 2px 0;
+            padding: 0;
             overflow: hidden;
             font-size: 0.86rem;
             cursor: pointer;
+            line-height: 1.1;
         }
 
         .search-form input[type="number"],
@@ -1605,6 +1609,7 @@
             .search-category-tabs {
                 position: static;
                 top: auto;
+                justify-content: flex-start;
                 flex-wrap: nowrap;
                 gap: 6px;
                 overflow-x: auto;

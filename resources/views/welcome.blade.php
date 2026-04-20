@@ -1706,6 +1706,7 @@
             }
 
             .search-form {
+                --search-control-height: 48px;
                 grid-template-columns: 1fr;
             }
 
@@ -1720,16 +1721,16 @@
             .search-inline-row {
                 display: grid;
                 grid-template-columns: 1fr;
-                gap: 10px;
-                padding: 12px;
+                gap: 8px;
+                padding: 10px;
                 overflow: visible;
             }
 
             .search-form.is-accommodation .search-inline-row {
                 display: grid;
                 grid-template-columns: 1fr;
-                gap: 8px;
-                padding: 10px;
+                gap: 6px;
+                padding: 8px;
             }
 
             .search-section-full-width {
@@ -1751,14 +1752,14 @@
             }
 
             .search-category-tabs {
-                margin: 18px 0 12px;
+                margin: 12px 0 8px;
                 width: 100%;
                 justify-content: flex-start;
                 overflow-x: auto;
                 overflow-y: hidden;
                 flex-wrap: nowrap;
                 gap: 6px;
-                padding: 8px;
+                padding: 7px;
             }
 
             .search-category-tab {
@@ -1771,7 +1772,7 @@
             }
 
             .search-shell {
-                padding: 12px;
+                padding: 10px;
                 border-radius: 16px;
             }
 
@@ -1782,13 +1783,13 @@
 
             .search-dynamic-fields.is-active {
                 display: grid;
-                gap: 8px;
+                gap: 6px;
             }
 
             .search-form.is-accommodation #accommodationFields.is-active {
                 display: grid;
                 grid-template-columns: 1fr;
-                gap: 8px;
+                gap: 6px;
                 flex: initial;
             }
 
@@ -1801,7 +1802,7 @@
                 border: 1px solid #d8e3ec;
                 border-radius: 10px;
                 border-left: 1px solid #d8e3ec;
-                padding: 4px 8px;
+                padding: 3px 8px;
                 min-height: var(--search-control-height);
                 background: #f9fbfd;
                 gap: 1px;

@@ -1725,6 +1725,13 @@
                 overflow: visible;
             }
 
+            .search-form.is-accommodation .search-inline-row {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 8px;
+                padding: 10px;
+            }
+
             .search-section-full-width {
                 overflow: visible;
                 margin-left: 0;
@@ -1776,6 +1783,38 @@
             .search-dynamic-fields.is-active {
                 display: grid;
                 gap: 8px;
+            }
+
+            .search-form.is-accommodation #accommodationFields.is-active {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 8px;
+                flex: initial;
+            }
+
+            .search-form.is-accommodation .search-inline-row > .search-field-shell {
+                padding: 0;
+                min-height: 0;
+            }
+
+            .search-form.is-accommodation #accommodationFields.is-active > .field {
+                border: 1px solid #d8e3ec;
+                border-radius: 10px;
+                border-left: 1px solid #d8e3ec;
+                padding: 4px 8px;
+                min-height: var(--search-control-height);
+                background: #f9fbfd;
+                gap: 1px;
+            }
+
+            .search-form.is-accommodation .search-submit-row {
+                width: 100%;
+                padding: 0;
+            }
+
+            .search-form.is-accommodation .search-submit-row button {
+                width: 100%;
+                min-width: 0;
             }
 
             #accommodationFields.is-active {

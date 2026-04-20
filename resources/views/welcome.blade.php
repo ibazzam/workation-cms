@@ -781,7 +781,7 @@
             background: #ffffff;
         }
 
-        .search-form.is-accommodation .search-inline-row {
+        .search-form.is-accommodation-like .search-inline-row {
             display: flex;
             gap: 0;
             padding: 0;
@@ -789,13 +789,13 @@
         }
 
         /* Hide atoll/island dropdowns in accommodation single-row layout */
-        .search-form.is-accommodation .field:has(#homeSearchAtoll),
-        .search-form.is-accommodation .field:has(#homeSearchIsland) {
+        .search-form.is-accommodation-like .field:has(#homeSearchAtoll),
+        .search-form.is-accommodation-like .field:has(#homeSearchIsland) {
             display: none;
         }
 
         /* Destination field shell in accommodation row */
-        .search-form.is-accommodation .search-inline-row > .search-field-shell {
+        .search-form.is-accommodation-like .search-inline-row > .search-field-shell {
             flex: 2 1 0;
             min-width: 0;
             border: 0;
@@ -812,7 +812,7 @@
         }
 
         /* Remove .search-primary-field own border inside accommodation row */
-        .search-form.is-accommodation .search-primary-field {
+        .search-form.is-accommodation-like .search-primary-field {
             border: 0;
             border-radius: 0;
             background: transparent;
@@ -823,13 +823,13 @@
         }
 
         /* Submit button: compact and right-aligned */
-        .search-form.is-accommodation .search-submit-row {
+        .search-form.is-accommodation-like .search-submit-row {
             padding: 8px 12px;
             align-self: center;
             flex: 0 0 auto;
         }
 
-        .search-form.is-accommodation .search-submit-row button {
+        .search-form.is-accommodation-like .search-submit-row button {
             white-space: nowrap;
             min-width: 110px;
         }
@@ -906,14 +906,14 @@
             flex: 1 1 auto;
         }
 
-        .search-form:not(.is-accommodation) #accommodationFields.is-active {
+        .search-form:not(.is-accommodation-like) #accommodationFields.is-active {
             display: grid;
             grid-template-columns: repeat(3, minmax(150px, 1fr));
             gap: 8px;
         }
 
         /* accommodationFields flows as a flex row inside the single-row shell */
-        .search-form.is-accommodation #accommodationFields.is-active {
+        .search-form.is-accommodation-like .search-dynamic-fields.is-active {
             display: flex;
             flex: 3 1 0;
             gap: 0;
@@ -923,7 +923,7 @@
         }
 
         /* Each dynamic field cell inside accommodation row */
-        .search-form.is-accommodation #accommodationFields.is-active > .field {
+        .search-form.is-accommodation-like .search-dynamic-fields.is-active > .field {
             flex: 1 1 0;
             min-width: 0;
             border: 0;
@@ -941,7 +941,7 @@
             overflow: visible;
         }
 
-        .search-form.is-accommodation #accommodationFields.is-active > .field.guest-picker {
+        .search-form.is-accommodation-like .search-dynamic-fields.is-active > .field.guest-picker {
             overflow: visible;
         }
 
@@ -1186,12 +1186,12 @@
             white-space: nowrap;
         }
 
-        .search-form.is-accommodation .search-submit-row,
-        .search-form.is-accommodation .search-submit-row button {
+        .search-form.is-accommodation-like .search-submit-row,
+        .search-form.is-accommodation-like .search-submit-row button {
             width: auto;
         }
 
-        .search-form.is-accommodation .search-submit-row button {
+        .search-form.is-accommodation-like .search-submit-row button {
             min-width: 136px;
         }
 
@@ -1537,7 +1537,7 @@
                 overflow: visible;
             }
 
-            .search-form.is-accommodation .search-inline-row {
+            .search-form.is-accommodation-like .search-inline-row {
                 grid-template-columns: 1fr;
             }
 
@@ -1546,11 +1546,11 @@
                 grid-column: auto;
             }
 
-            .search-form:not(.is-accommodation) .search-submit-row {
+            .search-form:not(.is-accommodation-like) .search-submit-row {
                 width: 100%;
             }
 
-            .search-form:not(.is-accommodation) .search-submit-row button {
+            .search-form:not(.is-accommodation-like) .search-submit-row button {
                 width: 100%;
             }
 
@@ -1564,7 +1564,7 @@
                 grid-template-columns: 130px minmax(0, 1fr);
             }
 
-            .search-form.is-accommodation .search-primary-field {
+            .search-form.is-accommodation-like .search-primary-field {
                 grid-template-columns: minmax(0, 1fr);
             }
 
@@ -1710,11 +1710,11 @@
                 grid-template-columns: 1fr;
             }
 
-            .search-form:not(.is-accommodation) .search-submit-row {
+            .search-form:not(.is-accommodation-like) .search-submit-row {
                 width: 100%;
             }
 
-            .search-form:not(.is-accommodation) .search-submit-row button {
+            .search-form:not(.is-accommodation-like) .search-submit-row button {
                 width: 100%;
             }
 
@@ -1726,7 +1726,7 @@
                 overflow: visible;
             }
 
-            .search-form.is-accommodation .search-inline-row {
+            .search-form.is-accommodation-like .search-inline-row {
                 display: grid;
                 grid-template-columns: 1fr;
                 gap: 6px;
@@ -1786,19 +1786,19 @@
                 gap: 6px;
             }
 
-            .search-form.is-accommodation #accommodationFields.is-active {
+            .search-form.is-accommodation-like .search-dynamic-fields.is-active {
                 display: grid;
                 grid-template-columns: 1fr;
                 gap: 6px;
                 flex: initial;
             }
 
-            .search-form.is-accommodation .search-inline-row > .search-field-shell {
+            .search-form.is-accommodation-like .search-inline-row > .search-field-shell {
                 padding: 0;
                 min-height: 0;
             }
 
-            .search-form.is-accommodation #accommodationFields.is-active > .field {
+            .search-form.is-accommodation-like .search-dynamic-fields.is-active > .field {
                 border: 1px solid #d8e3ec;
                 border-radius: 10px;
                 border-left: 1px solid #d8e3ec;
@@ -1808,12 +1808,12 @@
                 gap: 1px;
             }
 
-            .search-form.is-accommodation .search-submit-row {
+            .search-form.is-accommodation-like .search-submit-row {
                 width: 100%;
                 padding: 0;
             }
 
-            .search-form.is-accommodation .search-submit-row button {
+            .search-form.is-accommodation-like .search-submit-row button {
                 width: 100%;
                 min-width: 0;
             }
@@ -2495,11 +2495,13 @@
                 const category = String(categorySelect.value || 'accommodation').toLowerCase();
                 const normalizedCategory = normalizeCategoryKey(category);
                 const isAccommodation = normalizedCategory === 'accommodation';
+                const useAccommodationLikeLayout = ['accommodation', 'excursion', 'resort_day_visit'].includes(normalizedCategory);
                 
                 // Update form action
                 const displayCategory = normalizedCategory.replace(/_/g, '-');
                 form.setAttribute('action', '/catalog/' + displayCategory);
                 form.classList.toggle('is-accommodation', isAccommodation);
+                form.classList.toggle('is-accommodation-like', useAccommodationLikeLayout);
 
                 // Hide all field sets and disable their inputs
                 Object.keys(fieldSets).forEach(function (key) {

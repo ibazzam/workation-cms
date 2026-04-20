@@ -539,7 +539,7 @@
             top: 96px;
             left: 50%;
             transform: translateX(-50%);
-            width: min(1120px, calc(100% - 56px));
+            width: calc(100% - 24px);
             z-index: 2;
             display: grid;
             gap: 12px;
@@ -624,7 +624,9 @@
             border-radius: 10px;
             background: var(--surface);
             padding: 12px;
-            display: grid;
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: flex-end;
             gap: 8px;
             overflow: hidden;
             box-shadow: 0 12px 26px rgba(14, 41, 92, 0.2);
@@ -633,6 +635,23 @@
             width: 100%;
             margin-left: auto;
             margin-right: auto;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+
+        .search-box > .grid {
+            flex: 0 0 auto;
+        }
+
+        .search-box::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .search-box::-webkit-scrollbar-thumb {
+            background: #bfd4e2;
+            border-radius: 999px;
         }
 
         .catalog-section-title {
@@ -643,7 +662,7 @@
 
         .grid {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             gap: 6px;
             align-items: flex-end;
             min-width: 0;
@@ -656,23 +675,23 @@
         }
 
         .field.field-short {
-            flex: 0 0 68px;
-            width: 68px;
+            flex: 0 0 84px;
+            width: 84px;
         }
 
         .field.field-medium {
-            flex: 0 1 140px;
-            min-width: 110px;
+            flex: 0 0 164px;
+            width: 164px;
         }
 
         .field.field-date {
-            flex: 0 0 148px;
-            width: 148px;
+            flex: 0 0 172px;
+            width: 172px;
         }
 
         .field.field-long {
-            flex: 1 1 160px;
-            min-width: 130px;
+            flex: 0 0 220px;
+            width: 220px;
         }
 
         .field label {
@@ -722,9 +741,11 @@
 
         .actions {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             gap: 8px;
             align-items: center;
+            flex: 0 0 auto;
+            white-space: nowrap;
         }
 
         .section-title {
@@ -898,13 +919,23 @@
             }
 
             .field.field-short {
-                flex: 0 0 64px;
-                width: 64px;
+                flex: 0 0 80px;
+                width: 80px;
             }
 
             .field.field-date {
-                flex: 0 0 138px;
-                width: 138px;
+                flex: 0 0 164px;
+                width: 164px;
+            }
+
+            .field.field-medium {
+                flex: 0 0 152px;
+                width: 152px;
+            }
+
+            .field.field-long {
+                flex: 0 0 200px;
+                width: 200px;
             }
 
         }
@@ -1029,6 +1060,7 @@
 
             .search-box {
                 margin-top: 4px;
+                padding: 10px;
             }
 
             .hero-banner-title {
@@ -1055,15 +1087,16 @@
                 grid-template-columns: 1fr;
             }
 
-            .grid {
-                grid-template-columns: 1fr;
-            }
-
             .field.field-short,
             .field.field-medium,
             .field.field-date,
             .field.field-long {
-                grid-column: auto;
+                flex: 0 0 148px;
+                width: 148px;
+            }
+
+            .actions {
+                padding-right: 4px;
             }
         }
     </style>
@@ -1204,49 +1237,51 @@
                     <h1 class="hero-banner-title">{{ (string) ($categoryMeta['label'] ?? 'Category') }}.</h1>
                     <div class="search-sticky-wrap">
                         <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}">
-            <div class="grid">
-                <div class="field field-long">
-                    <label for="q">Search</label>
-                    <input id="q" name="q" type="text" value="{{ $filters['q'] ?? '' }}" placeholder="Atoll, island, place, or property name">
+            @if (!in_array($categoryKey, ['marine-transport', 'land-transport'], true))
+                <div class="grid">
+                    <div class="field field-long">
+                        <label for="q">Search</label>
+                        <input id="q" name="q" type="text" value="{{ $filters['q'] ?? '' }}" placeholder="Atoll, island, place, or property name">
+                    </div>
+                    <div class="field field-medium">
+                        <label for="atoll">Atoll</label>
+                        <select id="atoll" name="atoll">
+                            <option value="">All Atolls</option>
+                            @foreach ($atollOptions as $atoll)
+                                <option value="{{ $atoll }}" {{ ($filters['atoll'] ?? '') === $atoll ? 'selected' : '' }}>{{ $atoll }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="field field-medium">
+                        <label for="island">Island / City</label>
+                        <select id="island" name="island">
+                            <option value="">All Islands/Cities</option>
+                            @foreach ($islandOptions as $island)
+                                <option value="{{ $island }}" {{ ($filters['island'] ?? '') === $island ? 'selected' : '' }}>{{ $island }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="field field-medium">
+                        <label for="sort">Sort</label>
+                        <select id="sort" name="sort">
+                            <option value="recommended" {{ ($filters['sort'] ?? '') === 'recommended' ? 'selected' : '' }}>Recommended</option>
+                            <option value="most_wanted" {{ ($filters['sort'] ?? '') === 'most_wanted' ? 'selected' : '' }}>Most Wanted</option>
+                            <option value="most_booked" {{ ($filters['sort'] ?? '') === 'most_booked' ? 'selected' : '' }}>Most Booked</option>
+                            <option value="highest_reviews" {{ ($filters['sort'] ?? '') === 'highest_reviews' ? 'selected' : '' }}>Highest Reviews</option>
+                            <option value="price_low_high" {{ ($filters['sort'] ?? '') === 'price_low_high' ? 'selected' : '' }}>Price Low to High</option>
+                            <option value="price_high_low" {{ ($filters['sort'] ?? '') === 'price_high_low' ? 'selected' : '' }}>Price High to Low</option>
+                        </select>
+                    </div>
+                    <div class="field field-short">
+                        <label for="min_price">Min Price</label>
+                        <input id="min_price" name="min_price" type="number" min="0" value="{{ $filters['min_price'] ?? 0 }}">
+                    </div>
+                    <div class="field field-short">
+                        <label for="max_price">Max Price</label>
+                        <input id="max_price" name="max_price" type="number" min="0" value="{{ $filters['max_price'] ?? 0 }}">
+                    </div>
                 </div>
-                <div class="field field-medium">
-                    <label for="atoll">Atoll</label>
-                    <select id="atoll" name="atoll">
-                        <option value="">All Atolls</option>
-                        @foreach ($atollOptions as $atoll)
-                            <option value="{{ $atoll }}" {{ ($filters['atoll'] ?? '') === $atoll ? 'selected' : '' }}>{{ $atoll }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="field field-medium">
-                    <label for="island">Island / City</label>
-                    <select id="island" name="island">
-                        <option value="">All Islands/Cities</option>
-                        @foreach ($islandOptions as $island)
-                            <option value="{{ $island }}" {{ ($filters['island'] ?? '') === $island ? 'selected' : '' }}>{{ $island }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="field field-medium">
-                    <label for="sort">Sort</label>
-                    <select id="sort" name="sort">
-                        <option value="recommended" {{ ($filters['sort'] ?? '') === 'recommended' ? 'selected' : '' }}>Recommended</option>
-                        <option value="most_wanted" {{ ($filters['sort'] ?? '') === 'most_wanted' ? 'selected' : '' }}>Most Wanted</option>
-                        <option value="most_booked" {{ ($filters['sort'] ?? '') === 'most_booked' ? 'selected' : '' }}>Most Booked</option>
-                        <option value="highest_reviews" {{ ($filters['sort'] ?? '') === 'highest_reviews' ? 'selected' : '' }}>Highest Reviews</option>
-                        <option value="price_low_high" {{ ($filters['sort'] ?? '') === 'price_low_high' ? 'selected' : '' }}>Price Low to High</option>
-                        <option value="price_high_low" {{ ($filters['sort'] ?? '') === 'price_high_low' ? 'selected' : '' }}>Price High to Low</option>
-                    </select>
-                </div>
-                <div class="field field-short">
-                    <label for="min_price">Min Price</label>
-                    <input id="min_price" name="min_price" type="number" min="0" value="{{ $filters['min_price'] ?? 0 }}">
-                </div>
-                <div class="field field-short">
-                    <label for="max_price">Max Price</label>
-                    <input id="max_price" name="max_price" type="number" min="0" value="{{ $filters['max_price'] ?? 0 }}">
-                </div>
-            </div>
+            @endif
 
             @if ($categoryKey === 'accommodation')
                 <div class="grid">
@@ -1259,7 +1294,7 @@
             @elseif ($categoryKey === 'marine-transport' || $categoryKey === 'land-transport')
                 <div class="grid">
                     <div class="field field-long">
-                        <label for="origin_point">From (Island/Location)</label>
+                        <label for="origin_point">From</label>
                         <select id="origin_point" name="origin_point">
                             <option value="">All origins</option>
                             @foreach (($transportDestinationOptions ?? collect()) as $destinationOption)
@@ -1268,7 +1303,7 @@
                         </select>
                     </div>
                     <div class="field field-long">
-                        <label for="destination_point">To (Island/Location)</label>
+                        <label for="destination_point">To</label>
                         <select id="destination_point" name="destination_point">
                             <option value="">All destinations</option>
                             @foreach (($transportDestinationOptions ?? collect()) as $destinationOption)
@@ -1276,9 +1311,9 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="field field-date"><label for="travel_date">Travel Date</label><input id="travel_date" name="travel_date" type="date" value="{{ $filters['travel_date'] ?? '' }}"></div>
-                    <div class="field field-date"><label for="return_date">Return Date</label><input id="return_date" name="return_date" type="date" value="{{ $filters['return_date'] ?? '' }}"></div>
-                    <div class="field field-short"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ $filters['adults'] ?? 2 }}"></div>
+                    <div class="field field-date"><label for="travel_date">Departure Date</label><input id="travel_date" name="travel_date" type="date" value="{{ $filters['travel_date'] ?? '' }}"></div>
+                    <div class="field field-date"><label for="return_date">Return Date (Optional)</label><input id="return_date" name="return_date" type="date" value="{{ $filters['return_date'] ?? '' }}"></div>
+                    <div class="field field-short"><label for="adults">No. of Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ $filters['adults'] ?? 2 }}"></div>
                     <div class="field field-short"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ $filters['children'] ?? 0 }}"></div>
                 </div>
             @elseif ($categoryKey === 'restaurant')

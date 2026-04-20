@@ -1258,8 +1258,24 @@
                 </div>
             @elseif ($categoryKey === 'marine-transport' || $categoryKey === 'land-transport')
                 <div class="grid">
-                    <div class="field field-long"><label for="origin_point">From (Island/Location)</label><input id="origin_point" name="origin_point" type="text" value="{{ $filters['origin_point'] ?? '' }}"></div>
-                    <div class="field field-long"><label for="destination_point">To (Island/Location)</label><input id="destination_point" name="destination_point" type="text" value="{{ $filters['destination_point'] ?? '' }}"></div>
+                    <div class="field field-long">
+                        <label for="origin_point">From (Island/Location)</label>
+                        <select id="origin_point" name="origin_point">
+                            <option value="">All origins</option>
+                            @foreach (($transportDestinationOptions ?? collect()) as $destinationOption)
+                                <option value="{{ $destinationOption }}" {{ ($filters['origin_point'] ?? '') === $destinationOption ? 'selected' : '' }}>{{ $destinationOption }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="field field-long">
+                        <label for="destination_point">To (Island/Location)</label>
+                        <select id="destination_point" name="destination_point">
+                            <option value="">All destinations</option>
+                            @foreach (($transportDestinationOptions ?? collect()) as $destinationOption)
+                                <option value="{{ $destinationOption }}" {{ ($filters['destination_point'] ?? '') === $destinationOption ? 'selected' : '' }}>{{ $destinationOption }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="field field-date"><label for="travel_date">Travel Date</label><input id="travel_date" name="travel_date" type="date" value="{{ $filters['travel_date'] ?? '' }}"></div>
                     <div class="field field-date"><label for="return_date">Return Date</label><input id="return_date" name="return_date" type="date" value="{{ $filters['return_date'] ?? '' }}"></div>
                     <div class="field field-short"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ $filters['adults'] ?? 2 }}"></div>

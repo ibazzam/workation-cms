@@ -1370,6 +1370,7 @@ Route::get('/', function () {
     $homeLovedCards = $applyHomeDestinationImages($homeLovedCards);
 
     $homeListingMediaByProperty = collect();
+    $homeTransportDestinationOptions = collect();
 
     if (Schema::hasTable('vendor_properties')) {
         $baseQuery = DB::table('vendor_properties')->where('status', 'active');
@@ -1391,6 +1392,52 @@ Route::get('/', function () {
                 ->get();
 
             $homeListingMediaByProperty = $mediaRows->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
+        }
+
+        if (Schema::hasColumn('vendor_properties', 'listing_category')) {
+            $transportColumns = [];
+            foreach (['pickup_location', 'dropoff_location', 'origin_point', 'destination_point', 'island', 'city', 'atoll'] as $candidateColumn) {
+                if (Schema::hasColumn('vendor_properties', $candidateColumn)) {
+                    $transportColumns[] = $candidateColumn;
+                }
+            }
+
+            if (empty($transportColumns)) {
+                $transportColumns = ['listing_category'];
+            }
+
+            $transportRows = DB::table('vendor_properties')
+                ->where('status', 'active')
+                ->whereRaw("LOWER(REPLACE(listing_category, '-', '_')) IN (?, ?)", ['marine_transport', 'land_transport'])
+                ->select($transportColumns)
+                ->limit(2000)
+                ->get();
+
+            $transportDestinationMap = [];
+            foreach ($transportRows as $row) {
+                $candidates = [
+                    trim((string) (property_exists($row, 'pickup_location') ? $row->pickup_location : '')),
+                    trim((string) (property_exists($row, 'dropoff_location') ? $row->dropoff_location : '')),
+                    trim((string) (property_exists($row, 'origin_point') ? $row->origin_point : '')),
+                    trim((string) (property_exists($row, 'destination_point') ? $row->destination_point : '')),
+                    trim((string) (property_exists($row, 'island') ? $row->island : '')),
+                    trim((string) (property_exists($row, 'city') ? $row->city : '')),
+                    trim((string) (property_exists($row, 'atoll') ? $row->atoll : '')),
+                ];
+
+                foreach ($candidates as $candidate) {
+                    if ($candidate === '') {
+                        continue;
+                    }
+
+                    $transportDestinationMap[strtolower($candidate)] = $candidate;
+                }
+            }
+
+            if (!empty($transportDestinationMap)) {
+                natcasesort($transportDestinationMap);
+                $homeTransportDestinationOptions = collect(array_values($transportDestinationMap))->values();
+            }
         }
 
         $resolveDirectMediaUrl = static function ($media): ?string {
@@ -1745,6 +1792,7 @@ Route::get('/', function () {
         'homeTrendingCards' => $homeTrendingCards,
         'homeWeekendDealCards' => $homeWeekendDealCards,
         'homeLovedCards' => $homeLovedCards,
+        'homeTransportDestinationOptions' => $homeTransportDestinationOptions,
         'featuredBlogPost' => $featuredBlogPost,
         'activityLinks' => [
             [
@@ -3347,6 +3395,8 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     $minPrice = (float) $request->query('min_price', 0);
     $maxPrice = (float) $request->query('max_price', 0);
     $sort = strtolower(trim((string) $request->query('sort', 'recommended')));
+    $originPointFilter = trim((string) $request->query('origin_point', ''));
+    $destinationPointFilter = trim((string) $request->query('destination_point', ''));
 
     // For island-specific categories (restaurant, vehicle_rental), fall back to
     // current_island or pickup_island when the generic island filter is not set.
@@ -3363,6 +3413,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     $catalogPropertyMediaByProperty = collect();
     $atollOptions = collect();
     $islandOptions = collect();
+    $transportDestinationOptions = collect();
 
     if (Schema::hasTable('vendor_properties')) {
         $propertiesQuery = DB::table('vendor_properties')->where('status', 'active');
@@ -3395,6 +3446,44 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
 
         if ($effectiveIslandFilter !== '' && Schema::hasColumn('vendor_properties', 'island')) {
             $propertiesQuery->whereRaw('LOWER(island) = ?', [strtolower($effectiveIslandFilter)]);
+        }
+
+        $originSearchColumns = [];
+        foreach (['pickup_location', 'origin_point', 'island', 'city', 'atoll'] as $candidateColumn) {
+            if (Schema::hasColumn('vendor_properties', $candidateColumn)) {
+                $originSearchColumns[] = $candidateColumn;
+            }
+        }
+
+        if ($originPointFilter !== '' && !empty($originSearchColumns)) {
+            $propertiesQuery->where(function ($query) use ($originSearchColumns, $originPointFilter) {
+                foreach ($originSearchColumns as $index => $column) {
+                    if ($index === 0) {
+                        $query->where($column, 'like', '%' . $originPointFilter . '%');
+                    } else {
+                        $query->orWhere($column, 'like', '%' . $originPointFilter . '%');
+                    }
+                }
+            });
+        }
+
+        $destinationSearchColumns = [];
+        foreach (['dropoff_location', 'destination_point', 'island', 'city', 'atoll'] as $candidateColumn) {
+            if (Schema::hasColumn('vendor_properties', $candidateColumn)) {
+                $destinationSearchColumns[] = $candidateColumn;
+            }
+        }
+
+        if ($destinationPointFilter !== '' && !empty($destinationSearchColumns)) {
+            $propertiesQuery->where(function ($query) use ($destinationSearchColumns, $destinationPointFilter) {
+                foreach ($destinationSearchColumns as $index => $column) {
+                    if ($index === 0) {
+                        $query->where($column, 'like', '%' . $destinationPointFilter . '%');
+                    } else {
+                        $query->orWhere($column, 'like', '%' . $destinationPointFilter . '%');
+                    }
+                }
+            });
         }
 
         if (Schema::hasColumn('vendor_properties', 'base_price')) {
@@ -3484,6 +3573,51 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 ->limit(120)
                 ->pluck('island');
         }
+
+        if (Schema::hasColumn('vendor_properties', 'listing_category')) {
+            $transportDestinationMap = [];
+            $transportColumns = [];
+            foreach (['pickup_location', 'dropoff_location', 'origin_point', 'destination_point', 'island', 'city', 'atoll'] as $candidateColumn) {
+                if (Schema::hasColumn('vendor_properties', $candidateColumn)) {
+                    $transportColumns[] = $candidateColumn;
+                }
+            }
+
+            if (empty($transportColumns)) {
+                $transportColumns = ['listing_category'];
+            }
+
+            $transportRows = DB::table('vendor_properties')
+                ->where('status', 'active')
+                ->whereRaw("LOWER(REPLACE(listing_category, '-', '_')) IN (?, ?)", ['marine_transport', 'land_transport'])
+                ->select($transportColumns)
+                ->limit(2000)
+                ->get();
+
+            foreach ($transportRows as $row) {
+                $candidates = [
+                    trim((string) (property_exists($row, 'pickup_location') ? $row->pickup_location : '')),
+                    trim((string) (property_exists($row, 'dropoff_location') ? $row->dropoff_location : '')),
+                    trim((string) (property_exists($row, 'origin_point') ? $row->origin_point : '')),
+                    trim((string) (property_exists($row, 'destination_point') ? $row->destination_point : '')),
+                    trim((string) (property_exists($row, 'island') ? $row->island : '')),
+                    trim((string) (property_exists($row, 'city') ? $row->city : '')),
+                    trim((string) (property_exists($row, 'atoll') ? $row->atoll : '')),
+                ];
+
+                foreach ($candidates as $candidate) {
+                    if ($candidate === '') {
+                        continue;
+                    }
+                    $transportDestinationMap[strtolower($candidate)] = $candidate;
+                }
+            }
+
+            if (!empty($transportDestinationMap)) {
+                natcasesort($transportDestinationMap);
+                $transportDestinationOptions = collect(array_values($transportDestinationMap))->values();
+            }
+        }
     }
 
     return view('customer-category-catalog', [
@@ -3494,6 +3628,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         'catalogPropertyMediaByProperty' => $catalogPropertyMediaByProperty,
         'atollOptions' => $atollOptions,
         'islandOptions' => $islandOptions,
+        'transportDestinationOptions' => $transportDestinationOptions,
         'filters' => [
             'q' => $queryText,
             'atoll' => $atollFilter,

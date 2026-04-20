@@ -2138,8 +2138,24 @@
                             <!-- Marine Transport Fields -->
                             <div id="marineTransportFields" class="search-dynamic-fields" role="tabpanel" aria-labelledby="searchTab-marine-transport" data-fields-for="marine-transport" hidden aria-hidden="true">
                                 <div class="field"><label for="marineTripType">Trip Type</label><select id="marineTripType" name="trip_type"><option value="one_way">One Way</option><option value="round_trip">Round Trip</option></select></div>
-                                <div class="field"><label for="marineFrom">From Island</label><input id="marineFrom" name="from" type="text" placeholder="Departure island"></div>
-                                <div class="field"><label for="marineTo">To Island</label><input id="marineTo" name="to" type="text" placeholder="Arrival island"></div>
+                                <div class="field">
+                                    <label for="marineFrom">From Island</label>
+                                    <select id="marineFrom" name="origin_point">
+                                        <option value="">Select departure</option>
+                                        @foreach(($homeTransportDestinationOptions ?? collect()) as $destinationOption)
+                                            <option value="{{ $destinationOption }}">{{ $destinationOption }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="marineTo">To Island</label>
+                                    <select id="marineTo" name="destination_point">
+                                        <option value="">Select destination</option>
+                                        @foreach(($homeTransportDestinationOptions ?? collect()) as $destinationOption)
+                                            <option value="{{ $destinationOption }}">{{ $destinationOption }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
                                 <div class="field"><label for="marineDeparture">Departure</label><input id="marineDeparture" name="travel_date" type="date"></div>
                                 <div class="field"><label for="marineReturn">Return</label><input id="marineReturn" name="return_date" type="date"></div>
                                 <div class="field"><label for="marineAdults">Adults</label><input id="marineAdults" name="adults" type="number" min="1" value="2"></div>
@@ -2148,8 +2164,24 @@
                             <!-- Land Transport Fields -->
                             <div id="landTransportFields" class="search-dynamic-fields" role="tabpanel" aria-labelledby="searchTab-land-transport" data-fields-for="land-transport" hidden aria-hidden="true">
                                 <div class="field"><label for="landTripType">Trip Type</label><select id="landTripType" name="trip_type"><option value="one_way">One Way</option><option value="round_trip">Round Trip</option></select></div>
-                                <div class="field"><label for="landFrom">From</label><input id="landFrom" name="from" type="text" placeholder="Pickup location"></div>
-                                <div class="field"><label for="landTo">To</label><input id="landTo" name="to" type="text" placeholder="Dropoff location"></div>
+                                <div class="field">
+                                    <label for="landFrom">From</label>
+                                    <select id="landFrom" name="origin_point">
+                                        <option value="">Select pickup location</option>
+                                        @foreach(($homeTransportDestinationOptions ?? collect()) as $destinationOption)
+                                            <option value="{{ $destinationOption }}">{{ $destinationOption }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="landTo">To</label>
+                                    <select id="landTo" name="destination_point">
+                                        <option value="">Select dropoff location</option>
+                                        @foreach(($homeTransportDestinationOptions ?? collect()) as $destinationOption)
+                                            <option value="{{ $destinationOption }}">{{ $destinationOption }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
                                 <div class="field"><label for="landDeparture">Pickup Date</label><input id="landDeparture" name="travel_date" type="date"></div>
                                 <div class="field"><label for="landReturn">Return Date</label><input id="landReturn" name="return_date" type="date"></div>
                                 <div class="field"><label for="landAdults">Adults</label><input id="landAdults" name="adults" type="number" min="1" value="2"></div>

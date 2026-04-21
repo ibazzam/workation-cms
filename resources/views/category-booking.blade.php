@@ -102,13 +102,17 @@
             border: 1px solid #b8d9e2;
             background: #f8fdff;
             color: #0f6179;
-            border-radius: 999px;
-            padding: 6px 10px;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             font: inherit;
-            font-size: 0.78rem;
-            font-weight: 700;
+            font-size: 0.92rem;
             text-decoration: none;
             cursor: pointer;
+            padding: 0;
         }
 
         .share-links a:hover,
@@ -310,6 +314,80 @@
         .booking-price strong { font-size:0.98rem; color:#1a4360; }
         .booking-price span { font-size:0.76rem; color:#587188; }
 
+        .booking-subtitle {
+            margin: -2px 0 10px;
+            font-size: 0.88rem;
+            color: #365a71;
+            font-weight: 600;
+        }
+
+        .booking-lines {
+            margin-top: 6px;
+            border: 1px solid #d6e6ef;
+            border-radius: 12px;
+            background: #fbfdff;
+            overflow: hidden;
+        }
+
+        .booking-line {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 110px 88px;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 10px;
+            border-bottom: 1px solid #e2edf4;
+        }
+
+        .booking-line:last-child { border-bottom: 0; }
+
+        .booking-line-label {
+            font-size: 0.84rem;
+            color: #1f4760;
+            font-weight: 700;
+        }
+
+        .booking-line-price {
+            text-align: right;
+            font-size: 0.8rem;
+            color: #3f6278;
+            font-weight: 700;
+        }
+
+        .booking-line select {
+            width: 100%;
+            border: 1px solid #b8d9e2;
+            border-radius: 8px;
+            padding: 7px 9px;
+            font: inherit;
+            background: #f8fdff;
+        }
+
+        .booking-total {
+            margin-top: 10px;
+            border: 1px solid #c6dde8;
+            border-radius: 12px;
+            background: #edf7f4;
+            padding: 10px 11px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .booking-total span {
+            font-size: 0.76rem;
+            color: #3b5f75;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            font-weight: 700;
+        }
+
+        .booking-total strong {
+            font-size: 1rem;
+            color: #1a4360;
+        }
+
         .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
         .field { display:grid; gap:5px; }
         .field label { font-size:0.74rem; text-transform:uppercase; letter-spacing:0.07em; color:#3c5f76; font-family:"Space Grotesk","Trebuchet MS",sans-serif; }
@@ -362,6 +440,14 @@
         $pricingConfig = $pricingConfig ?? ['tax_rate' => 16, 'discount_percent' => 0];
         $currency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
         $basePrice = (float) ($property->base_price ?? 0);
+        $adultUnitPrice = (float) ($pricingConfig['adult_price'] ?? $basePrice);
+        $childUnitPrice = (float) ($pricingConfig['child_price'] ?? max(0, round($adultUnitPrice * 0.5, 2)));
+        $infantUnitPrice = (float) ($pricingConfig['infant_price'] ?? 0);
+        $qtyOptions = range(0, 20);
+        $adultSelected = max(1, (int) old('adults', (int) ($prefill['adults'] ?? 2)));
+        $childSelected = max(0, (int) old('children', (int) ($prefill['children'] ?? 0)));
+        $infantSelected = max(0, (int) old('infants', (int) ($prefill['infants'] ?? 0)));
+        $initialExcursionTotal = ($adultUnitPrice * $adultSelected) + ($childUnitPrice * $childSelected) + ($infantUnitPrice * $infantSelected);
 
         $propertyMedia = collect($propertyMedia ?? collect());
         $highlights = collect($highlights ?? []);
@@ -450,10 +536,10 @@
         <section class="share-card" aria-label="Share this listing">
             <span class="share-label">Share this {{ strtolower($categoryLabel) }}</span>
             <div class="share-links">
-                <a href="https://wa.me/?text={{ $shareEncodedText }}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> WhatsApp</a>
-                <a href="https://www.facebook.com/sharer/sharer.php?u={{ $shareEncodedUrl }}" target="_blank" rel="noopener"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i> Facebook</a>
-                <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ $shareEncodedUrl }}" target="_blank" rel="noopener"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i> LinkedIn</a>
-                <button type="button" data-copy-share-link="{{ $shareUrl }}"><i class="fa-solid fa-link" aria-hidden="true"></i> Copy link</button>
+                <a href="https://wa.me/?text={{ $shareEncodedText }}" target="_blank" rel="noopener" title="Share on WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+                <a href="https://www.facebook.com/sharer/sharer.php?u={{ $shareEncodedUrl }}" target="_blank" rel="noopener" title="Share on Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+                <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ $shareEncodedUrl }}" target="_blank" rel="noopener" title="Share on LinkedIn"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i></a>
+                <button type="button" data-copy-share-link="{{ $shareUrl }}" title="Copy link"><i class="fa-solid fa-link" aria-hidden="true"></i></button>
             </div>
         </section>
 
@@ -591,7 +677,10 @@
             </section>
 
             <aside class="booking-card reservation-form" aria-label="Category booking form">
-                <h2 class="block-title">Booking Request</h2>
+                <h2 class="block-title">{{ $categoryKey === 'excursion' ? 'Book Now' : 'Booking Request' }}</h2>
+                @if ($categoryKey === 'excursion')
+                    <p class="booking-subtitle">{{ (string) ($property->name ?? 'Excursion Activity') }}</p>
+                @endif
                 <div class="booking-price">
                     <span>Starting price</span>
                     <strong>{{ $currency }} {{ number_format($basePrice, 2) }}</strong>
@@ -614,10 +703,54 @@
 
                     <div class="grid">
                         @if ($categoryKey === 'excursion')
-                            <div class="field"><label for="serviceStartDate">Activity Date</label><input id="serviceStartDate" name="service_start_date" type="date" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
-                            <div class="field"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}" class="{{ $errors->has('adults') ? 'input-error' : '' }}" required>@error('adults')<p class="error-text">{{ $message }}</p>@enderror</div>
-                            <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}" class="{{ $errors->has('children') ? 'input-error' : '' }}">@error('children')<p class="error-text">{{ $message }}</p>@enderror</div>
-                            <div class="field"><label for="infants">Infants</label><input id="infants" name="infants" type="number" min="0" value="{{ old('infants', (int) ($prefill['infants'] ?? 0)) }}" class="{{ $errors->has('infants') ? 'input-error' : '' }}">@error('infants')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field full"><label for="serviceStartDate">Activity Date</label><input id="serviceStartDate" name="service_start_date" type="date" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field full">
+                                <label for="primaryFirstName">Lead Guest / Group Head</label>
+                                <input id="primaryFirstName" name="primary_first_name" type="text" value="{{ old('primary_first_name', trim(((string) ($prefill['primary_first_name'] ?? '')) . ' ' . ((string) ($prefill['primary_last_name'] ?? '')))) }}" class="{{ $errors->has('primary_first_name') ? 'input-error' : '' }}" placeholder="Name of lead guest">
+                                @error('primary_first_name')<p class="error-text">{{ $message }}</p>@enderror
+                                <input type="hidden" name="primary_last_name" value="{{ old('primary_last_name', (string) ($prefill['primary_last_name'] ?? '')) }}">
+                                <input type="hidden" name="primary_email" value="{{ old('primary_email', (string) ($prefill['primary_email'] ?? '')) }}">
+                                <input type="hidden" name="primary_mobile" value="{{ old('primary_mobile', (string) ($prefill['primary_mobile'] ?? '')) }}">
+                            </div>
+                            <div class="field full">
+                                <label>Guests and Unit Price</label>
+                                <div class="booking-lines">
+                                    <div class="booking-line">
+                                        <span class="booking-line-label">Adult</span>
+                                        <span class="booking-line-price">{{ $currency }} {{ number_format($adultUnitPrice, 2) }}</span>
+                                        <select id="adults" name="adults" class="{{ $errors->has('adults') ? 'input-error' : '' }}" data-excursion-qty data-unit-price="{{ $adultUnitPrice }}" required>
+                                            @foreach (range(1, 20) as $qty)
+                                                <option value="{{ $qty }}" {{ $adultSelected === $qty ? 'selected' : '' }}>{{ $qty }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="booking-line">
+                                        <span class="booking-line-label">Child</span>
+                                        <span class="booking-line-price">{{ $currency }} {{ number_format($childUnitPrice, 2) }}</span>
+                                        <select id="children" name="children" class="{{ $errors->has('children') ? 'input-error' : '' }}" data-excursion-qty data-unit-price="{{ $childUnitPrice }}">
+                                            @foreach ($qtyOptions as $qty)
+                                                <option value="{{ $qty }}" {{ $childSelected === $qty ? 'selected' : '' }}>{{ $qty }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="booking-line">
+                                        <span class="booking-line-label">Infant</span>
+                                        <span class="booking-line-price">{{ $currency }} {{ number_format($infantUnitPrice, 2) }}</span>
+                                        <select id="infants" name="infants" class="{{ $errors->has('infants') ? 'input-error' : '' }}" data-excursion-qty data-unit-price="{{ $infantUnitPrice }}">
+                                            @foreach ($qtyOptions as $qty)
+                                                <option value="{{ $qty }}" {{ $infantSelected === $qty ? 'selected' : '' }}>{{ $qty }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                @error('adults')<p class="error-text">{{ $message }}</p>@enderror
+                                @error('children')<p class="error-text">{{ $message }}</p>@enderror
+                                @error('infants')<p class="error-text">{{ $message }}</p>@enderror
+                            </div>
+                            <div class="booking-total field full" aria-live="polite">
+                                <span>Price Total</span>
+                                <strong id="excursionTotalDisplay">{{ $currency }} {{ number_format($initialExcursionTotal, 2) }}</strong>
+                            </div>
                             <div class="field full">
                                 <label for="serviceNotes">Additional Request (Optional)</label>
                                 <textarea id="serviceNotes" name="service_notes" placeholder="Any dietary, timing, or service request?">{{ old('service_notes', (string) ($prefill['service_notes'] ?? '')) }}</textarea>
@@ -694,12 +827,12 @@
                     </div>
 
                     <div class="summary">
-                        {{ $categoryKey === 'excursion' ? 'Simple request flow: your selected activity, date, guest count, and additional request are carried directly into checkout summary.' : 'Service-first checkout logic: core service requirements are captured before payment confirmation to reduce vendor-side revalidation.' }}
+                        {{ $categoryKey === 'excursion' ? 'Your selected activity, date, lead guest, quantities, and additional request are carried directly into checkout. You can revise date and guest counts before final payment.' : 'Service-first checkout logic: core service requirements are captured before payment confirmation to reduce vendor-side revalidation.' }}
                         Tax: {{ number_format((float) ($pricingConfig['tax_rate'] ?? 16), 2) }}% • Discount: {{ number_format((float) ($pricingConfig['discount_percent'] ?? 0), 2) }}%
                     </div>
 
                     <div class="actions">
-                        <button class="btn primary" type="submit">Proceed to Checkout</button>
+                        <button class="btn primary" type="submit">{{ $categoryKey === 'excursion' ? 'Book Now' : 'Proceed to Checkout' }}</button>
                         <a class="btn" href="/catalog/{{ $categoryKey }}">Back to {{ $categoryLabel }} Catalog</a>
                     </div>
                 </form>
@@ -712,27 +845,50 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const galleryShell = document.querySelector('.gallery-shell');
-            if (!galleryShell) return;
+            if (galleryShell) {
+                const mainImage = galleryShell.querySelector('.gallery-main');
+                const thumbButtons = galleryShell.querySelectorAll('.gallery-thumb');
 
-            const mainImage = galleryShell.querySelector('.gallery-main');
-            const thumbButtons = galleryShell.querySelectorAll('.gallery-thumb');
+                thumbButtons.forEach((btn, index) => {
+                    const img = btn.querySelector('img');
+                    if (img && index === 0) {
+                        btn.classList.add('is-active');
+                    }
 
-            thumbButtons.forEach((btn, index) => {
-                const img = btn.querySelector('img');
-                if (img && index === 0) {
-                    btn.classList.add('is-active');
-                }
+                    btn.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        if (!img || !mainImage) return;
 
-                btn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    if (!img) return;
+                        mainImage.src = img.src;
 
-                    mainImage.src = img.src;
-
-                    thumbButtons.forEach(b => b.classList.remove('is-active'));
-                    btn.classList.add('is-active');
+                        thumbButtons.forEach(b => b.classList.remove('is-active'));
+                        btn.classList.add('is-active');
+                    });
                 });
-            });
+            }
+
+            const qtySelects = document.querySelectorAll('[data-excursion-qty]');
+            const totalDisplay = document.getElementById('excursionTotalDisplay');
+            if (qtySelects.length > 0 && totalDisplay) {
+                const currency = @json($currency);
+                const updateExcursionTotal = function () {
+                    let total = 0;
+                    qtySelects.forEach((select) => {
+                        const qty = parseInt(select.value || '0', 10) || 0;
+                        const unit = parseFloat(select.getAttribute('data-unit-price') || '0') || 0;
+                        total += qty * unit;
+                    });
+                    totalDisplay.textContent = currency + ' ' + total.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                };
+
+                qtySelects.forEach((select) => {
+                    select.addEventListener('change', updateExcursionTotal);
+                });
+                updateExcursionTotal();
+            }
 
             const copyShareBtn = document.querySelector('[data-copy-share-link]');
             if (copyShareBtn) {
@@ -740,9 +896,9 @@
                     const shareUrl = this.getAttribute('data-copy-share-link') || window.location.href;
                     try {
                         await navigator.clipboard.writeText(shareUrl);
-                        this.textContent = 'Copied';
+                        this.style.background = '#d7f0e4';
                         setTimeout(() => {
-                            this.innerHTML = '<i class="fa-solid fa-link" aria-hidden="true"></i> Copy link';
+                            this.style.background = '#f8fdff';
                         }, 1500);
                     } catch (e) {
                         window.prompt('Copy this link', shareUrl);

@@ -4442,6 +4442,11 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
     $taxRate = (float) ($listingDetails['tax_rate'] ?? 16);
     $discountPercent = (float) ($listingDetails['promotion_discount_percent'] ?? 0);
 
+    $excursionBasePrice = (float) ($propertyRow->base_price ?? 0);
+    $excursionAdultPrice = (float) ($listingDetails['adult_price'] ?? $listingDetails['price_per_adult'] ?? $excursionBasePrice);
+    $excursionChildPrice = (float) ($listingDetails['child_price'] ?? $listingDetails['price_per_child'] ?? round($excursionAdultPrice * 0.5, 2));
+    $excursionInfantPrice = (float) ($listingDetails['infant_price'] ?? $listingDetails['price_per_infant'] ?? 0);
+
     $sessionGuestName = trim((string) session('portal_customer_user', ''));
     $nameParts = preg_split('/\s+/', $sessionGuestName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
     $prefillFirstName = (string) ($nameParts[0] ?? '');
@@ -4465,6 +4470,9 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         'pricingConfig' => [
             'tax_rate' => $taxRate,
             'discount_percent' => $discountPercent,
+            'adult_price' => $excursionAdultPrice,
+            'child_price' => $excursionChildPrice,
+            'infant_price' => $excursionInfantPrice,
         ],
         'prefill' => [
             'service_start_date' => trim((string) $request->query('service_start_date', '')),

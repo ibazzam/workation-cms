@@ -246,6 +246,9 @@
 
         <form method="POST" action="/portal/{{ $portal }}/login" aria-describedby="portal-login-hint">
             @csrf
+            @if ($portal === 'customer' && trim((string) request()->query('continue', '')) !== '')
+                <input type="hidden" name="continue" value="{{ trim((string) request()->query('continue', '')) }}">
+            @endif
             <p id="portal-login-hint" class="sr-only">Enter your username and password, then submit to sign in.</p>
             <label for="username">{{ $portal === 'customer' ? 'Email' : 'Username' }}</label>
             <input id="username" name="username" type="text" value="{{ old('username') }}" autocomplete="username" required>

@@ -56,6 +56,28 @@
 <body>
     @php
         $summary = $summary ?? [];
+        $checkoutDatesLabel = trim((string) (($summary['checkin'] ?? '-') . ' - ' . ($summary['checkout'] ?? '-')));
+        $checkoutGuestsLabel = (int) ($summary['adults'] ?? 1) . ' Adults, ' . (int) ($summary['children'] ?? 0) . ' Children';
+        if ((int) ($summary['infants'] ?? 0) > 0) {
+            $checkoutGuestsLabel .= ', ' . (int) ($summary['infants'] ?? 0) . ' Infants';
+        }
+    @endphp
+
+    @include('partials.customer-uniform-header', [
+        'headerHideOnScroll' => false,
+        'headerShowSearch' => false,
+        'headerMode' => 'checkout',
+        'headerCategoryLinks' => [],
+        'headerCheckoutContext' => [
+            'property' => (string) ($property->name ?? 'Checkout'),
+            'dates' => $checkoutDatesLabel,
+            'guests' => $checkoutGuestsLabel,
+        ],
+        'headerContinueUrl' => (string) request()->fullUrl(),
+    ])
+
+    @php
+        $summary = $summary ?? [];
         $property = $property ?? null;
         $roomName = trim((string) ($roomName ?? ''));
         $currency = strtoupper(trim((string) ($reservation->currency ?? $room->currency ?? $property->currency ?? 'MVR')));

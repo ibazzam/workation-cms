@@ -92,6 +92,25 @@
     @include('partials.uniform-buttons')
 </head>
 <body>
+    @include('partials.customer-uniform-header', [
+        'headerHideOnScroll' => true,
+        'headerShowSearch' => true,
+        'headerSearchAction' => '/catalog/' . str_replace('_', '-', strtolower(trim((string) ($property->listing_category ?? 'accommodation')))),
+        'headerSearchValue' => '',
+        'headerCategoryLinks' => [
+            ['key' => 'accommodation', 'title' => 'Accommodation', 'url' => '/catalog/accommodation'],
+            ['key' => 'marine-transport', 'title' => 'Marine Transport', 'url' => '/catalog/marine-transport'],
+            ['key' => 'land-transport', 'title' => 'Land Transport', 'url' => '/catalog/land-transport'],
+            ['key' => 'excursion', 'title' => 'Excursion', 'url' => '/catalog/excursion'],
+            ['key' => 'remote_workspace', 'title' => 'Remote Workspace', 'url' => '/catalog/remote_workspace'],
+            ['key' => 'conference_room', 'title' => 'Conference Rooms', 'url' => '/catalog/conference_room'],
+            ['key' => 'resort_day_visit', 'title' => 'Resort Day Visit', 'url' => '/catalog/resort_day_visit'],
+            ['key' => 'restaurant', 'title' => 'Restaurant', 'url' => '/catalog/restaurant'],
+            ['key' => 'vehicle_rental', 'title' => 'Vehicle Rental', 'url' => '/catalog/vehicle_rental'],
+        ],
+        'headerActiveCategoryKey' => str_replace('_', '-', strtolower(trim((string) ($property->listing_category ?? 'accommodation')))),
+    ])
+
     @php
         $roomMedia = $roomMedia ?? collect();
         $roomFeatures = $roomFeatures ?? collect();

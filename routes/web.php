@@ -3399,6 +3399,19 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     $conferenceDate = trim((string) $request->query('conference_date', ''));
     $minPrice = (float) $request->query('min_price', 0);
     $maxPrice = (float) $request->query('max_price', 0);
+    $minRating = (float) $request->query('min_rating', 0);
+    $minReviews = max(0, (int) $request->query('min_reviews', 0));
+    $distanceKm = (float) $request->query('distance_km', 0);
+    $userLat = (float) $request->query('user_lat', 0);
+    $userLng = (float) $request->query('user_lng', 0);
+    $amenitiesQuery = trim((string) $request->query('amenities', ''));
+    $amenityKeywords = collect(preg_split('/[,\n]+/', $amenitiesQuery) ?: [])
+        ->map(static fn ($value) => trim((string) $value))
+        ->filter(static fn ($value) => $value !== '')
+        ->unique()
+        ->values();
+    $availabilityOnlyRaw = strtolower(trim((string) $request->query('availability_only', '')));
+    $availabilityOnly = in_array($availabilityOnlyRaw, ['1', 'true', 'yes', 'on'], true);
     $sort = strtolower(trim((string) $request->query('sort', 'recommended')));
     $originPointFilter = trim((string) $request->query('origin_point', ''));
     $destinationPointFilter = trim((string) $request->query('destination_point', ''));
@@ -3427,7 +3440,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         }
 
         $searchColumns = [];
-        foreach (['name', 'listing_name', 'atoll', 'island', 'city', 'description'] as $candidateColumn) {
+        foreach (['name', 'listing_name', 'atoll', 'island', 'city', 'description', 'listing_details', 'amenities', 'facilities', 'pickup_location', 'dropoff_location', 'origin_point', 'destination_point'] as $candidateColumn) {
             if (Schema::hasColumn('vendor_properties', $candidateColumn)) {
                 $searchColumns[] = $candidateColumn;
             }
@@ -3517,11 +3530,91 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         $popularityColumn = $firstExistingColumn($popularityColumns);
         $bookedColumn = $firstExistingColumn($bookedColumns);
         $reviewColumn = $firstExistingColumn($reviewColumns);
+        $reviewCountColumn = $firstExistingColumn(['reviews_count', 'review_count', 'rating_count', 'total_reviews']);
+
+        if ($minRating > 0 && $reviewColumn !== null) {
+            $propertiesQuery->where($reviewColumn, '>=', $minRating);
+        }
+
+        if ($minReviews > 0 && $reviewCountColumn !== null) {
+            $propertiesQuery->where($reviewCountColumn, '>=', $minReviews);
+        }
+
+        if ($amenityKeywords->isNotEmpty()) {
+            $amenitySearchColumns = [];
+            foreach (['amenities', 'facilities', 'listing_details', 'description', 'name', 'listing_name'] as $candidateColumn) {
+                if (Schema::hasColumn('vendor_properties', $candidateColumn)) {
+                    $amenitySearchColumns[] = $candidateColumn;
+                }
+            }
+
+            if (!empty($amenitySearchColumns)) {
+                $propertiesQuery->where(function ($query) use ($amenitySearchColumns, $amenityKeywords) {
+                    foreach ($amenityKeywords as $keyword) {
+                        $query->where(function ($keywordQuery) use ($amenitySearchColumns, $keyword) {
+                            $normalizedKeyword = strtolower((string) $keyword);
+                            foreach ($amenitySearchColumns as $index => $column) {
+                                $pattern = '%' . $normalizedKeyword . '%';
+                                if ($index === 0) {
+                                    $keywordQuery->whereRaw("LOWER(COALESCE({$column}, '')) LIKE ?", [$pattern]);
+                                } else {
+                                    $keywordQuery->orWhereRaw("LOWER(COALESCE({$column}, '')) LIKE ?", [$pattern]);
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+        }
+
+        if ($availabilityOnly) {
+            $availabilityBooleanColumns = [];
+            foreach (['is_available', 'available', 'is_bookable', 'is_active_listing'] as $candidateColumn) {
+                if (Schema::hasColumn('vendor_properties', $candidateColumn)) {
+                    $availabilityBooleanColumns[] = $candidateColumn;
+                }
+            }
+
+            $availabilityStatusColumn = Schema::hasColumn('vendor_properties', 'availability_status') ? 'availability_status' : null;
+
+            if (!empty($availabilityBooleanColumns) || $availabilityStatusColumn !== null) {
+                $propertiesQuery->where(function ($query) use ($availabilityBooleanColumns, $availabilityStatusColumn) {
+                    foreach ($availabilityBooleanColumns as $index => $column) {
+                        if ($index === 0) {
+                            $query->where($column, 1);
+                        } else {
+                            $query->orWhere($column, 1);
+                        }
+                    }
+
+                    if ($availabilityStatusColumn !== null) {
+                        $query->orWhereIn(DB::raw('LOWER(' . $availabilityStatusColumn . ')'), ['available', 'open', 'in_stock', 'ready']);
+                    }
+                });
+            }
+        }
+
+        $latitudeColumn = $firstExistingColumn(['latitude', 'lat', 'location_lat', 'geo_lat']);
+        $longitudeColumn = $firstExistingColumn(['longitude', 'lng', 'location_lng', 'geo_lng']);
+
+        if (
+            $distanceKm > 0
+            && $userLat !== 0.0
+            && $userLng !== 0.0
+            && $latitudeColumn !== null
+            && $longitudeColumn !== null
+        ) {
+            $distanceSql = '(6371 * acos(least(1, greatest(-1, cos(radians(?)) * cos(radians(' . $latitudeColumn . ')) * cos(radians(' . $longitudeColumn . ') - radians(?)) + sin(radians(?)) * sin(radians(' . $latitudeColumn . '))))))';
+            $propertiesQuery->whereRaw($distanceSql . ' <= ?', [$userLat, $userLng, $userLat, $distanceKm]);
+        }
 
         if ($sort === 'price_low_high' && Schema::hasColumn('vendor_properties', 'base_price')) {
             $propertiesQuery->orderBy('base_price');
         } elseif ($sort === 'price_high_low' && Schema::hasColumn('vendor_properties', 'base_price')) {
             $propertiesQuery->orderByDesc('base_price');
+        } elseif ($sort === 'distance_nearest' && $latitudeColumn !== null && $longitudeColumn !== null && $userLat !== 0.0 && $userLng !== 0.0) {
+            $distanceSql = '(6371 * acos(least(1, greatest(-1, cos(radians(?)) * cos(radians(' . $latitudeColumn . ')) * cos(radians(' . $longitudeColumn . ') - radians(?)) + sin(radians(?)) * sin(radians(' . $latitudeColumn . '))))))';
+            $propertiesQuery->orderByRaw($distanceSql . ' asc', [$userLat, $userLng, $userLat]);
         } elseif ($sort === 'most_wanted' && $popularityColumn !== null) {
             $propertiesQuery->orderByDesc($popularityColumn);
         } elseif ($sort === 'most_booked' && $bookedColumn !== null) {
@@ -3658,6 +3751,13 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             'conference_date' => $conferenceDate,
             'min_price' => $minPrice,
             'max_price' => $maxPrice,
+            'min_rating' => $minRating,
+            'min_reviews' => $minReviews,
+            'distance_km' => $distanceKm,
+            'user_lat' => $userLat,
+            'user_lng' => $userLng,
+            'amenities' => $amenitiesQuery,
+            'availability_only' => $availabilityOnly ? '1' : '',
             'sort' => $sort,
             'checkin' => trim((string) $request->query('checkin', '')),
             'checkout' => trim((string) $request->query('checkout', '')),
@@ -10121,6 +10221,10 @@ Route::post('/portal/{portal}/reset-password', function (Request $request, strin
 Route::post('/portal/{portal}/login', function (Request $request, string $portal) {
     if (!in_array($portal, ['admin', 'vendor', 'customer'], true)) {
         abort(404);
+    }
+
+    if ($portal === 'customer') {
+        rememberCustomerPostAuthRedirect($request);
     }
 
     $validated = $request->validate([

@@ -844,6 +844,42 @@
             font-weight: 700;
         }
 
+        .card-type-chip {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            max-width: 100%;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: #e8f2f8;
+            color: #1e5672;
+            font-size: 0.66rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-desc {
+            margin: 0;
+            color: #4f677a;
+            font-size: 0.76rem;
+            line-height: 1.45;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-time {
+            color: #345469;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+        }
+
         .empty {
             margin-top: 10px;
             border: 1px dashed #cddbe8;
@@ -1571,6 +1607,63 @@
                             $svgFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2234%22%3ENo%20image%3C%2Ftext%3E%3C%2Fsvg%3E";
                             $price = (float) ($property->base_price ?? 0);
                             $cityName = trim((string) ($property->city ?? $property->island ?? $property->atoll ?? ''));
+                            $isExcursionCard = $categoryKey === 'excursion';
+                            $fromIsland = trim((string) ($property->island ?? ''));
+                            $fromCity = trim((string) ($property->city ?? ''));
+                            $fromAtoll = trim((string) ($property->atoll ?? ''));
+                            $fromPrimary = $fromIsland !== '' ? $fromIsland : $fromCity;
+                            $originLabel = $fromPrimary !== '' ? $fromPrimary : ($cityName !== '' ? $cityName : 'Maldives');
+                            if ($fromAtoll !== '' && stripos($originLabel, $fromAtoll) === false) {
+                                $originLabel .= ', ' . $fromAtoll;
+                            }
+                            $activityType = trim((string) (
+                                (property_exists($property, 'activity_type') ? $property->activity_type : '')
+                                ?: (property_exists($property, 'excursion_type') ? $property->excursion_type : '')
+                                ?: (property_exists($property, 'tour_type') ? $property->tour_type : '')
+                            ));
+                            $activityName = trim((string) (
+                                (property_exists($property, 'activity_name') ? $property->activity_name : '')
+                                ?: (property_exists($property, 'listing_name') ? $property->listing_name : '')
+                                ?: ($property->name ?? 'Listing')
+                            ));
+                            $descriptionSource = trim((string) (
+                                (property_exists($property, 'short_description') ? $property->short_description : '')
+                                ?: (property_exists($property, 'tagline') ? $property->tagline : '')
+                                ?: ($property->description ?? '')
+                            ));
+                            $shortDescription = \Illuminate\Support\Str::limit($descriptionSource, 96);
+
+                            $formatTimeLabel = static function ($rawValue): string {
+                                $value = trim((string) $rawValue);
+                                if ($value === '') {
+                                    return '';
+                                }
+
+                                $timestamp = strtotime($value);
+                                if ($timestamp !== false) {
+                                    return date('H:i', $timestamp);
+                                }
+
+                                if (preg_match('/^(\d{1,2}):(\d{2})/', $value, $matches)) {
+                                    return str_pad($matches[1], 2, '0', STR_PAD_LEFT) . ':' . $matches[2];
+                                }
+
+                                return $value;
+                            };
+
+                            $startTimeRaw =
+                                (property_exists($property, 'start_time') ? $property->start_time : null)
+                                ?? (property_exists($property, 'departure_time') ? $property->departure_time : null)
+                                ?? (property_exists($property, 'activity_start_time') ? $property->activity_start_time : null)
+                                ?? (property_exists($property, 'start_at') ? $property->start_at : null);
+                            $endTimeRaw =
+                                (property_exists($property, 'end_time') ? $property->end_time : null)
+                                ?? (property_exists($property, 'return_time') ? $property->return_time : null)
+                                ?? (property_exists($property, 'activity_end_time') ? $property->activity_end_time : null)
+                                ?? (property_exists($property, 'end_at') ? $property->end_at : null);
+
+                            $startTimeLabel = $formatTimeLabel($startTimeRaw);
+                            $endTimeLabel = $formatTimeLabel($endTimeRaw);
                             $starRank = max(0, min(5, (int) round((float) ($property->star_rating ?? $property->stars ?? $property->hotel_stars ?? 0))));
                             $reviewScoreRaw = (float) ($property->rating ?? $property->average_rating ?? 0);
                             $reviewScore = $reviewScoreRaw > 0 ? number_format($reviewScoreRaw, 1) : 'N/A';
@@ -1600,8 +1693,11 @@
                                 @endphp
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                                 <div class="card-body">
-                                    <span class="card-city">{{ $cityName !== '' ? $cityName : 'Maldives' }}</span>
-                                    <h3>{{ (string) ($property->name ?? 'Listing') }}</h3>
+                                    <span class="card-city">{{ $isExcursionCard ? ('From ' . $originLabel) : ($cityName !== '' ? $cityName : 'Maldives') }}</span>
+                                    @if ($isExcursionCard && $activityType !== '')
+                                        <span class="card-type-chip">{{ str_replace('_', ' ', $activityType) }}</span>
+                                    @endif
+                                    <h3>{{ $isExcursionCard ? $activityName : (string) ($property->name ?? 'Listing') }}</h3>
                                     <div class="card-stars" aria-label="Star ranking">
                                         @if ($starRank > 0)
                                             @for ($i = 0; $i < $starRank; $i++)
@@ -1614,6 +1710,20 @@
                                         <span>{{ number_format($reviewCount) }} reviews</span>
                                     </div>
                                     <div class="card-price">From {{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}</div>
+                                    @if ($isExcursionCard && $shortDescription !== '')
+                                        <p class="card-desc">{{ $shortDescription }}</p>
+                                    @endif
+                                    @if ($isExcursionCard && ($startTimeLabel !== '' || $endTimeLabel !== ''))
+                                        <div class="card-time">
+                                            @if ($startTimeLabel !== '' && $endTimeLabel !== '')
+                                                {{ $startTimeLabel }} - {{ $endTimeLabel }}
+                                            @elseif ($startTimeLabel !== '')
+                                                Starts {{ $startTimeLabel }}
+                                            @else
+                                                Ends {{ $endTimeLabel }}
+                                            @endif
+                                        </div>
+                                    @endif
                                 </div>
                             </a>
                         </article>

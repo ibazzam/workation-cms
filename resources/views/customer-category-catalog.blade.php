@@ -1483,9 +1483,19 @@
 
             <div class="hero-banner" aria-label="Category banner and quick filters">
                 <img class="hero-banner-image" src="{{ $categoryHeroImageUrl }}" alt="{{ (string) ($categoryMeta['label'] ?? 'Category') }} banner" loading="eager" fetchpriority="high" decoding="async" onerror="this.onerror=null;this.src='{{ $categoryHeroFallback }}';">
-                <div class="hero-banner-content">
-                    <div class="search-sticky-wrap">
-                        <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}" id="categorySearchForm">
+            </div>
+        </section>
+
+        <div class="page-body-split">
+            <div class="page-main-content">
+
+        <h2 class="section-title">Available Portfolio Items</h2>
+        @if ($catalogProperties->isEmpty())
+            <div class="empty">No listings found for this category and selected filters yet.</div>
+        @else
+            <form class="catalog-filters-form" method="GET" action="/catalog/{{ $categoryKey }}" id="catalogFiltersForm">
+            <div class="catalog-results-layout">
+                <div class="catalog-results-list">
             @if (!in_array($categoryKey, ['marine-transport', 'land-transport'], true))
                 <div class="grid">
                     <div class="field field-long">
@@ -1833,11 +1843,6 @@
                     </div>
                 </div>
             </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
         </section>
 
         <div class="page-body-split">
@@ -2236,10 +2241,12 @@
             function fallbackCoords(item) {
                 const key = String(item.island || item.city || item.atoll || item.name || 'maldives').toLowerCase();
                 const seed = hashText(key);
-                const baseLat = 3.2;
-                const baseLng = 73.1;
-                const latOffset = ((seed % 1800) / 1000) - 0.9;
-                const lngOffset = (((Math.floor(seed / 1800)) % 2200) / 1000) - 1.1;
+                // Maldives center: 4.1755° N, 73.5093° E
+                // Bounds approximately: 3.2°N to 5.0°N latitude, 72.0°E to 75.0°E longitude
+                const baseLat = 4.1755;
+                const baseLng = 73.5093;
+                const latOffset = ((seed % 900) / 1000) - 0.45;  // Range: -0.45 to +0.45
+                const lngOffset = (((Math.floor(seed / 900)) % 1500) / 1000) - 0.75;  // Range: -0.75 to +0.75
 
                 return {
                     lat: baseLat + latOffset,
@@ -2320,10 +2327,13 @@
             const map = window.L.map(mapContainer, {
                 zoomControl: true,
                 scrollWheelZoom: true,
+                center: [4.1755, 73.5093],
+                zoom: 8,
             });
 
             window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
+                minZoom: 2,
                 attribution: '&copy; OpenStreetMap contributors',
             }).addTo(map);
 

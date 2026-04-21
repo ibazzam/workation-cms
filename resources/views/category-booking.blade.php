@@ -68,6 +68,52 @@
             font-weight:700;
         }
 
+        .share-card {
+            margin-top: 10px;
+            border: 1px solid #cfe1ec;
+            border-radius: 14px;
+            background: #ffffff;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .share-label {
+            font-size: 0.78rem;
+            color: #3f6278;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .share-links {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .share-links a,
+        .share-links button {
+            border: 1px solid #b8d9e2;
+            background: #f8fdff;
+            color: #0f6179;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font: inherit;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .share-links a:hover,
+        .share-links button:hover { background: #eef8fc; }
+
         .layout {
             margin-top: 12px;
             display: grid;
@@ -191,7 +237,7 @@
             background: #edf4fb;
         }
 
-        .service-intel { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+        .service-intel { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
         .intel-card {
             border:1px solid #dbe7f0;
             border-radius:12px;
@@ -294,7 +340,7 @@
             .reservation-form,
             .service-content { grid-column: auto; grid-row: auto; }
             .booking-card { position:static; }
-            .service-intel { grid-template-columns:1fr 1fr; }
+            .service-intel { grid-template-columns:1fr; }
             .gallery-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
         }
 
@@ -359,6 +405,11 @@
             default => 'Service',
         };
 
+        $shareUrl = url()->current();
+        $shareText = trim((string) ($property->name ?? ($categoryLabel . ' Listing'))) . ' on Workation';
+        $shareEncodedText = urlencode($shareText . ' ' . $shareUrl);
+        $shareEncodedUrl = urlencode($shareUrl);
+
         $policyItems = match ($categoryKey) {
             'restaurant' => ['Arrival grace period applies.', 'Inform dietary requirements in notes.', 'Group reservations may need pre-confirmation.'],
             'marine-transport' => ['Provide accurate pickup island and time.', 'Weather delays may occur; reschedule available.', 'Passenger count must match manifest.'],
@@ -396,6 +447,16 @@
             </div>
         </section>
 
+        <section class="share-card" aria-label="Share this listing">
+            <span class="share-label">Share this {{ strtolower($categoryLabel) }}</span>
+            <div class="share-links">
+                <a href="https://wa.me/?text={{ $shareEncodedText }}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> WhatsApp</a>
+                <a href="https://www.facebook.com/sharer/sharer.php?u={{ $shareEncodedUrl }}" target="_blank" rel="noopener"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i> Facebook</a>
+                <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ $shareEncodedUrl }}" target="_blank" rel="noopener"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i> LinkedIn</a>
+                <button type="button" data-copy-share-link="{{ $shareUrl }}"><i class="fa-solid fa-link" aria-hidden="true"></i> Copy link</button>
+            </div>
+        </section>
+
         <div class="layout">
             <section class="service-content">
                 <section class="block" aria-label="Service gallery">
@@ -421,11 +482,11 @@
                     </div>
                 </section>
 
-                <section class="block" aria-label="Service intelligence" style="margin-top:12px;">
-                    <h2 class="block-title">Service Intelligence</h2>
+                <section class="block" aria-label="Service details" style="margin-top:12px;">
+                    <h2 class="block-title">{{ $categoryKey === 'excursion' ? 'Activity Details' : 'Service Snapshot' }}</h2>
                     <div class="service-intel">
                         <article class="intel-card">
-                            <strong>Best For</strong>
+                            <strong>{{ $categoryKey === 'excursion' ? 'Activity' : 'Best For' }}</strong>
                             <span>
                                 @if ($categoryKey === 'restaurant')
                                     Family dining, couples, and group reservations.
@@ -434,7 +495,7 @@
                                 @elseif ($categoryKey === 'land-transport')
                                     Local ground moves, airport runs, and sightseeing.
                                 @elseif ($categoryKey === 'excursion')
-                                    Guests seeking guided local activities and experiences.
+                                    {{ (string) ($property->name ?? 'Guided local activity and experience') }}
                                 @elseif ($categoryKey === 'conference_room')
                                     Meetings, training sessions, seminars, and corporate events.
                                 @else
@@ -443,12 +504,14 @@
                             </span>
                         </article>
                         <article class="intel-card">
-                            <strong>Operational Logic</strong>
-                            <span>Request date, pax, and service-specific fields are captured first so vendor confirmation and pricing are accurate before checkout.</span>
-                        </article>
-                        <article class="intel-card">
-                            <strong>Booking Readiness</strong>
-                            <span>Primary guest profile, service notes, and category requirements are validated to avoid follow-up delays.</span>
+                            <strong>{{ $categoryKey === 'excursion' ? 'Booking Inputs' : 'Booking Readiness' }}</strong>
+                            <span>
+                                @if ($categoryKey === 'excursion')
+                                    Select activity date, adult/children/infant counts, and add any special request. Full activity details are carried to checkout summary.
+                                @else
+                                    Core service requirements are captured before checkout so vendor confirmation is accurate.
+                                @endif
+                            </span>
                         </article>
                     </div>
                 </section>
@@ -473,7 +536,7 @@
 
                 <section class="block" aria-label="Service description and policies" style="margin-top:12px;">
                     <h2 class="block-title">Service Description</h2>
-                    <p class="description">{{ $descriptionText !== '' ? $descriptionText : 'Listing description will be updated soon.' }}</p>
+                    <p class="description">{!! nl2br(e($descriptionText !== '' ? $descriptionText : 'Listing description will be updated soon.')) !!}</p>
 
                     <h2 class="block-title" style="margin-top:12px;">Policy Snapshot</h2>
                     @php
@@ -550,77 +613,88 @@
                     @endif
 
                     <div class="grid">
-                        <div class="field"><label for="serviceStartDate">{{ (string) ($dateLabels['start'] ?? 'Service Start Date') }}</label><input id="serviceStartDate" name="service_start_date" type="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? 'datetime-local' : 'date' }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="serviceEndDate">{{ (string) ($dateLabels['end'] ?? 'Service End Date') }}</label><input id="serviceEndDate" name="service_end_date" type="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? 'datetime-local' : 'date' }}" value="{{ old('service_end_date', (string) ($prefill['service_end_date'] ?? '')) }}" class="{{ $errors->has('service_end_date') ? 'input-error' : '' }}">@error('service_end_date')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}" class="{{ $errors->has('adults') ? 'input-error' : '' }}" required>@error('adults')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}" class="{{ $errors->has('children') ? 'input-error' : '' }}">@error('children')<p class="error-text">{{ $message }}</p>@enderror</div>
+                        @if ($categoryKey === 'excursion')
+                            <div class="field"><label for="serviceStartDate">Activity Date</label><input id="serviceStartDate" name="service_start_date" type="date" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}" class="{{ $errors->has('adults') ? 'input-error' : '' }}" required>@error('adults')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}" class="{{ $errors->has('children') ? 'input-error' : '' }}">@error('children')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="infants">Infants</label><input id="infants" name="infants" type="number" min="0" value="{{ old('infants', (int) ($prefill['infants'] ?? 0)) }}" class="{{ $errors->has('infants') ? 'input-error' : '' }}">@error('infants')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field full">
+                                <label for="serviceNotes">Additional Request (Optional)</label>
+                                <textarea id="serviceNotes" name="service_notes" placeholder="Any dietary, timing, or service request?">{{ old('service_notes', (string) ($prefill['service_notes'] ?? '')) }}</textarea>
+                            </div>
+                        @else
+                            <div class="field"><label for="serviceStartDate">{{ (string) ($dateLabels['start'] ?? 'Service Start Date') }}</label><input id="serviceStartDate" name="service_start_date" type="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? 'datetime-local' : 'date' }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="serviceEndDate">{{ (string) ($dateLabels['end'] ?? 'Service End Date') }}</label><input id="serviceEndDate" name="service_end_date" type="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? 'datetime-local' : 'date' }}" value="{{ old('service_end_date', (string) ($prefill['service_end_date'] ?? '')) }}" class="{{ $errors->has('service_end_date') ? 'input-error' : '' }}">@error('service_end_date')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}" class="{{ $errors->has('adults') ? 'input-error' : '' }}" required>@error('adults')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}" class="{{ $errors->has('children') ? 'input-error' : '' }}">@error('children')<p class="error-text">{{ $message }}</p>@enderror</div>
 
-                        @foreach ($categoryFields as $field)
-                            @php
-                                $fieldKey = (string) ($field['key'] ?? '');
-                                $fieldType = (string) ($field['type'] ?? 'text');
-                                $fieldLabel = (string) ($field['label'] ?? Str::headline(str_replace('_', ' ', $fieldKey)));
-                                $fieldRequired = (bool) ($field['required'] ?? false);
-                                $fieldId = 'categoryField_' . $fieldKey;
-                                $fieldValue = old($fieldKey, $prefill[$fieldKey] ?? '');
-                            @endphp
-                            @if ($fieldType === 'checkbox')
-                                <div class="field full" style="margin-top:8px;">
-                                    <label style="margin-bottom:8px; display:block; font-size:0.74rem; text-transform:uppercase; letter-spacing:0.07em; color:#3c5f76; font-family:'Space Grotesk','Trebuchet MS',sans-serif;">{{ $fieldLabel }}</label>
-                                    <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px;">
-                                        @foreach ((array) ($field['options'] ?? []) as $optValue => $optLabel)
-                                            @php
-                                                $selectedFacilities = old($fieldKey, $prefill[$fieldKey] ?? []);
-                                                $isSelected = in_array((string) $optValue, (array) $selectedFacilities);
-                                            @endphp
-                                            <label style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:0.83rem; color:#34566d;">
-                                                <input type="checkbox" name="{{ $fieldKey }}[]" value="{{ (string) $optValue }}" {{ $isSelected ? 'checked' : '' }} style="cursor:pointer; width:16px; height:16px; accent-color:#0f6179;">
-                                                <span>{{ (string) $optLabel }}</span>
-                                            </label>
-                                        @endforeach
+                            @foreach ($categoryFields as $field)
+                                @php
+                                    $fieldKey = (string) ($field['key'] ?? '');
+                                    $fieldType = (string) ($field['type'] ?? 'text');
+                                    $fieldLabel = (string) ($field['label'] ?? Str::headline(str_replace('_', ' ', $fieldKey)));
+                                    $fieldRequired = (bool) ($field['required'] ?? false);
+                                    $fieldId = 'categoryField_' . $fieldKey;
+                                    $fieldValue = old($fieldKey, $prefill[$fieldKey] ?? '');
+                                @endphp
+                                @if ($fieldType === 'checkbox')
+                                    <div class="field full" style="margin-top:8px;">
+                                        <label style="margin-bottom:8px; display:block; font-size:0.74rem; text-transform:uppercase; letter-spacing:0.07em; color:#3c5f76; font-family:'Space Grotesk','Trebuchet MS',sans-serif;">{{ $fieldLabel }}</label>
+                                        <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px;">
+                                            @foreach ((array) ($field['options'] ?? []) as $optValue => $optLabel)
+                                                @php
+                                                    $selectedFacilities = old($fieldKey, $prefill[$fieldKey] ?? []);
+                                                    $isSelected = in_array((string) $optValue, (array) $selectedFacilities);
+                                                @endphp
+                                                <label style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:0.83rem; color:#34566d;">
+                                                    <input type="checkbox" name="{{ $fieldKey }}[]" value="{{ (string) $optValue }}" {{ $isSelected ? 'checked' : '' }} style="cursor:pointer; width:16px; height:16px; accent-color:#0f6179;">
+                                                    <span>{{ (string) $optLabel }}</span>
+                                                </label>
+                                            @endforeach
+                                        </div>
                                     </div>
-                                </div>
-                            @elseif ($fieldType === 'select')
-                                <div class="field">
-                                    <label for="{{ $fieldId }}">{{ $fieldLabel }}</label>
-                                    <select id="{{ $fieldId }}" name="{{ $fieldKey }}" class="{{ $errors->has($fieldKey) ? 'input-error' : '' }}" {{ $fieldRequired ? 'required' : '' }}>
-                                        <option value="">Select {{ $fieldLabel }}</option>
-                                        @foreach ((array) ($field['options'] ?? []) as $optValue => $optLabel)
-                                            <option value="{{ (string) $optValue }}" {{ (string) $fieldValue === (string) $optValue ? 'selected' : '' }}>{{ (string) $optLabel }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                @error($fieldKey)<p class="error-text">{{ $message }}</p>@enderror
-                            @elseif ($fieldType === 'number')
-                                <div class="field">
-                                    <label for="{{ $fieldId }}">{{ $fieldLabel }}</label>
-                                    <input id="{{ $fieldId }}" name="{{ $fieldKey }}" type="number" min="{{ (int) ($field['min'] ?? 0) }}" value="{{ $fieldValue }}" class="{{ $errors->has($fieldKey) ? 'input-error' : '' }}" {{ $fieldRequired ? 'required' : '' }}>
+                                @elseif ($fieldType === 'select')
+                                    <div class="field">
+                                        <label for="{{ $fieldId }}">{{ $fieldLabel }}</label>
+                                        <select id="{{ $fieldId }}" name="{{ $fieldKey }}" class="{{ $errors->has($fieldKey) ? 'input-error' : '' }}" {{ $fieldRequired ? 'required' : '' }}>
+                                            <option value="">Select {{ $fieldLabel }}</option>
+                                            @foreach ((array) ($field['options'] ?? []) as $optValue => $optLabel)
+                                                <option value="{{ (string) $optValue }}" {{ (string) $fieldValue === (string) $optValue ? 'selected' : '' }}>{{ (string) $optLabel }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
                                     @error($fieldKey)<p class="error-text">{{ $message }}</p>@enderror
-                                </div>
-                            @else
-                                <div class="field">
-                                    <label for="{{ $fieldId }}">{{ $fieldLabel }}</label>
-                                    <input id="{{ $fieldId }}" name="{{ $fieldKey }}" type="text" value="{{ $fieldValue }}" class="{{ $errors->has($fieldKey) ? 'input-error' : '' }}" {{ $fieldRequired ? 'required' : '' }}>
-                                    @error($fieldKey)<p class="error-text">{{ $message }}</p>@enderror
-                                </div>
-                            @endif
-                        @endforeach
+                                @elseif ($fieldType === 'number')
+                                    <div class="field">
+                                        <label for="{{ $fieldId }}">{{ $fieldLabel }}</label>
+                                        <input id="{{ $fieldId }}" name="{{ $fieldKey }}" type="number" min="{{ (int) ($field['min'] ?? 0) }}" value="{{ $fieldValue }}" class="{{ $errors->has($fieldKey) ? 'input-error' : '' }}" {{ $fieldRequired ? 'required' : '' }}>
+                                        @error($fieldKey)<p class="error-text">{{ $message }}</p>@enderror
+                                    </div>
+                                @else
+                                    <div class="field">
+                                        <label for="{{ $fieldId }}">{{ $fieldLabel }}</label>
+                                        <input id="{{ $fieldId }}" name="{{ $fieldKey }}" type="text" value="{{ $fieldValue }}" class="{{ $errors->has($fieldKey) ? 'input-error' : '' }}" {{ $fieldRequired ? 'required' : '' }}>
+                                        @error($fieldKey)<p class="error-text">{{ $message }}</p>@enderror
+                                    </div>
+                                @endif
+                            @endforeach
 
-                        <div class="field"><label for="primaryFirstName">Primary Guest First Name</label><input id="primaryFirstName" name="primary_first_name" type="text" value="{{ old('primary_first_name', (string) ($prefill['primary_first_name'] ?? '')) }}" class="{{ $errors->has('primary_first_name') ? 'input-error' : '' }}" required>@error('primary_first_name')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="primaryLastName">Primary Guest Last Name</label><input id="primaryLastName" name="primary_last_name" type="text" value="{{ old('primary_last_name', (string) ($prefill['primary_last_name'] ?? '')) }}" class="{{ $errors->has('primary_last_name') ? 'input-error' : '' }}" required>@error('primary_last_name')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="primaryNationality">Primary Guest Nationality</label><input id="primaryNationality" name="primary_nationality" type="text" value="{{ old('primary_nationality', (string) ($prefill['primary_nationality'] ?? '')) }}" class="{{ $errors->has('primary_nationality') ? 'input-error' : '' }}" required>@error('primary_nationality')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="primaryEmail">Primary Guest Email</label><input id="primaryEmail" name="primary_email" type="email" value="{{ old('primary_email', (string) ($prefill['primary_email'] ?? '')) }}" class="{{ $errors->has('primary_email') ? 'input-error' : '' }}" required>@error('primary_email')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field full"><label for="primaryMobile">Primary Guest Mobile</label><input id="primaryMobile" name="primary_mobile" type="text" placeholder="+960 ..." value="{{ old('primary_mobile', (string) ($prefill['primary_mobile'] ?? '')) }}" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required>@error('primary_mobile')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="primaryFirstName">Primary Guest First Name</label><input id="primaryFirstName" name="primary_first_name" type="text" value="{{ old('primary_first_name', (string) ($prefill['primary_first_name'] ?? '')) }}" class="{{ $errors->has('primary_first_name') ? 'input-error' : '' }}" required>@error('primary_first_name')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="primaryLastName">Primary Guest Last Name</label><input id="primaryLastName" name="primary_last_name" type="text" value="{{ old('primary_last_name', (string) ($prefill['primary_last_name'] ?? '')) }}" class="{{ $errors->has('primary_last_name') ? 'input-error' : '' }}" required>@error('primary_last_name')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="primaryNationality">Primary Guest Nationality</label><input id="primaryNationality" name="primary_nationality" type="text" value="{{ old('primary_nationality', (string) ($prefill['primary_nationality'] ?? '')) }}" class="{{ $errors->has('primary_nationality') ? 'input-error' : '' }}" required>@error('primary_nationality')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="primaryEmail">Primary Guest Email</label><input id="primaryEmail" name="primary_email" type="email" value="{{ old('primary_email', (string) ($prefill['primary_email'] ?? '')) }}" class="{{ $errors->has('primary_email') ? 'input-error' : '' }}" required>@error('primary_email')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field full"><label for="primaryMobile">Primary Guest Mobile</label><input id="primaryMobile" name="primary_mobile" type="text" placeholder="+960 ..." value="{{ old('primary_mobile', (string) ($prefill['primary_mobile'] ?? '')) }}" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required>@error('primary_mobile')<p class="error-text">{{ $message }}</p>@enderror</div>
 
-                        <div class="field full"><label for="additionalGuestDetails">Additional Guest Details (Optional)</label><textarea id="additionalGuestDetails" name="additional_guest_details">{{ old('additional_guest_details', '') }}</textarea></div>
-                        <div class="field full">
-                            <label for="serviceNotes">{{ $categoryKey === 'restaurant' ? 'Special Note for Food Order (Optional)' : 'Service Notes (Optional)' }}</label>
-                            <textarea id="serviceNotes" name="service_notes" placeholder="{{ $categoryKey === 'restaurant' ? 'Tell us what you want to order or any dietary preferences.' : 'Add any service details or requests.' }}">{{ old('service_notes', (string) ($prefill['service_notes'] ?? '')) }}</textarea>
-                        </div>
+                            <div class="field full"><label for="additionalGuestDetails">Additional Guest Details (Optional)</label><textarea id="additionalGuestDetails" name="additional_guest_details">{{ old('additional_guest_details', '') }}</textarea></div>
+                            <div class="field full">
+                                <label for="serviceNotes">{{ $categoryKey === 'restaurant' ? 'Special Note for Food Order (Optional)' : 'Service Notes (Optional)' }}</label>
+                                <textarea id="serviceNotes" name="service_notes" placeholder="{{ $categoryKey === 'restaurant' ? 'Tell us what you want to order or any dietary preferences.' : 'Add any service details or requests.' }}">{{ old('service_notes', (string) ($prefill['service_notes'] ?? '')) }}</textarea>
+                            </div>
+                        @endif
                     </div>
 
                     <div class="summary">
-                        Service-first checkout logic: core service requirements are captured before payment confirmation to reduce vendor-side revalidation.
+                        {{ $categoryKey === 'excursion' ? 'Simple request flow: your selected activity, date, guest count, and additional request are carried directly into checkout summary.' : 'Service-first checkout logic: core service requirements are captured before payment confirmation to reduce vendor-side revalidation.' }}
                         Tax: {{ number_format((float) ($pricingConfig['tax_rate'] ?? 16), 2) }}% • Discount: {{ number_format((float) ($pricingConfig['discount_percent'] ?? 0), 2) }}%
                     </div>
 
@@ -659,6 +733,22 @@
                     btn.classList.add('is-active');
                 });
             });
+
+            const copyShareBtn = document.querySelector('[data-copy-share-link]');
+            if (copyShareBtn) {
+                copyShareBtn.addEventListener('click', async function () {
+                    const shareUrl = this.getAttribute('data-copy-share-link') || window.location.href;
+                    try {
+                        await navigator.clipboard.writeText(shareUrl);
+                        this.textContent = 'Copied';
+                        setTimeout(() => {
+                            this.innerHTML = '<i class="fa-solid fa-link" aria-hidden="true"></i> Copy link';
+                        }, 1500);
+                    } catch (e) {
+                        window.prompt('Copy this link', shareUrl);
+                    }
+                });
+            }
         });
     </script>
 

@@ -63,7 +63,10 @@
         $checkoutMediaUrl = trim((string) ($checkoutMediaUrl ?? ''));
         $adults = max(1, (int) ($summary['adults'] ?? 1));
         $children = max(0, (int) ($summary['children'] ?? 0));
-        $guests = $adults + $children;
+        $infants = max(0, (int) ($summary['infants'] ?? 0));
+        $guests = $adults + $children + $infants;
+        $categoryKey = strtolower(trim((string) ($summary['category_key'] ?? '')));
+        $isExcursionBooking = $categoryKey === 'excursion';
         $roomSubtotal = (float) ($summary['room_subtotal'] ?? 0);
         $discountAmount = max(0, (float) ($summary['discount_amount'] ?? 0));
         $taxAmount = max(0, (float) ($summary['tax_amount'] ?? 0));
@@ -94,13 +97,13 @@
                     <div class="cell"><span class="label">Room / Service</span><div class="value">{{ $roomName !== '' ? $roomName : 'Service' }}</div></div>
                     <div class="cell"><span class="label">{{ (string) ($dateLabels['start'] ?? 'Check-in') }}</span><div class="value">{{ (string) ($summary['checkin'] ?? '-') }}</div></div>
                     <div class="cell"><span class="label">{{ (string) ($dateLabels['end'] ?? 'Check-out') }}</span><div class="value">{{ (string) ($summary['checkout'] ?? '-') }}</div></div>
-                    <div class="cell"><span class="label">Guests</span><div class="value">{{ (int) ($summary['adults'] ?? 1) }} Adults, {{ (int) ($summary['children'] ?? 0) }} Children</div></div>
+                    <div class="cell"><span class="label">Guests</span><div class="value">{{ (int) ($summary['adults'] ?? 1) }} Adults, {{ (int) ($summary['children'] ?? 0) }} Children{{ (int) ($summary['infants'] ?? 0) > 0 ? (', ' . (int) ($summary['infants'] ?? 0) . ' Infant' . ((int) ($summary['infants'] ?? 0) === 1 ? '' : 's')) : '' }}</div></div>
                     <div class="cell"><span class="label">Transfer Option</span><div class="value">{{ (string) ($summary['transfer_option'] ?? 'Not selected') }}</div></div>
                     <div class="cell"><span class="label">Primary Guest</span><div class="value">{{ trim(((string) ($summary['primary_first_name'] ?? '')) . ' ' . ((string) ($summary['primary_last_name'] ?? ''))) ?: 'Guest Customer' }}</div></div>
                     <div class="cell"><span class="label">Nationality</span><div class="value">{{ (string) ($summary['primary_nationality'] ?? '-') }}</div></div>
                     <div class="cell"><span class="label">Primary Guest Email</span><div class="value">{{ (string) ($summary['primary_email'] ?? 'guest@workation.local') }}</div></div>
                     <div class="cell"><span class="label">Primary Guest Mobile</span><div class="value">{{ (string) ($summary['primary_mobile'] ?? '-') }}</div></div>
-                    <div class="cell"><span class="label">Additional Guest Details</span><div class="value">{{ (string) ($summary['additional_guest_details'] ?? 'Not provided') }}</div></div>
+                    <div class="cell"><span class="label">{{ $isExcursionBooking ? 'Additional Request' : 'Additional Guest Details' }}</span><div class="value">{{ (string) ($isExcursionBooking ? ($summary['service_notes'] ?? '') : ($summary['additional_guest_details'] ?? '')) !== '' ? (string) ($isExcursionBooking ? ($summary['service_notes'] ?? '') : ($summary['additional_guest_details'] ?? '')) : 'Not provided' }}</div></div>
                     @if ($categoryDetails->isNotEmpty())
                         <div class="cell"><span class="label">Category Details</span><div class="value">{{ $categoryDetails->map(static fn ($item) => ((string) ($item['label'] ?? 'Detail')) . ': ' . ((string) ($item['value'] ?? '-')))->implode(' | ') }}</div></div>
                     @endif

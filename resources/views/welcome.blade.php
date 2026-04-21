@@ -1304,7 +1304,12 @@
         }
 
         .home-blog-teaser {
-            margin-top: 28px;
+            margin-top: 13px;
+            max-width: 860px;
+            margin-left: auto;
+            margin-right: auto;
+            padding-left: 14px;
+            padding-right: 14px;
         }
 
         .blog-teaser-grid {
@@ -2583,7 +2588,10 @@
             <div class="blog-teaser-grid">
                 @foreach ($recentBlogPosts as $post)
                     @php
-                        $postCover = trim((string) ($post->cover_image_url ?? $post->cover_image_path ?? ''));
+                        $postCoverSource = trim((string) ($post->cover_image_url ?? $post->cover_image_path ?? ''));
+                        $postCover = function_exists('blogResolveCoverImageUrl')
+                            ? blogResolveCoverImageUrl($postCoverSource)
+                            : $postCoverSource;
                         $postTitle = (string) ($post->title ?? 'Read Article');
                         $postSlug = (string) ($post->slug ?? '');
                         $postExcerpt = trim((string) ($post->excerpt ?? ''));

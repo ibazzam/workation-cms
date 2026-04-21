@@ -179,13 +179,17 @@
             border: 1px solid #b8d9e2;
             background: #f8fdff;
             color: #0f6179;
-            border-radius: 999px;
-            padding: 6px 10px;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             font: inherit;
-            font-size: 0.78rem;
-            font-weight: 700;
+            font-size: 0.92rem;
             text-decoration: none;
             cursor: pointer;
+            padding: 0;
         }
 
         .share-links a:hover,
@@ -1396,6 +1400,25 @@
     @include('partials.uniform-buttons')
 </head>
 <body>
+    @include('partials.customer-uniform-header', [
+        'headerHideOnScroll' => true,
+        'headerShowSearch' => true,
+        'headerSearchAction' => '/catalog/' . str_replace('_', '-', strtolower(trim((string) ($property->listing_category ?? 'accommodation')))),
+        'headerSearchValue' => '',
+        'headerCategoryLinks' => [
+            ['key' => 'accommodation', 'title' => 'Accommodation', 'url' => '/catalog/accommodation'],
+            ['key' => 'marine-transport', 'title' => 'Marine Transport', 'url' => '/catalog/marine-transport'],
+            ['key' => 'land-transport', 'title' => 'Land Transport', 'url' => '/catalog/land-transport'],
+            ['key' => 'excursion', 'title' => 'Excursion', 'url' => '/catalog/excursion'],
+            ['key' => 'remote_workspace', 'title' => 'Remote Workspace', 'url' => '/catalog/remote_workspace'],
+            ['key' => 'conference_room', 'title' => 'Conference Rooms', 'url' => '/catalog/conference_room'],
+            ['key' => 'resort_day_visit', 'title' => 'Resort Day Visit', 'url' => '/catalog/resort_day_visit'],
+            ['key' => 'restaurant', 'title' => 'Restaurant', 'url' => '/catalog/restaurant'],
+            ['key' => 'vehicle_rental', 'title' => 'Vehicle Rental', 'url' => '/catalog/vehicle_rental'],
+        ],
+        'headerActiveCategoryKey' => str_replace('_', '-', strtolower(trim((string) ($property->listing_category ?? 'accommodation')))),
+    ])
+
     @php
         $propertyMedia = $propertyMedia ?? collect();
         $rooms = $rooms ?? collect();
@@ -1611,10 +1634,10 @@
         <section class="share-card" aria-label="Share this property">
             <span class="share-label">Share this property</span>
             <div class="share-links">
-                <a href="https://wa.me/?text={{ $shareEncodedText }}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> WhatsApp</a>
-                <a href="https://www.facebook.com/sharer/sharer.php?u={{ $shareEncodedUrl }}" target="_blank" rel="noopener"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i> Facebook</a>
-                <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ $shareEncodedUrl }}" target="_blank" rel="noopener"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i> LinkedIn</a>
-                <button type="button" data-copy-share-link="{{ $shareUrl }}"><i class="fa-solid fa-link" aria-hidden="true"></i> Copy link</button>
+                <a href="https://wa.me/?text={{ $shareEncodedText }}" target="_blank" rel="noopener" title="Share on WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+                <a href="https://www.facebook.com/sharer/sharer.php?u={{ $shareEncodedUrl }}" target="_blank" rel="noopener" title="Share on Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+                <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ $shareEncodedUrl }}" target="_blank" rel="noopener" title="Share on LinkedIn"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i></a>
+                <button type="button" data-copy-share-link="{{ $shareUrl }}" title="Copy link"><i class="fa-solid fa-link" aria-hidden="true"></i></button>
             </div>
         </section>
 
@@ -2517,9 +2540,9 @@
                 const shareUrl = this.getAttribute('data-copy-share-link') || window.location.href;
                 try {
                     await navigator.clipboard.writeText(shareUrl);
-                    this.textContent = 'Copied';
+                    this.style.background = '#d7f0e4';
                     setTimeout(() => {
-                        this.innerHTML = '<i class="fa-solid fa-link" aria-hidden="true"></i> Copy link';
+                        this.style.background = '#f8fdff';
                     }, 1500);
                 } catch (e) {
                     window.prompt('Copy this link', shareUrl);

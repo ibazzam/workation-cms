@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <style>
         :root {
             --bg: #f3f8f5;
@@ -560,7 +561,8 @@
         }
 
         .search-sticky-wrap {
-            position: static;
+            position: sticky;
+            top: 8px;
             z-index: 2;
             width: 100%;
             padding: 0;
@@ -746,6 +748,232 @@
             align-items: center;
             flex: 0 0 auto;
             white-space: nowrap;
+        }
+
+        .filter-popup-toggle {
+            border: 1px solid #b9ccda;
+            border-radius: 8px;
+            background: #f4f9fc;
+            color: #1b4f6e;
+            height: 36px;
+            padding: 0 12px;
+            font: inherit;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .filter-popup-toggle:hover {
+            background: #e7f2f9;
+        }
+
+        .filter-popup-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(9, 27, 43, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px;
+            z-index: 1100;
+        }
+
+        .filter-popup {
+            width: min(860px, calc(100vw - 24px));
+            max-height: calc(100vh - 28px);
+            overflow: auto;
+            border: 1px solid #cddfea;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 20px 40px rgba(9, 34, 54, 0.35);
+            padding: 12px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .filter-popup-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .filter-popup-title {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 800;
+            color: #123d59;
+        }
+
+        .filter-popup-close {
+            border: 1px solid #c8dae7;
+            border-radius: 8px;
+            background: #f7fbff;
+            color: #234a66;
+            height: 34px;
+            padding: 0 10px;
+            font: inherit;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .filter-popup-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .filter-popup-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .catalog-results-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 360px;
+            gap: 12px;
+            align-items: start;
+        }
+
+        .catalog-map-panel {
+            position: sticky;
+            top: 84px;
+            border: 1px solid #d2e2ec;
+            border-radius: 12px;
+            background: #ffffff;
+            overflow: hidden;
+            box-shadow: 0 10px 24px rgba(15, 55, 86, 0.14);
+        }
+
+        .catalog-map-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            border-bottom: 1px solid #dce8f0;
+            padding: 10px 12px;
+            font-size: 0.78rem;
+            color: #294f68;
+            font-weight: 700;
+            background: #f5fbff;
+        }
+
+        .catalog-map-head strong {
+            color: #123f5d;
+            font-size: 0.83rem;
+        }
+
+        .category-map-wrap {
+            position: relative;
+        }
+
+        #categoryResultsMap {
+            width: 100%;
+            height: min(62vh, 560px);
+            background: #e7f1f7;
+        }
+
+        .map-search-area-btn {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 520;
+            border: 1px solid #0f7e72;
+            border-radius: 999px;
+            background: #0f9a88;
+            color: #ffffff;
+            height: 34px;
+            padding: 0 14px;
+            font: inherit;
+            font-size: 0.8rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(15, 97, 121, 0.28);
+            white-space: nowrap;
+        }
+
+        .leaflet-control-zoom {
+            border: 0 !important;
+            box-shadow: none !important;
+            margin-right: 10px !important;
+            margin-top: 10px !important;
+        }
+
+        .leaflet-control-zoom a {
+            width: 40px !important;
+            height: 40px !important;
+            line-height: 38px !important;
+            border: 1px solid #c9d7e2 !important;
+            border-radius: 12px !important;
+            background: #ffffff !important;
+            color: #2a4154 !important;
+            font-size: 22px !important;
+            font-weight: 700;
+            margin-bottom: 6px !important;
+            box-shadow: 0 4px 10px rgba(17, 44, 63, 0.2);
+        }
+
+        .leaflet-control-zoom a:hover {
+            background: #f4f9fc !important;
+        }
+
+        .price-marker {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #d2dce5;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #1a2f43;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            font-size: 12px;
+            font-weight: 800;
+            line-height: 1;
+            padding: 6px 9px;
+            box-shadow: 0 3px 8px rgba(20, 45, 73, 0.2);
+            white-space: nowrap;
+            transform: translateY(-2px);
+            transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+        }
+
+        .price-marker:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 14px rgba(20, 45, 73, 0.3);
+        }
+
+        .price-marker.is-compact {
+            font-size: 11px;
+            padding: 5px 8px;
+        }
+
+        .price-marker.is-super-compact {
+            font-size: 10px;
+            padding: 4px 7px;
+        }
+
+        .price-marker.is-active {
+            border-color: #0f6179;
+            background: #0f6179;
+            color: #ffffff;
+            box-shadow: 0 6px 16px rgba(15, 97, 121, 0.45);
+        }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+        }
+
+        .leaflet-popup-content {
+            margin: 10px 12px;
+        }
+
+        .map-empty {
+            padding: 14px;
+            font-size: 0.82rem;
+            color: #43627a;
         }
 
         .section-title {
@@ -997,6 +1225,23 @@
                 width: 100%;
             }
 
+            .catalog-results-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .catalog-map-panel {
+                position: relative;
+                top: auto;
+            }
+
+            #categoryResultsMap {
+                height: 300px;
+            }
+
+            .filter-popup-grid {
+                grid-template-columns: 1fr;
+            }
+
             .header-bar {
                 flex-direction: column;
                 align-items: stretch;
@@ -1214,65 +1459,33 @@
         }
     @endphp
 
-    <main class="page" data-api-base="{{ $apiBase }}">
+    <main class="page" data-api-base="{{ $apiBase }}" data-category-key="{{ $categoryKey }}">
         <section class="journey-hero" aria-label="Category hero and quick navigation">
-            <header class="header-bar" aria-label="Member account actions">
-                <div class="header-main">
-                    <div class="header-brand-wrap">
-                        <a class="header-brand header-brand-link" href="/">Workation</a>
-                        <p class="header-subline">Maldives Travel Market</p>
-                    </div>
-                    <nav class="header-links header-category-tabs" aria-label="Category tabs in header">
-                        @foreach ($catalogCategoryLinks as $item)
-                            <a class="header-link{{ $categoryKey === ($item['key'] ?? '') ? ' is-active' : '' }}" href="{{ '/catalog/' . ($item['key'] ?? 'accommodation') }}">{{ $item['title'] ?? 'Category' }}</a>
-                        @endforeach
-                        <a class="header-link" href="/blog">Travel picks</a>
-                    </nav>
-                    <div class="header-search-mini" aria-label="Quick destination search">
-                        <input type="search" value="{{ $filters['q'] ?? '' }}" placeholder="Destinations, islands, hotels, and experiences">
-                        <button type="button" aria-label="Search destinations"><i class="fa-solid fa-magnifying-glass"></i></button>
-                    </div>
-                </div>
-                <div class="customer-auth">
-                    @if ($customerLoggedIn)
-                        <a class="header-link" href="/customer#bookings">My bookings</a>
-                        <div class="account-menu" data-customer-menu>
-                            <button class="account-menu-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="customerMenuPanelCatalog">
-                                <span class="account-avatar" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
-                                <span>Welcome, {{ $customerName }}</span>
-                                <i class="fa-solid fa-chevron-down account-chevron" aria-hidden="true"></i>
-                            </button>
-                            <div id="customerMenuPanelCatalog" class="account-menu-panel" role="menu" hidden>
-                                <div class="account-panel-head">
-                                    <p class="account-panel-greet">Hi, {{ $customerName }}</p>
-                                    <p class="account-panel-note">Great to see you again.</p>
-                                </div>
-                                <div class="account-panel-links">
-                                    <a class="account-panel-link" href="/customer#bookings" role="menuitem">My Bookings</a>
-                                    <a class="account-panel-link" href="/customer" role="menuitem">Manage my account</a>
-                                    <a class="account-panel-link" href="/customer#promos" role="menuitem">Promo codes</a>
-                                    <a class="account-panel-link" href="/customer#favourites" role="menuitem">Favourites</a>
-                                </div>
-                                <div class="account-panel-foot">
-                                    <form method="POST" action="/portal/customer/logout" style="margin:0;">
-                                        @csrf
-                                        <button class="account-panel-logout" type="submit">Sign out</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    @else
-                        <a class="auth-link primary" href="{{ '/portal/customer/login?continue=' . urlencode($customerContinueUrl) }}">Sign in/register</a>
-                    @endif
-                </div>
-            </header>
+            @include('partials.customer-uniform-header', [
+                'injectUniformHeaderStyles' => false,
+                'injectUniformHeaderScripts' => false,
+                'headerNeedsSpacer' => false,
+                'headerHideOnScroll' => true,
+                'headerShowSearch' => true,
+                'headerSearchAction' => '/catalog/' . (string) $categoryKey,
+                'headerSearchValue' => (string) ($filters['q'] ?? ''),
+                'headerCategoryLinks' => $catalogCategoryLinks
+                    ->map(static fn (array $item) => [
+                        'key' => (string) ($item['key'] ?? ''),
+                        'title' => (string) ($item['title'] ?? 'Category'),
+                        'url' => '/catalog/' . (string) ($item['key'] ?? 'accommodation'),
+                    ])
+                    ->values()
+                    ->all(),
+                'headerActiveCategoryKey' => (string) $categoryKey,
+                'headerContinueUrl' => (string) $customerContinueUrl,
+            ])
 
             <div class="hero-banner" aria-label="Category banner and quick filters">
                 <img class="hero-banner-image" src="{{ $categoryHeroImageUrl }}" alt="{{ (string) ($categoryMeta['label'] ?? 'Category') }} banner" loading="eager" fetchpriority="high" decoding="async" onerror="this.onerror=null;this.src='{{ $categoryHeroFallback }}';">
                 <div class="hero-banner-content">
-                    <h1 class="hero-banner-title">{{ (string) ($categoryMeta['label'] ?? 'Category') }}.</h1>
                     <div class="search-sticky-wrap">
-                        <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}">
+                        <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}" id="categorySearchForm">
             @if (!in_array($categoryKey, ['marine-transport', 'land-transport'], true))
                 <div class="grid">
                     <div class="field field-long">
@@ -1306,6 +1519,7 @@
                             <option value="highest_reviews" {{ ($filters['sort'] ?? '') === 'highest_reviews' ? 'selected' : '' }}>Highest Reviews</option>
                             <option value="price_low_high" {{ ($filters['sort'] ?? '') === 'price_low_high' ? 'selected' : '' }}>Price Low to High</option>
                             <option value="price_high_low" {{ ($filters['sort'] ?? '') === 'price_high_low' ? 'selected' : '' }}>Price High to Low</option>
+                            <option value="distance_nearest" {{ ($filters['sort'] ?? '') === 'distance_nearest' ? 'selected' : '' }}>Nearest Distance</option>
                         </select>
                     </div>
                     <div class="field field-short">
@@ -1545,8 +1759,79 @@
             @endif
 
             <div class="actions">
+                <button class="filter-popup-toggle" type="button" id="openFilterPopup"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Filters</button>
                 <button class="primary" type="submit">Apply Filters</button>
-                <a href="/catalog/{{ $categoryKey }}">Reset</a>
+                <a href="/catalog/{{ $categoryKey }}">Clear all filters</a>
+            </div>
+
+            <div class="filter-popup-backdrop" id="filterPopupBackdrop" hidden>
+                <div class="filter-popup" role="dialog" aria-modal="true" aria-labelledby="filterPopupTitle">
+                    <div class="filter-popup-head">
+                        <h3 class="filter-popup-title" id="filterPopupTitle">Refine Results</h3>
+                        <button class="filter-popup-close" type="button" id="closeFilterPopup">Close</button>
+                    </div>
+                    <div class="filter-popup-grid">
+                        <div class="field">
+                            <label for="min_rating">Minimum Rating</label>
+                            <select id="min_rating" name="min_rating">
+                                <option value="">Any Rating</option>
+                                <option value="9" {{ (string) ($filters['min_rating'] ?? '') === '9' ? 'selected' : '' }}>9.0+</option>
+                                <option value="8" {{ (string) ($filters['min_rating'] ?? '') === '8' ? 'selected' : '' }}>8.0+</option>
+                                <option value="7" {{ (string) ($filters['min_rating'] ?? '') === '7' ? 'selected' : '' }}>7.0+</option>
+                                <option value="6" {{ (string) ($filters['min_rating'] ?? '') === '6' ? 'selected' : '' }}>6.0+</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="min_reviews">Minimum Reviews</label>
+                            <select id="min_reviews" name="min_reviews">
+                                <option value="">Any</option>
+                                <option value="10" {{ (string) ($filters['min_reviews'] ?? '') === '10' ? 'selected' : '' }}>10+</option>
+                                <option value="50" {{ (string) ($filters['min_reviews'] ?? '') === '50' ? 'selected' : '' }}>50+</option>
+                                <option value="100" {{ (string) ($filters['min_reviews'] ?? '') === '100' ? 'selected' : '' }}>100+</option>
+                                <option value="250" {{ (string) ($filters['min_reviews'] ?? '') === '250' ? 'selected' : '' }}>250+</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="amenities">Amenities / Keywords</label>
+                            <input id="amenities" name="amenities" type="text" value="{{ $filters['amenities'] ?? '' }}" placeholder="pool, spa, wifi, parking">
+                        </div>
+                        <div class="field">
+                            <label for="availability_only">Availability</label>
+                            <select id="availability_only" name="availability_only">
+                                <option value="">All</option>
+                                <option value="1" {{ (string) ($filters['availability_only'] ?? '') === '1' ? 'selected' : '' }}>Only Available</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="distance_km">Max Distance (km)</label>
+                            <input id="distance_km" name="distance_km" type="number" min="0" step="0.1" value="{{ $filters['distance_km'] ?? '' }}" placeholder="e.g. 25">
+                        </div>
+                        <div class="field">
+                            <label for="sort_popup">Sort</label>
+                            <select id="sort_popup" data-mirror-target="sort">
+                                <option value="recommended" {{ ($filters['sort'] ?? '') === 'recommended' ? 'selected' : '' }}>Recommended</option>
+                                <option value="most_wanted" {{ ($filters['sort'] ?? '') === 'most_wanted' ? 'selected' : '' }}>Most Wanted</option>
+                                <option value="most_booked" {{ ($filters['sort'] ?? '') === 'most_booked' ? 'selected' : '' }}>Most Booked</option>
+                                <option value="highest_reviews" {{ ($filters['sort'] ?? '') === 'highest_reviews' ? 'selected' : '' }}>Highest Reviews</option>
+                                <option value="price_low_high" {{ ($filters['sort'] ?? '') === 'price_low_high' ? 'selected' : '' }}>Price Low to High</option>
+                                <option value="price_high_low" {{ ($filters['sort'] ?? '') === 'price_high_low' ? 'selected' : '' }}>Price High to Low</option>
+                                <option value="distance_nearest" {{ ($filters['sort'] ?? '') === 'distance_nearest' ? 'selected' : '' }}>Nearest Distance</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="user_lat">Search Center Latitude</label>
+                            <input id="user_lat" name="user_lat" type="number" step="0.000001" value="{{ $filters['user_lat'] ?? '' }}" placeholder="4.1755">
+                        </div>
+                        <div class="field">
+                            <label for="user_lng">Search Center Longitude</label>
+                            <input id="user_lng" name="user_lng" type="number" step="0.000001" value="{{ $filters['user_lng'] ?? '' }}" placeholder="73.5093">
+                        </div>
+                    </div>
+                    <div class="filter-popup-actions">
+                        <a href="/catalog/{{ $categoryKey }}">Clear all filters</a>
+                        <button class="primary" type="submit">Apply Filters</button>
+                    </div>
+                </div>
             </div>
                         </form>
                     </div>
@@ -1562,6 +1847,8 @@
         @if ($catalogProperties->isEmpty())
             <div class="empty">No listings found for this category and selected filters yet.</div>
         @else
+            <div class="catalog-results-layout">
+                <div class="catalog-results-list">
             @php
                 $catalogSections = collect();
                 if ($popularOverall->isNotEmpty()) {
@@ -1684,7 +1971,25 @@
                                 default             => 'Proceed to Booking',
                             };
                         @endphp
-                        <article class="card">
+                        @php
+                            $rawLat = $property->latitude ?? $property->lat ?? $property->location_lat ?? $property->geo_lat ?? null;
+                            $rawLng = $property->longitude ?? $property->lng ?? $property->location_lng ?? $property->geo_lng ?? null;
+                            $lat = is_numeric($rawLat) ? (float) $rawLat : null;
+                            $lng = is_numeric($rawLng) ? (float) $rawLng : null;
+                        @endphp
+                        <article
+                            class="card"
+                            data-property-card
+                            data-id="{{ $propertyId }}"
+                            data-name="{{ e((string) ($property->name ?? 'Listing')) }}"
+                            data-city="{{ e((string) ($property->city ?? '')) }}"
+                            data-island="{{ e((string) ($property->island ?? '')) }}"
+                            data-atoll="{{ e((string) ($property->atoll ?? '')) }}"
+                            data-price="{{ number_format($price, 2, '.', '') }}"
+                            data-currency="{{ e(strtoupper((string) ($property->currency ?? 'MVR'))) }}"
+                            data-lat="{{ $lat !== null ? $lat : '' }}"
+                            data-lng="{{ $lng !== null ? $lng : '' }}"
+                        >
                             <a class="card-link" href="{{ $detailUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
                                 @php
                                     $resolvedImage = ($thumbUrl && trim($thumbUrl) !== '')
@@ -1730,12 +2035,27 @@
                     @endforeach
                 </section>
             @endforeach
+                </div>
+                <aside class="catalog-map-panel" aria-label="Map of filtered category results">
+                    <div class="catalog-map-head">
+                        <span>Map View</span>
+                        <span id="mapResultCount">0 results</span>
+                    </div>
+                    <div class="category-map-wrap">
+                        <button type="button" class="map-search-area-btn" id="mapSearchAreaButton">Search in this area</button>
+                        <div id="categoryResultsMap" role="application" aria-label="Filtered listing locations"></div>
+                    </div>
+                    <div class="map-empty" id="categoryMapEmpty" hidden>No map points available for the selected filters. Try broadening your search.</div>
+                </aside>
+            </div>
         @endif
 
         @include('partials.global-site-footer')
             </div>{{-- /page-main-content --}}
         </div>{{-- /page-body-split --}}
     </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <script>
         (function () {
@@ -1765,6 +2085,100 @@
 
     <script>
         (function () {
+            const searchForm = document.getElementById('categorySearchForm');
+            const openPopupButton = document.getElementById('openFilterPopup');
+            const closePopupButton = document.getElementById('closeFilterPopup');
+            const popupBackdrop = document.getElementById('filterPopupBackdrop');
+            const headerSearchInput = document.querySelector('.header-search-mini input[type="search"]');
+            const headerSearchButton = document.querySelector('.header-search-mini button');
+            const searchField = document.getElementById('q');
+
+            if (searchForm && openPopupButton && closePopupButton && popupBackdrop) {
+                const togglePopup = function (isOpen) {
+                    popupBackdrop.hidden = !isOpen;
+                    document.body.style.overflow = isOpen ? 'hidden' : '';
+                };
+
+                openPopupButton.addEventListener('click', function () {
+                    togglePopup(true);
+                });
+
+                closePopupButton.addEventListener('click', function () {
+                    togglePopup(false);
+                });
+
+                popupBackdrop.addEventListener('click', function (event) {
+                    if (event.target === popupBackdrop) {
+                        togglePopup(false);
+                    }
+                });
+
+                document.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape') {
+                        togglePopup(false);
+                    }
+                });
+            }
+
+            if (headerSearchInput && headerSearchButton && searchForm && searchField) {
+                const submitHeaderSearch = function () {
+                    searchField.value = String(headerSearchInput.value || '').trim();
+                    searchForm.submit();
+                };
+
+                headerSearchButton.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    submitHeaderSearch();
+                });
+
+                headerSearchInput.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        submitHeaderSearch();
+                    }
+                });
+            }
+
+            if (searchField && searchForm) {
+                let debounceTimer = null;
+                searchField.addEventListener('input', function () {
+                    const value = String(searchField.value || '').trim();
+                    if (debounceTimer !== null) {
+                        window.clearTimeout(debounceTimer);
+                    }
+                    debounceTimer = window.setTimeout(function () {
+                        if (value.length >= 2 || value === '') {
+                            searchForm.submit();
+                        }
+                    }, 600);
+                });
+            }
+
+            if (searchForm) {
+                const autoSubmitSelectors = searchForm.querySelectorAll('select[name="sort"], #sort_popup, #availability_only, #min_rating, #min_reviews');
+                autoSubmitSelectors.forEach(function (element) {
+                    element.addEventListener('change', function () {
+                        const mirrorTarget = element.getAttribute('data-mirror-target');
+                        if (mirrorTarget) {
+                            const targetField = searchForm.querySelector('[name="' + mirrorTarget + '"]');
+                            if (targetField) {
+                                targetField.value = element.value;
+                            }
+                        }
+                        searchForm.submit();
+                    });
+                });
+
+                const sortField = searchForm.querySelector('select[name="sort"]');
+                const sortPopup = document.getElementById('sort_popup');
+                if (sortField && sortPopup) {
+                    sortPopup.value = sortField.value;
+                    sortField.addEventListener('change', function () {
+                        sortPopup.value = sortField.value;
+                    });
+                }
+            }
+
             const menuRoot = document.querySelector('[data-customer-menu]');
             if (!menuRoot) {
                 return;
@@ -1798,6 +2212,258 @@
                     setMenuOpen(false);
                 }
             });
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const mapContainer = document.getElementById('categoryResultsMap');
+            const mapEmpty = document.getElementById('categoryMapEmpty');
+            const countLabel = document.getElementById('mapResultCount');
+            const pageRoot = document.querySelector('.page');
+            const mapSearchAreaButton = document.getElementById('mapSearchAreaButton');
+
+            function hashText(value) {
+                let hash = 0;
+                const text = String(value || '');
+                for (let i = 0; i < text.length; i += 1) {
+                    hash = ((hash << 5) - hash) + text.charCodeAt(i);
+                    hash |= 0;
+                }
+                return Math.abs(hash);
+            }
+
+            function fallbackCoords(item) {
+                const key = String(item.island || item.city || item.atoll || item.name || 'maldives').toLowerCase();
+                const seed = hashText(key);
+                const baseLat = 3.2;
+                const baseLng = 73.1;
+                const latOffset = ((seed % 1800) / 1000) - 0.9;
+                const lngOffset = (((Math.floor(seed / 1800)) % 2200) / 1000) - 1.1;
+
+                return {
+                    lat: baseLat + latOffset,
+                    lng: baseLng + lngOffset,
+                };
+            }
+
+            function parseCardData(card) {
+                const linkEl = card.querySelector('.card-link');
+                const latRaw = Number(card.getAttribute('data-lat'));
+                const lngRaw = Number(card.getAttribute('data-lng'));
+                const hasRealCoords = Number.isFinite(latRaw) && Number.isFinite(lngRaw) && Math.abs(latRaw) <= 90 && Math.abs(lngRaw) <= 180;
+
+                return {
+                    id: String(card.getAttribute('data-id') || ''),
+                    name: String(card.getAttribute('data-name') || 'Listing'),
+                    city: String(card.getAttribute('data-city') || ''),
+                    island: String(card.getAttribute('data-island') || ''),
+                    atoll: String(card.getAttribute('data-atoll') || ''),
+                    currency: String(card.getAttribute('data-currency') || 'MVR'),
+                    price: Number(card.getAttribute('data-price') || 0),
+                    url: linkEl ? linkEl.getAttribute('href') : '',
+                    lat: hasRealCoords ? latRaw : null,
+                    lng: hasRealCoords ? lngRaw : null,
+                    card: card,
+                };
+            }
+
+            function escapeHtml(value) {
+                return String(value || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            function shortPriceLabel(currency, priceValue) {
+                const normalized = Number(priceValue || 0);
+                if (!Number.isFinite(normalized) || normalized <= 0) {
+                    return escapeHtml(currency) + ' -';
+                }
+
+                if (normalized >= 1000) {
+                    return escapeHtml(currency) + ' ' + Math.round(normalized).toLocaleString();
+                }
+
+                return escapeHtml(currency) + ' ' + normalized.toFixed(0);
+            }
+
+            if (!mapContainer || typeof window.L === 'undefined') {
+                return;
+            }
+
+            const cards = Array.from(document.querySelectorAll('[data-property-card]'));
+            const uniqueItems = new Map();
+            cards.forEach(function (card) {
+                const item = parseCardData(card);
+                if (item.id === '' || uniqueItems.has(item.id)) {
+                    return;
+                }
+                uniqueItems.set(item.id, item);
+            });
+
+            const items = Array.from(uniqueItems.values());
+            if (countLabel) {
+                countLabel.textContent = items.length + (items.length === 1 ? ' result' : ' results');
+            }
+
+            if (items.length === 0) {
+                mapContainer.hidden = true;
+                if (mapEmpty) {
+                    mapEmpty.hidden = false;
+                }
+                return;
+            }
+
+            const map = window.L.map(mapContainer, {
+                zoomControl: true,
+                scrollWheelZoom: true,
+            });
+
+            window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors',
+            }).addTo(map);
+
+            const markerClassByDensity = items.length > 80
+                ? 'is-super-compact'
+                : (items.length > 45 ? 'is-compact' : '');
+            const bounds = [];
+            const markerById = new Map();
+            const markerElementById = new Map();
+
+            function setMarkerActive(propertyId, isActive) {
+                const markerElement = markerElementById.get(propertyId);
+                if (!markerElement) {
+                    return;
+                }
+                markerElement.classList.toggle('is-active', isActive);
+            }
+
+            items.forEach(function (item) {
+                const coords = (item.lat !== null && item.lng !== null)
+                    ? { lat: item.lat, lng: item.lng }
+                    : fallbackCoords(item);
+
+                bounds.push([coords.lat, coords.lng]);
+
+                const iconHtml = '<span class="price-marker ' + markerClassByDensity + '" data-marker-id="' + escapeHtml(item.id) + '">' + shortPriceLabel(item.currency, item.price) + '</span>';
+                const markerIcon = window.L.divIcon({
+                    className: 'price-pill-icon',
+                    html: iconHtml,
+                    iconSize: [1, 1],
+                    iconAnchor: [0, 0],
+                });
+
+                const marker = window.L.marker([coords.lat, coords.lng], { icon: markerIcon }).addTo(map);
+                markerById.set(item.id, marker);
+
+                const locationLine = [item.island, item.city, item.atoll].filter(function (value) { return value !== ''; }).join(', ');
+                const popupHtml = [
+                    '<div style="min-width:190px">',
+                    '<strong>' + escapeHtml(item.name) + '</strong>',
+                    locationLine ? '<div style="margin-top:4px;color:#4f6a7f;font-size:12px">' + escapeHtml(locationLine) + '</div>' : '',
+                    '<div style="margin-top:6px;font-size:12px">From ' + escapeHtml(item.currency) + ' ' + Number(item.price || 0).toFixed(2) + '</div>',
+                    item.url ? '<a href="' + escapeHtml(item.url) + '" style="display:inline-block;margin-top:8px;font-size:12px;color:#0f6179;font-weight:700;text-decoration:none">Open listing</a>' : '',
+                    '</div>',
+                ].join('');
+
+                marker.bindPopup(popupHtml);
+
+                marker.on('popupopen', function () {
+                    setMarkerActive(item.id, true);
+                });
+
+                marker.on('popupclose', function () {
+                    setMarkerActive(item.id, false);
+                });
+
+                marker.on('mouseover', function () {
+                    setMarkerActive(item.id, true);
+                });
+
+                marker.on('mouseout', function () {
+                    const popupIsOpen = marker.isPopupOpen && marker.isPopupOpen();
+                    if (!popupIsOpen) {
+                        setMarkerActive(item.id, false);
+                    }
+                });
+
+                marker.on('click', function () {
+                    setMarkerActive(item.id, true);
+                });
+            });
+
+            window.requestAnimationFrame(function () {
+                const markerElements = mapContainer.querySelectorAll('.price-marker[data-marker-id]');
+                markerElements.forEach(function (el) {
+                    const markerId = String(el.getAttribute('data-marker-id') || '');
+                    if (markerId !== '') {
+                        markerElementById.set(markerId, el);
+                    }
+                });
+            });
+
+            if (bounds.length > 1) {
+                map.fitBounds(bounds, { padding: [26, 26] });
+            } else {
+                map.setView(bounds[0], 11);
+            }
+
+            window.addEventListener('resize', function () {
+                map.invalidateSize();
+            });
+
+            if (mapSearchAreaButton) {
+                mapSearchAreaButton.addEventListener('click', function () {
+                    const mapCenter = map.getCenter();
+                    const mapBounds = map.getBounds();
+                    const northEast = mapBounds.getNorthEast();
+                    const southWest = mapBounds.getSouthWest();
+                    const deltaLat = Math.abs(northEast.lat - southWest.lat);
+                    const approxDistanceKm = Math.max(1, Math.round((deltaLat * 111) / 2));
+
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('user_lat', mapCenter.lat.toFixed(6));
+                    url.searchParams.set('user_lng', mapCenter.lng.toFixed(6));
+                    url.searchParams.set('distance_km', String(approxDistanceKm));
+                    if (!url.searchParams.get('sort')) {
+                        url.searchParams.set('sort', 'distance_nearest');
+                    }
+                    window.location.href = url.toString();
+                });
+            }
+
+            items.forEach(function (item) {
+                if (!item.card) {
+                    return;
+                }
+
+                item.card.addEventListener('mouseenter', function () {
+                    const marker = markerById.get(item.id);
+                    if (!marker) {
+                        return;
+                    }
+                    setMarkerActive(item.id, true);
+                });
+
+                item.card.addEventListener('mouseleave', function () {
+                    const marker = markerById.get(item.id);
+                    if (!marker) {
+                        return;
+                    }
+                    const popupIsOpen = marker.isPopupOpen && marker.isPopupOpen();
+                    if (!popupIsOpen) {
+                        setMarkerActive(item.id, false);
+                    }
+                });
+            });
+
+            if (pageRoot) {
+                pageRoot.classList.add('has-side-map');
+            }
         })();
     </script>
 

@@ -6,6 +6,7 @@
     <title>{{ $post->title }} | Workation Blog</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         :root {
             --bg: #e9efec;
@@ -221,18 +222,17 @@
         }
 
         .share-button {
-            width: 44px;
-            height: 44px;
-            border: 1px solid #aab9c6;
-            border-radius: 0;
-            background: #f7fafc;
-            color: #0f1f2b;
+            width: 36px;
+            height: 36px;
+            border: 1px solid #b8d9e2;
+            border-radius: 50%;
+            background: #f8fdff;
+            color: #0f6179;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-weight: 800;
-            font-size: 1.36rem;
+            font-size: 0.88rem;
             line-height: 1;
         }
 
@@ -749,10 +749,10 @@
         $encodedTitle = urlencode((string) $post->title);
 
         $shareLinks = [
-            ['label' => 'f', 'href' => 'https://www.facebook.com/sharer/sharer.php?u=' . $encodedUrl, 'title' => 'Share on Facebook'],
-            ['label' => 'X', 'href' => 'https://twitter.com/intent/tweet?url=' . $encodedUrl . '&text=' . $encodedTitle, 'title' => 'Share on X'],
-            ['label' => 'in', 'href' => 'https://www.linkedin.com/sharing/share-offsite/?url=' . $encodedUrl, 'title' => 'Share on LinkedIn'],
-            ['label' => '↗', 'href' => 'mailto:?subject=' . $encodedTitle . '&body=' . $encodedUrl, 'title' => 'Share by Email'],
+            ['icon' => 'fa-brands fa-whatsapp',   'href' => 'https://wa.me/?text=' . $encodedTitle . '%20' . $encodedUrl, 'title' => 'Share on WhatsApp'],
+            ['icon' => 'fa-brands fa-facebook-f', 'href' => 'https://www.facebook.com/sharer/sharer.php?u=' . $encodedUrl, 'title' => 'Share on Facebook'],
+            ['icon' => 'fa-brands fa-x-twitter',  'href' => 'https://twitter.com/intent/tweet?url=' . $encodedUrl . '&text=' . $encodedTitle, 'title' => 'Share on X'],
+            ['icon' => 'fa-brands fa-linkedin-in','href' => 'https://www.linkedin.com/sharing/share-offsite/?url=' . $encodedUrl, 'title' => 'Share on LinkedIn'],
         ];
 
         $rawContent = trim((string) ($post->content ?? ''));
@@ -823,7 +823,7 @@
 
                 <div class="share-row" aria-label="Share article">
                     @foreach ($shareLinks as $share)
-                        <a class="share-button" href="{{ $share['href'] }}" target="_blank" rel="noopener noreferrer" title="{{ $share['title'] }}">{{ $share['label'] }}</a>
+                        <a class="share-button" href="{{ $share['href'] }}" target="_blank" rel="noopener noreferrer" title="{{ $share['title'] }}"><i class="{{ $share['icon'] }}" aria-hidden="true"></i></a>
                     @endforeach
                 </div>
             </div>

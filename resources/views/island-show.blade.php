@@ -240,7 +240,7 @@
         .share-btn {
             width: 38px;
             height: 38px;
-            border-radius: 8px;
+            border-radius: 50%;
             border: 1.5px solid var(--line);
             background: var(--surface);
             display: inline-flex;

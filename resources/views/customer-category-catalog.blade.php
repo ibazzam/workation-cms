@@ -800,6 +800,10 @@
             z-index: 1100;
         }
 
+        .filter-popup-backdrop[hidden] {
+            display: none;
+        }
+
         .filter-popup {
             width: min(860px, calc(100vw - 24px));
             max-height: calc(100vh - 28px);

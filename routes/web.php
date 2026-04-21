@@ -1769,9 +1769,9 @@ Route::get('/', function () {
         }
     }
 
-    $featuredBlogPost = null;
+    $recentBlogPosts = collect();
     if (Schema::hasTable('blog_posts')) {
-        $featuredBlogPost = BlogPost::query()
+        $recentBlogPosts = BlogPost::query()
             ->where('is_published', true)
             ->where(function ($query) {
                 $query->whereNull('published_at')->orWhere('published_at', '<=', now());
@@ -1779,7 +1779,8 @@ Route::get('/', function () {
             ->orderByDesc('is_featured')
             ->orderByDesc('published_at')
             ->orderByDesc('created_at')
-            ->first();
+            ->limit(3)
+            ->get(array_filter(['id', 'title', 'slug', 'excerpt', \Illuminate\Support\Facades\Schema::hasColumn('blog_posts', 'cover_image_url') ? 'cover_image_url' : null, 'cover_image_path', 'blog_category_slug', 'published_at', 'created_at']));
     }
 
     return view('welcome', [
@@ -1793,7 +1794,7 @@ Route::get('/', function () {
         'homeWeekendDealCards' => $homeWeekendDealCards,
         'homeLovedCards' => $homeLovedCards,
         'homeTransportDestinationOptions' => $homeTransportDestinationOptions,
-        'featuredBlogPost' => $featuredBlogPost,
+        'recentBlogPosts' => $recentBlogPosts,
         'activityLinks' => [
             [
                 'label' => 'Strict Live Preflight PASS - Run 22991556615',

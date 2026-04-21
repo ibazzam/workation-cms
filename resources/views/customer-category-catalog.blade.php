@@ -539,7 +539,7 @@
             top: 96px;
             left: 50%;
             transform: translateX(-50%);
-            width: min(1120px, calc(100% - 56px));
+            width: calc(100% - 24px);
             z-index: 2;
             display: grid;
             gap: 12px;
@@ -624,7 +624,9 @@
             border-radius: 10px;
             background: var(--surface);
             padding: 12px;
-            display: grid;
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: flex-end;
             gap: 8px;
             overflow: hidden;
             box-shadow: 0 12px 26px rgba(14, 41, 92, 0.2);
@@ -633,6 +635,23 @@
             width: 100%;
             margin-left: auto;
             margin-right: auto;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+
+        .search-box > .grid {
+            flex: 0 0 auto;
+        }
+
+        .search-box::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .search-box::-webkit-scrollbar-thumb {
+            background: #bfd4e2;
+            border-radius: 999px;
         }
 
         .catalog-section-title {
@@ -643,7 +662,7 @@
 
         .grid {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             gap: 6px;
             align-items: flex-end;
             min-width: 0;
@@ -656,23 +675,23 @@
         }
 
         .field.field-short {
-            flex: 0 0 68px;
-            width: 68px;
+            flex: 0 0 84px;
+            width: 84px;
         }
 
         .field.field-medium {
-            flex: 0 1 140px;
-            min-width: 110px;
+            flex: 0 0 164px;
+            width: 164px;
         }
 
         .field.field-date {
-            flex: 0 0 148px;
-            width: 148px;
+            flex: 0 0 172px;
+            width: 172px;
         }
 
         .field.field-long {
-            flex: 1 1 160px;
-            min-width: 130px;
+            flex: 0 0 220px;
+            width: 220px;
         }
 
         .field label {
@@ -722,9 +741,11 @@
 
         .actions {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             gap: 8px;
             align-items: center;
+            flex: 0 0 auto;
+            white-space: nowrap;
         }
 
         .section-title {
@@ -823,6 +844,42 @@
             font-weight: 700;
         }
 
+        .card-type-chip {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            max-width: 100%;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: #e8f2f8;
+            color: #1e5672;
+            font-size: 0.66rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-desc {
+            margin: 0;
+            color: #4f677a;
+            font-size: 0.76rem;
+            line-height: 1.45;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-time {
+            color: #345469;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+        }
+
         .empty {
             margin-top: 10px;
             border: 1px dashed #cddbe8;
@@ -898,13 +955,23 @@
             }
 
             .field.field-short {
-                flex: 0 0 64px;
-                width: 64px;
+                flex: 0 0 80px;
+                width: 80px;
             }
 
             .field.field-date {
-                flex: 0 0 138px;
-                width: 138px;
+                flex: 0 0 164px;
+                width: 164px;
+            }
+
+            .field.field-medium {
+                flex: 0 0 152px;
+                width: 152px;
+            }
+
+            .field.field-long {
+                flex: 0 0 200px;
+                width: 200px;
             }
 
         }
@@ -1029,6 +1096,7 @@
 
             .search-box {
                 margin-top: 4px;
+                padding: 10px;
             }
 
             .hero-banner-title {
@@ -1055,15 +1123,16 @@
                 grid-template-columns: 1fr;
             }
 
-            .grid {
-                grid-template-columns: 1fr;
-            }
-
             .field.field-short,
             .field.field-medium,
             .field.field-date,
             .field.field-long {
-                grid-column: auto;
+                flex: 0 0 148px;
+                width: 148px;
+            }
+
+            .actions {
+                padding-right: 4px;
             }
         }
     </style>
@@ -1204,49 +1273,51 @@
                     <h1 class="hero-banner-title">{{ (string) ($categoryMeta['label'] ?? 'Category') }}.</h1>
                     <div class="search-sticky-wrap">
                         <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}">
-            <div class="grid">
-                <div class="field field-long">
-                    <label for="q">Search</label>
-                    <input id="q" name="q" type="text" value="{{ $filters['q'] ?? '' }}" placeholder="Atoll, island, place, or property name">
+            @if (!in_array($categoryKey, ['marine-transport', 'land-transport'], true))
+                <div class="grid">
+                    <div class="field field-long">
+                        <label for="q">Search</label>
+                        <input id="q" name="q" type="text" value="{{ $filters['q'] ?? '' }}" placeholder="Atoll, island, place, or property name">
+                    </div>
+                    <div class="field field-medium">
+                        <label for="atoll">Atoll</label>
+                        <select id="atoll" name="atoll">
+                            <option value="">All Atolls</option>
+                            @foreach ($atollOptions as $atoll)
+                                <option value="{{ $atoll }}" {{ ($filters['atoll'] ?? '') === $atoll ? 'selected' : '' }}>{{ $atoll }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="field field-medium">
+                        <label for="island">Island / City</label>
+                        <select id="island" name="island">
+                            <option value="">All Islands/Cities</option>
+                            @foreach ($islandOptions as $island)
+                                <option value="{{ $island }}" {{ ($filters['island'] ?? '') === $island ? 'selected' : '' }}>{{ $island }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="field field-medium">
+                        <label for="sort">Sort</label>
+                        <select id="sort" name="sort">
+                            <option value="recommended" {{ ($filters['sort'] ?? '') === 'recommended' ? 'selected' : '' }}>Recommended</option>
+                            <option value="most_wanted" {{ ($filters['sort'] ?? '') === 'most_wanted' ? 'selected' : '' }}>Most Wanted</option>
+                            <option value="most_booked" {{ ($filters['sort'] ?? '') === 'most_booked' ? 'selected' : '' }}>Most Booked</option>
+                            <option value="highest_reviews" {{ ($filters['sort'] ?? '') === 'highest_reviews' ? 'selected' : '' }}>Highest Reviews</option>
+                            <option value="price_low_high" {{ ($filters['sort'] ?? '') === 'price_low_high' ? 'selected' : '' }}>Price Low to High</option>
+                            <option value="price_high_low" {{ ($filters['sort'] ?? '') === 'price_high_low' ? 'selected' : '' }}>Price High to Low</option>
+                        </select>
+                    </div>
+                    <div class="field field-short">
+                        <label for="min_price">Min Price</label>
+                        <input id="min_price" name="min_price" type="number" min="0" value="{{ $filters['min_price'] ?? 0 }}">
+                    </div>
+                    <div class="field field-short">
+                        <label for="max_price">Max Price</label>
+                        <input id="max_price" name="max_price" type="number" min="0" value="{{ $filters['max_price'] ?? 0 }}">
+                    </div>
                 </div>
-                <div class="field field-medium">
-                    <label for="atoll">Atoll</label>
-                    <select id="atoll" name="atoll">
-                        <option value="">All Atolls</option>
-                        @foreach ($atollOptions as $atoll)
-                            <option value="{{ $atoll }}" {{ ($filters['atoll'] ?? '') === $atoll ? 'selected' : '' }}>{{ $atoll }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="field field-medium">
-                    <label for="island">Island / City</label>
-                    <select id="island" name="island">
-                        <option value="">All Islands/Cities</option>
-                        @foreach ($islandOptions as $island)
-                            <option value="{{ $island }}" {{ ($filters['island'] ?? '') === $island ? 'selected' : '' }}>{{ $island }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="field field-medium">
-                    <label for="sort">Sort</label>
-                    <select id="sort" name="sort">
-                        <option value="recommended" {{ ($filters['sort'] ?? '') === 'recommended' ? 'selected' : '' }}>Recommended</option>
-                        <option value="most_wanted" {{ ($filters['sort'] ?? '') === 'most_wanted' ? 'selected' : '' }}>Most Wanted</option>
-                        <option value="most_booked" {{ ($filters['sort'] ?? '') === 'most_booked' ? 'selected' : '' }}>Most Booked</option>
-                        <option value="highest_reviews" {{ ($filters['sort'] ?? '') === 'highest_reviews' ? 'selected' : '' }}>Highest Reviews</option>
-                        <option value="price_low_high" {{ ($filters['sort'] ?? '') === 'price_low_high' ? 'selected' : '' }}>Price Low to High</option>
-                        <option value="price_high_low" {{ ($filters['sort'] ?? '') === 'price_high_low' ? 'selected' : '' }}>Price High to Low</option>
-                    </select>
-                </div>
-                <div class="field field-short">
-                    <label for="min_price">Min Price</label>
-                    <input id="min_price" name="min_price" type="number" min="0" value="{{ $filters['min_price'] ?? 0 }}">
-                </div>
-                <div class="field field-short">
-                    <label for="max_price">Max Price</label>
-                    <input id="max_price" name="max_price" type="number" min="0" value="{{ $filters['max_price'] ?? 0 }}">
-                </div>
-            </div>
+            @endif
 
             @if ($categoryKey === 'accommodation')
                 <div class="grid">
@@ -1259,7 +1330,7 @@
             @elseif ($categoryKey === 'marine-transport' || $categoryKey === 'land-transport')
                 <div class="grid">
                     <div class="field field-long">
-                        <label for="origin_point">From (Island/Location)</label>
+                        <label for="origin_point">From</label>
                         <select id="origin_point" name="origin_point">
                             <option value="">All origins</option>
                             @foreach (($transportDestinationOptions ?? collect()) as $destinationOption)
@@ -1268,7 +1339,7 @@
                         </select>
                     </div>
                     <div class="field field-long">
-                        <label for="destination_point">To (Island/Location)</label>
+                        <label for="destination_point">To</label>
                         <select id="destination_point" name="destination_point">
                             <option value="">All destinations</option>
                             @foreach (($transportDestinationOptions ?? collect()) as $destinationOption)
@@ -1276,9 +1347,9 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="field field-date"><label for="travel_date">Travel Date</label><input id="travel_date" name="travel_date" type="date" value="{{ $filters['travel_date'] ?? '' }}"></div>
-                    <div class="field field-date"><label for="return_date">Return Date</label><input id="return_date" name="return_date" type="date" value="{{ $filters['return_date'] ?? '' }}"></div>
-                    <div class="field field-short"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ $filters['adults'] ?? 2 }}"></div>
+                    <div class="field field-date"><label for="travel_date">Departure Date</label><input id="travel_date" name="travel_date" type="date" value="{{ $filters['travel_date'] ?? '' }}"></div>
+                    <div class="field field-date"><label for="return_date">Return Date (Optional)</label><input id="return_date" name="return_date" type="date" value="{{ $filters['return_date'] ?? '' }}"></div>
+                    <div class="field field-short"><label for="adults">No. of Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ $filters['adults'] ?? 2 }}"></div>
                     <div class="field field-short"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ $filters['children'] ?? 0 }}"></div>
                 </div>
             @elseif ($categoryKey === 'restaurant')
@@ -1536,6 +1607,63 @@
                             $svgFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2234%22%3ENo%20image%3C%2Ftext%3E%3C%2Fsvg%3E";
                             $price = (float) ($property->base_price ?? 0);
                             $cityName = trim((string) ($property->city ?? $property->island ?? $property->atoll ?? ''));
+                            $isExcursionCard = $categoryKey === 'excursion';
+                            $fromIsland = trim((string) ($property->island ?? ''));
+                            $fromCity = trim((string) ($property->city ?? ''));
+                            $fromAtoll = trim((string) ($property->atoll ?? ''));
+                            $fromPrimary = $fromIsland !== '' ? $fromIsland : $fromCity;
+                            $originLabel = $fromPrimary !== '' ? $fromPrimary : ($cityName !== '' ? $cityName : 'Maldives');
+                            if ($fromAtoll !== '' && stripos($originLabel, $fromAtoll) === false) {
+                                $originLabel .= ', ' . $fromAtoll;
+                            }
+                            $activityType = trim((string) (
+                                (property_exists($property, 'activity_type') ? $property->activity_type : '')
+                                ?: (property_exists($property, 'excursion_type') ? $property->excursion_type : '')
+                                ?: (property_exists($property, 'tour_type') ? $property->tour_type : '')
+                            ));
+                            $activityName = trim((string) (
+                                (property_exists($property, 'activity_name') ? $property->activity_name : '')
+                                ?: (property_exists($property, 'listing_name') ? $property->listing_name : '')
+                                ?: ($property->name ?? 'Listing')
+                            ));
+                            $descriptionSource = trim((string) (
+                                (property_exists($property, 'short_description') ? $property->short_description : '')
+                                ?: (property_exists($property, 'tagline') ? $property->tagline : '')
+                                ?: ($property->description ?? '')
+                            ));
+                            $shortDescription = \Illuminate\Support\Str::limit($descriptionSource, 96);
+
+                            $formatTimeLabel = static function ($rawValue): string {
+                                $value = trim((string) $rawValue);
+                                if ($value === '') {
+                                    return '';
+                                }
+
+                                $timestamp = strtotime($value);
+                                if ($timestamp !== false) {
+                                    return date('H:i', $timestamp);
+                                }
+
+                                if (preg_match('/^(\d{1,2}):(\d{2})/', $value, $matches)) {
+                                    return str_pad($matches[1], 2, '0', STR_PAD_LEFT) . ':' . $matches[2];
+                                }
+
+                                return $value;
+                            };
+
+                            $startTimeRaw =
+                                (property_exists($property, 'start_time') ? $property->start_time : null)
+                                ?? (property_exists($property, 'departure_time') ? $property->departure_time : null)
+                                ?? (property_exists($property, 'activity_start_time') ? $property->activity_start_time : null)
+                                ?? (property_exists($property, 'start_at') ? $property->start_at : null);
+                            $endTimeRaw =
+                                (property_exists($property, 'end_time') ? $property->end_time : null)
+                                ?? (property_exists($property, 'return_time') ? $property->return_time : null)
+                                ?? (property_exists($property, 'activity_end_time') ? $property->activity_end_time : null)
+                                ?? (property_exists($property, 'end_at') ? $property->end_at : null);
+
+                            $startTimeLabel = $formatTimeLabel($startTimeRaw);
+                            $endTimeLabel = $formatTimeLabel($endTimeRaw);
                             $starRank = max(0, min(5, (int) round((float) ($property->star_rating ?? $property->stars ?? $property->hotel_stars ?? 0))));
                             $reviewScoreRaw = (float) ($property->rating ?? $property->average_rating ?? 0);
                             $reviewScore = $reviewScoreRaw > 0 ? number_format($reviewScoreRaw, 1) : 'N/A';
@@ -1565,8 +1693,11 @@
                                 @endphp
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                                 <div class="card-body">
-                                    <span class="card-city">{{ $cityName !== '' ? $cityName : 'Maldives' }}</span>
-                                    <h3>{{ (string) ($property->name ?? 'Listing') }}</h3>
+                                    <span class="card-city">{{ $isExcursionCard ? ('From ' . $originLabel) : ($cityName !== '' ? $cityName : 'Maldives') }}</span>
+                                    @if ($isExcursionCard && $activityType !== '')
+                                        <span class="card-type-chip">{{ str_replace('_', ' ', $activityType) }}</span>
+                                    @endif
+                                    <h3>{{ $isExcursionCard ? $activityName : (string) ($property->name ?? 'Listing') }}</h3>
                                     <div class="card-stars" aria-label="Star ranking">
                                         @if ($starRank > 0)
                                             @for ($i = 0; $i < $starRank; $i++)
@@ -1579,6 +1710,20 @@
                                         <span>{{ number_format($reviewCount) }} reviews</span>
                                     </div>
                                     <div class="card-price">From {{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}</div>
+                                    @if ($isExcursionCard && $shortDescription !== '')
+                                        <p class="card-desc">{{ $shortDescription }}</p>
+                                    @endif
+                                    @if ($isExcursionCard && ($startTimeLabel !== '' || $endTimeLabel !== ''))
+                                        <div class="card-time">
+                                            @if ($startTimeLabel !== '' && $endTimeLabel !== '')
+                                                {{ $startTimeLabel }} - {{ $endTimeLabel }}
+                                            @elseif ($startTimeLabel !== '')
+                                                Starts {{ $startTimeLabel }}
+                                            @else
+                                                Ends {{ $endTimeLabel }}
+                                            @endif
+                                        </div>
+                                    @endif
                                 </div>
                             </a>
                         </article>

@@ -13,13 +13,33 @@
         body { margin:0; font-family:"Outfit","Trebuchet MS",sans-serif; color:var(--ink); background:var(--bg); }
         .page { width:min(1180px,calc(100% - 24px)); margin:14px auto 28px; }
 
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px 6px;
+            margin-bottom: 10px;
+            font-size: 0.78rem;
+            color: #5f7488;
+        }
+
+        .breadcrumb a {
+            color: #0f6179;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .breadcrumb a:hover { text-decoration: underline; }
+
+        .breadcrumb span:last-child { color: #264d66; font-weight: 700; }
+
         .hero {
-            border:1px solid #cbe0ea;
-            border-radius:18px;
-            background:linear-gradient(132deg,#0f6179 0%,#1d848c 58%,#2f9891 100%);
-            color:#ecfcff;
-            padding:16px;
-            box-shadow:0 16px 30px rgba(14,86,111,0.2);
+            border: 1px solid #cbe0ea;
+            border-radius: 18px;
+            background: linear-gradient(130deg, #0f6179 0%, #1d848c 58%, #2f9891 100%);
+            color: #ecfcff;
+            padding: 14px 16px;
+            box-shadow: 0 20px 36px rgba(15, 88, 113, 0.22);
         }
 
         .hero-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
@@ -48,10 +68,39 @@
             font-weight:700;
         }
 
-        .layout { margin-top:12px; display:grid; grid-template-columns:minmax(320px,0.75fr) minmax(0,1.25fr); gap:12px; align-items:start; }
+        .layout {
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 320px;
+            gap: 12px;
+            align-items: start;
+        }
 
-        .reservation-form { grid-column: 1; grid-row: 1; }
-        .service-content { grid-column: 2; grid-row: 1; }
+        .reservation-form {
+            position: sticky;
+            top: 12px;
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .service-content {
+            grid-column: 1;
+            grid-row: 1;
+        }
+
+        @media (max-width: 1080px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .reservation-form {
+                grid-column: 1;
+            }
+
+            .service-content {
+                grid-column: 1;
+            }
+        }
 
         .block {
             border:1px solid var(--line);
@@ -69,30 +118,77 @@
             font-family:"Space Grotesk","Trebuchet MS",sans-serif;
         }
 
+        .gallery-shell {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 260px;
+            gap: 10px;
+            align-items: start;
+        }
+
+        .gallery-banner-wrap {
+            border-radius: 13px;
+            overflow: hidden;
+            border: 1px solid #cfe1ec;
+            background: #eff7fb;
+            min-height: 360px;
+        }
+
         .gallery-main {
-            width:100%;
-            height:260px;
-            border-radius:12px;
-            border:1px solid #d9e7f0;
-            background:#edf4fb;
-            object-fit:cover;
-            display:block;
+            width: 100%;
+            height: 100%;
+            min-height: 360px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .gallery-thumbs {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            max-height: 360px;
+            overflow: auto;
+            padding-right: 2px;
+        }
+
+        .gallery-thumb {
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #cfe1ec;
+            background: #eff7fb;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+            min-height: 78px;
+        }
+
+        .gallery-thumb img {
+            width: 100%;
+            height: 100%;
+            min-height: 78px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .gallery-thumb.is-active {
+            border-color: #1d848c;
+            box-shadow: 0 0 0 2px rgba(29, 132, 140, 0.25);
         }
 
         .gallery-grid {
-            margin-top:8px;
-            display:grid;
-            grid-template-columns:repeat(4,minmax(0,1fr));
-            gap:8px;
+            margin-top: 8px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
         }
 
         .gallery-grid img {
-            width:100%;
-            height:86px;
-            object-fit:cover;
-            border-radius:10px;
-            border:1px solid #d9e7f0;
-            background:#edf4fb;
+            width: 100%;
+            height: 86px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid #d9e7f0;
+            background: #edf4fb;
         }
 
         .service-intel { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
@@ -275,6 +371,16 @@
     @endphp
 
     <main class="page">
+        @php
+            $breadcrumbCategoryUrl = '/catalog/' . str_replace('_', '-', $categoryKey);
+        @endphp
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="/">Home</a>
+            <span aria-hidden="true">›</span>
+            <a href="{{ $breadcrumbCategoryUrl }}">{{ $categoryLabel }}</a>
+            <span aria-hidden="true">›</span>
+            <span>{{ (string) ($property->name ?? $categoryLabel . ' Listing') }}</span>
+        </nav>
         <section class="hero">
             <div class="hero-top">
                 <div>
@@ -294,16 +400,24 @@
             <section class="service-content">
                 <section class="block" aria-label="Service gallery">
                     <h2 class="block-title">Service Gallery</h2>
-                    <img class="gallery-main" src="{{ $heroImage ?: $fallbackImage }}" alt="Service image" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $fallbackImage }}';}">
-                    <div class="gallery-grid">
-                        @forelse ($propertyMedia->take(8) as $media)
-                            @php
-                                $thumb = $mediaUrl($media, 'thumb') ?? $mediaUrl($media, 'banner') ?? $fallbackImage;
-                            @endphp
-                            <img src="{{ $thumb }}" alt="Service media" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $fallbackImage }}';}">
-                        @empty
-                            <img src="{{ $fallbackImage }}" alt="Service media placeholder">
-                        @endforelse
+                    <div class="gallery-shell">
+                        <div class="gallery-banner-wrap">
+                            <img class="gallery-main" src="{{ $heroImage ?: $fallbackImage }}" alt="Service image" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $fallbackImage }}';}">
+                        </div>
+                        <div class="gallery-thumbs">
+                            @forelse ($propertyMedia->take(8) as $media)
+                                @php
+                                    $thumb = $mediaUrl($media, 'thumb') ?? $mediaUrl($media, 'banner') ?? $fallbackImage;
+                                @endphp
+                                <button class="gallery-thumb" aria-label="View service media">
+                                    <img src="{{ $thumb }}" alt="Service media" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $fallbackImage }}';}">
+                                </button>
+                            @empty
+                                <button class="gallery-thumb" aria-label="Service media placeholder">
+                                    <img src="{{ $fallbackImage }}" alt="Service media placeholder">
+                                </button>
+                            @endforelse
+                        </div>
                     </div>
                 </section>
 
@@ -520,6 +634,33 @@
 
         @include('partials.global-site-footer')
     </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const galleryShell = document.querySelector('.gallery-shell');
+            if (!galleryShell) return;
+
+            const mainImage = galleryShell.querySelector('.gallery-main');
+            const thumbButtons = galleryShell.querySelectorAll('.gallery-thumb');
+
+            thumbButtons.forEach((btn, index) => {
+                const img = btn.querySelector('img');
+                if (img && index === 0) {
+                    btn.classList.add('is-active');
+                }
+
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    if (!img) return;
+
+                    mainImage.src = img.src;
+
+                    thumbButtons.forEach(b => b.classList.remove('is-active'));
+                    btn.classList.add('is-active');
+                });
+            });
+        });
+    </script>
 
 </body>
 </html>

@@ -145,6 +145,52 @@
             white-space: nowrap;
         }
 
+        .share-card {
+            margin-top: 10px;
+            border: 1px solid #cfe1ec;
+            border-radius: 14px;
+            background: #ffffff;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .share-label {
+            font-size: 0.78rem;
+            color: #3f6278;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .share-links {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .share-links a,
+        .share-links button {
+            border: 1px solid #b8d9e2;
+            background: #f8fdff;
+            color: #0f6179;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font: inherit;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .share-links a:hover,
+        .share-links button:hover { background: #eef8fc; }
+
         .hero-rating {
             border: 1px solid rgba(225, 248, 252, 0.4);
             border-radius: 12px;
@@ -1390,6 +1436,10 @@
         $cheapestRoomId = $cheapestRoom ? (int) ($cheapestRoom->id ?? 0) : 0;
         $cheapestRoomPrice = $cheapestRoom ? number_format((float) ($cheapestRoom->base_price ?? 0), 2) : null;
         $selectRoomsTarget = $cheapestRoomId > 0 ? ('#room-' . $cheapestRoomId) : '#rooms-section';
+        $shareUrl = url()->current();
+        $shareText = trim((string) ($property->name ?? 'Property')) . ' on Workation';
+        $shareEncodedText = urlencode($shareText . ' ' . $shareUrl);
+        $shareEncodedUrl = urlencode($shareUrl);
         $surroundings = collect(array_filter(array_map('trim', explode(',', $locationLine))))
             ->take(3)
             ->map(static fn ($segment) => 'Nearby: ' . $segment)
@@ -1555,6 +1605,16 @@
                     </div>
                     <button type="submit" class="hero-avail-btn">Search</button>
                 </form>
+            </div>
+        </section>
+
+        <section class="share-card" aria-label="Share this property">
+            <span class="share-label">Share this property</span>
+            <div class="share-links">
+                <a href="https://wa.me/?text={{ $shareEncodedText }}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> WhatsApp</a>
+                <a href="https://www.facebook.com/sharer/sharer.php?u={{ $shareEncodedUrl }}" target="_blank" rel="noopener"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i> Facebook</a>
+                <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ $shareEncodedUrl }}" target="_blank" rel="noopener"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i> LinkedIn</a>
+                <button type="button" data-copy-share-link="{{ $shareUrl }}"><i class="fa-solid fa-link" aria-hidden="true"></i> Copy link</button>
             </div>
         </section>
 
@@ -2443,6 +2503,26 @@
             modal?.addEventListener('click', function (e) {
                 if (e.target === this) {
                     this.classList.remove('is-active');
+                }
+            });
+        })();
+
+        (function () {
+            const copyShareBtn = document.querySelector('[data-copy-share-link]');
+            if (!copyShareBtn) {
+                return;
+            }
+
+            copyShareBtn.addEventListener('click', async function () {
+                const shareUrl = this.getAttribute('data-copy-share-link') || window.location.href;
+                try {
+                    await navigator.clipboard.writeText(shareUrl);
+                    this.textContent = 'Copied';
+                    setTimeout(() => {
+                        this.innerHTML = '<i class="fa-solid fa-link" aria-hidden="true"></i> Copy link';
+                    }, 1500);
+                } catch (e) {
+                    window.prompt('Copy this link', shareUrl);
                 }
             });
         })();

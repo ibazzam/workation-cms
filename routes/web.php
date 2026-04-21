@@ -4269,7 +4269,7 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             ['key' => 'destination_point', 'label' => 'To', 'type' => 'text', 'required' => true],
         ],
         'excursion' => [
-            ['key' => 'excursion_type', 'label' => 'Excursion Type', 'type' => 'text', 'required' => true],
+            // Activity type is implied by selected listing on this page.
         ],
         'remote_workspace' => [
             ['key' => 'workspace_type', 'label' => 'Workspace Type', 'type' => 'text', 'required' => true],
@@ -4467,6 +4467,7 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             'service_end_date' => trim((string) $request->query('service_end_date', '')),
             'adults' => max(1, (int) $request->query('adults', 2)),
             'children' => max(0, (int) $request->query('children', 0)),
+            'infants' => max(0, (int) $request->query('infants', 0)),
             'primary_first_name' => $prefillFirstName,
             'primary_last_name' => $prefillLastName,
             'primary_nationality' => '',
@@ -4513,7 +4514,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
             'destination_point' => ['required', 'string', 'max:120'],
         ],
         'excursion' => [
-            'excursion_type' => ['required', 'string', 'max:120'],
+            // No extra category fields needed; selected listing already defines the activity.
         ],
         'remote_workspace' => [
             'workspace_type' => ['required', 'string', 'max:120'],
@@ -4563,12 +4564,13 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'service_end_date' => ['nullable', 'date', 'after_or_equal:service_start_date'],
         'adults' => ['required', 'integer', 'min:1', 'max:20'],
         'children' => ['nullable', 'integer', 'min:0', 'max:20'],
-        'primary_first_name' => ['required', 'string', 'max:80'],
-        'primary_last_name' => ['required', 'string', 'max:80'],
-        'primary_nationality' => ['required', 'string', 'max:120'],
+        'infants' => ['nullable', 'integer', 'min:0', 'max:20'],
+        'primary_first_name' => ['required_unless:category_key,excursion', 'nullable', 'string', 'max:80'],
+        'primary_last_name' => ['required_unless:category_key,excursion', 'nullable', 'string', 'max:80'],
+        'primary_nationality' => ['required_unless:category_key,excursion', 'nullable', 'string', 'max:120'],
         'guest_residency' => ['nullable', Rule::in(['local_resident', 'foreign_national'])],
-        'primary_email' => ['required', 'email', 'max:190'],
-        'primary_mobile' => ['required', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s\-()]{5,39}$/'],
+        'primary_email' => ['required_unless:category_key,excursion', 'nullable', 'email', 'max:190'],
+        'primary_mobile' => ['required_unless:category_key,excursion', 'nullable', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s\-()]{5,39}$/'],
         'additional_guest_details' => ['nullable', 'string', 'max:4000'],
         'service_notes' => ['nullable', 'string', 'max:4000'],
     ];
@@ -4634,6 +4636,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
     $units = max(1, $serviceStart->diffInDays($serviceEnd) + 1);
     $adults = (int) $payload['adults'];
     $children = (int) ($payload['children'] ?? 0);
+    $infants = (int) ($payload['infants'] ?? 0);
     $guestCount = $adults + $children;
 
     $basePrice = (float) ($propertyRow->base_price ?? 0);
@@ -4675,11 +4678,37 @@ Route::post('/booking/reserve-category', function (Request $request) {
     $transferCharge = (float) ($pricing['transfer_charge_total'] ?? 0);
     $totalAmount = (float) ($pricing['invoice_total_amount'] ?? 0);
 
-    $primaryFirstName = Str::title(trim((string) preg_replace('/\s+/', ' ', (string) $payload['primary_first_name'])));
-    $primaryLastName = Str::title(trim((string) preg_replace('/\s+/', ' ', (string) $payload['primary_last_name'])));
-    $primaryNationality = Str::title(trim((string) preg_replace('/\s+/', ' ', (string) $payload['primary_nationality'])));
-    $primaryEmail = Str::lower(trim((string) $payload['primary_email']));
-    $mobileRaw = trim((string) $payload['primary_mobile']);
+    $sessionGuestName = trim((string) session('portal_customer_user', ''));
+    $sessionNameParts = preg_split('/\s+/', $sessionGuestName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    $sessionFirstName = (string) ($sessionNameParts[0] ?? 'Guest');
+    $sessionLastName = count($sessionNameParts) > 1 ? implode(' ', array_slice($sessionNameParts, 1)) : 'Customer';
+    $sessionEmail = trim((string) session('portal_customer_email', ''));
+
+    $primaryFirstNameRaw = trim((string) ($payload['primary_first_name'] ?? ''));
+    $primaryLastNameRaw = trim((string) ($payload['primary_last_name'] ?? ''));
+    $primaryNationalityRaw = trim((string) ($payload['primary_nationality'] ?? ''));
+    $primaryEmailRaw = trim((string) ($payload['primary_email'] ?? ''));
+    $mobileRaw = trim((string) ($payload['primary_mobile'] ?? ''));
+
+    if ($categoryKey === 'excursion') {
+        if ($primaryFirstNameRaw === '') {
+            $primaryFirstNameRaw = $sessionFirstName;
+        }
+        if ($primaryLastNameRaw === '') {
+            $primaryLastNameRaw = $sessionLastName;
+        }
+        if ($primaryNationalityRaw === '') {
+            $primaryNationalityRaw = 'Not specified';
+        }
+        if ($primaryEmailRaw === '') {
+            $primaryEmailRaw = $sessionEmail !== '' ? $sessionEmail : 'guest@workation.local';
+        }
+    }
+
+    $primaryFirstName = Str::title(trim((string) preg_replace('/\s+/', ' ', $primaryFirstNameRaw)));
+    $primaryLastName = Str::title(trim((string) preg_replace('/\s+/', ' ', $primaryLastNameRaw)));
+    $primaryNationality = Str::title(trim((string) preg_replace('/\s+/', ' ', $primaryNationalityRaw)));
+    $primaryEmail = Str::lower(trim((string) $primaryEmailRaw));
     $primaryMobile = preg_replace('/[^0-9+]/', '', $mobileRaw) ?? $mobileRaw;
     $primaryMobile = preg_replace('/^\++/', '+', $primaryMobile) ?? $primaryMobile;
     $additionalGuestDetails = trim((string) ($payload['additional_guest_details'] ?? ''));
@@ -4725,6 +4754,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
                 'service_end_date' => $serviceEnd->toDateString(),
                 'adults' => $adults,
                 'children' => $children,
+                'infants' => $infants,
                 'primary_first_name' => $primaryFirstName,
                 'primary_last_name' => $primaryLastName,
                 'primary_nationality' => $primaryNationality,
@@ -4773,6 +4803,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
         . '&checkout=' . urlencode($serviceEnd->toDateString())
         . '&adults=' . $adults
         . '&children=' . $children
+        . '&infants=' . $infants
         . '&primary_first_name=' . urlencode($primaryFirstName)
         . '&primary_last_name=' . urlencode($primaryLastName)
         . '&primary_nationality=' . urlencode($primaryNationality)
@@ -4780,6 +4811,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
         . '&primary_email=' . urlencode($primaryEmail)
         . '&primary_mobile=' . urlencode($primaryMobile)
         . '&additional_guest_details=' . urlencode($additionalGuestDetails)
+        . '&service_notes=' . urlencode($serviceNotes)
         . '&transfer_option='
         . '&transfer_charge=' . urlencode((string) $transferCharge)
         . '&room_subtotal=' . urlencode((string) $serviceSubtotal)
@@ -4952,10 +4984,12 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
         'checkoutMediaUrl' => $checkoutMediaUrl,
         'dateLabels' => $dateLabels,
         'summary' => [
+            'category_key' => trim((string) $request->query('category_key', (string) ($reservationNotes['category_key'] ?? ''))),
             'checkin' => trim((string) $request->query('checkin', (string) ($reservationNotes['service_start_date'] ?? ''))),
             'checkout' => trim((string) $request->query('checkout', (string) ($reservationNotes['service_end_date'] ?? ''))),
             'adults' => max(1, (int) $request->query('adults', (int) ($reservationNotes['adults'] ?? 1))),
             'children' => max(0, (int) $request->query('children', (int) ($reservationNotes['children'] ?? 0))),
+            'infants' => max(0, (int) $request->query('infants', (int) ($reservationNotes['infants'] ?? 0))),
             'primary_first_name' => trim((string) $request->query('primary_first_name', (string) ($reservationNotes['primary_first_name'] ?? ''))),
             'primary_last_name' => trim((string) $request->query('primary_last_name', (string) ($reservationNotes['primary_last_name'] ?? ''))),
             'primary_nationality' => trim((string) $request->query('primary_nationality', (string) ($reservationNotes['primary_nationality'] ?? ''))),
@@ -4963,6 +4997,7 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
             'primary_email' => trim((string) $request->query('primary_email', (string) ($reservationNotes['primary_email'] ?? (string) ($reservationRow->customer_email ?? '')))),
             'primary_mobile' => trim((string) $request->query('primary_mobile', (string) ($reservationNotes['primary_mobile'] ?? ''))),
             'additional_guest_details' => trim((string) $request->query('additional_guest_details', (string) ($reservationNotes['additional_guest_details'] ?? ''))),
+            'service_notes' => trim((string) $request->query('service_notes', (string) ($reservationNotes['service_notes'] ?? ''))),
             'transfer_option' => trim((string) $request->query('transfer_option', (string) ($reservationNotes['transfer_option'] ?? ''))),
             'transfer_option_label' => trim((string) $request->query('transfer_option_label', (string) ($reservationNotes['transfer_option_label'] ?? ''))),
             'transfer_charge' => (float) $request->query('transfer_charge', (float) ($reservationNotes['transfer_charge'] ?? 0)),

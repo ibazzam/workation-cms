@@ -1303,6 +1303,114 @@
             gap: 10px;
         }
 
+        .home-blog-teaser {
+            margin-top: 28px;
+        }
+
+        .blog-teaser-grid {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .blog-teaser-card {
+            text-decoration: none;
+            color: #1b3f58;
+            border: 1px solid #d4e5ef;
+            border-radius: 14px;
+            background: #f8fcff;
+            overflow: hidden;
+            display: grid;
+            grid-template-rows: 180px auto;
+            transition: box-shadow 0.15s ease, border-color 0.15s ease;
+        }
+
+        .blog-teaser-card:hover {
+            border-color: #9ecad8;
+            box-shadow: 0 4px 16px rgba(14, 86, 111, 0.12);
+        }
+
+        .blog-teaser-media {
+            overflow: hidden;
+            width: 100%;
+            height: 180px;
+        }
+
+        .blog-teaser-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.25s ease;
+        }
+
+        .blog-teaser-card:hover .blog-teaser-media img {
+            transform: scale(1.03);
+        }
+
+        .blog-teaser-body {
+            padding: 12px 14px;
+            display: grid;
+            gap: 4px;
+            align-content: start;
+        }
+
+        .blog-teaser-cat {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+            color: #0f6179;
+        }
+
+        .blog-teaser-title {
+            margin: 0;
+            font-size: 0.94rem;
+            font-weight: 700;
+            line-height: 1.35;
+            color: #15364e;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .blog-teaser-excerpt {
+            margin: 0;
+            font-size: 0.78rem;
+            color: #4c697e;
+            line-height: 1.45;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .blog-teaser-date {
+            font-size: 0.72rem;
+            color: #7a96aa;
+            margin-top: 4px;
+        }
+
+        .blog-teaser-footer {
+            margin-top: 12px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .blog-teaser-all-link {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #0f6179;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .blog-teaser-all-link:hover { text-decoration: underline; }
+
         .item-card {
             border: 1px solid #dbe7f0;
             border-radius: 12px;
@@ -1899,7 +2007,7 @@
             ['icon' => 'fa-solid fa-car-side', 'title' => 'Vehicle Rentals', 'url' => '/catalog/vehicle_rental', 'divider_after' => true],
             ['icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'url' => '/catalog/remote_workspace'],
             ['icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'url' => '/catalog/conference_room'],
-            ['icon' => 'fa-solid fa-map-location-dot', 'title' => 'Travel picks', 'url' => '/blog', 'section_start' => true],
+            ['icon' => 'fa-solid fa-newspaper', 'title' => 'Blog', 'url' => '/blog', 'section_start' => true],
         ])->map(function (array $link) use ($homeSidebarLinkSourceByUrl) {
             $source = $homeSidebarLinkSourceByUrl->get((string) ($link['url'] ?? ''), []);
             if (!is_array($source)) {
@@ -2462,6 +2570,49 @@
                 @endforeach
             </div>
         </section>
+
+        @php
+            $recentBlogPosts = $recentBlogPosts ?? collect();
+        @endphp
+        @if ($recentBlogPosts->isNotEmpty())
+        <section class="home-blog-teaser" aria-label="Latest from the blog">
+            <div class="section-head">
+                <h2 class="section-title">From the Blog</h2>
+                <p class="section-sub">Travel guides, island picks, and inspiration for your Maldives trip.</p>
+            </div>
+            <div class="blog-teaser-grid">
+                @foreach ($recentBlogPosts as $post)
+                    @php
+                        $postCover = trim((string) ($post->cover_image_url ?? $post->cover_image_path ?? ''));
+                        $postTitle = (string) ($post->title ?? 'Read Article');
+                        $postSlug = (string) ($post->slug ?? '');
+                        $postExcerpt = trim((string) ($post->excerpt ?? ''));
+                        $postCategory = ucwords(str_replace('-', ' ', (string) ($post->blog_category_slug ?? 'travel')));
+                        $postDate = optional($post->published_at ?? $post->created_at)->format('M j, Y') ?? '';
+                        $blogTeaserFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22800%22 height=%22420%22 viewBox=%220 0 800 420%22%3E%3Crect width=%22800%22 height=%22420%22 fill=%22%23d7eaf5%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2224%22%3EBlog Image%3C%2Ftext%3E%3C%2Fsvg%3E";
+                    @endphp
+                    <a class="blog-teaser-card" href="/blog/{{ $postSlug }}">
+                        <div class="blog-teaser-media">
+                            <img src="{{ $postCover !== '' ? $postCover : $blogTeaserFallback }}" alt="{{ $postTitle }}" loading="lazy" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $blogTeaserFallback }}';}">
+                        </div>
+                        <div class="blog-teaser-body">
+                            <span class="blog-teaser-cat">{{ $postCategory }}</span>
+                            <h3 class="blog-teaser-title">{{ $postTitle }}</h3>
+                            @if ($postExcerpt !== '')
+                                <p class="blog-teaser-excerpt">{{ $postExcerpt }}</p>
+                            @endif
+                            @if ($postDate !== '')
+                                <span class="blog-teaser-date">{{ $postDate }}</span>
+                            @endif
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+            <div class="blog-teaser-footer">
+                <a class="blog-teaser-all-link" href="/blog">Read all articles <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+            </div>
+        </section>
+        @endif
 
         @include('partials.global-site-footer')
             </div>{{-- /page-main-content --}}

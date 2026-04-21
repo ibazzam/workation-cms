@@ -13,6 +13,26 @@
         body { margin:0; font-family:"Outfit","Trebuchet MS",sans-serif; color:var(--ink); background:var(--bg); }
         .page { width:min(1180px,calc(100% - 24px)); margin:14px auto 28px; }
 
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px 6px;
+            margin-bottom: 10px;
+            font-size: 0.78rem;
+            color: #5f7488;
+        }
+
+        .breadcrumb a {
+            color: #0f6179;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .breadcrumb a:hover { text-decoration: underline; }
+
+        .breadcrumb span:last-child { color: #264d66; font-weight: 700; }
+
         .hero {
             border: 1px solid #cbe0ea;
             border-radius: 18px;
@@ -351,6 +371,16 @@
     @endphp
 
     <main class="page">
+        @php
+            $breadcrumbCategoryUrl = '/catalog/' . str_replace('_', '-', $categoryKey);
+        @endphp
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="/">Home</a>
+            <span aria-hidden="true">›</span>
+            <a href="{{ $breadcrumbCategoryUrl }}">{{ $categoryLabel }}</a>
+            <span aria-hidden="true">›</span>
+            <span>{{ (string) ($property->name ?? $categoryLabel . ' Listing') }}</span>
+        </nav>
         <section class="hero">
             <div class="hero-top">
                 <div>

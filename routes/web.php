@@ -1780,7 +1780,7 @@ Route::get('/', function () {
             ->orderByDesc('published_at')
             ->orderByDesc('created_at')
             ->limit(3)
-            ->get(['id', 'title', 'slug', 'excerpt', 'cover_image_url', 'cover_image_path', 'blog_category_slug', 'published_at', 'created_at']);
+            ->get(array_filter(['id', 'title', 'slug', 'excerpt', \Illuminate\Support\Facades\Schema::hasColumn('blog_posts', 'cover_image_url') ? 'cover_image_url' : null, 'cover_image_path', 'blog_category_slug', 'published_at', 'created_at']));
     }
 
     return view('welcome', [

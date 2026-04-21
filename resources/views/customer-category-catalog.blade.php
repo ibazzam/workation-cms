@@ -1614,22 +1614,7 @@
         <div class="page-body-split">
             <div class="page-main-content">
 
-        <h2 class="section-title">Available Portfolio Items</h2>
-        @if ($catalogProperties->isEmpty())
-            <div class="empty">No listings found for this category and selected filters yet.</div>
-        @else
-            <form class="catalog-filters-form" method="GET" action="/catalog/{{ $categoryKey }}" id="catalogFiltersForm">
-            
-            <!-- Quick Filter Pills Row -->
-            <div class="quick-filters-bar">
-                <button type="button" class="quick-filter-btn filters-modal-btn" id="openFilterPopup"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Filters</button>
-                <a href="/catalog/{{ $categoryKey }}" class="quick-filter-btn clear-filters-btn">Clear all</a>
-            </div>
-
-            <!-- Hidden Inline Filters (for form submission only) -->
-            <div class="inline-filters-wrapper" style="display: none;">
-            <div class="catalog-results-layout">
-                <div class="catalog-results-list">
+                <form class="catalog-filters-form" method="GET" action="/catalog/{{ $categoryKey }}" id="catalogFiltersForm">
             @if (!in_array($categoryKey, ['marine-transport', 'land-transport'], true))
                 <div class="grid">
                     <div class="field field-long">

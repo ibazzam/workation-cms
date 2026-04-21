@@ -657,9 +657,31 @@
         }
 
         .catalog-section-title {
+            display: none;
             margin: 16px 0 8px;
             font-size: 1.05rem;
             letter-spacing: 0.02em;
+        }
+
+        .load-more-btn {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d2dce5;
+            border-radius: 6px;
+            background: #ffffff;
+            color: #2a4154;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+
+        .load-more-btn:hover {
+            border-color: #b9c5d1;
+            background: #f5fbfd;
         }
 
         .grid {
@@ -833,19 +855,34 @@
 
         .catalog-results-layout {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) 360px;
-            gap: 12px;
+            grid-template-columns: 0.65fr 1fr;
+            gap: 0;
             align-items: start;
+            height: calc(100vh - 220px);
+        }
+
+        .catalog-results-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            min-width: 0;
+            overflow-y: auto;
+            height: 100%;
+            border-right: 1px solid #e0e8f0;
+            background: #ffffff;
         }
 
         .catalog-map-panel {
-            position: sticky;
-            top: 84px;
-            border: 1px solid #d2e2ec;
-            border-radius: 12px;
+            position: relative;
+            top: 0;
+            border: 0;
+            border-radius: 0;
             background: #ffffff;
             overflow: hidden;
-            box-shadow: 0 10px 24px rgba(15, 55, 86, 0.14);
+            box-shadow: none;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         }
 
         .catalog-map-head {
@@ -872,8 +909,9 @@
 
         #categoryResultsMap {
             width: 100%;
-            height: min(62vh, 560px);
+            height: 100%;
             background: #e7f1f7;
+            flex: 1;
         }
 
         .map-search-area-btn {
@@ -982,94 +1020,126 @@
         }
 
         .catalog-grid {
-            margin-top: 10px;
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 10px;
+            margin-top: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
         }
 
         .card {
-            border: 1px solid #dbe7f0;
-            border-radius: 12px;
-            background: #fbfdff;
-            overflow: hidden;
+            border-bottom: 1px solid #e8ecf0;
+            border-radius: 0;
+            background: #ffffff;
+            overflow: visible;
+            padding: 12px;
+            display: flex;
+            flex-direction: row;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .card:hover {
+            background: #f9fbfd;
         }
 
         .card-link {
-            display: block;
+            display: flex;
+            flex-direction: row;
             color: inherit;
             text-decoration: none;
+            position: relative;
+            width: 100%;
+            gap: 12px;
         }
 
         .card img {
-            width: 100%;
-            height: 184px;
+            width: 120px;
+            height: 100px;
             object-fit: cover;
             background: #edf4fb;
             display: block;
+            border-radius: 6px;
+            flex-shrink: 0;
         }
 
         .card-body {
-            padding: 10px;
-            display: grid;
-            gap: 6px;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex: 1;
+            min-width: 0;
         }
 
         .card-city {
-            color: #698094;
+            color: #7b8d99;
             font-size: 0.7rem;
             line-height: 1;
+            margin-bottom: 1px;
         }
 
         .card h3 {
             margin: 0;
-            font-size: 1rem;
-            line-height: 1.3;
-            color: #102f45;
+            font-size: 0.85rem;
+            line-height: 1.1;
+            color: #1a2f43;
             font-weight: 700;
             display: -webkit-box;
-            -webkit-line-clamp: 2;
+            -webkit-line-clamp: 1;
             -webkit-box-orient: vertical;
             overflow: hidden;
+            margin-bottom: 1px;
         }
 
         .card-stars {
             display: inline-flex;
             align-items: center;
-            gap: 2px;
+            gap: 1px;
             color: #f3a337;
-            font-size: 0.72rem;
-            min-height: 14px;
+            font-size: 0.65rem;
+            min-height: 12px;
+            margin-bottom: 2px;
         }
 
         .card-review {
-            display: inline-flex;
+            display: flex;
             align-items: center;
             gap: 6px;
             color: #587085;
-            font-size: 0.73rem;
+            font-size: 0.65rem;
+            margin-bottom: 3px;
         }
 
         .card-rating-badge {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 34px;
-            height: 18px;
-            padding: 0 6px;
-            border-radius: 6px;
-            background: #1f4fd6;
+            min-width: 32px;
+            height: 32px;
+            padding: 0;
+            border-radius: 50%;
+            background: #2fa58a;
             color: #ffffff;
             font-size: 0.68rem;
             font-weight: 800;
             line-height: 1;
+            flex-direction: column;
+            flex-shrink: 0;
         }
 
         .card-price {
             margin-top: 2px;
-            color: #0d2e44;
-            font-size: 0.88rem;
+            color: #1a2f43;
+            font-size: 0.82rem;
             font-weight: 700;
+            margin-bottom: 2px;
+            line-height: 1;
+        }
+
+        .card-offer {
+            color: #0f6179;
+            font-size: 0.65rem;
+            margin-bottom: 6px;
         }
 
         .card-type-chip {
@@ -1091,21 +1161,39 @@
         }
 
         .card-desc {
+            display: none;
             margin: 0;
             color: #4f677a;
             font-size: 0.76rem;
             line-height: 1.45;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
         }
 
         .card-time {
+            display: none;
             color: #345469;
             font-size: 0.72rem;
             font-weight: 700;
-            letter-spacing: 0.01em;
+        }
+
+        .card-action-btn {
+            align-self: flex-start;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 5px;
+            background: #2fa58a;
+            color: #ffffff;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.2s ease;
+        }
+
+        .card-action-btn:hover {
+            background: #27917a;
         }
 
         .empty {
@@ -1116,6 +1204,43 @@
             border-radius: 12px;
             padding: 14px;
             font-size: 0.88rem;
+        }
+
+        .quick-filters-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .quick-filter-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border: 1px solid #d2dce5;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #2a4154;
+            font-size: 0.76rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .quick-filter-btn:hover {
+            border-color: #b9c5d1;
+            background: #f5fbfd;
+        }
+
+        .quick-filter-btn i {
+            font-size: 0.8rem;
+        }
+
+        .clear-filters-btn {
+            margin-left: auto;
         }
 
         .island-context-note {
@@ -1483,9 +1608,28 @@
 
             <div class="hero-banner" aria-label="Category banner and quick filters">
                 <img class="hero-banner-image" src="{{ $categoryHeroImageUrl }}" alt="{{ (string) ($categoryMeta['label'] ?? 'Category') }} banner" loading="eager" fetchpriority="high" decoding="async" onerror="this.onerror=null;this.src='{{ $categoryHeroFallback }}';">
-                <div class="hero-banner-content">
-                    <div class="search-sticky-wrap">
-                        <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}" id="categorySearchForm">
+            </div>
+        </section>
+
+        <div class="page-body-split">
+            <div class="page-main-content">
+
+        <h2 class="section-title">Available Portfolio Items</h2>
+        @if ($catalogProperties->isEmpty())
+            <div class="empty">No listings found for this category and selected filters yet.</div>
+        @else
+            <form class="catalog-filters-form" method="GET" action="/catalog/{{ $categoryKey }}" id="catalogFiltersForm">
+            
+            <!-- Quick Filter Pills Row -->
+            <div class="quick-filters-bar">
+                <button type="button" class="quick-filter-btn filters-modal-btn" id="openFilterPopup"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Filters</button>
+                <a href="/catalog/{{ $categoryKey }}" class="quick-filter-btn clear-filters-btn">Clear all</a>
+            </div>
+
+            <!-- Hidden Inline Filters (for form submission only) -->
+            <div class="inline-filters-wrapper" style="display: none;">
+            <div class="catalog-results-layout">
+                <div class="catalog-results-list">
             @if (!in_array($categoryKey, ['marine-transport', 'land-transport'], true))
                 <div class="grid">
                     <div class="field field-long">
@@ -1758,11 +1902,13 @@
                 </div>
             @endif
 
-            <div class="actions">
-                <button class="filter-popup-toggle" type="button" id="openFilterPopup"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Filters</button>
-                <button class="primary" type="submit">Apply Filters</button>
-                <a href="/catalog/{{ $categoryKey }}">Clear all filters</a>
+            <!-- Close hidden inline filters -->
             </div>
+            </div>
+
+            <!-- Actual Results Layout (shown to users) -->
+            <div class="catalog-results-layout">
+                <div class="catalog-results-list">
 
             <div class="filter-popup-backdrop" id="filterPopupBackdrop" hidden>
                 <div class="filter-popup" role="dialog" aria-modal="true" aria-labelledby="filterPopupTitle">
@@ -1833,11 +1979,6 @@
                     </div>
                 </div>
             </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
         </section>
 
         <div class="page-body-split">
@@ -2029,12 +2170,14 @@
                                             @endif
                                         </div>
                                     @endif
+                                    <a href="{{ $detailUrl }}" class="card-action-btn">View Deal <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
                                 </div>
                             </a>
                         </article>
                     @endforeach
                 </section>
             @endforeach
+                <button type="button" class="load-more-btn">Load more</button>
                 </div>
                 <aside class="catalog-map-panel" aria-label="Map of filtered category results">
                     <div class="catalog-map-head">
@@ -2236,10 +2379,12 @@
             function fallbackCoords(item) {
                 const key = String(item.island || item.city || item.atoll || item.name || 'maldives').toLowerCase();
                 const seed = hashText(key);
-                const baseLat = 3.2;
-                const baseLng = 73.1;
-                const latOffset = ((seed % 1800) / 1000) - 0.9;
-                const lngOffset = (((Math.floor(seed / 1800)) % 2200) / 1000) - 1.1;
+                // Maldives center: 4.1755° N, 73.5093° E
+                // Bounds approximately: 3.2°N to 5.0°N latitude, 72.0°E to 75.0°E longitude
+                const baseLat = 4.1755;
+                const baseLng = 73.5093;
+                const latOffset = ((seed % 900) / 1000) - 0.45;  // Range: -0.45 to +0.45
+                const lngOffset = (((Math.floor(seed / 900)) % 1500) / 1000) - 0.75;  // Range: -0.75 to +0.75
 
                 return {
                     lat: baseLat + latOffset,
@@ -2320,10 +2465,13 @@
             const map = window.L.map(mapContainer, {
                 zoomControl: true,
                 scrollWheelZoom: true,
+                center: [4.1755, 73.5093],
+                zoom: 8,
             });
 
             window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
+                minZoom: 2,
                 attribution: '&copy; OpenStreetMap contributors',
             }).addTo(map);
 

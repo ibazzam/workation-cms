@@ -15,7 +15,22 @@
                                                                 <input name="map_latitude" type="hidden" value="{{ (string) ($propertyDetails['map_latitude'] ?? '') }}">
                                                                 <input name="map_longitude" type="hidden" value="{{ (string) ($propertyDetails['map_longitude'] ?? '') }}">
                                                                 <input name="map_place_id" type="hidden" value="{{ (string) ($propertyDetails['map_place_id'] ?? '') }}">
-                                                                <textarea class="ops-textarea" name="description" maxlength="3000" placeholder="Description">{{ (string) ($property->description ?? '') }}</textarea>
+                                                                    <div class="edit-map-picker" data-property-edit-scope="geo">
+                                                                        <div class="edit-map-label">Pin Location on Map <span style="font-weight:400;color:#5b7488;">(click or drag the pin to set exact coordinates)</span></div>
+                                                                        <div class="edit-map-wrap" id="editPropertyMap_{{ $propertyId }}"></div>
+                                                                        <div class="edit-map-coords" id="editMapCoords_{{ $propertyId }}">
+                                                                            @php
+                                                                                $editLat = (string) ($propertyDetails['map_latitude'] ?? '');
+                                                                                $editLng = (string) ($propertyDetails['map_longitude'] ?? '');
+                                                                            @endphp
+                                                                            @if ($editLat !== '' && $editLng !== '')
+                                                                                Pinned: {{ $editLat }}, {{ $editLng }}
+                                                                            @else
+                                                                                No pin saved yet - click the map to set one
+                                                                            @endif
+                                                                        </div>
+                                                                    </div>
+                                                                    <textarea class="ops-textarea" name="description" maxlength="3000" placeholder="Description">{{ (string) ($property->description ?? '') }}</textarea>
                                                                 <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($property->base_price ?? 0) }}" data-property-edit-scope="capacity">
                                                                 <input class="ops-input" name="max_guests" type="number" min="0" max="10000" value="{{ (int) ($property->max_guests ?? 0) }}" data-property-edit-scope="capacity">
 

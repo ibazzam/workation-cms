@@ -689,6 +689,33 @@
             color: #4b6075;
         }
 
+        .edit-map-picker {
+            display: grid;
+            gap: 6px;
+            margin: 8px 0 10px;
+        }
+
+        .edit-map-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #1a3a52;
+        }
+
+        .edit-map-wrap {
+            width: 100%;
+            height: 240px;
+            border-radius: 8px;
+            border: 1px solid #c8d8e4;
+            overflow: hidden;
+            background: #eef4f9;
+        }
+
+        .edit-map-coords {
+            font-size: 0.74rem;
+            color: #4b6075;
+            font-style: italic;
+        }
+
         .ops-section {
             margin-top: 12px;
         }

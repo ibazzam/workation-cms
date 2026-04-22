@@ -841,21 +841,10 @@
         }
 
         .card-city {
-            color: #4a90a4;
-            font-size: 0.72rem;
-            font-weight: 600;
+            color: #7b8d99;
+            font-size: 0.7rem;
             line-height: 1;
-            margin-bottom: 3px;
-            display: flex;
-            align-items: center;
-            gap: 3px;
-        }
-        .card-city::before {
-            content: '\f3c5';
-            font-family: 'Font Awesome 6 Free';
-            font-weight: 900;
-            font-size: 0.65rem;
-            color: #4a90a4;
+            margin-bottom: 1px;
         }
 
         .card h3 {
@@ -2194,8 +2183,8 @@
                             $actionLabel = $categoryKey === 'accommodation' ? 'View Deal' : 'Book Now';
                         @endphp
                         @php
-                            $rawLat = $property->map_latitude ?? $property->latitude ?? $property->lat ?? $property->location_lat ?? $property->geo_lat ?? null;
-                            $rawLng = $property->map_longitude ?? $property->longitude ?? $property->lng ?? $property->location_lng ?? $property->geo_lng ?? null;
+                            $rawLat = $property->latitude ?? $property->lat ?? $property->location_lat ?? $property->geo_lat ?? $property->map_latitude ?? null;
+                            $rawLng = $property->longitude ?? $property->lng ?? $property->location_lng ?? $property->geo_lng ?? $property->map_longitude ?? null;
                             $lat = is_numeric($rawLat) ? (float) $rawLat : null;
                             $lng = is_numeric($rawLng) ? (float) $rawLng : null;
                         @endphp

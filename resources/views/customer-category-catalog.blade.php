@@ -36,6 +36,11 @@
             margin: 0 auto 28px;
         }
 
+        .page.category-accommodation {
+            width: calc(100vw - 24px);
+            max-width: none;
+        }
+
         .header-bar {
             min-height: 84px;
             display: flex;
@@ -1108,6 +1113,10 @@
             height: calc(100vh - 220px);
         }
 
+        .page.category-accommodation .catalog-results-layout {
+            grid-template-columns: 1fr 1fr;
+        }
+
         .catalog-results-list {
             display: flex;
             flex-direction: column;
@@ -1225,7 +1234,7 @@
 
         .page.category-accommodation .card-link-accommodation {
             display: grid;
-            grid-template-columns: var(--listing-thumb-width) minmax(0, 1fr) 220px;
+            grid-template-columns: var(--listing-thumb-width) minmax(0, 1fr) 200px;
             gap: 16px;
             align-items: start;
         }
@@ -1270,7 +1279,10 @@
         .page.category-accommodation .card h3 {
             font-size: 1rem;
             line-height: 1.2;
-            -webkit-line-clamp: 2;
+            -webkit-line-clamp: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
             margin-bottom: 2px;
         }
 
@@ -2694,9 +2706,13 @@
 
             const cards = Array.from(document.querySelectorAll('[data-property-card]'));
             const uniqueItems = new Map();
-            cards.forEach(function (card) {
+            cards.forEach(function (card, index) {
                 const item = parseCardData(card);
-                if (item.id === '' || uniqueItems.has(item.id)) {
+                if (item.id === '') {
+                    item.id = 'listing-' + String(index);
+                }
+
+                if (uniqueItems.has(item.id)) {
                     return;
                 }
                 uniqueItems.set(item.id, item);

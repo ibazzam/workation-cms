@@ -841,10 +841,21 @@
         }
 
         .card-city {
-            color: #7b8d99;
-            font-size: 0.7rem;
+            color: #4a90a4;
+            font-size: 0.72rem;
+            font-weight: 600;
             line-height: 1;
-            margin-bottom: 1px;
+            margin-bottom: 3px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .card-city::before {
+            content: '\f3c5';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            font-size: 0.65rem;
+            color: #4a90a4;
         }
 
         .card h3 {

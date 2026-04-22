@@ -4019,12 +4019,12 @@ Route::get('/property/{property}', function (Request $request, int $property) {
         $baseSelectColumns = array_values(array_filter([
             'id',
             'name',
-            'base_price',
-            'currency',
-            'listing_category',
-            'city',
-            'island',
-            'atoll',
+            in_array('base_price', $propertyColumns, true) ? 'base_price' : null,
+            in_array('currency', $propertyColumns, true) ? 'currency' : null,
+            in_array('listing_category', $propertyColumns, true) ? 'listing_category' : null,
+            in_array('city', $propertyColumns, true) ? 'city' : null,
+            in_array('island', $propertyColumns, true) ? 'island' : null,
+            in_array('atoll', $propertyColumns, true) ? 'atoll' : null,
             in_array('updated_at', $propertyColumns, true) ? 'updated_at' : null,
         ]));
 

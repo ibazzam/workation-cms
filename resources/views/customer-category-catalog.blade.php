@@ -544,7 +544,7 @@
             transform: translateX(-50%);
             width: min(1180px, calc(100% - 24px));
             z-index: 2;
-            display: none;
+            display: grid;
             gap: 12px;
         }
 
@@ -2034,8 +2034,8 @@
                             $actionLabel = $categoryKey === 'accommodation' ? 'View Deal' : 'Book Now';
                         @endphp
                         @php
-                            $rawLat = $property->latitude ?? $property->lat ?? $property->location_lat ?? $property->geo_lat ?? null;
-                            $rawLng = $property->longitude ?? $property->lng ?? $property->location_lng ?? $property->geo_lng ?? null;
+                            $rawLat = $property->latitude ?? $property->lat ?? $property->location_lat ?? $property->geo_lat ?? $property->map_latitude ?? null;
+                            $rawLng = $property->longitude ?? $property->lng ?? $property->location_lng ?? $property->geo_lng ?? $property->map_longitude ?? null;
                             $lat = is_numeric($rawLat) ? (float) $rawLat : null;
                             $lng = is_numeric($rawLng) ? (float) $rawLng : null;
                         @endphp
@@ -2058,11 +2058,21 @@
                                     $resolvedImage = ($thumbUrl && trim($thumbUrl) !== '')
                                         ? (string) $thumbUrl
                                         : ($bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback));
+                                    $accommodationLocationLabel = trim((string) ($property->island ?? ''));
+                                    if ($accommodationLocationLabel === '') {
+                                        $accommodationLocationLabel = trim((string) ($property->city ?? ''));
+                                    }
+                                    if ($accommodationLocationLabel === '') {
+                                        $accommodationLocationLabel = trim((string) ($property->atoll ?? ''));
+                                    }
+                                    $accommodationLocationLabel = $accommodationLocationLabel !== ''
+                                        ? ($accommodationLocationLabel . ', Maldives')
+                                        : 'Maldives';
                                 @endphp
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                                 <div class="card-body card-body-accommodation">
                                     <div class="card-main">
-                                        <span class="card-city">{{ trim(collect([$property->island ?? null, $property->city ?? null, $property->atoll ?? null])->filter(fn ($value) => trim((string) $value) !== '')->implode(', ')) ?: 'Maldives' }}</span>
+                                        <span class="card-city">{{ $accommodationLocationLabel }}</span>
                                         <h3>{{ (string) ($property->name ?? 'Listing') }}</h3>
                                         <div class="card-stars" aria-label="Star ranking">
                                             @if ($starRank > 0)

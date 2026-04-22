@@ -18,6 +18,8 @@
             --brand: #0f6179;
             --brand-strong: #0b4f66;
             --accent: #f3a337;
+            --listing-thumb-width: 144px;
+            --listing-thumb-height: 112px;
         }
 
         * { box-sizing: border-box; }
@@ -511,7 +513,7 @@
 
         .hero-banner {
             position: relative;
-            min-height: 360px;
+            min-height: 500px;
             border-radius: 0;
             overflow: hidden;
             background: linear-gradient(140deg, #1a57c4 0%, #3d7de8 48%, #7fa7ff 100%);
@@ -537,10 +539,10 @@
 
         .hero-banner-content {
             position: absolute;
-            top: 96px;
+            bottom: 22px;
             left: 50%;
             transform: translateX(-50%);
-            width: calc(100% - 24px);
+            width: min(1180px, calc(100% - 24px));
             z-index: 2;
             display: none;
             gap: 12px;
@@ -726,8 +728,8 @@
         }
 
         .card img {
-            width: 120px;
-            height: 100px;
+            width: var(--listing-thumb-width);
+            height: var(--listing-thumb-height);
             object-fit: cover;
             background: #edf4fb;
             display: block;
@@ -1125,43 +1127,35 @@
             white-space: nowrap;
         }
 
-        .page.category-accommodation .card-link {
+        .page.category-accommodation .card-link-accommodation {
             display: grid;
-            grid-template-columns: 120px minmax(0, 1fr);
-            gap: 12px;
-            align-items: flex-start;
-        }
-
-        .page.category-accommodation .card-body {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 4px 14px;
+            grid-template-columns: var(--listing-thumb-width) minmax(0, 1fr) 190px;
+            gap: 14px;
             align-items: start;
         }
 
-        .page.category-accommodation .card-city,
-        .page.category-accommodation .card h3,
-        .page.category-accommodation .card-stars,
-        .page.category-accommodation .card-review {
-            grid-column: 1;
+        .page.category-accommodation .card-body-accommodation {
+            display: contents;
         }
 
-        .page.category-accommodation .card-price,
-        .page.category-accommodation .card-offer,
-        .page.category-accommodation .card-action-btn {
-            grid-column: 2;
-            justify-self: end;
+        .page.category-accommodation .card-main {
+            min-width: 0;
+            display: grid;
+            gap: 4px;
+            align-content: start;
+        }
+
+        .page.category-accommodation .card-side {
+            min-width: 0;
+            display: grid;
+            gap: 8px;
+            justify-items: end;
+            align-content: start;
             text-align: right;
-            margin-top: 0;
-            margin-bottom: 0;
         }
 
-        .page.category-accommodation .card-action-btn {
-            align-self: center;
-        }
-
-        .page.category-default .hero-banner-content {
-            display: none;
+        .page.category-accommodation .card-side .card-action-btn {
+            align-self: start;
         }
 
         .page.category-default .catalog-results-layout {
@@ -1391,7 +1385,7 @@
                 left: auto;
                 transform: none;
                 width: calc(100% - 18px);
-                top: auto;
+                bottom: auto;
                 margin: 0 auto;
                 gap: 8px;
             }
@@ -2026,9 +2020,17 @@
                                 ?? $property->board_type
                                 ?? ''
                             ));
-                            $offerSummary = $mealPlan !== ''
-                                ? ucwords(str_replace(['_', '-'], ' ', $mealPlan))
-                                : ($includesBreakfast ? 'Breakfast included' : 'Without breakfast');
+                            $promotionMessage = trim((string) (
+                                $property->promotion_message
+                                ?? $property->promo_text
+                                ?? $property->offer_text
+                                ?? ''
+                            ));
+                            $offerSummary = $promotionMessage !== ''
+                                ? $promotionMessage
+                                : ($mealPlan !== ''
+                                    ? ucwords(str_replace(['_', '-'], ' ', $mealPlan))
+                                    : ($includesBreakfast ? 'Breakfast included' : 'Without breakfast'));
                             $actionLabel = $categoryKey === 'accommodation' ? 'View Deal' : 'Book Now';
                         @endphp
                         @php
@@ -2050,6 +2052,38 @@
                             data-lat="{{ $lat !== null ? $lat : '' }}"
                             data-lng="{{ $lng !== null ? $lng : '' }}"
                         >
+                            @if ($categoryKey === 'accommodation')
+                            <a class="card-link card-link-accommodation" href="{{ $detailUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
+                                @php
+                                    $resolvedImage = ($thumbUrl && trim($thumbUrl) !== '')
+                                        ? (string) $thumbUrl
+                                        : ($bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback));
+                                @endphp
+                                <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
+                                <div class="card-body card-body-accommodation">
+                                    <div class="card-main">
+                                        <span class="card-city">{{ trim(collect([$property->island ?? null, $property->city ?? null, $property->atoll ?? null])->filter(fn ($value) => trim((string) $value) !== '')->implode(', ')) ?: 'Maldives' }}</span>
+                                        <h3>{{ (string) ($property->name ?? 'Listing') }}</h3>
+                                        <div class="card-stars" aria-label="Star ranking">
+                                            @if ($starRank > 0)
+                                                @for ($i = 0; $i < $starRank; $i++)
+                                                    <i class="fa-solid fa-star" aria-hidden="true"></i>
+                                                @endfor
+                                            @endif
+                                        </div>
+                                        <div class="card-review">
+                                            <span class="card-rating-badge">{{ $reviewScore }}</span>
+                                            <span>{{ number_format($reviewCount) }} reviews</span>
+                                        </div>
+                                    </div>
+                                    <div class="card-side">
+                                        <div class="card-price">From {{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}</div>
+                                        <div class="card-offer">{{ $offerSummary }}</div>
+                                        <span class="card-action-btn">{{ $actionLabel }} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+                                    </div>
+                                </div>
+                            </a>
+                            @else
                             <a class="card-link" href="{{ $detailUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
                                 @php
                                     $resolvedImage = ($thumbUrl && trim($thumbUrl) !== '')
@@ -2093,6 +2127,7 @@
                                     <span class="card-action-btn">{{ $actionLabel }} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
                                 </div>
                             </a>
+                            @endif
                         </article>
                     @endforeach
                 </section>

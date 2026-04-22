@@ -18,8 +18,8 @@
             --brand: #0f6179;
             --brand-strong: #0b4f66;
             --accent: #f3a337;
-            --listing-thumb-width: 144px;
-            --listing-thumb-height: 112px;
+            --listing-thumb-width: 176px;
+            --listing-thumb-height: 132px;
         }
 
         * { box-sizing: border-box; }
@@ -136,7 +136,7 @@
             white-space: nowrap;
         }
 
-        .header-search-mini {
+        .header-bar .header-search-mini {
             display: none;
             align-items: center;
             min-width: 0;
@@ -148,7 +148,7 @@
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.55);
         }
 
-        .header-search-mini input {
+        .header-bar .header-search-mini input {
             border: 0;
             background: transparent;
             padding: 9px 12px;
@@ -158,7 +158,7 @@
             color: #244057;
         }
 
-        .header-search-mini button {
+        .header-bar .header-search-mini button {
             border: 0;
             width: 38px;
             height: 38px;
@@ -571,6 +571,19 @@
             transform: none;
         }
 
+        .search-sticky-wrap.is-fixed {
+            position: fixed;
+            top: var(--sticky-search-top, 80px);
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(1180px, calc(100% - 24px));
+            z-index: 1040;
+        }
+
+        .search-sticky-wrap.is-fixed .search-box {
+            box-shadow: 0 12px 30px rgba(14, 41, 92, 0.25);
+        }
+
         .hero {
             border: 1px solid rgba(212, 236, 245, 0.24);
             border-radius: 12px;
@@ -696,59 +709,6 @@
             height: 42px;
             padding: 0 18px;
             white-space: nowrap;
-        }
-
-        body.category-display-page .uniform-header {
-            position: sticky !important;
-            top: 0 !important;
-            z-index: 1050 !important;
-            min-height: 72px !important;
-            padding: 10px 16px !important;
-            border-bottom: 1px solid #d4e2ec !important;
-            background: #ffffff !important;
-            box-shadow: 0 6px 18px rgba(13, 43, 67, 0.08) !important;
-            backdrop-filter: none !important;
-        }
-
-        body.category-display-page .uniform-header .uniform-header-brand {
-            color: #103d59 !important;
-            font-size: 1.38rem !important;
-            letter-spacing: -0.03em !important;
-            text-shadow: none !important;
-        }
-
-        body.category-display-page .uniform-header .uniform-header-subline {
-            color: #5a7388 !important;
-            text-transform: uppercase;
-            letter-spacing: 0.09em;
-        }
-
-        body.category-display-page .uniform-header .uniform-header-search-mini,
-        body.category-display-page .uniform-header .header-search-mini {
-            display: flex !important;
-            min-width: 240px !important;
-            width: min(420px, 100%) !important;
-            border: 1px solid #c7d9e5 !important;
-            border-radius: 10px !important;
-            overflow: hidden !important;
-            background: #f8fcff !important;
-            box-shadow: none !important;
-        }
-
-        body.category-display-page .uniform-header .uniform-header-search-mini input,
-        body.category-display-page .uniform-header .header-search-mini input {
-            color: #1f425b !important;
-            padding: 9px 10px !important;
-            background: transparent !important;
-        }
-
-        body.category-display-page .uniform-header .uniform-header-search-mini button,
-        body.category-display-page .uniform-header .header-search-mini button {
-            width: auto !important;
-            padding: 0 10px !important;
-            height: 38px !important;
-            background: #0f6179 !important;
-            color: #ffffff !important;
         }
 
         .search-box::-webkit-scrollbar {
@@ -1223,8 +1183,8 @@
 
         .page.category-accommodation .card-link-accommodation {
             display: grid;
-            grid-template-columns: var(--listing-thumb-width) minmax(0, 1fr) 190px;
-            gap: 14px;
+            grid-template-columns: var(--listing-thumb-width) minmax(0, 1fr) 220px;
+            gap: 16px;
             align-items: start;
         }
 
@@ -1235,7 +1195,7 @@
         .page.category-accommodation .card-main {
             min-width: 0;
             display: grid;
-            gap: 4px;
+            gap: 6px;
             align-content: start;
         }
 
@@ -1250,6 +1210,50 @@
 
         .page.category-accommodation .card-side .card-action-btn {
             align-self: start;
+        }
+
+        .page.category-accommodation .card {
+            padding: 14px;
+        }
+
+        .page.category-accommodation .card-city {
+            font-size: 0.8rem;
+            margin-bottom: 4px;
+        }
+
+        .page.category-accommodation .card-city::before {
+            font-size: 0.72rem;
+        }
+
+        .page.category-accommodation .card h3 {
+            font-size: 1rem;
+            line-height: 1.2;
+            -webkit-line-clamp: 2;
+            margin-bottom: 2px;
+        }
+
+        .page.category-accommodation .card-stars {
+            font-size: 0.78rem;
+            min-height: 14px;
+        }
+
+        .page.category-accommodation .card-review {
+            font-size: 0.76rem;
+            gap: 8px;
+        }
+
+        .page.category-accommodation .card-price {
+            font-size: 1.04rem;
+            line-height: 1.2;
+        }
+
+        .page.category-accommodation .card-offer {
+            font-size: 0.76rem;
+        }
+
+        .page.category-accommodation .card-action-btn {
+            font-size: 0.8rem;
+            padding: 7px 14px;
         }
 
         .page.category-default .catalog-results-layout {
@@ -1368,6 +1372,14 @@
                 margin-top: 0;
                 transform: none;
                 width: 100%;
+            }
+
+            .search-sticky-wrap.is-fixed {
+                position: static;
+                left: auto;
+                top: auto;
+                width: 100%;
+                transform: none;
             }
 
             .catalog-results-layout {
@@ -2477,11 +2489,56 @@
 
     <script>
         (function () {
+            const stickyWrap = document.querySelector('.search-sticky-wrap');
+            const heroBanner = document.querySelector('.hero-banner');
+            const pageRoot = document.querySelector('.page.category-accommodation');
+
+            if (!stickyWrap || !heroBanner || !pageRoot) {
+                return;
+            }
+
+            const mobileQuery = window.matchMedia('(max-width: 680px)');
+
+            function updateStickySearch() {
+                if (mobileQuery.matches) {
+                    stickyWrap.classList.remove('is-fixed');
+                    stickyWrap.style.removeProperty('--sticky-search-top');
+                    return;
+                }
+
+                const header = document.querySelector('[data-uniform-header]');
+                const headerBottom = header
+                    ? Math.max(0, Math.round(header.getBoundingClientRect().bottom))
+                    : 0;
+                const heroBottom = heroBanner.getBoundingClientRect().bottom;
+                const shouldFix = heroBottom <= (headerBottom + 30);
+
+                stickyWrap.classList.toggle('is-fixed', shouldFix);
+                if (shouldFix) {
+                    stickyWrap.style.setProperty('--sticky-search-top', String(headerBottom + 8) + 'px');
+                } else {
+                    stickyWrap.style.removeProperty('--sticky-search-top');
+                }
+            }
+
+            window.addEventListener('scroll', updateStickySearch, { passive: true });
+            window.addEventListener('resize', updateStickySearch);
+            if (mobileQuery.addEventListener) {
+                mobileQuery.addEventListener('change', updateStickySearch);
+            }
+
+            updateStickySearch();
+        })();
+    </script>
+
+    <script>
+        (function () {
             const mapContainer = document.getElementById('categoryResultsMap');
             const mapEmpty = document.getElementById('categoryMapEmpty');
             const countLabel = document.getElementById('mapResultCount');
             const pageRoot = document.querySelector('.page');
             const mapSearchAreaButton = document.getElementById('mapSearchAreaButton');
+            const isAccommodationCatalog = !!(pageRoot && pageRoot.classList.contains('category-accommodation'));
 
             function hashText(value) {
                 let hash = 0;
@@ -2511,14 +2568,19 @@
 
             function parseCardData(card) {
                 const linkEl = card.querySelector('.card-link');
-                const latRaw = Number(card.getAttribute('data-lat'));
-                const lngRaw = Number(card.getAttribute('data-lng'));
-                const inMaldivesBounds = Number.isFinite(latRaw)
-                    && Number.isFinite(lngRaw)
-                    && latRaw >= 2.0
-                    && latRaw <= 8.0
-                    && lngRaw >= 71.0
-                    && lngRaw <= 75.5;
+                const parseCoordinate = function (rawValue) {
+                    if (rawValue === null || typeof rawValue === 'undefined') {
+                        return null;
+                    }
+                    const normalized = String(rawValue).trim().replace(',', '.');
+                    if (normalized === '') {
+                        return null;
+                    }
+                    const value = Number(normalized);
+                    return Number.isFinite(value) ? value : null;
+                };
+                const latRaw = parseCoordinate(card.getAttribute('data-lat'));
+                const lngRaw = parseCoordinate(card.getAttribute('data-lng'));
 
                 return {
                     id: String(card.getAttribute('data-id') || ''),
@@ -2529,8 +2591,8 @@
                     currency: String(card.getAttribute('data-currency') || 'MVR'),
                     price: Number(card.getAttribute('data-price') || 0),
                     url: linkEl ? linkEl.getAttribute('href') : '',
-                    lat: inMaldivesBounds ? latRaw : null,
-                    lng: inMaldivesBounds ? lngRaw : null,
+                    lat: latRaw,
+                    lng: lngRaw,
                     card: card,
                 };
             }
@@ -2572,10 +2634,6 @@
             });
 
             const items = Array.from(uniqueItems.values());
-            if (countLabel) {
-                countLabel.textContent = items.length + (items.length === 1 ? ' result' : ' results');
-            }
-
             if (items.length === 0) {
                 mapContainer.hidden = true;
                 if (mapEmpty) {
@@ -2599,9 +2657,11 @@
             const markerClassByDensity = items.length > 80
                 ? 'is-super-compact'
                 : (items.length > 45 ? 'is-compact' : '');
+            const shouldUseFallbackCoords = !isAccommodationCatalog;
             const bounds = [];
             const markerById = new Map();
             const markerElementById = new Map();
+            let mappedCount = 0;
 
             function setMarkerActive(propertyId, isActive) {
                 const markerElement = markerElementById.get(propertyId);
@@ -2612,9 +2672,18 @@
             }
 
             items.forEach(function (item) {
-                const coords = (item.lat !== null && item.lng !== null)
-                    ? { lat: item.lat, lng: item.lng }
-                    : fallbackCoords(item);
+                let coords = null;
+                if (item.lat !== null && item.lng !== null) {
+                    coords = { lat: item.lat, lng: item.lng };
+                } else if (shouldUseFallbackCoords) {
+                    coords = fallbackCoords(item);
+                }
+
+                if (!coords) {
+                    return;
+                }
+
+                mappedCount += 1;
 
                 bounds.push([coords.lat, coords.lng]);
 
@@ -2664,6 +2733,22 @@
                     setMarkerActive(item.id, true);
                 });
             });
+
+            if (countLabel) {
+                countLabel.textContent = mappedCount + (mappedCount === 1 ? ' result' : ' results');
+            }
+
+            if (bounds.length === 0) {
+                mapContainer.hidden = true;
+                if (mapEmpty) {
+                    mapEmpty.hidden = false;
+                    mapEmpty.textContent = 'No exact coordinates are available for these listings yet.';
+                }
+                if (mapSearchAreaButton) {
+                    mapSearchAreaButton.hidden = true;
+                }
+                return;
+            }
 
             window.requestAnimationFrame(function () {
                 const markerElements = mapContainer.querySelectorAll('.price-marker[data-marker-id]');

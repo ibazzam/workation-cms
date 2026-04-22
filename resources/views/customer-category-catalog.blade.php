@@ -2225,10 +2225,12 @@
             function fallbackCoords(item) {
                 const key = String(item.island || item.city || item.atoll || item.name || 'maldives').toLowerCase();
                 const seed = hashText(key);
-                const baseLat = 3.2;
-                const baseLng = 73.1;
-                const latOffset = ((seed % 1800) / 1000) - 0.9;
-                const lngOffset = (((Math.floor(seed / 1800)) % 2200) / 1000) - 1.1;
+                // Maldives center: 4.1755°N, 73.5093°E
+                // Bounds approximately: 3.2°N to 5.0°N latitude, 72.0°E to 75.0°E longitude
+                const baseLat = 4.1755;
+                const baseLng = 73.5093;
+                const latOffset = ((seed % 900) / 1000) - 0.45;  // Range: -0.45 to +0.45
+                const lngOffset = (((Math.floor(seed / 900)) % 1500) / 1000) - 0.75;  // Range: -0.75 to +0.75
 
                 return {
                     lat: baseLat + latOffset,
@@ -2309,6 +2311,8 @@
             const map = window.L.map(mapContainer, {
                 zoomControl: true,
                 scrollWheelZoom: true,
+                center: [4.1755, 73.5093],
+                zoom: 8,
             });
 
             window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

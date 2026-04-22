@@ -332,8 +332,8 @@
         }
 
         .auth-link.primary {
-            background: #1a7a68;
-            border-color: #136357;
+            background: #2fa58a;
+            border-color: #27917a;
             color: #ffffff;
         }
 
@@ -493,7 +493,7 @@
             border: 1px solid transparent;
             border-radius: 8px;
             background: transparent;
-            color: #136357;
+            color: #2fa58a;
             padding: 7px 10px;
             font-size: 0.78rem;
             line-height: 1.2;
@@ -507,8 +507,8 @@
         }
 
         .top-link:hover {
-            background: rgba(19, 99, 87, 0.07);
-            color: #0e4f43;
+            background: rgba(47, 165, 138, 0.11);
+            color: #27917a;
             border-color: transparent;
             box-shadow: none;
         }
@@ -522,7 +522,7 @@
 
         .top-link-head i {
             font-size: 0.92rem;
-            color: #136357;
+            color: #2fa58a;
             width: 16px;
             text-align: center;
             flex: 0 0 16px;

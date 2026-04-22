@@ -657,6 +657,100 @@
             scrollbar-width: none;
         }
 
+        .search-primary-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .search-primary-grid,
+        .search-filter-grid {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 8px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+
+        .search-filter-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border-top: 1px solid #dce7ef;
+            padding-top: 10px;
+        }
+
+        .filter-actions-inline {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+
+        .search-submit-btn {
+            height: 42px;
+            padding: 0 18px;
+            white-space: nowrap;
+        }
+
+        body.category-display-page .uniform-header {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 1050 !important;
+            min-height: 72px !important;
+            padding: 10px 16px !important;
+            border-bottom: 1px solid #d4e2ec !important;
+            background: #ffffff !important;
+            box-shadow: 0 6px 18px rgba(13, 43, 67, 0.08) !important;
+            backdrop-filter: none !important;
+        }
+
+        body.category-display-page .uniform-header .uniform-header-brand {
+            color: #103d59 !important;
+            font-size: 1.38rem !important;
+            letter-spacing: -0.03em !important;
+            text-shadow: none !important;
+        }
+
+        body.category-display-page .uniform-header .uniform-header-subline {
+            color: #5a7388 !important;
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+        }
+
+        body.category-display-page .uniform-header .uniform-header-search-mini,
+        body.category-display-page .uniform-header .header-search-mini {
+            display: flex !important;
+            min-width: 240px !important;
+            width: min(420px, 100%) !important;
+            border: 1px solid #c7d9e5 !important;
+            border-radius: 10px !important;
+            overflow: hidden !important;
+            background: #f8fcff !important;
+            box-shadow: none !important;
+        }
+
+        body.category-display-page .uniform-header .uniform-header-search-mini input,
+        body.category-display-page .uniform-header .header-search-mini input {
+            color: #1f425b !important;
+            padding: 9px 10px !important;
+            background: transparent !important;
+        }
+
+        body.category-display-page .uniform-header .uniform-header-search-mini button,
+        body.category-display-page .uniform-header .header-search-mini button {
+            width: auto !important;
+            padding: 0 10px !important;
+            height: 38px !important;
+            background: #0f6179 !important;
+            color: #ffffff !important;
+        }
+
         .search-box::-webkit-scrollbar {
             height: 8px;
         }
@@ -1537,7 +1631,68 @@
                 <div class="hero-banner-content">
                     <div class="search-sticky-wrap">
                         <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}" id="categorySearchForm">
-            @if (!in_array($categoryKey, ['marine-transport', 'land-transport'], true))
+            @if ($categoryKey === 'accommodation')
+                <div class="search-primary-row">
+                    <div class="grid search-primary-grid">
+                        <div class="field field-long">
+                            <label for="q">Search</label>
+                            <input id="q" name="q" type="text" value="{{ $filters['q'] ?? '' }}" placeholder="Atoll, island, place, or property name">
+                        </div>
+                        <div class="field field-date"><label for="checkin">Check-in Date</label><input id="checkin" name="checkin" type="date" value="{{ $filters['checkin'] ?? '' }}"></div>
+                        <div class="field field-date"><label for="checkout">Check-out Date</label><input id="checkout" name="checkout" type="date" value="{{ $filters['checkout'] ?? '' }}"></div>
+                        <div class="field field-short"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ $filters['adults'] ?? 2 }}"></div>
+                        <div class="field field-short"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ $filters['children'] ?? 0 }}"></div>
+                        <div class="field field-short"><label for="rooms">Rooms</label><input id="rooms" name="rooms" type="number" min="1" value="{{ $filters['rooms'] ?? 1 }}"></div>
+                    </div>
+                    <button class="primary search-submit-btn" type="submit">Search</button>
+                </div>
+                <div class="search-filter-row">
+                    <div class="grid search-filter-grid">
+                        <div class="field field-medium">
+                            <label for="atoll">Atoll</label>
+                            <select id="atoll" name="atoll">
+                                <option value="">All Atolls</option>
+                                @foreach ($atollOptions as $atoll)
+                                    <option value="{{ $atoll }}" {{ ($filters['atoll'] ?? '') === $atoll ? 'selected' : '' }}>{{ $atoll }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="field field-medium">
+                            <label for="island">Island / City</label>
+                            <select id="island" name="island">
+                                <option value="">All Islands/Cities</option>
+                                @foreach ($islandOptions as $island)
+                                    <option value="{{ $island }}" {{ ($filters['island'] ?? '') === $island ? 'selected' : '' }}>{{ $island }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="field field-medium">
+                            <label for="sort">Sort</label>
+                            <select id="sort" name="sort">
+                                <option value="recommended" {{ ($filters['sort'] ?? '') === 'recommended' ? 'selected' : '' }}>Recommended</option>
+                                <option value="most_wanted" {{ ($filters['sort'] ?? '') === 'most_wanted' ? 'selected' : '' }}>Most Wanted</option>
+                                <option value="most_booked" {{ ($filters['sort'] ?? '') === 'most_booked' ? 'selected' : '' }}>Most Booked</option>
+                                <option value="highest_reviews" {{ ($filters['sort'] ?? '') === 'highest_reviews' ? 'selected' : '' }}>Highest Reviews</option>
+                                <option value="price_low_high" {{ ($filters['sort'] ?? '') === 'price_low_high' ? 'selected' : '' }}>Price Low to High</option>
+                                <option value="price_high_low" {{ ($filters['sort'] ?? '') === 'price_high_low' ? 'selected' : '' }}>Price High to Low</option>
+                                <option value="distance_nearest" {{ ($filters['sort'] ?? '') === 'distance_nearest' ? 'selected' : '' }}>Nearest Distance</option>
+                            </select>
+                        </div>
+                        <div class="field field-short">
+                            <label for="min_price">Min Price</label>
+                            <input id="min_price" name="min_price" type="number" min="0" value="{{ $filters['min_price'] ?? 0 }}">
+                        </div>
+                        <div class="field field-short">
+                            <label for="max_price">Max Price</label>
+                            <input id="max_price" name="max_price" type="number" min="0" value="{{ $filters['max_price'] ?? 0 }}">
+                        </div>
+                    </div>
+                    <div class="filter-actions-inline">
+                        <button class="filter-popup-toggle" type="button" id="openFilterPopup"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Filters</button>
+                        <a href="/catalog/{{ $categoryKey }}">Clear all filters</a>
+                    </div>
+                </div>
+            @elseif (!in_array($categoryKey, ['marine-transport', 'land-transport'], true))
                 <div class="grid">
                     <div class="field field-long">
                         <label for="q">Search</label>
@@ -1584,15 +1739,7 @@
                 </div>
             @endif
 
-            @if ($categoryKey === 'accommodation')
-                <div class="grid">
-                    <div class="field field-date"><label for="checkin">Check-in Date</label><input id="checkin" name="checkin" type="date" value="{{ $filters['checkin'] ?? '' }}"></div>
-                    <div class="field field-date"><label for="checkout">Check-out Date</label><input id="checkout" name="checkout" type="date" value="{{ $filters['checkout'] ?? '' }}"></div>
-                    <div class="field field-short"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ $filters['adults'] ?? 2 }}"></div>
-                    <div class="field field-short"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ $filters['children'] ?? 0 }}"></div>
-                    <div class="field field-short"><label for="rooms">Rooms</label><input id="rooms" name="rooms" type="number" min="1" value="{{ $filters['rooms'] ?? 1 }}"></div>
-                </div>
-            @elseif ($categoryKey === 'marine-transport' || $categoryKey === 'land-transport')
+            @if ($categoryKey === 'marine-transport' || $categoryKey === 'land-transport')
                 <div class="grid">
                     <div class="field field-long">
                         <label for="origin_point">From</label>
@@ -1809,11 +1956,13 @@
                 </div>
             @endif
 
-            <div class="actions">
-                <button class="filter-popup-toggle" type="button" id="openFilterPopup"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Filters</button>
-                <button class="primary" type="submit">Apply Filters</button>
-                <a href="/catalog/{{ $categoryKey }}">Clear all filters</a>
-            </div>
+            @if ($categoryKey !== 'accommodation')
+                <div class="actions">
+                    <button class="filter-popup-toggle" type="button" id="openFilterPopup"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Filters</button>
+                    <button class="primary" type="submit">Apply Filters</button>
+                    <a href="/catalog/{{ $categoryKey }}">Clear all filters</a>
+                </div>
+            @endif
 
             <div class="filter-popup-backdrop" id="filterPopupBackdrop" hidden>
                 <div class="filter-popup" role="dialog" aria-modal="true" aria-labelledby="filterPopupTitle">
@@ -2169,6 +2318,10 @@
             const page = document.querySelector('.page');
             const header = document.querySelector('.header-bar');
             if (!page || !header) {
+                return;
+            }
+
+            if (header.matches('[data-uniform-header]')) {
                 return;
             }
 

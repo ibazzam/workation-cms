@@ -1381,8 +1381,19 @@
             width: 100%;
         }
 
+        .listing-management-table tr.is-editing {
+            display: block;
+            width: 100%;
+        }
+
+        .listing-management-table tr.is-editing .listing-cell-actions-cell {
+            display: block;
+            width: 100%;
+        }
+
         .listing-management-table tr.is-editing .listing-cell-actions {
             grid-template-columns: 1fr;
+            width: 100%;
         }
 
         .listing-management-table tr.is-media-open .listing-cell-main {
@@ -1494,6 +1505,7 @@
         }
 
         .update-row-form .ops-textarea,
+        .update-row-form .edit-map-picker,
         .update-row-form .ops-form-grid,
         .update-row-form .feature-checklist,
         .update-row-form .inline-actions {
@@ -4624,6 +4636,73 @@
                 });
             }
 
+            function initEditLocationMap(form) {
+                if (!window.L || !form) {
+                    return;
+                }
+                const propertyId = String(form.getAttribute('data-property-edit-form') || '').trim();
+                if (!propertyId) {
+                    return;
+                }
+                const mapEl = document.getElementById('editPropertyMap_' + propertyId);
+                if (!mapEl || mapEl.dataset.mapReady === '1') {
+                    return;
+                }
+
+                const latInput = form.querySelector('input[name="map_latitude"]');
+                const lngInput = form.querySelector('input[name="map_longitude"]');
+                const placeInput = form.querySelector('input[name="map_place_id"]');
+                const coordsLabel = document.getElementById('editMapCoords_' + propertyId);
+
+                const latValue = Number(latInput && latInput.value ? latInput.value : 4.1755);
+                const lngValue = Number(lngInput && lngInput.value ? lngInput.value : 73.5093);
+                const defaultLat = Number.isFinite(latValue) ? latValue : 4.1755;
+                const defaultLng = Number.isFinite(lngValue) ? lngValue : 73.5093;
+
+                const map = window.L.map(mapEl, {
+                    preferCanvas: true,
+                    zoomControl: true,
+                    worldCopyJump: true,
+                    inertia: true,
+                    fadeAnimation: false,
+                    markerZoomAnimation: false,
+                }).setView([defaultLat, defaultLng], 12);
+
+                window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(map);
+
+                const marker = window.L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+
+                const updatePin = function (latlng) {
+                    const lat = Number(latlng.lat.toFixed(6));
+                    const lng = Number(latlng.lng.toFixed(6));
+                    if (latInput) latInput.value = String(lat);
+                    if (lngInput) lngInput.value = String(lng);
+                    if (placeInput && placeInput.value.trim() === '') {
+                        placeInput.value = 'PIN-' + lat + ',' + lng;
+                    }
+                    marker.setLatLng([lat, lng]);
+                    if (coordsLabel) {
+                        coordsLabel.textContent = 'Pinned: ' + lat + ', ' + lng;
+                    }
+                };
+
+                map.on('click', function (event) {
+                    updatePin(event.latlng);
+                });
+
+                marker.on('dragend', function () {
+                    updatePin(marker.getLatLng());
+                });
+
+                mapEl.dataset.mapReady = '1';
+                setTimeout(function () {
+                    map.invalidateSize();
+                }, 180);
+            }
+
             function openEditForm(selector) {
                 const form = document.querySelector(selector);
                 if (!form) {
@@ -4638,6 +4717,7 @@
                 if (row) {
                     row.classList.add('is-editing');
                 }
+                initEditLocationMap(form);
                 const firstInput = form.querySelector('input, select, textarea');
                 if (firstInput) {
                     firstInput.focus();
@@ -5787,6 +5867,11 @@
                                 });
                             });
                             form.hidden = false;
+                            const row = form.closest('tr');
+                            if (row) {
+                                row.classList.add('is-editing');
+                            }
+                            initEditLocationMap(form);
                         }
                     });
                 });
@@ -5796,7 +5881,13 @@
                         const editId = String(button.getAttribute('data-property-edit-id') || '').trim();
                         if (!editId) return;
                         const form = document.querySelector('[data-property-edit-form="' + editId + '"]');
-                        if (form) form.hidden = true;
+                        if (form) {
+                            form.hidden = true;
+                            const row = form.closest('tr');
+                            if (row) {
+                                row.classList.remove('is-editing');
+                            }
+                        }
                     });
                 });
 

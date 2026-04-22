@@ -4636,6 +4636,84 @@
                 });
             }
 
+            function initEditLocationSelectors(form) {
+                if (!form) {
+                    return;
+                }
+
+                const countrySelect = form.querySelector('[data-edit-country]');
+                const stateSelect = form.querySelector('[data-edit-state]');
+                const citySelect = form.querySelector('[data-edit-city]');
+                if (!countrySelect || !stateSelect || !citySelect) {
+                    return;
+                }
+
+                const refreshStatesAndCities = function () {
+                    const locationTree = getCurrentLocationTree();
+                    const selectedCountry = countrySelect.dataset.selectedValue || countrySelect.value || 'Maldives';
+
+                    ensureSelectHasOption(countrySelect, selectedCountry);
+                    countrySelect.value = selectedCountry;
+
+                    const states = Object.keys(locationTree[selectedCountry] || {});
+                    rebuildSelect(stateSelect, states, 'Select atoll');
+
+                    const selectedState = stateSelect.dataset.selectedValue || stateSelect.value || '';
+                    ensureSelectHasOption(stateSelect, selectedState);
+                    if (selectedState && Array.from(stateSelect.options).some((option) => option.value === selectedState)) {
+                        stateSelect.value = selectedState;
+                    } else {
+                        stateSelect.value = states[0] || '';
+                    }
+
+                    const cities = (locationTree[selectedCountry] || {})[stateSelect.value] || [];
+                    rebuildSelect(citySelect, cities, 'Select island');
+
+                    const selectedCity = citySelect.dataset.selectedValue || citySelect.value || '';
+                    ensureSelectHasOption(citySelect, selectedCity);
+                    if (selectedCity && Array.from(citySelect.options).some((option) => option.value === selectedCity)) {
+                        citySelect.value = selectedCity;
+                    } else if (cities.length > 0) {
+                        citySelect.value = cities[0];
+                    }
+
+                    countrySelect.dataset.selectedValue = '';
+                    stateSelect.dataset.selectedValue = '';
+                    citySelect.dataset.selectedValue = '';
+                };
+
+                const refreshCities = function () {
+                    const locationTree = getCurrentLocationTree();
+                    const country = countrySelect.value || 'Maldives';
+                    const cities = (locationTree[country] || {})[stateSelect.value] || [];
+                    const selectedCity = citySelect.dataset.selectedValue || citySelect.value || '';
+
+                    rebuildSelect(citySelect, cities, 'Select island');
+                    ensureSelectHasOption(citySelect, selectedCity);
+                    if (selectedCity && Array.from(citySelect.options).some((option) => option.value === selectedCity)) {
+                        citySelect.value = selectedCity;
+                    } else if (cities.length > 0) {
+                        citySelect.value = cities[0];
+                    }
+                    citySelect.dataset.selectedValue = '';
+                };
+
+                if (countrySelect.dataset.locationBound !== '1') {
+                    countrySelect.addEventListener('change', function () {
+                        refreshStatesAndCities();
+                    });
+                    stateSelect.addEventListener('change', function () {
+                        refreshCities();
+                    });
+                    countrySelect.dataset.locationBound = '1';
+                }
+
+                refreshStatesAndCities();
+                getLocationTree().then(function () {
+                    refreshStatesAndCities();
+                });
+            }
+
             function initEditLocationMap(form) {
                 if (!window.L || !form) {
                     return;
@@ -4717,6 +4795,7 @@
                 if (row) {
                     row.classList.add('is-editing');
                 }
+                initEditLocationSelectors(form);
                 initEditLocationMap(form);
                 const firstInput = form.querySelector('input, select, textarea');
                 if (firstInput) {
@@ -5871,6 +5950,7 @@
                             if (row) {
                                 row.classList.add('is-editing');
                             }
+                            initEditLocationSelectors(form);
                             initEditLocationMap(form);
                         }
                     });

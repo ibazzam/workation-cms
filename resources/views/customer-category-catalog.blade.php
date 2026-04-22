@@ -542,7 +542,7 @@
             transform: translateX(-50%);
             width: calc(100% - 24px);
             z-index: 2;
-            display: grid;
+            display: none;
             gap: 12px;
         }
 

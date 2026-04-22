@@ -3953,6 +3953,12 @@ Route::get('/property/{property}', function (Request $request, int $property) {
     ], static fn ($v) => $v !== '')));
 
     $nearbyProperties = collect();
+    $nearbyRadiusKm = (float) $request->query('nearby_radius_km', 25);
+    if (!is_finite($nearbyRadiusKm) || $nearbyRadiusKm <= 0) {
+        $nearbyRadiusKm = 25.0;
+    }
+    $nearbyRadiusKm = max(1.0, min(200.0, $nearbyRadiusKm));
+    $nearbyUsesCoordinateRadius = false;
     if (Schema::hasTable('vendor_properties')) {
         $propertyColumns = Schema::getColumnListing('vendor_properties');
         $coordLatCandidates = ['map_latitude', 'latitude', 'lat', 'location_lat', 'geo_lat'];
@@ -4068,14 +4074,16 @@ Route::get('/property/{property}', function (Request $request, int $property) {
             ->values();
 
         if ($sourceLat !== null && $sourceLng !== null) {
+            $nearbyUsesCoordinateRadius = true;
             $nearbyProperties = $preparedNearby
                 ->filter(static fn (array $item) => is_float($item['distance_km']) || is_int($item['distance_km']))
+                ->filter(fn (array $item) => (float) $item['distance_km'] <= $nearbyRadiusKm)
                 ->sortBy('distance_km')
                 ->take(6)
                 ->values();
         }
 
-        if ($nearbyProperties->isEmpty()) {
+        if (!$nearbyUsesCoordinateRadius && $nearbyProperties->isEmpty()) {
             $sourceIsland = strtolower(trim((string) ($propertyRow->island ?? '')));
             $sourceCity = strtolower(trim((string) ($propertyRow->city ?? '')));
             $sourceAtoll = strtolower(trim((string) ($propertyRow->atoll ?? '')));
@@ -4096,7 +4104,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
                 ->values();
         }
 
-        if ($nearbyProperties->isEmpty()) {
+        if (!$nearbyUsesCoordinateRadius && $nearbyProperties->isEmpty()) {
             $nearbyProperties = $preparedNearby
                 ->take(6)
                 ->values();
@@ -4159,6 +4167,8 @@ Route::get('/property/{property}', function (Request $request, int $property) {
             'children' => max(0, (int) $request->query('children', 0)),
         ],
         'nearbyProperties' => $nearbyProperties,
+        'nearbyRadiusKm' => $nearbyRadiusKm,
+        'nearbyUsesCoordinateRadius' => $nearbyUsesCoordinateRadius,
     ]);
 });
 

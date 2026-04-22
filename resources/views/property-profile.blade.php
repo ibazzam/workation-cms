@@ -1500,6 +1500,11 @@
         $rooms = $rooms ?? collect();
         $roomMediaByRoom = $roomMediaByRoom ?? collect();
         $propertyFacilities = $propertyFacilities ?? collect();
+        $nearbyRadiusKm = (float) ($nearbyRadiusKm ?? 25);
+        if (!is_finite($nearbyRadiusKm) || $nearbyRadiusKm <= 0) {
+            $nearbyRadiusKm = 25;
+        }
+        $nearbyUsesCoordinateRadius = (bool) ($nearbyUsesCoordinateRadius ?? false);
         $nearbyProperties = collect($nearbyProperties ?? [])->map(static function ($item) {
             if (is_array($item)) {
                 return $item;
@@ -2064,7 +2069,12 @@
 
         @if ($nearbyProperties->isNotEmpty())
             <section id="nearby-properties-section" class="section nearby-properties-section" aria-label="Nearby properties">
-                <h2>Nearby Properties</h2>
+                <h2>
+                    Nearby Properties
+                    @if ($nearbyUsesCoordinateRadius)
+                        within {{ rtrim(rtrim(number_format($nearbyRadiusKm, 1), '0'), '.') }} km
+                    @endif
+                </h2>
                 <div class="nearby-grid">
                     @foreach ($nearbyProperties as $nearby)
                         @php

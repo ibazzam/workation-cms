@@ -1406,12 +1406,117 @@
             color: #43627a;
         }
 
+        @media (max-width: 1100px) {
+            .page.category-accommodation {
+                width: calc(100% - 18px);
+            }
+
+            .page.category-accommodation .catalog-results-layout {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+
+            .page.category-accommodation .catalog-results-list {
+                height: auto;
+                max-height: none;
+                border-right: 0;
+            }
+
+            .page.category-accommodation .catalog-map-panel {
+                height: 380px;
+                min-height: 380px;
+                border-top: 1px solid #dce8f0;
+            }
+
+            .page.category-accommodation .category-map-wrap {
+                min-height: 320px;
+            }
+
+            .search-sticky-wrap.is-fixed {
+                position: static;
+                top: auto;
+                left: auto;
+                transform: none;
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 820px) {
+            :root {
+                --listing-thumb-width: 156px;
+                --listing-thumb-height: 120px;
+            }
+
+            .search-primary-row {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .search-submit-btn {
+                width: 100%;
+            }
+
+            .search-filter-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            .filter-actions-inline {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+            }
+
+            .field.field-short,
+            .field.field-medium,
+            .field.field-date,
+            .field.field-long {
+                flex: 0 0 156px;
+                width: 156px;
+            }
+
+            .page.category-accommodation .card-link-accommodation {
+                grid-template-columns: var(--listing-thumb-width) minmax(0, 1fr);
+                gap: 10px;
+            }
+
+            .page.category-accommodation .card-body-accommodation {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr);
+                gap: 8px;
+            }
+
+            .page.category-accommodation .card-side {
+                justify-items: start;
+                text-align: left;
+                gap: 4px;
+            }
+
+            .page.category-accommodation .card-side .card-action-btn {
+                justify-self: start;
+            }
+
+            .page.category-accommodation .catalog-map-head {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .page.category-accommodation .map-radius-controls {
+                justify-content: flex-start;
+            }
+        }
+
 
 
         @media (max-width: 680px) {
             .page {
                 width: calc(100% - 18px);
                 margin: 10px auto 22px;
+            }
+
+            .page.category-accommodation {
+                width: calc(100% - 18px);
             }
 
             .page.is-header-hidden .header-bar {
@@ -1446,8 +1551,33 @@
                 top: auto;
             }
 
+            .page.category-accommodation .catalog-map-panel {
+                height: 320px;
+                min-height: 320px;
+            }
+
+            .page.category-accommodation .category-map-wrap {
+                min-height: 260px;
+            }
+
             #categoryResultsMap {
                 height: 300px;
+            }
+
+            .page.category-accommodation .card-link-accommodation {
+                grid-template-columns: 1fr;
+            }
+
+            .page.category-accommodation .card img {
+                width: 100%;
+                max-width: 100%;
+                height: 180px;
+            }
+
+            .page.category-accommodation .card-main,
+            .page.category-accommodation .card-side {
+                justify-items: start;
+                text-align: left;
             }
 
             .filter-popup-grid {

@@ -3952,6 +3952,202 @@ Route::get('/property/{property}', function (Request $request, int $property) {
         trim((string) ($propertyRow->city ?? '')),
     ], static fn ($v) => $v !== '')));
 
+    $nearbyProperties = collect();
+    $nearbyRadiusKm = (float) $request->query('nearby_radius_km', 25);
+    if (!is_finite($nearbyRadiusKm) || $nearbyRadiusKm <= 0) {
+        $nearbyRadiusKm = 25.0;
+    }
+    $nearbyRadiusKm = max(1.0, min(200.0, $nearbyRadiusKm));
+    $nearbyUsesCoordinateRadius = false;
+    if (Schema::hasTable('vendor_properties')) {
+        $propertyColumns = Schema::getColumnListing('vendor_properties');
+        $coordLatCandidates = ['map_latitude', 'latitude', 'lat', 'location_lat', 'geo_lat'];
+        $coordLngCandidates = ['map_longitude', 'longitude', 'lng', 'location_lng', 'geo_lng'];
+        $availableCoordColumns = array_values(array_unique(array_filter(array_merge($coordLatCandidates, $coordLngCandidates), static fn ($column) => in_array($column, $propertyColumns, true))));
+
+        $normalizeCoordinate = static function ($value, float $min, float $max): ?float {
+            if ($value === null) {
+                return null;
+            }
+
+            $raw = trim(str_replace(',', '.', (string) $value));
+            if ($raw === '' || !is_numeric($raw)) {
+                return null;
+            }
+
+            $parsed = (float) $raw;
+            if ($parsed < $min || $parsed > $max) {
+                return null;
+            }
+
+            return $parsed;
+        };
+
+        $pickCoordinate = static function ($row, array $candidates, callable $normalize, float $min, float $max): ?float {
+            foreach ($candidates as $column) {
+                if (!is_object($row) || !property_exists($row, $column)) {
+                    continue;
+                }
+
+                $value = $normalize($row->{$column}, $min, $max);
+                if ($value !== null) {
+                    return $value;
+                }
+            }
+
+            return null;
+        };
+
+        $distanceKmBetween = static function (float $lat1, float $lng1, float $lat2, float $lng2): float {
+            $earthRadius = 6371.0;
+            $latFrom = deg2rad($lat1);
+            $lngFrom = deg2rad($lng1);
+            $latTo = deg2rad($lat2);
+            $lngTo = deg2rad($lng2);
+
+            $latDelta = $latTo - $latFrom;
+            $lngDelta = $lngTo - $lngFrom;
+
+            $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) + cos($latFrom) * cos($latTo) * pow(sin($lngDelta / 2), 2)));
+
+            return $earthRadius * $angle;
+        };
+
+        $sourceLat = $pickCoordinate($propertyRow, $coordLatCandidates, $normalizeCoordinate, -90.0, 90.0);
+        $sourceLng = $pickCoordinate($propertyRow, $coordLngCandidates, $normalizeCoordinate, -180.0, 180.0);
+
+        $baseSelectColumns = array_values(array_filter([
+            'id',
+            'name',
+            'base_price',
+            'currency',
+            'listing_category',
+            'city',
+            'island',
+            'atoll',
+            in_array('updated_at', $propertyColumns, true) ? 'updated_at' : null,
+        ]));
+
+        $candidateRowsQuery = DB::table('vendor_properties')
+            ->select(array_values(array_unique(array_merge($baseSelectColumns, $availableCoordColumns))))
+            ->where('status', 'active')
+            ->where('id', '!=', (int) $propertyRow->id);
+
+        $currentCategory = trim((string) ($propertyRow->listing_category ?? ''));
+        if ($currentCategory !== '' && in_array('listing_category', $propertyColumns, true)) {
+            $candidateRowsQuery->where('listing_category', $currentCategory);
+        }
+
+        if (in_array('updated_at', $propertyColumns, true)) {
+            $candidateRowsQuery->orderByDesc('updated_at');
+        } else {
+            $candidateRowsQuery->orderByDesc('id');
+        }
+
+        $candidateRows = $candidateRowsQuery->limit(500)->get();
+
+        $preparedNearby = $candidateRows
+            ->map(function ($row) use ($pickCoordinate, $normalizeCoordinate, $coordLatCandidates, $coordLngCandidates, $sourceLat, $sourceLng, $distanceKmBetween) {
+                $lat = $pickCoordinate($row, $coordLatCandidates, $normalizeCoordinate, -90.0, 90.0);
+                $lng = $pickCoordinate($row, $coordLngCandidates, $normalizeCoordinate, -180.0, 180.0);
+                $distanceKm = null;
+
+                if ($sourceLat !== null && $sourceLng !== null && $lat !== null && $lng !== null) {
+                    $distanceKm = $distanceKmBetween($sourceLat, $sourceLng, $lat, $lng);
+                }
+
+                return [
+                    'id' => (int) ($row->id ?? 0),
+                    'name' => trim((string) ($row->name ?? 'Property')),
+                    'base_price' => (float) ($row->base_price ?? 0),
+                    'currency' => strtoupper(trim((string) ($row->currency ?? 'MVR'))),
+                    'city' => trim((string) ($row->city ?? '')),
+                    'island' => trim((string) ($row->island ?? '')),
+                    'atoll' => trim((string) ($row->atoll ?? '')),
+                    'lat' => $lat,
+                    'lng' => $lng,
+                    'distance_km' => $distanceKm,
+                    'url' => '/property/' . (int) ($row->id ?? 0),
+                ];
+            })
+            ->filter(static fn (array $item) => $item['id'] > 0 && $item['name'] !== '')
+            ->values();
+
+        if ($sourceLat !== null && $sourceLng !== null) {
+            $nearbyUsesCoordinateRadius = true;
+            $nearbyProperties = $preparedNearby
+                ->filter(static fn (array $item) => is_float($item['distance_km']) || is_int($item['distance_km']))
+                ->filter(fn (array $item) => (float) $item['distance_km'] <= $nearbyRadiusKm)
+                ->sortBy('distance_km')
+                ->take(6)
+                ->values();
+        }
+
+        if (!$nearbyUsesCoordinateRadius && $nearbyProperties->isEmpty()) {
+            $sourceIsland = strtolower(trim((string) ($propertyRow->island ?? '')));
+            $sourceCity = strtolower(trim((string) ($propertyRow->city ?? '')));
+            $sourceAtoll = strtolower(trim((string) ($propertyRow->atoll ?? '')));
+
+            $nearbyProperties = $preparedNearby
+                ->filter(static function (array $item) use ($sourceIsland, $sourceCity, $sourceAtoll): bool {
+                    $itemIsland = strtolower(trim((string) ($item['island'] ?? '')));
+                    $itemCity = strtolower(trim((string) ($item['city'] ?? '')));
+                    $itemAtoll = strtolower(trim((string) ($item['atoll'] ?? '')));
+
+                    $matchesIsland = $sourceIsland !== '' && $itemIsland !== '' && $sourceIsland === $itemIsland;
+                    $matchesCity = $sourceCity !== '' && $itemCity !== '' && $sourceCity === $itemCity;
+                    $matchesAtoll = $sourceAtoll !== '' && $itemAtoll !== '' && $sourceAtoll === $itemAtoll;
+
+                    return $matchesIsland || $matchesCity || $matchesAtoll;
+                })
+                ->take(6)
+                ->values();
+        }
+
+        if (!$nearbyUsesCoordinateRadius && $nearbyProperties->isEmpty()) {
+            $nearbyProperties = $preparedNearby
+                ->take(6)
+                ->values();
+        }
+
+        $nearbyPropertyIds = $nearbyProperties->pluck('id')->filter(static fn ($id) => (int) $id > 0)->map(static fn ($id) => (int) $id)->values();
+        $nearbyPropertyThumbById = collect();
+
+        if ($nearbyPropertyIds->isNotEmpty() && Schema::hasTable('vendor_listing_media')) {
+            $nearbyPropertyThumbById = DB::table('vendor_listing_media')
+                ->where('entity_type', 'property')
+                ->whereIn('entity_id', $nearbyPropertyIds->all())
+                ->orderByDesc('is_primary')
+                ->orderByDesc('created_at')
+                ->get()
+                ->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0))
+                ->map(static function ($items) {
+                    $firstMedia = collect($items)->first();
+                    if (!$firstMedia) {
+                        return null;
+                    }
+
+                    $mediaId = (int) ($firstMedia->id ?? 0);
+                    return $mediaId > 0 ? ('/media/vendor/' . $mediaId . '/thumb') : null;
+                });
+        }
+
+        $nearbyProperties = $nearbyProperties
+            ->map(static function (array $item) use ($nearbyPropertyThumbById): array {
+                $locationLine = trim(implode(', ', array_filter([
+                    trim((string) ($item['island'] ?? '')),
+                    trim((string) ($item['city'] ?? '')),
+                    trim((string) ($item['atoll'] ?? '')),
+                ], static fn ($value) => $value !== '')));
+
+                $item['location_line'] = $locationLine !== '' ? ($locationLine . ', Maldives') : 'Maldives';
+                $item['thumbnail_url'] = (string) ($nearbyPropertyThumbById->get((int) ($item['id'] ?? 0)) ?? '');
+
+                return $item;
+            })
+            ->values();
+    }
+
     return view('property-profile', [
         'property' => $propertyRow,
         'propertyMedia' => $propertyMedia,
@@ -3970,6 +4166,9 @@ Route::get('/property/{property}', function (Request $request, int $property) {
             'adults' => max(1, (int) $request->query('adults', 2)),
             'children' => max(0, (int) $request->query('children', 0)),
         ],
+        'nearbyProperties' => $nearbyProperties,
+        'nearbyRadiusKm' => $nearbyRadiusKm,
+        'nearbyUsesCoordinateRadius' => $nearbyUsesCoordinateRadius,
     ]);
 });
 

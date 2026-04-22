@@ -1447,9 +1447,22 @@
                 --listing-thumb-height: 120px;
             }
 
+            .search-box > .grid,
+            .search-box > .actions {
+                overflow: visible;
+            }
+
             .search-primary-row {
                 grid-template-columns: 1fr;
                 gap: 8px;
+            }
+
+            .search-primary-grid,
+            .search-filter-grid {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+                overflow: visible;
             }
 
             .search-submit-btn {
@@ -1472,8 +1485,9 @@
             .field.field-medium,
             .field.field-date,
             .field.field-long {
-                flex: 0 0 156px;
-                width: 156px;
+                flex: 1 1 auto;
+                width: auto;
+                min-width: 0;
             }
 
             .page.category-accommodation .card-link-accommodation {
@@ -1513,6 +1527,21 @@
             .page {
                 width: calc(100% - 18px);
                 margin: 10px auto 22px;
+            }
+
+            .search-primary-grid,
+            .search-filter-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-actions-inline {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-actions-inline > * {
+                width: 100%;
+                text-align: center;
             }
 
             .page.category-accommodation {
@@ -1714,8 +1743,9 @@
             .field.field-medium,
             .field.field-date,
             .field.field-long {
-                flex: 0 0 148px;
-                width: 148px;
+                flex: 1 1 auto;
+                width: 100%;
+                min-width: 0;
             }
 
             .actions {

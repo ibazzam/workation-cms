@@ -2183,8 +2183,8 @@
                             $actionLabel = $categoryKey === 'accommodation' ? 'View Deal' : 'Book Now';
                         @endphp
                         @php
-                            $rawLat = $property->latitude ?? $property->lat ?? $property->location_lat ?? $property->geo_lat ?? $property->map_latitude ?? null;
-                            $rawLng = $property->longitude ?? $property->lng ?? $property->location_lng ?? $property->geo_lng ?? $property->map_longitude ?? null;
+                            $rawLat = $property->map_latitude ?? $property->latitude ?? $property->lat ?? $property->location_lat ?? $property->geo_lat ?? null;
+                            $rawLng = $property->map_longitude ?? $property->longitude ?? $property->lng ?? $property->location_lng ?? $property->geo_lng ?? null;
                             $lat = is_numeric($rawLat) ? (float) $rawLat : null;
                             $lng = is_numeric($rawLng) ? (float) $rawLng : null;
                         @endphp

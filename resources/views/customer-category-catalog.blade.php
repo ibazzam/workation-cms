@@ -540,8 +540,10 @@
         .hero-banner-content {
             position: absolute;
             bottom: 22px;
-            left: 50%;
-            transform: translateX(-50%);
+            left: 0;
+            right: 0;
+            margin: 0 auto;
+            transform: none;
             width: min(1180px, calc(100% - 24px));
             z-index: 2;
             display: grid;
@@ -2724,7 +2726,7 @@
             const markerClassByDensity = items.length > 80
                 ? 'is-super-compact'
                 : (items.length > 45 ? 'is-compact' : '');
-            const shouldUseFallbackCoords = !isAccommodationCatalog;
+            const shouldUseFallbackCoords = true;
             const bounds = [];
             const markerById = new Map();
             const markerElementById = new Map();

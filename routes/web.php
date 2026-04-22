@@ -3594,8 +3594,8 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             }
         }
 
-        $latitudeColumn = $firstExistingColumn(['latitude', 'lat', 'location_lat', 'geo_lat']);
-        $longitudeColumn = $firstExistingColumn(['longitude', 'lng', 'location_lng', 'geo_lng']);
+        $latitudeColumn = $firstExistingColumn(['latitude', 'lat', 'location_lat', 'geo_lat', 'map_latitude']);
+        $longitudeColumn = $firstExistingColumn(['longitude', 'lng', 'location_lng', 'geo_lng', 'map_longitude']);
 
         if (
             $distanceKm > 0

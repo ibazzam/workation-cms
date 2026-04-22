@@ -18,8 +18,8 @@
             --brand: #0f6179;
             --brand-strong: #0b4f66;
             --accent: #f3a337;
-            --listing-thumb-width: 176px;
-            --listing-thumb-height: 132px;
+            --listing-thumb-width: 210px;
+            --listing-thumb-height: 158px;
         }
 
         * { box-sizing: border-box; }
@@ -572,7 +572,7 @@
         .search-sticky-wrap {
             position: sticky;
             top: 8px;
-            z-index: 2;
+            z-index: 50;
             width: 100%;
             padding: 0;
             transform: none;
@@ -1111,10 +1111,11 @@
             gap: 0;
             align-items: start;
             height: calc(100vh - 220px);
+            isolation: isolate;
         }
 
         .page.category-accommodation .catalog-results-layout {
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 0.72fr 1.28fr;
         }
 
         .catalog-results-list {
@@ -1234,8 +1235,8 @@
 
         .page.category-accommodation .card-link-accommodation {
             display: grid;
-            grid-template-columns: var(--listing-thumb-width) minmax(0, 1fr) 200px;
-            gap: 16px;
+            grid-template-columns: var(--listing-thumb-width) minmax(0, 1fr) 170px;
+            gap: 12px;
             align-items: start;
         }
 
@@ -2249,8 +2250,8 @@
                             $actionLabel = $categoryKey === 'accommodation' ? 'View Deal' : 'Book Now';
                         @endphp
                         @php
-                            $rawLat = $property->latitude ?? $property->lat ?? $property->location_lat ?? $property->geo_lat ?? $property->map_latitude ?? null;
-                            $rawLng = $property->longitude ?? $property->lng ?? $property->location_lng ?? $property->geo_lng ?? $property->map_longitude ?? null;
+                            $rawLat = $property->map_latitude ?? $property->latitude ?? $property->lat ?? $property->location_lat ?? $property->geo_lat ?? null;
+                            $rawLng = $property->map_longitude ?? $property->longitude ?? $property->lng ?? $property->location_lng ?? $property->geo_lng ?? null;
                             $lat = is_numeric($rawLat) ? (float) $rawLat : null;
                             $lng = is_numeric($rawLng) ? (float) $rawLng : null;
                         @endphp

@@ -1143,6 +1143,46 @@
             background: #f5fbff;
         }
 
+        .catalog-map-head-main {
+            display: grid;
+            gap: 3px;
+            min-width: 0;
+        }
+
+        .map-radius-controls {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .map-radius-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 26px;
+            padding: 0 9px;
+            border-radius: 999px;
+            border: 1px solid #c4d9e8;
+            background: #ffffff;
+            color: #2a536e;
+            text-decoration: none;
+            font-size: 0.7rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .map-radius-chip:hover {
+            background: #eef7fd;
+        }
+
+        .map-radius-chip.is-active {
+            border-color: #0f6179;
+            background: #0f6179;
+            color: #ffffff;
+        }
+
         .catalog-map-head strong {
             color: #123f5d;
             font-size: 0.83rem;
@@ -2305,8 +2345,35 @@
             @endforeach
                 </div>
                 <aside class="catalog-map-panel" aria-label="Map of filtered category results">
+                    @php
+                        $mapRadiusOptions = [5, 10, 25, 50];
+                        $mapBaseQuery = request()->query();
+                        unset($mapBaseQuery['distance_km']);
+                        $activeMapRadius = is_numeric($filters['distance_km'] ?? null)
+                            ? (float) ($filters['distance_km'] ?? 0)
+                            : 25.0;
+                        if ($activeMapRadius <= 0) {
+                            $activeMapRadius = 25.0;
+                        }
+                    @endphp
                     <div class="catalog-map-head">
-                        <span>Map View</span>
+                        <div class="catalog-map-head-main">
+                            <strong>Map View</strong>
+                        </div>
+                        <div class="map-radius-controls" aria-label="Map search radius">
+                            @foreach ($mapRadiusOptions as $radiusOption)
+                                @php
+                                    $radiusValue = (float) $radiusOption;
+                                    $radiusQuery = array_merge($mapBaseQuery, [
+                                        'distance_km' => $radiusOption,
+                                        'sort' => (string) ($filters['sort'] ?? '') !== '' ? (string) ($filters['sort'] ?? '') : 'distance_nearest',
+                                    ]);
+                                    $radiusUrl = url()->current() . '?' . http_build_query($radiusQuery);
+                                    $isActiveRadius = abs($activeMapRadius - $radiusValue) < 0.51;
+                                @endphp
+                                <a class="map-radius-chip{{ $isActiveRadius ? ' is-active' : '' }}" href="{{ $radiusUrl }}" data-radius-km="{{ $radiusOption }}">{{ $radiusOption }} km</a>
+                            @endforeach
+                        </div>
                         <span id="mapResultCount">0 results</span>
                     </div>
                     <div class="category-map-wrap">
@@ -2778,11 +2845,16 @@
                     const southWest = mapBounds.getSouthWest();
                     const deltaLat = Math.abs(northEast.lat - southWest.lat);
                     const approxDistanceKm = Math.max(1, Math.round((deltaLat * 111) / 2));
+                    const activeRadiusChip = document.querySelector('.map-radius-chip.is-active[data-radius-km]');
+                    const chipRadiusKm = activeRadiusChip ? Number(activeRadiusChip.getAttribute('data-radius-km')) : null;
+                    const selectedDistanceKm = Number.isFinite(chipRadiusKm) && chipRadiusKm > 0
+                        ? Math.round(chipRadiusKm)
+                        : approxDistanceKm;
 
                     const url = new URL(window.location.href);
                     url.searchParams.set('user_lat', mapCenter.lat.toFixed(6));
                     url.searchParams.set('user_lng', mapCenter.lng.toFixed(6));
-                    url.searchParams.set('distance_km', String(approxDistanceKm));
+                    url.searchParams.set('distance_km', String(selectedDistanceKm));
                     if (!url.searchParams.get('sort')) {
                         url.searchParams.set('sort', 'distance_nearest');
                     }

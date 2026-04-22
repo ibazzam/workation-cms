@@ -1094,6 +1094,8 @@
 
         .category-map-wrap {
             position: relative;
+            flex: 1;
+            min-height: 420px;
         }
 
         #categoryResultsMap {
@@ -1121,6 +1123,60 @@
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(15, 97, 121, 0.28);
             white-space: nowrap;
+        }
+
+        .page.category-accommodation .card-link {
+            display: grid;
+            grid-template-columns: 120px minmax(0, 1fr);
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .page.category-accommodation .card-body {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 4px 14px;
+            align-items: start;
+        }
+
+        .page.category-accommodation .card-city,
+        .page.category-accommodation .card h3,
+        .page.category-accommodation .card-stars,
+        .page.category-accommodation .card-review {
+            grid-column: 1;
+        }
+
+        .page.category-accommodation .card-price,
+        .page.category-accommodation .card-offer,
+        .page.category-accommodation .card-action-btn {
+            grid-column: 2;
+            justify-self: end;
+            text-align: right;
+            margin-top: 0;
+            margin-bottom: 0;
+        }
+
+        .page.category-accommodation .card-action-btn {
+            align-self: center;
+        }
+
+        .page.category-default .hero-banner-content {
+            display: none;
+        }
+
+        .page.category-default .catalog-results-layout {
+            display: block;
+            height: auto;
+        }
+
+        .page.category-default .catalog-results-list {
+            height: auto;
+            overflow: visible;
+            border-right: 0;
+        }
+
+        .page.category-default .catalog-map-panel {
+            display: none;
         }
 
         .leaflet-control-zoom {
@@ -1460,11 +1516,11 @@
         }
     @endphp
 
-    <main class="page" data-api-base="{{ $apiBase }}" data-category-key="{{ $categoryKey }}">
+    <main class="page {{ $categoryKey === 'accommodation' ? 'category-accommodation' : 'category-default' }}" data-api-base="{{ $apiBase }}" data-category-key="{{ $categoryKey }}">
         <section class="journey-hero" aria-label="Category hero and quick navigation">
             @include('partials.customer-uniform-header', [
-                'injectUniformHeaderStyles' => false,
-                'injectUniformHeaderScripts' => false,
+                'injectUniformHeaderStyles' => true,
+                'injectUniformHeaderScripts' => true,
                 'headerNeedsSpacer' => false,
                 'headerHideOnScroll' => true,
                 'headerShowSearch' => true,

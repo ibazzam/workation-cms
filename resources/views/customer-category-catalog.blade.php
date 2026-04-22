@@ -52,15 +52,15 @@
             top: 0;
             left: 0;
             right: 0;
-            transition: none;
+            transition: transform 0.22s ease, opacity 0.22s ease;
             z-index: 10;
-            backdrop-filter: none;
+            backdrop-filter: blur(2px);
         }
 
         .page.is-header-hidden .header-bar {
-            transform: none;
-            opacity: 1;
-            pointer-events: auto;
+            transform: translateY(-110%);
+            opacity: 0;
+            pointer-events: none;
         }
 
         .header-category-tabs {
@@ -542,7 +542,7 @@
             transform: translateX(-50%);
             width: calc(100% - 24px);
             z-index: 2;
-            display: none;
+            display: grid;
             gap: 12px;
         }
 
@@ -626,25 +626,33 @@
             border-radius: 10px;
             background: var(--surface);
             padding: 12px;
-            display: flex;
-            flex-wrap: nowrap;
-            align-items: flex-end;
+            display: grid;
+            grid-template-columns: 1fr;
+            align-items: stretch;
             gap: 8px;
-            overflow: hidden;
+            overflow: visible;
             box-shadow: 0 12px 26px rgba(14, 41, 92, 0.2);
             position: static;
             z-index: auto;
             width: 100%;
             margin-left: auto;
             margin-right: auto;
+        }
+
+        .search-box > .grid {
+            width: 100%;
             overflow-x: auto;
             overflow-y: hidden;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: thin;
         }
 
-        .search-box > .grid {
-            flex: 0 0 auto;
+        .search-box > .actions {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
         }
 
         .search-box::-webkit-scrollbar {
@@ -975,6 +983,10 @@
             justify-content: center;
             padding: 14px;
             z-index: 1100;
+        }
+
+        .filter-popup-backdrop[hidden] {
+            display: none !important;
         }
 
         .filter-popup {
@@ -1947,18 +1959,21 @@
                             $detailUrl = $categoryKey === 'accommodation'
                                 ? ('/property/' . $propertyId)
                                 : ('/category-booking/' . $categoryKey . '/' . $propertyId);
-                            $actionLabel = match ($categoryKey) {
-                                'accommodation'     => 'Open Listing Profile',
-                                'restaurant'        => 'Reserve a Table',
-                                'vehicle_rental'    => 'Hire Vehicle / Vessel',
-                                'marine-transport'  => 'Book Marine Transfer',
-                                'land-transport'    => 'Book Land Transfer',
-                                'excursion'         => 'Book Excursion',
-                                'conference_room'   => 'Book Conference Room',
-                                'resort_day_visit'  => 'Book Day Visit',
-                                'remote_workspace'  => 'Book Workspace',
-                                default             => 'Proceed to Booking',
-                            };
+                            $includesBreakfast = (bool) (
+                                $property->breakfast_included
+                                ?? $property->includes_breakfast
+                                ?? $property->has_breakfast
+                                ?? false
+                            );
+                            $mealPlan = trim((string) (
+                                $property->meal_plan
+                                ?? $property->board_type
+                                ?? ''
+                            ));
+                            $offerSummary = $mealPlan !== ''
+                                ? ucwords(str_replace(['_', '-'], ' ', $mealPlan))
+                                : ($includesBreakfast ? 'Breakfast included' : 'Without breakfast');
+                            $actionLabel = $categoryKey === 'accommodation' ? 'View Deal' : 'Book Now';
                         @endphp
                         @php
                             $rawLat = $property->latitude ?? $property->lat ?? $property->location_lat ?? $property->geo_lat ?? null;
@@ -2004,6 +2019,7 @@
                                         <span>{{ number_format($reviewCount) }} reviews</span>
                                     </div>
                                     <div class="card-price">From {{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}</div>
+                                    <div class="card-offer">{{ $offerSummary }}</div>
                                     @if ($isExcursionCard && $shortDescription !== '')
                                         <p class="card-desc">{{ $shortDescription }}</p>
                                     @endif
@@ -2018,6 +2034,7 @@
                                             @endif
                                         </div>
                                     @endif
+                                    <span class="card-action-btn">{{ $actionLabel }} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
                                 </div>
                             </a>
                         </article>
@@ -2242,7 +2259,12 @@
                 const linkEl = card.querySelector('.card-link');
                 const latRaw = Number(card.getAttribute('data-lat'));
                 const lngRaw = Number(card.getAttribute('data-lng'));
-                const hasRealCoords = Number.isFinite(latRaw) && Number.isFinite(lngRaw) && Math.abs(latRaw) <= 90 && Math.abs(lngRaw) <= 180;
+                const inMaldivesBounds = Number.isFinite(latRaw)
+                    && Number.isFinite(lngRaw)
+                    && latRaw >= 2.0
+                    && latRaw <= 8.0
+                    && lngRaw >= 71.0
+                    && lngRaw <= 75.5;
 
                 return {
                     id: String(card.getAttribute('data-id') || ''),
@@ -2253,8 +2275,8 @@
                     currency: String(card.getAttribute('data-currency') || 'MVR'),
                     price: Number(card.getAttribute('data-price') || 0),
                     url: linkEl ? linkEl.getAttribute('href') : '',
-                    lat: hasRealCoords ? latRaw : null,
-                    lng: hasRealCoords ? lngRaw : null,
+                    lat: inMaldivesBounds ? latRaw : null,
+                    lng: inMaldivesBounds ? lngRaw : null,
                     card: card,
                 };
             }

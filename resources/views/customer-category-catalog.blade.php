@@ -657,31 +657,9 @@
         }
 
         .catalog-section-title {
-            display: none;
             margin: 16px 0 8px;
             font-size: 1.05rem;
             letter-spacing: 0.02em;
-        }
-
-        .load-more-btn {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #d2dce5;
-            border-radius: 6px;
-            background: #ffffff;
-            color: #2a4154;
-            font-size: 0.8rem;
-            font-weight: 700;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s ease;
-            margin-top: 8px;
-            margin-bottom: 8px;
-        }
-
-        .load-more-btn:hover {
-            border-color: #b9c5d1;
-            background: #f5fbfd;
         }
 
         .grid {
@@ -800,10 +778,6 @@
             z-index: 1100;
         }
 
-        .filter-popup-backdrop[hidden] {
-            display: none;
-        }
-
         .filter-popup {
             width: min(860px, calc(100vw - 24px));
             max-height: calc(100vh - 28px);
@@ -859,34 +833,19 @@
 
         .catalog-results-layout {
             display: grid;
-            grid-template-columns: 0.65fr 1fr;
-            gap: 0;
+            grid-template-columns: minmax(0, 1fr) 360px;
+            gap: 12px;
             align-items: start;
-            height: calc(100vh - 220px);
-        }
-
-        .catalog-results-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-            min-width: 0;
-            overflow-y: auto;
-            height: 100%;
-            border-right: 1px solid #e0e8f0;
-            background: #ffffff;
         }
 
         .catalog-map-panel {
-            position: relative;
-            top: 0;
-            border: 0;
-            border-radius: 0;
+            position: sticky;
+            top: 84px;
+            border: 1px solid #d2e2ec;
+            border-radius: 12px;
             background: #ffffff;
             overflow: hidden;
-            box-shadow: none;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
+            box-shadow: 0 10px 24px rgba(15, 55, 86, 0.14);
         }
 
         .catalog-map-head {
@@ -913,9 +872,8 @@
 
         #categoryResultsMap {
             width: 100%;
-            height: 100%;
+            height: min(62vh, 560px);
             background: #e7f1f7;
-            flex: 1;
         }
 
         .map-search-area-btn {
@@ -1018,320 +976,7 @@
             color: #43627a;
         }
 
-        .section-title {
-            margin: 14px 0 0;
-            font-size: 1rem;
-        }
 
-        .catalog-grid {
-            margin-top: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-        }
-
-        .card {
-            border-bottom: 1px solid #e8ecf0;
-            border-radius: 0;
-            background: #ffffff;
-            overflow: visible;
-            padding: 12px;
-            display: flex;
-            flex-direction: row;
-            gap: 12px;
-            align-items: flex-start;
-        }
-
-        .card:hover {
-            background: #f9fbfd;
-        }
-
-        .card-link {
-            display: flex;
-            flex-direction: row;
-            color: inherit;
-            text-decoration: none;
-            position: relative;
-            width: 100%;
-            gap: 12px;
-        }
-
-        .card img {
-            width: 120px;
-            height: 100px;
-            object-fit: cover;
-            background: #edf4fb;
-            display: block;
-            border-radius: 6px;
-            flex-shrink: 0;
-        }
-
-        .card-body {
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            flex: 1;
-            min-width: 0;
-        }
-
-        .card-city {
-            color: #7b8d99;
-            font-size: 0.7rem;
-            line-height: 1;
-            margin-bottom: 1px;
-        }
-
-        .card h3 {
-            margin: 0;
-            font-size: 0.85rem;
-            line-height: 1.1;
-            color: #1a2f43;
-            font-weight: 700;
-            display: -webkit-box;
-            -webkit-line-clamp: 1;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            margin-bottom: 1px;
-        }
-
-        .card-stars {
-            display: inline-flex;
-            align-items: center;
-            gap: 1px;
-            color: #f3a337;
-            font-size: 0.65rem;
-            min-height: 12px;
-            margin-bottom: 2px;
-        }
-
-        .card-review {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: #587085;
-            font-size: 0.65rem;
-            margin-bottom: 3px;
-        }
-
-        .card-rating-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 32px;
-            height: 32px;
-            padding: 0;
-            border-radius: 50%;
-            background: #2fa58a;
-            color: #ffffff;
-            font-size: 0.68rem;
-            font-weight: 800;
-            line-height: 1;
-            flex-direction: column;
-            flex-shrink: 0;
-        }
-
-        .card-price {
-            margin-top: 2px;
-            color: #1a2f43;
-            font-size: 0.82rem;
-            font-weight: 700;
-            margin-bottom: 2px;
-            line-height: 1;
-        }
-
-        .card-offer {
-            color: #0f6179;
-            font-size: 0.65rem;
-            margin-bottom: 6px;
-        }
-
-        .card-type-chip {
-            display: inline-flex;
-            align-items: center;
-            width: fit-content;
-            max-width: 100%;
-            padding: 3px 8px;
-            border-radius: 999px;
-            background: #e8f2f8;
-            color: #1e5672;
-            font-size: 0.66rem;
-            font-weight: 700;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .card-desc {
-            display: none;
-            margin: 0;
-            color: #4f677a;
-            font-size: 0.76rem;
-            line-height: 1.45;
-        }
-
-        .card-time {
-            display: none;
-            color: #345469;
-            font-size: 0.72rem;
-            font-weight: 700;
-        }
-
-        .card-action-btn {
-            align-self: flex-start;
-            padding: 6px 12px;
-            border: none;
-            border-radius: 5px;
-            background: #2fa58a;
-            color: #ffffff;
-            font-size: 0.72rem;
-            font-weight: 700;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            transition: background 0.2s ease;
-        }
-
-        .card-action-btn:hover {
-            background: #27917a;
-        }
-
-        .empty {
-            margin-top: 10px;
-            border: 1px dashed #cddbe8;
-            background: #f7fbff;
-            color: #3f5a72;
-            border-radius: 12px;
-            padding: 14px;
-            font-size: 0.88rem;
-        }
-
-        .quick-filters-bar {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 14px;
-            flex-wrap: wrap;
-        }
-
-        .quick-filter-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 14px;
-            border: 1px solid #d2dce5;
-            border-radius: 999px;
-            background: #ffffff;
-            color: #2a4154;
-            font-size: 0.76rem;
-            font-weight: 700;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.2s ease;
-        }
-
-        .quick-filter-btn:hover {
-            border-color: #b9c5d1;
-            background: #f5fbfd;
-        }
-
-        .quick-filter-btn i {
-            font-size: 0.8rem;
-        }
-
-        .clear-filters-btn {
-            margin-left: auto;
-        }
-
-        .island-context-note {
-            display: flex;
-            align-items: flex-start;
-            gap: 9px;
-            border: 1px solid #b6daea;
-            border-radius: 10px;
-            background: #eaf6fb;
-            color: #1a4b62;
-            padding: 9px 12px;
-            font-size: 0.8rem;
-            line-height: 1.45;
-        }
-
-        .island-context-note i {
-            color: #0f6179;
-            margin-top: 2px;
-            flex: 0 0 14px;
-            text-align: center;
-        }
-
-        @media (max-width: 1040px) {
-            .page {
-                width: calc(100% - 20px);
-                margin: 0 auto 30px;
-            }
-
-            .header-main {
-                flex-wrap: wrap;
-            }
-
-            .header-category-tabs {
-                justify-content: flex-start;
-            }
-
-            .header-search-mini {
-                width: 100%;
-                order: 3;
-            }
-
-            .page-body-split {
-                display: block;
-            }
-
-            .header-bar {
-                padding: 10px 14px;
-            }
-
-            .journey-hero {
-                padding: 0;
-            }
-
-            .hero-banner {
-                min-height: 332px;
-            }
-
-            .hero-banner-content {
-                width: calc(100% - 28px);
-                top: 88px;
-            }
-
-            .catalog-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .field.field-short {
-                flex: 0 0 80px;
-                width: 80px;
-            }
-
-            .field.field-date {
-                flex: 0 0 164px;
-                width: 164px;
-            }
-
-            .field.field-medium {
-                flex: 0 0 152px;
-                width: 152px;
-            }
-
-            .field.field-long {
-                flex: 0 0 200px;
-                width: 200px;
-            }
-
-        }
 
         @media (max-width: 680px) {
             .page {
@@ -1612,13 +1257,9 @@
 
             <div class="hero-banner" aria-label="Category banner and quick filters">
                 <img class="hero-banner-image" src="{{ $categoryHeroImageUrl }}" alt="{{ (string) ($categoryMeta['label'] ?? 'Category') }} banner" loading="eager" fetchpriority="high" decoding="async" onerror="this.onerror=null;this.src='{{ $categoryHeroFallback }}';">
-            </div>
-        </section>
-
-        <div class="page-body-split">
-            <div class="page-main-content">
-
-                <form class="catalog-filters-form" method="GET" action="/catalog/{{ $categoryKey }}" id="catalogFiltersForm">
+                <div class="hero-banner-content">
+                    <div class="search-sticky-wrap">
+                        <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}" id="categorySearchForm">
             @if (!in_array($categoryKey, ['marine-transport', 'land-transport'], true))
                 <div class="grid">
                     <div class="field field-long">
@@ -1891,13 +1532,11 @@
                 </div>
             @endif
 
-            <!-- Close hidden inline filters -->
+            <div class="actions">
+                <button class="filter-popup-toggle" type="button" id="openFilterPopup"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Filters</button>
+                <button class="primary" type="submit">Apply Filters</button>
+                <a href="/catalog/{{ $categoryKey }}">Clear all filters</a>
             </div>
-            </div>
-
-            <!-- Actual Results Layout (shown to users) -->
-            <div class="catalog-results-layout">
-                <div class="catalog-results-list">
 
             <div class="filter-popup-backdrop" id="filterPopupBackdrop" hidden>
                 <div class="filter-popup" role="dialog" aria-modal="true" aria-labelledby="filterPopupTitle">
@@ -1968,6 +1607,11 @@
                     </div>
                 </div>
             </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
         </section>
 
         <div class="page-body-split">
@@ -2159,14 +1803,12 @@
                                             @endif
                                         </div>
                                     @endif
-                                    <a href="{{ $detailUrl }}" class="card-action-btn">View Deal <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
                                 </div>
                             </a>
                         </article>
                     @endforeach
                 </section>
             @endforeach
-                <button type="button" class="load-more-btn">Load more</button>
                 </div>
                 <aside class="catalog-map-panel" aria-label="Map of filtered category results">
                     <div class="catalog-map-head">
@@ -2368,12 +2010,10 @@
             function fallbackCoords(item) {
                 const key = String(item.island || item.city || item.atoll || item.name || 'maldives').toLowerCase();
                 const seed = hashText(key);
-                // Maldives center: 4.1755° N, 73.5093° E
-                // Bounds approximately: 3.2°N to 5.0°N latitude, 72.0°E to 75.0°E longitude
-                const baseLat = 4.1755;
-                const baseLng = 73.5093;
-                const latOffset = ((seed % 900) / 1000) - 0.45;  // Range: -0.45 to +0.45
-                const lngOffset = (((Math.floor(seed / 900)) % 1500) / 1000) - 0.75;  // Range: -0.75 to +0.75
+                const baseLat = 3.2;
+                const baseLng = 73.1;
+                const latOffset = ((seed % 1800) / 1000) - 0.9;
+                const lngOffset = (((Math.floor(seed / 1800)) % 2200) / 1000) - 1.1;
 
                 return {
                     lat: baseLat + latOffset,
@@ -2454,13 +2094,10 @@
             const map = window.L.map(mapContainer, {
                 zoomControl: true,
                 scrollWheelZoom: true,
-                center: [4.1755, 73.5093],
-                zoom: 8,
             });
 
             window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
-                minZoom: 2,
                 attribution: '&copy; OpenStreetMap contributors',
             }).addTo(map);
 

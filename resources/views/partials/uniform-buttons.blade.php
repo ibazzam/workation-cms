@@ -1,7 +1,7 @@
 <style>
     :root {
-        --btn-primary-border: #136357;
-        --btn-primary-bg: #1a7a68;
+        --btn-primary-border: #27917a;
+        --btn-primary-bg: #2fa58a;
         --btn-primary-text: #ffffff;
         --btn-secondary-border: #c8d8e5;
         --btn-secondary-bg: #ffffff;
@@ -111,7 +111,7 @@
     .submit:hover,
     .promo-apply:hover,
     .hero-avail-btn:hover {
-        border-color: #97b7ce;
+        border-color: #27917a;
         box-shadow: 0 6px 14px rgba(22, 70, 102, 0.14);
         transform: translateY(-1px);
     }

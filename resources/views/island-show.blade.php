@@ -457,10 +457,31 @@
     $atollSlug  = $atoll ? ($atoll->slug ?? \Illuminate\Support\Str::slug($atoll->name)) : null;
     $atollCode  = $atoll ? ($atoll->code ?? strtoupper(substr($atoll->name ?? '', 0, 3))) : null;
 
+    $resolveMediaUrl = static function (?string $rawPath): string {
+        $path = trim((string) $rawPath);
+        if ($path === '') {
+            return '';
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return str_starts_with($path, 'http://') ? ('https://' . ltrim(substr($path, 7), '/')) : $path;
+        }
+
+        if (str_starts_with($path, '/media/') || str_starts_with($path, '/storage/')) {
+            return $path;
+        }
+
+        $managed = portalManagedMediaUrlFromPath($path);
+        if (is_string($managed) && trim($managed) !== '') {
+            return $managed;
+        }
+
+        $normalized = ltrim(str_replace(['public/', 'storage/'], '', str_replace('\\', '/', $path)), '/');
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($normalized);
+    };
+
     $coverPath = trim((string) ($island->photo_path ?? ''));
-    $coverUrl = $coverPath !== ''
-        ? (portalManagedMediaUrlFromPath($coverPath) ?: \Illuminate\Support\Facades\Storage::disk('public')->url($coverPath))
-        : '';
+    $coverUrl = $resolveMediaUrl($coverPath);
 
     $shareUrl     = url('/islands/' . ($island->slug ?? \Illuminate\Support\Str::slug($island->name)));
     $shareTitle   = urlencode($island->name . ' – Maldives Island Directory on Workation');
@@ -638,9 +659,7 @@
                             ? ($rel->atoll->name ?? '') . ' atoll – ' . $rel->distance_from_airport_km . ' KM from VIA ' . $rel->nearest_airport_name
                             : ($rel->atoll->name ?? null);
                         $relPhotoPath = trim((string) ($rel->photo_path ?? ''));
-                        $relPhoto     = $relPhotoPath !== ''
-                            ? (portalManagedMediaUrlFromPath($relPhotoPath) ?: \Illuminate\Support\Facades\Storage::disk('public')->url($relPhotoPath))
-                            : '';
+                        $relPhoto     = $resolveMediaUrl($relPhotoPath);
                     @endphp
                     <a class="related-card" href="/islands/{{ $relSlug }}" aria-label="{{ $rel->name }}">
                         <div class="related-avatar">

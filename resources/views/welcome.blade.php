@@ -1638,6 +1638,16 @@
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
+            .home-blog-teaser {
+                max-width: none;
+                padding-left: 0;
+                padding-right: 0;
+            }
+
+            .blog-teaser-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
             .search-form {
                 grid-template-columns: 1fr 1fr;
             }
@@ -1970,6 +1980,40 @@
             .deal-grid,
             .loved-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .section-head {
+                align-items: flex-start;
+                gap: 4px;
+            }
+
+            .section-sub {
+                max-width: 28rem;
+            }
+
+            .home-blog-teaser {
+                margin-top: 10px;
+            }
+
+            .blog-teaser-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .blog-teaser-card {
+                grid-template-rows: 164px auto;
+            }
+
+            .blog-teaser-media {
+                height: 164px;
+            }
+
+            .blog-teaser-body {
+                padding: 12px;
+            }
+
+            .blog-teaser-footer {
+                justify-content: flex-start;
             }
         }
     </style>

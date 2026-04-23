@@ -1189,7 +1189,7 @@
         .nearby-grid {
             margin-top: 10px;
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 10px;
         }
 
@@ -1202,6 +1202,7 @@
             color: inherit;
             display: grid;
             grid-template-rows: 120px auto;
+            min-width: 0;
             transition: transform 0.16s ease, box-shadow 0.16s ease;
         }
 
@@ -1472,7 +1473,7 @@
             .room-offer-head,
             .room-offer-row { grid-template-columns: minmax(0, 1fr) 76px minmax(170px, 0.9fr); }
             .policies-grid { grid-template-columns: 1fr; }
-            .nearby-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .nearby-grid { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
         }
 
         @media (max-width: 680px) {
@@ -1500,6 +1501,9 @@
             .room-side-details li { align-items: flex-start; }
             .facility-grid { grid-template-columns: 1fr; }
             .nearby-grid { grid-template-columns: 1fr; }
+            .nearby-card { grid-template-rows: 156px auto; }
+            .nearby-card-media { height: 156px; }
+            .nearby-card-body { padding: 12px; }
         }
 
         /* Uniform Icon System Styles - Consistent across all pages */
@@ -1970,10 +1974,10 @@
 
         <nav class="section-tabs" aria-label="Property content navigation">
             <a class="section-tab" href="#rooms-section">Rooms</a>
-            <a class="section-tab" href="#nearby-properties-section">Nearby Properties</a>
             <a class="section-tab" href="#guest-reviews-section">Guest Reviews</a>
             <a class="section-tab" href="#services-amenities-section">Services & Amenities</a>
             <a class="section-tab" href="#policies-section">Policies</a>
+            <a class="section-tab" href="#nearby-properties-section">Nearby Properties</a>
         </nav>
 
         <section id="rooms-section" class="section rooms-section" aria-label="Available rooms">
@@ -2139,63 +2143,6 @@
             </div>
         </section>
 
-        @if ($nearbySectionVisible)
-            <section id="nearby-properties-section" class="section nearby-properties-section" aria-label="Nearby properties">
-                <div class="nearby-head">
-                    <h2>
-                        Nearby Properties
-                        @if ($nearbyUsesCoordinateRadius)
-                            within {{ $nearbyRadiusLabel }} km
-                        @endif
-                    </h2>
-                    @if ($nearbyUsesCoordinateRadius)
-                        <div class="nearby-radius-controls" aria-label="Nearby radius options">
-                            @foreach ($nearbyRadiusOptions as $radiusOption)
-                                @php
-                                    $radiusValue = (int) $radiusOption;
-                                    $radiusUrl = url()->current() . '?' . http_build_query(array_merge($nearbyQueryBase, ['nearby_radius_km' => $radiusValue])) . '#nearby-properties-section';
-                                    $isActiveRadius = abs($nearbyRadiusKm - $radiusValue) < 0.51;
-                                @endphp
-                                <a class="nearby-radius-chip{{ $isActiveRadius ? ' is-active' : '' }}" href="{{ $radiusUrl }}">{{ $radiusValue }} km</a>
-                            @endforeach
-                        </div>
-                    @endif
-                </div>
-
-                @if ($nearbyProperties->isNotEmpty())
-                    <div class="nearby-grid">
-                        @foreach ($nearbyProperties as $nearby)
-                            @php
-                                $nearbyName = trim((string) ($nearby['name'] ?? 'Property'));
-                                $nearbyUrl = trim((string) ($nearby['url'] ?? ''));
-                                $nearbyLocationLine = trim((string) ($nearby['location_line'] ?? 'Maldives'));
-                                $nearbyCurrency = strtoupper(trim((string) ($nearby['currency'] ?? 'MVR')));
-                                $nearbyPrice = number_format((float) ($nearby['base_price'] ?? 0), 2);
-                                $nearbyDistance = isset($nearby['distance_km']) ? (float) $nearby['distance_km'] : null;
-                                $nearbyThumb = trim((string) ($nearby['thumbnail_url'] ?? ''));
-                                $nearbyThumbFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22600%22 height=%22300%22 viewBox=%220 0 600 300%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d9e9f4%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c6ddec%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22600%22 height=%22300%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%233e6078%22 font-family=%22Arial%22 font-size=%2224%22%3ENearby%20Property%3C/text%3E%3C/svg%3E";
-                            @endphp
-                            <a class="nearby-card" href="{{ $nearbyUrl !== '' ? $nearbyUrl : ('/property/' . (int) ($nearby['id'] ?? 0)) }}" aria-label="Open {{ $nearbyName }}">
-                                <img class="nearby-card-media" src="{{ $nearbyThumb !== '' ? $nearbyThumb : $nearbyThumbFallback }}" alt="{{ $nearbyName }}" loading="lazy" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $nearbyThumbFallback }}';}">
-                                <div class="nearby-card-body">
-                                    <span class="nearby-location">{{ $nearbyLocationLine }}</span>
-                                    <h3 class="nearby-name">{{ $nearbyName }}</h3>
-                                    <div class="nearby-meta">
-                                        <span class="nearby-price">From {{ $nearbyCurrency }} {{ $nearbyPrice }}</span>
-                                        @if ($nearbyDistance !== null)
-                                            <span>{{ number_format($nearbyDistance, 1) }} km away</span>
-                                        @endif
-                                    </div>
-                                </div>
-                            </a>
-                        @endforeach
-                    </div>
-                @else
-                    <p class="nearby-empty">No properties found within {{ $nearbyRadiusLabel }} km of this property pin. Try a larger radius.</p>
-                @endif
-            </section>
-        @endif
-
         <section id="guest-reviews-section" class="section guest-reviews-section" aria-label="Guest reviews">
             <h2>Guest Reviews</h2>
             <div class="guest-reviews-layout">
@@ -2270,6 +2217,63 @@
                 <div class="policy-value">Please contact property support for the latest pet policy before arrival.</div>
             </div>
         </section>
+
+        @if ($nearbySectionVisible)
+            <section id="nearby-properties-section" class="section nearby-properties-section" aria-label="Nearby properties">
+                <div class="nearby-head">
+                    <h2>
+                        Nearby Properties
+                        @if ($nearbyUsesCoordinateRadius)
+                            within {{ $nearbyRadiusLabel }} km
+                        @endif
+                    </h2>
+                    @if ($nearbyUsesCoordinateRadius)
+                        <div class="nearby-radius-controls" aria-label="Nearby radius options">
+                            @foreach ($nearbyRadiusOptions as $radiusOption)
+                                @php
+                                    $radiusValue = (int) $radiusOption;
+                                    $radiusUrl = url()->current() . '?' . http_build_query(array_merge($nearbyQueryBase, ['nearby_radius_km' => $radiusValue])) . '#nearby-properties-section';
+                                    $isActiveRadius = abs($nearbyRadiusKm - $radiusValue) < 0.51;
+                                @endphp
+                                <a class="nearby-radius-chip{{ $isActiveRadius ? ' is-active' : '' }}" href="{{ $radiusUrl }}">{{ $radiusValue }} km</a>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+
+                @if ($nearbyProperties->isNotEmpty())
+                    <div class="nearby-grid">
+                        @foreach ($nearbyProperties as $nearby)
+                            @php
+                                $nearbyName = trim((string) ($nearby['name'] ?? 'Property'));
+                                $nearbyUrl = trim((string) ($nearby['url'] ?? ''));
+                                $nearbyLocationLine = trim((string) ($nearby['location_line'] ?? 'Maldives'));
+                                $nearbyCurrency = strtoupper(trim((string) ($nearby['currency'] ?? 'MVR')));
+                                $nearbyPrice = number_format((float) ($nearby['base_price'] ?? 0), 2);
+                                $nearbyDistance = isset($nearby['distance_km']) ? (float) $nearby['distance_km'] : null;
+                                $nearbyThumb = trim((string) ($nearby['thumbnail_url'] ?? ''));
+                                $nearbyThumbFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22600%22 height=%22300%22 viewBox=%220 0 600 300%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d9e9f4%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c6ddec%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22600%22 height=%22300%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%233e6078%22 font-family=%22Arial%22 font-size=%2224%22%3ENearby%20Property%3C/text%3E%3C/svg%3E";
+                            @endphp
+                            <a class="nearby-card" href="{{ $nearbyUrl !== '' ? $nearbyUrl : ('/property/' . (int) ($nearby['id'] ?? 0)) }}" aria-label="Open {{ $nearbyName }}">
+                                <img class="nearby-card-media" src="{{ $nearbyThumb !== '' ? $nearbyThumb : $nearbyThumbFallback }}" alt="{{ $nearbyName }}" loading="lazy" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $nearbyThumbFallback }}';}">
+                                <div class="nearby-card-body">
+                                    <span class="nearby-location">{{ $nearbyLocationLine }}</span>
+                                    <h3 class="nearby-name">{{ $nearbyName }}</h3>
+                                    <div class="nearby-meta">
+                                        <span class="nearby-price">From {{ $nearbyCurrency }} {{ $nearbyPrice }}</span>
+                                        @if ($nearbyDistance !== null)
+                                            <span>{{ number_format($nearbyDistance, 1) }} km away</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            </a>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="nearby-empty">No properties found within {{ $nearbyRadiusLabel }} km of this property pin. Try a larger radius.</p>
+                @endif
+            </section>
+        @endif
 
         @include('partials.global-site-footer')
     </main>

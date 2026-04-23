@@ -482,6 +482,40 @@
             gap: 2px;
         }
 
+        .island-badges {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+
+        .island-badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 3px 8px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+
+        .island-badge.country-capital {
+            background: #ecf3ff;
+            border-color: #c8daf9;
+            color: #194a8f;
+        }
+
+        .island-badge.atoll-capital {
+            background: #e9f8ef;
+            border-color: #c4e7d1;
+            color: #14613d;
+        }
+
         .island-atoll-code {
             font-size: 0.75rem;
             color: var(--muted);
@@ -621,6 +655,56 @@
         'resort_total' => 0,
         'uninhabited_total' => 0,
     ];
+
+    $resolveIslandImageUrl = static function (?string $rawPath): string {
+        $path = trim((string) ($rawPath ?? ''));
+        if ($path === '') {
+            return '';
+        }
+
+        $decoded = json_decode($path, true);
+        if (is_array($decoded)) {
+            $path = trim((string) ($decoded['path'] ?? $decoded['url'] ?? $decoded['photo_path'] ?? ''));
+            if ($path === '') {
+                return '';
+            }
+        }
+
+        $path = trim($path, " \t\n\r\0\x0B\"'");
+        if ($path === '') {
+            return '';
+        }
+
+        if (str_starts_with($path, 'http://')) {
+            return 'https://' . ltrim(substr($path, 7), '/');
+        }
+
+        if (str_starts_with($path, 'https://') || str_starts_with($path, 'data:image/')) {
+            return $path;
+        }
+
+        if (str_starts_with($path, '//')) {
+            return 'https:' . $path;
+        }
+
+        if (str_starts_with($path, '/media/') || str_starts_with($path, '/storage/')) {
+            return $path;
+        }
+
+        if (str_starts_with($path, 'media/') || str_starts_with($path, 'storage/')) {
+            return '/' . ltrim($path, '/');
+        }
+
+        $managed = portalManagedMediaUrlFromPath($path);
+        if (is_string($managed) && trim($managed) !== '') {
+            return $managed;
+        }
+
+        $normalized = ltrim(str_replace(['public/', 'storage/'], '', str_replace('\\', '/', $path)), '/');
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($normalized);
+    };
+
+    $islandImageFallback = "data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27400%27 viewBox=%270 0 400 400%27%3E%3Cdefs%3E%3ClinearGradient id=%27g%27 x1=%270%27 y1=%270%27 x2=%271%27 y2=%271%27%3E%3Cstop offset=%270%25%27 stop-color=%27%23d8e9f2%27/%3E%3Cstop offset=%27100%25%27 stop-color=%27%23c8dceb%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%27400%27 height=%27400%27 fill=%27url(%23g)%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dominant-baseline=%27middle%27 fill=%27%233e5b71%27 font-family=%27Arial%27 font-size=%2726%27%3ENo%20image%3C/text%3E%3C/svg%3E";
 @endphp
 
 <header class="header-bar" aria-label="Site navigation">
@@ -764,6 +848,8 @@
                                             $atollCode = $atoll->code ?? strtoupper(substr($atoll->name ?? '', 0, 3));
                                             $distanceHint = $island->distance_from_airport_km ? $island->distance_from_airport_km . ' KM' : null;
                                             $airportHint = $island->nearest_airport_name ?? null;
+                                            $capitalBadges = portalAtlasCapitalBadges((string) ($island->name ?? ''), (string) ($atoll->name ?? ''));
+                                            $islandImageUrl = $resolveIslandImageUrl((string) ($island->photo_path ?? ''));
                                             
                                             $hintParts = [];
                                             if ($distanceHint && $airportHint) $hintParts[] = $distanceHint . ' from ' . $airportHint;
@@ -779,11 +865,12 @@
                                             aria-label="{{ $island->name }}"
                                         >
                                             <div class="island-avatar">
-                                                @if ($island->photo_path)
+                                                @if ($islandImageUrl !== '')
                                                     <img
-                                                        src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($island->photo_path) }}"
+                                                        src="{{ $islandImageUrl }}"
                                                         alt="{{ $island->name }} aerial view"
                                                         loading="lazy"
+                                                        onerror="this.onerror=null;this.src='{{ $islandImageFallback }}';"
                                                     >
                                                 @else
                                                     <div class="avatar-placeholder" aria-hidden="true">{{ $typeEmoji[$typeKey] ?? '🏝' }}</div>
@@ -792,6 +879,13 @@
                                             <div class="island-meta">
                                                 <span class="island-atoll-code">{{ $atollCode }}</span>
                                                 <span class="island-name">{{ $island->name }}</span>
+                                                @if (!empty($capitalBadges))
+                                                    <span class="island-badges">
+                                                        @foreach ($capitalBadges as $badge)
+                                                            <span class="island-badge {{ (string) ($badge['key'] ?? '') }}">{{ (string) ($badge['label'] ?? '') }}</span>
+                                                        @endforeach
+                                                    </span>
+                                                @endif
                                                 @if ($hintText)
                                                     <span class="island-hint">{{ $hintText }}</span>
                                                 @endif

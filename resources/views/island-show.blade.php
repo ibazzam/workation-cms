@@ -463,6 +463,50 @@
             return '';
         }
 
+        // Handle accidental JSON payloads or quoted strings persisted in photo_path.
+        $decoded = json_decode($path, true);
+        if (is_array($decoded)) {
+            $path = trim((string) ($decoded['path'] ?? $decoded['url'] ?? $decoded['photo_path'] ?? ''));
+            if ($path === '') {
+                return '';
+            }
+        }
+
+        $path = trim($path, " \t\n\r\0\x0B\"'");
+        if ($path === '') {
+            return '';
+        }
+
+        if (str_starts_with($path, 'data:image/')) {
+            return $path;
+        }
+
+        if (str_starts_with($path, '//')) {
+            return 'https:' . $path;
+        }
+
+        if (str_starts_with($path, 'media/')) {
+            return '/' . ltrim($path, '/');
+        }
+
+        if (str_starts_with($path, 'storage/')) {
+            return '/' . ltrim($path, '/');
+        }
+
+        if (str_contains($path, '/media/')) {
+            $pos = strpos($path, '/media/');
+            if ($pos !== false) {
+                return substr($path, $pos);
+            }
+        }
+
+        if (str_contains($path, '/storage/')) {
+            $pos = strpos($path, '/storage/');
+            if ($pos !== false) {
+                return substr($path, $pos);
+            }
+        }
+
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
             return str_starts_with($path, 'http://') ? ('https://' . ltrim(substr($path, 7), '/')) : $path;
         }
@@ -482,6 +526,8 @@
 
     $coverPath = trim((string) ($island->photo_path ?? ''));
     $coverUrl = $resolveMediaUrl($coverPath);
+    $coverFallback = "data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%271600%27 height=%27900%27 viewBox=%270 0 1600 900%27%3E%3Cdefs%3E%3ClinearGradient id=%27g%27 x1=%270%27 y1=%270%27 x2=%271%27 y2=%271%27%3E%3Cstop offset=%270%25%27 stop-color=%27%23d8ece1%27/%3E%3Cstop offset=%27100%25%27 stop-color=%27%23c5dfd1%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%271600%27 height=%27900%27 fill=%27url(%23g)%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dominant-baseline=%27middle%27 fill=%27%23395c4c%27 font-family=%27Arial%27 font-size=%2742%27%3EIsland%20Photo%3C/text%3E%3C/svg%3E";
+    $capitalBadges = portalAtlasCapitalBadges((string) ($island->name ?? ''), (string) ($atollName ?? ''));
 
     $shareUrl     = url('/islands/' . ($island->slug ?? \Illuminate\Support\Str::slug($island->name)));
     $shareTitle   = urlencode($island->name . ' – Maldives Island Directory on Workation');
@@ -531,7 +577,7 @@
 
     <div class="hero-image-col">
         @if ($coverUrl !== '')
-            <img src="{{ $coverUrl }}" alt="{{ $island->name }} aerial photograph" loading="eager" fetchpriority="high">
+            <img src="{{ $coverUrl }}" alt="{{ $island->name }} aerial photograph" loading="eager" fetchpriority="high" onerror="this.onerror=null;this.src='{{ $coverFallback }}';">
         @else
             <div class="image-placeholder" aria-hidden="true">🏝</div>
         @endif
@@ -554,10 +600,6 @@
             @endforeach
         </div>
 
-        {{-- Atoll code + Island name --}}
-        @if ($atollCode)
-            <p class="atoll-label">{{ $atollCode }}</p>
-        @endif
         <div class="hero-meta">
             @if ($atollName)
                 <span class="hero-pill">{{ $atollName }} atoll</span>
@@ -575,6 +617,11 @@
                     Uninhabited island
                 @endif
             </span>
+            @if (!empty($capitalBadges))
+                @foreach ($capitalBadges as $badge)
+                    <span class="hero-pill">{{ (string) ($badge['label'] ?? '') }}</span>
+                @endforeach
+            @endif
         </div>
         <h1 class="island-title">{{ $island->name }}</h1>
 
@@ -595,14 +642,8 @@
         @endif
 
         {{-- Island facts --}}
-        @if ($atollName || $island->population !== null || $island->nearest_airport_name || $island->distance_from_airport_km !== null)
+        @if ($island->population !== null || $island->nearest_airport_name || $island->distance_from_airport_km !== null)
             <div class="fact-grid" aria-label="Island facts">
-            @if ($atollName)
-                <div class="fact-card">
-                    <span class="fact-label">Atoll</span>
-                    <span class="fact-value">{{ $atollName }}</span>
-                </div>
-            @endif
             @if ($island->population !== null)
                 <div class="fact-card">
                     <span class="fact-label">Population</span>
@@ -664,7 +705,7 @@
                     <a class="related-card" href="/islands/{{ $relSlug }}" aria-label="{{ $rel->name }}">
                         <div class="related-avatar">
                             @if ($relPhoto !== '')
-                                <img src="{{ $relPhoto }}" alt="{{ $rel->name }}" loading="lazy">
+                                <img src="{{ $relPhoto }}" alt="{{ $rel->name }}" loading="lazy" onerror="this.onerror=null;this.src='{{ $coverFallback }}';">
                             @else
                                 <div class="avatar-placeholder" aria-hidden="true">🏝</div>
                             @endif

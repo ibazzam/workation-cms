@@ -366,10 +366,6 @@
             min-width: 0;
         }
 
-        .page.category-accommodation .page-main-content {
-            padding-top: 10px;
-        }
-
         .sidebar-title {
             margin: 0 0 8px;
             font-size: 0.72rem;
@@ -1125,11 +1121,6 @@
             position: relative;
         }
 
-        .page.category-accommodation.is-results-fixed .catalog-results-layout {
-            position: sticky;
-            top: var(--catalog-layout-top, 150px);
-        }
-
         .catalog-results-list {
             display: flex;
             flex-direction: column;
@@ -1142,12 +1133,18 @@
             overscroll-behavior: auto;
         }
 
+        .page.category-accommodation .catalog-results-list {
+            margin-top: 10px;
+            height: auto;
+            max-height: none;
+            overflow-y: visible;
+        }
+
         .catalog-show-more-wrap {
             padding: 12px;
             border-top: 1px solid #e4edf4;
             background: #ffffff;
-            position: sticky;
-            bottom: 0;
+            position: static;
             z-index: 2;
         }
 
@@ -1166,7 +1163,7 @@
 
         .page.category-accommodation .catalog-map-panel {
             position: sticky;
-            top: 0;
+            top: var(--catalog-map-top, 0px);
             align-self: start;
         }
 
@@ -1447,6 +1444,7 @@
             .page.category-accommodation .catalog-results-list {
                 height: auto;
                 max-height: none;
+                margin-top: 10px;
                 border-right: 0;
             }
 
@@ -1597,6 +1595,10 @@
 
             .catalog-results-layout {
                 grid-template-columns: 1fr;
+            }
+
+            .page.category-accommodation .catalog-results-list {
+                margin-top: 8px;
             }
 
             .catalog-map-panel {
@@ -2846,9 +2848,8 @@
             const stickyWrap = document.querySelector('.search-sticky-wrap');
             const heroBanner = document.querySelector('.hero-banner');
             const pageRoot = document.querySelector('.page.category-accommodation');
-            const resultsLayout = document.querySelector('.page.category-accommodation .catalog-results-layout');
 
-            if (!stickyWrap || !heroBanner || !pageRoot || !resultsLayout) {
+            if (!stickyWrap || !heroBanner || !pageRoot) {
                 return;
             }
 
@@ -2858,6 +2859,7 @@
                 if (mobileQuery.matches) {
                     stickyWrap.classList.remove('is-fixed');
                     stickyWrap.style.removeProperty('--sticky-search-top');
+                    pageRoot.style.removeProperty('--catalog-map-top');
                     return;
                 }
 
@@ -2872,13 +2874,11 @@
                 if (shouldFix) {
                     stickyWrap.style.setProperty('--sticky-search-top', String(headerBottom + 8) + 'px');
                     const stickyHeight = Math.round(stickyWrap.getBoundingClientRect().height);
-                    const layoutTop = headerBottom + stickyHeight + 14;
-                    pageRoot.classList.add('is-results-fixed');
-                    pageRoot.style.setProperty('--catalog-layout-top', String(layoutTop) + 'px');
+                    const mapTop = headerBottom + stickyHeight + 14;
+                    pageRoot.style.setProperty('--catalog-map-top', String(mapTop) + 'px');
                 } else {
                     stickyWrap.style.removeProperty('--sticky-search-top');
-                    pageRoot.classList.remove('is-results-fixed');
-                    pageRoot.style.removeProperty('--catalog-layout-top');
+                    pageRoot.style.removeProperty('--catalog-map-top');
                 }
             }
 

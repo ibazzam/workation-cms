@@ -1128,7 +1128,6 @@
             height: calc(100vh - 170px);
             min-height: 600px;
             position: relative;
-            margin-top: var(--catalog-results-top-gap, 0px);
         }
 
         .catalog-results-list {
@@ -2870,7 +2869,6 @@
                     stickyWrap.classList.remove('is-fixed');
                     stickyWrap.style.removeProperty('--sticky-search-top');
                     pageRoot.style.removeProperty('--catalog-map-top');
-                    pageRoot.style.removeProperty('--catalog-results-top-gap');
                     return;
                 }
 
@@ -2886,13 +2884,10 @@
                     stickyWrap.style.setProperty('--sticky-search-top', String(headerBottom + 8) + 'px');
                     const stickyHeight = Math.round(stickyWrap.getBoundingClientRect().height);
                     const mapTop = headerBottom + stickyHeight + 14;
-                    const resultsGap = stickyHeight + 14;
                     pageRoot.style.setProperty('--catalog-map-top', String(mapTop) + 'px');
-                    pageRoot.style.setProperty('--catalog-results-top-gap', String(resultsGap) + 'px');
                 } else {
                     stickyWrap.style.removeProperty('--sticky-search-top');
                     pageRoot.style.removeProperty('--catalog-map-top');
-                    pageRoot.style.removeProperty('--catalog-results-top-gap');
                 }
             }
 
@@ -3023,7 +3018,7 @@
 
             const map = window.L.map(mapContainer, {
                 zoomControl: true,
-                scrollWheelZoom: false,
+                scrollWheelZoom: true,
                 center: [4.1755, 73.5093],
                 zoom: 8,
             });

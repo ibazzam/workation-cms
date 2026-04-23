@@ -1135,6 +1135,7 @@
 
         .page.category-accommodation .catalog-results-list {
             margin-top: 10px;
+            padding-top: var(--catalog-list-top-gap, 0px);
             height: auto;
             max-height: none;
             overflow-y: visible;
@@ -2860,6 +2861,7 @@
                     stickyWrap.classList.remove('is-fixed');
                     stickyWrap.style.removeProperty('--sticky-search-top');
                     pageRoot.style.removeProperty('--catalog-map-top');
+                    pageRoot.style.removeProperty('--catalog-list-top-gap');
                     return;
                 }
 
@@ -2875,10 +2877,13 @@
                     stickyWrap.style.setProperty('--sticky-search-top', String(headerBottom + 8) + 'px');
                     const stickyHeight = Math.round(stickyWrap.getBoundingClientRect().height);
                     const mapTop = headerBottom + stickyHeight + 14;
+                    const listGap = stickyHeight + 14;
                     pageRoot.style.setProperty('--catalog-map-top', String(mapTop) + 'px');
+                    pageRoot.style.setProperty('--catalog-list-top-gap', String(listGap) + 'px');
                 } else {
                     stickyWrap.style.removeProperty('--sticky-search-top');
                     pageRoot.style.removeProperty('--catalog-map-top');
+                    pageRoot.style.removeProperty('--catalog-list-top-gap');
                 }
             }
 

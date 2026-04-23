@@ -1404,6 +1404,22 @@
             width: 100%;
         }
 
+        .listing-edit-stretch-row td {
+            padding-top: 8px;
+            padding-bottom: 10px;
+            background: #ffffff;
+        }
+
+        .listing-edit-stretch {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .listing-edit-stretch .update-row-form.inline-table-form {
+            width: 100%;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
         .room-management-table tr.is-editing td:nth-child(1),
         .room-management-table tr.is-editing td:nth-child(2) {
             display: none;
@@ -4794,6 +4810,7 @@
                 const row = form.closest('tr');
                 if (row) {
                     row.classList.add('is-editing');
+                    row.hidden = false;
                 }
                 initEditLocationSelectors(form);
                 initEditLocationMap(form);
@@ -4812,6 +4829,7 @@
                 const row = form.closest('tr');
                 if (row) {
                     row.classList.remove('is-editing');
+                    row.hidden = true;
                 }
             }
 
@@ -5949,6 +5967,7 @@
                             const row = form.closest('tr');
                             if (row) {
                                 row.classList.add('is-editing');
+                                row.hidden = false;
                             }
                             initEditLocationSelectors(form);
                             initEditLocationMap(form);
@@ -5966,6 +5985,7 @@
                             const row = form.closest('tr');
                             if (row) {
                                 row.classList.remove('is-editing');
+                                row.hidden = true;
                             }
                         }
                     });

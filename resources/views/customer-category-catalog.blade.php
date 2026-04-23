@@ -1129,7 +1129,16 @@
             height: 100%;
             border-right: 1px solid #e0e8f0;
             background: #ffffff;
-            overscroll-behavior: contain;
+            overscroll-behavior: auto;
+        }
+
+        .catalog-show-more-wrap {
+            padding: 12px;
+            border-top: 1px solid #e4edf4;
+            background: #ffffff;
+            position: sticky;
+            bottom: 0;
+            z-index: 2;
         }
 
         .catalog-map-panel {
@@ -2534,6 +2543,9 @@
                     @endforeach
                 </section>
             @endforeach
+                    <div class="catalog-show-more-wrap" id="catalogShowMoreWrap" hidden>
+                        <button class="load-more-btn" id="catalogShowMoreButton" type="button">Show more listings</button>
+                    </div>
                 </div>
                 <aside class="catalog-map-panel" aria-label="Map of filtered category results">
                     @php
@@ -2747,6 +2759,67 @@
 
     <script>
         (function () {
+            const listRoot = document.querySelector('.catalog-results-list');
+            const showMoreWrap = document.getElementById('catalogShowMoreWrap');
+            const showMoreButton = document.getElementById('catalogShowMoreButton');
+            if (!listRoot || !showMoreWrap || !showMoreButton) {
+                return;
+            }
+
+            const pageSize = 20;
+            const cards = Array.from(listRoot.querySelectorAll('[data-property-card]'));
+            if (cards.length <= pageSize) {
+                showMoreWrap.hidden = true;
+                return;
+            }
+
+            const sectionGrids = Array.from(listRoot.querySelectorAll('.catalog-grid'));
+            const sectionTitles = Array.from(listRoot.querySelectorAll('.catalog-section-title'));
+            let visibleCount = pageSize;
+
+            function syncSectionVisibility() {
+                sectionGrids.forEach(function (grid, index) {
+                    const hasVisible = Array.from(grid.querySelectorAll('[data-property-card]')).some(function (card) {
+                        return !card.hidden;
+                    });
+                    grid.hidden = !hasVisible;
+                    if (sectionTitles[index]) {
+                        sectionTitles[index].hidden = !hasVisible;
+                    }
+                });
+            }
+
+            function applyVisibleWindow() {
+                cards.forEach(function (card, index) {
+                    const hidden = index >= visibleCount;
+                    card.hidden = hidden;
+                    card.setAttribute('data-hidden-by-pager', hidden ? '1' : '0');
+                });
+
+                syncSectionVisibility();
+
+                const remaining = Math.max(0, cards.length - visibleCount);
+                if (remaining > 0) {
+                    showMoreWrap.hidden = false;
+                    showMoreButton.textContent = 'Show more listings (' + remaining + ' left)';
+                } else {
+                    showMoreWrap.hidden = true;
+                }
+
+                window.dispatchEvent(new CustomEvent('catalog:cards-visibility-updated'));
+            }
+
+            showMoreButton.addEventListener('click', function () {
+                visibleCount = Math.min(cards.length, visibleCount + pageSize);
+                applyVisibleWindow();
+            });
+
+            applyVisibleWindow();
+        })();
+    </script>
+
+    <script>
+        (function () {
             const stickyWrap = document.querySelector('.search-sticky-wrap');
             const heroBanner = document.querySelector('.hero-banner');
             const pageRoot = document.querySelector('.page.category-accommodation');
@@ -2906,7 +2979,7 @@
 
             const map = window.L.map(mapContainer, {
                 zoomControl: true,
-                scrollWheelZoom: true,
+                scrollWheelZoom: false,
                 center: [4.1755, 73.5093],
                 zoom: 8,
             });

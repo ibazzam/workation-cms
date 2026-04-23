@@ -1189,7 +1189,8 @@
         .nearby-grid {
             margin-top: 10px;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(240px, 320px));
+            justify-content: start;
             gap: 10px;
         }
 

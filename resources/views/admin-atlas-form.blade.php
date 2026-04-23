@@ -161,6 +161,22 @@
                     <input name="wikipedia_title" type="text" maxlength="220" value="{{ old('wikipedia_title', (string) ($record->wikipedia_title ?? '')) }}">
                 </div>
             </div>
+            <div class="row">
+                <div class="field">
+                    <label>
+                        <input type="checkbox" name="is_country_capital" value="1" @checked((bool) old('is_country_capital', (bool) ($record->is_country_capital ?? false)))>
+                        Country capital
+                    </label>
+                    <small style="color:#5c7288;">Use for the national capital island/city.</small>
+                </div>
+                <div class="field">
+                    <label>
+                        <input type="checkbox" name="is_atoll_capital" value="1" @checked((bool) old('is_atoll_capital', (bool) ($record->is_atoll_capital ?? false)))>
+                        Atoll capital
+                    </label>
+                    <small style="color:#5c7288;">Marks this island as the administrative capital for its selected atoll.</small>
+                </div>
+            </div>
         @endif
 
         <div class="field">

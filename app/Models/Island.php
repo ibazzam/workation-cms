@@ -18,6 +18,8 @@ class Island extends Model
         'nearest_airport_name',
         'distance_from_airport_km',
         'is_inhabited',
+        'is_country_capital',
+        'is_atoll_capital',
         'island_type',
         'wikipedia_title',
         'source',
@@ -25,6 +27,8 @@ class Island extends Model
 
     protected $casts = [
         'is_inhabited' => 'boolean',
+        'is_country_capital' => 'boolean',
+        'is_atoll_capital' => 'boolean',
     ];
 
     public function atoll(): BelongsTo

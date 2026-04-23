@@ -1,9 +1,18 @@
 <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/properties/{{ $propertyId }}/update" data-property-edit-form="{{ $propertyId }}" data-property-edit-category="{{ vendorPortalCanonicalCategory((string) $editCategory) ?? $editCategory }}" hidden>
                                                                 @csrf
                                                                 <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $property->name }}" required>
-                                                                <input class="ops-input" name="location_country" type="text" maxlength="90" value="{{ (string) ($propertyDetails['location_country'] ?? '') }}" placeholder="Country" data-property-edit-scope="geo">
-                                                                <input class="ops-input" name="location_state" type="text" maxlength="120" value="{{ (string) ($propertyDetails['location_state'] ?? '') }}" placeholder="State / Province / Atoll" data-property-edit-scope="geo">
-                                                                <input class="ops-input" name="location_city" type="text" maxlength="120" value="{{ (string) ($propertyDetails['location_city'] ?? '') }}" placeholder="City / Island" data-property-edit-scope="geo">
+                                                                <select class="ops-select" name="location_country" data-property-edit-scope="geo" data-edit-country data-selected-value="{{ (string) ($propertyDetails['location_country'] ?? 'Maldives') }}">
+                                                                    <option value="Maldives" @selected((string) ($propertyDetails['location_country'] ?? 'Maldives') === 'Maldives')>Maldives</option>
+                                                                    <option value="Sri Lanka" @selected((string) ($propertyDetails['location_country'] ?? '') === 'Sri Lanka')>Sri Lanka</option>
+                                                                    <option value="India" @selected((string) ($propertyDetails['location_country'] ?? '') === 'India')>India</option>
+                                                                    <option value="Other" @selected((string) ($propertyDetails['location_country'] ?? '') === 'Other')>Other</option>
+                                                                </select>
+                                                                <select class="ops-select" name="location_state" data-property-edit-scope="geo" data-edit-state data-selected-value="{{ (string) ($propertyDetails['location_state'] ?? '') }}">
+                                                                    <option value="">Select atoll</option>
+                                                                </select>
+                                                                <select class="ops-select" name="location_city" data-property-edit-scope="geo" data-edit-city data-selected-value="{{ (string) ($propertyDetails['location_city'] ?? '') }}">
+                                                                    <option value="">Select island</option>
+                                                                </select>
                                                                 <input class="ops-input" name="location_ward" type="text" maxlength="120" value="{{ (string) ($propertyDetails['location_ward'] ?? '') }}" placeholder="Ward / Neighborhood" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="address_line" type="text" maxlength="255" value="{{ (string) ($propertyDetails['address_line'] ?? '') }}" placeholder="Address line" data-property-edit-scope="geo">
                                                                 <input class="ops-input" name="building_house_lot" type="text" maxlength="160" value="{{ (string) ($propertyDetails['building_house_lot'] ?? '') }}" placeholder="Building / House / Lot No." data-property-edit-scope="geo">

@@ -1619,8 +1619,15 @@
         $starString = str_repeat('★', $starCount) . str_repeat('☆', 5 - $starCount);
         $ratingOutOfTen = $ratingValue > 0 ? min(10, $ratingValue * 2) : 0;
         $reviewLabel = $ratingOutOfTen >= 9.0 ? 'Excellent' : ($ratingOutOfTen >= 8.0 ? 'Great' : ($ratingOutOfTen > 0 ? 'Good' : 'No rating yet'));
+        $rawMapLat = $property->map_latitude ?? $property->latitude ?? $property->lat ?? $property->location_lat ?? $property->geo_lat ?? null;
+        $rawMapLng = $property->map_longitude ?? $property->longitude ?? $property->lng ?? $property->location_lng ?? $property->geo_lng ?? null;
+        $mapLat = is_numeric($rawMapLat) ? (float) $rawMapLat : null;
+        $mapLng = is_numeric($rawMapLng) ? (float) $rawMapLng : null;
+        $hasExactCoordinates = $mapLat !== null && $mapLng !== null && $mapLat >= -90 && $mapLat <= 90 && $mapLng >= -180 && $mapLng <= 180;
         $mapQuery = $locationLine !== '' ? $locationLine : ((string) ($property->name ?? 'Workation'));
-        $mapUrl = 'https://www.google.com/maps/search/?api=1&query=' . urlencode($mapQuery);
+        $mapUrl = $hasExactCoordinates
+            ? ('https://www.google.com/maps/search/?api=1&query=' . urlencode($mapLat . ',' . $mapLng))
+            : ('https://www.google.com/maps/search/?api=1&query=' . urlencode($mapQuery));
         $cheapestRoom = $rooms->sortBy(static fn ($room) => (float) ($room->base_price ?? INF))->first();
         $cheapestRoomId = $cheapestRoom ? (int) ($cheapestRoom->id ?? 0) : 0;
         $cheapestRoomPrice = $cheapestRoom ? number_format((float) ($cheapestRoom->base_price ?? 0), 2) : null;

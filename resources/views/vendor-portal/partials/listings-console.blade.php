@@ -358,7 +358,6 @@
                                                                 $activeEditCategory = vendorPortalCanonicalCategory((string) $editCategory);
                                                                 $activeEditFormPartial = $editFormPartialMap[$activeEditCategory] ?? 'vendor-portal.partials.forms.edit.accommodation';
                                                             @endphp
-                                                            @include($activeEditFormPartial)
                                                             <div class="media-upload-row" data-property-media-panel="{{ $propertyId }}" hidden>
                                                                 <form class="media-panel-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data" data-media-upload-form>
                                                                     @csrf
@@ -417,6 +416,13 @@
                                                                     </form>
                                                                 @endif
                                                             </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr class="listing-edit-stretch-row" data-property-edit-row="{{ $propertyId }}" hidden>
+                                                    <td colspan="2">
+                                                        <div class="listing-edit-stretch">
+                                                            @include($activeEditFormPartial)
                                                         </div>
                                                     </td>
                                                 </tr>

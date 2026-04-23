@@ -24,13 +24,72 @@
             margin: 0;
             font-family: "Outfit", "Trebuchet MS", sans-serif;
             color: var(--ink);
-            background:
-                radial-gradient(circle at 8% 0%, #d8ece6 0, #d8ece600 30%),
-                radial-gradient(circle at 92% 6%, #ffe7c6 0, #ffe7c600 30%),
-                var(--bg);
+            background: #f4f7fb;
         }
 
         .page { width: min(1180px, calc(100% - 24px)); margin: 14px auto 28px; }
+
+        .top-search-shell {
+            position: sticky;
+            top: 12px;
+            z-index: 55;
+            border: 1px solid #d4e2ec;
+            border-radius: 12px;
+            background: #ffffff;
+            padding: 10px;
+            box-shadow: 0 8px 22px rgba(21, 39, 56, 0.08);
+            margin-bottom: 12px;
+        }
+
+        .top-search-form {
+            display: grid;
+            grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(140px, 1fr)) auto;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .top-search-field {
+            border: 1px solid #c6d7e4;
+            border-radius: 8px;
+            padding: 8px 10px;
+            background: #fbfdff;
+            color: #17344a;
+            display: grid;
+            gap: 2px;
+        }
+
+        .top-search-field label {
+            font-size: 0.68rem;
+            color: #5f7488;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+        }
+
+        .top-search-field input,
+        .top-search-field select {
+            border: 0;
+            background: transparent;
+            font: inherit;
+            font-size: 0.88rem;
+            color: #17344a;
+            padding: 0;
+            outline: none;
+        }
+
+        .top-search-btn {
+            border: 1px solid #0f6179;
+            background: #0f6179;
+            color: #ffffff;
+            border-radius: 8px;
+            padding: 11px 16px;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .top-search-btn:hover { filter: brightness(1.04); }
 
         .breadcrumb {
             display: flex;
@@ -59,6 +118,11 @@
             color: #ecfcff;
             padding: 14px 16px;
             box-shadow: 0 20px 36px rgba(15, 88, 113, 0.22);
+        }
+
+        .hero,
+        .share-card {
+            display: none;
         }
 
         .hero-top {
@@ -280,6 +344,139 @@
             overflow: auto;
             padding-right: 2px;
         }
+
+        .property-summary-shell {
+            margin-top: 12px;
+            border: 1px solid #d4e5ef;
+            border-radius: 16px;
+            background: #ffffff;
+            padding: 14px;
+            display: grid;
+            grid-template-columns: minmax(0, 1.7fr) minmax(220px, 0.7fr);
+            gap: 14px;
+            align-items: start;
+        }
+
+        .property-summary-main {
+            display: grid;
+            gap: 8px;
+        }
+
+        .property-summary-title {
+            margin: 0;
+            font-size: clamp(1.25rem, 2vw, 1.65rem);
+            color: #1a3347;
+        }
+
+        .property-summary-stars {
+            color: #f3a337;
+            letter-spacing: 0.08em;
+            font-size: 0.9rem;
+        }
+
+        .property-summary-address {
+            color: #3a5568;
+            font-size: 0.9rem;
+        }
+
+        .property-summary-address a {
+            color: #0f6179;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .property-summary-address a:hover { text-decoration: underline; }
+
+        .property-summary-reviews {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .summary-rating-chip {
+            border-radius: 999px;
+            background: #edf6fc;
+            border: 1px solid #cde1ef;
+            color: #214a64;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 4px 10px;
+        }
+
+        .summary-review-link {
+            color: #0f6179;
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .summary-review-link:hover { text-decoration: underline; }
+
+        .summary-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 2px;
+        }
+
+        .summary-tag {
+            border: 1px solid #d6e4ee;
+            border-radius: 999px;
+            background: #f8fbfe;
+            color: #2d4e64;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 9px;
+        }
+
+        .property-summary-price {
+            border: 1px solid #d4e5ef;
+            border-radius: 12px;
+            background: #f8fcff;
+            padding: 12px;
+            display: grid;
+            gap: 8px;
+            justify-items: end;
+            text-align: right;
+        }
+
+        .property-summary-price .k {
+            color: #5f7488;
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            font-weight: 700;
+        }
+
+        .property-summary-price .v {
+            color: #17344a;
+            font-size: 1.3rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .property-summary-price .sub {
+            color: #4c6477;
+            font-size: 0.76rem;
+        }
+
+        .property-summary-price .cta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            border: 1px solid #0f6179;
+            background: #0f6179;
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 0.84rem;
+            font-weight: 700;
+            padding: 9px 14px;
+            min-width: 120px;
+        }
+
+        .property-summary-price .cta:hover { filter: brightness(1.04); }
 
         .gallery-thumb {
             border-radius: 10px;
@@ -1270,6 +1467,10 @@
             border-radius: 12px;
             background: #f8fcff;
             padding: 8px;
+            position: sticky;
+            top: 86px;
+            z-index: 48;
+            backdrop-filter: blur(3px);
         }
 
         .section-tab {
@@ -1281,6 +1482,55 @@
             padding: 6px 11px;
             font-size: 0.8rem;
             font-weight: 700;
+        }
+
+        .section-tab.is-active,
+        .section-tab:hover {
+            border-color: #0f6179;
+            color: #0f6179;
+            background: #eef7fc;
+        }
+
+        .location-section {
+            margin-top: 12px;
+        }
+
+        .location-layout {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(280px, 0.95fr);
+            gap: 12px;
+            align-items: start;
+        }
+
+        .location-copy {
+            color: #37566b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            display: grid;
+            gap: 8px;
+        }
+
+        .location-map {
+            border: 1px solid #d5e5ef;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #eef5fb;
+            min-height: 220px;
+        }
+
+        .location-map iframe {
+            width: 100%;
+            height: 100%;
+            min-height: 220px;
+            border: 0;
+            display: block;
+        }
+
+        .location-map-caption {
+            color: #4f6678;
+            font-size: 0.8rem;
+            margin-top: 8px;
         }
 
         .rooms-grid {
@@ -1458,6 +1708,28 @@
         .muted { color: var(--muted); font-size: 0.8rem; line-height: 1.35; }
 
         @media (max-width: 1080px) {
+            .top-search-form {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .top-search-btn {
+                grid-column: 1 / -1;
+                width: 100%;
+            }
+
+            .property-summary-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .property-summary-price {
+                justify-items: start;
+                text-align: left;
+            }
+
+            .section-tabs {
+                top: 76px;
+            }
+
             .hero-avail-form { grid-template-columns: 1fr 120px 120px 65px 65px auto; }
             .layout { grid-template-columns: 1fr; }
             .info-section { grid-template-columns: 1fr; }
@@ -1475,9 +1747,29 @@
             .room-offer-row { grid-template-columns: minmax(0, 1fr) 76px minmax(170px, 0.9fr); }
             .policies-grid { grid-template-columns: 1fr; }
             .nearby-grid { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+            .location-layout { grid-template-columns: 1fr; }
         }
 
         @media (max-width: 680px) {
+            .top-search-shell {
+                top: 6px;
+                padding: 8px;
+            }
+
+            .top-search-form {
+                grid-template-columns: 1fr;
+            }
+
+            .section-tabs {
+                top: 62px;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+            }
+
+            .section-tab {
+                flex: 0 0 auto;
+            }
+
             .hero-avail-form { grid-template-columns: 1fr; }
             .hero-avail-btn { grid-column: 1 / -1; width: 100%; }
             .hero-stats { grid-template-columns: 1fr; }
@@ -1746,6 +2038,32 @@
             <span aria-hidden="true">›</span>
             <span>{{ (string) ($property->name ?? 'Property') }}</span>
         </nav>
+
+        <section class="top-search-shell" aria-label="Search property stay options">
+            <form method="GET" action="" class="top-search-form" id="propertyTopSearch">
+                <div class="top-search-field">
+                    <label for="topProperty">Location</label>
+                    <input id="topProperty" type="text" name="property_name" value="{{ (string) ($property->name ?? '') }}" readonly>
+                </div>
+                <div class="top-search-field">
+                    <label for="topCheckin">Check-in</label>
+                    <input id="topCheckin" type="date" name="checkin" value="{{ (string) ($prefill['checkin'] ?? '') }}">
+                </div>
+                <div class="top-search-field">
+                    <label for="topCheckout">Check-out</label>
+                    <input id="topCheckout" type="date" name="checkout" value="{{ (string) ($prefill['checkout'] ?? '') }}">
+                </div>
+                <div class="top-search-field">
+                    <label for="topGuests">Guests</label>
+                    <input id="topGuests" type="text" value="{{ (int) ($prefill['adults'] ?? 2) }} adults, {{ (int) ($prefill['children'] ?? 0) }} children, {{ (int) ($prefill['rooms'] ?? 1) }} room" readonly>
+                    <input type="hidden" name="rooms" value="{{ (int) ($prefill['rooms'] ?? 1) }}">
+                    <input type="hidden" name="adults" value="{{ (int) ($prefill['adults'] ?? 2) }}">
+                    <input type="hidden" name="children" value="{{ (int) ($prefill['children'] ?? 0) }}">
+                </div>
+                <button type="submit" class="top-search-btn"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Search</button>
+            </form>
+        </section>
+
         <section class="hero" aria-label="Property summary">
             <div class="hero-top">
                 <div>
@@ -1820,7 +2138,7 @@
         </section>
 
         <div class="layout">
-                <section class="section" aria-label="Property gallery">
+                <section id="property-gallery-section" class="section" aria-label="Property gallery">
                     <h2>Property Gallery</h2>
                     @php
                         $galleryItems = $propertyMedia->take(12)->values();
@@ -1857,6 +2175,33 @@
                             </div>
                         @endif
                     </div>
+                </section>
+
+                <section class="property-summary-shell" aria-label="Property overview">
+                    <div class="property-summary-main">
+                        <span class="property-summary-stars" aria-label="Star ranking">{{ $starString }}</span>
+                        <h1 class="property-summary-title">{{ (string) ($property->name ?? 'Property') }}</h1>
+                        <div class="property-summary-address">
+                            <span>{{ $locationLine !== '' ? $locationLine : 'Address details will be updated shortly.' }}</span>
+                            <span> · </span>
+                            <a href="{{ $mapUrl }}" target="_blank" rel="noopener">Map</a>
+                        </div>
+                        <div class="property-summary-reviews">
+                            <span class="summary-rating-chip">{{ $ratingOutOfTen > 0 ? number_format($ratingOutOfTen, 1) . '/10' : 'N/A' }} {{ $reviewLabel }}</span>
+                            <a class="summary-review-link" href="#guest-reviews-section">{{ $ratingUsers > 0 ? number_format($ratingUsers) : '0' }} reviews</a>
+                        </div>
+                        <div class="summary-tags" aria-label="Property quick tags">
+                            @foreach ($highlights->take(4) as $quickHighlight)
+                                <span class="summary-tag">{{ $amenityDisplay((string) $quickHighlight) }}</span>
+                            @endforeach
+                        </div>
+                    </div>
+                    <aside class="property-summary-price" aria-label="Rate summary">
+                        <span class="k">Starting from</span>
+                        <span class="v">{{ $currency }} {{ $basePrice }}</span>
+                        <span class="sub">per night · taxes may apply</span>
+                        <a class="cta" href="{{ $selectRoomsTarget }}">View rooms</a>
+                    </aside>
                 </section>
 
                 <section id="services-amenities-section" class="info-section" aria-label="Property highlights, amenities and description">
@@ -1973,12 +2318,13 @@
                 </section>
         </div>
 
-        <nav class="section-tabs" aria-label="Property content navigation">
+        <nav class="section-tabs" aria-label="Property content navigation" data-section-nav>
+            <a class="section-tab" href="#property-gallery-section">Photos</a>
+            <a class="section-tab" href="#services-amenities-section">Amenities</a>
             <a class="section-tab" href="#rooms-section">Rooms</a>
-            <a class="section-tab" href="#guest-reviews-section">Guest Reviews</a>
-            <a class="section-tab" href="#services-amenities-section">Services & Amenities</a>
-            <a class="section-tab" href="#policies-section">Policies</a>
-            <a class="section-tab" href="#nearby-properties-section">Nearby Properties</a>
+            <a class="section-tab" href="#guest-reviews-section">Reviews</a>
+            <a class="section-tab" href="#location-section">Location</a>
+            <a class="section-tab" href="#policies-section">Property Policies</a>
         </nav>
 
         <section id="rooms-section" class="section rooms-section" aria-label="Available rooms">
@@ -2192,6 +2538,28 @@
                             </button>
                         </div>
                     @endif
+                </div>
+            </div>
+        </section>
+
+        <section id="location-section" class="section location-section" aria-label="Property location">
+            <h2>Location</h2>
+            <div class="location-layout">
+                <div class="location-copy">
+                    <p>{{ $locationLine !== '' ? $locationLine : 'Location details are being updated.' }}</p>
+                    <p>This property is connected to major nearby points of interest and transport access, making arrivals and day trips easier for guests.</p>
+                    <a class="summary-review-link" href="{{ $mapUrl }}" target="_blank" rel="noopener">More location info</a>
+                </div>
+                <div>
+                    <div class="location-map">
+                        <iframe
+                            loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade"
+                            src="https://maps.google.com/maps?q={{ urlencode($hasExactCoordinates ? ($mapLat . ',' . $mapLng) : $mapQuery) }}&t=&z=13&ie=UTF8&iwloc=&output=embed"
+                            title="Property location map"
+                        ></iframe>
+                    </div>
+                    <p class="location-map-caption">{{ $locationLine !== '' ? $locationLine : 'Map location' }}</p>
                 </div>
             </div>
         </section>
@@ -2764,6 +3132,59 @@
                     this.classList.remove('is-active');
                 }
             });
+        })();
+
+        (function () {
+            const nav = document.querySelector('[data-section-nav]');
+            if (!nav) {
+                return;
+            }
+
+            const links = Array.from(nav.querySelectorAll('.section-tab[href^="#"]'));
+            if (links.length === 0) {
+                return;
+            }
+
+            const targets = links
+                .map((link) => {
+                    const id = String(link.getAttribute('href') || '').replace('#', '');
+                    const el = id ? document.getElementById(id) : null;
+                    return el ? { link, el } : null;
+                })
+                .filter(Boolean);
+
+            if (targets.length === 0) {
+                return;
+            }
+
+            const activate = (activeLink) => {
+                links.forEach((link) => {
+                    link.classList.toggle('is-active', link === activeLink);
+                });
+            };
+
+            const sync = () => {
+                const marker = window.scrollY + 170;
+                let current = targets[0];
+                for (const entry of targets) {
+                    if (entry.el.offsetTop <= marker) {
+                        current = entry;
+                    } else {
+                        break;
+                    }
+                }
+                activate(current.link);
+            };
+
+            links.forEach((link) => {
+                link.addEventListener('click', () => {
+                    activate(link);
+                });
+            });
+
+            window.addEventListener('scroll', sync, { passive: true });
+            window.addEventListener('resize', sync);
+            sync();
         })();
 
         (function () {

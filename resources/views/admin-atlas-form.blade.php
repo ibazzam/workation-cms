@@ -61,6 +61,21 @@
             return '/' . ltrim($path, '/');
         }
 
+        $atlasCandidate = ltrim(str_replace('\\', '/', $path), '/');
+        if (preg_match('#^(?:public/|storage/)?atlas/(?:islands|atolls)/#i', $atlasCandidate) === 1) {
+            if (str_starts_with($atlasCandidate, 'public/')) {
+                $atlasCandidate = substr($atlasCandidate, 7);
+            }
+            if (str_starts_with($atlasCandidate, 'storage/')) {
+                $atlasCandidate = substr($atlasCandidate, 8);
+            }
+            $atlasCandidate = ltrim($atlasCandidate, '/');
+            if ($atlasCandidate !== '') {
+                $encodedAtlasPath = implode('/', array_map('rawurlencode', explode('/', $atlasCandidate)));
+                return '/media/portal-public/' . $encodedAtlasPath;
+            }
+        }
+
         $managed = portalManagedMediaUrlFromPath($path);
         if (is_string($managed) && trim($managed) !== '') {
             return $managed;

@@ -2425,13 +2425,24 @@
                         @endphp
                         @php
                             $propertyDetails = [];
-                            if (isset($property->details)) {
-                                if (is_array($property->details)) {
-                                    $propertyDetails = $property->details;
-                                } elseif (is_string($property->details)) {
-                                    $decodedDetails = json_decode($property->details, true);
+                            $detailsSources = [
+                                $property->listing_details ?? null,
+                                $property->details ?? null,
+                            ];
+                            foreach ($detailsSources as $detailsSource) {
+                                if (is_array($detailsSource)) {
+                                    $propertyDetails = $detailsSource;
+                                    break;
+                                }
+                                if (is_object($detailsSource)) {
+                                    $propertyDetails = (array) $detailsSource;
+                                    break;
+                                }
+                                if (is_string($detailsSource) && trim($detailsSource) !== '') {
+                                    $decodedDetails = json_decode($detailsSource, true);
                                     if (is_array($decodedDetails)) {
                                         $propertyDetails = $decodedDetails;
+                                        break;
                                     }
                                 }
                             }

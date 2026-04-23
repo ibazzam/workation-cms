@@ -556,7 +556,7 @@
         }
 
         .page.category-accommodation .hero-banner-content {
-            width: calc(100% - 24px);
+            width: 100%;
         }
 
         .hero-banner-title {
@@ -592,8 +592,22 @@
         }
 
         .page.category-accommodation .search-sticky-wrap.is-fixed {
-            width: calc(100vw - 24px);
+            top: var(--sticky-search-top, 0px);
+            left: 0;
+            transform: none;
+            width: 100vw;
             max-width: none;
+        }
+
+        .page.category-accommodation .search-box {
+            border-radius: 0;
+        }
+
+        .page.category-accommodation .search-sticky-wrap.is-fixed .search-box {
+            border-left: 0;
+            border-right: 0;
+            border-top: 0;
+            box-shadow: 0 10px 24px rgba(14, 41, 92, 0.18);
         }
 
         .search-sticky-wrap.is-fixed .search-box {
@@ -1125,9 +1139,10 @@
 
         .page.category-accommodation .catalog-results-layout {
             grid-template-columns: 0.72fr 1.28fr;
-            height: calc(100vh - 170px);
+            height: var(--catalog-results-height, calc(100vh - 170px));
             min-height: 600px;
-            position: relative;
+            position: sticky;
+            top: var(--catalog-results-top, 0px);
         }
 
         .catalog-results-list {
@@ -1143,10 +1158,10 @@
         }
 
         .page.category-accommodation .catalog-results-list {
-            margin-top: 10px;
-            height: auto;
+            margin-top: 0;
+            height: 100%;
             max-height: none;
-            overflow-y: visible;
+            overflow-y: auto;
         }
 
         .catalog-show-more-wrap {
@@ -1171,8 +1186,8 @@
         }
 
         .page.category-accommodation .catalog-map-panel {
-            position: sticky;
-            top: var(--catalog-map-top, 0px);
+            position: relative;
+            top: 0;
             align-self: start;
         }
 
@@ -1448,12 +1463,15 @@
             .page.category-accommodation .catalog-results-layout {
                 grid-template-columns: 1fr;
                 height: auto;
+                position: relative;
+                top: auto;
             }
 
             .page.category-accommodation .catalog-results-list {
                 height: auto;
                 max-height: none;
                 margin-top: 10px;
+                overflow-y: visible;
                 border-right: 0;
             }
 
@@ -1461,6 +1479,7 @@
                 height: 380px;
                 min-height: 380px;
                 border-top: 1px solid #dce8f0;
+                position: relative;
             }
 
             .page.category-accommodation .category-map-wrap {
@@ -2868,7 +2887,8 @@
                 if (mobileQuery.matches) {
                     stickyWrap.classList.remove('is-fixed');
                     stickyWrap.style.removeProperty('--sticky-search-top');
-                    pageRoot.style.removeProperty('--catalog-map-top');
+                    pageRoot.style.removeProperty('--catalog-results-top');
+                    pageRoot.style.removeProperty('--catalog-results-height');
                     return;
                 }
 
@@ -2881,13 +2901,16 @@
 
                 stickyWrap.classList.toggle('is-fixed', shouldFix);
                 if (shouldFix) {
-                    stickyWrap.style.setProperty('--sticky-search-top', String(headerBottom + 8) + 'px');
+                    stickyWrap.style.setProperty('--sticky-search-top', String(headerBottom) + 'px');
                     const stickyHeight = Math.round(stickyWrap.getBoundingClientRect().height);
-                    const mapTop = headerBottom + stickyHeight + 14;
-                    pageRoot.style.setProperty('--catalog-map-top', String(mapTop) + 'px');
+                    const resultsTop = headerBottom + stickyHeight;
+                    const resultsHeight = Math.max(420, window.innerHeight - resultsTop);
+                    pageRoot.style.setProperty('--catalog-results-top', String(resultsTop) + 'px');
+                    pageRoot.style.setProperty('--catalog-results-height', String(resultsHeight) + 'px');
                 } else {
                     stickyWrap.style.removeProperty('--sticky-search-top');
-                    pageRoot.style.removeProperty('--catalog-map-top');
+                    pageRoot.style.removeProperty('--catalog-results-top');
+                    pageRoot.style.removeProperty('--catalog-results-height');
                 }
             }
 

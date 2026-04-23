@@ -479,6 +479,8 @@
             ->all();
     }
 
+    $defaultIslandPhotoUrl = '/media/blog/1/cover';
+
     $resolveMediaUrl = static function (?string $rawPath): string {
         $path = trim((string) $rawPath);
         if ($path === '') {
@@ -562,7 +564,7 @@
         return \Illuminate\Support\Facades\Storage::disk('public')->url($normalized);
     };
 
-    $resolveIslandDisplayImage = static function ($islandRecord, $atollRecord = null) use ($resolveMediaUrl, $atlasDestinationOverrides, $atlasCuratedDestinationImages): string {
+    $resolveIslandDisplayImage = static function ($islandRecord, $atollRecord = null) use ($resolveMediaUrl, $atlasDestinationOverrides, $atlasCuratedDestinationImages, $defaultIslandPhotoUrl): string {
         $directImage = $resolveMediaUrl((string) ($islandRecord->photo_path ?? ''));
         if ($directImage !== '') {
             return $directImage;
@@ -595,7 +597,12 @@
             }
         }
 
-        return $resolveMediaUrl((string) ($atollRecord->photo_path ?? ''));
+        $atollImage = $resolveMediaUrl((string) ($atollRecord->photo_path ?? ''));
+        if ($atollImage !== '') {
+            return $atollImage;
+        }
+
+        return $defaultIslandPhotoUrl;
     };
 
     $coverUrl = $resolveIslandDisplayImage($island, $atoll);
@@ -650,7 +657,7 @@
 
     <div class="hero-image-col">
         @if ($coverUrl !== '')
-            <img src="{{ $coverUrl }}" alt="{{ $island->name }} aerial photograph" loading="eager" fetchpriority="high" onerror="this.onerror=null;this.src='{{ $coverFallback }}';">
+            <img src="{{ $coverUrl }}" alt="{{ $island->name }} aerial photograph" loading="eager" fetchpriority="high" onerror="if(!this.dataset.fb && '{{ $defaultIslandPhotoUrl }}' !== '' && this.src !== '{{ $defaultIslandPhotoUrl }}'){this.dataset.fb='1';this.src='{{ $defaultIslandPhotoUrl }}';}else{this.onerror=null;this.src='{{ $coverFallback }}';}">
         @else
             <div class="image-placeholder" aria-hidden="true">🏝</div>
         @endif
@@ -777,7 +784,7 @@
                     <a class="related-card" href="/islands/{{ $relSlug }}" aria-label="{{ $rel->name }}">
                         <div class="related-avatar">
                             @if ($relPhoto !== '')
-                                <img src="{{ $relPhoto }}" alt="{{ $rel->name }}" loading="lazy" onerror="this.onerror=null;this.src='{{ $coverFallback }}';">
+                                <img src="{{ $relPhoto }}" alt="{{ $rel->name }}" loading="lazy" onerror="if(!this.dataset.fb && '{{ $defaultIslandPhotoUrl }}' !== '' && this.src !== '{{ $defaultIslandPhotoUrl }}'){this.dataset.fb='1';this.src='{{ $defaultIslandPhotoUrl }}';}else{this.onerror=null;this.src='{{ $coverFallback }}';}">
                             @else
                                 <div class="avatar-placeholder" aria-hidden="true">🏝</div>
                             @endif

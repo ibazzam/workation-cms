@@ -482,44 +482,18 @@
             gap: 2px;
         }
 
-        .island-badges {
+        .island-atoll-code {
+            font-size: 0.75rem;
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        .island-name-row {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
             flex-wrap: wrap;
-            margin-top: 4px;
-        }
-
-        .island-badge {
-            display: inline-flex;
-            align-items: center;
-            border-radius: 999px;
-            padding: 3px 8px;
-            font-size: 0.68rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            border: 1px solid transparent;
-            white-space: nowrap;
-        }
-
-        .island-badge.country-capital {
-            background: #ecf3ff;
-            border-color: #c8daf9;
-            color: #194a8f;
-        }
-
-        .island-badge.atoll-capital {
-            background: #e9f8ef;
-            border-color: #c4e7d1;
-            color: #14613d;
-        }
-
-        .island-atoll-code {
-            font-size: 0.75rem;
-            color: var(--muted);
-            font-weight: 500;
         }
 
         .island-name {
@@ -527,6 +501,33 @@
             font-weight: 700;
             color: var(--ink);
             line-height: 1.25;
+        }
+
+        .island-capital-mark {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            min-height: 22px;
+            border-radius: 999px;
+            padding: 3px 8px;
+            font-size: 0.64rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            border: 1px solid transparent;
+        }
+
+        .island-capital-mark.country-capital {
+            background: #ecf3ff;
+            border-color: #c8daf9;
+            color: #194a8f;
+        }
+
+        .island-capital-mark.atoll-capital {
+            background: #e9f8ef;
+            border-color: #c4e7d1;
+            color: #14613d;
         }
 
         .island-hint {
@@ -656,6 +657,28 @@
         'uninhabited_total' => 0,
     ];
 
+    $atlasCuratedDestinationImages = [
+        'male' => '/images/home/destinations/male-city.svg',
+        'male_city' => '/images/home/destinations/male-city.svg',
+        'hulhumale' => '/images/home/destinations/hulhumale-seafront.svg',
+        'hulhumale_seafront' => '/images/home/destinations/hulhumale-seafront.svg',
+        'thulusdhoo' => '/images/home/destinations/thulusdhoo-island.svg',
+        'thulusdhoo_island' => '/images/home/destinations/thulusdhoo-island.svg',
+        'thulhusdhoo' => '/images/home/destinations/thulusdhoo-island.svg',
+        'thulhusdhoo_island' => '/images/home/destinations/thulusdhoo-island.svg',
+        'ukulhas' => '/images/home/destinations/ukulhas-island.svg',
+        'ukulhas_island' => '/images/home/destinations/ukulhas-island.svg',
+        'dhigurah' => '/images/home/destinations/dhigurah-island.svg',
+        'dhigurah_island' => '/images/home/destinations/dhigurah-island.svg',
+    ];
+
+    $atlasDestinationOverrides = [];
+    if (\Illuminate\Support\Facades\Schema::hasTable('portal_destination_media_overrides')) {
+        $atlasDestinationOverrides = \Illuminate\Support\Facades\DB::table('portal_destination_media_overrides')
+            ->pluck('image_value', 'destination_key')
+            ->all();
+    }
+
     $resolveIslandImageUrl = static function (?string $rawPath): string {
         $path = trim((string) ($rawPath ?? ''));
         if ($path === '') {
@@ -705,6 +728,42 @@
     };
 
     $islandImageFallback = "data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27400%27 viewBox=%270 0 400 400%27%3E%3Cdefs%3E%3ClinearGradient id=%27g%27 x1=%270%27 y1=%270%27 x2=%271%27 y2=%271%27%3E%3Cstop offset=%270%25%27 stop-color=%27%23d8e9f2%27/%3E%3Cstop offset=%27100%25%27 stop-color=%27%23c8dceb%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%27400%27 height=%27400%27 fill=%27url(%23g)%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dominant-baseline=%27middle%27 fill=%27%233e5b71%27 font-family=%27Arial%27 font-size=%2726%27%3ENo%20image%3C/text%3E%3C/svg%3E";
+
+    $resolveIslandCardImage = static function ($island, $atoll) use ($resolveIslandImageUrl, $atlasDestinationOverrides, $atlasCuratedDestinationImages): string {
+        $directImage = $resolveIslandImageUrl((string) ($island->photo_path ?? ''));
+        if ($directImage !== '') {
+            return $directImage;
+        }
+
+        $candidates = [
+            portalNormalizeDestinationMediaKey((string) ($island->name ?? '')),
+            portalNormalizeDestinationMediaKey((string) ($island->slug ?? '')),
+            portalNormalizeDestinationMediaKey((string) ($island->name ?? '') . ' island'),
+            portalNormalizeDestinationMediaKey((string) ($atoll->name ?? '')),
+            portalNormalizeDestinationMediaKey((string) ($atoll->name ?? '') . ' atoll'),
+        ];
+
+        foreach ($candidates as $candidateKey) {
+            if ($candidateKey === '') {
+                continue;
+            }
+
+            $overrideValue = trim((string) ($atlasDestinationOverrides[$candidateKey] ?? ''));
+            if ($overrideValue !== '') {
+                $overrideUrl = portalManagedMediaUrlFromPath($overrideValue) ?? '';
+                if ($overrideUrl !== '') {
+                    return $overrideUrl;
+                }
+            }
+
+            $curatedUrl = trim((string) ($atlasCuratedDestinationImages[$candidateKey] ?? ''));
+            if ($curatedUrl !== '') {
+                return $curatedUrl;
+            }
+        }
+
+        return $resolveIslandImageUrl((string) ($atoll->photo_path ?? ''));
+    };
 @endphp
 
 <header class="header-bar" aria-label="Site navigation">
@@ -845,16 +904,16 @@
                                     @foreach ($typeIslands as $island)
                                         @php
                                             $islandSlug = $island->slug ?? Str::slug($island->name);
-                                            $atollCode = $atoll->code ?? strtoupper(substr($atoll->name ?? '', 0, 3));
                                             $distanceHint = $island->distance_from_airport_km ? $island->distance_from_airport_km . ' KM' : null;
                                             $airportHint = $island->nearest_airport_name ?? null;
                                             $capitalBadges = portalAtlasCapitalBadges((string) ($island->name ?? ''), (string) ($atoll->name ?? ''));
-                                            $islandImageUrl = $resolveIslandImageUrl((string) ($island->photo_path ?? ''));
+                                            $islandImageUrl = $resolveIslandCardImage($island, $atoll);
                                             
                                             $hintParts = [];
                                             if ($distanceHint && $airportHint) $hintParts[] = $distanceHint . ' from ' . $airportHint;
                                             elseif ($distanceHint) $hintParts[] = $distanceHint;
                                             $hintText = implode(' ', $hintParts);
+                                            $primaryCapitalBadge = $capitalBadges[0] ?? null;
                                         @endphp
                                         <a
                                             class="island-card"
@@ -877,15 +936,15 @@
                                                 @endif
                                             </div>
                                             <div class="island-meta">
-                                                <span class="island-atoll-code">{{ $atollCode }}</span>
-                                                <span class="island-name">{{ $island->name }}</span>
-                                                @if (!empty($capitalBadges))
-                                                    <span class="island-badges">
-                                                        @foreach ($capitalBadges as $badge)
-                                                            <span class="island-badge {{ (string) ($badge['key'] ?? '') }}">{{ (string) ($badge['label'] ?? '') }}</span>
-                                                        @endforeach
-                                                    </span>
-                                                @endif
+                                                <span class="island-name-row">
+                                                    <span class="island-name">{{ $island->name }}</span>
+                                                    @if ($primaryCapitalBadge)
+                                                        <span class="island-capital-mark {{ (string) ($primaryCapitalBadge['key'] ?? '') }}" aria-label="{{ (string) ($primaryCapitalBadge['label'] ?? '') }}">
+                                                            <span aria-hidden="true">{{ (string) (($primaryCapitalBadge['key'] ?? '') === 'country-capital' ? '★' : '⌂') }}</span>
+                                                            <span>{{ (string) (($primaryCapitalBadge['key'] ?? '') === 'country-capital' ? 'Capital' : 'Atoll capital') }}</span>
+                                                        </span>
+                                                    @endif
+                                                </span>
                                                 @if ($hintText)
                                                     <span class="island-hint">{{ $hintText }}</span>
                                                 @endif

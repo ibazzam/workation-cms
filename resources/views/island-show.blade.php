@@ -479,7 +479,7 @@
             ->all();
     }
 
-    $defaultIslandPhotoUrl = '/media/blog/1/cover';
+    $defaultIslandPhotoUrl = '';
 
     $resolveMediaUrl = static function (?string $rawPath): string {
         $path = trim((string) $rawPath);
@@ -555,6 +555,21 @@
             return $path;
         }
 
+        $atlasCandidate = ltrim(str_replace('\\', '/', $path), '/');
+        if (preg_match('#^(?:public/|storage/)?atlas/(?:islands|atolls)/#i', $atlasCandidate) === 1) {
+            if (str_starts_with($atlasCandidate, 'public/')) {
+                $atlasCandidate = substr($atlasCandidate, 7);
+            }
+            if (str_starts_with($atlasCandidate, 'storage/')) {
+                $atlasCandidate = substr($atlasCandidate, 8);
+            }
+            $atlasCandidate = ltrim($atlasCandidate, '/');
+            if ($atlasCandidate !== '') {
+                $encodedAtlasPath = implode('/', array_map('rawurlencode', explode('/', $atlasCandidate)));
+                return '/media/portal-public/' . $encodedAtlasPath;
+            }
+        }
+
         $managed = portalManagedMediaUrlFromPath($path);
         if (is_string($managed) && trim($managed) !== '') {
             return $managed;
@@ -627,7 +642,7 @@
 @endphp
 
 <header class="header-bar" aria-label="Site navigation">
-    <a class="brand" href="/">
+    <a class="brand" href="/blog">
         Workation
         <small>Blog</small>
     </a>
@@ -775,9 +790,8 @@
                 @foreach ($relatedIslands as $rel)
                     @php
                         $relSlug      = $rel->slug ?? \Illuminate\Support\Str::slug($rel->name);
-                        $relAtollCode = $rel->atoll ? ($rel->atoll->code ?? strtoupper(substr($rel->atoll->name ?? '', 0, 3))) : '';
                         $relHint      = $rel->distance_from_airport_km && $rel->nearest_airport_name
-                            ? ($rel->atoll->name ?? '') . ' atoll – ' . $rel->distance_from_airport_km . ' KM from VIA ' . $rel->nearest_airport_name
+                            ? trim((string) ($rel->atoll->name ?? '')) . ' atoll - ' . rtrim(rtrim(number_format((float) $rel->distance_from_airport_km, 1, '.', ''), '0'), '.') . ' km from ' . $rel->nearest_airport_name
                             : ($rel->atoll->name ?? null);
                         $relPhoto     = $resolveIslandDisplayImage($rel, $rel->atoll ?? null);
                     @endphp
@@ -790,9 +804,6 @@
                             @endif
                         </div>
                         <div class="related-meta">
-                            @if ($relAtollCode)
-                                <span class="related-atoll-code">{{ $relAtollCode }}.</span>
-                            @endif
                             <span class="related-name">{{ $rel->name }}</span>
                             @if ($relHint)
                                 <span class="related-hint">{{ $relHint }}</span>

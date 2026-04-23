@@ -555,6 +555,10 @@
             gap: 12px;
         }
 
+        .page.category-accommodation .hero-banner-content {
+            width: calc(100% - 24px);
+        }
+
         .hero-banner-title {
             margin: 0;
             color: #f5fbff;
@@ -585,6 +589,11 @@
             transform: translateX(-50%);
             width: min(1180px, calc(100% - 24px));
             z-index: 1040;
+        }
+
+        .page.category-accommodation .search-sticky-wrap.is-fixed {
+            width: calc(100vw - 24px);
+            max-width: none;
         }
 
         .search-sticky-wrap.is-fixed .search-box {
@@ -1119,6 +1128,7 @@
             height: calc(100vh - 170px);
             min-height: 600px;
             position: relative;
+            margin-top: var(--catalog-results-top-gap, 0px);
         }
 
         .catalog-results-list {
@@ -1135,7 +1145,6 @@
 
         .page.category-accommodation .catalog-results-list {
             margin-top: 10px;
-            padding-top: var(--catalog-list-top-gap, 0px);
             height: auto;
             max-height: none;
             overflow-y: visible;
@@ -2861,7 +2870,7 @@
                     stickyWrap.classList.remove('is-fixed');
                     stickyWrap.style.removeProperty('--sticky-search-top');
                     pageRoot.style.removeProperty('--catalog-map-top');
-                    pageRoot.style.removeProperty('--catalog-list-top-gap');
+                    pageRoot.style.removeProperty('--catalog-results-top-gap');
                     return;
                 }
 
@@ -2877,13 +2886,13 @@
                     stickyWrap.style.setProperty('--sticky-search-top', String(headerBottom + 8) + 'px');
                     const stickyHeight = Math.round(stickyWrap.getBoundingClientRect().height);
                     const mapTop = headerBottom + stickyHeight + 14;
-                    const listGap = stickyHeight + 14;
+                    const resultsGap = stickyHeight + 14;
                     pageRoot.style.setProperty('--catalog-map-top', String(mapTop) + 'px');
-                    pageRoot.style.setProperty('--catalog-list-top-gap', String(listGap) + 'px');
+                    pageRoot.style.setProperty('--catalog-results-top-gap', String(resultsGap) + 'px');
                 } else {
                     stickyWrap.style.removeProperty('--sticky-search-top');
                     pageRoot.style.removeProperty('--catalog-map-top');
-                    pageRoot.style.removeProperty('--catalog-list-top-gap');
+                    pageRoot.style.removeProperty('--catalog-results-top-gap');
                 }
             }
 

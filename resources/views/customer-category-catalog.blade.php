@@ -1116,6 +1116,8 @@
 
         .page.category-accommodation .catalog-results-layout {
             grid-template-columns: 0.72fr 1.28fr;
+            height: calc(100vh - 300px);
+            min-height: 540px;
         }
 
         .catalog-results-list {
@@ -1127,6 +1129,7 @@
             height: 100%;
             border-right: 1px solid #e0e8f0;
             background: #ffffff;
+            overscroll-behavior: contain;
         }
 
         .catalog-map-panel {
@@ -1140,6 +1143,12 @@
             height: 100%;
             display: flex;
             flex-direction: column;
+        }
+
+        .page.category-accommodation .catalog-map-panel {
+            position: sticky;
+            top: 10px;
+            align-self: start;
         }
 
         .catalog-map-head {
@@ -1433,10 +1442,6 @@
             }
 
             .search-sticky-wrap.is-fixed {
-                position: static;
-                top: auto;
-                left: auto;
-                transform: none;
                 width: 100%;
             }
         }
@@ -2410,8 +2415,19 @@
                             $actionLabel = $categoryKey === 'accommodation' ? 'View Deal' : 'Book Now';
                         @endphp
                         @php
-                            $rawLat = $property->map_latitude ?? $property->latitude ?? $property->lat ?? $property->location_lat ?? $property->geo_lat ?? null;
-                            $rawLng = $property->map_longitude ?? $property->longitude ?? $property->lng ?? $property->location_lng ?? $property->geo_lng ?? null;
+                            $propertyDetails = [];
+                            if (isset($property->details)) {
+                                if (is_array($property->details)) {
+                                    $propertyDetails = $property->details;
+                                } elseif (is_string($property->details)) {
+                                    $decodedDetails = json_decode($property->details, true);
+                                    if (is_array($decodedDetails)) {
+                                        $propertyDetails = $decodedDetails;
+                                    }
+                                }
+                            }
+                            $rawLat = $propertyDetails['map_latitude'] ?? $property->map_latitude ?? $property->latitude ?? $property->lat ?? $property->location_lat ?? $property->geo_lat ?? null;
+                            $rawLng = $propertyDetails['map_longitude'] ?? $property->map_longitude ?? $property->longitude ?? $property->lng ?? $property->location_lng ?? $property->geo_lng ?? null;
                             $lat = is_numeric($rawLat) ? (float) $rawLat : null;
                             $lng = is_numeric($rawLng) ? (float) $rawLng : null;
                         @endphp

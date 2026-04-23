@@ -562,8 +562,14 @@
         @elseif ($island->wikipedia_title)
             <p class="island-description">
                 {{ $island->name }} is an island in the Maldives
-                @if ($atollName), located in the {{ $atollName }} administrative atoll@endif.
-                @if ($island->is_inhabited) It is an inhabited island.@else It is an uninhabited island.@endif
+                @if ($atollName)
+                    , located in the {{ $atollName }} administrative atoll.
+                @endif
+                @if ($island->is_inhabited)
+                    It is an inhabited island.
+                @else
+                    It is an uninhabited island.
+                @endif
             </p>
         @endif
 
@@ -609,7 +615,7 @@
             <a
                 class="cat-card {{ $card['soon'] ? 'coming-soon' : '' }}"
                 href="{{ $card['href'] }}"
-                {{ $card['soon'] ? 'aria-disabled=true' : '' }}
+                @if ($card['soon']) aria-disabled="true" @endif
             >
                 <span class="cat-type">{{ $card['type'] }}</span>
                 <span class="cat-title">{{ $card['title'] }}</span>

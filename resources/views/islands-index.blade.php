@@ -702,6 +702,18 @@
             return 'https://' . ltrim(substr($path, 7), '/');
         }
 
+        if (preg_match('#^/?media/blog/(\d+)(?:/cover)?/?$#i', $path, $matches) === 1) {
+            return '/media/blog/' . $matches[1] . '/cover';
+        }
+
+        if (preg_match('#^/?blog/(\d+)(?:/cover)?/?$#i', $path, $matches) === 1) {
+            return '/media/blog/' . $matches[1] . '/cover';
+        }
+
+        if (preg_match('/^\d+$/', $path) === 1) {
+            return '/media/blog/' . $path . '/cover';
+        }
+
         if (str_starts_with($path, 'https://') || str_starts_with($path, 'data:image/')) {
             return $path;
         }
@@ -711,10 +723,16 @@
         }
 
         if (str_starts_with($path, '/media/') || str_starts_with($path, '/storage/')) {
+            if (preg_match('#^/media/blog/(\d+)(?:/cover)?/?$#i', $path, $matches) === 1) {
+                return '/media/blog/' . $matches[1] . '/cover';
+            }
             return $path;
         }
 
         if (str_starts_with($path, 'media/') || str_starts_with($path, 'storage/')) {
+            if (preg_match('#^media/blog/(\d+)(?:/cover)?/?$#i', $path, $matches) === 1) {
+                return '/media/blog/' . $matches[1] . '/cover';
+            }
             return '/' . ltrim($path, '/');
         }
 

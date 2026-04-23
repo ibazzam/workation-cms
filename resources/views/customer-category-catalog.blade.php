@@ -2896,12 +2896,16 @@
                     return;
                 }
 
+                const currentY = window.scrollY || 0;
                 const header = document.querySelector('[data-uniform-header]');
                 const headerBottom = header
                     ? Math.max(0, Math.round(header.getBoundingClientRect().bottom))
                     : 0;
                 const heroBottom = heroBanner.getBoundingClientRect().bottom;
-                const shouldFix = heroBottom <= (headerBottom + 30);
+                const isAccommodation = pageRoot.classList.contains('category-accommodation');
+                const shouldFix = isAccommodation
+                    ? currentY > 0
+                    : (heroBottom <= (headerBottom + 30));
 
                 stickyWrap.classList.toggle('is-fixed', shouldFix);
                 if (shouldFix) {

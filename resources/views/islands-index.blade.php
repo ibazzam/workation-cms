@@ -679,6 +679,8 @@
             ->all();
     }
 
+    $defaultIslandPhotoUrl = '/media/blog/1/cover';
+
     $resolveIslandImageUrl = static function (?string $rawPath): string {
         $path = trim((string) ($rawPath ?? ''));
         if ($path === '') {
@@ -747,7 +749,7 @@
 
     $islandImageFallback = "data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27400%27 viewBox=%270 0 400 400%27%3E%3Cdefs%3E%3ClinearGradient id=%27g%27 x1=%270%27 y1=%270%27 x2=%271%27 y2=%271%27%3E%3Cstop offset=%270%25%27 stop-color=%27%23d8e9f2%27/%3E%3Cstop offset=%27100%25%27 stop-color=%27%23c8dceb%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%27400%27 height=%27400%27 fill=%27url(%23g)%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dominant-baseline=%27middle%27 fill=%27%233e5b71%27 font-family=%27Arial%27 font-size=%2726%27%3ENo%20image%3C/text%3E%3C/svg%3E";
 
-    $resolveIslandCardImage = static function ($island, $atoll) use ($resolveIslandImageUrl, $atlasDestinationOverrides, $atlasCuratedDestinationImages): string {
+    $resolveIslandCardImage = static function ($island, $atoll) use ($resolveIslandImageUrl, $atlasDestinationOverrides, $atlasCuratedDestinationImages, $defaultIslandPhotoUrl): string {
         $directImage = $resolveIslandImageUrl((string) ($island->photo_path ?? ''));
         if ($directImage !== '') {
             return $directImage;
@@ -780,7 +782,12 @@
             }
         }
 
-        return $resolveIslandImageUrl((string) ($atoll->photo_path ?? ''));
+        $atollImage = $resolveIslandImageUrl((string) ($atoll->photo_path ?? ''));
+        if ($atollImage !== '') {
+            return $atollImage;
+        }
+
+        return $defaultIslandPhotoUrl;
     };
 @endphp
 
@@ -947,7 +954,7 @@
                                                         src="{{ $islandImageUrl }}"
                                                         alt="{{ $island->name }} aerial view"
                                                         loading="lazy"
-                                                        onerror="this.onerror=null;this.src='{{ $islandImageFallback }}';"
+                                                        onerror="if(!this.dataset.fb && '{{ $defaultIslandPhotoUrl }}' !== '' && this.src !== '{{ $defaultIslandPhotoUrl }}'){this.dataset.fb='1';this.src='{{ $defaultIslandPhotoUrl }}';}else{this.onerror=null;this.src='{{ $islandImageFallback }}';}"
                                                     >
                                                 @else
                                                     <div class="avatar-placeholder" aria-hidden="true">{{ $typeEmoji[$typeKey] ?? '🏝' }}</div>

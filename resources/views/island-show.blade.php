@@ -449,22 +449,20 @@
 <body>
 
 @php
-    use Illuminate\Support\Str;
-    use Illuminate\Support\Facades\Storage;
-
     /** @var \App\Models\Island $island */
     /** @var \Illuminate\Support\Collection $relatedIslands */
 
     $atoll      = $island->atoll;
     $atollName  = $atoll ? $atoll->name : null;
-    $atollSlug  = $atoll ? ($atoll->slug ?? Str::slug($atoll->name)) : null;
+    $atollSlug  = $atoll ? ($atoll->slug ?? \Illuminate\Support\Str::slug($atoll->name)) : null;
     $atollCode  = $atoll ? ($atoll->code ?? strtoupper(substr($atoll->name ?? '', 0, 3))) : null;
 
-    $coverUrl = $island->photo_path
-        ? Storage::disk('public')->url($island->photo_path)
+    $coverPath = trim((string) ($island->photo_path ?? ''));
+    $coverUrl = $coverPath !== ''
+        ? (portalManagedMediaUrlFromPath($coverPath) ?: \Illuminate\Support\Facades\Storage::disk('public')->url($coverPath))
         : '';
 
-    $shareUrl     = url('/islands/' . ($island->slug ?? Str::slug($island->name)));
+    $shareUrl     = url('/islands/' . ($island->slug ?? \Illuminate\Support\Str::slug($island->name)));
     $shareTitle   = urlencode($island->name . ' – Maldives Island Directory on Workation');
     $shareLinks   = [
         ['label' => 'Facebook', 'icon' => 'fb',  'href' => 'https://www.facebook.com/sharer/sharer.php?u=' . urlencode($shareUrl)],
@@ -633,7 +631,10 @@
                         $relHint      = $rel->distance_from_airport_km && $rel->nearest_airport_name
                             ? ($rel->atoll->name ?? '') . ' atoll – ' . $rel->distance_from_airport_km . ' KM from VIA ' . $rel->nearest_airport_name
                             : ($rel->atoll->name ?? null);
-                        $relPhoto     = $rel->photo_path ? Storage::disk('public')->url($rel->photo_path) : '';
+                        $relPhotoPath = trim((string) ($rel->photo_path ?? ''));
+                        $relPhoto     = $relPhotoPath !== ''
+                            ? (portalManagedMediaUrlFromPath($relPhotoPath) ?: \Illuminate\Support\Facades\Storage::disk('public')->url($relPhotoPath))
+                            : '';
                     @endphp
                     <a class="related-card" href="/islands/{{ $relSlug }}" aria-label="{{ $rel->name }}">
                         <div class="related-avatar">

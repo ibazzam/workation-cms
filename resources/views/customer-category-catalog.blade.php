@@ -1360,6 +1360,10 @@
             padding: 7px 14px;
         }
 
+        .page.category-accommodation .wf-site-footer {
+            display: none;
+        }
+
         .page.category-default .catalog-results-layout {
             display: block;
             height: auto;

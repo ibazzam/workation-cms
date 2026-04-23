@@ -457,6 +457,28 @@
     $atollSlug  = $atoll ? ($atoll->slug ?? \Illuminate\Support\Str::slug($atoll->name)) : null;
     $atollCode  = $atoll ? ($atoll->code ?? strtoupper(substr($atoll->name ?? '', 0, 3))) : null;
 
+    $atlasCuratedDestinationImages = [
+        'male' => '/images/home/destinations/male-city.svg',
+        'male_city' => '/images/home/destinations/male-city.svg',
+        'hulhumale' => '/images/home/destinations/hulhumale-seafront.svg',
+        'hulhumale_seafront' => '/images/home/destinations/hulhumale-seafront.svg',
+        'thulusdhoo' => '/images/home/destinations/thulusdhoo-island.svg',
+        'thulusdhoo_island' => '/images/home/destinations/thulusdhoo-island.svg',
+        'thulhusdhoo' => '/images/home/destinations/thulusdhoo-island.svg',
+        'thulhusdhoo_island' => '/images/home/destinations/thulusdhoo-island.svg',
+        'ukulhas' => '/images/home/destinations/ukulhas-island.svg',
+        'ukulhas_island' => '/images/home/destinations/ukulhas-island.svg',
+        'dhigurah' => '/images/home/destinations/dhigurah-island.svg',
+        'dhigurah_island' => '/images/home/destinations/dhigurah-island.svg',
+    ];
+
+    $atlasDestinationOverrides = [];
+    if (\Illuminate\Support\Facades\Schema::hasTable('portal_destination_media_overrides')) {
+        $atlasDestinationOverrides = \Illuminate\Support\Facades\DB::table('portal_destination_media_overrides')
+            ->pluck('image_value', 'destination_key')
+            ->all();
+    }
+
     $resolveMediaUrl = static function (?string $rawPath): string {
         $path = trim((string) $rawPath);
         if ($path === '') {
@@ -524,8 +546,43 @@
         return \Illuminate\Support\Facades\Storage::disk('public')->url($normalized);
     };
 
-    $coverPath = trim((string) ($island->photo_path ?? ''));
-    $coverUrl = $resolveMediaUrl($coverPath);
+    $resolveIslandDisplayImage = static function ($islandRecord, $atollRecord = null) use ($resolveMediaUrl, $atlasDestinationOverrides, $atlasCuratedDestinationImages): string {
+        $directImage = $resolveMediaUrl((string) ($islandRecord->photo_path ?? ''));
+        if ($directImage !== '') {
+            return $directImage;
+        }
+
+        $candidates = [
+            portalNormalizeDestinationMediaKey((string) ($islandRecord->name ?? '')),
+            portalNormalizeDestinationMediaKey((string) ($islandRecord->slug ?? '')),
+            portalNormalizeDestinationMediaKey((string) ($islandRecord->name ?? '') . ' island'),
+            portalNormalizeDestinationMediaKey((string) ($atollRecord->name ?? '')),
+            portalNormalizeDestinationMediaKey((string) ($atollRecord->name ?? '') . ' atoll'),
+        ];
+
+        foreach ($candidates as $candidateKey) {
+            if ($candidateKey === '') {
+                continue;
+            }
+
+            $overrideValue = trim((string) ($atlasDestinationOverrides[$candidateKey] ?? ''));
+            if ($overrideValue !== '') {
+                $overrideUrl = portalManagedMediaUrlFromPath($overrideValue) ?? '';
+                if ($overrideUrl !== '') {
+                    return $overrideUrl;
+                }
+            }
+
+            $curatedUrl = trim((string) ($atlasCuratedDestinationImages[$candidateKey] ?? ''));
+            if ($curatedUrl !== '') {
+                return $curatedUrl;
+            }
+        }
+
+        return $resolveMediaUrl((string) ($atollRecord->photo_path ?? ''));
+    };
+
+    $coverUrl = $resolveIslandDisplayImage($island, $atoll);
     $coverFallback = "data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%271600%27 height=%27900%27 viewBox=%270 0 1600 900%27%3E%3Cdefs%3E%3ClinearGradient id=%27g%27 x1=%270%27 y1=%270%27 x2=%271%27 y2=%271%27%3E%3Cstop offset=%270%25%27 stop-color=%27%23d8ece1%27/%3E%3Cstop offset=%27100%25%27 stop-color=%27%23c5dfd1%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%271600%27 height=%27900%27 fill=%27url(%23g)%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dominant-baseline=%27middle%27 fill=%27%23395c4c%27 font-family=%27Arial%27 font-size=%2742%27%3EIsland%20Photo%3C/text%3E%3C/svg%3E";
     $capitalBadges = portalAtlasCapitalBadges((string) ($island->name ?? ''), (string) ($atollName ?? ''));
 
@@ -699,8 +756,7 @@
                         $relHint      = $rel->distance_from_airport_km && $rel->nearest_airport_name
                             ? ($rel->atoll->name ?? '') . ' atoll – ' . $rel->distance_from_airport_km . ' KM from VIA ' . $rel->nearest_airport_name
                             : ($rel->atoll->name ?? null);
-                        $relPhotoPath = trim((string) ($rel->photo_path ?? ''));
-                        $relPhoto     = $resolveMediaUrl($relPhotoPath);
+                        $relPhoto     = $resolveIslandDisplayImage($rel, $rel->atoll ?? null);
                     @endphp
                     <a class="related-card" href="/islands/{{ $relSlug }}" aria-label="{{ $rel->name }}">
                         <div class="related-avatar">

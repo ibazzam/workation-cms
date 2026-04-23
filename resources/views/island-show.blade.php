@@ -600,10 +600,6 @@
             @endforeach
         </div>
 
-        {{-- Atoll code + Island name --}}
-        @if ($atollCode)
-            <p class="atoll-label">{{ $atollCode }}</p>
-        @endif
         <div class="hero-meta">
             @if ($atollName)
                 <span class="hero-pill">{{ $atollName }} atoll</span>
@@ -646,14 +642,8 @@
         @endif
 
         {{-- Island facts --}}
-        @if ($atollName || $island->population !== null || $island->nearest_airport_name || $island->distance_from_airport_km !== null)
+        @if ($island->population !== null || $island->nearest_airport_name || $island->distance_from_airport_km !== null)
             <div class="fact-grid" aria-label="Island facts">
-            @if ($atollName)
-                <div class="fact-card">
-                    <span class="fact-label">Atoll</span>
-                    <span class="fact-value">{{ $atollName }}</span>
-                </div>
-            @endif
             @if ($island->population !== null)
                 <div class="fact-card">
                     <span class="fact-label">Population</span>

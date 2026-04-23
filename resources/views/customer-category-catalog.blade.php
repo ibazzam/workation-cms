@@ -1116,8 +1116,8 @@
 
         .page.category-accommodation .catalog-results-layout {
             grid-template-columns: 0.72fr 1.28fr;
-            height: calc(100vh - 300px);
-            min-height: 540px;
+            height: calc(100vh - 170px);
+            min-height: 600px;
         }
 
         .catalog-results-list {
@@ -1156,7 +1156,7 @@
 
         .page.category-accommodation .catalog-map-panel {
             position: sticky;
-            top: 10px;
+            top: 0;
             align-self: start;
         }
 
@@ -2284,7 +2284,9 @@
         <div class="page-body-split">
             <div class="page-main-content">
 
-        <h2 class="section-title">Available Portfolio Items</h2>
+        @if ($categoryKey !== 'accommodation')
+            <h2 class="section-title">Available Portfolio Items</h2>
+        @endif
         @if ($catalogProperties->isEmpty())
             <div class="empty">No listings found for this category and selected filters yet.</div>
         @else

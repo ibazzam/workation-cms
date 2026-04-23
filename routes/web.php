@@ -8047,6 +8047,8 @@ Route::post('/portal/admin/atlas/islands', function (Request $request) {
         'description' => ['nullable', 'string', 'max:3000'],
         'island_type' => ['required', Rule::in(['inhabited', 'uninhabited', 'resort'])],
         'is_inhabited' => ['nullable', 'boolean'],
+        'is_country_capital' => ['nullable', 'boolean'],
+        'is_atoll_capital' => ['nullable', 'boolean'],
         'wikipedia_title' => ['nullable', 'string', 'max:220'],
         'photo' => ['nullable', 'image', 'max:6144'],
     ]);
@@ -8096,7 +8098,28 @@ Route::post('/portal/admin/atlas/islands', function (Request $request) {
     if (Schema::hasColumn('islands', 'source')) {
         $island->source = 'admin';
     }
+    if (Schema::hasColumn('islands', 'is_country_capital')) {
+        $island->is_country_capital = (bool) ($validated['is_country_capital'] ?? false);
+    }
+    if (Schema::hasColumn('islands', 'is_atoll_capital')) {
+        $island->is_atoll_capital = (bool) ($validated['is_atoll_capital'] ?? false);
+    }
     $island->save();
+
+    if (Schema::hasColumn('islands', 'is_country_capital') && (bool) ($island->is_country_capital ?? false)) {
+        \App\Models\Island::query()
+            ->where('id', '!=', (int) $island->id)
+            ->where('is_country_capital', true)
+            ->update(['is_country_capital' => false]);
+    }
+
+    if (Schema::hasColumn('islands', 'is_atoll_capital') && (bool) ($island->is_atoll_capital ?? false)) {
+        \App\Models\Island::query()
+            ->where('id', '!=', (int) $island->id)
+            ->where('atoll_id', (int) $island->atoll_id)
+            ->where('is_atoll_capital', true)
+            ->update(['is_atoll_capital' => false]);
+    }
 
     if ($request->hasFile('photo') && Schema::hasColumn('islands', 'photo_path')) {
         $photo = $request->file('photo');
@@ -8161,6 +8184,8 @@ Route::post('/portal/admin/atlas/islands/{island}', function (Request $request, 
         'description' => ['nullable', 'string', 'max:3000'],
         'island_type' => ['required', Rule::in(['inhabited', 'uninhabited', 'resort'])],
         'is_inhabited' => ['nullable', 'boolean'],
+        'is_country_capital' => ['nullable', 'boolean'],
+        'is_atoll_capital' => ['nullable', 'boolean'],
         'wikipedia_title' => ['nullable', 'string', 'max:220'],
         'photo' => ['nullable', 'image', 'max:6144'],
         'remove_photo' => ['nullable', 'boolean'],
@@ -8207,6 +8232,12 @@ Route::post('/portal/admin/atlas/islands/{island}', function (Request $request, 
     if (Schema::hasColumn('islands', 'wikipedia_title')) {
         $record->wikipedia_title = trim((string) ($validated['wikipedia_title'] ?? '')) ?: null;
     }
+    if (Schema::hasColumn('islands', 'is_country_capital')) {
+        $record->is_country_capital = (bool) ($validated['is_country_capital'] ?? false);
+    }
+    if (Schema::hasColumn('islands', 'is_atoll_capital')) {
+        $record->is_atoll_capital = (bool) ($validated['is_atoll_capital'] ?? false);
+    }
 
     if ((bool) ($validated['remove_photo'] ?? false) && Schema::hasColumn('islands', 'photo_path')) {
         $existingPath = trim((string) ($record->photo_path ?? ''));
@@ -8234,6 +8265,21 @@ Route::post('/portal/admin/atlas/islands/{island}', function (Request $request, 
     }
 
     $record->save();
+
+    if (Schema::hasColumn('islands', 'is_country_capital') && (bool) ($record->is_country_capital ?? false)) {
+        \App\Models\Island::query()
+            ->where('id', '!=', (int) $record->id)
+            ->where('is_country_capital', true)
+            ->update(['is_country_capital' => false]);
+    }
+
+    if (Schema::hasColumn('islands', 'is_atoll_capital') && (bool) ($record->is_atoll_capital ?? false)) {
+        \App\Models\Island::query()
+            ->where('id', '!=', (int) $record->id)
+            ->where('atoll_id', (int) $record->atoll_id)
+            ->where('is_atoll_capital', true)
+            ->update(['is_atoll_capital' => false]);
+    }
 
     portalAdminAuditLog('atlas_island_updated', [
         'target_role' => 'ADMIN',

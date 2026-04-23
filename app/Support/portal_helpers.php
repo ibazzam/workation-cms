@@ -1448,6 +1448,70 @@ if (!function_exists('portalAtlasCapitalBadges')) {
         $badges = [];
         $seen = [];
 
+        // Prefer DB-managed flags when available so admin form controls are authoritative.
+        if (
+            Schema::hasTable('islands')
+            && Schema::hasColumn('islands', 'is_country_capital')
+            && Schema::hasColumn('islands', 'is_atoll_capital')
+        ) {
+            static $capitalFlagRows = null;
+            if ($capitalFlagRows === null) {
+                try {
+                    $capitalFlagRows = \Illuminate\Support\Facades\DB::table('islands')
+                        ->leftJoin('atolls', 'atolls.id', '=', 'islands.atoll_id')
+                        ->select([
+                            'islands.name as island_name',
+                            'atolls.name as atoll_name',
+                            'islands.is_country_capital',
+                            'islands.is_atoll_capital',
+                        ])
+                        ->where(function ($query) {
+                            $query->where('islands.is_country_capital', true)
+                                ->orWhere('islands.is_atoll_capital', true);
+                        })
+                        ->get();
+                } catch (\Throwable $e) {
+                    $capitalFlagRows = collect();
+                }
+            }
+
+            $isCountryCapital = false;
+            $isAtollCapital = false;
+            $atollKey = $normalize($atollName);
+
+            foreach ($capitalFlagRows as $row) {
+                $rowNameKey = $normalize((string) ($row->island_name ?? ''));
+                if ($rowNameKey === '' || $rowNameKey !== $nameKey) {
+                    continue;
+                }
+
+                if ((bool) ($row->is_country_capital ?? false)) {
+                    $isCountryCapital = true;
+                }
+
+                if ((bool) ($row->is_atoll_capital ?? false)) {
+                    $rowAtollKey = $normalize((string) ($row->atoll_name ?? ''));
+                    if ($atollKey === '' || $rowAtollKey === '' || $rowAtollKey === $atollKey) {
+                        $isAtollCapital = true;
+                    }
+                }
+            }
+
+            if ($isCountryCapital) {
+                $badges[] = ['key' => 'country-capital', 'label' => 'Country Capital'];
+                $seen['country-capital'] = true;
+            }
+
+            if ($isAtollCapital) {
+                $badges[] = ['key' => 'atoll-capital', 'label' => 'Atoll Capital'];
+                $seen['atoll-capital'] = true;
+            }
+
+            if (!empty($badges)) {
+                return $badges;
+            }
+        }
+
         $countryCapitals = config('atlas_capitals.country_capitals', []);
         $countryCapitalKeys = collect(is_array($countryCapitals) ? $countryCapitals : [])
             ->map(static fn ($item) => $normalize((string) $item))

@@ -1421,6 +1421,85 @@ if (!function_exists('portalNormalizeDestinationMediaKey')) {
     }
 }
 
+if (!function_exists('portalAtlasCapitalBadges')) {
+    /**
+     * Resolve capital badges for an island/city name.
+     *
+     * @return array<int, array{key:string,label:string}>
+     */
+    function portalAtlasCapitalBadges(?string $islandName, ?string $atollName = null): array
+    {
+        $normalize = static function (?string $value): string {
+            $raw = strtolower(trim((string) ($value ?? '')));
+            if ($raw === '') {
+                return '';
+            }
+
+            $ascii = \Illuminate\Support\Str::ascii($raw);
+            $ascii = preg_replace('/[^a-z0-9]+/', ' ', $ascii) ?? '';
+            return trim(preg_replace('/\s+/', ' ', $ascii) ?? '');
+        };
+
+        $nameKey = $normalize($islandName);
+        if ($nameKey === '') {
+            return [];
+        }
+
+        $badges = [];
+        $seen = [];
+
+        $countryCapitals = config('atlas_capitals.country_capitals', []);
+        $countryCapitalKeys = collect(is_array($countryCapitals) ? $countryCapitals : [])
+            ->map(static fn ($item) => $normalize((string) $item))
+            ->filter(static fn ($item) => $item !== '')
+            ->values()
+            ->all();
+
+        if (in_array($nameKey, $countryCapitalKeys, true)) {
+            $badges[] = ['key' => 'country-capital', 'label' => 'Country Capital'];
+            $seen['country-capital'] = true;
+        }
+
+        $atollCapitalMap = config('atlas_capitals.atoll_capitals', []);
+        if (is_array($atollCapitalMap)) {
+            $atollKey = $normalize($atollName);
+            $resolvedAtollCapital = null;
+
+            if ($atollKey !== '') {
+                foreach ($atollCapitalMap as $rawAtoll => $rawCapital) {
+                    if ($normalize((string) $rawAtoll) !== $atollKey) {
+                        continue;
+                    }
+
+                    if (is_array($rawCapital)) {
+                        foreach ($rawCapital as $candidate) {
+                            $candidateKey = $normalize((string) $candidate);
+                            if ($candidateKey !== '' && $candidateKey === $nameKey) {
+                                $resolvedAtollCapital = $candidateKey;
+                                break;
+                            }
+                        }
+                    } else {
+                        $candidateKey = $normalize((string) $rawCapital);
+                        if ($candidateKey !== '' && $candidateKey === $nameKey) {
+                            $resolvedAtollCapital = $candidateKey;
+                        }
+                    }
+
+                    break;
+                }
+            }
+
+            if ($resolvedAtollCapital !== null && !isset($seen['atoll-capital'])) {
+                $badges[] = ['key' => 'atoll-capital', 'label' => 'Atoll Capital'];
+                $seen['atoll-capital'] = true;
+            }
+        }
+
+        return $badges;
+    }
+}
+
 if (!function_exists('portalStoreAdminHeroImage')) {
     if (!function_exists('portalStoreManagedOriginalImage')) {
         function portalStoreManagedOriginalImage($file, string $baseDirectory, string $slot): ?string

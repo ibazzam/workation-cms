@@ -17,6 +17,10 @@
         table { width: 100%; border-collapse: collapse; }
         th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 0.88rem; vertical-align: top; }
         .thumb { width: 50px; height: 34px; object-fit: cover; border-radius: 6px; background: #d9e3ee; }
+        .cap-badges { display: inline-flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+        .cap-badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 7px; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; border: 1px solid transparent; }
+        .cap-badge.country-capital { background: #ecf3ff; border-color: #c8daf9; color: #194a8f; }
+        .cap-badge.atoll-capital { background: #e9f8ef; border-color: #c4e7d1; color: #14613d; }
         .row-actions { display: flex; gap: 6px; }
         .btn.small { padding: 6px 10px; font-size: 0.78rem; }
         form { margin: 0; }
@@ -26,6 +30,57 @@
     </style>
 </head>
 <body>
+@php
+    $resolveAtlasPhotoUrl = static function (?string $rawPath): string {
+        $path = trim((string) ($rawPath ?? ''));
+        if ($path === '') {
+            return '';
+        }
+
+        $decoded = json_decode($path, true);
+        if (is_array($decoded)) {
+            $path = trim((string) ($decoded['path'] ?? $decoded['url'] ?? $decoded['photo_path'] ?? ''));
+            if ($path === '') {
+                return '';
+            }
+        }
+
+        $path = trim($path, " \t\n\r\0\x0B\"'");
+        if ($path === '') {
+            return '';
+        }
+
+        if (str_starts_with($path, 'http://')) {
+            return 'https://' . ltrim(substr($path, 7), '/');
+        }
+
+        if (str_starts_with($path, 'https://') || str_starts_with($path, 'data:image/')) {
+            return $path;
+        }
+
+        if (str_starts_with($path, '//')) {
+            return 'https:' . $path;
+        }
+
+        if (str_starts_with($path, '/media/') || str_starts_with($path, '/storage/')) {
+            return $path;
+        }
+
+        if (str_starts_with($path, 'media/') || str_starts_with($path, 'storage/')) {
+            return '/' . ltrim($path, '/');
+        }
+
+        $managed = portalManagedMediaUrlFromPath($path);
+        if (is_string($managed) && trim($managed) !== '') {
+            return $managed;
+        }
+
+        $normalized = ltrim(str_replace(['public/', 'storage/'], '', str_replace('\\', '/', $path)), '/');
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($normalized);
+    };
+
+    $thumbFallbackSvg = "data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27240%27 viewBox=%270 0 400 240%27%3E%3Cdefs%3E%3ClinearGradient id=%27g%27 x1=%270%27 y1=%270%27 x2=%271%27 y2=%271%27%3E%3Cstop offset=%270%25%27 stop-color=%27%23d6e4ef%27/%3E%3Cstop offset=%27100%25%27 stop-color=%27%23c7d8e6%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%27400%27 height=%27240%27 fill=%27url(%23g)%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dominant-baseline=%27middle%27 fill=%27%233e5668%27 font-family=%27Arial%27 font-size=%2722%27%3ENo%20image%3C/text%3E%3C/svg%3E";
+@endphp
 <div class="wrap">
     <div class="head">
         <div>
@@ -64,7 +119,12 @@
                     <tr>
                         <td>
                             @if(!empty($atoll->photo_path))
-                                <img class="thumb" src="{{ Storage::disk('public')->url($atoll->photo_path) }}" alt="{{ $atoll->name }}">
+                                @php $atollPhoto = $resolveAtlasPhotoUrl($atoll->photo_path); @endphp
+                                @if($atollPhoto !== '')
+                                    <img class="thumb" src="{{ $atollPhoto }}" alt="{{ $atoll->name }}" loading="lazy" onerror="this.onerror=null;this.src='{{ $thumbFallbackSvg }}';">
+                                @else
+                                    <span style="color:#8aa; font-size:0.76rem;">No image</span>
+                                @endif
                             @else
                                 <span style="color:#8aa; font-size:0.76rem;">No image</span>
                             @endif
@@ -106,12 +166,29 @@
                     <tr>
                         <td>
                             @if(!empty($island->photo_path))
-                                <img class="thumb" src="{{ Storage::disk('public')->url($island->photo_path) }}" alt="{{ $island->name }}">
+                                @php $islandPhoto = $resolveAtlasPhotoUrl($island->photo_path); @endphp
+                                @if($islandPhoto !== '')
+                                    <img class="thumb" src="{{ $islandPhoto }}" alt="{{ $island->name }}" loading="lazy" onerror="this.onerror=null;this.src='{{ $thumbFallbackSvg }}';">
+                                @else
+                                    <span style="color:#8aa; font-size:0.76rem;">No image</span>
+                                @endif
                             @else
                                 <span style="color:#8aa; font-size:0.76rem;">No image</span>
                             @endif
                         </td>
-                        <td>{{ $island->name }}</td>
+                        <td>
+                            {{ $island->name }}
+                            @php
+                                $islandCapitalBadges = portalAtlasCapitalBadges((string) ($island->name ?? ''), (string) (optional($island->atoll)->name ?? ''));
+                            @endphp
+                            @if(!empty($islandCapitalBadges))
+                                <span class="cap-badges">
+                                    @foreach($islandCapitalBadges as $badge)
+                                        <span class="cap-badge {{ (string) ($badge['key'] ?? '') }}">{{ (string) ($badge['label'] ?? '') }}</span>
+                                    @endforeach
+                                </span>
+                            @endif
+                        </td>
                         <td>{{ optional($island->atoll)->name ?? '-' }}</td>
                         <td>{{ $island->island_type ?? '-' }}</td>
                         <td>

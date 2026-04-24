@@ -2831,7 +2831,7 @@
                         <div class="room-body">
                             <h3><a class="room-name-link" href="#" data-open-room-modal="{{ $roomId }}">{{ (string) ($room->name ?? 'Room') }}</a></h3>
                             @php
-                                $roomOldPrice = number_format(((float) ($room->base_price_per_night ?? ($room->base_price ?? 0)) * 1.08, 2);
+                                $roomOldPrice = number_format(((float) ($room->base_price_per_night ?? ($room->base_price ?? 0)) * 1.08), 2);
                             @endphp
                             <div class="room-offer-table" aria-label="Room rate options" data-room-id="{{ $roomId }}">
                                 <div class="room-offer-head">

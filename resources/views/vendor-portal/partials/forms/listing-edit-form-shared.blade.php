@@ -347,14 +347,6 @@
                                                                 <input class="ops-input" name="check_out_time" type="time" value="{{ (string) ($propertyDetails['check_out_time'] ?? '12:00') }}" data-property-edit-scope="accommodation">
                                                                 <input class="ops-input" name="minimum_nights" type="number" min="1" max="365" value="{{ (string) ($propertyDetails['minimum_nights'] ?? 1) }}" placeholder="Minimum Nights" data-property-edit-scope="accommodation">
                                                                 <textarea class="ops-textarea" name="house_rules" rows="3" maxlength="2000" placeholder="House Rules" data-property-edit-scope="accommodation">{{ (string) ($propertyDetails['house_rules'] ?? '') }}</textarea>
-                                                                <select class="ops-select" name="meal_plan" data-property-edit-scope="accommodation">
-                                                                    <option value="" @selected((string) ($propertyDetails['meal_plan'] ?? '') === '')>Meal Plan</option>
-                                                                    <option value="room_only" @selected((string) ($propertyDetails['meal_plan'] ?? '') === 'room_only')>Room Only</option>
-                                                                    <option value="bed_breakfast" @selected((string) ($propertyDetails['meal_plan'] ?? '') === 'bed_breakfast')>Bed &amp; Breakfast</option>
-                                                                    <option value="half_board" @selected((string) ($propertyDetails['meal_plan'] ?? '') === 'half_board')>Half Board</option>
-                                                                    <option value="full_board" @selected((string) ($propertyDetails['meal_plan'] ?? '') === 'full_board')>Full Board</option>
-                                                                    <option value="all_inclusive" @selected((string) ($propertyDetails['meal_plan'] ?? '') === 'all_inclusive')>All Inclusive</option>
-                                                                </select>
                                                                 <input class="ops-input" name="check_in_grace_minutes" type="number" min="0" max="720" value="{{ (string) ($propertyDetails['check_in_grace_minutes'] ?? 60) }}" placeholder="Check-in Grace (minutes)" data-property-edit-scope="accommodation">
                                                                 <select class="ops-select" name="early_check_in_allowed" data-property-edit-scope="accommodation">
                                                                     <option value="" @selected((string) ($propertyDetails['early_check_in_allowed'] ?? '') === '')>Early Check-in</option>
@@ -369,8 +361,6 @@
                                                                     <option value="no" @selected((string) ($propertyDetails['late_check_out_allowed'] ?? '') === 'no')>Not Allowed</option>
                                                                 </select>
                                                                 <textarea class="ops-textarea" name="child_policy" rows="3" maxlength="3000" placeholder="Child Policy" data-property-edit-scope="accommodation">{{ (string) ($propertyDetails['child_policy'] ?? '') }}</textarea>
-                                                                <input class="ops-input" name="extra_guest_fee" type="number" min="0" step="0.01" value="{{ (string) ($propertyDetails['extra_guest_fee'] ?? '') }}" placeholder="Extra Guest Fee (MVR)" data-property-edit-scope="accommodation">
-                                                                <input class="ops-input" name="child_fee" type="number" min="0" step="0.01" value="{{ (string) ($propertyDetails['child_fee'] ?? '') }}" placeholder="Child Fee (MVR)" data-property-edit-scope="accommodation">
                                                                 <input class="ops-input" name="early_check_in_fee" type="number" min="0" step="0.01" value="{{ (string) ($propertyDetails['early_check_in_fee'] ?? '') }}" placeholder="Early Check-in Fee (MVR)" data-property-edit-scope="accommodation">
                                                                 <input class="ops-input" name="late_check_out_fee" type="number" min="0" step="0.01" value="{{ (string) ($propertyDetails['late_check_out_fee'] ?? '') }}" placeholder="Late Check-out Fee (MVR)" data-property-edit-scope="accommodation">
                                                                 {{-- Shared: cancellation policy --}}

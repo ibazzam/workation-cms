@@ -498,6 +498,11 @@
                                                                                                 <input class="ops-input" name="extra_person_capacity" type="number" min="0" max="20" value="{{ (int) ($room->extra_person_capacity ?? 0) > 0 ? (int) ($room->extra_person_capacity ?? 0) : '' }}" placeholder="Extra adult capacity">
                                                                                                 <input class="ops-input" name="child_capacity" type="number" min="0" max="20" value="{{ (int) ($room->child_capacity ?? 0) > 0 ? (int) ($room->child_capacity ?? 0) : '' }}" placeholder="Child capacity">
                                                                                                 <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($room->base_price ?? 0) > 0 ? (float) ($room->base_price ?? 0) : '' }}" placeholder="Base room price">
+                                                                                                <input class="ops-input" name="meal_plan_room_only_price" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_room_only_price ?? 0) > 0 ? (float) ($room->meal_plan_room_only_price ?? 0) : '' }}" placeholder="Room only price (MVR)">
+                                                                                                <input class="ops-input" name="meal_plan_bb_price" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_bb_price ?? 0) > 0 ? (float) ($room->meal_plan_bb_price ?? 0) : '' }}" placeholder="BB price (MVR)">
+                                                                                                <input class="ops-input" name="meal_plan_hb_price" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_hb_price ?? 0) > 0 ? (float) ($room->meal_plan_hb_price ?? 0) : '' }}" placeholder="HB price (MVR)">
+                                                                                                <input class="ops-input" name="meal_plan_fb_price" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_fb_price ?? 0) > 0 ? (float) ($room->meal_plan_fb_price ?? 0) : '' }}" placeholder="FB price (MVR)">
+                                                                                                <input class="ops-input" name="meal_plan_ai_price" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_ai_price ?? 0) > 0 ? (float) ($room->meal_plan_ai_price ?? 0) : '' }}" placeholder="All inclusive price (MVR)">
                                                                                                 <input class="ops-input" name="extra_person_price" type="number" min="0" step="0.01" value="{{ (float) ($room->extra_person_price ?? 0) > 0 ? (float) ($room->extra_person_price ?? 0) : '' }}" placeholder="Extra adult price">
                                                                                                 <input class="ops-input" name="child_price" type="number" min="0" step="0.01" value="{{ (float) ($room->child_price ?? 0) > 0 ? (float) ($room->child_price ?? 0) : '' }}" placeholder="Child price">
                                                                                                 @php
@@ -688,6 +693,26 @@
                                                                     <div class="ops-field">
                                                                         <label>Room Base Price (MVR)</label>
                                                                         <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('base_price', '') : '' }}">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Room Only Price (MVR)</label>
+                                                                        <input class="ops-input" name="meal_plan_room_only_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_room_only_price', '') : '' }}">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>BB Price (MVR)</label>
+                                                                        <input class="ops-input" name="meal_plan_bb_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_bb_price', '') : '' }}">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>HB Price (MVR)</label>
+                                                                        <input class="ops-input" name="meal_plan_hb_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_hb_price', '') : '' }}">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>FB Price (MVR)</label>
+                                                                        <input class="ops-input" name="meal_plan_fb_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_fb_price', '') : '' }}">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>All Inclusive Price (MVR)</label>
+                                                                        <input class="ops-input" name="meal_plan_ai_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_ai_price', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
                                                                         <label>Extra Adult Price (MVR)</label>

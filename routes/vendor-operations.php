@@ -859,7 +859,6 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['area_value'] = vendorPortalNormalizedNumeric($validated['area_value'] ?? null);
             $details['area_unit'] = 'sqft';
             $details['bedroom_count'] = isset($validated['bedroom_count']) ? (int) $validated['bedroom_count'] : null;
-            $details['meal_plan'] = trim((string) ($validated['meal_plan'] ?? ''));
             $details['check_in_time'] = trim((string) ($validated['check_in_time'] ?? ''));
             $details['check_out_time'] = trim((string) ($validated['check_out_time'] ?? ''));
             $details['check_in_grace_minutes'] = isset($validated['check_in_grace_minutes']) && $validated['check_in_grace_minutes'] !== ''
@@ -877,8 +876,6 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['star_rating'] = isset($validated['star_rating']) && $validated['star_rating'] !== ''
                 ? (int) $validated['star_rating']
                 : null;
-            $details['extra_guest_fee'] = vendorPortalNormalizedNumeric($validated['extra_guest_fee'] ?? null);
-            $details['child_fee'] = vendorPortalNormalizedNumeric($validated['child_fee'] ?? null);
             $details['early_check_in_fee'] = vendorPortalNormalizedNumeric($validated['early_check_in_fee'] ?? null);
             $details['late_check_out_fee'] = vendorPortalNormalizedNumeric($validated['late_check_out_fee'] ?? null);
             $details['property_amenities'] = $propertyAmenities;
@@ -1046,7 +1043,7 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
             if (!in_array(($details['area_unit'] ?? ''), ['sqm', 'sqft'], true)) {
                 $errors[] = 'Area unit must be sqm or sqft.';
             }
-            foreach (['extra_guest_fee', 'child_fee', 'early_check_in_fee', 'late_check_out_fee'] as $feeField) {
+            foreach (['early_check_in_fee', 'late_check_out_fee'] as $feeField) {
                 if (isset($details[$feeField]) && $details[$feeField] !== null && (float) $details[$feeField] < 0) {
                     $errors[] = 'Accommodation fee values cannot be negative.';
                     break;
@@ -1055,9 +1052,6 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
         }
 
         if ($listingCategory === 'accommodation') {
-            if (!empty($details['meal_plan']) && !in_array((string) ($details['meal_plan'] ?? ''), ['room_only', 'bed_breakfast', 'half_board', 'full_board', 'all_inclusive'], true)) {
-                $errors[] = 'Meal plan must be room_only, bed_breakfast, half_board, full_board, or all_inclusive.';
-            }
             if (!empty($details['check_in_time']) && strtotime((string) $details['check_in_time']) === false) {
                 $errors[] = 'Check-in time must be a valid time.';
             }
@@ -2972,6 +2966,11 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         'room_features' => ['nullable', 'array'],
         'room_features.*' => ['required', 'string', 'max:80'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_room_only_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_bb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_hb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_fb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_ai_price' => ['nullable', 'numeric', 'min:0'],
         'extra_person_price' => ['nullable', 'numeric', 'min:0'],
         'child_price' => ['nullable', 'numeric', 'min:0'],
         'child_policy' => ['nullable', 'string', 'max:3000'],
@@ -3067,6 +3066,21 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
     if (Schema::hasColumn('vendor_property_room_categories', 'child_price')) {
         $insertPayload['child_price'] = (float) ($validated['child_price'] ?? 0);
     }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_room_only_price')) {
+        $insertPayload['meal_plan_room_only_price'] = (float) ($validated['meal_plan_room_only_price'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_bb_price')) {
+        $insertPayload['meal_plan_bb_price'] = (float) ($validated['meal_plan_bb_price'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_hb_price')) {
+        $insertPayload['meal_plan_hb_price'] = (float) ($validated['meal_plan_hb_price'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_fb_price')) {
+        $insertPayload['meal_plan_fb_price'] = (float) ($validated['meal_plan_fb_price'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_ai_price')) {
+        $insertPayload['meal_plan_ai_price'] = (float) ($validated['meal_plan_ai_price'] ?? 0);
+    }
     if (Schema::hasColumn('vendor_property_room_categories', 'bathroom_type')) {
         $insertPayload['bathroom_type'] = $submittedBathroomType === '' ? null : $submittedBathroomType;
     }
@@ -3127,6 +3141,11 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
         'bathroom_amenities' => ['nullable', 'array'],
         'bathroom_amenities.*' => ['required', 'string', 'max:80'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_room_only_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_bb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_hb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_fb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_ai_price' => ['nullable', 'numeric', 'min:0'],
         'extra_person_price' => ['nullable', 'numeric', 'min:0'],
         'child_price' => ['nullable', 'numeric', 'min:0'],
         'child_policy' => ['nullable', 'string', 'max:3000'],
@@ -3210,6 +3229,21 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'child_price')) {
         $updatePayload['child_price'] = (float) ($validated['child_price'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_room_only_price')) {
+        $updatePayload['meal_plan_room_only_price'] = (float) ($validated['meal_plan_room_only_price'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_bb_price')) {
+        $updatePayload['meal_plan_bb_price'] = (float) ($validated['meal_plan_bb_price'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_hb_price')) {
+        $updatePayload['meal_plan_hb_price'] = (float) ($validated['meal_plan_hb_price'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_fb_price')) {
+        $updatePayload['meal_plan_fb_price'] = (float) ($validated['meal_plan_fb_price'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_ai_price')) {
+        $updatePayload['meal_plan_ai_price'] = (float) ($validated['meal_plan_ai_price'] ?? 0);
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'bathroom_type')) {
         $updatePayload['bathroom_type'] = $submittedBathroomType === '' ? null : $submittedBathroomType;
@@ -3375,13 +3409,10 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'property_amenities.*' => ['required', 'string', 'max:80'],
         'property_features' => ['nullable', 'array'],
         'property_features.*' => ['required', 'string', 'max:80'],
-        'meal_plan' => ['nullable', Rule::in(['room_only', 'bed_breakfast', 'half_board', 'full_board', 'all_inclusive'])],
         'check_in_grace_minutes' => ['nullable', 'integer', 'min:0', 'max:720'],
         'early_check_in_allowed' => ['nullable', Rule::in(['yes', 'no', 'subject_to_availability'])],
         'late_check_out_allowed' => ['nullable', Rule::in(['yes', 'no', 'subject_to_availability'])],
         'child_policy' => ['nullable', 'string', 'max:3000'],
-        'extra_guest_fee' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
-        'child_fee' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
         'early_check_in_fee' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
         'late_check_out_fee' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
     ]);
@@ -3639,13 +3670,10 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'property_amenities.*' => ['required', 'string', 'max:80'],
         'property_features' => ['nullable', 'array'],
         'property_features.*' => ['required', 'string', 'max:80'],
-        'meal_plan' => ['nullable', Rule::in(['room_only', 'bed_breakfast', 'half_board', 'full_board', 'all_inclusive'])],
         'check_in_grace_minutes' => ['nullable', 'integer', 'min:0', 'max:720'],
         'early_check_in_allowed' => ['nullable', Rule::in(['yes', 'no', 'subject_to_availability'])],
         'late_check_out_allowed' => ['nullable', Rule::in(['yes', 'no', 'subject_to_availability'])],
         'child_policy' => ['nullable', 'string', 'max:3000'],
-        'extra_guest_fee' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
-        'child_fee' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
         'early_check_in_fee' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
         'late_check_out_fee' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
         'status' => ['required', Rule::in(['active', 'inactive'])],

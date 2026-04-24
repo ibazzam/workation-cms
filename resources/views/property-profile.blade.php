@@ -31,7 +31,7 @@
 
         .top-search-shell {
             position: sticky;
-            top: 12px;
+            top: 74px;
             z-index: 55;
             border: 1px solid #d4e2ec;
             border-radius: 12px;
@@ -39,6 +39,10 @@
             padding: 10px;
             box-shadow: 0 8px 22px rgba(21, 39, 56, 0.08);
             margin-bottom: 12px;
+        }
+
+        body.is-header-hidden .top-search-shell {
+            top: 8px;
         }
 
         .top-search-form {
@@ -420,6 +424,37 @@
             margin-top: 2px;
         }
 
+        .summary-share {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 2px;
+        }
+
+        .summary-share a,
+        .summary-share button {
+            border: 1px solid #cfe1ec;
+            background: #f8fdff;
+            color: #0f6179;
+            border-radius: 999px;
+            height: 30px;
+            min-width: 30px;
+            padding: 0 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font: inherit;
+            font-size: 0.78rem;
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: 700;
+            gap: 6px;
+        }
+
+        .summary-share a:hover,
+        .summary-share button:hover { background: #eef8fc; }
+
         .summary-tag {
             border: 1px solid #d6e4ee;
             border-radius: 999px;
@@ -509,7 +544,7 @@
             background: #ffffff;
             padding: 14px;
             display: grid;
-            grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.9fr);
+            grid-template-columns: 1fr;
             gap: 14px;
             align-items: start;
         }
@@ -1730,6 +1765,10 @@
                 top: 76px;
             }
 
+            body.is-header-hidden .section-tabs {
+                top: 62px;
+            }
+
             .hero-avail-form { grid-template-columns: 1fr 120px 120px 65px 65px auto; }
             .layout { grid-template-columns: 1fr; }
             .info-section { grid-template-columns: 1fr; }
@@ -1752,8 +1791,12 @@
 
         @media (max-width: 680px) {
             .top-search-shell {
-                top: 6px;
+                top: 62px;
                 padding: 8px;
+            }
+
+            body.is-header-hidden .top-search-shell {
+                top: 6px;
             }
 
             .top-search-form {
@@ -1764,6 +1807,10 @@
                 top: 62px;
                 overflow-x: auto;
                 flex-wrap: nowrap;
+            }
+
+            body.is-header-hidden .section-tabs {
+                top: 54px;
             }
 
             .section-tab {
@@ -2127,16 +2174,6 @@
             </div>
         </section>
 
-        <section class="share-card" aria-label="Share this property">
-            <span class="share-label">Share this property</span>
-            <div class="share-links">
-                <a href="https://wa.me/?text={{ $shareEncodedText }}" target="_blank" rel="noopener" title="Share on WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
-                <a href="https://www.facebook.com/sharer/sharer.php?u={{ $shareEncodedUrl }}" target="_blank" rel="noopener" title="Share on Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
-                <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ $shareEncodedUrl }}" target="_blank" rel="noopener" title="Share on LinkedIn"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i></a>
-                <button type="button" data-copy-share-link="{{ $shareUrl }}" title="Copy link"><i class="fa-solid fa-link" aria-hidden="true"></i></button>
-            </div>
-        </section>
-
         <div class="layout">
                 <section id="property-gallery-section" class="section" aria-label="Property gallery">
                     <h2>Property Gallery</h2>
@@ -2190,10 +2227,12 @@
                             <span class="summary-rating-chip">{{ $ratingOutOfTen > 0 ? number_format($ratingOutOfTen, 1) . '/10' : 'N/A' }} {{ $reviewLabel }}</span>
                             <a class="summary-review-link" href="#guest-reviews-section">{{ $ratingUsers > 0 ? number_format($ratingUsers) : '0' }} reviews</a>
                         </div>
-                        <div class="summary-tags" aria-label="Property quick tags">
-                            @foreach ($highlights->take(4) as $quickHighlight)
-                                <span class="summary-tag">{{ $amenityDisplay((string) $quickHighlight) }}</span>
-                            @endforeach
+
+                        <div class="summary-share" aria-label="Share this property">
+                            <a href="https://wa.me/?text={{ $shareEncodedText }}" target="_blank" rel="noopener" title="Share on WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span>Share</span></a>
+                            <a href="https://www.facebook.com/sharer/sharer.php?u={{ $shareEncodedUrl }}" target="_blank" rel="noopener" title="Share on Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+                            <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ $shareEncodedUrl }}" target="_blank" rel="noopener" title="Share on LinkedIn"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i></a>
+                            <button type="button" data-copy-share-link="{{ $shareUrl }}" title="Copy link"><i class="fa-solid fa-link" aria-hidden="true"></i></button>
                         </div>
                     </div>
                     <aside class="property-summary-price" aria-label="Rate summary">
@@ -2291,30 +2330,6 @@
                         </section>
                     </div>
 
-                    <aside class="review-card" aria-label="Review and ratings">
-                        <h2 class="block-title">Review & Ratings</h2>
-                        <div class="review-score">
-                            <span class="review-score-badge">{{ $ratingOutOfTen > 0 ? number_format($ratingOutOfTen, 1) . '/10' : 'N/A' }}</span>
-                            <span class="review-score-text">{{ $reviewLabel }}</span>
-                        </div>
-                        <p class="review-note">
-                            {{ $ratingUsers > 0 ? ($ratingUsers . ' guest reviews available for this property.') : 'Reviews are being collected. Be the first to leave feedback after your stay.' }}
-                        </p>
-                        <a class="review-link" href="#guest-reviews-section">{{ $ratingUsers > 0 ? number_format($ratingUsers) : '0' }} reviews</a>
-                        <div class="summary-row"><span>Total Reviews</span><strong>{{ $ratingUsers > 0 ? number_format($ratingUsers) : '0' }}</strong></div>
-                        <div class="summary-row"><span>Average Score</span><strong>{{ $ratingOutOfTen > 0 ? number_format($ratingOutOfTen, 1) . ' / 10' : 'N/A' }}</strong></div>
-                        <div class="summary-row"><span>Category</span><strong>{{ $listingCategory }}</strong></div>
-
-                        <section class="surroundings-card" aria-label="Surroundings">
-                            <h3 class="surroundings-title">Surroundings</h3>
-                            <ul class="surroundings-list">
-                                @foreach ($surroundings as $point)
-                                    <li>{{ $point }}</li>
-                                @endforeach
-                            </ul>
-                            <a class="review-link" href="{{ $mapUrl }}" target="_blank" rel="noopener">View on map</a>
-                        </section>
-                    </aside>
                 </section>
         </div>
 

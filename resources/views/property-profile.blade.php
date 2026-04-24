@@ -52,7 +52,7 @@
         }
 
         body.is-header-hidden .top-search-shell {
-            top: 74px;
+            top: 0;
         }
 
         .top-search-form {
@@ -2335,21 +2335,21 @@
             ? ('https://www.google.com/maps/search/?api=1&query=' . urlencode($mapLat . ',' . $mapLng))
             : ('https://www.google.com/maps/search/?api=1&query=' . urlencode($mapQuery));
         $pricedRooms = $rooms->filter(static function ($room): bool {
-            $value = $room->base_price_per_night ?? null;
+            $value = $room->base_price_per_night ?? ($room->base_price ?? null);
             return is_numeric($value) && (float) $value > 0;
         });
 
         $cheapestPricedRoom = $pricedRooms
-            ->sortBy(static fn ($room) => (float) ($room->base_price_per_night ?? INF))
+            ->sortBy(static fn ($room) => (float) ($room->base_price_per_night ?? ($room->base_price ?? INF)))
             ->first();
 
         $cheapestRoom = $cheapestPricedRoom
-            ?? $rooms->sortBy(static fn ($room) => (float) ($room->base_price_per_night ?? INF))->first();
+            ?? $rooms->sortBy(static fn ($room) => (float) ($room->base_price_per_night ?? ($room->base_price ?? INF)))->first();
 
         $cheapestRoomId = $cheapestRoom ? (int) ($cheapestRoom->id ?? 0) : 0;
-        $cheapestRoomPrice = $cheapestPricedRoom ? number_format((float) ($cheapestPricedRoom->base_price_per_night ?? 0), 2) : null;
+        $cheapestRoomPrice = $cheapestPricedRoom ? number_format((float) ($cheapestPricedRoom->base_price_per_night ?? ($cheapestPricedRoom->base_price ?? 0)), 2) : null;
         $startingPriceValue = $cheapestPricedRoom
-            ? (float) ($cheapestPricedRoom->base_price_per_night ?? 0)
+            ? (float) ($cheapestPricedRoom->base_price_per_night ?? ($cheapestPricedRoom->base_price ?? 0))
             : (float) ($property->base_price ?? 0);
         $startingPriceCurrency = strtoupper(trim((string) ($cheapestPricedRoom->currency ?? $property->currency ?? 'MVR')));
         if ($startingPriceCurrency === '') {
@@ -2751,7 +2751,7 @@
                         $hasBreakfast = str_contains($amenitiesText, 'breakfast');
                         $breakfastLabel = $hasBreakfast ? 'With Breakfast' : 'Without Breakfast';
                         $roomCurrency = strtoupper((string) ($room->currency ?? $currency));
-                        $roomPrice = number_format((float) ($room->base_price_per_night ?? 0), 2);
+                        $roomPrice = number_format((float) ($room->base_price_per_night ?? ($room->base_price ?? 0)), 2);
                         $bedType = trim((string) ($room->bed_type ?? 'Standard Bed'));
                         $roomSizeSqm = (int) ($room->room_size_sqm ?? 0);
                         $floorInfo = trim((string) ($room->floor_info ?? ''));
@@ -2769,7 +2769,7 @@
                             'children' => $prefillChildren,
                         ];
                         $roomLink = '/room/' . $roomId . '?' . http_build_query($roomQuery);
-                        $primaryNightlyRateRaw = (float) ($room->base_price_per_night ?? 0);
+                        $primaryNightlyRateRaw = (float) ($room->base_price_per_night ?? ($room->base_price ?? 0));
                         $primaryTotalRaw = $primaryNightlyRateRaw * $prefillStayNights;
                         $alternateBreakfastLabel = $hasBreakfast ? 'Without Breakfast' : 'With Breakfast';
                         $alternateRateMultiplier = $hasBreakfast ? 0.85 : 1.15;
@@ -2831,8 +2831,7 @@
                         <div class="room-body">
                             <h3><a class="room-name-link" href="#" data-open-room-modal="{{ $roomId }}">{{ (string) ($room->name ?? 'Room') }}</a></h3>
                             @php
-                                $roomOldPrice = number_format(((float) ($room->base_price ?? 0)) * 1.08, 2);
-                                                        $roomOldPrice = number_format(((float) ($room->base_price_per_night ?? 0)) * 1.08, 2);
+                                $roomOldPrice = number_format(((float) ($room->base_price_per_night ?? ($room->base_price ?? 0)) * 1.08, 2);
                             @endphp
                             <div class="room-offer-table" aria-label="Room rate options" data-room-id="{{ $roomId }}">
                                 <div class="room-offer-head">

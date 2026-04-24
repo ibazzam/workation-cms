@@ -3679,22 +3679,51 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             ->filter(static fn (int $id) => $id > 0)
             ->values();
 
-        // For accommodation, override base_price with the cheapest room's base_price_per_night.
+        // For accommodation, override base_price with the cheapest room nightly rate.
+        // Supports both canonical and legacy room price columns.
         if ($dbCategoryKey === 'accommodation' && $propertyIds->isNotEmpty() && Schema::hasTable('accommodation_rooms')) {
-            $minRoomPrices = DB::table('accommodation_rooms')
-                ->whereIn('property_id', $propertyIds->all())
-                ->where('base_price_per_night', '>', 0)
-                ->groupBy('property_id')
-                ->selectRaw('property_id, MIN(base_price_per_night) as min_price')
-                ->pluck('min_price', 'property_id');
+            $hasRoomActiveColumn = Schema::hasColumn('accommodation_rooms', 'is_active');
+            $hasNightlyColumn = Schema::hasColumn('accommodation_rooms', 'base_price_per_night');
+            $hasLegacyRoomPriceColumn = Schema::hasColumn('accommodation_rooms', 'base_price');
 
-            $catalogProperties = $catalogProperties->map(static function ($prop) use ($minRoomPrices) {
-                $pid = (int) ($prop->id ?? 0);
-                if ($pid > 0 && $minRoomPrices->has($pid)) {
-                    $prop->base_price = (float) $minRoomPrices->get($pid);
+            if ($hasNightlyColumn || $hasLegacyRoomPriceColumn) {
+                $roomPriceColumns = ['property_id'];
+                if ($hasNightlyColumn) {
+                    $roomPriceColumns[] = 'base_price_per_night';
                 }
-                return $prop;
-            });
+                if ($hasLegacyRoomPriceColumn) {
+                    $roomPriceColumns[] = 'base_price';
+                }
+
+                $roomPriceRows = DB::table('accommodation_rooms')
+                    ->whereIn('property_id', $propertyIds->all())
+                    ->when($hasRoomActiveColumn, static function ($query) {
+                        $query->where('is_active', 1);
+                    })
+                    ->get($roomPriceColumns);
+
+                $minRoomPrices = $roomPriceRows
+                    ->groupBy(static fn ($row) => (int) ($row->property_id ?? 0))
+                    ->map(static function ($rows) {
+                        return collect($rows)
+                            ->map(static function ($row) {
+                                $nightly = isset($row->base_price_per_night) ? (float) $row->base_price_per_night : 0;
+                                $legacy = isset($row->base_price) ? (float) $row->base_price : 0;
+                                return $nightly > 0 ? $nightly : $legacy;
+                            })
+                            ->filter(static fn (float $value) => $value > 0)
+                            ->min();
+                    })
+                    ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+
+                $catalogProperties = $catalogProperties->map(static function ($prop) use ($minRoomPrices) {
+                    $pid = (int) ($prop->id ?? 0);
+                    if ($pid > 0 && $minRoomPrices->has($pid)) {
+                        $prop->base_price = (float) $minRoomPrices->get($pid);
+                    }
+                    return $prop;
+                });
+            }
         }
 
         if (Schema::hasTable('vendor_listing_media') && $propertyIds->isNotEmpty()) {

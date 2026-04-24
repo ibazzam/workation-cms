@@ -446,8 +446,8 @@
         }
 
         .island-avatar {
-            width: 140px;
-            height: 140px;
+            width: 164px;
+            height: 164px;
             border-radius: 50%;
             overflow: hidden;
             background: var(--line);

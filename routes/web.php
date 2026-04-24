@@ -2,7 +2,9 @@
 
 use App\Models\User;
 use App\Models\BlogPost;
+use App\Support\CheckoutPaymentRouter;
 use App\Support\ReservationPricingPolicy;
+use App\Support\ReservationSettlementCalculator;
 use App\Support\UniformIconSystem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -83,6 +85,51 @@ if (!function_exists('firstNonEmptyEnv')) {
         }
 
         return '';
+    }
+}
+
+if (!function_exists('workationReservationPaymentNotes')) {
+    function workationReservationPaymentNotes(object $reservationRow): array
+    {
+        $notes = json_decode((string) ($reservationRow->notes ?? ''), true);
+        return is_array($notes) ? $notes : [];
+    }
+}
+
+if (!function_exists('workationApplyReservationPaymentEvent')) {
+    function workationApplyReservationPaymentEvent(object $reservationRow, array $event): array
+    {
+        $reservationId = (int) ($reservationRow->id ?? 0);
+        if ($reservationId <= 0) {
+            return ['status' => 'invalid'];
+        }
+
+        $eventId = trim((string) ($event['event_id'] ?? ''));
+        $intentId = trim((string) ($event['intent_id'] ?? ''));
+        $reference = trim((string) ($event['reference'] ?? ''));
+        $status = strtolower(trim((string) ($event['status'] ?? 'failed')));
+
+        if ($eventId !== '' && trim((string) ($reservationRow->payment_webhook_event_id ?? '')) === $eventId) {
+            return ['status' => 'duplicate'];
+        }
+
+        $paymentStatus = $status === 'paid' ? 'paid' : 'unpaid';
+
+        DB::table('vendor_reservations')
+            ->where('id', $reservationId)
+            ->update([
+                'payment_status' => $paymentStatus,
+                'status' => $status === 'paid' ? 'confirmed' : (string) ($reservationRow->status ?? 'pending'),
+                'payment_reference' => $reference !== '' ? $reference : (string) ($reservationRow->payment_reference ?? ''),
+                'payment_intent_id' => $intentId !== '' ? $intentId : (string) ($reservationRow->payment_intent_id ?? ''),
+                'payment_verified_at' => $status === 'paid' ? now() : ($reservationRow->payment_verified_at ?? null),
+                'payment_webhook_event_id' => $eventId !== '' ? $eventId : (string) ($reservationRow->payment_webhook_event_id ?? ''),
+                'payment_webhook_received_at' => now(),
+                'payment_error' => $status === 'paid' ? null : trim((string) ($event['error'] ?? 'Payment failed verification.')),
+                'updated_at' => now(),
+            ]);
+
+        return ['status' => $paymentStatus];
     }
 }
 
@@ -4422,6 +4469,7 @@ Route::post('/booking/reserve', function (Request $request) {
         'discount_percent' => $discountPercent,
         'adults' => $adults,
         'children' => $children,
+        'infants' => (int) ($payload['infants'] ?? 0),
         'nights' => $nights,
         'room_count' => $roomCount,
         'primary_nationality' => (string) ($payload['primary_nationality'] ?? ''),
@@ -4975,6 +5023,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'discount_percent' => $discountPercent,
         'adults' => $adults,
         'children' => $children,
+        'infants' => $infants,
         'nights' => $units,
         'room_count' => $roomCount,
         'primary_nationality' => (string) ($payload['primary_nationality'] ?? ''),
@@ -5282,6 +5331,15 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
         }
     }
 
+    $paymentContext = [
+        'primary_nationality' => trim((string) $request->query('primary_nationality', (string) ($reservationNotes['primary_nationality'] ?? ''))),
+        'guest_residency' => trim((string) $request->query('guest_residency', (string) ($reservationNotes['guest_residency'] ?? ''))),
+        'requested_gateway' => trim((string) $request->query('payment_gateway', '')),
+        'reservation_currency' => strtoupper(trim((string) ($reservationRow->currency ?? $roomRow->currency ?? $propertyRow->currency ?? 'MVR'))),
+        'amount' => (float) $request->query('total', (float) ($reservationNotes['invoice_total_amount'] ?? ($reservationRow->total_amount ?? 0))),
+    ];
+    $paymentPolicy = CheckoutPaymentRouter::buildPaymentPolicy($paymentContext, trim((string) $request->query('payment_currency', '')));
+
     return view('booking-checkout', [
         'reservation' => $reservationRow,
         'property' => $propertyRow,
@@ -5293,6 +5351,7 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
         'categoryDetails' => $categoryDetails,
         'backUrl' => $backUrl,
         'checkoutMediaUrl' => $checkoutMediaUrl,
+        'paymentPolicy' => $paymentPolicy,
         'dateLabels' => $dateLabels,
         'summary' => [
             'category_key' => trim((string) $request->query('category_key', (string) ($reservationNotes['category_key'] ?? ''))),
@@ -5341,6 +5400,181 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
             'total' => (float) $request->query('total', (float) ($reservationNotes['invoice_total_amount'] ?? ($reservationRow->total_amount ?? 0))),
         ],
     ]);
+});
+
+Route::post('/booking/checkout/{reservation}/payment-intent', function (Request $request, int $reservation) {
+    if (!Schema::hasTable('vendor_reservations')) {
+        abort(404);
+    }
+
+    $reservationRow = DB::table('vendor_reservations')->where('id', $reservation)->first();
+    if (!$reservationRow) {
+        abort(404);
+    }
+
+    $validated = $request->validate([
+        'payment_currency' => ['nullable', 'string', 'min:3', 'max:8'],
+        'payment_gateway' => ['nullable', 'string', 'min:2', 'max:64'],
+        'payment_provider' => ['nullable', 'string', 'min:2', 'max:64'],
+        'payment_selection' => ['nullable', 'string', 'max:120'],
+        'primary_nationality' => ['required', 'string', 'max:120'],
+        'guest_residency' => ['required', Rule::in(['local_resident', 'foreign_national'])],
+    ]);
+
+    if (in_array(strtolower(trim((string) ($reservationRow->status ?? 'pending'))), ['cancelled', 'canceled'], true)) {
+        return back()->withErrors(['payment' => 'Cancelled reservations cannot be paid.']);
+    }
+
+    if (strtolower(trim((string) ($reservationRow->payment_status ?? 'unpaid'))) === 'paid') {
+        return back()->withErrors(['payment' => 'This reservation is already paid.']);
+    }
+
+    $notes = workationReservationPaymentNotes($reservationRow);
+    $primaryNationality = trim((string) ($validated['primary_nationality'] ?? ''));
+    $guestResidency = trim((string) ($validated['guest_residency'] ?? ''));
+
+    $notes['primary_nationality'] = $primaryNationality;
+    $notes['guest_residency'] = $guestResidency;
+
+    $requestedGateway = trim((string) ($validated['payment_provider'] ?? ($validated['payment_gateway'] ?? '')));
+    $requestedCurrency = trim((string) ($validated['payment_currency'] ?? ''));
+    $selection = trim((string) ($validated['payment_selection'] ?? ''));
+    if ($selection !== '' && str_contains($selection, '|')) {
+        [$selectionGateway, $selectionCurrency] = array_pad(explode('|', $selection, 2), 2, '');
+        if ($requestedGateway === '') {
+            $requestedGateway = trim((string) $selectionGateway);
+        }
+        if ($requestedCurrency === '') {
+            $requestedCurrency = trim((string) $selectionCurrency);
+        }
+    }
+
+    try {
+        $intent = CheckoutPaymentRouter::createIntentPayload([
+            'primary_nationality' => $primaryNationality,
+            'guest_residency' => $guestResidency,
+            'reservation_currency' => (string) ($reservationRow->currency ?? 'MVR'),
+            'amount' => (float) ($notes['invoice_total_amount'] ?? ($reservationRow->total_amount ?? 0)),
+        ], $requestedCurrency, $requestedGateway);
+    } catch (\InvalidArgumentException $exception) {
+        return back()->withErrors(['payment' => $exception->getMessage()]);
+    }
+
+    $settlement = ReservationSettlementCalculator::calculate(
+        (float) ($intent['amount'] ?? 0),
+        (string) ($intent['gateway'] ?? ''),
+        (string) ($intent['provider'] ?? '')
+    );
+    $intent['settlement'] = $settlement;
+
+    DB::table('vendor_reservations')
+        ->where('id', $reservation)
+        ->update([
+            'customer_segment' => (string) $intent['segment'],
+            'payment_currency' => (string) $intent['currency'],
+            'payment_gateway' => (string) $intent['gateway'],
+            'payment_intent_id' => (string) $intent['intent_id'],
+            'payment_amount' => (float) $intent['amount'],
+            'commission_rate_percent' => (float) ($settlement['commission_rate_percent'] ?? 0),
+            'commission_amount' => (float) ($settlement['commission_amount'] ?? 0),
+            'gateway_fee_rate_percent' => (float) ($settlement['gateway_fee_rate_percent'] ?? 0),
+            'gateway_fee_amount' => (float) ($settlement['gateway_fee_amount'] ?? 0),
+            'vendor_payout_amount' => (float) ($settlement['vendor_payout_amount'] ?? 0),
+            'payment_error' => null,
+            'payment_payload_json' => json_encode($intent),
+            'notes' => json_encode($notes),
+            'updated_at' => now(),
+        ]);
+
+    return redirect('/booking/payment/hosted/' . $reservation . '?intent=' . urlencode((string) $intent['intent_id']));
+});
+
+Route::get('/booking/payment/hosted/{reservation}', function (Request $request, int $reservation) {
+    if (!Schema::hasTable('vendor_reservations')) {
+        abort(404);
+    }
+
+    $reservationRow = DB::table('vendor_reservations')->where('id', $reservation)->first();
+    if (!$reservationRow) {
+        abort(404);
+    }
+
+    $intentId = trim((string) $request->query('intent', ''));
+    if ($intentId === '' || $intentId !== trim((string) ($reservationRow->payment_intent_id ?? ''))) {
+        abort(404);
+    }
+
+    $propertyRow = Schema::hasTable('vendor_properties')
+        ? DB::table('vendor_properties')->where('id', (int) ($reservationRow->vendor_property_id ?? 0))->first()
+        : null;
+
+    return view('booking-payment-hosted', [
+        'reservation' => $reservationRow,
+        'property' => $propertyRow,
+        'intentId' => $intentId,
+    ]);
+});
+
+Route::post('/booking/payment/hosted/{reservation}/complete', function (Request $request, int $reservation) {
+    if (!Schema::hasTable('vendor_reservations')) {
+        abort(404);
+    }
+
+    $reservationRow = DB::table('vendor_reservations')->where('id', $reservation)->first();
+    if (!$reservationRow) {
+        abort(404);
+    }
+
+    $validated = $request->validate([
+        'intent_id' => ['required', 'string', 'max:120'],
+        'payment_reference' => ['nullable', 'string', 'max:120'],
+    ]);
+
+    if ((string) $validated['intent_id'] !== (string) ($reservationRow->payment_intent_id ?? '')) {
+        return back()->withErrors(['payment' => 'Payment session no longer matches this reservation.']);
+    }
+
+    workationApplyReservationPaymentEvent($reservationRow, [
+        'event_id' => 'internal_' . Str::lower(Str::random(20)),
+        'intent_id' => (string) $validated['intent_id'],
+        'reference' => trim((string) ($validated['payment_reference'] ?? ('INT-' . $reservation))),
+        'status' => 'paid',
+    ]);
+
+    return redirect('/booking/checkout/' . $reservation)->with('portal_notice', 'Payment recorded and reservation confirmed.');
+});
+
+Route::post('/booking/payment/webhooks/{gateway}', function (Request $request, string $gateway) {
+    if (!Schema::hasTable('vendor_reservations')) {
+        abort(404);
+    }
+
+    $raw = (string) $request->getContent();
+    $signature = trim((string) $request->header('X-Workation-Signature', ''));
+    if (!CheckoutPaymentRouter::verifySignature($gateway, $raw, $signature)) {
+        return response()->json(['ok' => false, 'message' => 'Invalid signature'], 401);
+    }
+
+    $payload = json_decode($raw, true);
+    if (!is_array($payload)) {
+        return response()->json(['ok' => false, 'message' => 'Invalid payload'], 422);
+    }
+
+    $reservationId = (int) ($payload['reservation_id'] ?? 0);
+    $reservationRow = DB::table('vendor_reservations')->where('id', $reservationId)->first();
+    if (!$reservationRow) {
+        return response()->json(['ok' => false, 'message' => 'Reservation not found'], 404);
+    }
+
+    $result = workationApplyReservationPaymentEvent($reservationRow, [
+        'event_id' => (string) ($payload['event_id'] ?? ''),
+        'intent_id' => (string) ($payload['intent_id'] ?? ''),
+        'reference' => (string) ($payload['reference'] ?? ''),
+        'status' => (string) ($payload['status'] ?? 'failed'),
+        'error' => (string) ($payload['error'] ?? ''),
+    ]);
+
+    return response()->json(['ok' => true, 'result' => $result['status'] ?? 'processed']);
 });
 
 Route::get('/customer', function () {
@@ -6142,6 +6376,7 @@ Route::get('/admin', function (Request $request) {
     $financeAdjustments = collect();
     $financeReservationPolicy = portalFinanceLoadReservationPolicy();
     $financeTaxComponents = collect(portalFinanceTaxComponents($financeReservationPolicy));
+    $financeTaxableCategoryOptions = vendorPortalCategoryMap();
 
     if (Schema::hasTable('portal_finance_settings')) {
         $commissionRateSetting = DB::table('portal_finance_settings')
@@ -6501,6 +6736,7 @@ Route::get('/admin', function (Request $request) {
         'financeAdjustments' => $financeAdjustments,
         'financeReservationPolicy' => $financeReservationPolicy,
         'financeTaxComponents' => $financeTaxComponents,
+        'financeTaxableCategoryOptions' => $financeTaxableCategoryOptions,
         'listingOptionCatalog' => $listingOptionCatalog,
         'homeHeroAdminImageUrl' => $homeHeroAdminImageUrl,
         'homeHeroAdminStoredValue' => $homeHeroAdminStoredValue,
@@ -6590,6 +6826,78 @@ Route::post('/portal/admin/finance/commission/update', function (Request $reques
     return back()->with('portal_notice', 'Finance commission settings updated.');
 });
 
+Route::post('/portal/admin/finance/policy/update', function (Request $request) {
+    if (!canModeratePortalFinance()) {
+        return back()->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_FINANCE can update reservation finance policy.']);
+    }
+
+    if (!Schema::hasTable('portal_finance_settings')) {
+        return back()->withErrors(['auth' => 'Finance settings table is not ready. Run migrations first.']);
+    }
+
+    $categoryKeys = array_keys(vendorPortalCategoryMap());
+    $validated = $request->validate([
+        'green_tax_room_threshold' => ['required', 'integer', 'min:1', 'max:10000'],
+        'taxable_categories' => ['nullable', 'array'],
+        'taxable_categories.*' => ['string', Rule::in($categoryKeys)],
+        'transfer_default_local_adult_rate' => ['required', 'numeric', 'min:0', 'max:1000000'],
+        'transfer_default_local_child_rate' => ['required', 'numeric', 'min:0', 'max:1000000'],
+        'transfer_default_foreign_adult_rate' => ['required', 'numeric', 'min:0', 'max:1000000'],
+        'transfer_default_foreign_child_rate' => ['required', 'numeric', 'min:0', 'max:1000000'],
+        'transfer_default_base_local' => ['required', 'numeric', 'min:0', 'max:1000000'],
+        'transfer_default_base_foreign' => ['required', 'numeric', 'min:0', 'max:1000000'],
+    ]);
+
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+    $policy = portalFinanceLoadReservationPolicy();
+    $policy['green_tax_room_threshold'] = (int) $validated['green_tax_room_threshold'];
+    $policy['taxable_categories'] = array_values(array_unique(array_filter(
+        array_map(static fn ($value): string => strtolower(trim((string) $value)), (array) ($validated['taxable_categories'] ?? ['accommodation'])),
+        static fn (string $value): bool => $value !== ''
+    )));
+    $policy['transfer_default_local_adult_rate'] = round((float) $validated['transfer_default_local_adult_rate'], 4);
+    $policy['transfer_default_local_child_rate'] = round((float) $validated['transfer_default_local_child_rate'], 4);
+    $policy['transfer_default_foreign_adult_rate'] = round((float) $validated['transfer_default_foreign_adult_rate'], 4);
+    $policy['transfer_default_foreign_child_rate'] = round((float) $validated['transfer_default_foreign_child_rate'], 4);
+    $policy['transfer_default_base_local'] = round((float) $validated['transfer_default_base_local'], 4);
+    $policy['transfer_default_base_foreign'] = round((float) $validated['transfer_default_base_foreign'], 4);
+
+    portalFinanceSaveReservationPolicy($policy, $actorUserId);
+
+    portalAdminAuditLog('finance_reservation_policy_updated', [
+        'target_role' => 'ADMIN_FINANCE',
+        'green_tax_room_threshold' => (int) $validated['green_tax_room_threshold'],
+        'taxable_categories' => $policy['taxable_categories'],
+        'transfer_default_local_adult_rate' => $policy['transfer_default_local_adult_rate'],
+        'transfer_default_local_child_rate' => $policy['transfer_default_local_child_rate'],
+        'transfer_default_foreign_adult_rate' => $policy['transfer_default_foreign_adult_rate'],
+        'transfer_default_foreign_child_rate' => $policy['transfer_default_foreign_child_rate'],
+        'transfer_default_base_local' => $policy['transfer_default_base_local'],
+        'transfer_default_base_foreign' => $policy['transfer_default_base_foreign'],
+    ]);
+
+    return back()->with('portal_notice', 'Reservation finance policy updated.');
+});
+
+Route::post('/portal/admin/finance/policy/apply-maldives-defaults', function () {
+    if (!canModeratePortalFinance()) {
+        return back()->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_FINANCE can apply Maldives finance defaults.']);
+    }
+
+    if (!Schema::hasTable('portal_finance_settings')) {
+        return back()->withErrors(['auth' => 'Finance settings table is not ready. Run migrations first.']);
+    }
+
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+    portalFinanceSaveReservationPolicy(ReservationPricingPolicy::defaultPolicy(), $actorUserId);
+
+    portalAdminAuditLog('finance_policy_maldives_defaults_applied', [
+        'target_role' => 'ADMIN_FINANCE',
+    ]);
+
+    return back()->with('portal_notice', 'Maldives finance defaults applied.');
+});
+
 Route::post('/portal/admin/finance/tax-components/upsert', function (Request $request) {
     if (!canModeratePortalFinance()) {
         return back()->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN_FINANCE can update tax components.']);
@@ -6605,11 +6913,25 @@ Route::post('/portal/admin/finance/tax-components/upsert', function (Request $re
         'calculation_mode' => ['required', Rule::in(['percent_subtotal', 'per_guest_per_night', 'flat_booking'])],
         'default_rate' => ['required', 'numeric', 'min:0', 'max:1000000'],
         'applies_to' => ['required', Rule::in(['all', 'local_resident', 'foreign_national'])],
+        'applies_to_categories_csv' => ['nullable', 'string', 'max:1000'],
         'active' => ['nullable', Rule::in(['0', '1'])],
         'is_service_charge' => ['nullable', Rule::in(['0', '1'])],
+        'exclude_infants' => ['nullable', Rule::in(['0', '1'])],
         'min_room_count' => ['nullable', 'integer', 'min:0', 'max:10000'],
         'max_room_count' => ['nullable', 'integer', 'min:0', 'max:10000'],
     ]);
+
+    $allowedCategoryKeys = array_keys(vendorPortalCategoryMap());
+    $appliesToCategories = [];
+    $rawCategories = trim((string) ($validated['applies_to_categories_csv'] ?? ''));
+    if ($rawCategories !== '') {
+        $appliesToCategories = array_values(array_unique(array_filter(array_map(static function ($value) use ($allowedCategoryKeys): string {
+            $normalized = strtolower(trim((string) $value));
+            $normalized = str_replace([' ', '-'], '_', $normalized);
+            $normalized = preg_replace('/[^a-z0-9_]+/', '', $normalized) ?? '';
+            return in_array($normalized, $allowedCategoryKeys, true) ? $normalized : '';
+        }, explode(',', $rawCategories)), static fn (string $value): bool => $value !== '')));
+    }
 
     $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
 
@@ -6619,8 +6941,10 @@ Route::post('/portal/admin/finance/tax-components/upsert', function (Request $re
         'calculation_mode' => (string) $validated['calculation_mode'],
         'default_rate' => (float) $validated['default_rate'],
         'applies_to' => (string) $validated['applies_to'],
+        'applies_to_categories' => $appliesToCategories,
         'active' => (string) ($validated['active'] ?? '1') === '1',
         'is_service_charge' => (string) ($validated['is_service_charge'] ?? '0') === '1',
+        'exclude_infants' => (string) ($validated['exclude_infants'] ?? '0') === '1',
         'min_room_count' => $validated['min_room_count'] ?? null,
         'max_room_count' => $validated['max_room_count'] ?? null,
     ], $actorUserId);
@@ -6631,6 +6955,8 @@ Route::post('/portal/admin/finance/tax-components/upsert', function (Request $re
         'calculation_mode' => (string) $validated['calculation_mode'],
         'default_rate' => round((float) $validated['default_rate'], 4),
         'applies_to' => (string) $validated['applies_to'],
+        'applies_to_categories' => $appliesToCategories,
+        'exclude_infants' => (string) ($validated['exclude_infants'] ?? '0') === '1',
     ]);
 
     return back()->with('portal_notice', 'Tax component saved.');

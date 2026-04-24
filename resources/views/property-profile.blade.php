@@ -1559,25 +1559,29 @@
         }
 
         .location-map {
-            border: 1px solid #d5e5ef;
-            border-radius: 12px;
+            border: 1px solid #c7dbea;
+            border-radius: 16px;
             overflow: hidden;
-            background: #eef5fb;
-            min-height: 220px;
+            background: linear-gradient(145deg, #f7fbff 0%, #edf5fb 100%);
+            min-height: 320px;
+            box-shadow: 0 10px 26px rgba(22, 58, 84, 0.12);
+            padding: 6px;
         }
 
         .location-map iframe {
             width: 100%;
             height: 100%;
-            min-height: 220px;
+            min-height: 308px;
             border: 0;
             display: block;
+            border-radius: 10px;
         }
 
         .location-map-caption {
-            color: #4f6678;
-            font-size: 0.8rem;
-            margin-top: 8px;
+            color: #3f5c73;
+            font-size: 0.82rem;
+            margin-top: 10px;
+            font-weight: 600;
         }
 
         .rooms-grid {
@@ -1856,6 +1860,15 @@
             .nearby-card { grid-template-rows: 156px auto; }
             .nearby-card-media { height: 156px; }
             .nearby-card-body { padding: 12px; }
+
+            .location-map {
+                min-height: 260px;
+                padding: 5px;
+            }
+
+            .location-map iframe {
+                min-height: 248px;
+            }
         }
 
         /* Uniform Icon System Styles - Consistent across all pages */

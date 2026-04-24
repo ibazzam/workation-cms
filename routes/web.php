@@ -3679,6 +3679,24 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             ->filter(static fn (int $id) => $id > 0)
             ->values();
 
+        // For accommodation, override base_price with the cheapest room's base_price_per_night.
+        if ($dbCategoryKey === 'accommodation' && $propertyIds->isNotEmpty() && Schema::hasTable('accommodation_rooms')) {
+            $minRoomPrices = DB::table('accommodation_rooms')
+                ->whereIn('property_id', $propertyIds->all())
+                ->where('base_price_per_night', '>', 0)
+                ->groupBy('property_id')
+                ->selectRaw('property_id, MIN(base_price_per_night) as min_price')
+                ->pluck('min_price', 'property_id');
+
+            $catalogProperties = $catalogProperties->map(static function ($prop) use ($minRoomPrices) {
+                $pid = (int) ($prop->id ?? 0);
+                if ($pid > 0 && $minRoomPrices->has($pid)) {
+                    $prop->base_price = (float) $minRoomPrices->get($pid);
+                }
+                return $prop;
+            });
+        }
+
         if (Schema::hasTable('vendor_listing_media') && $propertyIds->isNotEmpty()) {
             $mediaRows = DB::table('vendor_listing_media')
                 ->where('entity_type', 'property')

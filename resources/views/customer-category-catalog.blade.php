@@ -51,8 +51,8 @@
             padding: 0 24px;
             border: 0;
             border-radius: 0;
-            background: rgba(255, 255, 255, 0.96);
-            box-shadow: 0 10px 24px rgba(22, 64, 93, 0.06);
+            background: transparent;
+            box-shadow: none;
             margin: 0;
             width: 100%;
             position: absolute;
@@ -61,7 +61,7 @@
             right: 0;
             transition: transform 0.22s ease, opacity 0.22s ease;
             z-index: 10;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(2px);
         }
 
         .page.is-header-hidden .header-bar {
@@ -101,10 +101,10 @@
             justify-content: center;
             width: 34px;
             height: 34px;
-            border: 1px solid #d8e5ef;
+            border: 1px solid rgba(217, 235, 245, 0.4);
             border-radius: 10px;
-            background: #f9fcff;
-            color: #61778c;
+            background: rgba(245, 252, 255, 0.18);
+            color: #e7f8ff;
             font-size: 0.82rem;
         }
 
@@ -112,10 +112,10 @@
             margin: 0;
             font-size: 1.7rem;
             font-weight: 900;
-            color: #02193f;
+            color: #f3fbff;
             letter-spacing: -0.04em;
             line-height: 1;
-            text-shadow: none;
+            text-shadow: 0 4px 16px rgba(8, 30, 85, 0.35);
             display: inline-flex;
             align-items: center;
             gap: 10px;
@@ -126,18 +126,18 @@
         }
 
         .header-brand-link {
-            color: inherit;
+            color: #f3fbff;
             text-decoration: none;
         }
 
         .header-brand-link:hover {
-            color: var(--brand-strong);
+            color: #ffffff;
         }
 
         .header-subline {
             margin: 1px 0 0;
             font-size: 0.7rem;
-            color: #71869a;
+            color: rgba(235, 246, 255, 0.9);
             white-space: nowrap;
         }
 
@@ -184,7 +184,7 @@
 
         .header-link {
             text-decoration: none;
-            color: #0f1724;
+            color: #e9f5ff;
             font-size: 0.74rem;
             font-weight: 700;
             text-transform: uppercase;
@@ -211,31 +211,31 @@
         }
 
         .header-link:hover {
-            border-color: rgba(2, 25, 63, 0.12);
-            background: rgba(2, 25, 63, 0.04);
-            color: #02193f;
+            border-color: rgba(233, 248, 255, 0.35);
+            background: rgba(255, 255, 255, 0.14);
+            color: #ffffff;
         }
 
         .auth-link {
             text-decoration: none;
-            border: 1px solid #c9dbea;
+            border: 1px solid rgba(225, 242, 251, 0.55);
             border-radius: 10px;
             padding: 7px 12px;
-            background: #f6fbff;
-            color: #19466a;
+            background: rgba(255, 255, 255, 0.14);
+            color: #ffffff;
             font-size: 0.8rem;
             font-weight: 700;
             font-family: inherit;
         }
 
         .auth-link:hover {
-            border-color: #9fbcd0;
-            color: #173e5b;
+            background: rgba(255, 255, 255, 0.24);
+            color: #ffffff;
         }
 
         .auth-link.primary {
-            background: #2fa58a;
-            border-color: #27917a;
+            background: #1a7a68;
+            border-color: #136357;
             color: #ffffff;
         }
 
@@ -247,28 +247,24 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            border: 1px solid #c9dbea;
+            border: 1px solid rgba(226, 243, 251, 0.62);
             border-radius: 11px;
             padding: 6px 10px;
-            background: #ffffff;
-            color: #173e5b;
+            background: rgba(255, 255, 255, 0.14);
+            color: #ffffff;
             font-size: 0.8rem;
             font-weight: 700;
             font-family: inherit;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(20, 63, 90, 0.08);
-        }
-
-        .account-menu-toggle:hover {
-            border-color: #9fbcd0;
+            box-shadow: 0 4px 10px rgba(8, 33, 49, 0.22);
         }
 
         .account-avatar {
             width: 22px;
             height: 22px;
             border-radius: 999px;
-            background: linear-gradient(135deg, #e8f5fb 0%, #d4ebf7 100%);
-            color: #1e5a7e;
+            background: rgba(255, 255, 255, 0.22);
+            color: #ffffff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -573,9 +569,8 @@
         }
 
         .header-category-tabs .header-link.is-active {
-            background: #0f6179;
-            border-color: #0f6179;
-            color: #ffffff;
+            background: rgba(255, 255, 255, 0.94);
+            color: #154e71;
         }
 
         .search-sticky-wrap {

@@ -99,21 +99,15 @@
 
     .uniform-header-link {
         text-decoration: none;
-        border: 1px solid transparent;
+        border: 1px solid #d2e1ec;
         border-radius: 999px;
         padding: 6px 10px;
-        background: transparent;
-        color: #0f1724;
+        background: #f7fbff;
+        color: #244d67;
         font-size: 0.74rem;
         font-weight: 700;
         white-space: nowrap;
         flex: 0 0 auto;
-    }
-
-    .uniform-header-link:hover {
-        border-color: rgba(2, 25, 63, 0.12);
-        background: rgba(2, 25, 63, 0.04);
-        color: #02193f;
     }
 
     .uniform-header-link.is-active {
@@ -164,24 +158,19 @@
 
     .uniform-auth-link {
         text-decoration: none;
-        border: 1px solid #c9dbea;
+        border: 1px solid #c9d9e6;
         border-radius: 10px;
         padding: 7px 10px;
-        background: #f6fbff;
-        color: #19466a;
+        background: #ffffff;
+        color: #244c66;
         font-size: 0.78rem;
         font-weight: 700;
         white-space: nowrap;
     }
 
-    .uniform-auth-link:hover {
-        border-color: #9fbcd0;
-        color: #173e5b;
-    }
-
     .uniform-auth-link.primary {
-        border-color: #27917a;
-        background: #2fa58a;
+        border-color: #0f6179;
+        background: #0f6179;
         color: #ffffff;
     }
 
@@ -190,20 +179,15 @@
     }
 
     .uniform-account-toggle {
-        border: 1px solid #c9dbea;
+        border: 1px solid #c9d9e6;
         border-radius: 10px;
         padding: 7px 10px;
         background: #ffffff;
-        color: #173e5b;
+        color: #244c66;
         font-size: 0.78rem;
         font-weight: 700;
         font-family: inherit;
         cursor: pointer;
-        box-shadow: 0 4px 10px rgba(20, 63, 90, 0.08);
-    }
-
-    .uniform-account-toggle:hover {
-        border-color: #9fbcd0;
     }
 
     .uniform-account-panel {

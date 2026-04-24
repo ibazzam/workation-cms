@@ -1790,6 +1790,23 @@
             padding-bottom: 14px;
         }
 
+        .guest-reviews-section,
+        .location-section,
+        .policies-section {
+            border: 1px solid #d4e5ef;
+            border-radius: 16px;
+            background: #ffffff;
+            padding: 14px;
+        }
+
+        .guest-reviews-section h2,
+        .location-section h2,
+        .policies-section h2 {
+            margin: 0 0 8px;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
         .location-section {
             margin-top: 12px;
         }

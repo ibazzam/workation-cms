@@ -39,15 +39,20 @@
             top: 74px;
             z-index: 55;
             border: 1px solid var(--brand-line);
-            border-radius: 12px;
+            border-radius: 0;
             background: var(--surface);
             padding: 10px;
-            box-shadow: 0 8px 22px rgba(21, 39, 56, 0.08);
+            box-shadow: none;
             margin-bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         body.is-header-hidden .top-search-shell {
-            top: 8px;
+            top: 74px;
         }
 
         .top-search-form {
@@ -316,16 +321,38 @@
         }
 
         .section {
-            border: 1px solid var(--line);
-            border-radius: 16px;
-            background: var(--surface);
-            padding: 14px;
+            border: none;
+            border-top: 1px solid #f0f4f8;
+            border-radius: 0;
+            background: transparent;
+            padding: 0;
+            margin-top: 20px;
         }
 
-        .section h2 { margin: 0; font-size: 1.04rem; }
+        .section:first-of-type {
+            border-top: none;
+            margin-top: 0;
+        }
+
+        .rooms-section .section {
+            border: none;
+            padding: 0;
+            margin-top: 0;
+        }
+
+        .section h2 {
+            margin: 0;
+            font-size: 1.04rem;
+            padding-top: 20px;
+            padding-bottom: 14px;
+        }
+
+        .section:first-of-type h2 {
+            padding-top: 0;
+        }
 
         .gallery-shell {
-            margin-top: 10px;
+            margin-top: 14px;
             display: grid;
             grid-template-columns: minmax(0, 1fr) 260px;
             gap: 10px;
@@ -1428,7 +1455,7 @@
             }
         }
 
-        .policies-section { margin-top: 12px; }
+        .policies-section { margin-top: 20px; }
 
         .hero-availability {
             margin-top: 12px;
@@ -1727,6 +1754,11 @@
             border-color: #0f6179;
             color: #0f6179;
             background: #eef7fc;
+        }
+
+        .guest-reviews-section h2 {
+            padding-top: 0;
+            padding-bottom: 14px;
         }
 
         .location-section {
@@ -2499,6 +2531,15 @@
                     </aside>
                 </section>
 
+        <nav class="section-tabs" aria-label="Property content navigation" data-section-nav>
+            <a class="section-tab" href="#property-gallery-section">Photos</a>
+            <a class="section-tab" href="#services-amenities-section">Amenities</a>
+            <a class="section-tab" href="#rooms-section">Rooms</a>
+            <a class="section-tab" href="#guest-reviews-section">Reviews</a>
+            <a class="section-tab" href="#location-section">Location</a>
+            <a class="section-tab" href="#policies-section">Property Policies</a>
+        </nav>
+
                 <section id="services-amenities-section" class="info-section" aria-label="Property highlights, amenities and description">
                     <div class="info-main">
                         <div>
@@ -2588,15 +2629,6 @@
 
                 </section>
         </div>
-
-        <nav class="section-tabs" aria-label="Property content navigation" data-section-nav>
-            <a class="section-tab" href="#property-gallery-section">Photos</a>
-            <a class="section-tab" href="#services-amenities-section">Amenities</a>
-            <a class="section-tab" href="#rooms-section">Rooms</a>
-            <a class="section-tab" href="#guest-reviews-section">Reviews</a>
-            <a class="section-tab" href="#location-section">Location</a>
-            <a class="section-tab" href="#policies-section">Property Policies</a>
-        </nav>
 
         <section id="rooms-section" class="section rooms-section" aria-label="Available rooms">
             <div class="rooms-head">

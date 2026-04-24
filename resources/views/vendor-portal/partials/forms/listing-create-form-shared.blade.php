@@ -91,10 +91,7 @@
                             <input id="map_latitude" name="map_latitude" type="hidden" value="{{ old('map_latitude') }}">
                             <input id="map_longitude" name="map_longitude" type="hidden" value="{{ old('map_longitude') }}">
                             <input id="map_place_id" name="map_place_id" type="hidden" value="{{ old('map_place_id') }}">
-                            <div class="ops-field" data-category-scope="capacity">
-                                <label for="property_base_price">Base Price (MVR)</label>
-                                <input id="property_base_price" name="base_price" class="ops-input" type="number" min="0" step="0.01" value="{{ old('base_price') }}" required>
-                            </div>
+                            <input id="property_base_price" name="base_price" type="hidden" value="0">
                             <div class="ops-field" data-category-scope="capacity">
                                 <label for="property_max_guests">Max Guests</label>
                                 <input id="property_max_guests" name="max_guests" class="ops-input" type="number" min="0" max="10000" value="{{ old('max_guests') }}">

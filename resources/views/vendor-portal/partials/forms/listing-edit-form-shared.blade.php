@@ -40,7 +40,7 @@
                                                                         </div>
                                                                     </div>
                                                                     <textarea class="ops-textarea" name="description" maxlength="3000" placeholder="Description">{{ (string) ($property->description ?? '') }}</textarea>
-                                                                <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($property->base_price ?? 0) }}" data-property-edit-scope="capacity">
+                                                                <input name="base_price" type="hidden" value="{{ (float) ($property->base_price ?? 0) }}" data-property-edit-scope="capacity">
                                                                 <input class="ops-input" name="max_guests" type="number" min="0" max="10000" value="{{ (int) ($property->max_guests ?? 0) }}" data-property-edit-scope="capacity">
 
                                                                 <input class="ops-input" name="area_value" type="number" min="5" max="100000" step="0.01" value="{{ (string) ($propertyDetails['area_value'] ?? '') }}" placeholder="Area Value (sqft)" data-property-edit-scope="stay">

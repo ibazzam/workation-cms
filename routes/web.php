@@ -3703,6 +3703,37 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 $combinedRoomPricesByProperty = $combinedRoomPricesByProperty->union($legacyRoomPrices);
             }
 
+            if (Schema::hasTable('accommodation_packages')
+                && Schema::hasColumn('accommodation_packages', 'property_id')
+                && Schema::hasColumn('accommodation_packages', 'base_price')) {
+                $packagePrices = DB::table('accommodation_packages')
+                    ->whereIn('property_id', $propertyIds->all())
+                    ->when(Schema::hasColumn('accommodation_packages', 'is_active'), static function ($query) {
+                        $query->where('is_active', 1);
+                    })
+                    ->where('base_price', '>', 0)
+                    ->get(['property_id', 'base_price'])
+                    ->groupBy(static fn ($row) => (int) ($row->property_id ?? 0))
+                    ->map(static function ($rows) {
+                        return collect($rows)
+                            ->map(static fn ($row) => (float) ($row->base_price ?? 0))
+                            ->filter(static fn (float $value) => $value > 0)
+                            ->min();
+                    })
+                    ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+
+                $combinedRoomPricesByProperty = $combinedRoomPricesByProperty
+                    ->merge($packagePrices)
+                    ->groupBy(static fn ($value, $key) => (int) $key)
+                    ->map(static function ($values) {
+                        return collect($values)
+                            ->map(static fn ($value) => (float) $value)
+                            ->filter(static fn (float $value) => $value > 0)
+                            ->min();
+                    })
+                    ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+            }
+
             if (Schema::hasTable('accommodation_rooms') && Schema::hasColumn('accommodation_rooms', 'property_id')) {
                 $hasRoomActiveColumn = Schema::hasColumn('accommodation_rooms', 'is_active');
                 $hasNightlyColumn = Schema::hasColumn('accommodation_rooms', 'base_price_per_night');
@@ -3755,6 +3786,9 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 $pid = (int) ($prop->id ?? 0);
                 if ($pid > 0 && $combinedRoomPricesByProperty->has($pid)) {
                     $prop->base_price = (float) $combinedRoomPricesByProperty->get($pid);
+                } else {
+                    // Accommodation cards should not fall back to property-level fixed base price.
+                    $prop->base_price = 0;
                 }
                 return $prop;
             });
@@ -3923,6 +3957,33 @@ Route::get('/property/{property}', function (Request $request, int $property) {
             ->orderByDesc('updated_at')
             ->limit(60)
             ->get();
+    }
+
+    if ($rooms->isEmpty() && Schema::hasTable('accommodation_rooms')) {
+        $accommodationRoomRows = DB::table('accommodation_rooms')
+            ->where('property_id', (int) $propertyRow->id)
+            ->when(Schema::hasColumn('accommodation_rooms', 'is_active'), static function ($query) {
+                $query->where('is_active', 1);
+            })
+            ->orderByDesc('updated_at')
+            ->limit(60)
+            ->get();
+
+        $rooms = $accommodationRoomRows->map(static function ($room) {
+            $roomType = trim((string) ($room->room_type ?? 'Room'));
+            $roomName = trim((string) ($room->name ?? ''));
+            if ($roomName === '') {
+                $roomName = $roomType !== '' ? ucfirst(str_replace('_', ' ', $roomType)) : 'Room';
+            }
+
+            $room->name = $roomName;
+            $room->base_price = isset($room->base_price) ? (float) $room->base_price : (float) ($room->base_price_per_night ?? 0);
+            $room->max_occupancy = isset($room->max_occupancy) ? (int) $room->max_occupancy : (int) ($room->capacity_guests ?? 2);
+            $room->amenities = (string) ($room->amenities ?? '');
+            $room->bathroom_amenities = (string) ($room->bathroom_amenities ?? '');
+            $room->bed_type = (string) ($room->bed_type ?? 'Standard Bed');
+            return $room;
+        })->values();
     }
 
     $roomIds = $rooms->pluck('id')->map(static fn ($id) => (int) $id)->filter(static fn (int $id) => $id > 0)->values();

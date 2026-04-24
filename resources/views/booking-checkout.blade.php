@@ -33,7 +33,7 @@
         .mini-panel { display:grid; gap:10px; }
         .mini-section { border:1px solid #dbe7f0; border-radius:10px; background:#fbfdff; padding:10px; display:grid; gap:8px; }
         .mini-title { margin:0; font-size:0.82rem; text-transform:uppercase; letter-spacing:0.06em; color:#49657c; }
-        .hotel-thumb { width:100%; height:120px; object-fit:cover; border-radius:9px; border:1px solid #d9e7f0; background:#eef6fb; }
+        .hotel-thumb { width:100%; height:156px; object-fit:cover; border-radius:9px; border:1px solid #d9e7f0; background:#eef6fb; }
         .hotel-name { font-size:0.92rem; font-weight:700; color:#1a4159; }
         .score-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
         .score-chip { background:#0f6179; color:#ecfcff; border-radius:8px; padding:3px 8px; font-size:0.8rem; font-weight:700; }
@@ -43,13 +43,23 @@
         .fine-print { color:#4c6a7f; font-size:0.78rem; line-height:1.45; }
         .compact-line { display:flex; justify-content:space-between; gap:10px; font-size:0.8rem; color:#3b5c73; }
         .compact-line strong { color:#1f465f; }
+        .payment-box { margin-top:12px; border:1px solid #d6e5ee; border-radius:12px; background:#f7fbff; padding:12px; display:grid; gap:10px; }
+        .payment-box h2 { margin:0; font-size:0.94rem; color:#18455c; }
+        .payment-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+        .payment-stat { border:1px solid #dbe7f0; border-radius:10px; background:#ffffff; padding:10px; display:grid; gap:4px; }
+        .payment-stat .k { font-size:0.7rem; text-transform:uppercase; letter-spacing:0.07em; color:#5c7689; font-weight:700; }
+        .payment-stat .v { font-size:0.9rem; font-weight:700; color:#173d54; }
+        .payment-note { margin:0; color:#4a687e; font-size:0.82rem; line-height:1.45; }
         .actions { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
         @media (max-width: 980px) {
             .layout { grid-template-columns:1fr; }
             .checkout-details,
             .checkout-summary { grid-column: auto; grid-row: auto; }
         }
-        @media (max-width: 760px) { .grid { grid-template-columns:1fr; } }
+        @media (max-width: 760px) {
+            .grid,
+            .payment-grid { grid-template-columns:1fr; }
+        }
     </style>
     @include('partials.uniform-buttons')
 </head>
@@ -106,6 +116,25 @@
         $cancellationPolicy = trim((string) ($cancellationPolicy ?? 'Standard cancellation terms apply.'));
         $dateLabels = $dateLabels ?? ['start' => 'Check-in', 'end' => 'Check-out'];
         $categoryDetails = collect($categoryDetails ?? [])->filter(static fn ($item) => is_array($item))->values();
+        $paymentPolicy = $paymentPolicy ?? [];
+        $paymentOptions = collect($paymentPolicy['available_options'] ?? [])->filter(static fn ($option) => is_array($option))->values();
+        $paymentProviders = $paymentOptions
+            ->map(static fn ($option) => [
+                'provider' => strtolower(trim((string) ($option['provider'] ?? $option['gateway'] ?? ''))),
+                'provider_label' => trim((string) ($option['provider_label'] ?? $option['gateway_label'] ?? 'Gateway')),
+            ])
+            ->filter(static fn ($option) => ($option['provider'] ?? '') !== '')
+            ->unique('provider')
+            ->values();
+        $lockedPaymentCurrency = strtoupper(trim((string) ($paymentPolicy['currency'] ?? $currency)));
+        $lockedPaymentGateway = trim((string) ($paymentPolicy['gateway'] ?? ''));
+        $lockedPaymentProvider = strtolower(trim((string) ($paymentPolicy['provider'] ?? '')));
+        $paymentGatewayLabel = trim((string) ($paymentPolicy['gateway_label'] ?? 'Card Gateway'));
+        $paymentProviderLabel = trim((string) ($paymentPolicy['provider_label'] ?? $paymentGatewayLabel));
+        $paymentNotice = trim((string) ($paymentPolicy['customer_notice'] ?? 'Payment routing is enforced based on customer segment.'));
+        $checkoutPrimaryNationality = old('primary_nationality', (string) ($summary['primary_nationality'] ?? ''));
+        $checkoutGuestResidency = old('guest_residency', (string) ($summary['guest_residency'] ?? ''));
+        $selectedProvider = strtolower(trim((string) old('payment_provider', $lockedPaymentProvider !== '' ? $lockedPaymentProvider : (string) ($paymentProviders->first()['provider'] ?? ''))));
     @endphp
 
     <main class="page">
@@ -129,6 +158,22 @@
                     @if ($categoryDetails->isNotEmpty())
                         <div class="cell"><span class="label">Category Details</span><div class="value">{{ $categoryDetails->map(static fn ($item) => ((string) ($item['label'] ?? 'Detail')) . ': ' . ((string) ($item['value'] ?? '-')))->implode(' | ') }}</div></div>
                     @endif
+                </div>
+
+                <div class="payment-box" aria-label="Payment routing details">
+                    <h2>Payment Method</h2>
+                    <div class="payment-grid">
+                        <div class="payment-stat"><span class="k">Customer Segment</span><span class="v">{{ $isForeigner ? 'Foreign National' : 'Local Maldivian' }}</span></div>
+                        <div class="payment-stat"><span class="k">Payment Currency</span><span class="v" id="paymentCurrencyDisplay">{{ $lockedPaymentCurrency }}</span></div>
+                        <div class="payment-stat"><span class="k">Gateway</span><span class="v" id="paymentGatewayDisplay">{{ $paymentProviderLabel }}</span></div>
+                    </div>
+                    @if ($paymentProviders->isNotEmpty())
+                        <div class="payment-stat">
+                            <span class="k">Available Providers</span>
+                            <span class="v">{{ $paymentProviders->map(static fn ($option) => (string) ($option['provider_label'] ?? 'Gateway'))->implode(' | ') }}</span>
+                        </div>
+                    @endif
+                    <p class="payment-note">{{ $paymentNotice }}</p>
                 </div>
 
                 <aside class="mini-panel checkout-summary" aria-label="Reservation compact summary">
@@ -209,12 +254,129 @@
             </div>
 
             <div class="actions">
-                <a class="btn" href="#" onclick="alert('Payment gateway integration can be connected next.'); return false;">Confirm & Pay</a>
+                @if (!empty($reservation->id))
+                    <form method="post" action="/booking/checkout/{{ (int) $reservation->id }}/payment-intent">
+                        @csrf
+                        <input type="hidden" name="payment_currency" value="{{ $lockedPaymentCurrency }}">
+                        <input type="hidden" name="payment_gateway" value="{{ $lockedPaymentGateway }}">
+                        <input type="hidden" name="payment_provider" value="{{ $selectedProvider }}">
+                        <label class="label" for="primary_nationality">Guest nationality *</label>
+                        <input
+                            id="primary_nationality"
+                            name="primary_nationality"
+                            type="text"
+                            required
+                            maxlength="120"
+                            value="{{ $checkoutPrimaryNationality }}"
+                            style="min-width:220px; padding:8px 10px; border:1px solid #c9dbe8; border-radius:10px; margin-right:8px;"
+                            placeholder="e.g. Maldivian"
+                        >
+                        <label class="label" for="guest_residency">Residency *</label>
+                        <select
+                            id="guest_residency"
+                            name="guest_residency"
+                            required
+                            style="min-width:220px; padding:8px 10px; border:1px solid #c9dbe8; border-radius:10px; margin-right:8px;"
+                        >
+                            <option value="">Select residency</option>
+                            <option value="local_resident" {{ $checkoutGuestResidency === 'local_resident' ? 'selected' : '' }}>Local resident</option>
+                            <option value="foreign_national" {{ $checkoutGuestResidency === 'foreign_national' ? 'selected' : '' }}>Foreign national</option>
+                        </select>
+                        @if ($paymentProviders->isNotEmpty())
+                            <label class="label" for="payment_provider_select">Choose payment method</label>
+                            <select id="payment_provider_select" name="payment_provider_select" style="min-width:260px; padding:8px 10px; border:1px solid #c9dbe8; border-radius:10px; margin-right:8px;">
+                                @foreach ($paymentProviders as $providerOption)
+                                    @php
+                                        $providerKey = strtolower(trim((string) ($providerOption['provider'] ?? '')));
+                                        $providerLabel = trim((string) ($providerOption['provider_label'] ?? 'Gateway'));
+                                    @endphp
+                                    <option
+                                        value="{{ $providerKey }}"
+                                        data-provider="{{ $providerKey }}"
+                                        data-provider-label="{{ $providerLabel }}"
+                                        {{ $providerKey === $selectedProvider ? 'selected' : '' }}
+                                    >{{ $providerLabel }}</option>
+                                @endforeach
+                            </select>
+                        @endif
+                        @error('primary_nationality')
+                            <div class="fine-print" style="color:#a73434; width:100%;">{{ $message }}</div>
+                        @enderror
+                        @error('guest_residency')
+                            <div class="fine-print" style="color:#a73434; width:100%;">{{ $message }}</div>
+                        @enderror
+                        <button class="btn" type="submit">Confirm & Pay</button>
+                    </form>
+                @else
+                    <button class="btn" type="button" disabled>Confirm & Pay</button>
+                @endif
                 <a class="btn alt" href="{{ (string) ($backUrl ?? ($room ? ('/room/' . (int) ($room->id ?? 0)) : '/customer')) }}">Back</a>
             </div>
         </section>
 
         @include('partials.global-site-footer')
     </main>
+
+    <script>
+        (function () {
+            var selection = document.getElementById('payment_provider_select');
+            if (!selection) {
+                return;
+            }
+
+            var currencyDisplay = document.getElementById('paymentCurrencyDisplay');
+            var gatewayDisplay = document.getElementById('paymentGatewayDisplay');
+            var form = selection.closest('form');
+            var hiddenCurrency = form ? form.querySelector('input[name="payment_currency"]') : null;
+            var hiddenGateway = form ? form.querySelector('input[name="payment_gateway"]') : null;
+            var hiddenProvider = form ? form.querySelector('input[name="payment_provider"]') : null;
+            var paymentOptions = @json($paymentOptions->values()->all());
+
+            var syncSelection = function () {
+                var selectedOption = selection.options[selection.selectedIndex];
+                if (!selectedOption) {
+                    return;
+                }
+
+                var provider = (selectedOption.getAttribute('data-provider') || '').trim().toLowerCase();
+                var providerLabel = (selectedOption.getAttribute('data-provider-label') || '').trim();
+                var matched = null;
+                for (var i = 0; i < paymentOptions.length; i++) {
+                    var option = paymentOptions[i] || {};
+                    var optionProvider = String(option.provider || option.gateway || '').trim().toLowerCase();
+                    if (optionProvider === provider) {
+                        matched = option;
+                        break;
+                    }
+                }
+
+                var currency = matched ? String(matched.currency || '').trim() : '';
+                var gateway = matched ? String(matched.gateway || '').trim() : '';
+
+                if (currencyDisplay && currency !== '') {
+                    currencyDisplay.textContent = currency;
+                }
+
+                if (gatewayDisplay && providerLabel !== '') {
+                    gatewayDisplay.textContent = providerLabel;
+                }
+
+                if (hiddenCurrency && currency !== '') {
+                    hiddenCurrency.value = currency;
+                }
+
+                if (hiddenGateway && gateway !== '') {
+                    hiddenGateway.value = gateway;
+                }
+
+                if (hiddenProvider) {
+                    hiddenProvider.value = provider;
+                }
+            };
+
+            selection.addEventListener('change', syncSelection);
+            syncSelection();
+        })();
+    </script>
 </body>
 </html>

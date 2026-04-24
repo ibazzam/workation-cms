@@ -14,7 +14,18 @@ class ReservationPricingPolicy
     public static function defaultPolicy(): array
     {
         return [
-            'taxable_categories' => ['accommodation'],
+            'taxable_categories' => [
+                'accommodation',
+                'marine_transport',
+                'land_transport',
+                'excursion',
+                'remote_workspace',
+                'conference_room',
+                'resort_day_visit',
+                'restaurant',
+                'vehicle_rental',
+                'water_sports',
+            ],
             'green_tax_room_threshold' => 50,
             'transfer_default_local_adult_rate' => 25.0,
             'transfer_default_local_child_rate' => 15.0,
@@ -38,6 +49,8 @@ class ReservationPricingPolicy
                     'calculation_mode' => 'per_guest_per_night',
                     'default_rate' => 0.0,
                     'applies_to' => 'local_resident',
+                    'applies_to_categories' => ['accommodation'],
+                    'exclude_infants' => true,
                     'active' => true,
                 ],
                 [
@@ -46,6 +59,8 @@ class ReservationPricingPolicy
                     'calculation_mode' => 'per_guest_per_night',
                     'default_rate' => 6.0,
                     'applies_to' => 'foreign_national',
+                    'applies_to_categories' => ['accommodation'],
+                    'exclude_infants' => true,
                     'active' => true,
                     'max_room_count' => 49,
                 ],
@@ -55,6 +70,8 @@ class ReservationPricingPolicy
                     'calculation_mode' => 'per_guest_per_night',
                     'default_rate' => 12.0,
                     'applies_to' => 'foreign_national',
+                    'applies_to_categories' => ['accommodation'],
+                    'exclude_infants' => true,
                     'active' => true,
                     'min_room_count' => 50,
                 ],
@@ -64,14 +81,26 @@ class ReservationPricingPolicy
                     'calculation_mode' => 'percent_subtotal',
                     'default_rate' => 17.0,
                     'applies_to' => 'foreign_national',
+                    'applies_to_categories' => ['accommodation'],
                     'active' => true,
                 ],
                 [
-                    'code' => 'gst_local',
-                    'label' => 'GST (Local)',
+                    'code' => 'gst_standard',
+                    'label' => 'GST (Standard)',
                     'calculation_mode' => 'percent_subtotal',
                     'default_rate' => 8.0,
-                    'applies_to' => 'local_resident',
+                    'applies_to' => 'all',
+                    'applies_to_categories' => [
+                        'marine_transport',
+                        'land_transport',
+                        'excursion',
+                        'remote_workspace',
+                        'conference_room',
+                        'resort_day_visit',
+                        'restaurant',
+                        'vehicle_rental',
+                        'water_sports',
+                    ],
                     'active' => true,
                 ],
             ],
@@ -175,8 +204,10 @@ class ReservationPricingPolicy
                 'calculation_mode' => $mode,
                 'default_rate' => round(max(0, (float) ($component['default_rate'] ?? 0)), 4),
                 'applies_to' => $appliesTo,
+                'applies_to_categories' => self::normalizeComponentCategories($component['applies_to_categories'] ?? null),
                 'active' => (bool) ($component['active'] ?? true),
                 'is_service_charge' => (bool) ($component['is_service_charge'] ?? false),
+                'exclude_infants' => (bool) ($component['exclude_infants'] ?? false),
                 'min_room_count' => isset($component['min_room_count']) && is_numeric($component['min_room_count'])
                     ? max(0, (int) $component['min_room_count'])
                     : null,
@@ -217,6 +248,7 @@ class ReservationPricingPolicy
 
         $adults = max(1, (int) Arr::get($payload, 'adults', 1));
         $children = max(0, (int) Arr::get($payload, 'children', 0));
+        $infants = max(0, (int) Arr::get($payload, 'infants', 0));
         $guestCount = max(1, $adults + $children);
         $nights = max(1, (int) Arr::get($payload, 'nights', 1));
         $roomCount = max(0, (int) Arr::get($payload, 'room_count', 0));
@@ -256,6 +288,10 @@ class ReservationPricingPolicy
                     continue;
                 }
 
+                if (!self::componentAppliesToCategory((array) ($component['applies_to_categories'] ?? []), $listingCategory)) {
+                    continue;
+                }
+
                 $minRoomCount = $component['min_room_count'] ?? null;
                 $maxRoomCount = $component['max_room_count'] ?? null;
                 if (is_int($minRoomCount) && $roomCount < $minRoomCount) {
@@ -276,7 +312,11 @@ class ReservationPricingPolicy
                 if ($mode === 'percent_subtotal') {
                     $amount = round($discountedSubtotal * ($appliedRate / 100), 2);
                 } elseif ($mode === 'per_guest_per_night') {
-                    $amount = round($appliedRate * $guestCount * $nights, 2);
+                    $chargeableGuests = $guestCount;
+                    if ((bool) ($component['exclude_infants'] ?? false)) {
+                        $chargeableGuests = max(0, $chargeableGuests - $infants);
+                    }
+                    $amount = round($appliedRate * $chargeableGuests * $nights, 2);
                 } elseif ($mode === 'flat_booking') {
                     $amount = round($appliedRate, 2);
                 }
@@ -343,6 +383,7 @@ class ReservationPricingPolicy
             'guest_is_foreigner' => $guestIsForeigner,
             'adults' => $adults,
             'children' => $children,
+            'infants' => $infants,
             'guest_count' => $guestCount,
             'nights' => $nights,
             'room_count' => $roomCount,
@@ -383,6 +424,32 @@ class ReservationPricingPolicy
             'foreign_national' => $guestResidency === 'foreign_national',
             default => true,
         };
+    }
+
+    private static function normalizeComponentCategories(mixed $categories): array
+    {
+        if (is_string($categories)) {
+            $categories = explode(',', $categories);
+        }
+
+        if (!is_array($categories)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(array_map(static function ($value): string {
+            $normalized = strtolower(trim((string) $value));
+            $normalized = str_replace([' ', '-'], '_', $normalized);
+            return preg_replace('/[^a-z0-9_]+/', '', $normalized) ?? '';
+        }, $categories), static fn (string $value): bool => $value !== '')));
+    }
+
+    private static function componentAppliesToCategory(array $componentCategories, string $listingCategory): bool
+    {
+        if ($componentCategories === []) {
+            return true;
+        }
+
+        return in_array($listingCategory, $componentCategories, true);
     }
 
     private static function resolveTransferCharge(

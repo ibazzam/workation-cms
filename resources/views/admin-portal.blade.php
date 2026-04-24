@@ -1175,6 +1175,68 @@
                         <button class="btn btn-primary" type="submit">Update Commission Settings</button>
                     </form>
 
+                    <form class="finance-form" method="POST" action="/portal/admin/finance/policy/update">
+                        @csrf
+                        <p class="label">Reservation Policy Settings</p>
+                        <p class="small">Use this to update Maldives tax policy thresholds and any default transfer fallback values when government or supplier rules change.</p>
+                        <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+                            <button
+                                class="btn btn-secondary"
+                                type="submit"
+                                formaction="/portal/admin/finance/policy/apply-maldives-defaults"
+                                formmethod="post"
+                                onclick="return confirm('Apply Maldives default tax policy and overwrite current policy values?');"
+                            >Apply Maldives Defaults</button>
+                        </div>
+                        <div class="finance-form-grid">
+                            <div class="finance-field">
+                                <label for="green_tax_room_threshold">Green Tax Room Threshold</label>
+                                <input id="green_tax_room_threshold" name="green_tax_room_threshold" type="number" min="1" max="10000" value="{{ old('green_tax_room_threshold', (int) ($financeReservationPolicy['green_tax_room_threshold'] ?? 50)) }}" required>
+                            </div>
+                            <div class="finance-field">
+                                <label for="transfer_default_local_adult_rate">Default Local Adult Transfer</label>
+                                <input id="transfer_default_local_adult_rate" name="transfer_default_local_adult_rate" type="number" step="0.0001" min="0" max="1000000" value="{{ old('transfer_default_local_adult_rate', (float) ($financeReservationPolicy['transfer_default_local_adult_rate'] ?? 0)) }}" required>
+                            </div>
+                            <div class="finance-field">
+                                <label for="transfer_default_local_child_rate">Default Local Child Transfer</label>
+                                <input id="transfer_default_local_child_rate" name="transfer_default_local_child_rate" type="number" step="0.0001" min="0" max="1000000" value="{{ old('transfer_default_local_child_rate', (float) ($financeReservationPolicy['transfer_default_local_child_rate'] ?? 0)) }}" required>
+                            </div>
+                            <div class="finance-field">
+                                <label for="transfer_default_foreign_adult_rate">Default Foreign Adult Transfer</label>
+                                <input id="transfer_default_foreign_adult_rate" name="transfer_default_foreign_adult_rate" type="number" step="0.0001" min="0" max="1000000" value="{{ old('transfer_default_foreign_adult_rate', (float) ($financeReservationPolicy['transfer_default_foreign_adult_rate'] ?? 0)) }}" required>
+                            </div>
+                            <div class="finance-field">
+                                <label for="transfer_default_foreign_child_rate">Default Foreign Child Transfer</label>
+                                <input id="transfer_default_foreign_child_rate" name="transfer_default_foreign_child_rate" type="number" step="0.0001" min="0" max="1000000" value="{{ old('transfer_default_foreign_child_rate', (float) ($financeReservationPolicy['transfer_default_foreign_child_rate'] ?? 0)) }}" required>
+                            </div>
+                            <div class="finance-field">
+                                <label for="transfer_default_base_local">Default Local Transfer Base</label>
+                                <input id="transfer_default_base_local" name="transfer_default_base_local" type="number" step="0.0001" min="0" max="1000000" value="{{ old('transfer_default_base_local', (float) ($financeReservationPolicy['transfer_default_base_local'] ?? 0)) }}" required>
+                            </div>
+                            <div class="finance-field">
+                                <label for="transfer_default_base_foreign">Default Foreign Transfer Base</label>
+                                <input id="transfer_default_base_foreign" name="transfer_default_base_foreign" type="number" step="0.0001" min="0" max="1000000" value="{{ old('transfer_default_base_foreign', (float) ($financeReservationPolicy['transfer_default_base_foreign'] ?? 0)) }}" required>
+                            </div>
+                            <div class="finance-field finance-field-wide">
+                                <label>Taxable Categories</label>
+                                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-top:8px;">
+                                    @foreach (($financeTaxableCategoryOptions ?? []) as $categoryKey => $categoryLabel)
+                                        <label style="display:flex; align-items:center; gap:8px; font-weight:500;">
+                                            <input
+                                                type="checkbox"
+                                                name="taxable_categories[]"
+                                                value="{{ $categoryKey }}"
+                                                {{ in_array($categoryKey, old('taxable_categories', (array) ($financeReservationPolicy['taxable_categories'] ?? [])), true) ? 'checked' : '' }}
+                                            >
+                                            <span>{{ $categoryLabel }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" type="submit">Update Reservation Policy</button>
+                    </form>
+
                     <form class="finance-form" method="POST" action="/portal/admin/finance/tax-components/upsert">
                         @csrf
                         <p class="label">Tax Components (Admin Moderation)</p>
@@ -1207,6 +1269,10 @@
                                     <option value="foreign_national">Foreign National</option>
                                 </select>
                             </div>
+                            <div class="finance-field finance-field-wide">
+                                <label for="tax_component_applies_to_categories_csv">Applies To Categories (comma-separated keys)</label>
+                                <input id="tax_component_applies_to_categories_csv" name="applies_to_categories_csv" type="text" maxlength="1000" placeholder="accommodation,restaurant,excursion">
+                            </div>
                             <div class="finance-field">
                                 <label for="tax_component_active">Active</label>
                                 <select id="tax_component_active" name="active" required>
@@ -1219,6 +1285,13 @@
                                 <select id="tax_component_service_flag" name="is_service_charge" required>
                                     <option value="0">Tax</option>
                                     <option value="1">Service Charge</option>
+                                </select>
+                            </div>
+                            <div class="finance-field">
+                                <label for="tax_component_exclude_infants">Exclude Infants (Under 2)</label>
+                                <select id="tax_component_exclude_infants" name="exclude_infants" required>
+                                    <option value="0">No</option>
+                                    <option value="1">Yes</option>
                                 </select>
                             </div>
                             <div class="finance-field">
@@ -1287,13 +1360,7 @@
                 <table class="finance-table" aria-label="Tax components moderation table">
                     <thead>
                         <tr>
-                            <th>Code</th>
-                            <th>Label</th>
-                            <th>Calculation</th>
-                            <th>Default Rate</th>
-                            <th>Applies To</th>
-                            <th>Status</th>
-                            <th>Type</th>
+                            <th>Tax Component Details</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -1301,15 +1368,82 @@
                         @forelse (($financeTaxComponents ?? collect())->take(120) as $taxComponent)
                             @php
                                 $taxCode = strtolower(trim((string) ($taxComponent['code'] ?? '')));
+                                $taxCategoriesCsv = collect((array) ($taxComponent['applies_to_categories'] ?? []))
+                                    ->map(static fn ($value) => strtolower(trim((string) $value)))
+                                    ->filter()
+                                    ->implode(',');
                             @endphp
                             <tr>
-                                <td>{{ $taxCode }}</td>
-                                <td>{{ (string) ($taxComponent['label'] ?? '-') }}</td>
-                                <td>{{ strtoupper((string) ($taxComponent['calculation_mode'] ?? '-')) }}</td>
-                                <td>{{ number_format((float) ($taxComponent['default_rate'] ?? 0), 4) }}</td>
-                                <td>{{ strtoupper((string) ($taxComponent['applies_to'] ?? 'all')) }}</td>
-                                <td>{{ ((bool) ($taxComponent['active'] ?? false)) ? 'ACTIVE' : 'INACTIVE' }}</td>
-                                <td>{{ ((bool) ($taxComponent['is_service_charge'] ?? false)) ? 'SERVICE' : 'TAX' }}</td>
+                                <td>
+                                    <form method="POST" action="/portal/admin/finance/tax-components/upsert" style="display:grid; gap:8px; min-width:950px;">
+                                        @csrf
+                                        <div style="display:grid; grid-template-columns:160px 220px 160px 130px 180px 110px 110px 130px 120px 120px auto auto; gap:8px; align-items:end;">
+                                            <div>
+                                                <label class="small">Code</label>
+                                                <input type="text" name="code" maxlength="80" value="{{ $taxCode }}" required>
+                                            </div>
+                                            <div>
+                                                <label class="small">Label</label>
+                                                <input type="text" name="label" maxlength="190" value="{{ (string) ($taxComponent['label'] ?? '-') }}" required>
+                                            </div>
+                                            <div>
+                                                <label class="small">Calculation</label>
+                                                <select name="calculation_mode" required>
+                                                    <option value="percent_subtotal" {{ (string) ($taxComponent['calculation_mode'] ?? '') === 'percent_subtotal' ? 'selected' : '' }}>Percent</option>
+                                                    <option value="per_guest_per_night" {{ (string) ($taxComponent['calculation_mode'] ?? '') === 'per_guest_per_night' ? 'selected' : '' }}>Per Guest/Night</option>
+                                                    <option value="flat_booking" {{ (string) ($taxComponent['calculation_mode'] ?? '') === 'flat_booking' ? 'selected' : '' }}>Flat Booking</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="small">Rate</label>
+                                                <input type="number" name="default_rate" step="0.0001" min="0" max="1000000" value="{{ number_format((float) ($taxComponent['default_rate'] ?? 0), 4, '.', '') }}" required>
+                                            </div>
+                                            <div>
+                                                <label class="small">Applies To</label>
+                                                <select name="applies_to" required>
+                                                    <option value="all" {{ (string) ($taxComponent['applies_to'] ?? '') === 'all' ? 'selected' : '' }}>All Guests</option>
+                                                    <option value="local_resident" {{ (string) ($taxComponent['applies_to'] ?? '') === 'local_resident' ? 'selected' : '' }}>Local</option>
+                                                    <option value="foreign_national" {{ (string) ($taxComponent['applies_to'] ?? '') === 'foreign_national' ? 'selected' : '' }}>Foreign</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="small">Categories CSV</label>
+                                                <input type="text" name="applies_to_categories_csv" maxlength="1000" value="{{ $taxCategoriesCsv }}" placeholder="all categories when blank">
+                                            </div>
+                                            <div>
+                                                <label class="small">Active</label>
+                                                <select name="active" required>
+                                                    <option value="1" {{ ((bool) ($taxComponent['active'] ?? false)) ? 'selected' : '' }}>Yes</option>
+                                                    <option value="0" {{ !((bool) ($taxComponent['active'] ?? false)) ? 'selected' : '' }}>No</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="small">Type</label>
+                                                <select name="is_service_charge" required>
+                                                    <option value="0" {{ !((bool) ($taxComponent['is_service_charge'] ?? false)) ? 'selected' : '' }}>Tax</option>
+                                                    <option value="1" {{ ((bool) ($taxComponent['is_service_charge'] ?? false)) ? 'selected' : '' }}>Service</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="small">Exclude Infants</label>
+                                                <select name="exclude_infants" required>
+                                                    <option value="0" {{ !((bool) ($taxComponent['exclude_infants'] ?? false)) ? 'selected' : '' }}>No</option>
+                                                    <option value="1" {{ ((bool) ($taxComponent['exclude_infants'] ?? false)) ? 'selected' : '' }}>Yes</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="small">Min Rooms</label>
+                                                <input type="number" name="min_room_count" min="0" max="10000" value="{{ $taxComponent['min_room_count'] !== null ? (int) $taxComponent['min_room_count'] : '' }}">
+                                            </div>
+                                            <div>
+                                                <label class="small">Max Rooms</label>
+                                                <input type="number" name="max_room_count" min="0" max="10000" value="{{ $taxComponent['max_room_count'] !== null ? (int) $taxComponent['max_room_count'] : '' }}">
+                                            </div>
+                                            <div>
+                                                <button class="btn btn-primary" type="submit">Save</button>
+                                            </div>
+                                    </form>
+                                </td>
                                 <td>
                                     <form method="POST" action="/portal/admin/finance/tax-components/delete" onsubmit="return confirm('Delete this tax component?');">
                                         @csrf
@@ -1320,7 +1454,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="finance-empty">No tax components configured.</td>
+                                <td colspan="2" class="finance-empty">No tax components configured.</td>
                             </tr>
                         @endforelse
                     </tbody>

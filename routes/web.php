@@ -4321,6 +4321,11 @@ Route::get('/room/{room}', function (Request $request, int $room) {
     $nameParts = preg_split('/\s+/', $sessionGuestName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
     $prefillFirstName = (string) ($nameParts[0] ?? '');
     $prefillLastName = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
+    $selectedNightlyRate = (float) $request->query('rate_nightly', 0);
+    if (!is_finite($selectedNightlyRate) || $selectedNightlyRate <= 0) {
+        $selectedNightlyRate = 0.0;
+    }
+    $selectedMealPlan = trim((string) $request->query('meal_plan', ''));
 
     return view('room-profile', [
         'room' => $roomRow,
@@ -4341,6 +4346,8 @@ Route::get('/room/{room}', function (Request $request, int $room) {
             'primary_nationality' => '',
             'primary_email' => trim((string) session('portal_customer_email', '')),
             'primary_mobile' => '',
+            'selected_nightly_rate' => $selectedNightlyRate,
+            'selected_meal_plan' => $selectedMealPlan,
         ],
     ]);
 });

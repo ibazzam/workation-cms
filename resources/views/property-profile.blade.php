@@ -540,6 +540,35 @@
             font-size: 0.76rem;
         }
 
+        .property-summary-price-total {
+            color: #1d4c67;
+            font-size: 0.83rem;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
+        .property-summary-price-note {
+            color: #4f6f85;
+            font-size: 0.76rem;
+            line-height: 1.25;
+        }
+
+        .property-summary-price-soldout {
+            border: 1px solid #f0b7b7;
+            border-radius: 999px;
+            background: #fff2f2;
+            color: #a53a3a;
+            font-size: 0.73rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 4px 10px;
+        }
+
+        .property-summary-price-soldout.is-hidden {
+            display: none;
+        }
+
         .property-summary-price .cta {
             display: inline-flex;
             align-items: center;
@@ -1964,6 +1993,36 @@
             line-height: 1;
         }
 
+        .room-price-summary {
+            margin-top: 4px;
+            color: #254b63;
+            font-size: 0.82rem;
+            font-weight: 600;
+            line-height: 1.35;
+        }
+
+        .room-price-summary-note {
+            margin-top: 1px;
+            color: #4f6f85;
+            font-size: 0.78rem;
+            line-height: 1.3;
+        }
+
+        .room-soldout-badge {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid #f0b7b7;
+            border-radius: 999px;
+            background: #fff2f2;
+            color: #a53a3a;
+            font-size: 0.73rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 4px 10px;
+            margin-top: 6px;
+        }
+
         .reserve-btn {
             text-decoration: none;
             border: 1px solid #0f6179;
@@ -2223,6 +2282,19 @@
         $ratingValue = (float) ($ratingValue ?? 0);
         $ratingUsers = (int) ($ratingUsers ?? 0);
         $prefill = $prefill ?? ['checkin' => '', 'checkout' => '', 'rooms' => 1, 'adults' => 2, 'children' => 0];
+        $prefillCheckin = trim((string) ($prefill['checkin'] ?? ''));
+        $prefillCheckout = trim((string) ($prefill['checkout'] ?? ''));
+        $prefillAdults = max(1, (int) ($prefill['adults'] ?? 2));
+        $prefillChildren = max(0, (int) ($prefill['children'] ?? 0));
+        $prefillRooms = max(1, (int) ($prefill['rooms'] ?? 1));
+        $prefillStayNights = 1;
+        if ($prefillCheckin !== '' && $prefillCheckout !== '') {
+            try {
+                $prefillStayNights = max(1, \Carbon\Carbon::parse($prefillCheckin)->diffInDays(\Carbon\Carbon::parse($prefillCheckout)));
+            } catch (\Throwable $e) {
+                $prefillStayNights = 1;
+            }
+        }
         $mediaUrl = $mediaUrl ?? static fn () => null;
         $currency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
         $basePrice = number_format((float) ($property->base_price ?? 0), 2);
@@ -2263,6 +2335,8 @@
             $startingPriceCurrency = 'MVR';
         }
         $startingPrice = number_format($startingPriceValue, 2);
+        $startingTotalPrice = number_format($startingPriceValue * $prefillStayNights, 2);
+        $hasBookableRate = $pricedRooms->isNotEmpty();
         $selectRoomsTarget = $cheapestRoomId > 0 ? ('#room-' . $cheapestRoomId) : '#rooms-section';
         $shareUrl = url()->current();
         $shareText = trim((string) ($property->name ?? 'Property')) . ' on Workation';
@@ -2527,6 +2601,11 @@
                         <span class="k">Starting from</span>
                         <span class="v">{{ $startingPriceCurrency }} {{ $startingPrice }}</span>
                         <span class="sub">per night · taxes may apply</span>
+                        <span class="property-summary-price-total" data-starting-total data-starting-currency="{{ $startingPriceCurrency }}" data-starting-nightly="{{ number_format($startingPriceValue, 2, '.', '') }}">
+                            {{ $startingPriceCurrency }} {{ $startingTotalPrice }} total 1 room, {{ $prefillStayNights }} night{{ $prefillStayNights !== 1 ? 's' : '' }}
+                        </span>
+                        <span class="property-summary-price-note">including taxes and fees estimate</span>
+                        <span class="property-summary-price-soldout{{ $hasBookableRate ? ' is-hidden' : '' }}" data-starting-soldout>Sold out for selected dates</span>
                         <a class="cta" href="{{ $selectRoomsTarget }}">View rooms</a>
                     </aside>
                 </section>
@@ -2661,7 +2740,36 @@
                         $extraBedPolicy = trim((string) ($room->extra_bed_policy ?? ''));
                         $roomAmenitiesRaw = collect(preg_split('/[,\n]+/', (string) ($room->amenities ?? '')) ?: [])->map(static fn ($item) => trim((string) $item))->filter()->values();
                         $bathAmenitiesRaw = collect(preg_split('/[,\n]+/', (string) ($room->bathroom_amenities ?? '')) ?: [])->map(static fn ($item) => trim((string) $item))->filter()->values();
-                        $roomLink = '/room/' . $roomId . '?checkin=' . urlencode((string) ($prefill['checkin'] ?? '')) . '&checkout=' . urlencode((string) ($prefill['checkout'] ?? '')) . '&rooms=' . (int) ($prefill['rooms'] ?? 1) . '&adults=' . (int) ($prefill['adults'] ?? 2) . '&children=' . (int) ($prefill['children'] ?? 0);
+                        $roomQuery = [
+                            'checkin' => $prefillCheckin,
+                            'checkout' => $prefillCheckout,
+                            'rooms' => $prefillRooms,
+                            'adults' => $prefillAdults,
+                            'children' => $prefillChildren,
+                        ];
+                        $roomLink = '/room/' . $roomId . '?' . http_build_query($roomQuery);
+                        $primaryNightlyRateRaw = (float) ($room->base_price ?? 0);
+                        $primaryTotalRaw = $primaryNightlyRateRaw * $prefillStayNights;
+                        $alternateBreakfastLabel = $hasBreakfast ? 'Without Breakfast' : 'With Breakfast';
+                        $alternateRateMultiplier = $hasBreakfast ? 0.85 : 1.15;
+                        $alternateNightlyRateRaw = $primaryNightlyRateRaw * $alternateRateMultiplier;
+                        $alternateTotalRaw = $alternateNightlyRateRaw * $prefillStayNights;
+                        $primaryReserveLink = '/room/' . $roomId . '?' . http_build_query(array_merge($roomQuery, [
+                            'rate_nightly' => number_format($primaryNightlyRateRaw, 2, '.', ''),
+                            'meal_plan' => $breakfastLabel,
+                        ]));
+                        $alternateReserveLink = '/room/' . $roomId . '?' . http_build_query(array_merge($roomQuery, [
+                            'rate_nightly' => number_format($alternateNightlyRateRaw, 2, '.', ''),
+                            'meal_plan' => $alternateBreakfastLabel,
+                        ]));
+                        $isRoomSoldOut = (
+                            (property_exists($room, 'is_available') && (int) ($room->is_available ?? 1) === 0)
+                            || (property_exists($room, 'available') && (int) ($room->available ?? 1) === 0)
+                            || (property_exists($room, 'is_bookable') && (int) ($room->is_bookable ?? 1) === 0)
+                            || (property_exists($room, 'available_rooms') && (int) ($room->available_rooms ?? 1) <= 0)
+                            || (property_exists($room, 'inventory_count') && (int) ($room->inventory_count ?? 1) <= 0)
+                            || (property_exists($room, 'total_rooms') && property_exists($room, 'bookings_count') && (int) ($room->bookings_count ?? 0) >= (int) ($room->total_rooms ?? 0) && (int) ($room->total_rooms ?? 0) > 0)
+                        );
                         $amenities = collect([
                                 (string) ($room->bed_type ?? ''),
                                 ...(preg_split('/[,\n]+/', (string) ($room->amenities ?? '')) ?: []),
@@ -2723,6 +2831,13 @@
                                             <div>
                                                 <div class="room-price-old">{{ $roomCurrency }} {{ $roomOldPrice }}</div>
                                                 <div class="room-price-now">{{ $roomCurrency }} {{ $roomPrice }}</div>
+                                                <div class="room-price-summary" data-rate-summary data-rate-currency="{{ $roomCurrency }}" data-nightly-rate="{{ number_format($primaryNightlyRateRaw, 2, '.', '') }}">
+                                                    {{ $roomCurrency }} {{ number_format($primaryTotalRaw, 2) }} total 1 room, {{ $prefillStayNights }} night{{ $prefillStayNights !== 1 ? 's' : '' }}
+                                                </div>
+                                                <div class="room-price-summary-note">incl. taxes &amp; fees</div>
+                                                @if ($isRoomSoldOut)
+                                                    <span class="room-soldout-badge" data-rate-soldout>Sold out for selected dates</span>
+                                                @endif
                                                 @php
                                                     $roomOldPriceValue = floatval($roomOldPrice);
                                                     $roomPriceValue = floatval($roomPrice);
@@ -2734,16 +2849,13 @@
                                                     <span class="discount-badge">{{ $discountPercent }}% off</span>
                                                 @endif
                                             </div>
-                                            <a class="reserve-btn" href="{{ $roomLink }}">Reserve</a>
+                                            <a class="reserve-btn" href="{{ $primaryReserveLink }}" data-base-room-link="{{ $roomLink }}" data-rate-nightly="{{ number_format($primaryNightlyRateRaw, 2, '.', '') }}" data-meal-plan="{{ $breakfastLabel }}" @if($isRoomSoldOut) aria-disabled="true" style="pointer-events:none;opacity:.45;" @endif>Reserve</a>
                                         </div>
                                     </div>
                                 </div>
                                 @php
-                                    $alternateBreakfastLabel = $hasBreakfast ? 'Without Breakfast' : 'With Breakfast';
-                                    $alternatePrice = $hasBreakfast 
-                                        ? number_format(((float) ($room->base_price ?? 0)) * 0.85, 2)
-                                        : number_format(((float) ($room->base_price ?? 0)) * 1.15, 2);
-                                    $alternateOldPrice = number_format((floatval($alternatePrice)) * 1.08, 2);
+                                    $alternatePrice = number_format($alternateNightlyRateRaw, 2);
+                                    $alternateOldPrice = number_format($alternateNightlyRateRaw * 1.08, 2);
                                 @endphp
                                 <div class="room-offer-row is-hidden">
                                     <div class="room-choices">
@@ -2758,6 +2870,13 @@
                                             <div>
                                                 <div class="room-price-old">{{ $roomCurrency }} {{ $alternateOldPrice }}</div>
                                                 <div class="room-price-now">{{ $roomCurrency }} {{ $alternatePrice }}</div>
+                                                <div class="room-price-summary" data-rate-summary data-rate-currency="{{ $roomCurrency }}" data-nightly-rate="{{ number_format($alternateNightlyRateRaw, 2, '.', '') }}">
+                                                    {{ $roomCurrency }} {{ number_format($alternateTotalRaw, 2) }} total 1 room, {{ $prefillStayNights }} night{{ $prefillStayNights !== 1 ? 's' : '' }}
+                                                </div>
+                                                <div class="room-price-summary-note">incl. taxes &amp; fees</div>
+                                                @if ($isRoomSoldOut)
+                                                    <span class="room-soldout-badge" data-rate-soldout>Sold out for selected dates</span>
+                                                @endif
                                                 @php
                                                     $alternateOldPriceValue = floatval($alternateOldPrice);
                                                     $alternatePriceValue = floatval($alternatePrice);
@@ -2769,7 +2888,7 @@
                                                     <span class="discount-badge">{{ $altDiscountPercent }}% off</span>
                                                 @endif
                                             </div>
-                                            <a class="reserve-btn" href="{{ $roomLink }}">Reserve</a>
+                                            <a class="reserve-btn" href="{{ $alternateReserveLink }}" data-base-room-link="{{ $roomLink }}" data-rate-nightly="{{ number_format($alternateNightlyRateRaw, 2, '.', '') }}" data-meal-plan="{{ $alternateBreakfastLabel }}" @if($isRoomSoldOut) aria-disabled="true" style="pointer-events:none;opacity:.45;" @endif>Reserve</a>
                                         </div>
                                     </div>
                                 </div>
@@ -3555,6 +3674,142 @@
         })();
 
         (function () {
+            const topCheckin = document.getElementById('topCheckin');
+            const topCheckout = document.getElementById('topCheckout');
+            const topGuests = document.getElementById('topGuests');
+            const topRooms = document.querySelector('#propertyTopSearch input[name="rooms"]');
+            const topAdults = document.querySelector('#propertyTopSearch input[name="adults"]');
+            const topChildren = document.querySelector('#propertyTopSearch input[name="children"]');
+            const availCheckin = document.getElementById('availCheckin');
+            const availCheckout = document.getElementById('availCheckout');
+            const availRooms = document.getElementById('availRooms');
+            const availAdults = document.getElementById('availAdults');
+            const availChildren = document.getElementById('availChildren');
+            const startingTotal = document.querySelector('[data-starting-total]');
+            const startingSoldout = document.querySelector('[data-starting-soldout]');
+            const rateSummaries = Array.from(document.querySelectorAll('[data-rate-summary]'));
+            const reserveButtons = Array.from(document.querySelectorAll('.reserve-btn[data-base-room-link]'));
+
+            if (startingTotal || rateSummaries.length > 0 || reserveButtons.length > 0) {
+                const pluralize = (value, singular) => `${value} ${singular}${value === 1 ? '' : 's'}`;
+                const clampInt = (value, minimum) => {
+                    const parsed = Number(value);
+                    if (!Number.isFinite(parsed)) return minimum;
+                    return Math.max(minimum, Math.floor(parsed));
+                };
+
+                const calculateNights = (checkinValue, checkoutValue) => {
+                    if (!checkinValue || !checkoutValue) {
+                        return 1;
+                    }
+
+                    const checkinDate = new Date(checkinValue + 'T00:00:00');
+                    const checkoutDate = new Date(checkoutValue + 'T00:00:00');
+                    if (Number.isNaN(checkinDate.getTime()) || Number.isNaN(checkoutDate.getTime())) {
+                        return 1;
+                    }
+
+                    const diffMs = checkoutDate.getTime() - checkinDate.getTime();
+                    const nights = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                    return nights > 0 ? nights : 1;
+                };
+
+                const syncTopGuestText = (adultsCount, childrenCount, roomsCount) => {
+                    if (!topGuests) {
+                        return;
+                    }
+
+                    topGuests.value = `${adultsCount} adults, ${childrenCount} children, ${pluralize(roomsCount, 'room')}`;
+                };
+
+                const syncFromAvailability = () => {
+                    if (topCheckin && availCheckin) topCheckin.value = availCheckin.value;
+                    if (topCheckout && availCheckout) topCheckout.value = availCheckout.value;
+                    if (topRooms && availRooms) topRooms.value = String(clampInt(availRooms.value, 1));
+                    if (topAdults && availAdults) topAdults.value = String(clampInt(availAdults.value, 1));
+                    if (topChildren && availChildren) topChildren.value = String(clampInt(availChildren.value, 0));
+                };
+
+                const syncAvailabilityDates = () => {
+                    if (availCheckin && topCheckin) availCheckin.value = topCheckin.value;
+                    if (availCheckout && topCheckout) availCheckout.value = topCheckout.value;
+                };
+
+                const refreshTotals = () => {
+                    const checkinValue = (topCheckin?.value || '').trim();
+                    const checkoutValue = (topCheckout?.value || '').trim();
+                    const roomsCount = clampInt(topRooms?.value || 1, 1);
+                    const adultsCount = clampInt(topAdults?.value || 1, 1);
+                    const childrenCount = clampInt(topChildren?.value || 0, 0);
+                    const nights = calculateNights(checkinValue, checkoutValue);
+
+                    syncTopGuestText(adultsCount, childrenCount, roomsCount);
+
+                    if (startingTotal) {
+                        const currencyCode = String(startingTotal.dataset.startingCurrency || 'MVR').trim() || 'MVR';
+                        const nightlyRate = Number(startingTotal.dataset.startingNightly || 0);
+                        const total = nightlyRate * nights;
+                        startingTotal.textContent = `${currencyCode} ${total.toFixed(2)} total 1 room, ${pluralize(nights, 'night')}`;
+                    }
+
+                    rateSummaries.forEach((summary) => {
+                        const currencyCode = String(summary.dataset.rateCurrency || 'MVR').trim() || 'MVR';
+                        const nightlyRate = Number(summary.dataset.nightlyRate || 0);
+                        const total = nightlyRate * nights;
+                        summary.textContent = `${currencyCode} ${total.toFixed(2)} total 1 room, ${pluralize(nights, 'night')}`;
+                    });
+
+                    reserveButtons.forEach((button) => {
+                        const baseRoomLink = String(button.dataset.baseRoomLink || '').trim();
+                        if (baseRoomLink === '') {
+                            return;
+                        }
+
+                        const nightlyRate = Number(button.dataset.rateNightly || 0).toFixed(2);
+                        const mealPlan = String(button.dataset.mealPlan || '').trim();
+                        const url = new URL(baseRoomLink, window.location.origin);
+                        url.searchParams.set('checkin', checkinValue);
+                        url.searchParams.set('checkout', checkoutValue);
+                        url.searchParams.set('rooms', String(roomsCount));
+                        url.searchParams.set('adults', String(adultsCount));
+                        url.searchParams.set('children', String(childrenCount));
+                        url.searchParams.set('rate_nightly', nightlyRate);
+                        if (mealPlan !== '') {
+                            url.searchParams.set('meal_plan', mealPlan);
+                        }
+
+                        button.href = url.pathname + '?' + url.searchParams.toString();
+                    });
+
+                    if (startingSoldout) {
+                        const hasEnabledReserve = reserveButtons.some((button) => button.getAttribute('aria-disabled') !== 'true');
+                        startingSoldout.classList.toggle('is-hidden', hasEnabledReserve);
+                    }
+                };
+
+                [topCheckin, topCheckout].forEach((input) => {
+                    if (!input) return;
+                    input.addEventListener('change', () => {
+                        syncAvailabilityDates();
+                        refreshTotals();
+                    });
+                });
+
+                [availCheckin, availCheckout, availRooms, availAdults, availChildren].forEach((input) => {
+                    if (!input) return;
+                    input.addEventListener('input', () => {
+                        syncFromAvailability();
+                        refreshTotals();
+                    });
+                    input.addEventListener('change', () => {
+                        syncFromAvailability();
+                        refreshTotals();
+                    });
+                });
+
+                refreshTotals();
+            }
+
             const nav = document.querySelector('[data-section-nav]');
             if (!nav) {
                 return;

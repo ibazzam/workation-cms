@@ -122,6 +122,12 @@
         $currency = strtoupper(trim((string) ($room->currency ?? $property->currency ?? 'MVR')));
         $basePrice = number_format((float) ($room->base_price ?? 0), 2);
         $basePriceRaw = (float) ($room->base_price ?? 0);
+        $selectedNightlyRateRaw = (float) ($prefill['selected_nightly_rate'] ?? 0);
+        if (!is_finite($selectedNightlyRateRaw) || $selectedNightlyRateRaw <= 0) {
+            $selectedNightlyRateRaw = $basePriceRaw;
+        }
+        $selectedMealPlan = trim((string) ($prefill['selected_meal_plan'] ?? ''));
+        $selectedNightlyRate = number_format($selectedNightlyRateRaw, 2);
         $taxRate = (float) ($pricingConfig['tax_rate'] ?? 16);
         $discountPercent = (float) ($pricingConfig['discount_percent'] ?? 0);
         $inclusives = collect($bookingPolicies['inclusives'] ?? [])->map(static fn ($v) => trim((string) $v))->filter()->values();
@@ -176,7 +182,10 @@
                         <p class="sum-prop-name">{{ (string) ($property->name ?? 'Property') }}</p>
                         <p class="sum-room-name">{{ (string) ($room->name ?? 'Room') }}</p>
                         <p class="sum-room-meta">{{ $roomBedLabel }}{{ $roomSize > 0 ? ' · ' . $roomSize . '㎡' : '' }}{{ $roomNonSmoking ? ' · Non-smoking' : '' }}</p>
-                        <p class="sum-room-meta">Rate: <strong style="color:#1b3f58">{{ $currency }} {{ number_format($basePriceRaw, 2) }}</strong> / night</p>
+                        <p class="sum-room-meta">Rate: <strong style="color:#1b3f58">{{ $currency }} {{ $selectedNightlyRate }}</strong> / night</p>
+                        @if ($selectedMealPlan !== '')
+                            <p class="sum-room-meta">Meal plan: <strong style="color:#1b3f58">{{ $selectedMealPlan }}</strong></p>
+                        @endif
                     </section>
 
                     <section class="sum-section" aria-label="Stay dates">
@@ -198,7 +207,7 @@
 
                     <section class="sum-section" aria-label="Price summary">
                         <h2 class="sum-title"><span class="sum-title-number">3</span> Price Summary</h2>
-                        <div class="sum-compact-line"><span>Nightly rate</span><strong id="invoiceNightly">{{ $currency }} {{ number_format($basePriceRaw, 2) }}</strong></div>
+                        <div class="sum-compact-line"><span>Nightly rate</span><strong id="invoiceNightly">{{ $currency }} {{ $selectedNightlyRate }}</strong></div>
                         <div class="sum-compact-line"><span>Stay (nights)</span><strong id="invoiceNights">{{ $stayNights }}</strong></div>
                         <div class="sum-compact-line"><span>Room subtotal</span><strong id="invoiceRoomSubtotal">{{ $currency }} 0.00</strong></div>
                         <div class="sum-compact-line"><span>Discount</span><strong id="invoiceDiscount">- {{ $currency }} 0.00</strong></div>
@@ -374,12 +383,13 @@
             const invoiceTax = document.getElementById('invoiceTax');
             const invoiceTransfer = document.getElementById('invoiceTransfer');
             const invoiceTotal = document.getElementById('invoiceTotal');
+            const invoiceNightly = document.getElementById('invoiceNightly');
             const roomSubtotalInput = document.getElementById('roomSubtotalInput');
             const discountAmountInput = document.getElementById('discountAmountInput');
             const taxAmountInput = document.getElementById('taxAmountInput');
             const totalAmountInput = document.getElementById('totalAmountInput');
             const currency = @json($currency);
-            const nightlyRate = Number(@json($basePriceRaw));
+            const nightlyRate = Number(@json($selectedNightlyRateRaw));
             const taxRate = Number(@json($taxRate));
             const discountPercent = Number(@json($discountPercent));
 
@@ -421,6 +431,7 @@
 
                 transferCharge.value = transferTotal.toFixed(2);
 
+                if (invoiceNightly) invoiceNightly.textContent = toCurrency(nightlyRate);
                 if (invoiceNights) invoiceNights.textContent = String(nights);
                 if (invoiceGuests) invoiceGuests.textContent = adultCount + ' Adults, ' + childCount + ' Children';
                 if (invoiceRoomSubtotal) invoiceRoomSubtotal.textContent = toCurrency(roomSubtotal);

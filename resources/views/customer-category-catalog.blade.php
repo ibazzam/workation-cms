@@ -51,8 +51,8 @@
             padding: 0 24px;
             border: 0;
             border-radius: 0;
-            background: transparent;
-            box-shadow: none;
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 10px 24px rgba(22, 64, 93, 0.06);
             margin: 0;
             width: 100%;
             position: absolute;
@@ -61,7 +61,7 @@
             right: 0;
             transition: transform 0.22s ease, opacity 0.22s ease;
             z-index: 10;
-            backdrop-filter: blur(2px);
+            backdrop-filter: blur(10px);
         }
 
         .page.is-header-hidden .header-bar {
@@ -101,10 +101,10 @@
             justify-content: center;
             width: 34px;
             height: 34px;
-            border: 1px solid rgba(217, 235, 245, 0.4);
+            border: 1px solid #d8e5ef;
             border-radius: 10px;
-            background: rgba(245, 252, 255, 0.18);
-            color: #e7f8ff;
+            background: #f9fcff;
+            color: #61778c;
             font-size: 0.82rem;
         }
 
@@ -112,10 +112,10 @@
             margin: 0;
             font-size: 1.7rem;
             font-weight: 900;
-            color: #f3fbff;
+            color: #02193f;
             letter-spacing: -0.04em;
             line-height: 1;
-            text-shadow: 0 4px 16px rgba(8, 30, 85, 0.35);
+            text-shadow: none;
             display: inline-flex;
             align-items: center;
             gap: 10px;
@@ -126,18 +126,18 @@
         }
 
         .header-brand-link {
-            color: #f3fbff;
+            color: inherit;
             text-decoration: none;
         }
 
         .header-brand-link:hover {
-            color: #ffffff;
+            color: var(--brand-strong);
         }
 
         .header-subline {
             margin: 1px 0 0;
             font-size: 0.7rem;
-            color: rgba(235, 246, 255, 0.9);
+            color: #71869a;
             white-space: nowrap;
         }
 
@@ -184,7 +184,7 @@
 
         .header-link {
             text-decoration: none;
-            color: #e9f5ff;
+            color: #0f1724;
             font-size: 0.74rem;
             font-weight: 700;
             text-transform: uppercase;
@@ -211,31 +211,31 @@
         }
 
         .header-link:hover {
-            border-color: rgba(233, 248, 255, 0.35);
-            background: rgba(255, 255, 255, 0.14);
-            color: #ffffff;
+            border-color: rgba(2, 25, 63, 0.12);
+            background: rgba(2, 25, 63, 0.04);
+            color: #02193f;
         }
 
         .auth-link {
             text-decoration: none;
-            border: 1px solid rgba(225, 242, 251, 0.55);
+            border: 1px solid #c9dbea;
             border-radius: 10px;
             padding: 7px 12px;
-            background: rgba(255, 255, 255, 0.14);
-            color: #ffffff;
+            background: #f6fbff;
+            color: #19466a;
             font-size: 0.8rem;
             font-weight: 700;
             font-family: inherit;
         }
 
         .auth-link:hover {
-            background: rgba(255, 255, 255, 0.24);
-            color: #ffffff;
+            border-color: #9fbcd0;
+            color: #173e5b;
         }
 
         .auth-link.primary {
-            background: #1a7a68;
-            border-color: #136357;
+            background: #2fa58a;
+            border-color: #27917a;
             color: #ffffff;
         }
 
@@ -247,24 +247,28 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            border: 1px solid rgba(226, 243, 251, 0.62);
+            border: 1px solid #c9dbea;
             border-radius: 11px;
             padding: 6px 10px;
-            background: rgba(255, 255, 255, 0.14);
-            color: #ffffff;
+            background: #ffffff;
+            color: #173e5b;
             font-size: 0.8rem;
             font-weight: 700;
             font-family: inherit;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(8, 33, 49, 0.22);
+            box-shadow: 0 4px 10px rgba(20, 63, 90, 0.08);
+        }
+
+        .account-menu-toggle:hover {
+            border-color: #9fbcd0;
         }
 
         .account-avatar {
             width: 22px;
             height: 22px;
             border-radius: 999px;
-            background: rgba(255, 255, 255, 0.22);
-            color: #ffffff;
+            background: linear-gradient(135deg, #e8f5fb 0%, #d4ebf7 100%);
+            color: #1e5a7e;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -569,8 +573,9 @@
         }
 
         .header-category-tabs .header-link.is-active {
-            background: rgba(255, 255, 255, 0.94);
-            color: #154e71;
+            background: #0f6179;
+            border-color: #0f6179;
+            color: #ffffff;
         }
 
         .search-sticky-wrap {

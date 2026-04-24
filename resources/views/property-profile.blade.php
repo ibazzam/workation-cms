@@ -32,12 +32,21 @@
             background: var(--bg);
         }
 
+        :root {
+            --property-header-offset: 74px;
+            --property-search-shell-height: 74px;
+        }
+
+        body.is-header-hidden {
+            --property-header-offset: 0px;
+        }
+
         .page { width: min(1180px, calc(100% - 24px)); margin: 14px auto 28px; }
 
         .top-search-shell {
             position: sticky;
-            top: 74px;
-            z-index: 55;
+            top: var(--property-header-offset);
+            z-index: 60;
             border: 1px solid var(--brand-line);
             border-radius: 0;
             background: var(--surface);
@@ -52,7 +61,7 @@
         }
 
         body.is-header-hidden .top-search-shell {
-            top: 0;
+            top: var(--property-header-offset);
         }
 
         .top-search-form {
@@ -1762,8 +1771,8 @@
             background: #f8fcff;
             padding: 8px;
             position: sticky;
-            top: 86px;
-            z-index: 48;
+            top: calc(var(--property-header-offset) + var(--property-search-shell-height));
+            z-index: 58;
             backdrop-filter: blur(3px);
         }
 
@@ -2102,11 +2111,11 @@
             }
 
             .section-tabs {
-                top: 76px;
+                top: calc(var(--property-header-offset) + var(--property-search-shell-height));
             }
 
             body.is-header-hidden .section-tabs {
-                top: 62px;
+                top: calc(var(--property-header-offset) + var(--property-search-shell-height));
             }
 
             .hero-avail-form { grid-template-columns: 1fr 120px 120px 65px 65px auto; }
@@ -2131,12 +2140,11 @@
 
         @media (max-width: 680px) {
             .top-search-shell {
-                top: 62px;
                 padding: 8px;
             }
 
             body.is-header-hidden .top-search-shell {
-                top: 6px;
+                top: var(--property-header-offset);
             }
 
             .top-search-form {
@@ -2144,13 +2152,13 @@
             }
 
             .section-tabs {
-                top: 62px;
+                top: calc(var(--property-header-offset) + var(--property-search-shell-height));
                 overflow-x: auto;
                 flex-wrap: nowrap;
             }
 
             body.is-header-hidden .section-tabs {
-                top: 54px;
+                top: calc(var(--property-header-offset) + var(--property-search-shell-height));
             }
 
             .section-tab {
@@ -2350,7 +2358,7 @@
         $cheapestRoomPrice = $cheapestPricedRoom ? number_format((float) ($cheapestPricedRoom->base_price_per_night ?? ($cheapestPricedRoom->base_price ?? 0)), 2) : null;
         $startingPriceValue = $cheapestPricedRoom
             ? (float) ($cheapestPricedRoom->base_price_per_night ?? ($cheapestPricedRoom->base_price ?? 0))
-            : (float) ($property->base_price ?? 0);
+            : 0;
         $startingPriceCurrency = strtoupper(trim((string) ($cheapestPricedRoom->currency ?? $property->currency ?? 'MVR')));
         if ($startingPriceCurrency === '') {
             $startingPriceCurrency = 'MVR';
@@ -3695,6 +3703,27 @@
         })();
 
         (function () {
+            const root = document.documentElement;
+            const topSearchShell = document.querySelector('.top-search-shell');
+            const sectionTabs = document.querySelector('.section-tabs');
+
+            const syncStickyMetrics = () => {
+                if (!topSearchShell) {
+                    return;
+                }
+                const shellHeight = Math.max(0, Math.ceil(topSearchShell.getBoundingClientRect().height));
+                if (shellHeight > 0) {
+                    root.style.setProperty('--property-search-shell-height', `${shellHeight}px`);
+                }
+                if (sectionTabs) {
+                    sectionTabs.style.setProperty('scroll-margin-top', `calc(var(--property-header-offset) + var(--property-search-shell-height) + 12px)`);
+                }
+            };
+
+            syncStickyMetrics();
+            window.addEventListener('resize', syncStickyMetrics);
+            window.addEventListener('load', syncStickyMetrics);
+
             const topCheckin = document.getElementById('topCheckin');
             const topCheckout = document.getElementById('topCheckout');
             const topGuests = document.getElementById('topGuests');
@@ -3860,7 +3889,9 @@
             };
 
             const sync = () => {
-                const marker = window.scrollY + 170;
+                const headerOffset = parseInt(getComputedStyle(root).getPropertyValue('--property-header-offset'), 10) || 0;
+                const shellHeight = parseInt(getComputedStyle(root).getPropertyValue('--property-search-shell-height'), 10) || 0;
+                const marker = window.scrollY + headerOffset + shellHeight + 48;
                 let current = targets[0];
                 for (const entry of targets) {
                     if (entry.el.offsetTop <= marker) {

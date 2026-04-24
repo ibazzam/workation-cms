@@ -38,7 +38,7 @@
             background: #ffffff;
             padding: 10px;
             box-shadow: 0 8px 22px rgba(21, 39, 56, 0.08);
-            margin-bottom: 12px;
+            margin-bottom: 0;
         }
 
         body.is-header-hidden .top-search-shell {
@@ -291,11 +291,23 @@
         .hero-stat .v { margin-top: 2px; font-size: 0.9rem; font-weight: 700; color: #f1fcff; }
 
         .layout {
-            margin-top: 12px;
+            margin-top: 0;
             display: grid;
             grid-template-columns: 1fr;
             gap: 12px;
             align-items: start;
+        }
+
+        #property-gallery-section {
+            padding-top: 0;
+        }
+
+        #property-gallery-section > h2 {
+            display: none;
+        }
+
+        #property-gallery-section .gallery-shell {
+            margin-top: 0;
         }
 
         .section {

@@ -703,17 +703,6 @@
                                 <textarea id="property_house_rules" name="house_rules" class="ops-textarea" rows="3" maxlength="2000" placeholder="No parties, no smoking indoors, quiet after 10pm…">{{ old('house_rules') }}</textarea>
                             </div>
                             <div class="ops-field" data-category-scope="accommodation">
-                                <label for="property_meal_plan">Meal Plan</label>
-                                <select id="property_meal_plan" name="meal_plan" class="ops-select" required>
-                                    <option value="" @selected(old('meal_plan') === '')>Select meal plan</option>
-                                    <option value="room_only" @selected(old('meal_plan') === 'room_only')>Room Only</option>
-                                    <option value="bed_breakfast" @selected(old('meal_plan') === 'bed_breakfast')>Bed &amp; Breakfast</option>
-                                    <option value="half_board" @selected(old('meal_plan') === 'half_board')>Half Board</option>
-                                    <option value="full_board" @selected(old('meal_plan') === 'full_board')>Full Board</option>
-                                    <option value="all_inclusive" @selected(old('meal_plan') === 'all_inclusive')>All Inclusive</option>
-                                </select>
-                            </div>
-                            <div class="ops-field" data-category-scope="accommodation">
                                 <label for="property_check_in_grace_minutes">Check-in Grace (minutes)</label>
                                 <input id="property_check_in_grace_minutes" name="check_in_grace_minutes" class="ops-input" type="number" min="0" max="720" value="{{ old('check_in_grace_minutes', 60) }}" placeholder="Late arrival tolerance window">
                             </div>
@@ -738,14 +727,6 @@
                             <div class="ops-field ops-field-wide" data-category-scope="accommodation">
                                 <label for="property_child_policy">Child Policy</label>
                                 <textarea id="property_child_policy" name="child_policy" class="ops-textarea" rows="3" maxlength="3000" placeholder="Children under 6 stay free with existing bedding; extra bed available at surcharge…">{{ old('child_policy') }}</textarea>
-                            </div>
-                            <div class="ops-field" data-category-scope="accommodation">
-                                <label for="property_extra_guest_fee">Extra Guest Fee (MVR)</label>
-                                <input id="property_extra_guest_fee" name="extra_guest_fee" class="ops-input" type="number" min="0" step="0.01" value="{{ old('extra_guest_fee') }}" placeholder="Per extra guest per night">
-                            </div>
-                            <div class="ops-field" data-category-scope="accommodation">
-                                <label for="property_child_fee">Child Fee (MVR)</label>
-                                <input id="property_child_fee" name="child_fee" class="ops-input" type="number" min="0" step="0.01" value="{{ old('child_fee') }}" placeholder="Per child per night">
                             </div>
                             <div class="ops-field" data-category-scope="accommodation">
                                 <label for="property_early_check_in_fee">Early Check-in Fee (MVR)</label>

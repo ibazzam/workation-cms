@@ -1558,6 +1558,44 @@
 
         .hero-avail-btn:hover { filter: brightness(1.04); }
 
+        .hero-transfer-shell {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed rgba(205, 236, 244, 0.45);
+            display: grid;
+            gap: 8px;
+        }
+
+        .hero-transfer-field {
+            display: grid;
+            gap: 4px;
+            max-width: 320px;
+        }
+
+        .hero-transfer-field label {
+            font-size: 0.66rem;
+            color: #d4f0f6;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+        }
+
+        .hero-transfer-select {
+            width: 100%;
+            border: 1px solid rgba(150, 210, 230, 0.6);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font: inherit;
+            color: #103247;
+            background: #f8fdff;
+            font-size: 0.82rem;
+        }
+
+        .hero-transfer-summary {
+            margin: 0;
+            color: #d4f0f6;
+            font-size: 0.78rem;
+        }
+
         .policies-grid {
             margin-top: 10px;
             display: grid;
@@ -1761,7 +1799,7 @@
         .rooms-sub { margin: 0; color: #5d7487; font-size: 0.83rem; }
 
         .section-tabs {
-            margin-top: 12px;
+            margin-top: 0;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -1915,6 +1953,11 @@
             font-weight: 600;
         }
 
+        .room-tag i {
+            margin-right: 5px;
+            font-size: 0.7rem;
+        }
+
         .room-body { padding: 12px; display: grid; gap: 10px; }
         .room-body h3 { margin: 0; font-size: 1rem; color: #153f59; }
 
@@ -1996,11 +2039,101 @@
             margin-right: 0 !important;
         }
 
+        .room-plan-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            width: fit-content;
+            border: 1px solid #d6e5ef;
+            border-radius: 999px;
+            background: #f5fbff;
+            color: #204b64;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 3px 8px;
+        }
+
+        .room-plan-badge::before {
+            content: '' !important;
+            margin-right: 0 !important;
+        }
+
+        .room-breakfast-highlight {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            width: fit-content;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 3px 8px;
+        }
+
+        .room-breakfast-highlight::before {
+            content: '' !important;
+            margin-right: 0 !important;
+        }
+
+        .room-breakfast-highlight.is-included {
+            border: 1px solid #9fd3bc;
+            background: #eaf8f0;
+            color: #1f6d4d;
+        }
+
+        .room-breakfast-highlight.is-not-included {
+            border: 1px solid #ecd2a8;
+            background: #fff7eb;
+            color: #8a5d1e;
+        }
+
         .room-sleeps {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
             color: #244960;
             font-size: 0.84rem;
             font-weight: 700;
             text-align: center;
+        }
+
+        .room-sleeps-icons {
+            display: inline-flex;
+            align-items: flex-end;
+            gap: 2px;
+            color: #1f6f95;
+        }
+
+        .room-sleeps-icons .fa-user {
+            font-size: 0.84rem;
+        }
+
+        .room-sleeps-icons .room-sleeps-child {
+            font-size: 0.7rem;
+            opacity: 0.95;
+        }
+
+        .room-sleeps-count {
+            color: #365d75;
+            font-size: 0.74rem;
+            font-weight: 700;
+        }
+
+        .room-occupancy-inline {
+            display: inline-flex;
+            align-items: flex-end;
+            gap: 2px;
+            color: #1f6f95;
+            margin: 0 4px;
+        }
+
+        .room-occupancy-inline .fa-user {
+            font-size: 0.84rem;
+        }
+
+        .room-occupancy-inline .room-sleeps-child {
+            font-size: 0.7rem;
+            opacity: 0.95;
         }
 
         .room-price-box {
@@ -2235,6 +2368,7 @@
 <body>
     @include('partials.customer-uniform-header', [
         'headerHideOnScroll' => true,
+        'headerRevealAtTopOnly' => true,
         'headerShowSearch' => true,
         'headerSearchAction' => '/catalog/' . str_replace('_', '-', strtolower(trim((string) ($property->listing_category ?? 'accommodation')))),
         'headerSearchValue' => '',
@@ -2327,6 +2461,13 @@
         $mediaUrl = $mediaUrl ?? static fn () => null;
         $currency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
         $basePrice = number_format((float) ($property->base_price ?? 0), 2);
+        $propertyDetails = [];
+        if (isset($property->listing_details)) {
+            $decodedPropertyDetails = json_decode((string) ($property->listing_details ?? ''), true);
+            if (is_array($decodedPropertyDetails)) {
+                $propertyDetails = $decodedPropertyDetails;
+            }
+        }
         $description = trim((string) ($property->description ?? ''));
         $listingCategory = strtoupper(str_replace('_', ' ', (string) ($property->listing_category ?? 'ACCOMMODATION')));
         $starCount = $ratingValue > 0 ? max(1, min(5, (int) round($ratingValue))) : 4;
@@ -2365,8 +2506,46 @@
         }
         $startingPrice = number_format($startingPriceValue, 2);
         $startingTotalPrice = number_format($startingPriceValue * $prefillStayNights, 2);
+        $displayFromCurrency = $startingPriceValue > 0 ? $startingPriceCurrency : $currency;
+        $displayFromPrice = $startingPriceValue > 0 ? $startingPrice : $basePrice;
         $hasBookableRate = $pricedRooms->isNotEmpty();
         $selectRoomsTarget = $cheapestRoomId > 0 ? ('#room-' . $cheapestRoomId) : '#rooms-section';
+        $transferOptionCatalog = [
+            'speedboat' => 'Speedboat transfer',
+            'domestic_flight' => 'Domestic flight transfer',
+            'seaplane' => 'Seaplane transfer',
+            'ferry' => 'Public ferry transfer',
+            'private_transfer' => 'Private transfer',
+        ];
+        $transferOptions = collect(is_array($propertyDetails['transfer_options'] ?? null) ? $propertyDetails['transfer_options'] : [])
+            ->map(static fn ($item) => strtolower(trim((string) $item)))
+            ->filter(static fn ($item) => $item !== '')
+            ->unique()
+            ->values();
+        $transferRates = is_array($propertyDetails['transfer_rates'] ?? null) ? $propertyDetails['transfer_rates'] : [];
+        $transferRateMatrix = is_array($propertyDetails['transfer_rate_matrix'] ?? null) ? $propertyDetails['transfer_rate_matrix'] : [];
+        $transferChoices = $transferOptions
+            ->map(static function (string $transferKey) use ($transferOptionCatalog, $transferRates, $transferRateMatrix) {
+                $matrix = is_array($transferRateMatrix[$transferKey] ?? null)
+                    ? $transferRateMatrix[$transferKey]
+                    : [];
+                $fallbackRate = is_numeric($transferRates[$transferKey] ?? null) ? (float) $transferRates[$transferKey] : 0.0;
+                $adultRate = is_numeric($matrix['foreign_adult_charge'] ?? null)
+                    ? (float) $matrix['foreign_adult_charge']
+                    : $fallbackRate;
+                $childRate = is_numeric($matrix['foreign_child_charge'] ?? null)
+                    ? (float) $matrix['foreign_child_charge']
+                    : 0.0;
+
+                return [
+                    'key' => $transferKey,
+                    'label' => $transferOptionCatalog[$transferKey] ?? ucwords(str_replace('_', ' ', $transferKey)),
+                    'adult_rate' => max(0, $adultRate),
+                    'child_rate' => max(0, $childRate),
+                ];
+            })
+            ->filter(static fn (array $item) => $item['adult_rate'] > 0 || $item['child_rate'] > 0)
+            ->values();
         $shareUrl = url()->current();
         $shareText = trim((string) ($property->name ?? 'Property')) . ' on Workation';
         $shareEncodedText = urlencode($shareText . ' ' . $shareUrl);
@@ -2524,12 +2703,12 @@
                     <span>{{ $locationLine !== '' ? $locationLine : 'Address details will be updated shortly.' }}</span>
                     <a class="map-link" href="{{ $mapUrl }}" target="_blank" rel="noopener">Show on map</a>
                 </div>
-                <span class="price-chip">From {{ $currency }} {{ $basePrice }} / night</span>
+                <span class="price-chip">From {{ $displayFromCurrency }} {{ $displayFromPrice }} / night</span>
             </div>
 
             <div class="hero-stats">
                 <div class="hero-stat"><div class="k">Category</div><div class="v">{{ $listingCategory }}</div></div>
-                <div class="hero-stat"><div class="k">Starting Price</div><div class="v">{{ $currency }} {{ $basePrice }}</div></div>
+                <div class="hero-stat"><div class="k">Starting Price</div><div class="v">{{ $displayFromCurrency }} {{ $displayFromPrice }}</div></div>
                 <div class="hero-stat"><div class="k">Available Rooms</div><div class="v">{{ $rooms->count() }}</div></div>
             </div>
 
@@ -2562,6 +2741,28 @@
                     </div>
                     <button type="submit" class="hero-avail-btn">Search</button>
                 </form>
+                @if ($transferChoices->isNotEmpty())
+                    <div class="hero-transfer-shell" aria-label="Transfer options">
+                        <div class="hero-transfer-field">
+                            <label for="transferOptionSelect">Transfer Option</label>
+                            <select id="transferOptionSelect" class="hero-transfer-select">
+                                <option value="">No transfer</option>
+                                @foreach ($transferChoices as $transferChoice)
+                                    <option
+                                        value="{{ $transferChoice['key'] }}"
+                                        data-adult-rate="{{ number_format((float) ($transferChoice['adult_rate'] ?? 0), 2, '.', '') }}"
+                                        data-child-rate="{{ number_format((float) ($transferChoice['child_rate'] ?? 0), 2, '.', '') }}"
+                                    >
+                                        {{ $transferChoice['label'] }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <p class="hero-transfer-summary" data-transfer-summary>
+                            Optional transfer can be added to room reservation.
+                        </p>
+                    </div>
+                @endif
             </div>
         </section>
 
@@ -2756,10 +2957,7 @@
                             ->filter(static fn ($url) => is_string($url) && trim($url) !== '')
                             ->values();
                         $amenitiesText = strtolower((string) ($room->amenities ?? ''));
-                        $hasBreakfast = str_contains($amenitiesText, 'breakfast');
-                        $breakfastLabel = $hasBreakfast ? 'With Breakfast' : 'Without Breakfast';
                         $roomCurrency = strtoupper((string) ($room->currency ?? $currency));
-                        $roomPrice = number_format((float) ($room->base_price_per_night ?? ($room->base_price ?? 0)), 2);
                         $bedType = trim((string) ($room->bed_type ?? 'Standard Bed'));
                         $roomSizeSqm = (int) ($room->room_size_sqm ?? 0);
                         $floorInfo = trim((string) ($room->floor_info ?? ''));
@@ -2777,20 +2975,78 @@
                             'children' => $prefillChildren,
                         ];
                         $roomLink = '/room/' . $roomId . '?' . http_build_query($roomQuery);
-                        $primaryNightlyRateRaw = (float) ($room->base_price_per_night ?? ($room->base_price ?? 0));
-                        $primaryTotalRaw = $primaryNightlyRateRaw * $prefillStayNights;
-                        $alternateBreakfastLabel = $hasBreakfast ? 'Without Breakfast' : 'With Breakfast';
-                        $alternateRateMultiplier = $hasBreakfast ? 0.85 : 1.15;
-                        $alternateNightlyRateRaw = $primaryNightlyRateRaw * $alternateRateMultiplier;
-                        $alternateTotalRaw = $alternateNightlyRateRaw * $prefillStayNights;
-                        $primaryReserveLink = '/room/' . $roomId . '?' . http_build_query(array_merge($roomQuery, [
-                            'rate_nightly' => number_format($primaryNightlyRateRaw, 2, '.', ''),
-                            'meal_plan' => $breakfastLabel,
-                        ]));
-                        $alternateReserveLink = '/room/' . $roomId . '?' . http_build_query(array_merge($roomQuery, [
-                            'rate_nightly' => number_format($alternateNightlyRateRaw, 2, '.', ''),
-                            'meal_plan' => $alternateBreakfastLabel,
-                        ]));
+                        $defaultNightlyRate = (float) ($room->base_price_per_night ?? ($room->base_price ?? 0));
+                        $roomOnlyNightlyRate = (float) ($room->meal_plan_room_only_price ?? 0);
+                        if ($roomOnlyNightlyRate <= 0) {
+                            $roomOnlyNightlyRate = $defaultNightlyRate;
+                        }
+
+                        $rateOptions = collect([
+                            [
+                                'meal_plan' => 'Room Only',
+                                'title' => 'Room Only',
+                                'subtitle' => 'Room only (no meals)',
+                                'nightly' => $roomOnlyNightlyRate,
+                            ],
+                            [
+                                'meal_plan' => 'BB',
+                                'title' => 'Bed & Breakfast',
+                                'subtitle' => 'Bed & Breakfast included',
+                                'nightly' => (float) (($room->meal_plan_bb_price ?? 0) > 0 ? ($room->meal_plan_bb_price ?? 0) : ($room->meal_plan_breakfast_price ?? 0)),
+                            ],
+                            [
+                                'meal_plan' => 'HB',
+                                'title' => 'Half Board',
+                                'subtitle' => 'Half Board included',
+                                'nightly' => (float) ($room->meal_plan_hb_price ?? 0),
+                            ],
+                            [
+                                'meal_plan' => 'FB',
+                                'title' => 'Full Board',
+                                'subtitle' => 'Full Board included',
+                                'nightly' => (float) ($room->meal_plan_fb_price ?? 0),
+                            ],
+                            [
+                                'meal_plan' => 'All Inclusive',
+                                'title' => 'All Inclusive',
+                                'subtitle' => 'All Inclusive package',
+                                'nightly' => (float) ($room->meal_plan_ai_price ?? 0),
+                            ],
+                        ])->filter(static fn ($item) => (float) ($item['nightly'] ?? 0) > 0)->values();
+
+                        if ($rateOptions->isEmpty() && $defaultNightlyRate > 0) {
+                            $rateOptions = collect([[
+                                'meal_plan' => 'Room Only',
+                                'title' => 'Room Only',
+                                'subtitle' => 'Standard room rate',
+                                'nightly' => $defaultNightlyRate,
+                            ]]);
+                        }
+
+                        $rateOptions = $rateOptions->map(static function ($option) {
+                            $mealPlan = strtolower(trim((string) ($option['meal_plan'] ?? '')));
+                            $hasBreakfast = in_array($mealPlan, ['bb', 'hb', 'fb', 'all inclusive'], true);
+                            $icon = match ($mealPlan) {
+                                'room only' => 'fa-solid fa-bed',
+                                'bb' => 'fa-solid fa-mug-hot',
+                                'hb' => 'fa-solid fa-utensils',
+                                'fb' => 'fa-solid fa-bowl-food',
+                                'all inclusive' => 'fa-solid fa-champagne-glasses',
+                                default => 'fa-solid fa-utensils',
+                            };
+
+                            $option['breakfast_label'] = $hasBreakfast ? 'With Breakfast' : 'Without Breakfast';
+                            $option['has_breakfast'] = $hasBreakfast;
+                            $option['icon'] = $icon;
+                            return $option;
+                        })->values();
+
+                        $primaryNightlyRateRaw = (float) ($rateOptions->first()['nightly'] ?? $defaultNightlyRate);
+                        $roomPrice = number_format($primaryNightlyRateRaw, 2);
+                        $breakfastLabel = (string) ($rateOptions->first()['meal_plan'] ?? 'Room Only');
+                        $maxOccupancy = max(1, (int) ($room->max_occupancy ?? 1));
+                        $adultFigureCount = min(2, $maxOccupancy);
+                        $childFigureCount = max(0, $maxOccupancy - $adultFigureCount);
                         $isRoomSoldOut = (
                             (property_exists($room, 'is_available') && (int) ($room->is_available ?? 1) === 0)
                             || (property_exists($room, 'available') && (int) ($room->available ?? 1) === 0)
@@ -2833,104 +3089,86 @@
                         <a class="room-media-link" href="#" data-open-room-modal="{{ $roomId }}">
                             <div class="room-media">
                                 <img src="{{ $roomThumb ?? '' }}" alt="{{ (string) ($room->name ?? 'Room') }}" loading="lazy">
-                                <span class="room-tag">{{ $breakfastLabel }}</span>
+                                <span class="room-tag"><i class="{{ (string) ($rateOptions->first()['icon'] ?? 'fa-solid fa-utensils') }}" aria-hidden="true"></i>{{ $breakfastLabel }}</span>
                             </div>
                         </a>
                         <div class="room-body">
                             <h3><a class="room-name-link" href="#" data-open-room-modal="{{ $roomId }}">{{ (string) ($room->name ?? 'Room') }}</a></h3>
-                            @php
-                                $roomOldPrice = number_format(((float) ($room->base_price_per_night ?? ($room->base_price ?? 0)) * 1.08), 2);
-                            @endphp
                             <div class="room-offer-table" aria-label="Room rate options" data-room-id="{{ $roomId }}">
                                 <div class="room-offer-head">
                                     <span>Your Choices</span>
                                     <span>Sleeps</span>
                                     <span>Today's Price</span>
                                 </div>
-                                <div class="room-offer-row">
-                                    <div class="room-choices">
-                                        <span class="room-option-title">{{ $breakfastLabel }}</span>
-                                        <span class="room-option-subtitle">{{ $hasBreakfast ? 'Free breakfast included' : 'Breakfast optional' }}</span>
-                                        <span>Instant confirmation</span>
-                                        <span>Prepay online or pay at property</span>
-                                    </div>
-                                    <div class="room-sleeps">{{ (int) ($room->max_occupancy ?? 1) }}</div>
-                                    <div>
-                                        <div class="room-price-box">
-                                            <div>
-                                                <div class="room-price-old">{{ $roomCurrency }} {{ $roomOldPrice }}</div>
-                                                <div class="room-price-now">{{ $roomCurrency }} {{ $roomPrice }}</div>
-                                                <div class="room-price-summary" data-rate-summary data-rate-currency="{{ $roomCurrency }}" data-nightly-rate="{{ number_format($primaryNightlyRateRaw, 2, '.', '') }}">
-                                                    {{ $roomCurrency }} {{ number_format($primaryTotalRaw, 2) }} total 1 room, {{ $prefillStayNights }} night{{ $prefillStayNights !== 1 ? 's' : '' }}
+                                @foreach ($rateOptions as $rateIndex => $rateOption)
+                                    @php
+                                        $nightlyRateRaw = (float) ($rateOption['nightly'] ?? 0);
+                                        $ratePrice = number_format($nightlyRateRaw, 2);
+                                        $rateOldPrice = number_format($nightlyRateRaw * 1.08, 2);
+                                        $rateTotalRaw = $nightlyRateRaw * $prefillStayNights;
+                                        $reserveLink = '/room/' . $roomId . '?' . http_build_query(array_merge($roomQuery, [
+                                            'rate_nightly' => number_format($nightlyRateRaw, 2, '.', ''),
+                                            'meal_plan' => (string) ($rateOption['meal_plan'] ?? 'Room Only'),
+                                        ]));
+                                        $rateOldPriceValue = floatval($rateOldPrice);
+                                        $ratePriceValue = floatval($ratePrice);
+                                        $rateDiscountPercent = $rateOldPriceValue > 0
+                                            ? round((($rateOldPriceValue - $ratePriceValue) / $rateOldPriceValue) * 100)
+                                            : 0;
+                                    @endphp
+                                    <div class="room-offer-row{{ $rateIndex > 0 ? ' is-hidden' : '' }}">
+                                        <div class="room-choices">
+                                            <span class="room-option-title">{{ (string) ($rateOption['title'] ?? 'Room Only') }}</span>
+                                            <span class="room-option-subtitle">{{ (string) ($rateOption['subtitle'] ?? 'Rate details available') }}</span>
+                                            <span class="room-plan-badge"><i class="{{ (string) ($rateOption['icon'] ?? 'fa-solid fa-utensils') }}" aria-hidden="true"></i>{{ (string) ($rateOption['meal_plan'] ?? 'Rate Plan') }}</span>
+                                            <span class="room-breakfast-highlight {{ (bool) ($rateOption['has_breakfast'] ?? false) ? 'is-included' : 'is-not-included' }}"><i class="fa-solid fa-mug-hot" aria-hidden="true"></i>{{ (string) ($rateOption['breakfast_label'] ?? 'Without Breakfast') }}</span>
+                                            <span>Instant confirmation</span>
+                                            <span>Prepay online or pay at property</span>
+                                        </div>
+                                        <div class="room-sleeps" aria-label="Sleeps {{ $maxOccupancy }} guests">
+                                            <span class="room-sleeps-icons" aria-hidden="true">
+                                                @for ($i = 0; $i < $adultFigureCount; $i++)
+                                                    <i class="fa-solid fa-user"></i>
+                                                @endfor
+                                                @for ($i = 0; $i < $childFigureCount; $i++)
+                                                    <i class="fa-solid fa-child-reaching room-sleeps-child"></i>
+                                                @endfor
+                                            </span>
+                                            <span class="room-sleeps-count">{{ $maxOccupancy }}</span>
+                                        </div>
+                                        <div>
+                                            <div class="room-price-box">
+                                                <div>
+                                                    <div class="room-price-old">{{ $roomCurrency }} {{ $rateOldPrice }}</div>
+                                                    <div class="room-price-now">{{ $roomCurrency }} {{ $ratePrice }}</div>
+                                                    <div class="room-price-summary" data-rate-summary data-rate-currency="{{ $roomCurrency }}" data-nightly-rate="{{ number_format($nightlyRateRaw, 2, '.', '') }}">
+                                                        {{ $roomCurrency }} {{ number_format($rateTotalRaw, 2) }} total 1 room, {{ $prefillStayNights }} night{{ $prefillStayNights !== 1 ? 's' : '' }}
+                                                    </div>
+                                                    <div class="room-price-summary-note">incl. taxes &amp; fees</div>
+                                                    @if ($isRoomSoldOut)
+                                                        <span class="room-soldout-badge" data-rate-soldout>Sold out for selected dates</span>
+                                                    @endif
+                                                    @if ($rateDiscountPercent > 0)
+                                                        <span class="discount-badge">{{ $rateDiscountPercent }}% off</span>
+                                                    @endif
                                                 </div>
-                                                <div class="room-price-summary-note">incl. taxes &amp; fees</div>
-                                                @if ($isRoomSoldOut)
-                                                    <span class="room-soldout-badge" data-rate-soldout>Sold out for selected dates</span>
-                                                @endif
-                                                @php
-                                                    $roomOldPriceValue = floatval($roomOldPrice);
-                                                    $roomPriceValue = floatval($roomPrice);
-                                                    $discountPercent = $roomOldPriceValue > 0
-                                                        ? round((($roomOldPriceValue - $roomPriceValue) / $roomOldPriceValue) * 100)
-                                                        : 0;
-                                                @endphp
-                                                @if ($discountPercent > 0)
-                                                    <span class="discount-badge">{{ $discountPercent }}% off</span>
-                                                @endif
+                                                <a class="reserve-btn" href="{{ $reserveLink }}" data-base-room-link="{{ $roomLink }}" data-rate-nightly="{{ number_format($nightlyRateRaw, 2, '.', '') }}" data-meal-plan="{{ (string) ($rateOption['meal_plan'] ?? 'Room Only') }}" @if($isRoomSoldOut) aria-disabled="true" style="pointer-events:none;opacity:.45;" @endif>Reserve</a>
                                             </div>
-                                            <a class="reserve-btn" href="{{ $primaryReserveLink }}" data-base-room-link="{{ $roomLink }}" data-rate-nightly="{{ number_format($primaryNightlyRateRaw, 2, '.', '') }}" data-meal-plan="{{ $breakfastLabel }}" @if($isRoomSoldOut) aria-disabled="true" style="pointer-events:none;opacity:.45;" @endif>Reserve</a>
                                         </div>
                                     </div>
-                                </div>
-                                @php
-                                    $alternatePrice = number_format($alternateNightlyRateRaw, 2);
-                                    $alternateOldPrice = number_format($alternateNightlyRateRaw * 1.08, 2);
-                                @endphp
-                                <div class="room-offer-row is-hidden">
-                                    <div class="room-choices">
-                                        <span class="room-option-title">{{ $alternateBreakfastLabel }}</span>
-                                        <span class="room-option-subtitle">{{ $hasBreakfast ? 'Breakfast optional' : 'Free breakfast included' }}</span>
-                                        <span>Instant confirmation</span>
-                                        <span>Prepay online or pay at property</span>
+                                @endforeach
+                                @if ($rateOptions->count() > 1)
+                                    <div class="room-offer-expand">
+                                        <button class="room-offer-expand-btn" data-expand-toggle="room-{{ $roomId }}">
+                                            Show More Rates
+                                        </button>
                                     </div>
-                                    <div class="room-sleeps">{{ (int) ($room->max_occupancy ?? 1) }}</div>
-                                    <div>
-                                        <div class="room-price-box">
-                                            <div>
-                                                <div class="room-price-old">{{ $roomCurrency }} {{ $alternateOldPrice }}</div>
-                                                <div class="room-price-now">{{ $roomCurrency }} {{ $alternatePrice }}</div>
-                                                <div class="room-price-summary" data-rate-summary data-rate-currency="{{ $roomCurrency }}" data-nightly-rate="{{ number_format($alternateNightlyRateRaw, 2, '.', '') }}">
-                                                    {{ $roomCurrency }} {{ number_format($alternateTotalRaw, 2) }} total 1 room, {{ $prefillStayNights }} night{{ $prefillStayNights !== 1 ? 's' : '' }}
-                                                </div>
-                                                <div class="room-price-summary-note">incl. taxes &amp; fees</div>
-                                                @if ($isRoomSoldOut)
-                                                    <span class="room-soldout-badge" data-rate-soldout>Sold out for selected dates</span>
-                                                @endif
-                                                @php
-                                                    $alternateOldPriceValue = floatval($alternateOldPrice);
-                                                    $alternatePriceValue = floatval($alternatePrice);
-                                                    $altDiscountPercent = $alternateOldPriceValue > 0
-                                                        ? round((($alternateOldPriceValue - $alternatePriceValue) / $alternateOldPriceValue) * 100)
-                                                        : 0;
-                                                @endphp
-                                                @if ($altDiscountPercent > 0)
-                                                    <span class="discount-badge">{{ $altDiscountPercent }}% off</span>
-                                                @endif
-                                            </div>
-                                            <a class="reserve-btn" href="{{ $alternateReserveLink }}" data-base-room-link="{{ $roomLink }}" data-rate-nightly="{{ number_format($alternateNightlyRateRaw, 2, '.', '') }}" data-meal-plan="{{ $alternateBreakfastLabel }}" @if($isRoomSoldOut) aria-disabled="true" style="pointer-events:none;opacity:.45;" @endif>Reserve</a>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="room-offer-expand">
-                                    <button class="room-offer-expand-btn" data-expand-toggle="room-{{ $roomId }}">
-                                        Show More Rates
-                                    </button>
-                                </div>
+                                @endif
                             </div>
 
                             <ul class="room-side-details">
                                 <li><span class="room-amenity-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v.5M3 12h.5M20.5 12h.5M12 20v.5M5.5 5.5l.35.35M18.15 18.15l.35.35M18.5 5.5l-.35.35M5.85 18.15l-.35.35"/><circle cx="12" cy="12" r="4"/></svg></span><span>{{ $bedType }}</span></li>
-                                <li><span class="room-amenity-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11h18M6 6h12v8H6zM8 18h8"/></svg></span><span>Occupancy: {{ (int) ($room->max_occupancy ?? 1) }} guests</span></li>
+                                <li><span class="room-amenity-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11h18M6 6h12v8H6zM8 18h8"/></svg></span><span>Occupancy:<span class="room-occupancy-inline" aria-hidden="true">@for ($i = 0; $i < $adultFigureCount; $i++)<i class="fa-solid fa-user"></i>@endfor @for ($i = 0; $i < $childFigureCount; $i++)<i class="fa-solid fa-child-reaching room-sleeps-child"></i>@endfor</span>{{ $maxOccupancy }} guests</span></li>
                                 @foreach ($amenities as $amenity)
                                     <li><span class="room-amenity-icon" aria-hidden="true">{!! $facilitySvg($amenity) !!}</span><span>{{ $amenity }}</span></li>
                                 @endforeach
@@ -3735,6 +3973,8 @@
             const availRooms = document.getElementById('availRooms');
             const availAdults = document.getElementById('availAdults');
             const availChildren = document.getElementById('availChildren');
+            const transferOptionSelect = document.getElementById('transferOptionSelect');
+            const transferSummary = document.querySelector('[data-transfer-summary]');
             const startingTotal = document.querySelector('[data-starting-total]');
             const startingSoldout = document.querySelector('[data-starting-soldout]');
             const rateSummaries = Array.from(document.querySelectorAll('[data-rate-summary]'));
@@ -3792,8 +4032,23 @@
                     const adultsCount = clampInt(topAdults?.value || 1, 1);
                     const childrenCount = clampInt(topChildren?.value || 0, 0);
                     const nights = calculateNights(checkinValue, checkoutValue);
+                    const selectedTransferOption = transferOptionSelect?.value || '';
+                    const selectedTransferElement = transferOptionSelect
+                        ? transferOptionSelect.options[transferOptionSelect.selectedIndex]
+                        : null;
+                    const transferAdultRate = Number(selectedTransferElement?.dataset?.adultRate || 0);
+                    const transferChildRate = Number(selectedTransferElement?.dataset?.childRate || 0);
+                    const transferTotal = (adultsCount * transferAdultRate) + (childrenCount * transferChildRate);
 
                     syncTopGuestText(adultsCount, childrenCount, roomsCount);
+
+                    if (transferSummary) {
+                        if (selectedTransferOption !== '') {
+                            transferSummary.textContent = `Transfer charge estimate: MVR ${transferTotal.toFixed(2)} total (${adultsCount} adults, ${childrenCount} children).`;
+                        } else {
+                            transferSummary.textContent = 'Optional transfer can be added to room reservation.';
+                        }
+                    }
 
                     if (startingTotal) {
                         const currencyCode = String(startingTotal.dataset.startingCurrency || 'MVR').trim() || 'MVR';
@@ -3827,6 +4082,17 @@
                         if (mealPlan !== '') {
                             url.searchParams.set('meal_plan', mealPlan);
                         }
+                        if (selectedTransferOption !== '') {
+                            url.searchParams.set('transfer_option', selectedTransferOption);
+                            url.searchParams.set('transfer_adult_rate', transferAdultRate.toFixed(2));
+                            url.searchParams.set('transfer_child_rate', transferChildRate.toFixed(2));
+                            url.searchParams.set('transfer_total', transferTotal.toFixed(2));
+                        } else {
+                            url.searchParams.delete('transfer_option');
+                            url.searchParams.delete('transfer_adult_rate');
+                            url.searchParams.delete('transfer_child_rate');
+                            url.searchParams.delete('transfer_total');
+                        }
 
                         button.href = url.pathname + '?' + url.searchParams.toString();
                     });
@@ -3856,6 +4122,10 @@
                         refreshTotals();
                     });
                 });
+
+                if (transferOptionSelect) {
+                    transferOptionSelect.addEventListener('change', refreshTotals);
+                }
 
                 refreshTotals();
             }

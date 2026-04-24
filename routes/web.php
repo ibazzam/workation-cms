@@ -3684,14 +3684,24 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         if ($dbCategoryKey === 'accommodation' && $propertyIds->isNotEmpty()) {
             $combinedRoomPricesByProperty = collect();
 
-            if (Schema::hasTable('vendor_property_room_categories')
-                && Schema::hasColumn('vendor_property_room_categories', 'vendor_property_id')
+            $legacyRoomPropertyColumn = null;
+            if (Schema::hasTable('vendor_property_room_categories')) {
+                if (Schema::hasColumn('vendor_property_room_categories', 'vendor_property_id')) {
+                    $legacyRoomPropertyColumn = 'vendor_property_id';
+                } elseif (Schema::hasColumn('vendor_property_room_categories', 'property_id')) {
+                    $legacyRoomPropertyColumn = 'property_id';
+                }
+            }
+
+            if ($legacyRoomPropertyColumn !== null
                 && Schema::hasColumn('vendor_property_room_categories', 'base_price')) {
                 $legacyRoomPrices = DB::table('vendor_property_room_categories')
-                    ->whereIn('vendor_property_id', $propertyIds->all())
+                    ->whereIn($legacyRoomPropertyColumn, $propertyIds->all())
                     ->where('base_price', '>', 0)
-                    ->get(['vendor_property_id', 'base_price'])
-                    ->groupBy(static fn ($row) => (int) ($row->vendor_property_id ?? 0))
+                    ->get([$legacyRoomPropertyColumn, 'base_price'])
+                    ->groupBy(static function ($row) use ($legacyRoomPropertyColumn) {
+                        return (int) ($row->{$legacyRoomPropertyColumn} ?? 0);
+                    })
                     ->map(static function ($rows) {
                         return collect($rows)
                             ->map(static fn ($row) => (float) ($row->base_price ?? 0))
@@ -3786,9 +3796,6 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 $pid = (int) ($prop->id ?? 0);
                 if ($pid > 0 && $combinedRoomPricesByProperty->has($pid)) {
                     $prop->base_price = (float) $combinedRoomPricesByProperty->get($pid);
-                } else {
-                    // Accommodation cards should not fall back to property-level fixed base price.
-                    $prop->base_price = 0;
                 }
                 return $prop;
             });
@@ -3951,9 +3958,18 @@ Route::get('/property/{property}', function (Request $request, int $property) {
     }
 
     $rooms = collect();
+    $legacyRoomPropertyColumn = null;
     if (Schema::hasTable('vendor_property_room_categories')) {
+        if (Schema::hasColumn('vendor_property_room_categories', 'vendor_property_id')) {
+            $legacyRoomPropertyColumn = 'vendor_property_id';
+        } elseif (Schema::hasColumn('vendor_property_room_categories', 'property_id')) {
+            $legacyRoomPropertyColumn = 'property_id';
+        }
+    }
+
+    if ($legacyRoomPropertyColumn !== null) {
         $rooms = DB::table('vendor_property_room_categories')
-            ->where('vendor_property_id', (int) $propertyRow->id)
+            ->where($legacyRoomPropertyColumn, (int) $propertyRow->id)
             ->orderByDesc('updated_at')
             ->limit(60)
             ->get();

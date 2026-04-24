@@ -2,6 +2,7 @@
     $injectUniformHeaderStyles = isset($injectUniformHeaderStyles) ? (bool) $injectUniformHeaderStyles : true;
     $injectUniformHeaderScripts = isset($injectUniformHeaderScripts) ? (bool) $injectUniformHeaderScripts : true;
     $headerHideOnScroll = isset($headerHideOnScroll) ? (bool) $headerHideOnScroll : true;
+    $headerRevealAtTopOnly = isset($headerRevealAtTopOnly) ? (bool) $headerRevealAtTopOnly : false;
     $headerNeedsSpacer = isset($headerNeedsSpacer) ? (bool) $headerNeedsSpacer : true;
     $headerMode = trim((string) ($headerMode ?? 'default'));
     $headerShowSearch = isset($headerShowSearch) ? (bool) $headerShowSearch : false;
@@ -388,6 +389,8 @@
             return;
         }
 
+        const revealAtTopOnly = {{ $headerRevealAtTopOnly ? 'true' : 'false' }};
+
         let lastScrollY = window.scrollY || 0;
 
         function syncHeaderScrollState() {
@@ -397,6 +400,12 @@
             }
 
             const currentY = window.scrollY || 0;
+            if (revealAtTopOnly) {
+                document.body.classList.toggle('is-header-hidden', currentY > 0);
+                lastScrollY = currentY;
+                return;
+            }
+
             const isDesktop = window.matchMedia('(min-width: 921px)').matches;
             const isScrollingDown = currentY > lastScrollY;
             const hideThreshold = Math.max(62, header.offsetHeight + 8);

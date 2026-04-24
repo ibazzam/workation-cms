@@ -39,15 +39,20 @@
             top: 74px;
             z-index: 55;
             border: 1px solid var(--brand-line);
-            border-radius: 12px;
+            border-radius: 0;
             background: var(--surface);
             padding: 10px;
-            box-shadow: 0 8px 22px rgba(21, 39, 56, 0.08);
+            box-shadow: none;
             margin-bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         body.is-header-hidden .top-search-shell {
-            top: 8px;
+            top: 74px;
         }
 
         .top-search-form {
@@ -316,16 +321,38 @@
         }
 
         .section {
-            border: 1px solid var(--line);
-            border-radius: 16px;
-            background: var(--surface);
-            padding: 14px;
+            border: none;
+            border-top: 1px solid #f0f4f8;
+            border-radius: 0;
+            background: transparent;
+            padding: 0;
+            margin-top: 20px;
         }
 
-        .section h2 { margin: 0; font-size: 1.04rem; }
+        .section:first-of-type {
+            border-top: none;
+            margin-top: 0;
+        }
+
+        .rooms-section .section {
+            border: none;
+            padding: 0;
+            margin-top: 0;
+        }
+
+        .section h2 {
+            margin: 0;
+            font-size: 1.04rem;
+            padding-top: 20px;
+            padding-bottom: 14px;
+        }
+
+        .section:first-of-type h2 {
+            padding-top: 0;
+        }
 
         .gallery-shell {
-            margin-top: 10px;
+            margin-top: 14px;
             display: grid;
             grid-template-columns: minmax(0, 1fr) 260px;
             gap: 10px;
@@ -1194,51 +1221,43 @@
 
         .room-meal-plan-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
         }
 
         .room-meal-plan-card {
             border: 1px solid #d7e6f0;
-            border-radius: 12px;
+            border-radius: 8px;
             background: #ffffff;
-            padding: 10px;
+            padding: 12px 14px;
             display: grid;
-            gap: 6px;
-            box-shadow: 0 5px 14px rgba(15, 68, 97, 0.05);
+            gap: 4px;
+            box-shadow: 0 2px 8px rgba(15, 68, 97, 0.06);
+            align-items: center;
+            justify-items: center;
+            text-align: center;
         }
 
         .room-meal-plan-card.is-primary {
-            border-color: #8ec1da;
-            background: linear-gradient(160deg, #ffffff 0%, #f6fbff 100%);
-            box-shadow: 0 8px 18px rgba(15, 97, 121, 0.1);
-        }
-
-        .room-meal-plan-top {
-            display: flex;
-            justify-content: space-between;
-            gap: 8px;
-            align-items: center;
+            border-color: #0f6179;
+            background: linear-gradient(160deg, #edf6fc 0%, #f7fbff 100%);
+            box-shadow: 0 4px 12px rgba(15, 97, 121, 0.15);
         }
 
         .room-meal-plan-code {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 800;
-            color: #0f3d52;
-            letter-spacing: 0.04em;
+            color: #0f6179;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
         }
 
         .room-meal-plan-name {
             margin: 0;
             color: #35586e;
-            font-size: 0.78rem;
-            line-height: 1.45;
-        }
-
-        .room-meal-plan-price {
-            color: #17344a;
-            font-size: 0.88rem;
-            font-weight: 800;
+            font-size: 0.72rem;
+            line-height: 1.3;
+            font-weight: 600;
         }
 
         .room-quick-specs {
@@ -1436,7 +1455,7 @@
             }
         }
 
-        .policies-section { margin-top: 12px; }
+        .policies-section { margin-top: 20px; }
 
         .hero-availability {
             margin-top: 12px;
@@ -1737,6 +1756,11 @@
             background: #eef7fc;
         }
 
+        .guest-reviews-section h2 {
+            padding-top: 0;
+            padding-bottom: 14px;
+        }
+
         .location-section {
             margin-top: 12px;
         }
@@ -1890,6 +1914,27 @@
             margin-right: 6px;
             color: #1b72aa;
             font-weight: 700;
+        }
+
+        .room-option-title {
+            font-weight: 700 !important;
+            font-size: 0.88rem !important;
+            color: #0f6179 !important;
+        }
+
+        .room-option-title::before {
+            content: '' !important;
+            margin-right: 0 !important;
+        }
+
+        .room-option-subtitle {
+            font-size: 0.78rem !important;
+            color: #5a7a8a !important;
+        }
+
+        .room-option-subtitle::before {
+            content: '' !important;
+            margin-right: 0 !important;
         }
 
         .room-sleeps {
@@ -2486,6 +2531,15 @@
                     </aside>
                 </section>
 
+        <nav class="section-tabs" aria-label="Property content navigation" data-section-nav>
+            <a class="section-tab" href="#property-gallery-section">Photos</a>
+            <a class="section-tab" href="#services-amenities-section">Amenities</a>
+            <a class="section-tab" href="#rooms-section">Rooms</a>
+            <a class="section-tab" href="#guest-reviews-section">Reviews</a>
+            <a class="section-tab" href="#location-section">Location</a>
+            <a class="section-tab" href="#policies-section">Property Policies</a>
+        </nav>
+
                 <section id="services-amenities-section" class="info-section" aria-label="Property highlights, amenities and description">
                     <div class="info-main">
                         <div>
@@ -2576,15 +2630,6 @@
                 </section>
         </div>
 
-        <nav class="section-tabs" aria-label="Property content navigation" data-section-nav>
-            <a class="section-tab" href="#property-gallery-section">Photos</a>
-            <a class="section-tab" href="#services-amenities-section">Amenities</a>
-            <a class="section-tab" href="#rooms-section">Rooms</a>
-            <a class="section-tab" href="#guest-reviews-section">Reviews</a>
-            <a class="section-tab" href="#location-section">Location</a>
-            <a class="section-tab" href="#policies-section">Property Policies</a>
-        </nav>
-
         <section id="rooms-section" class="section rooms-section" aria-label="Available rooms">
             <div class="rooms-head">
                 <h2>Available Rooms</h2>
@@ -2667,8 +2712,8 @@
                                 </div>
                                 <div class="room-offer-row">
                                     <div class="room-choices">
-                                        <span>{{ $breakfastLabel }}</span>
-                                        <span>{{ $hasBreakfast ? 'Free breakfast included' : 'Breakfast optional' }}</span>
+                                        <span class="room-option-title">{{ $breakfastLabel }}</span>
+                                        <span class="room-option-subtitle">{{ $hasBreakfast ? 'Free breakfast included' : 'Breakfast optional' }}</span>
                                         <span>Instant confirmation</span>
                                         <span>Prepay online or pay at property</span>
                                     </div>
@@ -2702,8 +2747,8 @@
                                 @endphp
                                 <div class="room-offer-row is-hidden">
                                     <div class="room-choices">
-                                        <span>{{ $alternateBreakfastLabel }}</span>
-                                        <span>{{ $hasBreakfast ? 'Breakfast optional' : 'Free breakfast included' }}</span>
+                                        <span class="room-option-title">{{ $alternateBreakfastLabel }}</span>
+                                        <span class="room-option-subtitle">{{ $hasBreakfast ? 'Breakfast optional' : 'Free breakfast included' }}</span>
                                         <span>Instant confirmation</span>
                                         <span>Prepay online or pay at property</span>
                                     </div>
@@ -3218,12 +3263,8 @@
                     <div class="room-meal-plan-grid">
                         ${plans.map((plan) => `
                             <div class="room-meal-plan-card${plan.primary ? ' is-primary' : ''}">
-                                <div class="room-meal-plan-top">
-                                    <span class="room-meal-plan-code">${plan.code}</span>
-                                    ${plan.priceText !== '' ? `<span class="room-meal-plan-price">${plan.priceText}</span>` : ''}
-                                </div>
+                                <span class="room-meal-plan-code">${plan.code}</span>
                                 <p class="room-meal-plan-name">${plan.title}</p>
-                                <p class="room-details-description">${plan.description}</p>
                             </div>
                         `).join('')}
                     </div>

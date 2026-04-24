@@ -1972,9 +1972,28 @@
         $mapUrl = $hasExactCoordinates
             ? ('https://www.google.com/maps/search/?api=1&query=' . urlencode($mapLat . ',' . $mapLng))
             : ('https://www.google.com/maps/search/?api=1&query=' . urlencode($mapQuery));
-        $cheapestRoom = $rooms->sortBy(static fn ($room) => (float) ($room->base_price ?? INF))->first();
+        $pricedRooms = $rooms->filter(static function ($room): bool {
+            $value = $room->base_price ?? null;
+            return is_numeric($value) && (float) $value > 0;
+        });
+
+        $cheapestPricedRoom = $pricedRooms
+            ->sortBy(static fn ($room) => (float) ($room->base_price ?? INF))
+            ->first();
+
+        $cheapestRoom = $cheapestPricedRoom
+            ?? $rooms->sortBy(static fn ($room) => (float) ($room->base_price ?? INF))->first();
+
         $cheapestRoomId = $cheapestRoom ? (int) ($cheapestRoom->id ?? 0) : 0;
-        $cheapestRoomPrice = $cheapestRoom ? number_format((float) ($cheapestRoom->base_price ?? 0), 2) : null;
+        $cheapestRoomPrice = $cheapestPricedRoom ? number_format((float) ($cheapestPricedRoom->base_price ?? 0), 2) : null;
+        $startingPriceValue = $cheapestPricedRoom
+            ? (float) ($cheapestPricedRoom->base_price ?? 0)
+            : (float) ($property->base_price ?? 0);
+        $startingPriceCurrency = strtoupper(trim((string) ($cheapestPricedRoom->currency ?? $property->currency ?? 'MVR')));
+        if ($startingPriceCurrency === '') {
+            $startingPriceCurrency = 'MVR';
+        }
+        $startingPrice = number_format($startingPriceValue, 2);
         $selectRoomsTarget = $cheapestRoomId > 0 ? ('#room-' . $cheapestRoomId) : '#rooms-section';
         $shareUrl = url()->current();
         $shareText = trim((string) ($property->name ?? 'Property')) . ' on Workation';
@@ -2237,7 +2256,7 @@
                     </div>
                     <aside class="property-summary-price" aria-label="Rate summary">
                         <span class="k">Starting from</span>
-                        <span class="v">{{ $currency }} {{ $basePrice }}</span>
+                        <span class="v">{{ $startingPriceCurrency }} {{ $startingPrice }}</span>
                         <span class="sub">per night · taxes may apply</span>
                         <a class="cta" href="{{ $selectRoomsTarget }}">View rooms</a>
                     </aside>

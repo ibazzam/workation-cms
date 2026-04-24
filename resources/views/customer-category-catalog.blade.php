@@ -19,7 +19,7 @@
             --brand-strong: #0b4f66;
             --accent: #f3a337;
             --listing-thumb-width: 210px;
-            --listing-thumb-height: 158px;
+            --listing-thumb-height: 192px;
         }
 
         * { box-sizing: border-box; }
@@ -1498,7 +1498,7 @@
         @media (max-width: 820px) {
             :root {
                 --listing-thumb-width: 156px;
-                --listing-thumb-height: 120px;
+                --listing-thumb-height: 148px;
             }
 
             .search-box > .grid,

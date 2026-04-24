@@ -15,6 +15,11 @@
             --line: #d5e2ec;
             --surface: #ffffff;
             --brand: #0f6179;
+            --brand-soft: #edf6fc;
+            --brand-soft-2: #f7fbff;
+            --brand-line: #d4e5ef;
+            --brand-ink: #1f4f6b;
+            --brand-shadow: rgba(15, 97, 121, 0.12);
             --accent: #f3a337;
         }
 
@@ -24,7 +29,7 @@
             margin: 0;
             font-family: "Outfit", "Trebuchet MS", sans-serif;
             color: var(--ink);
-            background: #f4f7fb;
+            background: var(--bg);
         }
 
         .page { width: min(1180px, calc(100% - 24px)); margin: 14px auto 28px; }
@@ -33,9 +38,9 @@
             position: sticky;
             top: 74px;
             z-index: 55;
-            border: 1px solid #d4e2ec;
+            border: 1px solid var(--brand-line);
             border-radius: 12px;
-            background: #ffffff;
+            background: var(--surface);
             padding: 10px;
             box-shadow: 0 8px 22px rgba(21, 39, 56, 0.08);
             margin-bottom: 0;
@@ -641,80 +646,117 @@
 
         .amenities-board {
             margin-top: 10px;
-            border: 1px solid #d8e6ef;
-            border-radius: 13px;
-            background: #f8fbfe;
-            padding: 12px;
+            border: 1px solid #d7e6f0;
+            border-radius: 14px;
+            background: linear-gradient(160deg, #f7fbff 0%, #f1f8fe 100%);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+            padding: 14px;
             display: grid;
-            gap: 10px;
+            gap: 12px;
         }
 
         .amenities-head {
             display: flex;
             align-items: center;
-            gap: 8px;
-            color: #1d425a;
-            font-size: 0.98rem;
+            gap: 9px;
+            color: #173f57;
+            font-size: 0.95rem;
             font-weight: 700;
             margin: 0;
+            letter-spacing: 0.01em;
+        }
+
+        .amenities-head .facility-icon {
+            border: 1px solid #c6dced;
+            border-radius: 999px;
+            background: #e8f4fc;
+            color: #195170;
         }
 
         .amenities-columns {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
+            align-items: start;
         }
 
         .amenity-group {
-            border: 1px solid #dbe8f1;
-            border-radius: 10px;
+            border: 1px solid #d2e3ef;
+            border-radius: 12px;
             background: #ffffff;
-            padding: 10px;
+            padding: 11px;
             display: grid;
-            gap: 8px;
+            gap: 9px;
             align-content: start;
+            align-self: start;
+            box-shadow: 0 5px 14px rgba(15, 68, 97, 0.06);
+            transition: border-color 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .amenity-group:hover {
+            border-color: #b9d5e6;
+            box-shadow: 0 8px 20px rgba(15, 68, 97, 0.1);
         }
 
         .amenity-group-title {
             margin: 0;
-            font-size: 0.86rem;
+            font-size: 0.8rem;
             font-weight: 700;
-            color: #234c66;
+            color: #1f4f6b;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding-bottom: 7px;
+            border-bottom: 1px dashed #d6e6f2;
         }
 
         .amenity-list {
             list-style: none;
             margin: 0;
             padding: 0;
-            display: grid;
-            gap: 6px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
         }
 
         .amenity-list li {
-            display: flex;
-            align-items: flex-start;
-            gap: 7px;
-            color: #35566c;
-            font-size: 0.81rem;
-            line-height: 1.35;
-        }
-
-        .amenity-list-item {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            flex-wrap: wrap;
+            color: #2f556e;
+            font-size: 0.78rem;
+            line-height: 1.25;
+            border: 1px solid #d6e7f2;
+            border-radius: 999px;
+            background: #f7fbff;
+            padding: 5px 9px;
+            max-width: 100%;
+        }
+
+        .amenity-list li .facility-icon {
+            flex: 0 0 16px;
+            width: 16px;
+            height: 16px;
+            font-size: 0.72rem;
+            color: #1d5a7a;
+        }
+
+        .amenity-list-item {
+            display: inline-grid;
+            align-items: center;
+            gap: 4px;
+            min-width: 0;
         }
 
         .amenity-pill {
-            border: 1px solid #cce1ec;
+            border: 1px solid #b9d9e8;
             border-radius: 999px;
             padding: 1px 7px;
-            font-size: 0.67rem;
+            font-size: 0.62rem;
             font-weight: 600;
-            color: #2a607c;
-            background: #ecf6fb;
+            color: #1e607e;
+            background: #e5f3fb;
             white-space: nowrap;
+            justify-self: start;
         }
 
         .facility-item {
@@ -1014,6 +1056,7 @@
         .room-details-modal {
             background: #ffffff;
             border-radius: 16px;
+            width: min(1180px, calc(100% - 24px));
             max-width: 90%;
             max-height: 90vh;
             overflow-y: auto;
@@ -1039,28 +1082,37 @@
 
         .room-details-content {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
+            grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+            gap: 20px;
             padding: 24px;
+            align-items: start;
         }
 
         .room-details-gallery {
             display: grid;
             grid-template-columns: 1fr 1fr;
+            grid-auto-rows: 156px;
             gap: 12px;
+            align-content: start;
         }
 
         .room-details-gallery img {
             width: 100%;
-            height: 180px;
+            height: 100%;
             object-fit: cover;
-            border-radius: 8px;
+            border-radius: 10px;
             display: block;
+            background: #eef5fb;
+        }
+
+        .room-details-gallery img:first-child {
+            grid-column: 1 / -1;
+            grid-row: span 2;
         }
 
         .room-details-sidebar {
             display: grid;
-            gap: 20px;
+            gap: 14px;
             align-content: start;
             max-height: 85vh;
             overflow-y: auto;
@@ -1069,11 +1121,15 @@
 
         .room-details-header {
             display: grid;
-            gap: 8px;
+            gap: 10px;
+            padding: 14px;
+            border: 1px solid var(--brand-line);
+            border-radius: 14px;
+            background: var(--brand-soft-2);
         }
 
         .room-details-title {
-            font-size: 1.3rem;
+            font-size: 1.35rem;
             font-weight: 800;
             color: #0f3d52;
             margin: 0;
@@ -1086,9 +1142,103 @@
         }
 
         .room-bed-note {
+            margin: 0;
+            font-size: 0.82rem;
+            color: #51697b;
+            line-height: 1.5;
+        }
+
+        .room-summary-badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .room-summary-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid #d3e4ef;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #264f68;
+            font-size: 0.74rem;
+            font-weight: 700;
+            padding: 5px 9px;
+        }
+
+        .room-summary-badge i {
+            color: var(--brand);
+        }
+
+        .room-details-description {
+            margin: 0;
+            color: #3f5e72;
+            font-size: 0.84rem;
+            line-height: 1.55;
+        }
+
+        .room-meal-plans {
+            display: grid;
+            gap: 10px;
+        }
+
+        .room-section-label {
+            margin: 0;
+            font-size: 0.76rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: #234b64;
+        }
+
+        .room-meal-plan-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .room-meal-plan-card {
+            border: 1px solid #d7e6f0;
+            border-radius: 12px;
+            background: #ffffff;
+            padding: 10px;
+            display: grid;
+            gap: 6px;
+            box-shadow: 0 5px 14px rgba(15, 68, 97, 0.05);
+        }
+
+        .room-meal-plan-card.is-primary {
+            border-color: #8ec1da;
+            background: linear-gradient(160deg, #ffffff 0%, #f6fbff 100%);
+            box-shadow: 0 8px 18px rgba(15, 97, 121, 0.1);
+        }
+
+        .room-meal-plan-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .room-meal-plan-code {
             font-size: 0.8rem;
-            color: #666;
-            line-height: 1.4;
+            font-weight: 800;
+            color: #0f3d52;
+            letter-spacing: 0.04em;
+        }
+
+        .room-meal-plan-name {
+            margin: 0;
+            color: #35586e;
+            font-size: 0.78rem;
+            line-height: 1.45;
+        }
+
+        .room-meal-plan-price {
+            color: #17344a;
+            font-size: 0.88rem;
+            font-weight: 800;
         }
 
         .room-quick-specs {
@@ -1118,53 +1268,66 @@
             flex: 0 0 16px;
         }
 
+        .room-amenities-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            align-items: start;
+        }
+
         .room-amenity-category {
             display: grid;
             gap: 8px;
+            padding: 10px;
+            border: 1px solid #d9e7f0;
+            border-radius: 10px;
+            background: #fbfdff;
         }
 
         .room-amenity-category-title {
-            font-size: 0.85rem;
+            font-size: 0.76rem;
             font-weight: 700;
             color: #0f3d52;
             text-transform: uppercase;
-            letter-spacing: 0.03em;
+            letter-spacing: 0.05em;
+            padding-bottom: 6px;
+            border-bottom: 1px dashed #d9e7f0;
         }
 
         .room-amenity-list {
+            list-style: none;
             margin: 0;
             padding: 0;
-            display: grid;
+            display: flex;
+            flex-wrap: wrap;
             gap: 6px;
         }
 
         .room-amenity-item {
             list-style: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.8rem;
-            color: #2c5169;
-        }
-
-        .room-amenity-item input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            cursor: pointer;
-            accent-color: #3a82aa;
-        }
-
-        .room-amenity-item label {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 6px;
-            cursor: pointer;
-            flex: 1;
+            font-size: 0.76rem;
+            color: #2c5169;
+            border: 1px solid #dbe8f1;
+            border-radius: 999px;
+            background: #f6fbff;
+            padding: 5px 8px;
+            max-width: 100%;
+        }
+
+        .room-amenity-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+            line-height: 1.25;
         }
 
         .room-amenity-icon {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             border-radius: 999px;
             border: 1px solid #d2e3ee;
             background: #f3f9fd;
@@ -1172,8 +1335,8 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.72rem;
-            flex: 0 0 18px;
+            font-size: 0.68rem;
+            flex: 0 0 16px;
         }
 
         .room-amenity-badge {
@@ -1188,6 +1351,11 @@
             white-space: nowrap;
         }
 
+        .room-policy-stack {
+            display: grid;
+            gap: 10px;
+        }
+
         .room-policy-section {
             padding: 12px;
             border: 1px solid #e0ebf3;
@@ -1196,7 +1364,7 @@
         }
 
         .room-policy-title {
-            font-size: 0.85rem;
+            font-size: 0.68rem;
             font-weight: 700;
             color: #8b4513;
             margin: 0 0 6px 0;
@@ -1234,6 +1402,37 @@
                 grid-template-columns: 1fr;
                 gap: 16px;
                 padding: 16px;
+            }
+
+            .room-details-sidebar {
+                max-height: none;
+                overflow: visible;
+                padding-right: 0;
+            }
+
+            .room-amenities-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .room-details-gallery {
+                grid-template-columns: 1fr;
+                grid-auto-rows: 180px;
+            }
+
+            .room-details-gallery img:first-child {
+                grid-column: auto;
+                grid-row: span 1;
+            }
+
+            .room-amenities-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .room-quick-specs,
+            .room-meal-plan-grid {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -1446,7 +1645,7 @@
             text-decoration: none;
             color: inherit;
             display: grid;
-            grid-template-rows: 120px auto;
+            grid-template-rows: 156px auto;
             min-width: 0;
             transition: transform 0.16s ease, box-shadow 0.16s ease;
         }
@@ -1458,7 +1657,7 @@
 
         .nearby-card-media {
             width: 100%;
-            height: 120px;
+            height: 156px;
             object-fit: cover;
             background: #eaf2f8;
             display: block;
@@ -1857,8 +2056,8 @@
             .room-side-details li { align-items: flex-start; }
             .facility-grid { grid-template-columns: 1fr; }
             .nearby-grid { grid-template-columns: 1fr; }
-            .nearby-card { grid-template-rows: 156px auto; }
-            .nearby-card-media { height: 156px; }
+            .nearby-card { grid-template-rows: 176px auto; }
+            .nearby-card-media { height: 176px; }
             .nearby-card-body { padding: 12px; }
 
             .location-map {
@@ -2441,6 +2640,9 @@
                         data-room-non-smoking="{{ $nonSmoking ? '1' : '0' }}"
                         data-room-child-policy="{{ $childPolicy }}"
                         data-room-extra-bed-policy="{{ $extraBedPolicy }}"
+                        data-room-description="{{ trim((string) ($room->description ?? '')) }}"
+                        data-room-meal-plan="{{ trim((string) ($room->meal_plan ?? '')) }}"
+                        data-room-currency="{{ $roomCurrency }}"
                         data-room-link="{{ $roomLink }}"
                         data-room-images='@json($roomImages->all())'
                         data-room-amenities='@json($roomAmenitiesRaw->all())'
@@ -2723,11 +2925,14 @@
             <div class="room-details-header">
                 <h2 class="room-details-title" data-title></h2>
                 <div class="room-bed-info" data-bedinfo></div>
+                <div class="room-summary-badges" data-summary-badges></div>
+                <p class="room-details-description" data-description></p>
                 <p class="room-bed-note" data-note></p>
             </div>
+            <div class="room-meal-plans" data-meal-plans></div>
             <div class="room-quick-specs" data-specs></div>
-            <div data-amenities></div>
-            <div data-policies></div>
+            <div class="room-amenities-grid" data-amenities></div>
+            <div class="room-policy-stack" data-policies></div>
             <a class="room-select-btn" data-select-btn href="#">Select Room</a>
         </div>
     </template>
@@ -2947,6 +3152,84 @@
                     .replace(/\bTv\b/g, 'TV');
             }
 
+            function mealPlanMeta(value) {
+                const normalized = String(value || '').toLowerCase().replace(/[_-]+/g, ' ').trim();
+
+                if (['room only', 'ro', 'without breakfast'].includes(normalized)) {
+                    return { code: 'RO', title: 'Room Only' };
+                }
+                if (['bed breakfast', 'bb', 'with breakfast'].includes(normalized)) {
+                    return { code: 'BB', title: 'Bed and Breakfast' };
+                }
+                if (['half board', 'hb'].includes(normalized)) {
+                    return { code: 'HB', title: 'Half Board' };
+                }
+                if (['full board', 'fb'].includes(normalized)) {
+                    return { code: 'FB', title: 'Full Board' };
+                }
+                if (['all inclusive', 'ai'].includes(normalized)) {
+                    return { code: 'AI', title: 'All Inclusive' };
+                }
+
+                return { code: titleCaseToken(value || 'Plan'), title: titleCaseToken(value || 'Plan') };
+            }
+
+            function collectMealPlans(roomCard) {
+                const rows = Array.from(roomCard.querySelectorAll('.room-offer-row'));
+                const plans = [];
+
+                rows.forEach((row, index) => {
+                    const choiceSpans = Array.from(row.querySelectorAll('.room-choices span')).map((node) => node.textContent.trim()).filter(Boolean);
+                    const planText = choiceSpans[0] || roomCard.dataset.roomMealPlan || '';
+                    const meta = mealPlanMeta(planText);
+                    const priceText = row.querySelector('.room-price-now')?.textContent?.trim() || '';
+                    const description = choiceSpans[1] || 'Rate details available at booking';
+
+                    if (meta.title === '') {
+                        return;
+                    }
+
+                    plans.push({
+                        code: meta.code,
+                        title: meta.title,
+                        description,
+                        priceText,
+                        primary: index === 0,
+                    });
+                });
+
+                if (plans.length === 0) {
+                    const fallbackMeta = mealPlanMeta(roomCard.dataset.roomMealPlan || 'room_only');
+                    plans.push({
+                        code: fallbackMeta.code,
+                        title: fallbackMeta.title,
+                        description: 'Selected room plan details will be confirmed during reservation.',
+                        priceText: '',
+                        primary: true,
+                    });
+                }
+
+                return plans.filter((plan, index, list) => list.findIndex((item) => item.code === plan.code) === index);
+            }
+
+            function buildMealPlansHtml(plans) {
+                return `
+                    <p class="room-section-label">Meal Plans</p>
+                    <div class="room-meal-plan-grid">
+                        ${plans.map((plan) => `
+                            <div class="room-meal-plan-card${plan.primary ? ' is-primary' : ''}">
+                                <div class="room-meal-plan-top">
+                                    <span class="room-meal-plan-code">${plan.code}</span>
+                                    ${plan.priceText !== '' ? `<span class="room-meal-plan-price">${plan.priceText}</span>` : ''}
+                                </div>
+                                <p class="room-meal-plan-name">${plan.title}</p>
+                                <p class="room-details-description">${plan.description}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
             function amenityIconClass(token) {
                 const value = String(token || '').toLowerCase().replace(/[_-]+/g, ' ').trim();
 
@@ -3007,8 +3290,7 @@
                                 const iconClass = amenityIconClass(item);
                                 return `
                                     <li class="room-amenity-item">
-                                        <input type="checkbox" id="amenity-${roomId}-${categoryTitle.replace(/\s+/g, '-').toLowerCase()}-${idx}" checked disabled>
-                                        <label for="amenity-${roomId}-${categoryTitle.replace(/\s+/g, '-').toLowerCase()}-${idx}"><span class="room-amenity-icon" aria-hidden="true"><i class="${iconClass}"></i></span>${safeItem}${badge}</label>
+                                        <span class="room-amenity-label"><span class="room-amenity-icon" aria-hidden="true"><i class="${iconClass}"></i></span><span>${safeItem}</span>${badge}</span>
                                     </li>
                                 `;
                             }).join('')}
@@ -3027,11 +3309,15 @@
                 const roomNonSmoking = roomCard.dataset.roomNonSmoking !== '0';
                 const roomChildPolicy = roomCard.dataset.roomChildPolicy || 'Children of all ages can stay in this room.';
                 const roomExtraBedPolicy = roomCard.dataset.roomExtraBedPolicy || 'Extra beds and cots are not available for this room type.';
+                const roomDescription = roomCard.dataset.roomDescription || '';
+                const roomMealPlan = roomCard.dataset.roomMealPlan || '';
+                const roomCurrency = roomCard.dataset.roomCurrency || 'MVR';
                 const roomLink = roomCard.dataset.roomLink || '#';
                 const roomImages = parseJsonArray(roomCard.dataset.roomImages);
                 const roomAmenities = parseJsonArray(roomCard.dataset.roomAmenities);
                 const bathroomAmenities = parseJsonArray(roomCard.dataset.bathroomAmenities);
                 const maxOccupancy = roomCard.querySelector('.room-sleeps')?.textContent?.trim() || '1';
+                const mealPlans = collectMealPlans(roomCard);
 
                 return {
                     roomId,
@@ -3043,11 +3329,15 @@
                     roomNonSmoking,
                     roomChildPolicy,
                     roomExtraBedPolicy,
+                    roomDescription,
+                    roomMealPlan,
+                    roomCurrency,
                     roomLink,
                     roomImages,
                     roomAmenities,
                     bathroomAmenities,
                     maxOccupancy,
+                    mealPlans,
                 };
             }
 
@@ -3078,7 +3368,33 @@
 
                 clone.querySelector('[data-title]').textContent = roomData.roomName;
                 clone.querySelector('[data-bedinfo]').textContent = `${titleCaseToken(roomData.roomBed)} • Sleeps ${roomData.maxOccupancy}`;
-                clone.querySelector('[data-note]').textContent = roomData.roomExtraBedPolicy;
+                const summaryBadges = clone.querySelector('[data-summary-badges]');
+                if (summaryBadges) {
+                    const badgeItems = [
+                        { icon: 'fa-regular fa-user', label: `Sleeps ${roomData.maxOccupancy}` },
+                        roomData.roomHasWindow ? { icon: 'fa-regular fa-square', label: 'Window' } : null,
+                        roomData.roomNonSmoking ? { icon: 'fa-solid fa-ban-smoking', label: 'Non-smoking' } : null,
+                        roomData.roomSize > 0 ? { icon: 'fa-solid fa-ruler-combined', label: `${roomData.roomSize}m²` } : null,
+                    ].filter(Boolean);
+
+                    summaryBadges.innerHTML = badgeItems.map((badge) => `<span class="room-summary-badge"><i class="${badge.icon}" aria-hidden="true"></i><span>${badge.label}</span></span>`).join('');
+                }
+
+                const descriptionEl = clone.querySelector('[data-description]');
+                if (descriptionEl) {
+                    descriptionEl.textContent = roomData.roomDescription !== ''
+                        ? roomData.roomDescription
+                        : `${roomData.roomName} features ${titleCaseToken(roomData.roomBed)}, practical in-room comforts, and a straightforward stay setup for couples, families, or short work trips.`;
+                }
+
+                clone.querySelector('[data-note]').textContent = roomData.roomMealPlan !== ''
+                    ? `Meal plan: ${mealPlanMeta(roomData.roomMealPlan).title}. Extra bed and child policies are listed below.`
+                    : 'Meal plan and extra bed conditions vary by selected rate. Full room and child policy details are listed below.';
+
+                const mealPlansDiv = clone.querySelector('[data-meal-plans]');
+                if (mealPlansDiv) {
+                    mealPlansDiv.innerHTML = buildMealPlansHtml(roomData.mealPlans);
+                }
 
                 const specsDiv = clone.querySelector('[data-specs]');
                 if (specsDiv) {
@@ -3157,6 +3473,10 @@
                         <div class="room-policy-section">
                             <h4 class="room-policy-title">Child Policies</h4>
                             <p class="room-policy-text">${roomData.roomChildPolicy}</p>
+                        </div>
+                        <div class="room-policy-section">
+                            <h4 class="room-policy-title">Room Policy</h4>
+                            <p class="room-policy-text">${roomData.roomMealPlan !== '' ? `This room is currently offered under ${mealPlanMeta(roomData.roomMealPlan).title}. Final inclusions depend on the selected rate option.` : 'Meal plan and inclusions may vary by selected room rate. Please review the rate option before reserving.'}</p>
                         </div>
                         <div class="room-policy-section">
                             <h4 class="room-policy-title">Cots and Extra Beds</h4>

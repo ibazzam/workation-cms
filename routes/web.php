@@ -1134,6 +1134,7 @@ if (!function_exists('getAvailableCategories')) {
             $dbCategories = DB::table('vendor_properties')
                 ->where('status', 'active')
                 ->whereNotNull('listing_category')
+                ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'))
                 ->distinct()
                 ->pluck('listing_category')
                 ->filter(static fn ($cat) => !empty(trim((string) $cat)))
@@ -1242,8 +1243,9 @@ Route::get('/', function () {
             $nameKey = portalNormalizeDestinationMediaKey((string) ($row->name ?? ''));
             $slugKey = portalNormalizeDestinationMediaKey((string) ($row->slug ?? ''));
             $islandNameKey = $nameKey !== '' ? portalNormalizeDestinationMediaKey((string) ($row->name ?? '') . ' island') : '';
+            $cityNameKey = $nameKey !== '' ? portalNormalizeDestinationMediaKey((string) ($row->name ?? '') . ' city') : '';
 
-            foreach ([$nameKey, $slugKey, $islandNameKey] as $candidateKey) {
+            foreach ([$nameKey, $slugKey, $islandNameKey, $cityNameKey] as $candidateKey) {
                 if ($candidateKey === '' || array_key_exists($candidateKey, $homeDatabaseDestinationImages)) {
                     continue;
                 }
@@ -1420,7 +1422,9 @@ Route::get('/', function () {
     $homeTransportDestinationOptions = collect();
 
     if (Schema::hasTable('vendor_properties')) {
-        $baseQuery = DB::table('vendor_properties')->where('status', 'active');
+        $baseQuery = DB::table('vendor_properties')
+            ->where('status', 'active')
+            ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'));
         $allProperties = $baseQuery->limit(300)->get();
 
         $propertyIds = $allProperties
@@ -1433,7 +1437,7 @@ Route::get('/', function () {
         if ($propertyIds->isNotEmpty() && Schema::hasTable('vendor_accommodation_listings')) {
             $dedicatedAccommodationRows = DB::table('vendor_accommodation_listings')
                 ->whereIn('vendor_property_id', $propertyIds->all())
-                ->get(['vendor_property_id', 'name', 'status', 'location', 'description', 'base_price', 'currency', 'max_guests', 'details'])
+                ->get(['vendor_property_id', 'name', 'status', 'location', 'description', 'currency', 'max_guests', 'details'])
                 ->keyBy(static fn ($row) => (int) ($row->vendor_property_id ?? 0));
 
             if ($dedicatedAccommodationRows->isNotEmpty()) {
@@ -1455,9 +1459,6 @@ Route::get('/', function () {
                         }
                     }
 
-                    if (isset($dedicated->base_price) && is_numeric($dedicated->base_price)) {
-                        $property->base_price = (float) $dedicated->base_price;
-                    }
                     if (isset($dedicated->max_guests) && is_numeric($dedicated->max_guests)) {
                         $property->max_guests = (int) $dedicated->max_guests;
                     }
@@ -1642,6 +1643,7 @@ Route::get('/', function () {
 
             $transportRows = DB::table('vendor_properties')
                 ->where('status', 'active')
+                ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'))
                 ->whereRaw("LOWER(REPLACE(listing_category, '-', '_')) IN (?, ?)", ['marine_transport', 'land_transport'])
                 ->select($transportColumns)
                 ->limit(2000)
@@ -1778,6 +1780,7 @@ Route::get('/', function () {
         if (Schema::hasColumn('vendor_properties', 'listing_category')) {
             $categoryCounts = DB::table('vendor_properties')
                 ->where('status', 'active')
+                ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'))
                 ->selectRaw("REPLACE(LOWER(listing_category), '-', '_') as category_key, COUNT(*) as total")
                 ->groupBy('category_key')
                 ->pluck('total', 'category_key');
@@ -1967,6 +1970,7 @@ Route::get('/', function () {
         if ($sortColumn !== null) {
             $lovedRows = DB::table('vendor_properties')
                 ->where('status', 'active')
+                ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'))
                 ->orderByDesc($sortColumn)
                 ->orderByDesc('updated_at')
                 ->limit(120)
@@ -3674,7 +3678,9 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     $transportDestinationOptions = collect();
 
     if (Schema::hasTable('vendor_properties')) {
-        $propertiesQuery = DB::table('vendor_properties')->where('status', 'active');
+        $propertiesQuery = DB::table('vendor_properties')
+            ->where('status', 'active')
+            ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'));
         if (Schema::hasColumn('vendor_properties', 'listing_category')) {
             $propertiesQuery->whereRaw('LOWER(listing_category) = ?', [$dbCategoryKey]);
         }
@@ -3744,7 +3750,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             });
         }
 
-        if (Schema::hasColumn('vendor_properties', 'base_price')) {
+        if ($dbCategoryKey !== 'accommodation' && Schema::hasColumn('vendor_properties', 'base_price')) {
             if ($minPrice > 0) {
                 $propertiesQuery->where('base_price', '>=', $minPrice);
             }
@@ -3848,9 +3854,9 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             $propertiesQuery->whereRaw($distanceSql . ' <= ?', [$userLat, $userLng, $userLat, $distanceKm]);
         }
 
-        if ($sort === 'price_low_high' && Schema::hasColumn('vendor_properties', 'base_price')) {
+        if ($sort === 'price_low_high' && $dbCategoryKey !== 'accommodation' && Schema::hasColumn('vendor_properties', 'base_price')) {
             $propertiesQuery->orderBy('base_price');
-        } elseif ($sort === 'price_high_low' && Schema::hasColumn('vendor_properties', 'base_price')) {
+        } elseif ($sort === 'price_high_low' && $dbCategoryKey !== 'accommodation' && Schema::hasColumn('vendor_properties', 'base_price')) {
             $propertiesQuery->orderByDesc('base_price');
         } elseif ($sort === 'distance_nearest' && $latitudeColumn !== null && $longitudeColumn !== null && $userLat !== 0.0 && $userLng !== 0.0) {
             $distanceSql = '(6371 * acos(least(1, greatest(-1, cos(radians(?)) * cos(radians(' . $latitudeColumn . ')) * cos(radians(' . $longitudeColumn . ') - radians(?)) + sin(radians(?)) * sin(radians(' . $latitudeColumn . '))))))';
@@ -3876,7 +3882,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         if ($dbCategoryKey === 'accommodation' && $propertyIds->isNotEmpty() && Schema::hasTable('vendor_accommodation_listings')) {
             $dedicatedAccommodationRows = DB::table('vendor_accommodation_listings')
                 ->whereIn('vendor_property_id', $propertyIds->all())
-                ->get(['vendor_property_id', 'name', 'status', 'location', 'description', 'base_price', 'currency', 'max_guests', 'details'])
+                ->get(['vendor_property_id', 'name', 'status', 'location', 'description', 'currency', 'max_guests', 'details'])
                 ->keyBy(static fn ($row) => (int) ($row->vendor_property_id ?? 0));
 
             if ($dedicatedAccommodationRows->isNotEmpty()) {
@@ -3893,9 +3899,6 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                         }
                     }
 
-                    if (isset($dedicated->base_price) && is_numeric($dedicated->base_price)) {
-                        $property->base_price = (float) $dedicated->base_price;
-                    }
                     if (isset($dedicated->max_guests) && is_numeric($dedicated->max_guests)) {
                         $property->max_guests = (int) $dedicated->max_guests;
                     }
@@ -3906,30 +3909,6 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                     return $property;
                 })->values();
 
-                if ($minPrice > 0 || $maxPrice > 0) {
-                    $catalogProperties = $catalogProperties->filter(static function ($property) use ($minPrice, $maxPrice) {
-                        $price = (float) ($property->base_price ?? 0);
-                        if ($minPrice > 0 && $price < $minPrice) {
-                            return false;
-                        }
-                        if ($maxPrice > 0 && $price > $maxPrice) {
-                            return false;
-                        }
-                        return true;
-                    })->values();
-                }
-
-                if ($sort === 'price_low_high') {
-                    $catalogProperties = $catalogProperties->sortBy(static fn ($property) => (float) ($property->base_price ?? 0))->values();
-                } elseif ($sort === 'price_high_low') {
-                    $catalogProperties = $catalogProperties->sortByDesc(static fn ($property) => (float) ($property->base_price ?? 0))->values();
-                }
-
-                $propertyIds = $catalogProperties
-                    ->pluck('id')
-                    ->map(static fn ($id) => (int) $id)
-                    ->filter(static fn (int $id) => $id > 0)
-                    ->values();
             }
         }
 
@@ -4075,6 +4054,31 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 }
                 return $prop;
             });
+
+            if ($minPrice > 0 || $maxPrice > 0) {
+                $catalogProperties = $catalogProperties->filter(static function ($property) use ($minPrice, $maxPrice) {
+                    $price = (float) ($property->base_price ?? 0);
+                    if ($minPrice > 0 && $price < $minPrice) {
+                        return false;
+                    }
+                    if ($maxPrice > 0 && $price > $maxPrice) {
+                        return false;
+                    }
+                    return true;
+                })->values();
+            }
+
+            if ($sort === 'price_low_high') {
+                $catalogProperties = $catalogProperties->sortBy(static fn ($property) => (float) ($property->base_price ?? 0))->values();
+            } elseif ($sort === 'price_high_low') {
+                $catalogProperties = $catalogProperties->sortByDesc(static fn ($property) => (float) ($property->base_price ?? 0))->values();
+            }
+
+            $propertyIds = $catalogProperties
+                ->pluck('id')
+                ->map(static fn ($id) => (int) $id)
+                ->filter(static fn (int $id) => $id > 0)
+                ->values();
         }
 
         if (Schema::hasTable('vendor_listing_media') && $propertyIds->isNotEmpty()) {
@@ -4092,6 +4096,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         if (Schema::hasColumn('vendor_properties', 'atoll')) {
             $atollOptions = DB::table('vendor_properties')
                 ->where('status', 'active')
+                ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'))
                 ->when(Schema::hasColumn('vendor_properties', 'listing_category'), function ($query) use ($dbCategoryKey) {
                     $query->whereRaw('LOWER(listing_category) = ?', [$dbCategoryKey]);
                 })
@@ -4106,6 +4111,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         if (Schema::hasColumn('vendor_properties', 'island')) {
             $islandOptions = DB::table('vendor_properties')
                 ->where('status', 'active')
+                ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'))
                 ->when(Schema::hasColumn('vendor_properties', 'listing_category'), function ($query) use ($dbCategoryKey) {
                     $query->whereRaw('LOWER(listing_category) = ?', [$dbCategoryKey]);
                 })
@@ -4132,6 +4138,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
 
             $transportRows = DB::table('vendor_properties')
                 ->where('status', 'active')
+                ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'))
                 ->whereRaw("LOWER(REPLACE(listing_category, '-', '_')) IN (?, ?)", ['marine_transport', 'land_transport'])
                 ->select($transportColumns)
                 ->limit(2000)
@@ -4237,7 +4244,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
     if ($listingCategory === 'accommodation' && Schema::hasTable('vendor_accommodation_listings')) {
         $dedicatedAccommodation = DB::table('vendor_accommodation_listings')
             ->where('vendor_property_id', (int) $propertyRow->id)
-            ->first(['name', 'status', 'location', 'description', 'base_price', 'currency', 'max_guests', 'details']);
+            ->first(['name', 'status', 'location', 'description', 'currency', 'max_guests', 'details']);
 
         if ($dedicatedAccommodation) {
             foreach (['name', 'status', 'location', 'description', 'currency'] as $field) {
@@ -4246,9 +4253,6 @@ Route::get('/property/{property}', function (Request $request, int $property) {
                 }
             }
 
-            if (isset($dedicatedAccommodation->base_price) && is_numeric($dedicatedAccommodation->base_price)) {
-                $propertyRow->base_price = (float) $dedicatedAccommodation->base_price;
-            }
             if (isset($dedicatedAccommodation->max_guests) && is_numeric($dedicatedAccommodation->max_guests)) {
                 $propertyRow->max_guests = (int) $dedicatedAccommodation->max_guests;
             }

@@ -1413,6 +1413,7 @@ if (!function_exists('portalNormalizeDestinationMediaKey')) {
             return '';
         }
 
+        $normalized = \Illuminate\Support\Str::ascii($normalized);
         $normalized = str_replace(['%20', '+'], ' ', $normalized);
         $normalized = preg_replace('/[^a-z0-9]+/', ' ', $normalized) ?? '';
         $normalized = trim(preg_replace('/\s+/', ' ', $normalized) ?? '');

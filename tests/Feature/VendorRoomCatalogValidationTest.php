@@ -246,20 +246,17 @@ class VendorRoomCatalogValidationTest extends TestCase
             'portal_vendor_id' => 'VN-ROOM-001',
         ]);
 
-        $propertyId = (int) DB::table('vendor_properties')->insertGetId([
+        $propertyId = (int) DB::table('vendor_accommodation_listings')->insertGetId([
             'vendor_user_id' => $vendor->id,
             'name' => 'Test Stay',
-            'property_type' => 'property',
-            'listing_category' => 'accommodation',
             'location' => 'Male',
             'description' => 'Accommodation listing for room validation tests',
             'status' => 'active',
-            'base_price' => 0,
-            'currency' => 'MVR',
             'max_guests' => 0,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        DB::table('vendor_accommodation_listings')->where('id', $propertyId)->update(['vendor_property_id' => $propertyId]);
 
         return [$vendor, $propertyId];
     }

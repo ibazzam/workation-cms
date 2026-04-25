@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\User;
 use App\Models\BlogPost;
@@ -1127,16 +1127,8 @@ if (!function_exists('getAvailableCategories')) {
             ];
         }
 
-        if (!Schema::hasTable('vendor_properties') || !Schema::hasColumn('vendor_properties', 'listing_category')) {
-            return $defaultCategories;
-        }
-
         try {
-            $dbCategories = DB::table('vendor_properties')
-                ->where('status', 'active')
-                ->whereNotNull('listing_category')
-                ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'))
-                ->distinct()
+            $dbCategories = VendorPropertyCompatibilityReader::allActiveListings(600)
                 ->pluck('listing_category')
                 ->filter(static fn ($cat) => !empty(trim((string) $cat)))
                 ->map(static fn ($cat) => strtolower(trim((string) $cat)))
@@ -1449,66 +1441,14 @@ Route::get('/', function () {
     $homeListingMediaByProperty = collect();
     $homeTransportDestinationOptions = collect();
 
-    if (Schema::hasTable('vendor_properties')) {
-        $baseQuery = DB::table('vendor_properties')
-            ->where('status', 'active')
-            ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'));
-        $allProperties = $baseQuery->limit(300)->get();
+    {
+        $allProperties = VendorPropertyCompatibilityReader::allActiveListings(300);
 
         $propertyIds = $allProperties
             ->pluck('id')
             ->map(static fn ($id) => (int) $id)
             ->filter(static fn (int $id) => $id > 0)
             ->values();
-
-        // Phase 2 source-of-truth: hydrate accommodation rows from dedicated table.
-        if ($propertyIds->isNotEmpty() && Schema::hasTable('vendor_accommodation_listings')) {
-            $accommodationSelectColumns = ['vendor_property_id', 'name', 'status', 'location', 'description', 'max_guests', 'details'];
-            if (Schema::hasColumn('vendor_accommodation_listings', 'currency')) {
-                $accommodationSelectColumns[] = 'currency';
-            }
-
-            $dedicatedAccommodationRows = DB::table('vendor_accommodation_listings')
-                ->whereIn('vendor_property_id', $propertyIds->all())
-                ->get($accommodationSelectColumns)
-                ->keyBy(static fn ($row) => (int) ($row->vendor_property_id ?? 0));
-
-            if ($dedicatedAccommodationRows->isNotEmpty()) {
-                $allProperties = $allProperties->map(static function ($property) use ($dedicatedAccommodationRows) {
-                    $category = strtolower(trim((string) ($property->listing_category ?? '')));
-                    if ($category !== 'accommodation') {
-                        return $property;
-                    }
-
-                    $propertyId = (int) ($property->id ?? 0);
-                    $dedicated = $dedicatedAccommodationRows->get($propertyId);
-                    if (!$dedicated) {
-                        return $property;
-                    }
-
-                    foreach (['name', 'status', 'location', 'description'] as $field) {
-                        if (isset($dedicated->{$field}) && trim((string) $dedicated->{$field}) !== '') {
-                            $property->{$field} = $dedicated->{$field};
-                        }
-                    }
-
-                    if (property_exists($dedicated, 'currency') && trim((string) ($dedicated->currency ?? '')) !== '') {
-                        $property->currency = $dedicated->currency;
-                    }
-
-                    if (isset($dedicated->max_guests) && is_numeric($dedicated->max_guests)) {
-                        $property->max_guests = (int) $dedicated->max_guests;
-                    }
-                    if (isset($dedicated->details) && trim((string) $dedicated->details) !== '') {
-                        $property->listing_details = (string) $dedicated->details;
-                    }
-
-                    return $property;
-                })->values();
-            }
-        }
-
-        // Accommodation listings may now store room prices in meal-plan columns.
         // Hydrate property base_price from the lowest valid room price so home/category
         // cards always show a real "From" value.
         if ($propertyIds->isNotEmpty()) {
@@ -1677,51 +1617,38 @@ Route::get('/', function () {
             $homeListingMediaByProperty = $mediaRows->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
         }
 
-        if (Schema::hasColumn('vendor_properties', 'listing_category')) {
-            $transportColumns = [];
-            foreach (['pickup_location', 'dropoff_location', 'origin_point', 'destination_point', 'island', 'city', 'atoll'] as $candidateColumn) {
-                if (Schema::hasColumn('vendor_properties', $candidateColumn)) {
-                    $transportColumns[] = $candidateColumn;
+        $transportRows = $allProperties
+            ->filter(static function ($row) {
+                $category = strtolower(trim(str_replace('-', '_', (string) ($row->listing_category ?? ''))));
+                return in_array($category, ['marine_transport', 'land_transport'], true);
+            })
+            ->take(2000)
+            ->values();
+
+        $transportDestinationMap = [];
+        foreach ($transportRows as $row) {
+            $candidates = [
+                trim((string) (property_exists($row, 'pickup_location') ? $row->pickup_location : '')),
+                trim((string) (property_exists($row, 'dropoff_location') ? $row->dropoff_location : '')),
+                trim((string) (property_exists($row, 'origin_point') ? $row->origin_point : '')),
+                trim((string) (property_exists($row, 'destination_point') ? $row->destination_point : '')),
+                trim((string) (property_exists($row, 'island') ? $row->island : '')),
+                trim((string) (property_exists($row, 'city') ? $row->city : '')),
+                trim((string) (property_exists($row, 'atoll') ? $row->atoll : '')),
+            ];
+
+            foreach ($candidates as $candidate) {
+                if ($candidate === '') {
+                    continue;
                 }
+
+                $transportDestinationMap[strtolower($candidate)] = $candidate;
             }
+        }
 
-            if (empty($transportColumns)) {
-                $transportColumns = ['listing_category'];
-            }
-
-            $transportRows = DB::table('vendor_properties')
-                ->where('status', 'active')
-                ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'))
-                ->whereRaw("LOWER(REPLACE(listing_category, '-', '_')) IN (?, ?)", ['marine_transport', 'land_transport'])
-                ->select($transportColumns)
-                ->limit(2000)
-                ->get();
-
-            $transportDestinationMap = [];
-            foreach ($transportRows as $row) {
-                $candidates = [
-                    trim((string) (property_exists($row, 'pickup_location') ? $row->pickup_location : '')),
-                    trim((string) (property_exists($row, 'dropoff_location') ? $row->dropoff_location : '')),
-                    trim((string) (property_exists($row, 'origin_point') ? $row->origin_point : '')),
-                    trim((string) (property_exists($row, 'destination_point') ? $row->destination_point : '')),
-                    trim((string) (property_exists($row, 'island') ? $row->island : '')),
-                    trim((string) (property_exists($row, 'city') ? $row->city : '')),
-                    trim((string) (property_exists($row, 'atoll') ? $row->atoll : '')),
-                ];
-
-                foreach ($candidates as $candidate) {
-                    if ($candidate === '') {
-                        continue;
-                    }
-
-                    $transportDestinationMap[strtolower($candidate)] = $candidate;
-                }
-            }
-
-            if (!empty($transportDestinationMap)) {
-                natcasesort($transportDestinationMap);
-                $homeTransportDestinationOptions = collect(array_values($transportDestinationMap))->values();
-            }
+        if (!empty($transportDestinationMap)) {
+            natcasesort($transportDestinationMap);
+            $homeTransportDestinationOptions = collect(array_values($transportDestinationMap))->values();
         }
 
         $resolveDirectMediaUrl = static function ($media): ?string {
@@ -1825,13 +1752,11 @@ Route::get('/', function () {
             return trim((string) ($property->atoll ?? ''));
         };
 
-        if (Schema::hasColumn('vendor_properties', 'listing_category')) {
-            $categoryCounts = DB::table('vendor_properties')
-                ->where('status', 'active')
-                ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'))
-                ->selectRaw("REPLACE(LOWER(listing_category), '-', '_') as category_key, COUNT(*) as total")
-                ->groupBy('category_key')
-                ->pluck('total', 'category_key');
+        if ($allProperties->isNotEmpty()) {
+            $categoryCounts = $allProperties
+                ->groupBy(static fn ($property) => str_replace('-', '_', strtolower(trim((string) ($property->listing_category ?? '')))))
+                ->filter(static fn ($group, $key) => $key !== '')
+                ->map(static fn ($group) => $group->count());
 
             $normalizeHomeCategoryKey = static fn (?string $value): string => str_replace('-', '_', strtolower(trim((string) $value)));
 
@@ -2005,24 +1930,8 @@ Route::get('/', function () {
             ];
         }
 
-        $reviewColumns = ['review_score', 'rating_average', 'average_rating', 'rating'];
-        $popularityColumns = ['bookings_count', 'total_bookings', 'wishlist_count', 'view_count'];
-        $sortColumn = null;
-        foreach (array_merge($reviewColumns, $popularityColumns) as $column) {
-            if (Schema::hasColumn('vendor_properties', $column)) {
-                $sortColumn = $column;
-                break;
-            }
-        }
-
-        if ($sortColumn !== null) {
-            $lovedRows = DB::table('vendor_properties')
-                ->where('status', 'active')
-                ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'))
-                ->orderByDesc($sortColumn)
-                ->orderByDesc('updated_at')
-                ->limit(120)
-                ->get();
+        {
+            $lovedRows = $allProperties->sortByDesc('updated_at')->take(120)->values();
 
             if ($lovedRows->isNotEmpty()) {
                 $lovedDestinationCards = [];
@@ -2036,11 +1945,10 @@ Route::get('/', function () {
                     }
 
                     $seenLovedDestinations[$destinationKey] = true;
-                    $score = (string) ($property->{$sortColumn} ?? '0');
                     $propertyId = (int) ($property->id ?? 0);
                     $lovedDestinationCards[] = [
                         'title' => $location,
-                        'subtitle' => 'Score ' . $score,
+                        'subtitle' => 'Popular Destination',
                         'url' => '/catalog/accommodation?q=' . urlencode($location),
                         'image_url' => $resolvePropertyImage($propertyId),
                         'fallback_image_url' => $resolvePropertyFallbackImage($propertyId),
@@ -3725,15 +3633,13 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     $islandOptions = collect();
     $transportDestinationOptions = collect();
 
-    if (Schema::hasTable('vendor_properties')) {
-        // Route group migration step 1:
-        // keep vendor_properties as source while routing reads through a compatibility layer
-        // that can merge dedicated-table values and emit parity diagnostics.
+    $categoryTable = \App\Support\VendorPropertyCompatibilityReader::categoryTableNameFor($dbCategoryKey);
+    {
         $propertiesQuery = VendorPropertyCompatibilityReader::categoryApprovedBaseQuery($dbCategoryKey);
 
         $searchColumns = [];
         foreach (['name', 'listing_name', 'atoll', 'island', 'city', 'description', 'listing_details', 'amenities', 'facilities', 'pickup_location', 'dropoff_location', 'origin_point', 'destination_point'] as $candidateColumn) {
-            if (Schema::hasColumn('vendor_properties', $candidateColumn)) {
+            if (Schema::hasColumn($categoryTable, $candidateColumn)) {
                 $searchColumns[] = $candidateColumn;
             }
         }
@@ -3750,17 +3656,17 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             });
         }
 
-        if ($atollFilter !== '' && Schema::hasColumn('vendor_properties', 'atoll')) {
+        if ($atollFilter !== '' && Schema::hasColumn($categoryTable, 'atoll')) {
             $propertiesQuery->whereRaw('LOWER(atoll) = ?', [strtolower($atollFilter)]);
         }
 
-        if ($effectiveIslandFilter !== '' && Schema::hasColumn('vendor_properties', 'island')) {
+        if ($effectiveIslandFilter !== '' && Schema::hasColumn($categoryTable, 'island')) {
             $propertiesQuery->whereRaw('LOWER(island) = ?', [strtolower($effectiveIslandFilter)]);
         }
 
         $originSearchColumns = [];
         foreach (['pickup_location', 'origin_point', 'island', 'city', 'atoll'] as $candidateColumn) {
-            if (Schema::hasColumn('vendor_properties', $candidateColumn)) {
+            if (Schema::hasColumn($categoryTable, $candidateColumn)) {
                 $originSearchColumns[] = $candidateColumn;
             }
         }
@@ -3779,7 +3685,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
 
         $destinationSearchColumns = [];
         foreach (['dropoff_location', 'destination_point', 'island', 'city', 'atoll'] as $candidateColumn) {
-            if (Schema::hasColumn('vendor_properties', $candidateColumn)) {
+            if (Schema::hasColumn($categoryTable, $candidateColumn)) {
                 $destinationSearchColumns[] = $candidateColumn;
             }
         }
@@ -3796,7 +3702,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             });
         }
 
-        if ($dbCategoryKey !== 'accommodation' && Schema::hasColumn('vendor_properties', 'base_price')) {
+        if ($dbCategoryKey !== 'accommodation' && Schema::hasColumn($categoryTable, 'base_price')) {
             if ($minPrice > 0) {
                 $propertiesQuery->where('base_price', '>=', $minPrice);
             }
@@ -3809,9 +3715,9 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         $bookedColumns = ['bookings_count', 'total_bookings'];
         $reviewColumns = ['review_score', 'rating_average', 'average_rating', 'rating'];
 
-        $firstExistingColumn = static function (array $columns): ?string {
+        $firstExistingColumn = static function (array $columns) use ($categoryTable): ?string {
             foreach ($columns as $column) {
-                if (Schema::hasColumn('vendor_properties', $column)) {
+                if (Schema::hasColumn($categoryTable, $column)) {
                     return $column;
                 }
             }
@@ -3835,7 +3741,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         if ($amenityKeywords->isNotEmpty()) {
             $amenitySearchColumns = [];
             foreach (['amenities', 'facilities', 'listing_details', 'description', 'name', 'listing_name'] as $candidateColumn) {
-                if (Schema::hasColumn('vendor_properties', $candidateColumn)) {
+                if (Schema::hasColumn($categoryTable, $candidateColumn)) {
                     $amenitySearchColumns[] = $candidateColumn;
                 }
             }
@@ -3862,12 +3768,12 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         if ($availabilityOnly) {
             $availabilityBooleanColumns = [];
             foreach (['is_available', 'available', 'is_bookable', 'is_active_listing'] as $candidateColumn) {
-                if (Schema::hasColumn('vendor_properties', $candidateColumn)) {
+                if (Schema::hasColumn($categoryTable, $candidateColumn)) {
                     $availabilityBooleanColumns[] = $candidateColumn;
                 }
             }
 
-            $availabilityStatusColumn = Schema::hasColumn('vendor_properties', 'availability_status') ? 'availability_status' : null;
+            $availabilityStatusColumn = Schema::hasColumn($categoryTable, 'availability_status') ? 'availability_status' : null;
 
             if (!empty($availabilityBooleanColumns) || $availabilityStatusColumn !== null) {
                 $propertiesQuery->where(function ($query) use ($availabilityBooleanColumns, $availabilityStatusColumn) {
@@ -3900,9 +3806,9 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             $propertiesQuery->whereRaw($distanceSql . ' <= ?', [$userLat, $userLng, $userLat, $distanceKm]);
         }
 
-        if ($sort === 'price_low_high' && $dbCategoryKey !== 'accommodation' && Schema::hasColumn('vendor_properties', 'base_price')) {
+        if ($sort === 'price_low_high' && $dbCategoryKey !== 'accommodation' && Schema::hasColumn($categoryTable, 'base_price')) {
             $propertiesQuery->orderBy('base_price');
-        } elseif ($sort === 'price_high_low' && $dbCategoryKey !== 'accommodation' && Schema::hasColumn('vendor_properties', 'base_price')) {
+        } elseif ($sort === 'price_high_low' && $dbCategoryKey !== 'accommodation' && Schema::hasColumn($categoryTable, 'base_price')) {
             $propertiesQuery->orderByDesc('base_price');
         } elseif ($sort === 'distance_nearest' && $latitudeColumn !== null && $longitudeColumn !== null && $userLat !== 0.0 && $userLng !== 0.0) {
             $distanceSql = '(6371 * acos(least(1, greatest(-1, cos(radians(?)) * cos(radians(' . $latitudeColumn . ')) * cos(radians(' . $longitudeColumn . ') - radians(?)) + sin(radians(?)) * sin(radians(' . $latitudeColumn . '))))))';
@@ -3923,18 +3829,6 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             ->map(static fn ($id) => (int) $id)
             ->filter(static fn (int $id) => $id > 0)
             ->values();
-
-        // Phase 2 source-of-truth: accommodation reads from dedicated category table.
-        if ($dbCategoryKey === 'accommodation' && $propertyIds->isNotEmpty() && Schema::hasTable('vendor_accommodation_listings')) {
-            $dedicatedAccommodationRows = VendorPropertyCompatibilityReader::loadAccommodationRows($propertyIds);
-            if ($dedicatedAccommodationRows->isNotEmpty()) {
-                $catalogProperties = VendorPropertyCompatibilityReader::mergeAccommodationFromDedicated(
-                    $catalogProperties,
-                    $dedicatedAccommodationRows,
-                    'catalog'
-                );
-            }
-        }
 
         // For accommodation, override base_price with the cheapest valid room price.
         // Room pricing may come from legacy vendor_property_room_categories or accommodation_rooms.
@@ -4123,43 +4017,42 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         $atollOptions = VendorPropertyCompatibilityReader::distinctOptionValues($dbCategoryKey, 'atoll', 120);
         $islandOptions = VendorPropertyCompatibilityReader::distinctOptionValues($dbCategoryKey, 'island', 120);
 
-        if (Schema::hasColumn('vendor_properties', 'listing_category')) {
+        {
             $transportDestinationMap = [];
-            $transportColumns = [];
-            foreach (['pickup_location', 'dropoff_location', 'origin_point', 'destination_point', 'island', 'city', 'atoll'] as $candidateColumn) {
-                if (Schema::hasColumn('vendor_properties', $candidateColumn)) {
-                    $transportColumns[] = $candidateColumn;
+            $transportLocationColumns = ['pickup_location', 'dropoff_location', 'origin_point', 'destination_point', 'island', 'city', 'atoll'];
+
+            foreach (['vendor_marine_transport_listings', 'vendor_land_transport_listings'] as $transportTable) {
+                if (!Schema::hasTable($transportTable)) {
+                    continue;
                 }
-            }
 
-            if (empty($transportColumns)) {
-                $transportColumns = ['listing_category'];
-            }
+                $transportSelectCols = array_values(array_filter(
+                    $transportLocationColumns,
+                    static fn ($col) => Schema::hasColumn($transportTable, $col)
+                ));
 
-            $transportRows = DB::table('vendor_properties')
-                ->where('status', 'active')
-                ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'))
-                ->whereRaw("LOWER(REPLACE(listing_category, '-', '_')) IN (?, ?)", ['marine_transport', 'land_transport'])
-                ->select($transportColumns)
-                ->limit(2000)
-                ->get();
+                if (empty($transportSelectCols)) {
+                    continue;
+                }
 
-            foreach ($transportRows as $row) {
-                $candidates = [
-                    trim((string) (property_exists($row, 'pickup_location') ? $row->pickup_location : '')),
-                    trim((string) (property_exists($row, 'dropoff_location') ? $row->dropoff_location : '')),
-                    trim((string) (property_exists($row, 'origin_point') ? $row->origin_point : '')),
-                    trim((string) (property_exists($row, 'destination_point') ? $row->destination_point : '')),
-                    trim((string) (property_exists($row, 'island') ? $row->island : '')),
-                    trim((string) (property_exists($row, 'city') ? $row->city : '')),
-                    trim((string) (property_exists($row, 'atoll') ? $row->atoll : '')),
-                ];
+                $transportRows = DB::table($transportTable)
+                    ->where('status', 'active')
+                    ->when(Schema::hasColumn($transportTable, 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'))
+                    ->select($transportSelectCols)
+                    ->limit(2000)
+                    ->get();
 
-                foreach ($candidates as $candidate) {
-                    if ($candidate === '') {
-                        continue;
+                foreach ($transportRows as $row) {
+                    foreach ($transportLocationColumns as $col) {
+                        if (!property_exists($row, $col)) {
+                            continue;
+                        }
+                        $val = trim((string) ($row->{$col} ?? ''));
+                        if ($val === '') {
+                            continue;
+                        }
+                        $transportDestinationMap[strtolower($val)] = $val;
                     }
-                    $transportDestinationMap[strtolower($candidate)] = $candidate;
                 }
             }
 
@@ -4227,16 +4120,14 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
 });
 
 Route::get('/property/{property}', function (Request $request, int $property) {
-    if (!Schema::hasTable('vendor_properties')) {
+    $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById($property);
+
+    if (!$propertyRow) {
         abort(404);
     }
 
-    $propertyRow = DB::table('vendor_properties')
-        ->where('id', $property)
-        ->where('status', 'active')
-        ->first();
-
-    if (!$propertyRow) {
+    $listingStatus = strtolower(trim((string) ($propertyRow->status ?? 'inactive')));
+    if ($listingStatus !== 'active') {
         abort(404);
     }
 
@@ -4374,10 +4265,9 @@ Route::get('/property/{property}', function (Request $request, int $property) {
         ->unique()
         ->values();
 
-    $reviewColumn = collect(['review_score', 'rating_average', 'average_rating', 'rating'])
-        ->first(static fn ($column) => Schema::hasColumn('vendor_properties', $column));
-    $reviewCountColumn = collect(['review_count', 'rating_count', 'total_reviews'])
-        ->first(static fn ($column) => Schema::hasColumn('vendor_properties', $column));
+    // No review/rating columns exist on category tables; ratings come from review tables below.
+    $reviewColumn = null;
+    $reviewCountColumn = null;
 
     $guestReviews = collect();
     $reviewTableCandidates = [
@@ -4464,156 +4354,51 @@ Route::get('/property/{property}', function (Request $request, int $property) {
     }
     $nearbyRadiusKm = max(1.0, min(200.0, $nearbyRadiusKm));
     $nearbyUsesCoordinateRadius = false;
-    if (Schema::hasTable('vendor_properties')) {
-        $propertyColumns = Schema::getColumnListing('vendor_properties');
-        $coordLatCandidates = ['map_latitude', 'latitude', 'lat', 'location_lat', 'geo_lat'];
-        $coordLngCandidates = ['map_longitude', 'longitude', 'lng', 'location_lng', 'geo_lng'];
-        $availableCoordColumns = array_values(array_unique(array_filter(array_merge($coordLatCandidates, $coordLngCandidates), static fn ($column) => in_array($column, $propertyColumns, true))));
-
-        $normalizeCoordinate = static function ($value, float $min, float $max): ?float {
-            if ($value === null) {
-                return null;
-            }
-
-            $raw = trim(str_replace(',', '.', (string) $value));
-            if ($raw === '' || !is_numeric($raw)) {
-                return null;
-            }
-
-            $parsed = (float) $raw;
-            if ($parsed < $min || $parsed > $max) {
-                return null;
-            }
-
-            return $parsed;
-        };
-
-        $pickCoordinate = static function ($row, array $candidates, callable $normalize, float $min, float $max): ?float {
-            foreach ($candidates as $column) {
-                if (!is_object($row) || !property_exists($row, $column)) {
-                    continue;
-                }
-
-                $value = $normalize($row->{$column}, $min, $max);
-                if ($value !== null) {
-                    return $value;
-                }
-            }
-
-            return null;
-        };
-
-        $distanceKmBetween = static function (float $lat1, float $lng1, float $lat2, float $lng2): float {
-            $earthRadius = 6371.0;
-            $latFrom = deg2rad($lat1);
-            $lngFrom = deg2rad($lng1);
-            $latTo = deg2rad($lat2);
-            $lngTo = deg2rad($lng2);
-
-            $latDelta = $latTo - $latFrom;
-            $lngDelta = $lngTo - $lngFrom;
-
-            $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) + cos($latFrom) * cos($latTo) * pow(sin($lngDelta / 2), 2)));
-
-            return $earthRadius * $angle;
-        };
-
-        $sourceLat = $pickCoordinate($propertyRow, $coordLatCandidates, $normalizeCoordinate, -90.0, 90.0);
-        $sourceLng = $pickCoordinate($propertyRow, $coordLngCandidates, $normalizeCoordinate, -180.0, 180.0);
-
-        $baseSelectColumns = array_values(array_filter([
-            'id',
-            'name',
-            in_array('base_price', $propertyColumns, true) ? 'base_price' : null,
-            in_array('currency', $propertyColumns, true) ? 'currency' : null,
-            in_array('listing_category', $propertyColumns, true) ? 'listing_category' : null,
-            in_array('city', $propertyColumns, true) ? 'city' : null,
-            in_array('island', $propertyColumns, true) ? 'island' : null,
-            in_array('atoll', $propertyColumns, true) ? 'atoll' : null,
-            in_array('updated_at', $propertyColumns, true) ? 'updated_at' : null,
-        ]));
-
-        $candidateRowsQuery = DB::table('vendor_properties')
-            ->select(array_values(array_unique(array_merge($baseSelectColumns, $availableCoordColumns))))
-            ->where('status', 'active')
-            ->where('id', '!=', (int) $propertyRow->id);
-
+    {
         $currentCategory = trim((string) ($propertyRow->listing_category ?? ''));
-        if ($currentCategory !== '' && in_array('listing_category', $propertyColumns, true)) {
-            $candidateRowsQuery->where('listing_category', $currentCategory);
-        }
+        $allCategoryListings = \App\Support\VendorPropertyCompatibilityReader::allActiveListings(500);
 
-        if (in_array('updated_at', $propertyColumns, true)) {
-            $candidateRowsQuery->orderByDesc('updated_at');
-        } else {
-            $candidateRowsQuery->orderByDesc('id');
-        }
-
-        $candidateRows = $candidateRowsQuery->limit(500)->get();
-
-        $preparedNearby = $candidateRows
-            ->map(function ($row) use ($pickCoordinate, $normalizeCoordinate, $coordLatCandidates, $coordLngCandidates, $sourceLat, $sourceLng, $distanceKmBetween) {
-                $lat = $pickCoordinate($row, $coordLatCandidates, $normalizeCoordinate, -90.0, 90.0);
-                $lng = $pickCoordinate($row, $coordLngCandidates, $normalizeCoordinate, -180.0, 180.0);
-                $distanceKm = null;
-
-                if ($sourceLat !== null && $sourceLng !== null && $lat !== null && $lng !== null) {
-                    $distanceKm = $distanceKmBetween($sourceLat, $sourceLng, $lat, $lng);
-                }
-
-                return [
-                    'id' => (int) ($row->id ?? 0),
-                    'name' => trim((string) ($row->name ?? 'Property')),
-                    'base_price' => (float) ($row->base_price ?? 0),
-                    'currency' => strtoupper(trim((string) ($row->currency ?? 'MVR'))),
-                    'city' => trim((string) ($row->city ?? '')),
-                    'island' => trim((string) ($row->island ?? '')),
-                    'atoll' => trim((string) ($row->atoll ?? '')),
-                    'lat' => $lat,
-                    'lng' => $lng,
-                    'distance_km' => $distanceKm,
-                    'url' => '/property/' . (int) ($row->id ?? 0),
-                ];
-            })
-            ->filter(static fn (array $item) => $item['id'] > 0 && $item['name'] !== '')
+        $candidateRows = $allCategoryListings
+            ->filter(static fn ($row) => $currentCategory === '' || ($row->listing_category ?? '') === $currentCategory)
+            ->filter(static fn ($row) => (int) ($row->id ?? 0) !== (int) $propertyRow->id)
             ->values();
 
-        if ($sourceLat !== null && $sourceLng !== null) {
-            $nearbyUsesCoordinateRadius = true;
-            $nearbyProperties = $preparedNearby
-                ->filter(static fn (array $item) => is_float($item['distance_km']) || is_int($item['distance_km']))
-                ->filter(fn (array $item) => (float) $item['distance_km'] <= $nearbyRadiusKm)
-                ->sortBy('distance_km')
-                ->take(6)
-                ->values();
-        }
+        $preparedNearby = $candidateRows->map(static function ($row) {
+            return [
+                'id' => (int) ($row->id ?? 0),
+                'name' => trim((string) ($row->name ?? 'Property')),
+                'base_price' => (float) ($row->base_price ?? 0),
+                'currency' => strtoupper(trim((string) ($row->currency ?? 'MVR'))),
+                'city' => trim((string) ($row->city ?? '')),
+                'island' => trim((string) ($row->island ?? '')),
+                'atoll' => trim((string) ($row->atoll ?? '')),
+                'lat' => null,
+                'lng' => null,
+                'distance_km' => null,
+                'url' => '/property/' . (int) ($row->id ?? 0),
+            ];
+        })->filter(static fn (array $item) => $item['id'] > 0 && $item['name'] !== '')->values();
 
-        if (!$nearbyUsesCoordinateRadius && $nearbyProperties->isEmpty()) {
-            $sourceIsland = strtolower(trim((string) ($propertyRow->island ?? '')));
-            $sourceCity = strtolower(trim((string) ($propertyRow->city ?? '')));
-            $sourceAtoll = strtolower(trim((string) ($propertyRow->atoll ?? '')));
+        $sourceIsland = strtolower(trim((string) ($propertyRow->island ?? '')));
+        $sourceCity = strtolower(trim((string) ($propertyRow->city ?? '')));
+        $sourceAtoll = strtolower(trim((string) ($propertyRow->atoll ?? '')));
 
-            $nearbyProperties = $preparedNearby
-                ->filter(static function (array $item) use ($sourceIsland, $sourceCity, $sourceAtoll): bool {
-                    $itemIsland = strtolower(trim((string) ($item['island'] ?? '')));
-                    $itemCity = strtolower(trim((string) ($item['city'] ?? '')));
-                    $itemAtoll = strtolower(trim((string) ($item['atoll'] ?? '')));
+        $nearbyByLocation = $preparedNearby
+            ->filter(static function (array $item) use ($sourceIsland, $sourceCity, $sourceAtoll): bool {
+                $itemIsland = strtolower(trim((string) ($item['island'] ?? '')));
+                $itemCity = strtolower(trim((string) ($item['city'] ?? '')));
+                $itemAtoll = strtolower(trim((string) ($item['atoll'] ?? '')));
 
-                    $matchesIsland = $sourceIsland !== '' && $itemIsland !== '' && $sourceIsland === $itemIsland;
-                    $matchesCity = $sourceCity !== '' && $itemCity !== '' && $sourceCity === $itemCity;
-                    $matchesAtoll = $sourceAtoll !== '' && $itemAtoll !== '' && $sourceAtoll === $itemAtoll;
+                $matchesIsland = $sourceIsland !== '' && $itemIsland !== '' && $sourceIsland === $itemIsland;
+                $matchesCity = $sourceCity !== '' && $itemCity !== '' && $sourceCity === $itemCity;
+                $matchesAtoll = $sourceAtoll !== '' && $itemAtoll !== '' && $sourceAtoll === $itemAtoll;
 
-                    return $matchesIsland || $matchesCity || $matchesAtoll;
-                })
-                ->take(6)
-                ->values();
-        }
+                return $matchesIsland || $matchesCity || $matchesAtoll;
+            })
+            ->take(6)
+            ->values();
 
-        if (!$nearbyUsesCoordinateRadius && $nearbyProperties->isEmpty()) {
-            $nearbyProperties = $preparedNearby
-                ->take(6)
-                ->values();
-        }
+        $nearbyProperties = $nearbyByLocation->isNotEmpty() ? $nearbyByLocation : $preparedNearby->take(6)->values();
 
         $nearbyPropertyIds = $nearbyProperties->pluck('id')->filter(static fn ($id) => (int) $id > 0)->map(static fn ($id) => (int) $id)->values();
         $nearbyPropertyThumbById = collect();
@@ -4687,9 +4472,7 @@ Route::get('/room/{room}', function (Request $request, int $room) {
         abort(404);
     }
 
-    $propertyRow = Schema::hasTable('vendor_properties')
-        ? DB::table('vendor_properties')->where('id', (int) ($roomRow->vendor_property_id ?? 0))->first()
-        : null;
+    $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById((int) ($roomRow->vendor_property_id ?? 0));
 
     if (!$propertyRow) {
         abort(404);
@@ -4848,9 +4631,7 @@ Route::post('/booking/reserve', function (Request $request) {
         'primary_mobile' => 'primary guest mobile',
     ]);
 
-    $propertyRow = Schema::hasTable('vendor_properties')
-        ? DB::table('vendor_properties')->where('id', (int) $payload['property_id'])->first()
-        : null;
+    $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById((int) $payload['property_id']);
     $roomRow = Schema::hasTable('vendor_property_room_categories')
         ? DB::table('vendor_property_room_categories')->where('id', (int) $payload['room_id'])->first()
         : null;
@@ -4860,7 +4641,7 @@ Route::post('/booking/reserve', function (Request $request) {
     }
 
     // Listing-level publish gate: only approved listings can accept bookings.
-    if (Schema::hasColumn('vendor_properties', 'listing_moderation_status')) {
+    if (isset($propertyRow->listing_moderation_status)) {
         $listingModerationStatus = strtolower(trim((string) ($propertyRow->listing_moderation_status ?? 'draft')));
         if ($listingModerationStatus !== 'approved') {
             return back()->withErrors(['booking' => 'This listing is not yet available for bookings. It is currently under review or pending approval.']);
@@ -5115,20 +4896,18 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
 
     $categoryFields = collect($categoryFieldMap[$categoryKey] ?? [])->values();
 
-    if (!Schema::hasTable('vendor_properties')) {
+    $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById($property);
+    if (!$propertyRow) {
         abort(404);
     }
 
-    $propertyQuery = DB::table('vendor_properties')
-        ->where('id', $property)
-        ->where('status', 'active');
-
-    if (Schema::hasColumn('vendor_properties', 'listing_category')) {
-        $propertyQuery->whereRaw('LOWER(listing_category) = ?', [$dbCategoryKey]);
+    $listingStatus = strtolower(trim((string) ($propertyRow->status ?? 'inactive')));
+    if ($listingStatus !== 'active') {
+        abort(404);
     }
 
-    $propertyRow = $propertyQuery->first();
-    if (!$propertyRow) {
+    $listingCategory = strtolower(trim(str_replace('-', '_', (string) ($propertyRow->listing_category ?? ''))));
+    if ($listingCategory !== '' && $listingCategory !== $dbCategoryKey) {
         abort(404);
     }
 
@@ -5417,28 +5196,26 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'primary_mobile' => 'primary guest mobile',
     ], $categoryFieldLabels));
 
-    if (!Schema::hasTable('vendor_properties')) {
-        abort(404);
-    }
-
     $categoryKey = strtolower(trim((string) $payload['category_key']));
     // Normalise hyphenated keys (from URL) to underscored DB values
     $dbCategoryKey = str_replace('-', '_', $categoryKey);
-    $propertyQuery = DB::table('vendor_properties')
-        ->where('id', (int) $payload['property_id'])
-        ->where('status', 'active');
-
-    if (Schema::hasColumn('vendor_properties', 'listing_category')) {
-        $propertyQuery->whereRaw('LOWER(listing_category) = ?', [$dbCategoryKey]);
-    }
-
-    $propertyRow = $propertyQuery->first();
+    $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById((int) $payload['property_id']);
     if (!$propertyRow) {
         abort(404);
     }
 
+    $listingStatus = strtolower(trim((string) ($propertyRow->status ?? 'inactive')));
+    if ($listingStatus !== 'active') {
+        abort(404);
+    }
+
+    $listingCategory = strtolower(trim(str_replace('-', '_', (string) ($propertyRow->listing_category ?? ''))));
+    if ($listingCategory !== '' && $listingCategory !== $dbCategoryKey) {
+        abort(404);
+    }
+
     // Listing-level publish gate: only approved listings can accept bookings.
-    if (Schema::hasColumn('vendor_properties', 'listing_moderation_status')) {
+    if (isset($propertyRow->listing_moderation_status)) {
         $listingModerationStatus = strtolower(trim((string) ($propertyRow->listing_moderation_status ?? 'draft')));
         if ($listingModerationStatus !== 'approved') {
             return back()->withErrors(['booking' => 'This listing is not yet available for bookings. It is currently under review or pending approval.']);
@@ -5669,9 +5446,7 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
     }
 
     $propertyId = (int) $request->query('property_id', (int) ($reservationRow->vendor_property_id ?? 0));
-    $propertyRow = Schema::hasTable('vendor_properties')
-        ? DB::table('vendor_properties')->where('id', $propertyId)->first()
-        : null;
+    $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById($propertyId);
 
     $roomId = (int) $request->query('room_id', 0);
     $roomName = '';
@@ -5969,9 +5744,7 @@ Route::get('/booking/payment/hosted/{reservation}', function (Request $request, 
         abort(404);
     }
 
-    $propertyRow = Schema::hasTable('vendor_properties')
-        ? DB::table('vendor_properties')->where('id', (int) ($reservationRow->vendor_property_id ?? 0))->first()
-        : null;
+    $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById((int) ($reservationRow->vendor_property_id ?? 0));
 
     return view('booking-payment-hosted', [
         'reservation' => $reservationRow,
@@ -6048,13 +5821,13 @@ Route::get('/customer', function () {
     $propertyMediaByProperty = collect();
     $roomMediaByRoom = collect();
 
-    if (Schema::hasTable('vendor_properties')) {
-        $customerProperties = DB::table('vendor_properties')
-            ->where('status', 'active')
-            ->orderByDesc('updated_at')
-            ->limit(24)
-            ->get();
-    }
+    $customerProperties = VendorPropertyCompatibilityReader::allActiveListings(240)
+        ->sortByDesc(static function ($property) {
+            $updatedAt = strtotime((string) ($property->updated_at ?? ''));
+            return $updatedAt !== false ? $updatedAt : 0;
+        })
+        ->take(24)
+        ->values();
 
     $propertyIds = $customerProperties->pluck('id')->map(static fn ($id) => (int) $id)->filter(static fn (int $id) => $id > 0)->values();
 
@@ -6187,20 +5960,29 @@ Route::get('/customer', function () {
             ->get(['id', 'vendor_property_id', 'start_at', 'end_at', 'status', 'payment_status', 'total_amount', 'currency', 'notes', 'created_at']);
 
         $propertyNamesById = collect();
-        if (Schema::hasTable('vendor_properties')) {
-            $reservationPropertyIds = $reservationRows
-                ->pluck('vendor_property_id')
-                ->map(static fn ($id) => (int) $id)
-                ->filter(static fn (int $id) => $id > 0)
-                ->unique()
-                ->values();
+        $reservationPropertyIds = $reservationRows
+            ->pluck('vendor_property_id')
+            ->map(static fn ($id) => (int) $id)
+            ->filter(static fn (int $id) => $id > 0)
+            ->unique()
+            ->values();
 
-            if ($reservationPropertyIds->isNotEmpty()) {
-                $propertyNamesById = DB::table('vendor_properties')
-                    ->whereIn('id', $reservationPropertyIds->all())
-                    ->get(['id', 'name', 'listing_category'])
-                    ->keyBy('id');
-            }
+        if ($reservationPropertyIds->isNotEmpty()) {
+            $propertyNamesById = $reservationPropertyIds
+                ->map(static function (int $propertyId) {
+                    $row = VendorPropertyCompatibilityReader::loadPropertyById($propertyId);
+                    if (!$row) {
+                        return null;
+                    }
+
+                    return (object) [
+                        'id' => $propertyId,
+                        'name' => (string) ($row->name ?? ''),
+                        'listing_category' => (string) ($row->listing_category ?? ''),
+                    ];
+                })
+                ->filter()
+                ->keyBy('id');
         }
 
         $today = now()->startOfDay();
@@ -7116,13 +6898,17 @@ Route::get('/admin', function (Request $request) {
         $alerts->push('Finance moderation tables are missing. Run migrations to enable frontend commission controls.');
     }
 
-    // Listing moderation data (pending_review listings for admin panel)
-    $pendingModerationListings = collect();
-    $listingModerationHistory = collect();
-    if (Schema::hasTable('vendor_properties') && Schema::hasColumn('vendor_properties', 'listing_moderation_status')) {
+    // Listing moderation data — read from dedicated category tables (primary source),
+    // falling back to vendor_properties if dedicated tables lack moderation columns.
+    $pendingModerationListings = \App\Support\VendorPropertyCompatibilityReader::pendingModerationListings(100);
+    $listingModerationHistory = \App\Support\VendorPropertyCompatibilityReader::listingModerationHistory(80);
+
+    // Fallback: if dedicated tables have no moderation columns yet, read from vendor_properties.
+    if ($pendingModerationListings->isEmpty()
+        && Schema::hasTable('vendor_properties')
+        && Schema::hasColumn('vendor_properties', 'listing_moderation_status')) {
         $pendingModerationListings = DB::table('vendor_properties as vp')
             ->leftJoin('users as vu', 'vu.id', '=', 'vp.vendor_user_id')
-            ->leftJoin('users as approver', 'approver.id', '=', 'vp.listing_approved_by_user_id')
             ->where('vp.listing_moderation_status', 'pending_review')
             ->orderBy('vp.listing_submitted_for_review_at')
             ->limit(100)
@@ -7139,7 +6925,10 @@ Route::get('/admin', function (Request $request) {
                 'vu.email as vendor_email',
                 'vu.portal_vendor_id',
             ]);
-
+    }
+    if ($listingModerationHistory->isEmpty()
+        && Schema::hasTable('vendor_properties')
+        && Schema::hasColumn('vendor_properties', 'listing_moderation_status')) {
         $listingModerationHistory = DB::table('vendor_properties as vp')
             ->leftJoin('users as vu', 'vu.id', '=', 'vp.vendor_user_id')
             ->leftJoin('users as approver', 'approver.id', '=', 'vp.listing_approved_by_user_id')
@@ -7518,7 +7307,19 @@ Route::post('/portal/admin/listing-options/upsert', function (Request $request) 
     }
 
     $validated = $request->validate([
-        'option_type' => ['required', Rule::in(['transport_mode', 'accommodation_facility', 'room_amenity'])],
+        'option_type' => ['required', Rule::in([
+            'transport_mode',
+            'accommodation_facility',
+            'property_amenity',
+            'property_feature',
+            'room_amenity',
+            'bathroom_amenity',
+            'room_bed_type',
+            'excursion_type',
+            'restaurant_meal_service',
+            'vehicle_rental_type',
+            'transfer_option',
+        ])],
         'option_value' => ['required', 'string', 'max:120'],
         'option_label' => ['required', 'string', 'max:190'],
         'option_group' => ['nullable', 'string', 'max:80'],
@@ -12107,34 +11908,30 @@ Route::post('/portal/admin/listings/{listing}/approve', function (Request $reque
         abort(403);
     }
 
-    if (!Schema::hasTable('vendor_properties') || !Schema::hasColumn('vendor_properties', 'listing_moderation_status')) {
-        return back()->withErrors(['listing' => 'Listing moderation columns are missing. Run migrations first.']);
-    }
-
-    $listingRow = DB::table('vendor_properties')->where('id', $listing)->first();
+    $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing);
     if (!$listingRow) {
         return back()->withErrors(['listing' => 'Listing not found.']);
     }
 
-    if ((string) ($listingRow->listing_moderation_status ?? '') !== 'pending_review') {
+    $currentStatus = strtolower(trim((string) ($listingRow->listing_moderation_status ?? '')));
+    if ($currentStatus !== 'pending_review') {
         return back()->withErrors(['listing' => 'Only listings in pending_review status can be approved.']);
     }
 
     $adminNotes = trim((string) ($request->input('admin_notes') ?? ''));
     $adminUserId = (int) session('portal_admin_user_id');
+    $categoryHint = vendorPortalCanonicalCategory((string) ($listingRow->listing_category ?? ''));
 
-    DB::table('vendor_properties')
-        ->where('id', $listing)
-        ->update([
-            'listing_moderation_status' => 'approved',
-            'listing_admin_notes' => $adminNotes ?: null,
-            'listing_approved_at' => now(),
-            'listing_approved_by_user_id' => $adminUserId,
-            'updated_at' => now(),
-        ]);
+    \App\Support\VendorPropertyCompatibilityReader::updateModerationStatus(
+        $listing,
+        'approved',
+        $adminNotes ?: null,
+        $adminUserId,
+        $categoryHint
+    );
 
     portalAdminAuditLog('listing.approved', [
-        'target_identifier' => (string) ($listingRow->name ?? $listingRow->listing_name ?? ('listing_id:' . $listing)),
+        'target_identifier' => (string) ($listingRow->listing_name ?? $listingRow->name ?? ('listing_id:' . $listing)),
         'target_role' => 'VENDOR',
         'listing_id' => $listing,
         'vendor_id' => (int) ($listingRow->vendor_user_id ?? 0),
@@ -12148,37 +11945,33 @@ Route::post('/portal/admin/listings/{listing}/reject', function (Request $reques
         abort(403);
     }
 
-    if (!Schema::hasTable('vendor_properties') || !Schema::hasColumn('vendor_properties', 'listing_moderation_status')) {
-        return back()->withErrors(['listing' => 'Listing moderation columns are missing. Run migrations first.']);
-    }
-
     $validated = $request->validate([
         'admin_notes' => ['required', 'string', 'max:2000'],
     ]);
 
-    $listingRow = DB::table('vendor_properties')->where('id', $listing)->first();
+    $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing);
     if (!$listingRow) {
         return back()->withErrors(['listing' => 'Listing not found.']);
     }
 
-    if (!in_array((string) ($listingRow->listing_moderation_status ?? ''), ['pending_review', 'approved'], true)) {
+    $currentStatus = strtolower(trim((string) ($listingRow->listing_moderation_status ?? '')));
+    if (!in_array($currentStatus, ['pending_review', 'approved'], true)) {
         return back()->withErrors(['listing' => 'Only pending_review or approved listings can be rejected.']);
     }
 
     $adminUserId = (int) session('portal_admin_user_id');
+    $categoryHint = vendorPortalCanonicalCategory((string) ($listingRow->listing_category ?? ''));
 
-    DB::table('vendor_properties')
-        ->where('id', $listing)
-        ->update([
-            'listing_moderation_status' => 'rejected',
-            'listing_admin_notes' => trim((string) $validated['admin_notes']),
-            'listing_approved_at' => now(),
-            'listing_approved_by_user_id' => $adminUserId,
-            'updated_at' => now(),
-        ]);
+    \App\Support\VendorPropertyCompatibilityReader::updateModerationStatus(
+        $listing,
+        'rejected',
+        trim((string) $validated['admin_notes']),
+        $adminUserId,
+        $categoryHint
+    );
 
     portalAdminAuditLog('listing.rejected', [
-        'target_identifier' => (string) ($listingRow->name ?? $listingRow->listing_name ?? ('listing_id:' . $listing)),
+        'target_identifier' => (string) ($listingRow->listing_name ?? $listingRow->name ?? ('listing_id:' . $listing)),
         'target_role' => 'VENDOR',
         'listing_id' => $listing,
         'vendor_id' => (int) ($listingRow->vendor_user_id ?? 0),

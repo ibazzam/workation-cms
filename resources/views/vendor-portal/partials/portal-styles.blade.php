@@ -295,6 +295,27 @@
             margin-top: 0;
         }
 
+        .page-listing-form .portal-shell {
+            grid-template-columns: 208px minmax(0, 1fr);
+            gap: 8px;
+        }
+
+        .page-listing-form .ops-category-card {
+            padding: 8px;
+        }
+
+        .page-listing-form .ops-header {
+            margin-bottom: 8px;
+        }
+
+        .page-listing-form .ops-form {
+            padding: 8px;
+        }
+
+        .page-listing-form .listing-form-section {
+            padding: 12px;
+        }
+
         .portal-nav a,
         .nav-item-link,
         .nav-sub-link {
@@ -653,6 +674,111 @@
             gap: 7px;
             font-size: 0.82rem;
             color: #223b51;
+        }
+
+        .listing-form-stack {
+            display: grid;
+            gap: 14px;
+        }
+
+        .listing-form-section {
+            border: 1px solid #d7e0e6;
+            border-radius: 12px;
+            background: #fff;
+            padding: 14px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .listing-form-section-head {
+            display: grid;
+            gap: 4px;
+        }
+
+        .listing-form-section-head h4 {
+            margin: 0;
+            font-size: 0.98rem;
+            color: #19384f;
+        }
+
+        .listing-form-section-head p {
+            margin: 0;
+            color: #557186;
+            font-size: 0.82rem;
+            line-height: 1.5;
+        }
+
+        .listing-transfer-table {
+            display: grid;
+            gap: 8px;
+        }
+
+        .listing-transfer-head,
+        .listing-transfer-row {
+            display: grid;
+            grid-template-columns: minmax(220px, 1.4fr) repeat(4, minmax(120px, 1fr));
+            gap: 8px;
+            align-items: center;
+        }
+
+        .listing-transfer-head {
+            padding: 0 2px;
+            color: #587285;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .listing-transfer-row {
+            border: 1px solid #dce6ee;
+            border-radius: 10px;
+            padding: 10px;
+            background: #f9fcff;
+        }
+
+        .listing-transfer-option {
+            display: grid;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .listing-transfer-option label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+            font-size: 0.85rem;
+            color: #223b51;
+            text-transform: none;
+            letter-spacing: normal;
+            font-family: "Outfit", "Trebuchet MS", sans-serif;
+        }
+
+        .listing-transfer-option small {
+            color: #597386;
+            font-size: 0.76rem;
+            line-height: 1.4;
+        }
+
+        .listing-transfer-rate {
+            display: grid;
+            gap: 4px;
+        }
+
+        .listing-transfer-rate span {
+            color: #587285;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .listing-form-note {
+            margin: 0;
+            color: #587285;
+            font-size: 0.78rem;
+            line-height: 1.5;
         }
 
         .location-grid {
@@ -2055,6 +2181,14 @@
 
             .ops-grid,
             .ops-form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .listing-transfer-head {
+                display: none;
+            }
+
+            .listing-transfer-row {
                 grid-template-columns: 1fr;
             }
 

@@ -290,11 +290,14 @@ if (!function_exists('vendorPortalSyncCategoryListingRecord')) {
             'status' => $status,
             'location' => $location,
             'description' => $description,
-            'currency' => $currency,
             'max_guests' => $maxGuests,
             'details' => empty($details) ? null : json_encode($details),
             'updated_at' => now(),
         ];
+
+        if (Schema::hasColumn($tableName, 'currency')) {
+            $payload['currency'] = $currency;
+        }
 
         if (Schema::hasColumn($tableName, 'base_price')) {
             $payload['base_price'] = $basePrice;

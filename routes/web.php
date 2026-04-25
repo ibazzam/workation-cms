@@ -1429,6 +1429,47 @@ Route::get('/', function () {
             ->filter(static fn (int $id) => $id > 0)
             ->values();
 
+        // Phase 2 source-of-truth: hydrate accommodation rows from dedicated table.
+        if ($propertyIds->isNotEmpty() && Schema::hasTable('vendor_accommodation_listings')) {
+            $dedicatedAccommodationRows = DB::table('vendor_accommodation_listings')
+                ->whereIn('vendor_property_id', $propertyIds->all())
+                ->get(['vendor_property_id', 'name', 'status', 'location', 'description', 'base_price', 'currency', 'max_guests', 'details'])
+                ->keyBy(static fn ($row) => (int) ($row->vendor_property_id ?? 0));
+
+            if ($dedicatedAccommodationRows->isNotEmpty()) {
+                $allProperties = $allProperties->map(static function ($property) use ($dedicatedAccommodationRows) {
+                    $category = strtolower(trim((string) ($property->listing_category ?? '')));
+                    if ($category !== 'accommodation') {
+                        return $property;
+                    }
+
+                    $propertyId = (int) ($property->id ?? 0);
+                    $dedicated = $dedicatedAccommodationRows->get($propertyId);
+                    if (!$dedicated) {
+                        return $property;
+                    }
+
+                    foreach (['name', 'status', 'location', 'description', 'currency'] as $field) {
+                        if (isset($dedicated->{$field}) && trim((string) $dedicated->{$field}) !== '') {
+                            $property->{$field} = $dedicated->{$field};
+                        }
+                    }
+
+                    if (isset($dedicated->base_price) && is_numeric($dedicated->base_price)) {
+                        $property->base_price = (float) $dedicated->base_price;
+                    }
+                    if (isset($dedicated->max_guests) && is_numeric($dedicated->max_guests)) {
+                        $property->max_guests = (int) $dedicated->max_guests;
+                    }
+                    if (isset($dedicated->details) && trim((string) $dedicated->details) !== '') {
+                        $property->listing_details = (string) $dedicated->details;
+                    }
+
+                    return $property;
+                })->values();
+            }
+        }
+
         // Accommodation listings may now store room prices in meal-plan columns.
         // Hydrate property base_price from the lowest valid room price so home/category
         // cards always show a real "From" value.
@@ -3831,6 +3872,67 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             ->filter(static fn (int $id) => $id > 0)
             ->values();
 
+        // Phase 2 source-of-truth: accommodation reads from dedicated category table.
+        if ($dbCategoryKey === 'accommodation' && $propertyIds->isNotEmpty() && Schema::hasTable('vendor_accommodation_listings')) {
+            $dedicatedAccommodationRows = DB::table('vendor_accommodation_listings')
+                ->whereIn('vendor_property_id', $propertyIds->all())
+                ->get(['vendor_property_id', 'name', 'status', 'location', 'description', 'base_price', 'currency', 'max_guests', 'details'])
+                ->keyBy(static fn ($row) => (int) ($row->vendor_property_id ?? 0));
+
+            if ($dedicatedAccommodationRows->isNotEmpty()) {
+                $catalogProperties = $catalogProperties->map(static function ($property) use ($dedicatedAccommodationRows) {
+                    $propertyId = (int) ($property->id ?? 0);
+                    $dedicated = $dedicatedAccommodationRows->get($propertyId);
+                    if (!$dedicated) {
+                        return $property;
+                    }
+
+                    foreach (['name', 'status', 'location', 'description', 'currency'] as $field) {
+                        if (isset($dedicated->{$field}) && trim((string) $dedicated->{$field}) !== '') {
+                            $property->{$field} = $dedicated->{$field};
+                        }
+                    }
+
+                    if (isset($dedicated->base_price) && is_numeric($dedicated->base_price)) {
+                        $property->base_price = (float) $dedicated->base_price;
+                    }
+                    if (isset($dedicated->max_guests) && is_numeric($dedicated->max_guests)) {
+                        $property->max_guests = (int) $dedicated->max_guests;
+                    }
+                    if (isset($dedicated->details) && trim((string) $dedicated->details) !== '') {
+                        $property->listing_details = (string) $dedicated->details;
+                    }
+
+                    return $property;
+                })->values();
+
+                if ($minPrice > 0 || $maxPrice > 0) {
+                    $catalogProperties = $catalogProperties->filter(static function ($property) use ($minPrice, $maxPrice) {
+                        $price = (float) ($property->base_price ?? 0);
+                        if ($minPrice > 0 && $price < $minPrice) {
+                            return false;
+                        }
+                        if ($maxPrice > 0 && $price > $maxPrice) {
+                            return false;
+                        }
+                        return true;
+                    })->values();
+                }
+
+                if ($sort === 'price_low_high') {
+                    $catalogProperties = $catalogProperties->sortBy(static fn ($property) => (float) ($property->base_price ?? 0))->values();
+                } elseif ($sort === 'price_high_low') {
+                    $catalogProperties = $catalogProperties->sortByDesc(static fn ($property) => (float) ($property->base_price ?? 0))->values();
+                }
+
+                $propertyIds = $catalogProperties
+                    ->pluck('id')
+                    ->map(static fn ($id) => (int) $id)
+                    ->filter(static fn (int $id) => $id > 0)
+                    ->values();
+            }
+        }
+
         // For accommodation, override base_price with the cheapest valid room price.
         // Room pricing may come from legacy vendor_property_room_categories or accommodation_rooms.
         if ($dbCategoryKey === 'accommodation' && $propertyIds->isNotEmpty()) {
@@ -4129,6 +4231,31 @@ Route::get('/property/{property}', function (Request $request, int $property) {
 
     if (!$propertyRow) {
         abort(404);
+    }
+
+    $listingCategory = strtolower(trim((string) ($propertyRow->listing_category ?? '')));
+    if ($listingCategory === 'accommodation' && Schema::hasTable('vendor_accommodation_listings')) {
+        $dedicatedAccommodation = DB::table('vendor_accommodation_listings')
+            ->where('vendor_property_id', (int) $propertyRow->id)
+            ->first(['name', 'status', 'location', 'description', 'base_price', 'currency', 'max_guests', 'details']);
+
+        if ($dedicatedAccommodation) {
+            foreach (['name', 'status', 'location', 'description', 'currency'] as $field) {
+                if (isset($dedicatedAccommodation->{$field}) && trim((string) $dedicatedAccommodation->{$field}) !== '') {
+                    $propertyRow->{$field} = $dedicatedAccommodation->{$field};
+                }
+            }
+
+            if (isset($dedicatedAccommodation->base_price) && is_numeric($dedicatedAccommodation->base_price)) {
+                $propertyRow->base_price = (float) $dedicatedAccommodation->base_price;
+            }
+            if (isset($dedicatedAccommodation->max_guests) && is_numeric($dedicatedAccommodation->max_guests)) {
+                $propertyRow->max_guests = (int) $dedicatedAccommodation->max_guests;
+            }
+            if (isset($dedicatedAccommodation->details) && trim((string) $dedicatedAccommodation->details) !== '') {
+                $propertyRow->listing_details = (string) $dedicatedAccommodation->details;
+            }
+        }
     }
 
     $rooms = collect();

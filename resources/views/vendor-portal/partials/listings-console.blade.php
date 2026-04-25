@@ -48,7 +48,7 @@
                 <p class="ops-title">{{ $consoleTitleLabel }}</p>
                 @if ($forcedListingCategory !== '')
                     <div class="inline-actions">
-                        <a class="btn btn-primary" href="/vendor/listings/create/{{ $forcedListingCategory }}">Add {{ $consoleCategoryLabel }}</a>
+                        <a class="btn btn-primary" href="/vendor/listings/{{ $forcedListingCategory }}/create">Add {{ $consoleCategoryLabel }}</a>
                         <a class="btn btn-secondary" href="/vendor/reservations">Reservations</a>
                         <a class="btn btn-secondary" href="/vendor/pricing">Pricing</a>
                         <a class="btn btn-secondary" href="/vendor/billing">Billing</a>
@@ -317,7 +317,7 @@
                                                         <div class="listing-cell-actions">
                                                             <div class="listing-actions-compact">
                                                                 <div class="listing-actions-row">
-                                                                    <button class="btn btn-secondary" type="button" data-open-property-edit data-property-edit-id="{{ $propertyId }}" data-property-edit-category="{{ $editCategory }}">Edit</button>
+                                                                    <a class="btn btn-secondary" href="/vendor/listings/{{ $editCategory }}/{{ $propertyId }}/edit">Edit</a>
                                                                     <button class="btn btn-secondary" type="button" data-toggle-property-media="{{ $propertyId }}">Manage Media</button>
                                                                     @if ($categoryKey === 'accommodation')
                                                                         <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ $propertyId }}">Add Room</button>

@@ -290,12 +290,15 @@ if (!function_exists('vendorPortalSyncCategoryListingRecord')) {
             'status' => $status,
             'location' => $location,
             'description' => $description,
-            'base_price' => $basePrice,
             'currency' => $currency,
             'max_guests' => $maxGuests,
             'details' => empty($details) ? null : json_encode($details),
             'updated_at' => now(),
         ];
+
+        if (Schema::hasColumn($tableName, 'base_price')) {
+            $payload['base_price'] = $basePrice;
+        }
 
         DB::table($tableName)->updateOrInsert(
             ['vendor_property_id' => $vendorPropertyId],
@@ -2249,12 +2252,192 @@ foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
                 ->withErrors(['profile' => 'Complete compliance verification in My Account and wait for admin approval before creating listings.']);
         }
 
-        return redirect('/vendor?page=listings')
-            ->with('portal_active_panel', 'listings')
-            ->with('listing_wizard_step', 1)
-            ->with('portal_listing_mode', 'create')
-            ->with('portal_listing_category', $listingCategoryAlias);
+        $approvedCategories = vendorPortalApprovedCategories($vendorUser);
+        if (!in_array($listingCategoryAlias, $approvedCategories, true)) {
+            return redirect('/vendor/listings/' . $listingCategoryAlias)
+                ->withErrors(['profile' => 'This listing category is locked. Contact admin to unlock ' . $listingCategoryAlias . ' for your account.']);
+        }
+
+        $vendorCategoryMap = vendorPortalCategoryMap();
+        $selectedVendorCategories = vendorPortalSelectedCategories($vendorUser);
+        $listingCategoryViewOrder = ['accommodation','marine_transport','land_transport','water_sports','excursion','remote_workspace','conference_room','resort_day_visit','restaurant','vehicle_rental'];
+        $listingCategoryLabelMap = array_merge($vendorCategoryMap, ['marine_transport' => 'Marine Transport', 'land_transport' => 'Land Transport', 'conference_room' => 'Conference Rooms']);
+        $categoryLabel = $listingCategoryLabelMap[$listingCategoryAlias] ?? ucwords(str_replace('_', ' ', $listingCategoryAlias));
+
+        $vendorProfileRow = DB::table('vendor_profiles')
+            ->where('vendor_user_id', $vendorUserId)
+            ->first(['business_name', 'contact_email']);
+        $vendorProfile = [
+            'name' => (string) ($vendorProfileRow->business_name ?? ($vendorUser->name ?? '')),
+            'email' => (string) ($vendorProfileRow->contact_email ?? ($vendorUser->email ?? '')),
+            'approved_categories' => $approvedCategories,
+        ];
+
+        $transferOptionCatalog = [
+            'car' => 'Car',
+            'van' => 'Van',
+            'ferry' => 'Ferry',
+            'speedboat' => 'SpeedBoat',
+            'seaplane' => 'SeaPlane',
+            'domestic_flight' => 'Domestic Flight',
+        ];
+        $workspaceAmenityCatalog = [
+            'workdesk' => 'Workdesk',
+            'wifi' => 'WiFi',
+            'printing' => 'Printing',
+            'water_bottles' => 'Water Bottles',
+            'coffee' => 'Coffee',
+            'tea' => 'Tea',
+            'snacks' => 'Snacks',
+        ];
+
+        return view('vendor-portal.listing-form-page', [
+            'category' => $listingCategoryAlias,
+            'categoryLabel' => $categoryLabel,
+            'formType' => 'create',
+            'pageTitle' => 'New ' . $categoryLabel . ' Listing',
+            'pageSubtitle' => 'Complete the form below to create a new ' . strtolower($categoryLabel) . ' listing.',
+            'portalUser' => session('portal_vendor_user_email', $vendorUser->email ?? ''),
+            'vendorProfile' => $vendorProfile,
+            'vendorCategoryMap' => $vendorCategoryMap,
+            'selectedVendorCategories' => $selectedVendorCategories,
+            'listingCategoryViewOrder' => $listingCategoryViewOrder,
+            'listingCategoryLabelMap' => $listingCategoryLabelMap,
+            'activePortalPage' => 'listings',
+            'forcedListingCategory' => $listingCategoryAlias,
+            'transportModeOptions' => vendorPortalListingOptions('transport_mode'),
+            'transportModeOptionsCollection' => collect(vendorPortalListingOptions('transport_mode')),
+            'propertyAmenityOptions' => vendorPortalListingOptions('property_amenity'),
+            'propertyAmenityOptionsCollection' => collect(vendorPortalListingOptions('property_amenity')),
+            'propertyFeatureOptions' => vendorPortalListingOptions('property_feature'),
+            'propertyFeatureOptionsCollection' => collect(vendorPortalListingOptions('property_feature')),
+            'excursionTypeOptions' => vendorPortalListingOptions('excursion_type'),
+            'excursionTypeOptionsCollection' => collect(vendorPortalListingOptions('excursion_type')),
+            'restaurantMealServiceOptions' => vendorPortalListingOptions('restaurant_meal_service'),
+            'restaurantMealServiceOptionsCollection' => collect(vendorPortalListingOptions('restaurant_meal_service')),
+            'vehicleRentalTypeOptions' => vendorPortalListingOptions('vehicle_rental_type'),
+            'vehicleRentalTypeOptionsCollection' => collect(vendorPortalListingOptions('vehicle_rental_type')),
+            'vendorTaxComponents' => collect([]),
+            'transferOptionCatalog' => $transferOptionCatalog,
+            'workspaceAmenityCatalog' => $workspaceAmenityCatalog,
+            'oldTransferOptions' => old('transfer_options', []),
+            'oldTransferRatesInput' => [],
+            'oldPropertyAmenities' => old('property_amenities', []),
+            'oldPropertyFeatures' => old('property_features', []),
+            'oldWorkspaceAmenityStatus' => [],
+        ]);
     })->name('vendor.listings.category.create.' . $listingCategoryAlias);
+}
+
+foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
+    Route::get('/vendor/listings/' . $listingCategoryAlias . '/{propertyId}/edit', function (int $propertyId) use ($listingCategoryAlias) {
+        if (!session()->get('portal_vendor_authenticated', false)) {
+            return redirect('/portal/vendor/login');
+        }
+
+        $vendorUserId = (int) session('portal_vendor_user_id', 0);
+        $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+        if (!vendorPortalCanManageListings($vendorUser)) {
+            return redirect('/vendor?page=profile')
+                ->with('portal_active_panel', 'profile')
+                ->withErrors(['profile' => 'Complete compliance verification in My Account and wait for admin approval before editing listings.']);
+        }
+
+        $approvedCategories = vendorPortalApprovedCategories($vendorUser);
+        if (!in_array($listingCategoryAlias, $approvedCategories, true)) {
+            return redirect('/vendor/listings/' . $listingCategoryAlias)
+                ->withErrors(['profile' => 'This listing category is locked. Contact admin to unlock ' . $listingCategoryAlias . ' for your account.']);
+        }
+
+        $propertyRow = DB::table('vendor_properties')
+            ->where('id', $propertyId)
+            ->where('vendor_user_id', $vendorUserId)
+            ->first();
+        if (!$propertyRow) {
+            return redirect('/vendor/listings/' . $listingCategoryAlias)
+                ->withErrors(['profile' => 'Listing not found or access denied.']);
+        }
+
+        $propertyDetails = [];
+        if (is_string($propertyRow->listing_details ?? null) && trim($propertyRow->listing_details) !== '') {
+            $decoded = json_decode($propertyRow->listing_details, true);
+            if (is_array($decoded)) {
+                $propertyDetails = $decoded;
+            }
+        }
+
+        $vendorCategoryMap = vendorPortalCategoryMap();
+        $selectedVendorCategories = vendorPortalSelectedCategories($vendorUser);
+        $listingCategoryViewOrder = ['accommodation','marine_transport','land_transport','water_sports','excursion','remote_workspace','conference_room','resort_day_visit','restaurant','vehicle_rental'];
+        $listingCategoryLabelMap = array_merge($vendorCategoryMap, ['marine_transport' => 'Marine Transport', 'land_transport' => 'Land Transport', 'conference_room' => 'Conference Rooms']);
+        $categoryLabel = $listingCategoryLabelMap[$listingCategoryAlias] ?? ucwords(str_replace('_', ' ', $listingCategoryAlias));
+
+        $vendorProfileRow = DB::table('vendor_profiles')
+            ->where('vendor_user_id', $vendorUserId)
+            ->first(['business_name', 'contact_email']);
+        $vendorProfile = [
+            'name' => (string) ($vendorProfileRow->business_name ?? ($vendorUser->name ?? '')),
+            'email' => (string) ($vendorProfileRow->contact_email ?? ($vendorUser->email ?? '')),
+            'approved_categories' => $approvedCategories,
+        ];
+
+        $transferOptionCatalog = [
+            'car' => 'Car',
+            'van' => 'Van',
+            'ferry' => 'Ferry',
+            'speedboat' => 'SpeedBoat',
+            'seaplane' => 'SeaPlane',
+            'domestic_flight' => 'Domestic Flight',
+        ];
+        $workspaceAmenityCatalog = [
+            'workdesk' => 'Workdesk',
+            'wifi' => 'WiFi',
+            'printing' => 'Printing',
+            'water_bottles' => 'Water Bottles',
+            'coffee' => 'Coffee',
+            'tea' => 'Tea',
+            'snacks' => 'Snacks',
+        ];
+
+        return view('vendor-portal.listing-form-page', [
+            'category' => $listingCategoryAlias,
+            'categoryLabel' => $categoryLabel,
+            'formType' => 'edit',
+            'property' => $propertyRow,
+            'propertyId' => $propertyId,
+            'propertyDetails' => $propertyDetails,
+            'pageTitle' => 'Edit: ' . ($propertyRow->name ?? 'Listing #' . $propertyId),
+            'pageSubtitle' => 'Update your ' . strtolower($categoryLabel) . ' listing details.',
+            'portalUser' => session('portal_vendor_user_email', $vendorUser->email ?? ''),
+            'vendorProfile' => $vendorProfile,
+            'vendorCategoryMap' => $vendorCategoryMap,
+            'selectedVendorCategories' => $selectedVendorCategories,
+            'listingCategoryViewOrder' => $listingCategoryViewOrder,
+            'listingCategoryLabelMap' => $listingCategoryLabelMap,
+            'activePortalPage' => 'listings',
+            'forcedListingCategory' => $listingCategoryAlias,
+            'transportModeOptions' => vendorPortalListingOptions('transport_mode'),
+            'transportModeOptionsCollection' => collect(vendorPortalListingOptions('transport_mode')),
+            'propertyAmenityOptions' => vendorPortalListingOptions('property_amenity'),
+            'propertyAmenityOptionsCollection' => collect(vendorPortalListingOptions('property_amenity')),
+            'propertyFeatureOptions' => vendorPortalListingOptions('property_feature'),
+            'propertyFeatureOptionsCollection' => collect(vendorPortalListingOptions('property_feature')),
+            'excursionTypeOptions' => vendorPortalListingOptions('excursion_type'),
+            'excursionTypeOptionsCollection' => collect(vendorPortalListingOptions('excursion_type')),
+            'restaurantMealServiceOptions' => vendorPortalListingOptions('restaurant_meal_service'),
+            'restaurantMealServiceOptionsCollection' => collect(vendorPortalListingOptions('restaurant_meal_service')),
+            'vehicleRentalTypeOptions' => vendorPortalListingOptions('vehicle_rental_type'),
+            'vehicleRentalTypeOptionsCollection' => collect(vendorPortalListingOptions('vehicle_rental_type')),
+            'vendorTaxComponents' => collect([]),
+            'transferOptionCatalog' => $transferOptionCatalog,
+            'workspaceAmenityCatalog' => $workspaceAmenityCatalog,
+            'oldTransferOptions' => old('transfer_options', []),
+            'oldTransferRatesInput' => [],
+            'oldPropertyAmenities' => old('property_amenities', []),
+            'oldPropertyFeatures' => old('property_features', []),
+            'oldWorkspaceAmenityStatus' => [],
+        ]);
+    })->name('vendor.listings.category.edit.' . $listingCategoryAlias);
 }
 
 Route::get('/vendor/listings/{category}', function (string $category) {

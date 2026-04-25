@@ -1429,6 +1429,148 @@ Route::get('/', function () {
             ->filter(static fn (int $id) => $id > 0)
             ->values();
 
+        // Accommodation listings may now store room prices in meal-plan columns.
+        // Hydrate property base_price from the lowest valid room price so home/category
+        // cards always show a real "From" value.
+        if ($propertyIds->isNotEmpty()) {
+            $combinedRoomPricesByProperty = collect();
+
+            $legacyRoomPropertyColumn = null;
+            if (Schema::hasTable('vendor_property_room_categories')) {
+                if (Schema::hasColumn('vendor_property_room_categories', 'vendor_property_id')) {
+                    $legacyRoomPropertyColumn = 'vendor_property_id';
+                } elseif (Schema::hasColumn('vendor_property_room_categories', 'property_id')) {
+                    $legacyRoomPropertyColumn = 'property_id';
+                }
+            }
+
+            if ($legacyRoomPropertyColumn !== null) {
+                $legacyPriceColumns = [];
+                foreach ([
+                    'base_price',
+                    'meal_plan_room_only_price',
+                    'meal_plan_breakfast_price',
+                    'meal_plan_half_board_price',
+                    'meal_plan_full_board_price',
+                    'meal_plan_all_inclusive_price',
+                ] as $candidateColumn) {
+                    if (Schema::hasColumn('vendor_property_room_categories', $candidateColumn)) {
+                        $legacyPriceColumns[] = $candidateColumn;
+                    }
+                }
+
+                if (!empty($legacyPriceColumns)) {
+                    $legacyRoomRows = DB::table('vendor_property_room_categories')
+                        ->whereIn($legacyRoomPropertyColumn, $propertyIds->all())
+                        ->get(array_merge([$legacyRoomPropertyColumn], $legacyPriceColumns));
+
+                    $legacyRoomPrices = $legacyRoomRows
+                        ->groupBy(static function ($row) use ($legacyRoomPropertyColumn) {
+                            return (int) ($row->{$legacyRoomPropertyColumn} ?? 0);
+                        })
+                        ->map(static function ($rows) use ($legacyPriceColumns) {
+                            return collect($rows)
+                                ->flatMap(static function ($row) use ($legacyPriceColumns) {
+                                    return collect($legacyPriceColumns)
+                                        ->map(static fn ($column) => (float) ($row->{$column} ?? 0));
+                                })
+                                ->filter(static fn (float $value) => $value > 0)
+                                ->min();
+                        })
+                        ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+
+                    $combinedRoomPricesByProperty = $combinedRoomPricesByProperty->union($legacyRoomPrices);
+                }
+            }
+
+            if (Schema::hasTable('accommodation_rooms') && Schema::hasColumn('accommodation_rooms', 'property_id')) {
+                $hasRoomActiveColumn = Schema::hasColumn('accommodation_rooms', 'is_active');
+                $roomPriceColumns = ['property_id'];
+
+                foreach (['base_price_per_night', 'base_price'] as $candidateColumn) {
+                    if (Schema::hasColumn('accommodation_rooms', $candidateColumn)) {
+                        $roomPriceColumns[] = $candidateColumn;
+                    }
+                }
+
+                if (count($roomPriceColumns) > 1) {
+                    $roomRows = DB::table('accommodation_rooms')
+                        ->whereIn('property_id', $propertyIds->all())
+                        ->when($hasRoomActiveColumn, static function ($query) {
+                            $query->where('is_active', 1);
+                        })
+                        ->get($roomPriceColumns);
+
+                    $canonicalRoomPrices = $roomRows
+                        ->groupBy(static fn ($row) => (int) ($row->property_id ?? 0))
+                        ->map(static function ($rows) {
+                            return collect($rows)
+                                ->map(static function ($row) {
+                                    $nightly = isset($row->base_price_per_night) ? (float) $row->base_price_per_night : 0;
+                                    $legacy = isset($row->base_price) ? (float) $row->base_price : 0;
+                                    return $nightly > 0 ? $nightly : $legacy;
+                                })
+                                ->filter(static fn (float $value) => $value > 0)
+                                ->min();
+                        })
+                        ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+
+                    $combinedRoomPricesByProperty = $combinedRoomPricesByProperty
+                        ->merge($canonicalRoomPrices)
+                        ->groupBy(static fn ($value, $key) => (int) $key)
+                        ->map(static function ($values) {
+                            return collect($values)
+                                ->map(static fn ($value) => (float) $value)
+                                ->filter(static fn (float $value) => $value > 0)
+                                ->min();
+                        })
+                        ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+                }
+            }
+
+            if (Schema::hasTable('accommodation_packages')
+                && Schema::hasColumn('accommodation_packages', 'property_id')
+                && Schema::hasColumn('accommodation_packages', 'base_price')) {
+                $packagePrices = DB::table('accommodation_packages')
+                    ->whereIn('property_id', $propertyIds->all())
+                    ->when(Schema::hasColumn('accommodation_packages', 'is_active'), static function ($query) {
+                        $query->where('is_active', 1);
+                    })
+                    ->where('base_price', '>', 0)
+                    ->get(['property_id', 'base_price'])
+                    ->groupBy(static fn ($row) => (int) ($row->property_id ?? 0))
+                    ->map(static function ($rows) {
+                        return collect($rows)
+                            ->map(static fn ($row) => (float) ($row->base_price ?? 0))
+                            ->filter(static fn (float $value) => $value > 0)
+                            ->min();
+                    })
+                    ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+
+                $combinedRoomPricesByProperty = $combinedRoomPricesByProperty
+                    ->merge($packagePrices)
+                    ->groupBy(static fn ($value, $key) => (int) $key)
+                    ->map(static function ($values) {
+                        return collect($values)
+                            ->map(static fn ($value) => (float) $value)
+                            ->filter(static fn (float $value) => $value > 0)
+                            ->min();
+                    })
+                    ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+            }
+
+            if ($combinedRoomPricesByProperty->isNotEmpty()) {
+                $allProperties = $allProperties->map(static function ($property) use ($combinedRoomPricesByProperty) {
+                    $propertyId = (int) ($property->id ?? 0);
+                    if ($propertyId > 0 && $combinedRoomPricesByProperty->has($propertyId)) {
+                        $property->base_price = (float) $combinedRoomPricesByProperty->get($propertyId);
+                    }
+
+                    return $property;
+                });
+            }
+        }
+
         if (Schema::hasTable('vendor_listing_media') && $propertyIds->isNotEmpty()) {
             $mediaRows = DB::table('vendor_listing_media')
                 ->where('entity_type', 'property')
@@ -1679,6 +1821,12 @@ Route::get('/', function () {
                 $location = $propertyLocationLabel($sample);
                 if ($location !== '') {
                     $card['subtitle'] = $location;
+                }
+
+                $samplePrice = (float) ($sample->base_price ?? 0);
+                if ($samplePrice > 0) {
+                    $sampleCurrency = strtoupper(trim((string) ($sample->currency ?? 'MVR')));
+                    $card['price_label'] = $sampleCurrency . ' ' . number_format($samplePrice, 2);
                 }
 
                 return $card;
@@ -3694,23 +3842,41 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             }
 
             if ($legacyRoomPropertyColumn !== null
-                && Schema::hasColumn('vendor_property_room_categories', 'base_price')) {
+            ) {
+                $legacyPriceColumns = [];
+                foreach ([
+                    'base_price',
+                    'meal_plan_room_only_price',
+                    'meal_plan_breakfast_price',
+                    'meal_plan_half_board_price',
+                    'meal_plan_full_board_price',
+                    'meal_plan_all_inclusive_price',
+                ] as $candidateColumn) {
+                    if (Schema::hasColumn('vendor_property_room_categories', $candidateColumn)) {
+                        $legacyPriceColumns[] = $candidateColumn;
+                    }
+                }
+
+                if (!empty($legacyPriceColumns)) {
                 $legacyRoomPrices = DB::table('vendor_property_room_categories')
                     ->whereIn($legacyRoomPropertyColumn, $propertyIds->all())
-                    ->where('base_price', '>', 0)
-                    ->get([$legacyRoomPropertyColumn, 'base_price'])
+                    ->get(array_merge([$legacyRoomPropertyColumn], $legacyPriceColumns))
                     ->groupBy(static function ($row) use ($legacyRoomPropertyColumn) {
                         return (int) ($row->{$legacyRoomPropertyColumn} ?? 0);
                     })
-                    ->map(static function ($rows) {
+                    ->map(static function ($rows) use ($legacyPriceColumns) {
                         return collect($rows)
-                            ->map(static fn ($row) => (float) ($row->base_price ?? 0))
+                            ->flatMap(static function ($row) use ($legacyPriceColumns) {
+                                return collect($legacyPriceColumns)
+                                    ->map(static fn ($column) => (float) ($row->{$column} ?? 0));
+                            })
                             ->filter(static fn (float $value) => $value > 0)
                             ->min();
                     })
                     ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
 
                 $combinedRoomPricesByProperty = $combinedRoomPricesByProperty->union($legacyRoomPrices);
+                }
             }
 
             if (Schema::hasTable('accommodation_packages')

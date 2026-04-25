@@ -2113,12 +2113,6 @@
             opacity: 0.95;
         }
 
-        .room-sleeps-count {
-            color: #365d75;
-            font-size: 0.74rem;
-            font-weight: 700;
-        }
-
         .room-occupancy-inline {
             display: inline-flex;
             align-items: flex-end;
@@ -3134,7 +3128,6 @@
                                                     <i class="fa-solid fa-child-reaching room-sleeps-child"></i>
                                                 @endfor
                                             </span>
-                                            <span class="room-sleeps-count">{{ $maxOccupancy }}</span>
                                         </div>
                                         <div>
                                             <div class="room-price-box">
@@ -3168,7 +3161,7 @@
 
                             <ul class="room-side-details">
                                 <li><span class="room-amenity-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v.5M3 12h.5M20.5 12h.5M12 20v.5M5.5 5.5l.35.35M18.15 18.15l.35.35M18.5 5.5l-.35.35M5.85 18.15l-.35.35"/><circle cx="12" cy="12" r="4"/></svg></span><span>{{ $bedType }}</span></li>
-                                <li><span class="room-amenity-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11h18M6 6h12v8H6zM8 18h8"/></svg></span><span>Occupancy:<span class="room-occupancy-inline" aria-hidden="true">@for ($i = 0; $i < $adultFigureCount; $i++)<i class="fa-solid fa-user"></i>@endfor @for ($i = 0; $i < $childFigureCount; $i++)<i class="fa-solid fa-child-reaching room-sleeps-child"></i>@endfor</span>{{ $maxOccupancy }} guests</span></li>
+                                <li><span class="room-amenity-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11h18M6 6h12v8H6zM8 18h8"/></svg></span><span>Occupancy:<span class="room-occupancy-inline" aria-label="Sleeps {{ $maxOccupancy }} guests">@for ($i = 0; $i < $adultFigureCount; $i++)<i class="fa-solid fa-user"></i>@endfor @for ($i = 0; $i < $childFigureCount; $i++)<i class="fa-solid fa-child-reaching room-sleeps-child"></i>@endfor</span></span></li>
                                 @foreach ($amenities as $amenity)
                                     <li><span class="room-amenity-icon" aria-hidden="true">{!! $facilitySvg($amenity) !!}</span><span>{{ $amenity }}</span></li>
                                 @endforeach

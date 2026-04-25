@@ -467,7 +467,7 @@
                                                                                             </div>
                                                                                         </td>
                                                                                         <td>
-                                                                                            <span class="room-summary-line">Qty: {{ (int) ($room->quantity ?? 0) }} | Max: {{ (int) ($room->max_occupancy ?? 0) }} | {{ (int) ($room->room_size_sqm ?? 0) > 0 ? ((int) ($room->room_size_sqm ?? 0) . 'sqm') : 'Size n/a' }} | Floor: {{ trim((string) ($room->floor_info ?? '')) !== '' ? (string) ($room->floor_info ?? '') : 'n/a' }} | Base: {{ $property->currency ?? 'MVR' }} {{ number_format((float) ($room->base_price ?? 0), 2) }}</span>
+                                                                                            <span class="room-summary-line">Qty: {{ (int) ($room->quantity ?? 0) }} | Max: {{ (int) ($room->max_occupancy ?? 0) }} | {{ (int) ($room->room_size_sqm ?? 0) > 0 ? ((int) ($room->room_size_sqm ?? 0) . 'sqm') : 'Size n/a' }} | Floor: {{ trim((string) ($room->floor_info ?? '')) !== '' ? (string) ($room->floor_info ?? '') : 'n/a' }} | Room Only: {{ $property->currency ?? 'MVR' }} {{ number_format((float) (($room->meal_plan_room_only_price ?? 0) > 0 ? ($room->meal_plan_room_only_price ?? 0) : ($room->base_price ?? 0)), 2) }}</span>
                                                                                         </td>
                                                                                         <td>
                                                                                             <div class="inline-actions listing-actions-inline listing-actions-compact">
@@ -497,7 +497,6 @@
                                                                                                 </select>
                                                                                                 <input class="ops-input" name="extra_person_capacity" type="number" min="0" max="20" value="{{ (int) ($room->extra_person_capacity ?? 0) > 0 ? (int) ($room->extra_person_capacity ?? 0) : '' }}" placeholder="Extra adult capacity">
                                                                                                 <input class="ops-input" name="child_capacity" type="number" min="0" max="20" value="{{ (int) ($room->child_capacity ?? 0) > 0 ? (int) ($room->child_capacity ?? 0) : '' }}" placeholder="Child capacity">
-                                                                                                <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ (float) ($room->base_price ?? 0) > 0 ? (float) ($room->base_price ?? 0) : '' }}" placeholder="Base room price">
                                                                                                 <input class="ops-input" name="meal_plan_room_only_price" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_room_only_price ?? 0) > 0 ? (float) ($room->meal_plan_room_only_price ?? 0) : '' }}" placeholder="Room only price (MVR)">
                                                                                                 <input class="ops-input" name="meal_plan_bb_price" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_bb_price ?? 0) > 0 ? (float) ($room->meal_plan_bb_price ?? 0) : '' }}" placeholder="BB price (MVR)">
                                                                                                 <input class="ops-input" name="meal_plan_hb_price" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_hb_price ?? 0) > 0 ? (float) ($room->meal_plan_hb_price ?? 0) : '' }}" placeholder="HB price (MVR)">
@@ -689,10 +688,6 @@
                                                                     <div class="ops-field">
                                                                         <label>Child Capacity</label>
                                                                         <input class="ops-input" name="child_capacity" type="number" min="0" max="20" value="{{ $showInlineRoomRow ? old('child_capacity', '') : '' }}">
-                                                                    </div>
-                                                                    <div class="ops-field">
-                                                                        <label>Room Base Price (MVR)</label>
-                                                                        <input class="ops-input" name="base_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('base_price', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
                                                                         <label>Room Only Price (MVR)</label>

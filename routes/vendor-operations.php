@@ -3026,6 +3026,10 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         return back()->withErrors(['profile' => 'Room categories can only be added under accommodation listings.'])->withInput();
     }
 
+    $resolvedRoomOnlyPrice = (float) ($validated['meal_plan_room_only_price'] ?? 0);
+    $legacyBasePrice = (float) ($validated['base_price'] ?? 0);
+    $resolvedBasePrice = $resolvedRoomOnlyPrice > 0 ? $resolvedRoomOnlyPrice : $legacyBasePrice;
+
     $insertPayload = [
         'vendor_user_id' => $vendorUserId,
         'vendor_property_id' => $vendorPropertyId,
@@ -3034,7 +3038,7 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         'max_occupancy' => (int) ($validated['max_occupancy'] ?? 1),
         'bed_type' => trim((string) ($validated['bed_type'] ?? '')),
         'amenities' => implode(', ', $roomAmenityTokens),
-        'base_price' => (float) ($validated['base_price'] ?? 0),
+        'base_price' => $resolvedBasePrice,
         'currency' => 'MVR',
         'created_at' => now(),
         'updated_at' => now(),
@@ -3067,7 +3071,7 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         $insertPayload['child_price'] = (float) ($validated['child_price'] ?? 0);
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_room_only_price')) {
-        $insertPayload['meal_plan_room_only_price'] = (float) ($validated['meal_plan_room_only_price'] ?? 0);
+        $insertPayload['meal_plan_room_only_price'] = $resolvedRoomOnlyPrice > 0 ? $resolvedRoomOnlyPrice : $resolvedBasePrice;
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_bb_price')) {
         $insertPayload['meal_plan_bb_price'] = (float) ($validated['meal_plan_bb_price'] ?? 0);
@@ -3194,13 +3198,17 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
         }
     }
 
+    $resolvedRoomOnlyPrice = (float) ($validated['meal_plan_room_only_price'] ?? 0);
+    $legacyBasePrice = (float) ($validated['base_price'] ?? 0);
+    $resolvedBasePrice = $resolvedRoomOnlyPrice > 0 ? $resolvedRoomOnlyPrice : $legacyBasePrice;
+
     $updatePayload = [
         'name' => trim((string) $validated['name']),
         'quantity' => (int) ($validated['quantity'] ?? 1),
         'max_occupancy' => (int) ($validated['max_occupancy'] ?? 1),
         'bed_type' => trim((string) ($validated['bed_type'] ?? '')),
         'amenities' => implode(', ', $roomAmenities),
-        'base_price' => (float) ($validated['base_price'] ?? 0),
+        'base_price' => $resolvedBasePrice,
         'updated_at' => now(),
     ];
 
@@ -3231,7 +3239,7 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
         $updatePayload['child_price'] = (float) ($validated['child_price'] ?? 0);
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_room_only_price')) {
-        $updatePayload['meal_plan_room_only_price'] = (float) ($validated['meal_plan_room_only_price'] ?? 0);
+        $updatePayload['meal_plan_room_only_price'] = $resolvedRoomOnlyPrice > 0 ? $resolvedRoomOnlyPrice : $resolvedBasePrice;
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_bb_price')) {
         $updatePayload['meal_plan_bb_price'] = (float) ($validated['meal_plan_bb_price'] ?? 0);

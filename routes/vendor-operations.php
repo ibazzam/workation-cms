@@ -236,6 +236,88 @@ if (!function_exists('vendorPortalPropertyTypeForCategory')) {
     }
 }
 
+if (!function_exists('vendorPortalCategoryStorageTableMap')) {
+    function vendorPortalCategoryStorageTableMap(): array
+    {
+        return [
+            'accommodation' => 'vendor_accommodation_listings',
+            'conference_room' => 'vendor_conference_room_listings',
+            'marine_transport' => 'vendor_marine_transport_listings',
+            'land_transport' => 'vendor_land_transport_listings',
+            'excursion' => 'vendor_excursion_listings',
+            'remote_workspace' => 'vendor_remote_workspace_listings',
+            'resort_day_visit' => 'vendor_resort_day_visit_listings',
+            'restaurant' => 'vendor_restaurant_listings',
+            'vehicle_rental' => 'vendor_vehicle_rental_listings',
+            'water_sports' => 'vendor_water_sports_listings',
+        ];
+    }
+}
+
+if (!function_exists('vendorPortalCategoryStorageTable')) {
+    function vendorPortalCategoryStorageTable(string $listingCategory): ?string
+    {
+        $map = vendorPortalCategoryStorageTableMap();
+        return $map[$listingCategory] ?? null;
+    }
+}
+
+if (!function_exists('vendorPortalSyncCategoryListingRecord')) {
+    function vendorPortalSyncCategoryListingRecord(
+        string $listingCategory,
+        int $vendorPropertyId,
+        int $vendorUserId,
+        string $name,
+        string $status,
+        string $location,
+        string $description,
+        float $basePrice,
+        string $currency,
+        int $maxGuests,
+        array $details
+    ): void {
+        $tableName = vendorPortalCategoryStorageTable($listingCategory);
+        if ($tableName === null) {
+            throw new \RuntimeException('No category storage table configured for: ' . $listingCategory);
+        }
+        if (!Schema::hasTable($tableName)) {
+            throw new \RuntimeException('Category storage table is missing: ' . $tableName . '. Run migrations.');
+        }
+
+        $payload = [
+            'vendor_user_id' => $vendorUserId,
+            'name' => $name,
+            'status' => $status,
+            'location' => $location,
+            'description' => $description,
+            'base_price' => $basePrice,
+            'currency' => $currency,
+            'max_guests' => $maxGuests,
+            'details' => empty($details) ? null : json_encode($details),
+            'updated_at' => now(),
+        ];
+
+        DB::table($tableName)->updateOrInsert(
+            ['vendor_property_id' => $vendorPropertyId],
+            array_merge($payload, ['created_at' => now()])
+        );
+    }
+}
+
+if (!function_exists('vendorPortalDeleteCategoryListingRecord')) {
+    function vendorPortalDeleteCategoryListingRecord(string $listingCategory, int $vendorPropertyId): void
+    {
+        $tableName = vendorPortalCategoryStorageTable($listingCategory);
+        if ($tableName === null || !Schema::hasTable($tableName)) {
+            return;
+        }
+
+        DB::table($tableName)
+            ->where('vendor_property_id', $vendorPropertyId)
+            ->delete();
+    }
+}
+
 if (!function_exists('vendorPortalNormalizedNumeric')) {
     function vendorPortalNormalizedNumeric(mixed $value): ?float
     {
@@ -3555,7 +3637,23 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         $payload['amenities'] = implode(', ', $selectedAmenityTokens);
     }
 
-    DB::table('vendor_properties')->insert($payload);
+    DB::transaction(function () use ($payload, $canonicalListingCategory, $vendorUserId, $resolvedLocation, $resolvedBasePrice, $normalizedMaxGuests, $propertyDetails): void {
+        $vendorPropertyId = (int) DB::table('vendor_properties')->insertGetId($payload);
+
+        vendorPortalSyncCategoryListingRecord(
+            $canonicalListingCategory,
+            $vendorPropertyId,
+            $vendorUserId,
+            (string) ($payload['name'] ?? ''),
+            (string) ($payload['status'] ?? 'active'),
+            $resolvedLocation,
+            (string) ($payload['description'] ?? ''),
+            $resolvedBasePrice,
+            (string) ($payload['currency'] ?? 'MVR'),
+            $normalizedMaxGuests,
+            $propertyDetails
+        );
+    });
 
     return vendorPortalListingsBackResponse('Property/service listing added.', 2);
 });
@@ -3825,10 +3923,28 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         }
     }
 
-    DB::table('vendor_properties')
-        ->where('id', $property)
-        ->where('vendor_user_id', $vendorUserId)
-        ->update($updatePayload);
+    DB::transaction(function () use ($property, $vendorUserId, $updatePayload, $canonicalListingCategory, $resolvedLocation, $resolvedBasePrice, $normalizedMaxGuests, $existingDetails, $validated): void {
+        DB::table('vendor_properties')
+            ->where('id', $property)
+            ->where('vendor_user_id', $vendorUserId)
+            ->update($updatePayload);
+
+        if ($canonicalListingCategory !== null) {
+            vendorPortalSyncCategoryListingRecord(
+                $canonicalListingCategory,
+                $property,
+                $vendorUserId,
+                trim((string) ($validated['name'] ?? '')),
+                (string) ($validated['status'] ?? 'active'),
+                $resolvedLocation,
+                trim((string) ($validated['description'] ?? '')),
+                $resolvedBasePrice,
+                'MVR',
+                $normalizedMaxGuests,
+                $existingDetails
+            );
+        }
+    });
 
     return vendorPortalListingsBackResponse('Property listing updated.', 2);
 });
@@ -3843,10 +3959,27 @@ Route::post('/portal/vendor/properties/{property}/delete', function (int $proper
 
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
 
-    DB::table('vendor_properties')
+    $propertyRecord = DB::table('vendor_properties')
         ->where('id', $property)
         ->where('vendor_user_id', $vendorUserId)
-        ->delete();
+        ->first(['id', 'listing_category']);
+
+    if (!$propertyRecord) {
+        return back()->withErrors(['profile' => 'Property not found for this vendor account.']);
+    }
+
+    $canonicalListingCategory = vendorPortalCanonicalCategory((string) ($propertyRecord->listing_category ?? ''));
+
+    DB::transaction(function () use ($property, $vendorUserId, $canonicalListingCategory): void {
+        if ($canonicalListingCategory !== null) {
+            vendorPortalDeleteCategoryListingRecord($canonicalListingCategory, $property);
+        }
+
+        DB::table('vendor_properties')
+            ->where('id', $property)
+            ->where('vendor_user_id', $vendorUserId)
+            ->delete();
+    });
 
     return vendorPortalListingsBackResponse('Property listing removed.', 1);
 });

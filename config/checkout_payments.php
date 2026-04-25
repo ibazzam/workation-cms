@@ -19,6 +19,11 @@ $foreignAllowedCurrencies = $parseCurrencyList(
     ['USD']
 );
 
+$localAllowedCurrencies = $parseCurrencyList(
+    env('WORKATION_PAYMENT_LOCAL_ALLOWED_CURRENCIES', 'MVR,USD'),
+    ['MVR', 'USD']
+);
+
 $stripeSupportedCurrencies = $parseCurrencyList(
     env(
         'WORKATION_PAYMENT_STRIPE_SUPPORTED_CURRENCIES',
@@ -48,8 +53,8 @@ return [
     ],
 
     'global_segment_currency_restrictions' => [
-        // Locals are settled in MVR only.
-        'local_maldivian' => ['MVR'],
+        // Locals can settle in MVR or choose Stripe-supported USD checkout.
+        'local_maldivian' => $localAllowedCurrencies,
         // Foreign currencies are configurable and default to USD.
         'foreign_national' => $foreignAllowedCurrencies,
     ],

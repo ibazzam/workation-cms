@@ -1227,6 +1227,33 @@ Route::get('/', function () {
 
     $homeDatabaseDestinationImages = [];
     if (Schema::hasTable('islands')) {
+        // Island and atoll photos are always stored on the public disk
+        // (Storage::disk('public')), not the portal managed media disk.
+        // Resolve them the same way as islands-index.blade.php does.
+        $resolveAtlasPhotoUrl = static function (string $photoPath): string {
+            if ($photoPath === '') {
+                return '';
+            }
+            // Full URLs (http/https) — return as-is (upgrade to https)
+            if (str_starts_with($photoPath, 'https://')) {
+                return $photoPath;
+            }
+            if (str_starts_with($photoPath, 'http://')) {
+                return 'https://' . ltrim(substr($photoPath, 7), '/');
+            }
+            // Internal proxy routes
+            if (str_starts_with($photoPath, '/media/')) {
+                return $photoPath;
+            }
+            // Everything else is a relative path on the public disk
+            $normalized = ltrim(str_replace(['public/', 'storage/'], '', str_replace('\\', '/', $photoPath)), '/');
+            try {
+                return Storage::disk('public')->url($normalized);
+            } catch (\Throwable $e) {
+                return '';
+            }
+        };
+
         $islandRows = DB::table('islands')
             ->select(['name', 'slug', 'photo_path'])
             ->whereNotNull('photo_path')
@@ -1235,7 +1262,7 @@ Route::get('/', function () {
             ->get();
 
         foreach ($islandRows as $row) {
-            $imageUrl = portalManagedMediaUrlFromPath((string) ($row->photo_path ?? ''));
+            $imageUrl = $resolveAtlasPhotoUrl((string) ($row->photo_path ?? ''));
             if ($imageUrl === null || $imageUrl === '') {
                 continue;
             }
@@ -1263,7 +1290,7 @@ Route::get('/', function () {
             ->get();
 
         foreach ($atollRows as $row) {
-            $imageUrl = portalManagedMediaUrlFromPath((string) ($row->photo_path ?? ''));
+            $imageUrl = $resolveAtlasPhotoUrl((string) ($row->photo_path ?? ''));
             if ($imageUrl === null || $imageUrl === '') {
                 continue;
             }

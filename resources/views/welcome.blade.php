@@ -1424,14 +1424,14 @@
             color: #1b3f58;
             display: grid;
             overflow: hidden;
-            min-height: 330px;
-            grid-template-rows: 210px auto;
+            min-height: 300px;
+            grid-template-rows: auto 1fr;
         }
 
         .item-card-media {
             position: relative;
             width: 100%;
-            height: 210px;
+            aspect-ratio: 4 / 3;
             background: linear-gradient(140deg, #d6edf1 0%, #bfdfeb 45%, #ffe3be 100%);
             overflow: hidden;
         }
@@ -2009,12 +2009,12 @@
             }
 
             .item-card {
-                min-height: 306px;
-                grid-template-rows: 188px auto;
+                min-height: 286px;
+                grid-template-rows: auto 1fr;
             }
 
             .item-card-media {
-                height: 188px;
+                aspect-ratio: 16 / 10;
             }
 
             .blog-teaser-body {

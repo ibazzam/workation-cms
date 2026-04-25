@@ -290,11 +290,14 @@ if (!function_exists('vendorPortalSyncCategoryListingRecord')) {
             'status' => $status,
             'location' => $location,
             'description' => $description,
-            'currency' => $currency,
             'max_guests' => $maxGuests,
             'details' => empty($details) ? null : json_encode($details),
             'updated_at' => now(),
         ];
+
+        if (Schema::hasColumn($tableName, 'currency')) {
+            $payload['currency'] = $currency;
+        }
 
         if (Schema::hasColumn($tableName, 'base_price')) {
             $payload['base_price'] = $basePrice;
@@ -2264,9 +2267,12 @@ foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
         $listingCategoryLabelMap = array_merge($vendorCategoryMap, ['marine_transport' => 'Marine Transport', 'land_transport' => 'Land Transport', 'conference_room' => 'Conference Rooms']);
         $categoryLabel = $listingCategoryLabelMap[$listingCategoryAlias] ?? ucwords(str_replace('_', ' ', $listingCategoryAlias));
 
-        $vendorProfileRow = DB::table('vendor_profiles')
-            ->where('vendor_user_id', $vendorUserId)
-            ->first(['business_name', 'contact_email']);
+        $vendorProfileRow = null;
+        if (Schema::hasTable('vendor_profiles')) {
+            $vendorProfileRow = DB::table('vendor_profiles')
+                ->where('vendor_user_id', $vendorUserId)
+                ->first(['business_name', 'contact_email']);
+        }
         $vendorProfile = [
             'name' => (string) ($vendorProfileRow->business_name ?? ($vendorUser->name ?? '')),
             'email' => (string) ($vendorProfileRow->contact_email ?? ($vendorUser->email ?? '')),
@@ -2372,9 +2378,12 @@ foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
         $listingCategoryLabelMap = array_merge($vendorCategoryMap, ['marine_transport' => 'Marine Transport', 'land_transport' => 'Land Transport', 'conference_room' => 'Conference Rooms']);
         $categoryLabel = $listingCategoryLabelMap[$listingCategoryAlias] ?? ucwords(str_replace('_', ' ', $listingCategoryAlias));
 
-        $vendorProfileRow = DB::table('vendor_profiles')
-            ->where('vendor_user_id', $vendorUserId)
-            ->first(['business_name', 'contact_email']);
+        $vendorProfileRow = null;
+        if (Schema::hasTable('vendor_profiles')) {
+            $vendorProfileRow = DB::table('vendor_profiles')
+                ->where('vendor_user_id', $vendorUserId)
+                ->first(['business_name', 'contact_email']);
+        }
         $vendorProfile = [
             'name' => (string) ($vendorProfileRow->business_name ?? ($vendorUser->name ?? '')),
             'email' => (string) ($vendorProfileRow->contact_email ?? ($vendorUser->email ?? '')),

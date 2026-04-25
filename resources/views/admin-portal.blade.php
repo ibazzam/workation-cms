@@ -2451,9 +2451,9 @@
             </div>
         </section>
 
+        </div>
+        </div>
         @include('partials.global-site-footer')
-        </div>
-        </div>
     </main>
 
     <script>

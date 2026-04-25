@@ -1227,6 +1227,33 @@ Route::get('/', function () {
 
     $homeDatabaseDestinationImages = [];
     if (Schema::hasTable('islands')) {
+        // Island and atoll photos are always stored on the public disk
+        // (Storage::disk('public')), not the portal managed media disk.
+        // Resolve them the same way as islands-index.blade.php does.
+        $resolveAtlasPhotoUrl = static function (string $photoPath): string {
+            if ($photoPath === '') {
+                return '';
+            }
+            // Full URLs (http/https) — return as-is (upgrade to https)
+            if (str_starts_with($photoPath, 'https://')) {
+                return $photoPath;
+            }
+            if (str_starts_with($photoPath, 'http://')) {
+                return 'https://' . ltrim(substr($photoPath, 7), '/');
+            }
+            // Internal proxy routes
+            if (str_starts_with($photoPath, '/media/')) {
+                return $photoPath;
+            }
+            // Everything else is a relative path on the public disk
+            $normalized = ltrim(str_replace(['public/', 'storage/'], '', str_replace('\\', '/', $photoPath)), '/');
+            try {
+                return Storage::disk('public')->url($normalized);
+            } catch (\Throwable $e) {
+                return '';
+            }
+        };
+
         $islandRows = DB::table('islands')
             ->select(['name', 'slug', 'photo_path'])
             ->whereNotNull('photo_path')
@@ -1235,7 +1262,7 @@ Route::get('/', function () {
             ->get();
 
         foreach ($islandRows as $row) {
-            $imageUrl = portalManagedMediaUrlFromPath((string) ($row->photo_path ?? ''));
+            $imageUrl = $resolveAtlasPhotoUrl((string) ($row->photo_path ?? ''));
             if ($imageUrl === null || $imageUrl === '') {
                 continue;
             }
@@ -1263,7 +1290,7 @@ Route::get('/', function () {
             ->get();
 
         foreach ($atollRows as $row) {
-            $imageUrl = portalManagedMediaUrlFromPath((string) ($row->photo_path ?? ''));
+            $imageUrl = $resolveAtlasPhotoUrl((string) ($row->photo_path ?? ''));
             if ($imageUrl === null || $imageUrl === '') {
                 continue;
             }
@@ -1435,9 +1462,14 @@ Route::get('/', function () {
 
         // Phase 2 source-of-truth: hydrate accommodation rows from dedicated table.
         if ($propertyIds->isNotEmpty() && Schema::hasTable('vendor_accommodation_listings')) {
+            $accommodationSelectColumns = ['vendor_property_id', 'name', 'status', 'location', 'description', 'max_guests', 'details'];
+            if (Schema::hasColumn('vendor_accommodation_listings', 'currency')) {
+                $accommodationSelectColumns[] = 'currency';
+            }
+
             $dedicatedAccommodationRows = DB::table('vendor_accommodation_listings')
                 ->whereIn('vendor_property_id', $propertyIds->all())
-                ->get(['vendor_property_id', 'name', 'status', 'location', 'description', 'currency', 'max_guests', 'details'])
+                ->get($accommodationSelectColumns)
                 ->keyBy(static fn ($row) => (int) ($row->vendor_property_id ?? 0));
 
             if ($dedicatedAccommodationRows->isNotEmpty()) {
@@ -1453,10 +1485,14 @@ Route::get('/', function () {
                         return $property;
                     }
 
-                    foreach (['name', 'status', 'location', 'description', 'currency'] as $field) {
+                    foreach (['name', 'status', 'location', 'description'] as $field) {
                         if (isset($dedicated->{$field}) && trim((string) $dedicated->{$field}) !== '') {
                             $property->{$field} = $dedicated->{$field};
                         }
+                    }
+
+                    if (property_exists($dedicated, 'currency') && trim((string) ($dedicated->currency ?? '')) !== '') {
+                        $property->currency = $dedicated->currency;
                     }
 
                     if (isset($dedicated->max_guests) && is_numeric($dedicated->max_guests)) {
@@ -1476,6 +1512,17 @@ Route::get('/', function () {
         // cards always show a real "From" value.
         if ($propertyIds->isNotEmpty()) {
             $combinedRoomPricesByProperty = collect();
+
+            // Accommodation prices must come from room/package tables.
+            // Reset stale vendor_properties.base_price values first.
+            $allProperties = $allProperties->map(static function ($property) {
+                $category = strtolower(trim((string) ($property->listing_category ?? '')));
+                if ($category === 'accommodation') {
+                    $property->base_price = 0;
+                }
+
+                return $property;
+            })->values();
 
             $legacyRoomPropertyColumn = null;
             if (Schema::hasTable('vendor_property_room_categories')) {
@@ -3880,9 +3927,14 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
 
         // Phase 2 source-of-truth: accommodation reads from dedicated category table.
         if ($dbCategoryKey === 'accommodation' && $propertyIds->isNotEmpty() && Schema::hasTable('vendor_accommodation_listings')) {
+            $accommodationSelectColumns = ['vendor_property_id', 'name', 'status', 'location', 'description', 'max_guests', 'details'];
+            if (Schema::hasColumn('vendor_accommodation_listings', 'currency')) {
+                $accommodationSelectColumns[] = 'currency';
+            }
+
             $dedicatedAccommodationRows = DB::table('vendor_accommodation_listings')
                 ->whereIn('vendor_property_id', $propertyIds->all())
-                ->get(['vendor_property_id', 'name', 'status', 'location', 'description', 'currency', 'max_guests', 'details'])
+                ->get($accommodationSelectColumns)
                 ->keyBy(static fn ($row) => (int) ($row->vendor_property_id ?? 0));
 
             if ($dedicatedAccommodationRows->isNotEmpty()) {
@@ -3893,10 +3945,14 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                         return $property;
                     }
 
-                    foreach (['name', 'status', 'location', 'description', 'currency'] as $field) {
+                    foreach (['name', 'status', 'location', 'description'] as $field) {
                         if (isset($dedicated->{$field}) && trim((string) $dedicated->{$field}) !== '') {
                             $property->{$field} = $dedicated->{$field};
                         }
+                    }
+
+                    if (property_exists($dedicated, 'currency') && trim((string) ($dedicated->currency ?? '')) !== '') {
+                        $property->currency = $dedicated->currency;
                     }
 
                     if (isset($dedicated->max_guests) && is_numeric($dedicated->max_guests)) {
@@ -4047,7 +4103,10 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 }
             }
 
+            // Force accommodation pricing to come only from room/package tables.
+            // This prevents stale vendor_properties.base_price from showing on cards.
             $catalogProperties = $catalogProperties->map(static function ($prop) use ($combinedRoomPricesByProperty) {
+                $prop->base_price = 0;
                 $pid = (int) ($prop->id ?? 0);
                 if ($pid > 0 && $combinedRoomPricesByProperty->has($pid)) {
                     $prop->base_price = (float) $combinedRoomPricesByProperty->get($pid);
@@ -4242,15 +4301,24 @@ Route::get('/property/{property}', function (Request $request, int $property) {
 
     $listingCategory = strtolower(trim((string) ($propertyRow->listing_category ?? '')));
     if ($listingCategory === 'accommodation' && Schema::hasTable('vendor_accommodation_listings')) {
+        $accommodationSelectColumns = ['name', 'status', 'location', 'description', 'max_guests', 'details'];
+        if (Schema::hasColumn('vendor_accommodation_listings', 'currency')) {
+            $accommodationSelectColumns[] = 'currency';
+        }
+
         $dedicatedAccommodation = DB::table('vendor_accommodation_listings')
             ->where('vendor_property_id', (int) $propertyRow->id)
-            ->first(['name', 'status', 'location', 'description', 'currency', 'max_guests', 'details']);
+            ->first($accommodationSelectColumns);
 
         if ($dedicatedAccommodation) {
-            foreach (['name', 'status', 'location', 'description', 'currency'] as $field) {
+            foreach (['name', 'status', 'location', 'description'] as $field) {
                 if (isset($dedicatedAccommodation->{$field}) && trim((string) $dedicatedAccommodation->{$field}) !== '') {
                     $propertyRow->{$field} = $dedicatedAccommodation->{$field};
                 }
+            }
+
+            if (property_exists($dedicatedAccommodation, 'currency') && trim((string) ($dedicatedAccommodation->currency ?? '')) !== '') {
+                $propertyRow->currency = $dedicatedAccommodation->currency;
             }
 
             if (isset($dedicatedAccommodation->max_guests) && is_numeric($dedicatedAccommodation->max_guests)) {

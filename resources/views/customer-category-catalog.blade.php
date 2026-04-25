@@ -2545,7 +2545,13 @@
                                         </div>
                                     </div>
                                     <div class="card-side">
-                                        <div class="card-price">From {{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}</div>
+                                        <div class="card-price">
+                                            @if ($price > 0)
+                                                From {{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}
+                                            @else
+                                                Price on request
+                                            @endif
+                                        </div>
                                         <div class="card-offer">{{ $offerSummary }}</div>
                                         <span class="card-action-btn">{{ $actionLabel }} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
                                     </div>
@@ -2576,7 +2582,13 @@
                                         <span class="card-rating-badge">{{ $reviewScore }}</span>
                                         <span>{{ number_format($reviewCount) }} reviews</span>
                                     </div>
-                                    <div class="card-price">From {{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}</div>
+                                    <div class="card-price">
+                                        @if ($price > 0)
+                                            From {{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}
+                                        @else
+                                            Price on request
+                                        @endif
+                                    </div>
                                     <div class="card-offer">{{ $offerSummary }}</div>
                                     @if ($isExcursionCard && $shortDescription !== '')
                                         <p class="card-desc">{{ $shortDescription }}</p>

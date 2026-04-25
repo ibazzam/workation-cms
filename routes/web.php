@@ -1504,6 +1504,17 @@ Route::get('/', function () {
         if ($propertyIds->isNotEmpty()) {
             $combinedRoomPricesByProperty = collect();
 
+            // Accommodation prices must come from room/package tables.
+            // Reset stale vendor_properties.base_price values first.
+            $allProperties = $allProperties->map(static function ($property) {
+                $category = strtolower(trim((string) ($property->listing_category ?? '')));
+                if ($category === 'accommodation') {
+                    $property->base_price = 0;
+                }
+
+                return $property;
+            })->values();
+
             $legacyRoomPropertyColumn = null;
             if (Schema::hasTable('vendor_property_room_categories')) {
                 if (Schema::hasColumn('vendor_property_room_categories', 'vendor_property_id')) {
@@ -4074,7 +4085,10 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 }
             }
 
+            // Force accommodation pricing to come only from room/package tables.
+            // This prevents stale vendor_properties.base_price from showing on cards.
             $catalogProperties = $catalogProperties->map(static function ($prop) use ($combinedRoomPricesByProperty) {
+                $prop->base_price = 0;
                 $pid = (int) ($prop->id ?? 0);
                 if ($pid > 0 && $combinedRoomPricesByProperty->has($pid)) {
                     $prop->base_price = (float) $combinedRoomPricesByProperty->get($pid);

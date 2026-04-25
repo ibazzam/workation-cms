@@ -1,5 +1,32 @@
 <?php
 
+$parseCurrencyList = static function (?string $csv, array $fallback): array {
+    $raw = trim((string) ($csv ?? ''));
+    if ($raw === '') {
+        return array_values(array_unique(array_map(static fn (string $currency): string => strtoupper(trim($currency)), $fallback)));
+    }
+
+    $tokens = preg_split('/\s*,\s*/', $raw) ?: [];
+    $normalized = array_values(array_unique(array_filter(array_map(static fn (string $currency): string => strtoupper(trim($currency)), $tokens), static fn (string $currency): bool => $currency !== '')));
+
+    return $normalized !== []
+        ? $normalized
+        : array_values(array_unique(array_map(static fn (string $currency): string => strtoupper(trim($currency)), $fallback)));
+};
+
+$foreignAllowedCurrencies = $parseCurrencyList(
+    env('WORKATION_PAYMENT_FOREIGN_ALLOWED_CURRENCIES', 'USD'),
+    ['USD']
+);
+
+$stripeSupportedCurrencies = $parseCurrencyList(
+    env(
+        'WORKATION_PAYMENT_STRIPE_SUPPORTED_CURRENCIES',
+        implode(',', array_values(array_unique(array_merge(['MVR'], $foreignAllowedCurrencies))))
+    ),
+    array_values(array_unique(array_merge(['MVR'], $foreignAllowedCurrencies)))
+);
+
 return [
     'commission_rate_percent' => 12.0,
 
@@ -21,8 +48,10 @@ return [
     ],
 
     'global_segment_currency_restrictions' => [
-        'local_maldivian' => ['MVR', 'USD'],
-        'foreign_national' => ['USD'],
+        // Locals are settled in MVR only.
+        'local_maldivian' => ['MVR'],
+        // Foreign currencies are configurable and default to USD.
+        'foreign_national' => $foreignAllowedCurrencies,
     ],
 
     // Ordered by preference per customer segment.
@@ -72,7 +101,8 @@ return [
             'label' => env('WORKATION_PAYMENT_STRIPE_LABEL', 'Stripe Checkout'),
             'provider' => 'stripe',
             'currency' => null,
-            'supported_currencies' => ['MVR', 'USD'],
+            // Multi-currency is controlled by env, e.g. "MVR,USD,EUR,GBP,AED".
+            'supported_currencies' => $stripeSupportedCurrencies,
             'mode' => env('WORKATION_PAYMENT_STRIPE_MODE', 'internal'),
             'checkout_url' => env('WORKATION_PAYMENT_STRIPE_CHECKOUT_URL', ''),
             'allowed_segments' => ['local_maldivian', 'foreign_national'],

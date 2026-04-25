@@ -112,6 +112,11 @@ class CheckoutPaymentRouter
             throw new InvalidArgumentException('No eligible payment gateway is configured for this reservation.');
         }
 
+        $segment = self::resolveCustomerSegment(
+            (string) ($context['primary_nationality'] ?? ''),
+            (string) ($context['guest_residency'] ?? '')
+        );
+
         $gateway = strtolower(trim((string) $requestedGateway));
         $currency = strtoupper(trim((string) $requestedCurrency));
 
@@ -133,6 +138,15 @@ class CheckoutPaymentRouter
         if ($reservationCurrency !== '') {
             foreach ($options as $option) {
                 if ((string) $option['currency'] === $reservationCurrency) {
+                    return $option;
+                }
+            }
+        }
+
+        $fallbackCurrency = strtoupper(trim((string) config('checkout_payments.fallback_currency_by_segment.' . $segment, '')));
+        if ($fallbackCurrency !== '') {
+            foreach ($options as $option) {
+                if ((string) $option['currency'] === $fallbackCurrency) {
                     return $option;
                 }
             }

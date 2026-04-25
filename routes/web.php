@@ -6,6 +6,7 @@ use App\Support\CheckoutPaymentRouter;
 use App\Support\ReservationPricingPolicy;
 use App\Support\ReservationSettlementCalculator;
 use App\Support\UniformIconSystem;
+use App\Support\VendorPropertyCompatibilityReader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -3725,12 +3726,10 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     $transportDestinationOptions = collect();
 
     if (Schema::hasTable('vendor_properties')) {
-        $propertiesQuery = DB::table('vendor_properties')
-            ->where('status', 'active')
-            ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'));
-        if (Schema::hasColumn('vendor_properties', 'listing_category')) {
-            $propertiesQuery->whereRaw('LOWER(listing_category) = ?', [$dbCategoryKey]);
-        }
+        // Route group migration step 1:
+        // keep vendor_properties as source while routing reads through a compatibility layer
+        // that can merge dedicated-table values and emit parity diagnostics.
+        $propertiesQuery = VendorPropertyCompatibilityReader::categoryApprovedBaseQuery($dbCategoryKey);
 
         $searchColumns = [];
         foreach (['name', 'listing_name', 'atoll', 'island', 'city', 'description', 'listing_details', 'amenities', 'facilities', 'pickup_location', 'dropoff_location', 'origin_point', 'destination_point'] as $candidateColumn) {
@@ -3927,44 +3926,13 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
 
         // Phase 2 source-of-truth: accommodation reads from dedicated category table.
         if ($dbCategoryKey === 'accommodation' && $propertyIds->isNotEmpty() && Schema::hasTable('vendor_accommodation_listings')) {
-            $accommodationSelectColumns = ['vendor_property_id', 'name', 'status', 'location', 'description', 'max_guests', 'details'];
-            if (Schema::hasColumn('vendor_accommodation_listings', 'currency')) {
-                $accommodationSelectColumns[] = 'currency';
-            }
-
-            $dedicatedAccommodationRows = DB::table('vendor_accommodation_listings')
-                ->whereIn('vendor_property_id', $propertyIds->all())
-                ->get($accommodationSelectColumns)
-                ->keyBy(static fn ($row) => (int) ($row->vendor_property_id ?? 0));
-
+            $dedicatedAccommodationRows = VendorPropertyCompatibilityReader::loadAccommodationRows($propertyIds);
             if ($dedicatedAccommodationRows->isNotEmpty()) {
-                $catalogProperties = $catalogProperties->map(static function ($property) use ($dedicatedAccommodationRows) {
-                    $propertyId = (int) ($property->id ?? 0);
-                    $dedicated = $dedicatedAccommodationRows->get($propertyId);
-                    if (!$dedicated) {
-                        return $property;
-                    }
-
-                    foreach (['name', 'status', 'location', 'description'] as $field) {
-                        if (isset($dedicated->{$field}) && trim((string) $dedicated->{$field}) !== '') {
-                            $property->{$field} = $dedicated->{$field};
-                        }
-                    }
-
-                    if (property_exists($dedicated, 'currency') && trim((string) ($dedicated->currency ?? '')) !== '') {
-                        $property->currency = $dedicated->currency;
-                    }
-
-                    if (isset($dedicated->max_guests) && is_numeric($dedicated->max_guests)) {
-                        $property->max_guests = (int) $dedicated->max_guests;
-                    }
-                    if (isset($dedicated->details) && trim((string) $dedicated->details) !== '') {
-                        $property->listing_details = (string) $dedicated->details;
-                    }
-
-                    return $property;
-                })->values();
-
+                $catalogProperties = VendorPropertyCompatibilityReader::mergeAccommodationFromDedicated(
+                    $catalogProperties,
+                    $dedicatedAccommodationRows,
+                    'catalog'
+                );
             }
         }
 
@@ -4152,35 +4120,8 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             $catalogPropertyMediaByProperty = $mediaRows->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
         }
 
-        if (Schema::hasColumn('vendor_properties', 'atoll')) {
-            $atollOptions = DB::table('vendor_properties')
-                ->where('status', 'active')
-                ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'))
-                ->when(Schema::hasColumn('vendor_properties', 'listing_category'), function ($query) use ($dbCategoryKey) {
-                    $query->whereRaw('LOWER(listing_category) = ?', [$dbCategoryKey]);
-                })
-                ->whereNotNull('atoll')
-                ->where('atoll', '!=', '')
-                ->distinct()
-                ->orderBy('atoll')
-                ->limit(120)
-                ->pluck('atoll');
-        }
-
-        if (Schema::hasColumn('vendor_properties', 'island')) {
-            $islandOptions = DB::table('vendor_properties')
-                ->where('status', 'active')
-                ->when(Schema::hasColumn('vendor_properties', 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'))
-                ->when(Schema::hasColumn('vendor_properties', 'listing_category'), function ($query) use ($dbCategoryKey) {
-                    $query->whereRaw('LOWER(listing_category) = ?', [$dbCategoryKey]);
-                })
-                ->whereNotNull('island')
-                ->where('island', '!=', '')
-                ->distinct()
-                ->orderBy('island')
-                ->limit(120)
-                ->pluck('island');
-        }
+        $atollOptions = VendorPropertyCompatibilityReader::distinctOptionValues($dbCategoryKey, 'atoll', 120);
+        $islandOptions = VendorPropertyCompatibilityReader::distinctOptionValues($dbCategoryKey, 'island', 120);
 
         if (Schema::hasColumn('vendor_properties', 'listing_category')) {
             $transportDestinationMap = [];
@@ -4301,32 +4242,18 @@ Route::get('/property/{property}', function (Request $request, int $property) {
 
     $listingCategory = strtolower(trim((string) ($propertyRow->listing_category ?? '')));
     if ($listingCategory === 'accommodation' && Schema::hasTable('vendor_accommodation_listings')) {
-        $accommodationSelectColumns = ['name', 'status', 'location', 'description', 'max_guests', 'details'];
-        if (Schema::hasColumn('vendor_accommodation_listings', 'currency')) {
-            $accommodationSelectColumns[] = 'currency';
-        }
+        $dedicatedAccommodationRows = VendorPropertyCompatibilityReader::loadAccommodationRows(
+            collect([(int) $propertyRow->id])
+        );
 
-        $dedicatedAccommodation = DB::table('vendor_accommodation_listings')
-            ->where('vendor_property_id', (int) $propertyRow->id)
-            ->first($accommodationSelectColumns);
+        if ($dedicatedAccommodationRows->isNotEmpty()) {
+            $mergedRows = VendorPropertyCompatibilityReader::mergeAccommodationFromDedicated(
+                collect([$propertyRow]),
+                $dedicatedAccommodationRows,
+                'property_profile'
+            );
 
-        if ($dedicatedAccommodation) {
-            foreach (['name', 'status', 'location', 'description'] as $field) {
-                if (isset($dedicatedAccommodation->{$field}) && trim((string) $dedicatedAccommodation->{$field}) !== '') {
-                    $propertyRow->{$field} = $dedicatedAccommodation->{$field};
-                }
-            }
-
-            if (property_exists($dedicatedAccommodation, 'currency') && trim((string) ($dedicatedAccommodation->currency ?? '')) !== '') {
-                $propertyRow->currency = $dedicatedAccommodation->currency;
-            }
-
-            if (isset($dedicatedAccommodation->max_guests) && is_numeric($dedicatedAccommodation->max_guests)) {
-                $propertyRow->max_guests = (int) $dedicatedAccommodation->max_guests;
-            }
-            if (isset($dedicatedAccommodation->details) && trim((string) $dedicatedAccommodation->details) !== '') {
-                $propertyRow->listing_details = (string) $dedicatedAccommodation->details;
-            }
+            $propertyRow = $mergedRows->first() ?: $propertyRow;
         }
     }
 

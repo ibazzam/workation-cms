@@ -1449,6 +1449,10 @@ Route::get('/', function () {
                 foreach ([
                     'base_price',
                     'meal_plan_room_only_price',
+                    'meal_plan_bb_price',
+                    'meal_plan_hb_price',
+                    'meal_plan_fb_price',
+                    'meal_plan_ai_price',
                     'meal_plan_breakfast_price',
                     'meal_plan_half_board_price',
                     'meal_plan_full_board_price',
@@ -3847,6 +3851,10 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 foreach ([
                     'base_price',
                     'meal_plan_room_only_price',
+                    'meal_plan_bb_price',
+                    'meal_plan_hb_price',
+                    'meal_plan_fb_price',
+                    'meal_plan_ai_price',
                     'meal_plan_breakfast_price',
                     'meal_plan_half_board_price',
                     'meal_plan_full_board_price',

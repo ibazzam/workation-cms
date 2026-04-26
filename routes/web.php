@@ -250,6 +250,23 @@ if (!function_exists('workationDerivedListingBasePrice')) {
     }
 }
 
+if (!function_exists('workationPropertyLookupIds')) {
+    function workationPropertyLookupIds(object $row): array
+    {
+        $candidates = [
+            (int) ($row->id ?? 0),
+            (int) ($row->dedicated_row_id ?? 0),
+            (int) ($row->vendor_property_id ?? 0),
+            (int) ($row->property_id ?? 0),
+            (int) ($row->legacy_property_id ?? 0),
+            (int) ($row->source_property_id ?? 0),
+            (int) ($row->parent_property_id ?? 0),
+        ];
+
+        return array_values(array_filter(array_unique($candidates), static fn (int $id): bool => $id > 0));
+    }
+}
+
 if (!function_exists('workationOverlappingReservationCount')) {
     function workationOverlappingReservationCount(int $vendorUserId, int $vendorPropertyId, Carbon $start, Carbon $endExclusive, ?int $roomId = null, ?int $serviceId = null): int
     {
@@ -1918,12 +1935,7 @@ Route::get('/', function () {
             ->filter(static fn (int $id) => $id > 0)
             ->values();
         $propertyLookupIds = $allProperties
-            ->flatMap(static function ($property) {
-                return [
-                    (int) ($property->id ?? 0),
-                    (int) ($property->dedicated_row_id ?? 0),
-                ];
-            })
+            ->flatMap(static fn ($property) => workationPropertyLookupIds($property))
             ->filter(static fn (int $id) => $id > 0)
             ->unique()
             ->values();
@@ -2131,6 +2143,11 @@ Route::get('/', function () {
 
                     if ($lookupId !== null) {
                         $property->base_price = (float) $combinedRoomPricesByProperty->get($lookupId);
+                    } elseif (strtolower(trim((string) ($property->listing_category ?? ''))) === 'accommodation') {
+                        $fallbackDerivedPrice = workationDerivedListingBasePrice($property);
+                        if ($fallbackDerivedPrice > 0) {
+                            $property->base_price = $fallbackDerivedPrice;
+                        }
                     }
 
                     return $property;
@@ -4539,12 +4556,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             ->filter(static fn (int $id) => $id > 0)
             ->values();
         $propertyLookupIds = $catalogProperties
-            ->flatMap(static function ($row) {
-                return [
-                    (int) ($row->id ?? 0),
-                    (int) ($row->dedicated_row_id ?? 0),
-                ];
-            })
+            ->flatMap(static fn ($row) => workationPropertyLookupIds($row))
             ->filter(static fn (int $id) => $id > 0)
             ->unique()
             ->values();
@@ -4740,6 +4752,11 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                     $prop->base_price = (float) $combinedRoomPricesByProperty->get($pid);
                 } elseif ($dedicatedId > 0 && $combinedRoomPricesByProperty->has($dedicatedId)) {
                     $prop->base_price = (float) $combinedRoomPricesByProperty->get($dedicatedId);
+                } else {
+                    $fallbackDerivedPrice = workationDerivedListingBasePrice($prop);
+                    if ($fallbackDerivedPrice > 0) {
+                        $prop->base_price = $fallbackDerivedPrice;
+                    }
                 }
                 return $prop;
             });
@@ -4769,12 +4786,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 ->filter(static fn (int $id) => $id > 0)
                 ->values();
             $propertyLookupIds = $catalogProperties
-                ->flatMap(static function ($row) {
-                    return [
-                        (int) ($row->id ?? 0),
-                        (int) ($row->dedicated_row_id ?? 0),
-                    ];
-                })
+                ->flatMap(static fn ($row) => workationPropertyLookupIds($row))
                 ->filter(static fn (int $id) => $id > 0)
                 ->unique()
                 ->values();

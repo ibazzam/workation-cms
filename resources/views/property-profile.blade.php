@@ -1596,6 +1596,100 @@
             font-size: 0.78rem;
         }
 
+        .transfer-policy-grid {
+            margin-top: 10px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .transfer-policy-intro {
+            margin: 0;
+            color: #46657c;
+            font-size: 0.86rem;
+            line-height: 1.6;
+        }
+
+        .transfer-rate-card {
+            border: 1px solid #dbe7f0;
+            border-radius: 14px;
+            background: #fbfdff;
+            padding: 14px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .transfer-rate-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .transfer-rate-title {
+            margin: 0;
+            font-size: 1rem;
+            color: #183e58;
+        }
+
+        .transfer-rate-note {
+            margin: 4px 0 0;
+            color: #5a7488;
+            font-size: 0.8rem;
+            line-height: 1.5;
+        }
+
+        .transfer-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid #cfe0eb;
+            border-radius: 999px;
+            padding: 6px 10px;
+            background: #edf6f3;
+            color: #24516b;
+            font-size: 0.76rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .transfer-rate-table {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .transfer-rate-box {
+            border: 1px solid #dbe7f0;
+            border-radius: 12px;
+            background: #f7fbff;
+            padding: 12px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .transfer-rate-box h3 {
+            margin: 0;
+            font-size: 0.86rem;
+            color: #214964;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .transfer-rate-line {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            color: #36586d;
+            font-size: 0.84rem;
+        }
+
+        .transfer-policy-summary {
+            margin: 0;
+            color: #567185;
+            font-size: 0.8rem;
+            line-height: 1.5;
+        }
+
         .policies-grid {
             margin-top: 10px;
             display: grid;
@@ -2261,6 +2355,7 @@
             .room-offer-head,
             .room-offer-row { grid-template-columns: minmax(0, 1fr) 76px minmax(170px, 0.9fr); }
             .policies-grid { grid-template-columns: 1fr; }
+            .transfer-rate-table { grid-template-columns: 1fr; }
             .nearby-grid { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
             .location-layout { grid-template-columns: 1fr; }
         }
@@ -2305,6 +2400,7 @@
             .gallery-thumbs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
             .highlights-grid { grid-template-columns: 1fr; }
             .amenities-columns { grid-template-columns: 1fr; }
+            .transfer-rate-head { flex-direction: column; }
             .room-card { grid-template-columns: 1fr; }
             .room-media { min-height: 210px; }
             .room-body { padding: 10px; }
@@ -2524,21 +2620,46 @@
                     ? $transferRateMatrix[$transferKey]
                     : [];
                 $fallbackRate = is_numeric($transferRates[$transferKey] ?? null) ? (float) $transferRates[$transferKey] : 0.0;
-                $adultRate = is_numeric($matrix['foreign_adult_charge'] ?? null)
+                $localAdultRate = is_numeric($matrix['local_adult_charge'] ?? null)
+                    ? (float) $matrix['local_adult_charge']
+                    : 0.0;
+                $localChildRate = is_numeric($matrix['local_child_charge'] ?? null)
+                    ? (float) $matrix['local_child_charge']
+                    : 0.0;
+                $foreignAdultRate = is_numeric($matrix['foreign_adult_charge'] ?? null)
                     ? (float) $matrix['foreign_adult_charge']
                     : $fallbackRate;
-                $childRate = is_numeric($matrix['foreign_child_charge'] ?? null)
+                $foreignChildRate = is_numeric($matrix['foreign_child_charge'] ?? null)
                     ? (float) $matrix['foreign_child_charge']
+                    : 0.0;
+                $baseLocalRate = is_numeric($matrix['base_charge_local'] ?? null)
+                    ? (float) $matrix['base_charge_local']
+                    : 0.0;
+                $baseForeignRate = is_numeric($matrix['base_charge_foreign'] ?? null)
+                    ? (float) $matrix['base_charge_foreign']
                     : 0.0;
 
                 return [
                     'key' => $transferKey,
                     'label' => $transferOptionCatalog[$transferKey] ?? ucwords(str_replace('_', ' ', $transferKey)),
-                    'adult_rate' => max(0, $adultRate),
-                    'child_rate' => max(0, $childRate),
+                    'local_adult_rate' => max(0, $localAdultRate),
+                    'local_child_rate' => max(0, $localChildRate),
+                    'foreign_adult_rate' => max(0, $foreignAdultRate),
+                    'foreign_child_rate' => max(0, $foreignChildRate),
+                    'base_charge_local' => max(0, $baseLocalRate),
+                    'base_charge_foreign' => max(0, $baseForeignRate),
+                    'adult_rate' => max(0, $foreignAdultRate),
+                    'child_rate' => max(0, $foreignChildRate),
                 ];
             })
-            ->filter(static fn (array $item) => $item['adult_rate'] > 0 || $item['child_rate'] > 0)
+            ->filter(static fn (array $item) =>
+                $item['local_adult_rate'] > 0
+                || $item['local_child_rate'] > 0
+                || $item['foreign_adult_rate'] > 0
+                || $item['foreign_child_rate'] > 0
+                || $item['base_charge_local'] > 0
+                || $item['base_charge_foreign'] > 0
+            )
             ->values();
         $shareUrl = url()->current();
         $shareText = trim((string) ($property->name ?? 'Property')) . ' on Workation';
@@ -2753,7 +2874,7 @@
                             </select>
                         </div>
                         <p class="hero-transfer-summary" data-transfer-summary>
-                            Optional transfer can be added to room reservation.
+                            Optional transfer can be added to room reservation. Full local and foreigner fare details are listed in the Transfer Policy &amp; Rates section below.
                         </p>
                     </div>
                 @endif
@@ -2840,6 +2961,7 @@
             <a class="section-tab" href="#rooms-section">Rooms</a>
             <a class="section-tab" href="#guest-reviews-section">Reviews</a>
             <a class="section-tab" href="#location-section">Location</a>
+            <a class="section-tab" href="#transfer-policy-section">Transfer Rates</a>
             <a class="section-tab" href="#policies-section">Property Policies</a>
         </nav>
 
@@ -3248,6 +3370,45 @@
                 </div>
             </div>
         </section>
+
+        @if ($transferChoices->isNotEmpty())
+            <section id="transfer-policy-section" class="section transfer-policy-section" aria-label="Transfer policy and rates">
+                <h2>Transfer Policy &amp; Rates</h2>
+                <div class="transfer-policy-grid">
+                    <p class="transfer-policy-intro">Available transfer modes for this property are visible here before room selection. Guests still choose their transfer during the booking flow after selecting a room, and the applicable fare is calculated according to whether the guest is a local resident or a foreign national.</p>
+                    @foreach ($transferChoices as $transferChoice)
+                        <article class="transfer-rate-card">
+                            <div class="transfer-rate-head">
+                                <div>
+                                    <h3 class="transfer-rate-title">{{ $transferChoice['label'] }}</h3>
+                                    <p class="transfer-rate-note">Charges below are shown per passenger unless a base charge is listed separately.</p>
+                                </div>
+                                <span class="transfer-pill"><i class="fa-solid fa-route" aria-hidden="true"></i> Available at checkout</span>
+                            </div>
+                            <div class="transfer-rate-table">
+                                <div class="transfer-rate-box">
+                                    <h3>Local Resident</h3>
+                                    <div class="transfer-rate-line"><span>Adult fare</span><strong>{{ $currency }} {{ number_format((float) ($transferChoice['local_adult_rate'] ?? 0), 2) }}</strong></div>
+                                    <div class="transfer-rate-line"><span>Child fare</span><strong>{{ $currency }} {{ number_format((float) ($transferChoice['local_child_rate'] ?? 0), 2) }}</strong></div>
+                                    @if ((float) ($transferChoice['base_charge_local'] ?? 0) > 0)
+                                        <div class="transfer-rate-line"><span>Base charge</span><strong>{{ $currency }} {{ number_format((float) ($transferChoice['base_charge_local'] ?? 0), 2) }}</strong></div>
+                                    @endif
+                                </div>
+                                <div class="transfer-rate-box">
+                                    <h3>Foreigner</h3>
+                                    <div class="transfer-rate-line"><span>Adult fare</span><strong>{{ $currency }} {{ number_format((float) ($transferChoice['foreign_adult_rate'] ?? 0), 2) }}</strong></div>
+                                    <div class="transfer-rate-line"><span>Child fare</span><strong>{{ $currency }} {{ number_format((float) ($transferChoice['foreign_child_rate'] ?? 0), 2) }}</strong></div>
+                                    @if ((float) ($transferChoice['base_charge_foreign'] ?? 0) > 0)
+                                        <div class="transfer-rate-line"><span>Base charge</span><strong>{{ $currency }} {{ number_format((float) ($transferChoice['base_charge_foreign'] ?? 0), 2) }}</strong></div>
+                                    @endif
+                                </div>
+                            </div>
+                            <p class="transfer-policy-summary">Transfer selection remains part of the existing booking flow, so this section is informational and does not change the current checkout behavior.</p>
+                        </article>
+                    @endforeach
+                </div>
+            </section>
+        @endif
 
         <section id="policies-section" class="section policies-section" aria-label="Property policies">
             <h2>Property Policies</h2>

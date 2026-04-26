@@ -1751,7 +1751,15 @@
                             <select id="listing_option_type" name="option_type" required>
                                 <option value="transport_mode">Transport Mode</option>
                                 <option value="accommodation_facility">Accommodation Facility</option>
+                                <option value="property_amenity">Property Amenity</option>
+                                <option value="property_feature">Property Feature</option>
                                 <option value="room_amenity">Room Amenity</option>
+                                <option value="bathroom_amenity">Bathroom Amenity</option>
+                                <option value="room_bed_type">Room Bed Type</option>
+                                <option value="transfer_option">Transfer Option</option>
+                                <option value="excursion_type">Excursion Type</option>
+                                <option value="restaurant_meal_service">Restaurant Meal Service</option>
+                                <option value="vehicle_rental_type">Vehicle Rental Type</option>
                             </select>
                         </div>
                         <div class="finance-field">

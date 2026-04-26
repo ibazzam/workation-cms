@@ -274,7 +274,8 @@ if (!function_exists('vendorPortalSyncCategoryListingRecord')) {
         float $basePrice,
         string $currency,
         int $maxGuests,
-        array $details
+        array $details,
+        ?string $moderationStatus = null
     ): void {
         $tableName = vendorPortalCategoryStorageTable($listingCategory);
         if ($tableName === null) {
@@ -303,10 +304,69 @@ if (!function_exists('vendorPortalSyncCategoryListingRecord')) {
             $payload['base_price'] = $basePrice;
         }
 
+        // Sync moderation status when provided (e.g. during create).
+        if ($moderationStatus !== null && Schema::hasColumn($tableName, 'listing_moderation_status')) {
+            $payload['listing_moderation_status'] = $moderationStatus;
+        }
+
         DB::table($tableName)->updateOrInsert(
             ['vendor_property_id' => $vendorPropertyId],
             array_merge($payload, ['created_at' => now()])
         );
+    }
+}
+
+if (!function_exists('vendorPortalCreateCategoryListingRecord')) {
+    /**
+     * Insert a new listing into the dedicated category table and return the
+     * canonical vendor_property_id (= the new row's own auto-increment id).
+     *
+     * The category table's vendor_property_id column is nullable (as of
+     * migration 070). We insert the row first to obtain the auto-increment id,
+     * then immediately set vendor_property_id = id so reads via
+     * VendorPropertyCompatibilityReader::loadPropertyById() work correctly.
+     */
+    function vendorPortalCreateCategoryListingRecord(
+        string $listingCategory,
+        int $vendorUserId,
+        string $name,
+        string $location,
+        string $description,
+        int $maxGuests,
+        array $details,
+        string $moderationStatus = 'draft'
+    ): int {
+        $tableName = vendorPortalCategoryStorageTable($listingCategory);
+        if ($tableName === null) {
+            throw new \RuntimeException('No category storage table configured for: ' . $listingCategory);
+        }
+        if (!Schema::hasTable($tableName)) {
+            throw new \RuntimeException('Category storage table is missing: ' . $tableName . '. Run migrations.');
+        }
+
+        $payload = [
+            'vendor_user_id' => $vendorUserId,
+            'name' => $name,
+            'status' => 'active',
+            'location' => $location,
+            'description' => $description,
+            'max_guests' => $maxGuests,
+            'details' => empty($details) ? null : json_encode($details),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        if (Schema::hasColumn($tableName, 'listing_moderation_status')) {
+            $payload['listing_moderation_status'] = $moderationStatus;
+        }
+
+        $newId = (int) DB::table($tableName)->insertGetId($payload);
+
+        // Self-reference: the category table row's own id becomes the
+        // canonical vendor_property_id used across all related tables.
+        DB::table($tableName)->where('id', $newId)->update(['vendor_property_id' => $newId]);
+
+        return $newId;
     }
 }
 
@@ -482,13 +542,33 @@ if (!function_exists('vendorPortalWriteMediaVariant')) {
 if (!function_exists('vendorPortalTransferOptionCatalog')) {
     function vendorPortalTransferOptionCatalog(): array
     {
+        return array_keys(vendorPortalTransferOptionLabelMap());
+    }
+}
+
+if (!function_exists('vendorPortalTransferOptionLabelMap')) {
+    function vendorPortalTransferOptionLabelMap(): array
+    {
+        $labels = [];
+        foreach (vendorPortalListingOptions('transfer_option') as $option) {
+            $value = strtolower(trim((string) ($option['value'] ?? '')));
+            $label = trim((string) ($option['label'] ?? $value));
+            if ($value !== '' && $label !== '') {
+                $labels[$value] = $label;
+            }
+        }
+
+        if ($labels !== []) {
+            return $labels;
+        }
+
         return [
-            'car',
-            'van',
-            'ferry',
-            'speedboat',
-            'seaplane',
-            'domestic_flight',
+            'car' => 'Car',
+            'van' => 'Van',
+            'ferry' => 'Ferry',
+            'speedboat' => 'SpeedBoat',
+            'seaplane' => 'SeaPlane',
+            'domestic_flight' => 'Domestic Flight',
         ];
     }
 }
@@ -608,6 +688,14 @@ if (!function_exists('vendorPortalListingOptionDefaults')) {
                 ['value' => 'marine_ferry', 'label' => 'Marine - Ferry', 'group' => 'marine', 'sort_order' => 120],
                 ['value' => 'other_land_vehicle', 'label' => 'Other Land Vehicle', 'group' => 'land', 'sort_order' => 130],
                 ['value' => 'other_marine_vessel', 'label' => 'Other Marine Vessel', 'group' => 'marine', 'sort_order' => 140],
+            ],
+            'transfer_option' => [
+                ['value' => 'car', 'label' => 'Car', 'group' => 'land', 'sort_order' => 10],
+                ['value' => 'van', 'label' => 'Van', 'group' => 'land', 'sort_order' => 20],
+                ['value' => 'ferry', 'label' => 'Ferry', 'group' => 'marine', 'sort_order' => 30],
+                ['value' => 'speedboat', 'label' => 'SpeedBoat', 'group' => 'marine', 'sort_order' => 40],
+                ['value' => 'seaplane', 'label' => 'SeaPlane', 'group' => 'air', 'sort_order' => 50],
+                ['value' => 'domestic_flight', 'label' => 'Domestic Flight', 'group' => 'air', 'sort_order' => 60],
             ],
         ];
     }
@@ -1442,20 +1530,14 @@ if (!function_exists('vendorPortalAccommodationRoomCount')) {
             }
         }
 
-        if (!Schema::hasTable('vendor_properties') || !Schema::hasColumn('vendor_properties', 'listing_details')) {
+        $property = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById($propertyId, $vendorUserId);
+        $rawDetails = $property->listing_details ?? ($property->details ?? null);
+
+        if (!$property || !is_string($rawDetails) || trim($rawDetails) === '') {
             return 0;
         }
 
-        $property = DB::table('vendor_properties')
-            ->where('id', $propertyId)
-            ->where('vendor_user_id', $vendorUserId)
-            ->first(['listing_details']);
-
-        if (!$property || !is_string($property->listing_details) || trim($property->listing_details) === '') {
-            return 0;
-        }
-
-        $details = json_decode($property->listing_details, true);
+        $details = json_decode($rawDetails, true);
         if (!is_array($details)) {
             return 0;
         }
@@ -1499,14 +1581,14 @@ if (!function_exists('vendorPortalAccommodationRoomPricing')) {
         }
 
         $resolvedPropertyId = (int) ($room->vendor_property_id ?? 0);
-        if ($resolvedPropertyId <= 0 || !Schema::hasTable('vendor_properties')) {
+        if ($resolvedPropertyId <= 0) {
             return null;
         }
 
-        $property = DB::table('vendor_properties')
-            ->where('id', $resolvedPropertyId)
-            ->where('vendor_user_id', $vendorUserId)
-            ->first(['listing_category', 'listing_details']);
+        $property = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById($resolvedPropertyId, $vendorUserId);
+        if (!$property) {
+            return null;
+        }
 
         $propertyCategory = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
         if ($propertyCategory !== 'accommodation') {
@@ -1593,14 +1675,11 @@ if (!function_exists('vendorPortalPropertyTransferCharge')) {
             'transfer_charge_total' => 0.0,
         ];
 
-        if ($vendorUserId <= 0 || $propertyId === null || $propertyId <= 0 || $requestedOption === '' || !Schema::hasTable('vendor_properties')) {
+        if ($vendorUserId <= 0 || $propertyId === null || $propertyId <= 0 || $requestedOption === '') {
             return $result;
         }
 
-        $property = DB::table('vendor_properties')
-            ->where('id', $propertyId)
-            ->where('vendor_user_id', $vendorUserId)
-            ->first(['listing_category', 'listing_details']);
+        $property = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById($propertyId, $vendorUserId);
 
         if (!$property) {
             return $result;
@@ -1611,7 +1690,7 @@ if (!function_exists('vendorPortalPropertyTransferCharge')) {
             return $result;
         }
 
-        $detailsRaw = (string) ($property->listing_details ?? '');
+        $detailsRaw = (string) ($property->listing_details ?? ($property->details ?? ''));
         $details = is_string($detailsRaw) && trim($detailsRaw) !== ''
             ? json_decode($detailsRaw, true)
             : [];
@@ -1676,14 +1755,11 @@ if (!function_exists('vendorPortalReservationInvoiceTaxes')) {
             'tax_lines' => [],
         ];
 
-        if ($propertyId === null || $propertyId <= 0 || !Schema::hasTable('vendor_properties')) {
+        if ($propertyId === null || $propertyId <= 0) {
             return $breakdown;
         }
 
-        $property = DB::table('vendor_properties')
-            ->where('id', $propertyId)
-            ->where('vendor_user_id', $vendorUserId)
-            ->first(['listing_category', 'listing_details']);
+        $property = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById($propertyId, $vendorUserId);
 
         if (!$property) {
             return $breakdown;
@@ -1693,8 +1769,9 @@ if (!function_exists('vendorPortalReservationInvoiceTaxes')) {
         $breakdown['listing_category'] = $listingCategory;
 
         $details = [];
-        if (is_string($property->listing_details ?? null) && trim((string) $property->listing_details) !== '') {
-            $decoded = json_decode((string) $property->listing_details, true);
+        $rawDetails = $property->listing_details ?? ($property->details ?? null);
+        if (is_string($rawDetails) && trim($rawDetails) !== '') {
+            $decoded = json_decode($rawDetails, true);
             if (is_array($decoded)) {
                 $details = $decoded;
             }
@@ -1775,21 +1852,16 @@ Route::get('/vendor', function () {
     $vendorTaxComponents = collect($vendorReservationPolicy['tax_components'] ?? []);
 
     if ($vendorUserId > 0) {
-        if (Schema::hasTable('vendor_properties')) {
-            $vendorProperties = DB::table('vendor_properties')
-                ->where('vendor_user_id', $vendorUserId)
-                ->orderByDesc('updated_at')
-                ->limit(200)
-                ->get();
+        // Load vendor listings from dedicated category tables.
+        $vendorProperties = \App\Support\VendorPropertyCompatibilityReader::loadVendorListings($vendorUserId, 200);
 
-            $existingListingCategories = $vendorProperties
-                ->map(static fn ($property) => vendorPortalCanonicalCategory((string) ($property->listing_category ?? '')))
-                ->filter(static fn ($category) => is_string($category) && $category !== '')
-                ->values()
-                ->all();
-            if ($existingListingCategories !== []) {
-                $selectedVendorCategories = array_values(array_unique(array_merge($selectedVendorCategories, $existingListingCategories)));
-            }
+        $existingListingCategories = $vendorProperties
+            ->map(static fn ($property) => vendorPortalCanonicalCategory((string) ($property->listing_category ?? '')))
+            ->filter(static fn ($category) => is_string($category) && $category !== '')
+            ->values()
+            ->all();
+        if ($existingListingCategories !== []) {
+            $selectedVendorCategories = array_values(array_unique(array_merge($selectedVendorCategories, $existingListingCategories)));
         }
 
         if (Schema::hasTable('vendor_services')) {
@@ -2279,14 +2351,7 @@ foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
             'approved_categories' => $approvedCategories,
         ];
 
-        $transferOptionCatalog = [
-            'car' => 'Car',
-            'van' => 'Van',
-            'ferry' => 'Ferry',
-            'speedboat' => 'SpeedBoat',
-            'seaplane' => 'SeaPlane',
-            'domestic_flight' => 'Domestic Flight',
-        ];
+        $transferOptionCatalog = vendorPortalTransferOptionLabelMap();
         $workspaceAmenityCatalog = [
             'workdesk' => 'Workdesk',
             'wifi' => 'WiFi',
@@ -2355,18 +2420,16 @@ foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
                 ->withErrors(['profile' => 'This listing category is locked. Contact admin to unlock ' . $listingCategoryAlias . ' for your account.']);
         }
 
-        $propertyRow = DB::table('vendor_properties')
-            ->where('id', $propertyId)
-            ->where('vendor_user_id', $vendorUserId)
-            ->first();
+        $propertyRow = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById($propertyId, $vendorUserId, $listingCategoryAlias);
         if (!$propertyRow) {
             return redirect('/vendor/listings/' . $listingCategoryAlias)
                 ->withErrors(['profile' => 'Listing not found or access denied.']);
         }
 
         $propertyDetails = [];
-        if (is_string($propertyRow->listing_details ?? null) && trim($propertyRow->listing_details) !== '') {
-            $decoded = json_decode($propertyRow->listing_details, true);
+        $rawDetails = $propertyRow->listing_details ?? ($propertyRow->details ?? null);
+        if (is_string($rawDetails) && trim($rawDetails) !== '') {
+            $decoded = json_decode($rawDetails, true);
             if (is_array($decoded)) {
                 $propertyDetails = $decoded;
             }
@@ -2390,14 +2453,7 @@ foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
             'approved_categories' => $approvedCategories,
         ];
 
-        $transferOptionCatalog = [
-            'car' => 'Car',
-            'van' => 'Van',
-            'ferry' => 'Ferry',
-            'speedboat' => 'SpeedBoat',
-            'seaplane' => 'SeaPlane',
-            'domestic_flight' => 'Domestic Flight',
-        ];
+        $transferOptionCatalog = vendorPortalTransferOptionLabelMap();
         $workspaceAmenityCatalog = [
             'workdesk' => 'Workdesk',
             'wifi' => 'WiFi',
@@ -2891,15 +2947,7 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
     }
 
     if ($entityType === 'property') {
-        if (!Schema::hasTable('vendor_properties')) {
-            return back()->withErrors(['profile' => 'Properties table is not ready. Run migrations first.']);
-        }
-
-        $propertyExists = DB::table('vendor_properties')
-            ->where('id', (int) $entityId)
-            ->where('vendor_user_id', $vendorUserId)
-            ->exists();
-
+        $propertyExists = \App\Support\VendorPropertyCompatibilityReader::vendorOwnsProperty((int) $entityId, $vendorUserId);
         if (!$propertyExists) {
             return back()->withErrors(['profile' => 'Property not found for this vendor account.'])->withInput();
         }
@@ -3213,10 +3261,6 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         return back()->withErrors(['profile' => 'Room categories table is not ready. Run migrations first.']);
     }
 
-    if (!Schema::hasTable('vendor_properties')) {
-        return back()->withErrors(['profile' => 'Properties table is not ready. Run migrations first.']);
-    }
-
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
 
     $validated = $request->validate([
@@ -3286,10 +3330,7 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
 
     $vendorPropertyId = (int) ($validated['vendor_property_id'] ?? 0);
 
-    $propertyRecord = DB::table('vendor_properties')
-        ->where('id', $vendorPropertyId)
-        ->where('vendor_user_id', $vendorUserId)
-        ->first(['id', 'listing_category']);
+    $propertyRecord = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById($vendorPropertyId, $vendorUserId);
 
     if (!$propertyRecord) {
         return back()->withErrors(['profile' => 'Select a valid property owned by your vendor account.'])->withInput();
@@ -3461,11 +3502,8 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
         ])->withInput();
     }
 
-    if (Schema::hasTable('vendor_properties') && isset($roomRecord->vendor_property_id)) {
-        $propertyRecord = DB::table('vendor_properties')
-            ->where('id', (int) $roomRecord->vendor_property_id)
-            ->where('vendor_user_id', $vendorUserId)
-            ->first(['listing_category']);
+    if (isset($roomRecord->vendor_property_id)) {
+        $propertyRecord = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById((int) $roomRecord->vendor_property_id, $vendorUserId);
         $propertyCategory = vendorPortalCanonicalCategory((string) ($propertyRecord->listing_category ?? ''));
         if ($propertyCategory !== 'accommodation') {
             return back()->withErrors(['profile' => 'Only rooms under accommodation listings can be updated here.'])->withInput();
@@ -3575,9 +3613,6 @@ Route::post('/portal/vendor/rooms/{room}/delete', function (int $room) {
 Route::post('/portal/vendor/properties/create', function (Request $request) {
     if (!session('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');
-    }
-    if (!Schema::hasTable('vendor_properties')) {
-        return back()->withErrors(['profile' => 'Vendor properties table is not ready. Run migrations first.']);
     }
 
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
@@ -3805,45 +3840,16 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         $normalizedMaxGuests = max(0, (int) ($categoryCapacity ?? ($validated['max_guests'] ?? 0)));
     }
 
-    $payload = [
-        'vendor_user_id' => $vendorUserId,
-        'name' => trim((string) $validated['name']),
-        'property_type' => $resolvedPropertyType,
-        'location' => $resolvedLocation,
-        'description' => trim((string) ($validated['description'] ?? '')),
-        'status' => 'active',
-        'base_price' => $resolvedBasePrice,
-        'currency' => 'MVR',
-        'max_guests' => $normalizedMaxGuests,
-        'created_at' => now(),
-        'updated_at' => now(),
-    ];
-
-    if (Schema::hasColumn('vendor_properties', 'listing_category')) {
-        $payload['listing_category'] = $canonicalListingCategory;
-    }
-    if (Schema::hasColumn('vendor_properties', 'listing_details')) {
-        $payload['listing_details'] = empty($propertyDetails) ? null : json_encode($propertyDetails);
-    }
-    if (Schema::hasColumn('vendor_properties', 'amenities')) {
-        $payload['amenities'] = implode(', ', $selectedAmenityTokens);
-    }
-
-    DB::transaction(function () use ($payload, $canonicalListingCategory, $vendorUserId, $resolvedLocation, $resolvedBasePrice, $normalizedMaxGuests, $propertyDetails): void {
-        $vendorPropertyId = (int) DB::table('vendor_properties')->insertGetId($payload);
-
-        vendorPortalSyncCategoryListingRecord(
+    DB::transaction(function () use ($canonicalListingCategory, $vendorUserId, $validated, $resolvedLocation, $normalizedMaxGuests, $propertyDetails): void {
+        vendorPortalCreateCategoryListingRecord(
             $canonicalListingCategory,
-            $vendorPropertyId,
             $vendorUserId,
-            (string) ($payload['name'] ?? ''),
-            (string) ($payload['status'] ?? 'active'),
+            trim((string) $validated['name']),
             $resolvedLocation,
-            (string) ($payload['description'] ?? ''),
-            $resolvedBasePrice,
-            (string) ($payload['currency'] ?? 'MVR'),
+            trim((string) ($validated['description'] ?? '')),
             $normalizedMaxGuests,
-            $propertyDetails
+            $propertyDetails,
+            'draft'
         );
     });
 
@@ -3854,15 +3860,9 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
     if (!session('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');
     }
-    if (!Schema::hasTable('vendor_properties')) {
-        return back()->withErrors(['profile' => 'Vendor properties table is not ready. Run migrations first.']);
-    }
 
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
-    $propertyRecord = DB::table('vendor_properties')
-        ->where('id', $property)
-        ->where('vendor_user_id', $vendorUserId)
-        ->first();
+    $propertyRecord = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById($property, $vendorUserId);
 
     if (!$propertyRecord) {
         return back()->withErrors(['profile' => 'Property not found for this vendor account.']);
@@ -4098,29 +4098,7 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'updated_at' => now(),
     ];
 
-    if (Schema::hasColumn('vendor_properties', 'amenities')) {
-        $updatePayload['amenities'] = implode(', ', $selectedAmenityTokens);
-    }
-
-    if ($canonicalListingCategory !== null) {
-        if (Schema::hasColumn('vendor_properties', 'property_type')) {
-            $updatePayload['property_type'] = vendorPortalPropertyTypeForCategory($canonicalListingCategory);
-        }
-        if (Schema::hasColumn('vendor_properties', 'listing_category')) {
-            $updatePayload['listing_category'] = $canonicalListingCategory;
-        }
-        if (!empty($existingDetails) && Schema::hasColumn('vendor_properties', 'listing_details')) {
-            $existingDetails['listing_category'] = $canonicalListingCategory;
-            $updatePayload['listing_details'] = json_encode($existingDetails);
-        }
-    }
-
     DB::transaction(function () use ($property, $vendorUserId, $updatePayload, $canonicalListingCategory, $resolvedLocation, $resolvedBasePrice, $normalizedMaxGuests, $existingDetails, $validated): void {
-        DB::table('vendor_properties')
-            ->where('id', $property)
-            ->where('vendor_user_id', $vendorUserId)
-            ->update($updatePayload);
-
         if ($canonicalListingCategory !== null) {
             vendorPortalSyncCategoryListingRecord(
                 $canonicalListingCategory,
@@ -4145,16 +4123,10 @@ Route::post('/portal/vendor/properties/{property}/delete', function (int $proper
     if (!session('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');
     }
-    if (!Schema::hasTable('vendor_properties')) {
-        return back()->withErrors(['profile' => 'Vendor properties table is not ready. Run migrations first.']);
-    }
 
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
 
-    $propertyRecord = DB::table('vendor_properties')
-        ->where('id', $property)
-        ->where('vendor_user_id', $vendorUserId)
-        ->first(['id', 'listing_category']);
+    $propertyRecord = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById($property, $vendorUserId);
 
     if (!$propertyRecord) {
         return back()->withErrors(['profile' => 'Property not found for this vendor account.']);
@@ -4162,15 +4134,10 @@ Route::post('/portal/vendor/properties/{property}/delete', function (int $proper
 
     $canonicalListingCategory = vendorPortalCanonicalCategory((string) ($propertyRecord->listing_category ?? ''));
 
-    DB::transaction(function () use ($property, $vendorUserId, $canonicalListingCategory): void {
+    DB::transaction(function () use ($property, $canonicalListingCategory): void {
         if ($canonicalListingCategory !== null) {
             vendorPortalDeleteCategoryListingRecord($canonicalListingCategory, $property);
         }
-
-        DB::table('vendor_properties')
-            ->where('id', $property)
-            ->where('vendor_user_id', $vendorUserId)
-            ->delete();
     });
 
     return vendorPortalListingsBackResponse('Property listing removed.', 1);
@@ -4180,21 +4147,12 @@ Route::post('/portal/vendor/properties/{property}/submit-for-review', function (
     if (!session('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');
     }
-    if (!Schema::hasTable('vendor_properties')) {
-        return back()->withErrors(['profile' => 'Vendor properties table is not ready. Run migrations first.']);
-    }
-    if (!Schema::hasColumn('vendor_properties', 'listing_moderation_status')) {
-        return back()->withErrors(['profile' => 'Listing moderation is not available yet. Run migrations first.']);
-    }
 
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
 
-    $listing = DB::table('vendor_properties')
-        ->where('id', $property)
-        ->where('vendor_user_id', $vendorUserId)
-        ->first(['id', 'name', 'status', 'description', 'location', 'base_price', 'max_guests', 'listing_category', 'listing_details', 'listing_moderation_status']);
-
-    if (!$listing) {
+    // Load listing from dedicated table first; fall back to vendor_properties.
+    $listing = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($property);
+    if (!$listing || (int) ($listing->vendor_user_id ?? 0) !== $vendorUserId) {
         return back()->withErrors(['profile' => 'Listing not found.']);
     }
 
@@ -4205,8 +4163,9 @@ Route::post('/portal/vendor/properties/{property}/submit-for-review', function (
     }
 
     $listingDetails = [];
-    if (is_string($listing->listing_details ?? null) && trim((string) $listing->listing_details) !== '') {
-        $decodedDetails = json_decode((string) $listing->listing_details, true);
+    $rawDetails = $listing->listing_details ?? ($listing->details ?? null);
+    if (is_string($rawDetails) && trim((string) $rawDetails) !== '') {
+        $decodedDetails = json_decode((string) $rawDetails, true);
         if (is_array($decodedDetails)) {
             $listingDetails = $decodedDetails;
         }
@@ -4222,25 +4181,7 @@ Route::post('/portal/vendor/properties/{property}/submit-for-review', function (
         }
     }
 
-    $updatePayload = [
-        'listing_moderation_status' => 'pending_review',
-        'listing_submitted_for_review_at' => now(),
-        'updated_at' => now(),
-    ];
-    if (Schema::hasColumn('vendor_properties', 'listing_admin_notes')) {
-        $updatePayload['listing_admin_notes'] = null;
-    }
-    if (Schema::hasColumn('vendor_properties', 'listing_approved_at')) {
-        $updatePayload['listing_approved_at'] = null;
-    }
-    if (Schema::hasColumn('vendor_properties', 'listing_approved_by_user_id')) {
-        $updatePayload['listing_approved_by_user_id'] = null;
-    }
-
-    DB::table('vendor_properties')
-        ->where('id', $property)
-        ->where('vendor_user_id', $vendorUserId)
-        ->update($updatePayload);
+    \App\Support\VendorPropertyCompatibilityReader::submitForReview($property, $canonicalListingCategory);
 
     return vendorPortalListingsBackResponse('Listing submitted for admin review. You will be notified once it has been approved.', 1);
 });
@@ -4395,12 +4336,8 @@ Route::post('/portal/vendor/availability/save', function (Request $request) {
     $freeNotes = trim((string) ($validated['notes'] ?? ''));
 
     $propertyCategoryFromTarget = null;
-    if ($vendorPropertyId !== null && Schema::hasTable('vendor_properties')) {
-        $propertyRecord = DB::table('vendor_properties')
-            ->select(['id', 'listing_category'])
-            ->where('id', $vendorPropertyId)
-            ->where('vendor_user_id', $vendorUserId)
-            ->first();
+    if ($vendorPropertyId !== null) {
+        $propertyRecord = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById($vendorPropertyId, $vendorUserId);
         if (!$propertyRecord) {
             return back()->withErrors(['profile' => 'Selected property is not valid for this vendor account.'])->withInput();
         }
@@ -4534,9 +4471,6 @@ Route::post('/portal/vendor/transport/tariff/save', function (Request $request) 
     if (!session('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');
     }
-    if (!Schema::hasTable('vendor_properties')) {
-        return back()->withErrors(['profile' => 'Vendor properties table is not ready. Run migrations first.']);
-    }
 
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
     $validated = $request->validate([
@@ -4548,16 +4482,13 @@ Route::post('/portal/vendor/transport/tariff/save', function (Request $request) 
         'private_hire_rate' => ['nullable', 'numeric', 'min:0'],
     ]);
 
-    $property = DB::table('vendor_properties')
-        ->where('id', (int) $validated['vendor_property_id'])
-        ->where('vendor_user_id', $vendorUserId)
-        ->first();
+    $property = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById((int) $validated['vendor_property_id'], $vendorUserId);
     if (!$property) {
         return back()->withErrors(['profile' => 'Selected transport listing was not found for this vendor account.'])->withInput();
     }
 
     $listingCategory = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
-    if ($listingCategory !== 'transport') {
+    if (!in_array($listingCategory, ['marine_transport', 'land_transport'], true)) {
         return back()->withErrors(['profile' => 'Tariff options can only be updated for transport listings.'])->withInput();
     }
 
@@ -4593,14 +4524,17 @@ Route::post('/portal/vendor/transport/tariff/save', function (Request $request) 
     }
 
     $selectedRate = (float) ($rateByMode[$tariffMode] ?? 0);
-    DB::table('vendor_properties')
-        ->where('id', (int) $validated['vendor_property_id'])
-        ->where('vendor_user_id', $vendorUserId)
-        ->update([
-            'base_price' => $selectedRate,
-            'listing_details' => json_encode($details),
-            'updated_at' => now(),
-        ]);
+    $tableName = vendorPortalCategoryStorageTable($listingCategory);
+    if ($tableName !== null && Schema::hasTable($tableName)) {
+        $colUpdate = ['details' => json_encode($details), 'updated_at' => now()];
+        if (Schema::hasColumn($tableName, 'base_price')) {
+            $colUpdate['base_price'] = $selectedRate;
+        }
+        DB::table($tableName)
+            ->where('vendor_property_id', (int) $validated['vendor_property_id'])
+            ->where('vendor_user_id', $vendorUserId)
+            ->update($colUpdate);
+    }
 
     return back()->with('portal_notice', 'Transport tariff updated.');
 });
@@ -4608,9 +4542,6 @@ Route::post('/portal/vendor/transport/tariff/save', function (Request $request) 
 Route::post('/portal/vendor/transfer/rates/save', function (Request $request) {
     if (!session('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');
-    }
-    if (!Schema::hasTable('vendor_properties')) {
-        return back()->withErrors(['profile' => 'Vendor properties table is not ready. Run migrations first.']);
     }
 
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
@@ -4622,10 +4553,7 @@ Route::post('/portal/vendor/transfer/rates/save', function (Request $request) {
         'transfer_rates.*' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
     ]);
 
-    $property = DB::table('vendor_properties')
-        ->where('id', (int) $validated['vendor_property_id'])
-        ->where('vendor_user_id', $vendorUserId)
-        ->first();
+    $property = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById((int) $validated['vendor_property_id'], $vendorUserId);
     if (!$property) {
         return back()->withErrors(['profile' => 'Selected listing was not found for this vendor account.'])->withInput();
     }
@@ -4693,13 +4621,13 @@ Route::post('/portal/vendor/transfer/rates/save', function (Request $request) {
     $details['transfer_options'] = array_values(array_unique($configuredTransferOptions));
     $details['transfer_rates'] = $currentTransferRates;
 
-    DB::table('vendor_properties')
-        ->where('id', (int) $validated['vendor_property_id'])
-        ->where('vendor_user_id', $vendorUserId)
-        ->update([
-            'listing_details' => json_encode($details),
-            'updated_at' => now(),
-        ]);
+    $tableName = vendorPortalCategoryStorageTable($listingCategory);
+    if ($tableName !== null && Schema::hasTable($tableName)) {
+        DB::table($tableName)
+            ->where('vendor_property_id', (int) $validated['vendor_property_id'])
+            ->where('vendor_user_id', $vendorUserId)
+            ->update(['details' => json_encode($details), 'updated_at' => now()]);
+    }
 
     return back()->with('portal_notice', 'Transfer rates updated for availability and bookings.');
 });
@@ -4760,13 +4688,12 @@ Route::post('/portal/vendor/inquiries/{inquiry}/status', function (Request $requ
         $query->where($vendorColumn, $vendorUserId);
     } else {
         $propertyColumn = collect(['vendor_property_id', 'property_id', 'listing_id', 'entity_id'])->first(static fn ($column) => in_array($column, $columns, true));
-        if ($propertyColumn === null || !Schema::hasTable('vendor_properties')) {
+        if ($propertyColumn === null) {
             return back()->withErrors(['profile' => 'Unable to verify inquiry ownership for this account.']);
         }
 
-        $vendorPropertyIds = DB::table('vendor_properties')
-            ->where('vendor_user_id', $vendorUserId)
-            ->pluck('id')
+        $vendorPropertyIds = \App\Support\VendorPropertyCompatibilityReader::loadVendorListings($vendorUserId)
+            ->pluck('vendor_property_id')
             ->map(static fn ($id): int => (int) $id)
             ->filter(static fn (int $id): bool => $id > 0)
             ->values();
@@ -4840,13 +4767,12 @@ Route::post('/portal/vendor/reviews/{review}/respond', function (Request $reques
         $query->where($vendorColumn, $vendorUserId);
     } else {
         $propertyColumn = collect(['vendor_property_id', 'property_id', 'listing_id', 'entity_id'])->first(static fn ($column) => in_array($column, $columns, true));
-        if ($propertyColumn === null || !Schema::hasTable('vendor_properties')) {
+        if ($propertyColumn === null) {
             return back()->withErrors(['profile' => 'Unable to verify review ownership for this account.']);
         }
 
-        $vendorPropertyIds = DB::table('vendor_properties')
-            ->where('vendor_user_id', $vendorUserId)
-            ->pluck('id')
+        $vendorPropertyIds = \App\Support\VendorPropertyCompatibilityReader::loadVendorListings($vendorUserId)
+            ->pluck('vendor_property_id')
             ->map(static fn ($id): int => (int) $id)
             ->filter(static fn (int $id): bool => $id > 0)
             ->values();
@@ -4915,14 +4841,7 @@ Route::post('/portal/vendor/pricing/create', function (Request $request) {
     $vendorRoomCategoryId = filled($validated['vendor_room_category_id'] ?? null) ? (int) $validated['vendor_room_category_id'] : null;
 
     if ($vendorPropertyId !== null) {
-        if (!Schema::hasTable('vendor_properties')) {
-            return back()->withErrors(['profile' => 'Properties table is not ready. Run migrations first.'])->withInput();
-        }
-
-        $propertyExists = DB::table('vendor_properties')
-            ->where('id', $vendorPropertyId)
-            ->where('vendor_user_id', $vendorUserId)
-            ->exists();
+        $propertyExists = \App\Support\VendorPropertyCompatibilityReader::vendorOwnsProperty($vendorPropertyId, $vendorUserId);
         if (!$propertyExists) {
             return back()->withErrors(['profile' => 'Property ID is not valid for this vendor account.'])->withInput();
         }

@@ -10,7 +10,7 @@
     @include('vendor-portal.partials.portal-styles')
 </head>
 <body>
-    <main class="page">
+    <main class="page page-listing-form">
         <section class="hero">
             <div class="hero-top">
                 <div class="hero-head">

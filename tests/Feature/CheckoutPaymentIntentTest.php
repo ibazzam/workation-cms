@@ -103,18 +103,16 @@ class CheckoutPaymentIntentTest extends TestCase
     {
         $vendor = User::factory()->create();
 
-        $propertyId = (int) DB::table('vendor_properties')->insertGetId([
+        $propertyId = (int) DB::table('vendor_accommodation_listings')->insertGetId([
             'vendor_user_id' => $vendor->id,
             'name' => 'Checkout Test Property',
-            'property_type' => 'property',
             'location' => 'Male',
             'status' => 'active',
-            'base_price' => 1200,
-            'currency' => $currency,
             'max_guests' => 2,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        DB::table('vendor_accommodation_listings')->where('id', $propertyId)->update(['vendor_property_id' => $propertyId]);
 
         return (int) DB::table('vendor_reservations')->insertGetId([
             'vendor_user_id' => $vendor->id,

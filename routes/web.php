@@ -181,7 +181,7 @@ if (!function_exists('workationOverlappingReservationCount')) {
 }
 
 if (!function_exists('workationSlotAvailabilityCheck')) {
-    function workationSlotAvailabilityCheck(int $vendorUserId, int $vendorPropertyId, Carbon $start, Carbon $endExclusive, int $unitsRequested = 1, ?int $roomCategoryId = null, ?int $serviceId = null): array
+    function workationSlotAvailabilityCheck(int $vendorUserId, int $vendorPropertyId, Carbon $start, Carbon $endExclusive, int $unitsRequested = 1, ?int $roomCategoryId = null, ?int $serviceId = null, ?string $listingCategory = null, ?string $routeName = null): array
     {
         if ($vendorUserId <= 0 || $vendorPropertyId <= 0 || !Schema::hasTable('vendor_availability_slots')) {
             return ['ok' => true, 'reason' => null, 'checked' => false];
@@ -203,6 +203,14 @@ if (!function_exists('workationSlotAvailabilityCheck')) {
 
         if ($roomCategoryId !== null && $roomCategoryId > 0 && Schema::hasColumn('vendor_availability_slots', 'vendor_room_category_id')) {
             $slotsQuery->where('vendor_room_category_id', $roomCategoryId);
+        }
+
+        if ($listingCategory !== null && trim($listingCategory) !== '' && Schema::hasColumn('vendor_availability_slots', 'listing_category')) {
+            $slotsQuery->where('listing_category', trim($listingCategory));
+        }
+
+        if ($routeName !== null && trim($routeName) !== '' && Schema::hasColumn('vendor_availability_slots', 'route_name')) {
+            $slotsQuery->where('route_name', trim($routeName));
         }
 
         $slots = $slotsQuery->get(['slot_date', 'inventory', 'reserved_count', 'is_closed']);
@@ -234,7 +242,7 @@ if (!function_exists('workationSlotAvailabilityCheck')) {
 }
 
 if (!function_exists('workationReserveAvailabilitySlots')) {
-    function workationReserveAvailabilitySlots(int $vendorUserId, int $vendorPropertyId, Carbon $start, Carbon $endExclusive, int $units = 1, ?int $roomCategoryId = null, ?int $serviceId = null): void
+    function workationReserveAvailabilitySlots(int $vendorUserId, int $vendorPropertyId, Carbon $start, Carbon $endExclusive, int $units = 1, ?int $roomCategoryId = null, ?int $serviceId = null, ?string $listingCategory = null, ?string $routeName = null): void
     {
         if ($vendorUserId <= 0 || $vendorPropertyId <= 0 || $units <= 0 || !Schema::hasTable('vendor_availability_slots')) {
             return;
@@ -252,6 +260,14 @@ if (!function_exists('workationReserveAvailabilitySlots')) {
 
             if ($roomCategoryId !== null && $roomCategoryId > 0 && Schema::hasColumn('vendor_availability_slots', 'vendor_room_category_id')) {
                 $query->where('vendor_room_category_id', $roomCategoryId);
+            }
+
+            if ($listingCategory !== null && trim($listingCategory) !== '' && Schema::hasColumn('vendor_availability_slots', 'listing_category')) {
+                $query->where('listing_category', trim($listingCategory));
+            }
+
+            if ($routeName !== null && trim($routeName) !== '' && Schema::hasColumn('vendor_availability_slots', 'route_name')) {
+                $query->where('route_name', trim($routeName));
             }
 
             $query->update([
@@ -5092,6 +5108,8 @@ Route::post('/booking/reserve', function (Request $request) {
         $bookingEndExclusive,
         1,
         (int) ($roomRow->id ?? 0),
+        null,
+        'accommodation',
         null
     );
 
@@ -5279,6 +5297,8 @@ Route::post('/booking/reserve', function (Request $request) {
             $bookingEndExclusive,
             1,
             (int) ($roomRow->id ?? 0),
+            null,
+            'accommodation',
             null
         );
     }
@@ -5708,9 +5728,21 @@ Route::post('/booking/reserve-category', function (Request $request) {
         : $serviceStart->copy();
     $serviceEndExclusive = $serviceEnd->copy()->addDay()->startOfDay();
 
-    $unitsRequested = $categoryKey === 'accommodation'
-        ? max(1, (int) ($payload['rooms'] ?? 1))
-        : 1;
+    $routeName = '';
+    if (in_array($categoryKey, ['marine-transport', 'land-transport'], true)) {
+        $origin = trim((string) ($payload['origin_point'] ?? ''));
+        $destination = trim((string) ($payload['destination_point'] ?? ''));
+        if ($origin !== '' || $destination !== '') {
+            $routeName = trim($origin . ' -> ' . $destination);
+        }
+    }
+
+    $unitsRequested = match ($categoryKey) {
+        'accommodation' => max(1, (int) ($payload['rooms'] ?? 1)),
+        'conference_room' => max(1, (int) ($payload['expected_capacity'] ?? ($adults + $children))),
+        'marine-transport', 'land-transport', 'excursion', 'resort_day_visit', 'restaurant' => max(1, $adults + $children),
+        default => 1,
+    };
 
     $slotAvailability = workationSlotAvailabilityCheck(
         (int) ($propertyRow->vendor_user_id ?? 0),
@@ -5719,7 +5751,9 @@ Route::post('/booking/reserve-category', function (Request $request) {
         $serviceEndExclusive,
         $unitsRequested,
         null,
-        null
+        null,
+        str_replace('-', '_', $categoryKey),
+        $routeName !== '' ? $routeName : null
     );
 
     if (($slotAvailability['ok'] ?? true) !== true) {
@@ -5911,7 +5945,9 @@ Route::post('/booking/reserve-category', function (Request $request) {
             $serviceEndExclusive,
             $unitsRequested,
             null,
-            null
+            null,
+            str_replace('-', '_', $categoryKey),
+            $routeName !== '' ? $routeName : null
         );
     }
 

@@ -2042,16 +2042,23 @@ Route::get('/', function () {
                         })
                         ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
 
-                    $combinedRoomPricesByProperty = $combinedRoomPricesByProperty
-                        ->merge($canonicalRoomPrices)
-                        ->groupBy(static fn ($value, $key) => (int) $key)
-                        ->map(static function ($values) {
-                            return collect($values)
-                                ->map(static fn ($value) => (float) $value)
-                                ->filter(static fn (float $value) => $value > 0)
-                                ->min();
-                        })
-                        ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+                    foreach ($canonicalRoomPrices as $propertyLookupId => $candidatePrice) {
+                        $normalizedPropertyLookupId = (int) $propertyLookupId;
+                        $normalizedCandidatePrice = (float) $candidatePrice;
+                        if ($normalizedPropertyLookupId <= 0 || $normalizedCandidatePrice <= 0) {
+                            continue;
+                        }
+
+                        if ($combinedRoomPricesByProperty->has($normalizedPropertyLookupId)) {
+                            $existingPrice = (float) ($combinedRoomPricesByProperty->get($normalizedPropertyLookupId) ?? 0);
+                            $combinedRoomPricesByProperty->put(
+                                $normalizedPropertyLookupId,
+                                $existingPrice > 0 ? min($existingPrice, $normalizedCandidatePrice) : $normalizedCandidatePrice
+                            );
+                        } else {
+                            $combinedRoomPricesByProperty->put($normalizedPropertyLookupId, $normalizedCandidatePrice);
+                        }
+                    }
                 }
             }
 
@@ -2116,33 +2123,33 @@ Route::get('/', function () {
                     })
                     ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
 
-                $combinedRoomPricesByProperty = $combinedRoomPricesByProperty
-                    ->merge($packagePrices)
-                    ->groupBy(static fn ($value, $key) => (int) $key)
-                    ->map(static function ($values) {
-                        return collect($values)
-                            ->map(static fn ($value) => (float) $value)
-                            ->filter(static fn (float $value) => $value > 0)
-                            ->min();
-                    })
-                    ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+                foreach ($packagePrices as $propertyLookupId => $candidatePrice) {
+                    $normalizedPropertyLookupId = (int) $propertyLookupId;
+                    $normalizedCandidatePrice = (float) $candidatePrice;
+                    if ($normalizedPropertyLookupId <= 0 || $normalizedCandidatePrice <= 0) {
+                        continue;
+                    }
+
+                    if ($combinedRoomPricesByProperty->has($normalizedPropertyLookupId)) {
+                        $existingPrice = (float) ($combinedRoomPricesByProperty->get($normalizedPropertyLookupId) ?? 0);
+                        $combinedRoomPricesByProperty->put(
+                            $normalizedPropertyLookupId,
+                            $existingPrice > 0 ? min($existingPrice, $normalizedCandidatePrice) : $normalizedCandidatePrice
+                        );
+                    } else {
+                        $combinedRoomPricesByProperty->put($normalizedPropertyLookupId, $normalizedCandidatePrice);
+                    }
+                }
                 }
             }
 
             if ($combinedRoomPricesByProperty->isNotEmpty()) {
                 $allProperties = $allProperties->map(static function ($property) use ($combinedRoomPricesByProperty) {
-                    $propertyId = (int) ($property->id ?? 0);
-                    $dedicatedId = (int) ($property->dedicated_row_id ?? 0);
-                    $lookupId = null;
+                    $lookupId = collect(workationPropertyLookupIds($property))
+                        ->first(static fn (int $candidateId) => $combinedRoomPricesByProperty->has($candidateId));
 
-                    if ($propertyId > 0 && $combinedRoomPricesByProperty->has($propertyId)) {
-                        $lookupId = $propertyId;
-                    } elseif ($dedicatedId > 0 && $combinedRoomPricesByProperty->has($dedicatedId)) {
-                        $lookupId = $dedicatedId;
-                    }
-
-                    if ($lookupId !== null) {
-                        $property->base_price = (float) $combinedRoomPricesByProperty->get($lookupId);
+                    if (is_int($lookupId) && $lookupId > 0) {
+                        $property->base_price = (float) ($combinedRoomPricesByProperty->get($lookupId) ?? 0);
                     } elseif (strtolower(trim((string) ($property->listing_category ?? ''))) === 'accommodation') {
                         $fallbackDerivedPrice = workationDerivedListingBasePrice($property);
                         if ($fallbackDerivedPrice > 0) {

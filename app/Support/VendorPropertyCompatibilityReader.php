@@ -189,6 +189,7 @@ class VendorPropertyCompatibilityReader
             $rows = $rows->map(static function ($row) use ($categoryKey) {
                 // Shape to match the legacy vendor_properties column names
                 $row->listing_category = $categoryKey;
+                $row->dedicated_row_id = isset($row->id) ? (int) $row->id : 0;
                 $row->id = (int) ($row->vendor_property_id ?? $row->id ?? 0);
                 if (isset($row->details) && !isset($row->listing_details)) {
                     $row->listing_details = $row->details;
@@ -274,9 +275,8 @@ class VendorPropertyCompatibilityReader
                 ->get($selectCols)
                 ->map(static function ($row) use ($categoryKey) {
                     $row->listing_category = $categoryKey;
-                    if (!isset($row->id)) {
-                        $row->id = $row->vendor_property_id ?? 0;
-                    }
+                    $row->dedicated_row_id = isset($row->id) ? (int) $row->id : 0;
+                    $row->id = (int) ($row->vendor_property_id ?? $row->id ?? 0);
                     if (isset($row->details) && !isset($row->listing_details)) {
                         $row->listing_details = $row->details;
                     }
@@ -530,7 +530,7 @@ class VendorPropertyCompatibilityReader
 
     private static function dedicatedTableSelectColumns(string $tableName): array
     {
-        $base = ['vendor_property_id', 'vendor_user_id', 'name', 'status', 'location', 'description', 'max_guests', 'details', 'created_at', 'updated_at'];
+        $base = ['id', 'vendor_property_id', 'vendor_user_id', 'name', 'status', 'location', 'description', 'max_guests', 'details', 'created_at', 'updated_at'];
 
         if (Schema::hasColumn($tableName, 'base_price')) {
             $base[] = 'base_price';
@@ -567,6 +567,7 @@ class VendorPropertyCompatibilityReader
     private static function shapeDedicatedRow(object $row, string $categoryKey): object
     {
         $row->listing_category = $categoryKey;
+        $row->dedicated_row_id = isset($row->id) ? (int) $row->id : 0;
         $row->id = (int) ($row->vendor_property_id ?? $row->id ?? 0);
         if (isset($row->details) && !isset($row->listing_details)) {
             $row->listing_details = $row->details;

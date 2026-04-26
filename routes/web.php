@@ -1456,10 +1456,10 @@ Route::get('/', function () {
     ]);
 
     $homeTrendingCards = collect([
-        ['title' => 'Maafushi Island', 'subtitle' => 'Most searched for affordable island escapes.', 'url' => '/catalog/accommodation?q=Maafushi'],
-        ['title' => 'Male City', 'subtitle' => 'Convenient urban stays and transfer access.', 'url' => '/catalog/accommodation?q=Male'],
-        ['title' => 'Baa Atoll', 'subtitle' => 'Nature-rich stays and iconic snorkeling spots.', 'url' => '/catalog/accommodation?q=Baa+Atoll'],
-        ['title' => 'Ari Atoll', 'subtitle' => 'Popular for diving and premium island resorts.', 'url' => '/catalog/accommodation?q=Ari+Atoll'],
+        ['title' => 'Maafushi Island', 'subtitle' => 'Most searched for affordable island escapes.', 'url' => '/catalog/accommodation?q=Maafushi', 'image_url' => '/images/home/destinations/maafushi-island.svg', 'fallback_image_url' => '/images/home/destinations/maafushi-island.svg'],
+        ['title' => 'Male City', 'subtitle' => 'Convenient urban stays and transfer access.', 'url' => '/catalog/accommodation?q=Male', 'image_url' => '/images/home/destinations/male-city.svg', 'fallback_image_url' => '/images/home/destinations/male-city.svg'],
+        ['title' => 'Baa Atoll', 'subtitle' => 'Nature-rich stays and iconic snorkeling spots.', 'url' => '/catalog/accommodation?q=Baa+Atoll', 'image_url' => '/images/home/destinations/baa-atoll.svg', 'fallback_image_url' => '/images/home/destinations/baa-atoll.svg'],
+        ['title' => 'Ari Atoll', 'subtitle' => 'Popular for diving and premium island resorts.', 'url' => '/catalog/accommodation?q=Ari+Atoll', 'image_url' => '/images/home/destinations/ari-atoll.svg', 'fallback_image_url' => '/images/home/destinations/ari-atoll.svg'],
     ]);
 
     $homeWeekendDealCards = collect([
@@ -1470,10 +1470,10 @@ Route::get('/', function () {
     ]);
 
     $homeLovedCards = collect([
-        ['title' => 'Hulhumale Seafront', 'subtitle' => 'Consistently high ratings for convenience.', 'url' => '/catalog/accommodation?q=Hulhumale'],
-        ['title' => 'Thulusdhoo Island', 'subtitle' => 'Guest favorite for surf culture and charm.', 'url' => '/catalog/accommodation?q=Thulusdhoo'],
-        ['title' => 'Ukulhas Island', 'subtitle' => 'Loved for clean beaches and relaxed stays.', 'url' => '/catalog/accommodation?q=Ukulhas'],
-        ['title' => 'Dhigurah Island', 'subtitle' => 'Strong demand for reef and marine experiences.', 'url' => '/catalog/accommodation?q=Dhigurah'],
+        ['title' => 'Hulhumale Seafront', 'subtitle' => 'Consistently high ratings for convenience.', 'url' => '/catalog/accommodation?q=Hulhumale', 'image_url' => '/images/home/destinations/hulhumale-seafront.svg', 'fallback_image_url' => '/images/home/destinations/hulhumale-seafront.svg'],
+        ['title' => 'Thulusdhoo Island', 'subtitle' => 'Guest favorite for surf culture and charm.', 'url' => '/catalog/accommodation?q=Thulusdhoo', 'image_url' => '/images/home/destinations/thulusdhoo-island.svg', 'fallback_image_url' => '/images/home/destinations/thulusdhoo-island.svg'],
+        ['title' => 'Ukulhas Island', 'subtitle' => 'Loved for clean beaches and relaxed stays.', 'url' => '/catalog/accommodation?q=Ukulhas', 'image_url' => '/images/home/destinations/ukulhas-island.svg', 'fallback_image_url' => '/images/home/destinations/ukulhas-island.svg'],
+        ['title' => 'Dhigurah Island', 'subtitle' => 'Strong demand for reef and marine experiences.', 'url' => '/catalog/accommodation?q=Dhigurah', 'image_url' => '/images/home/destinations/dhigurah-island.svg', 'fallback_image_url' => '/images/home/destinations/dhigurah-island.svg'],
     ]);
 
     $homeTrendingCards = $applyHomeDestinationArtPreference($applyHomeDestinationImages($homeTrendingCards));
@@ -1685,8 +1685,17 @@ Route::get('/', function () {
             if ($combinedRoomPricesByProperty->isNotEmpty()) {
                 $allProperties = $allProperties->map(static function ($property) use ($combinedRoomPricesByProperty) {
                     $propertyId = (int) ($property->id ?? 0);
+                    $dedicatedId = (int) ($property->dedicated_row_id ?? 0);
+                    $lookupId = null;
+
                     if ($propertyId > 0 && $combinedRoomPricesByProperty->has($propertyId)) {
-                        $property->base_price = (float) $combinedRoomPricesByProperty->get($propertyId);
+                        $lookupId = $propertyId;
+                    } elseif ($dedicatedId > 0 && $combinedRoomPricesByProperty->has($dedicatedId)) {
+                        $lookupId = $dedicatedId;
+                    }
+
+                    if ($lookupId !== null) {
+                        $property->base_price = (float) $combinedRoomPricesByProperty->get($lookupId);
                     }
 
                     return $property;
@@ -2000,7 +2009,7 @@ Route::get('/', function () {
         }
 
         $priceSorted = $allProperties
-            ->filter(static fn ($property) => isset($property->base_price) && is_numeric($property->base_price))
+            ->filter(static fn ($property) => isset($property->base_price) && is_numeric($property->base_price) && (float) ($property->base_price ?? 0) > 0)
             ->sortBy(static fn ($property) => (float) $property->base_price)
             ->values();
 
@@ -4103,8 +4112,11 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             $catalogProperties = $catalogProperties->map(static function ($prop) use ($combinedRoomPricesByProperty) {
                 $prop->base_price = 0;
                 $pid = (int) ($prop->id ?? 0);
+                $dedicatedId = (int) ($prop->dedicated_row_id ?? 0);
                 if ($pid > 0 && $combinedRoomPricesByProperty->has($pid)) {
                     $prop->base_price = (float) $combinedRoomPricesByProperty->get($pid);
+                } elseif ($dedicatedId > 0 && $combinedRoomPricesByProperty->has($dedicatedId)) {
+                    $prop->base_price = (float) $combinedRoomPricesByProperty->get($dedicatedId);
                 }
                 return $prop;
             });

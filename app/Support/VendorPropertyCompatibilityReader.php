@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Schema;
 
 class VendorPropertyCompatibilityReader
 {
+    private static array $tableExistsCache = [];
+    private static array $columnExistsCache = [];
+    private static array $dedicatedSelectColumnsCache = [];
+
     public static function categoryTableNameFor(string $categoryKey): string
     {
         return self::categoryTableMap()[$categoryKey] ?? 'vendor_accommodation_listings';
@@ -18,7 +22,7 @@ class VendorPropertyCompatibilityReader
     {
         $tableName = self::categoryTableNameFor($categoryKey);
 
-        if (!Schema::hasTable($tableName)) {
+        if (!self::hasTable($tableName)) {
             // Return a safe no-results query builder so callers can chain without crashing.
             return DB::table($tableName)->whereRaw('1 = 0');
         }
@@ -26,7 +30,7 @@ class VendorPropertyCompatibilityReader
         $query = DB::table($tableName)
             ->where('status', 'active');
 
-        if (Schema::hasColumn($tableName, 'listing_moderation_status')) {
+        if (self::hasColumn($tableName, 'listing_moderation_status')) {
             $query->where('listing_moderation_status', 'approved');
         }
 
@@ -37,7 +41,7 @@ class VendorPropertyCompatibilityReader
     {
         $tableName = self::categoryTableNameFor($categoryKey);
 
-        if (!Schema::hasTable($tableName) || !Schema::hasColumn($tableName, $column)) {
+        if (!self::hasTable($tableName) || !self::hasColumn($tableName, $column)) {
             return collect();
         }
 
@@ -54,7 +58,7 @@ class VendorPropertyCompatibilityReader
     {
         $columns = ['vendor_property_id', 'name', 'status', 'location', 'description', 'max_guests', 'details'];
 
-        if (Schema::hasColumn('vendor_accommodation_listings', 'currency')) {
+        if (self::hasColumn('vendor_accommodation_listings', 'currency')) {
             $columns[] = 'currency';
         }
 
@@ -63,7 +67,7 @@ class VendorPropertyCompatibilityReader
 
     public static function loadAccommodationRows(Collection $propertyIds): Collection
     {
-        if ($propertyIds->isEmpty() || !Schema::hasTable('vendor_accommodation_listings')) {
+        if ($propertyIds->isEmpty() || !self::hasTable('vendor_accommodation_listings')) {
             return collect();
         }
 
@@ -135,7 +139,7 @@ class VendorPropertyCompatibilityReader
     {
         // Check dedicated tables first.
         foreach (self::categoryTableMap() as $tableName) {
-            if (!Schema::hasTable($tableName)) {
+            if (!self::hasTable($tableName)) {
                 continue;
             }
 
@@ -150,7 +154,7 @@ class VendorPropertyCompatibilityReader
         }
 
         // Fallback to vendor_properties.
-        if (Schema::hasTable('vendor_properties')) {
+        if (self::hasTable('vendor_properties')) {
             return DB::table('vendor_properties')
                 ->where('id', $id)
                 ->where('vendor_user_id', $vendorUserId)
@@ -171,7 +175,7 @@ class VendorPropertyCompatibilityReader
         $all = collect();
 
         foreach ($categoryTableMap as $categoryKey => $tableName) {
-            if (!Schema::hasTable($tableName)) {
+            if (!self::hasTable($tableName)) {
                 continue;
             }
 
@@ -180,7 +184,7 @@ class VendorPropertyCompatibilityReader
             $query = DB::table($tableName)
                 ->where('status', 'active');
 
-            if (Schema::hasColumn($tableName, 'listing_moderation_status')) {
+            if (self::hasColumn($tableName, 'listing_moderation_status')) {
                 $query->where('listing_moderation_status', 'approved');
             }
 
@@ -214,7 +218,7 @@ class VendorPropertyCompatibilityReader
         // Try to load from the appropriate dedicated table first.
         if ($categoryHint !== null) {
             $tableName = self::categoryTableMap()[$categoryHint] ?? null;
-            if ($tableName !== null && Schema::hasTable($tableName)) {
+            if ($tableName !== null && self::hasTable($tableName)) {
                 $row = DB::table($tableName)->where('vendor_property_id', $id)->first();
                 if ($row) {
                     return self::shapeDedicatedRow($row, $categoryHint);
@@ -230,7 +234,7 @@ class VendorPropertyCompatibilityReader
 
         // Try all dedicated tables if no category hint.
         foreach (self::categoryTableMap() as $categoryKey => $tableName) {
-            if (!Schema::hasTable($tableName)) {
+            if (!self::hasTable($tableName)) {
                 continue;
             }
             $row = DB::table($tableName)->where('vendor_property_id', $id)->first();
@@ -246,7 +250,7 @@ class VendorPropertyCompatibilityReader
         }
 
         // Final fallback to vendor_properties.
-        if (!Schema::hasTable('vendor_properties')) {
+        if (!self::hasTable('vendor_properties')) {
             return null;
         }
 
@@ -262,7 +266,7 @@ class VendorPropertyCompatibilityReader
         $all = collect();
 
         foreach (self::categoryTableMap() as $categoryKey => $tableName) {
-            if (!Schema::hasTable($tableName)) {
+            if (!self::hasTable($tableName)) {
                 continue;
             }
 
@@ -299,10 +303,10 @@ class VendorPropertyCompatibilityReader
         $all = collect();
 
         foreach (self::categoryTableMap() as $categoryKey => $tableName) {
-            if (!Schema::hasTable($tableName)) {
+            if (!self::hasTable($tableName)) {
                 continue;
             }
-            if (!Schema::hasColumn($tableName, 'listing_moderation_status')) {
+            if (!self::hasColumn($tableName, 'listing_moderation_status')) {
                 continue;
             }
 
@@ -343,10 +347,10 @@ class VendorPropertyCompatibilityReader
         $all = collect();
 
         foreach (self::categoryTableMap() as $categoryKey => $tableName) {
-            if (!Schema::hasTable($tableName)) {
+            if (!self::hasTable($tableName)) {
                 continue;
             }
-            if (!Schema::hasColumn($tableName, 'listing_moderation_status')) {
+            if (!self::hasColumn($tableName, 'listing_moderation_status')) {
                 continue;
             }
 
@@ -407,16 +411,16 @@ class VendorPropertyCompatibilityReader
             : array_values(self::categoryTableMap());
 
         foreach ($tables as $tableName) {
-            if ($tableName === null || !Schema::hasTable($tableName)) {
+            if ($tableName === null || !self::hasTable($tableName)) {
                 continue;
             }
-            if (!Schema::hasColumn($tableName, 'listing_moderation_status')) {
+            if (!self::hasColumn($tableName, 'listing_moderation_status')) {
                 continue;
             }
 
             $colPayload = array_filter(
                 $dedicatedPayload,
-                static fn ($key) => Schema::hasColumn($tableName, $key),
+                static fn ($key) => self::hasColumn($tableName, $key),
                 ARRAY_FILTER_USE_KEY
             );
 
@@ -430,15 +434,15 @@ class VendorPropertyCompatibilityReader
         }
 
         // Dual-write to vendor_properties during transition.
-        if (Schema::hasTable('vendor_properties') && Schema::hasColumn('vendor_properties', 'listing_moderation_status')) {
+        if (self::hasTable('vendor_properties') && self::hasColumn('vendor_properties', 'listing_moderation_status')) {
             $vpPayload = ['listing_moderation_status' => $status, 'updated_at' => $now];
-            if (Schema::hasColumn('vendor_properties', 'listing_admin_notes')) {
+            if (self::hasColumn('vendor_properties', 'listing_admin_notes')) {
                 $vpPayload['listing_admin_notes'] = $adminNotes;
             }
-            if (Schema::hasColumn('vendor_properties', 'listing_approved_at')) {
+            if (self::hasColumn('vendor_properties', 'listing_approved_at')) {
                 $vpPayload['listing_approved_at'] = $now;
             }
-            if (Schema::hasColumn('vendor_properties', 'listing_approved_by_user_id')) {
+            if (self::hasColumn('vendor_properties', 'listing_approved_by_user_id')) {
                 $vpPayload['listing_approved_by_user_id'] = $approvedByUserId;
             }
 
@@ -466,16 +470,16 @@ class VendorPropertyCompatibilityReader
             : array_values(self::categoryTableMap());
 
         foreach ($tables as $tableName) {
-            if ($tableName === null || !Schema::hasTable($tableName)) {
+            if ($tableName === null || !self::hasTable($tableName)) {
                 continue;
             }
-            if (!Schema::hasColumn($tableName, 'listing_moderation_status')) {
+            if (!self::hasColumn($tableName, 'listing_moderation_status')) {
                 continue;
             }
 
             $colPayload = array_filter(
                 $payload,
-                static fn ($key) => Schema::hasColumn($tableName, $key),
+                static fn ($key) => self::hasColumn($tableName, $key),
                 ARRAY_FILTER_USE_KEY
             );
 
@@ -489,18 +493,18 @@ class VendorPropertyCompatibilityReader
         }
 
         // Dual-write to vendor_properties during transition.
-        if (Schema::hasTable('vendor_properties') && Schema::hasColumn('vendor_properties', 'listing_moderation_status')) {
+        if (self::hasTable('vendor_properties') && self::hasColumn('vendor_properties', 'listing_moderation_status')) {
             $vpPayload = ['listing_moderation_status' => 'pending_review', 'updated_at' => $now];
-            if (Schema::hasColumn('vendor_properties', 'listing_submitted_for_review_at')) {
+            if (self::hasColumn('vendor_properties', 'listing_submitted_for_review_at')) {
                 $vpPayload['listing_submitted_for_review_at'] = $now;
             }
-            if (Schema::hasColumn('vendor_properties', 'listing_admin_notes')) {
+            if (self::hasColumn('vendor_properties', 'listing_admin_notes')) {
                 $vpPayload['listing_admin_notes'] = null;
             }
-            if (Schema::hasColumn('vendor_properties', 'listing_approved_at')) {
+            if (self::hasColumn('vendor_properties', 'listing_approved_at')) {
                 $vpPayload['listing_approved_at'] = null;
             }
-            if (Schema::hasColumn('vendor_properties', 'listing_approved_by_user_id')) {
+            if (self::hasColumn('vendor_properties', 'listing_approved_by_user_id')) {
                 $vpPayload['listing_approved_by_user_id'] = null;
             }
 
@@ -530,44 +534,78 @@ class VendorPropertyCompatibilityReader
 
     private static function dedicatedTableSelectColumns(string $tableName): array
     {
+        if (isset(self::$dedicatedSelectColumnsCache[$tableName])) {
+            return self::$dedicatedSelectColumnsCache[$tableName];
+        }
+
         $base = ['id', 'vendor_property_id', 'vendor_user_id', 'name', 'status', 'location', 'description', 'max_guests', 'details', 'created_at', 'updated_at'];
 
-        if (Schema::hasColumn($tableName, 'base_price')) {
+        if (self::hasColumn($tableName, 'base_price')) {
             $base[] = 'base_price';
         }
-        if (Schema::hasColumn($tableName, 'currency')) {
+        if (self::hasColumn($tableName, 'currency')) {
             $base[] = 'currency';
         }
-        if (Schema::hasColumn($tableName, 'listing_moderation_status')) {
+        if (self::hasColumn($tableName, 'listing_moderation_status')) {
             $base[] = 'listing_moderation_status';
         }
-        if (Schema::hasColumn($tableName, 'listing_admin_notes')) {
+        if (self::hasColumn($tableName, 'listing_admin_notes')) {
             $base[] = 'listing_admin_notes';
         }
-        if (Schema::hasColumn($tableName, 'listing_submitted_for_review_at')) {
+        if (self::hasColumn($tableName, 'listing_submitted_for_review_at')) {
             $base[] = 'listing_submitted_for_review_at';
         }
-        if (Schema::hasColumn($tableName, 'listing_approved_at')) {
+        if (self::hasColumn($tableName, 'listing_approved_at')) {
             $base[] = 'listing_approved_at';
         }
-        if (Schema::hasColumn($tableName, 'listing_approved_by_user_id')) {
+        if (self::hasColumn($tableName, 'listing_approved_by_user_id')) {
             $base[] = 'listing_approved_by_user_id';
         }
 
         foreach (['view_count', 'wishlist_count', 'bookings_count', 'total_bookings', 'rating', 'average_rating', 'review_score', 'reviews_count', 'review_count'] as $col) {
-            if (Schema::hasColumn($tableName, $col)) {
+            if (self::hasColumn($tableName, $col)) {
                 $base[] = $col;
             }
         }
 
         // Common category-specific columns (present on some tables)
         foreach (['island', 'atoll', 'city', 'pickup_location', 'dropoff_location', 'origin_point', 'destination_point'] as $col) {
-            if (Schema::hasColumn($tableName, $col)) {
+            if (self::hasColumn($tableName, $col)) {
                 $base[] = $col;
             }
         }
 
+        self::$dedicatedSelectColumnsCache[$tableName] = $base;
+
         return $base;
+    }
+
+    private static function hasTable(string $tableName): bool
+    {
+        if (app()->runningUnitTests()) {
+            return Schema::hasTable($tableName);
+        }
+
+        if (!array_key_exists($tableName, self::$tableExistsCache)) {
+            self::$tableExistsCache[$tableName] = Schema::hasTable($tableName);
+        }
+
+        return self::$tableExistsCache[$tableName];
+    }
+
+    private static function hasColumn(string $tableName, string $columnName): bool
+    {
+        if (app()->runningUnitTests()) {
+            return Schema::hasColumn($tableName, $columnName);
+        }
+
+        $key = $tableName . '.' . $columnName;
+
+        if (!array_key_exists($key, self::$columnExistsCache)) {
+            self::$columnExistsCache[$key] = Schema::hasColumn($tableName, $columnName);
+        }
+
+        return self::$columnExistsCache[$key];
     }
 
     private static function shapeDedicatedRow(object $row, string $categoryKey): object

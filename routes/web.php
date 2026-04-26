@@ -1340,6 +1340,20 @@ Route::get('/', function () {
                 continue;
             }
 
+            $normalized = str_replace(['male_city_city', 'city_male_city'], 'male_city', $normalized);
+
+            $aliases = [
+                'male' => 'male_city',
+                'malecity' => 'male_city',
+                'male_city' => 'male_city',
+                'male_town' => 'male_city',
+                'male_capital' => 'male_city',
+            ];
+
+            if (array_key_exists($normalized, $aliases)) {
+                return $aliases[$normalized];
+            }
+
             return $normalized;
         }
 
@@ -1965,28 +1979,66 @@ Route::get('/', function () {
             })->values();
         }
 
+        $propertyEngagementScore = static function ($property): float {
+            $viewCount = (float) ($property->view_count ?? 0);
+            $wishlistCount = (float) ($property->wishlist_count ?? 0);
+            $bookingsCount = (float) ($property->bookings_count ?? $property->total_bookings ?? 0);
+            $reviewCount = (float) ($property->reviews_count ?? $property->review_count ?? 0);
+            $rating = (float) ($property->review_score ?? $property->average_rating ?? $property->rating ?? 0);
+
+            return ($viewCount * 1.0)
+                + ($wishlistCount * 3.0)
+                + ($bookingsCount * 4.0)
+                + ($reviewCount * 2.0)
+                + ($rating * 5.0);
+        };
+
         $locationScores = [];
         foreach ($allProperties as $property) {
-            $location = trim((string) ($property->island ?? ''));
-            if ($location === '') {
-                $location = trim((string) ($property->city ?? ''));
-            }
-            if ($location === '') {
-                $location = trim((string) ($property->atoll ?? ''));
-            }
+            $location = $propertyLocationValue($property);
             if ($location === '') {
                 continue;
             }
 
-            $key = strtolower($location);
+            $normalizedLocation = portalNormalizeDestinationMediaKey($location);
+            if ($normalizedLocation === 'male') {
+                $normalizedLocation = 'male_city';
+            }
+            if ($normalizedLocation === '') {
+                continue;
+            }
+
+            $displayLocation = $normalizedLocation === 'male_city' ? 'Male City' : $location;
+            $engagementScore = $propertyEngagementScore($property);
+
+            $key = strtolower($normalizedLocation);
             if (!array_key_exists($key, $locationScores)) {
-                $locationScores[$key] = ['title' => $location, 'count' => 0, 'sample_property' => $property];
+                $locationScores[$key] = [
+                    'title' => $displayLocation,
+                    'count' => 0,
+                    'engagement_score' => 0.0,
+                    'sample_property' => $property,
+                ];
             }
             $locationScores[$key]['count']++;
+            $locationScores[$key]['engagement_score'] += $engagementScore;
+
+            if ($engagementScore > (float) ($locationScores[$key]['sample_score'] ?? -1)) {
+                $locationScores[$key]['sample_property'] = $property;
+                $locationScores[$key]['sample_score'] = $engagementScore;
+            }
         }
 
         if (!empty($locationScores)) {
-            uasort($locationScores, static fn (array $a, array $b) => $b['count'] <=> $a['count']);
+            uasort($locationScores, static function (array $a, array $b) {
+                $scoreA = (float) ($a['engagement_score'] ?? 0);
+                $scoreB = (float) ($b['engagement_score'] ?? 0);
+                if ($scoreA !== $scoreB) {
+                    return $scoreB <=> $scoreA;
+                }
+
+                return ((int) ($b['count'] ?? 0)) <=> ((int) ($a['count'] ?? 0));
+            });
             $homeTrendingCards = collect(array_slice(array_values($locationScores), 0, 4))
                 ->map(function (array $row) use ($resolvePropertyImage, $resolvePropertyFallbackImage) {
                     $sample = $row['sample_property'] ?? null;
@@ -2044,24 +2096,9 @@ Route::get('/', function () {
         }
 
         {
-            $homeLovedScore = static function ($property): float {
-                $viewCount = (float) ($property->view_count ?? 0);
-                $wishlistCount = (float) ($property->wishlist_count ?? 0);
-                $bookingsCount = (float) ($property->bookings_count ?? $property->total_bookings ?? 0);
-                $reviewCount = (float) ($property->reviews_count ?? $property->review_count ?? 0);
-                $rating = (float) ($property->review_score ?? $property->average_rating ?? $property->rating ?? 0);
-
-                // Weight real engagement ahead of freshness; fallback to updated_at below if all are zero.
-                return ($viewCount * 1.0)
-                    + ($wishlistCount * 3.0)
-                    + ($bookingsCount * 4.0)
-                    + ($reviewCount * 2.0)
-                    + ($rating * 5.0);
-            };
-
             $lovedRows = $allProperties
-                ->sortByDesc(static function ($property) use ($homeLovedScore) {
-                    $score = $homeLovedScore($property);
+                ->sortByDesc(static function ($property) use ($propertyEngagementScore) {
+                    $score = $propertyEngagementScore($property);
                     if ($score > 0) {
                         return $score;
                     }

@@ -3406,5 +3406,65 @@
             initAtollIslandSearch();
         })();
     </script>
+
+    <script>
+        (function () {
+            const searchForm = document.getElementById('categorySearchForm');
+            if (!searchForm) {
+                return;
+            }
+
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            const todayString = now.toISOString().slice(0, 10);
+
+            const dateInputs = Array.from(searchForm.querySelectorAll('input[type="date"], input[type="datetime-local"]'));
+            dateInputs.forEach(function (input) {
+                if (input.type === 'datetime-local') {
+                    input.min = todayString + 'T00:00';
+                } else {
+                    input.min = todayString;
+                }
+            });
+
+            const syncDatePair = function (startInput, endInput, allowEqual) {
+                if (!startInput || !endInput) {
+                    return;
+                }
+
+                const sync = function () {
+                    const startValue = String(startInput.value || '').trim();
+                    const startDateOnly = startValue.slice(0, 10);
+                    const minimumEnd = startDateOnly !== '' ? startValue : (endInput.type === 'datetime-local' ? todayString + 'T00:00' : todayString);
+                    endInput.min = minimumEnd;
+
+                    if (startDateOnly !== '' && startDateOnly < todayString) {
+                        startInput.setCustomValidity('Date cannot be in the past.');
+                    } else {
+                        startInput.setCustomValidity('');
+                    }
+
+                    const endValue = String(endInput.value || '').trim();
+                    if (startValue !== '' && endValue !== '') {
+                        const isInvalid = allowEqual ? endValue < startValue : endValue <= startValue;
+                        endInput.setCustomValidity(isInvalid ? 'End date must be after start date.' : '');
+                    } else {
+                        endInput.setCustomValidity('');
+                    }
+                };
+
+                startInput.addEventListener('change', sync);
+                startInput.addEventListener('input', sync);
+                endInput.addEventListener('change', sync);
+                endInput.addEventListener('input', sync);
+                sync();
+            };
+
+            syncDatePair(document.getElementById('checkin'), document.getElementById('checkout'), false);
+            syncDatePair(document.getElementById('travel_date'), document.getElementById('return_date'), true);
+            syncDatePair(document.getElementById('workspace_start'), document.getElementById('workspace_end'), true);
+            syncDatePair(document.getElementById('pickup_date'), document.getElementById('return_date_rental'), true);
+        })();
+    </script>
 </body>
 </html>

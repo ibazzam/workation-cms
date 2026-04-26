@@ -285,8 +285,8 @@
                         <section class="booking-subsection" aria-label="Stay details">
                             <h3 class="booking-subtitle">Stay details</h3>
                             <div class="booking-grid">
-                                <div class="field"><label for="checkin">Check-in</label><input id="checkin" name="checkin" type="date" required value="{{ old('checkin', (string) ($prefill['checkin'] ?? '')) }}" class="{{ $errors->has('checkin') ? 'input-error' : '' }}">@error('checkin')<p class="error-text">{{ $message }}</p>@enderror</div>
-                                <div class="field"><label for="checkout">Check-out</label><input id="checkout" name="checkout" type="date" required value="{{ old('checkout', (string) ($prefill['checkout'] ?? '')) }}" class="{{ $errors->has('checkout') ? 'input-error' : '' }}">@error('checkout')<p class="error-text">{{ $message }}</p>@enderror</div>
+                                <div class="field"><label for="checkin">Check-in</label><input id="checkin" name="checkin" type="date" min="{{ now()->toDateString() }}" required value="{{ old('checkin', (string) ($prefill['checkin'] ?? '')) }}" class="{{ $errors->has('checkin') ? 'input-error' : '' }}">@error('checkin')<p class="error-text">{{ $message }}</p>@enderror</div>
+                                <div class="field"><label for="checkout">Check-out</label><input id="checkout" name="checkout" type="date" min="{{ now()->toDateString() }}" required value="{{ old('checkout', (string) ($prefill['checkout'] ?? '')) }}" class="{{ $errors->has('checkout') ? 'input-error' : '' }}">@error('checkout')<p class="error-text">{{ $message }}</p>@enderror</div>
                                 <div class="field"><label for="adults">Adults</label><input id="adults" name="adults" type="number" min="1" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}" class="{{ $errors->has('adults') ? 'input-error' : '' }}" required>@error('adults')<p class="error-text">{{ $message }}</p>@enderror</div>
                                 <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}" class="{{ $errors->has('children') ? 'input-error' : '' }}">@error('children')<p class="error-text">{{ $message }}</p>@enderror</div>
                                 <div class="field"><label for="transferOption">Transfer Option</label>
@@ -392,9 +392,31 @@
             const nightlyRate = Number(@json($selectedNightlyRateRaw));
             const taxRate = Number(@json($taxRate));
             const discountPercent = Number(@json($discountPercent));
+            const todayDate = @json(now()->toDateString());
 
             if (!transferOption || !transferCharge || !adults || !children || !checkin || !checkout) {
                 return;
+            }
+
+            checkin.min = todayDate;
+            checkout.min = todayDate;
+
+            function syncCheckoutMin() {
+                const checkinValue = String(checkin.value || '').trim();
+                checkout.min = checkinValue !== '' ? checkinValue : todayDate;
+
+                if (checkinValue !== '' && checkinValue < todayDate) {
+                    checkin.setCustomValidity('Check-in date cannot be in the past.');
+                } else {
+                    checkin.setCustomValidity('');
+                }
+
+                const checkoutValue = String(checkout.value || '').trim();
+                if (checkoutValue !== '' && checkinValue !== '' && checkoutValue <= checkinValue) {
+                    checkout.setCustomValidity('Check-out date must be after check-in date.');
+                } else {
+                    checkout.setCustomValidity('');
+                }
             }
 
             function toCurrency(value) {
@@ -466,10 +488,17 @@
                 transferOption.addEventListener(eventName, syncSummary);
                 adults.addEventListener(eventName, syncSummary);
                 children.addEventListener(eventName, syncSummary);
-                checkin.addEventListener(eventName, syncSummary);
-                checkout.addEventListener(eventName, syncSummary);
+                checkin.addEventListener(eventName, function () {
+                    syncCheckoutMin();
+                    syncSummary();
+                });
+                checkout.addEventListener(eventName, function () {
+                    syncCheckoutMin();
+                    syncSummary();
+                });
             });
 
+            syncCheckoutMin();
             syncSummary();
         })();
     </script>

@@ -1358,6 +1358,19 @@ Route::get('/', function () {
 
         return $homeCuratedDestinationImages[$destinationKey] ?? null;
     };
+    
+    $resolveHomePreferredDestinationArt = static function (array $card) use ($homeCuratedDestinationImages, $homeDatabaseDestinationImages, $resolveHomeDestinationKey): ?string {
+        $destinationKey = $resolveHomeDestinationKey($card);
+        if ($destinationKey === '') {
+            return null;
+        }
+
+        if (array_key_exists($destinationKey, $homeCuratedDestinationImages)) {
+            return $homeCuratedDestinationImages[$destinationKey] ?? null;
+        }
+
+        return $homeDatabaseDestinationImages[$destinationKey] ?? null;
+    };
 
     $resolveHomeDestinationOverrideImage = static function (array $card) use ($homeDestinationMediaOverrides, $resolveHomeDestinationKey): ?string {
         $destinationKey = $resolveHomeDestinationKey($card);
@@ -1408,8 +1421,8 @@ Route::get('/', function () {
         })->values();
     };
 
-    $applyHomeDestinationArtPreference = static function ($cards) use ($resolveHomeDestinationOverrideImage, $resolveHomeCuratedDestinationImage) {
-        return collect($cards)->map(function ($card) use ($resolveHomeDestinationOverrideImage, $resolveHomeCuratedDestinationImage) {
+    $applyHomeDestinationArtPreference = static function ($cards) use ($resolveHomeDestinationOverrideImage, $resolveHomePreferredDestinationArt) {
+        return collect($cards)->map(function ($card) use ($resolveHomeDestinationOverrideImage, $resolveHomePreferredDestinationArt) {
             if (!is_array($card)) {
                 return $card;
             }
@@ -1422,7 +1435,7 @@ Route::get('/', function () {
                 return $card;
             }
 
-            $curatedImage = $resolveHomeCuratedDestinationImage($card);
+            $curatedImage = $resolveHomePreferredDestinationArt($card);
             if ($curatedImage !== null && $curatedImage !== '') {
                 $card['image_url'] = $curatedImage;
                 $card['fallback_image_url'] = $curatedImage;
@@ -3995,34 +4008,46 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             }
 
             if (Schema::hasTable('accommodation_packages')
-                && Schema::hasColumn('accommodation_packages', 'property_id')
-                && Schema::hasColumn('accommodation_packages', 'base_price')) {
-                $packagePrices = DB::table('accommodation_packages')
-                    ->whereIn('property_id', $propertyLookupIds->all())
-                    ->when(Schema::hasColumn('accommodation_packages', 'is_active'), static function ($query) {
-                        $query->where('is_active', 1);
-                    })
-                    ->where('base_price', '>', 0)
-                    ->get(['property_id', 'base_price'])
-                    ->groupBy(static fn ($row) => (int) ($row->property_id ?? 0))
-                    ->map(static function ($rows) {
-                        return collect($rows)
-                            ->map(static fn ($row) => (float) ($row->base_price ?? 0))
-                            ->filter(static fn (float $value) => $value > 0)
-                            ->min();
-                    })
-                    ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+                && Schema::hasColumn('accommodation_packages', 'property_id')) {
+                $packagePriceColumns = ['property_id'];
+                if (Schema::hasColumn('accommodation_packages', 'base_price')) {
+                    $packagePriceColumns[] = 'base_price';
+                }
+                if (Schema::hasColumn('accommodation_packages', 'price_per_night')) {
+                    $packagePriceColumns[] = 'price_per_night';
+                }
 
-                $combinedRoomPricesByProperty = $combinedRoomPricesByProperty
-                    ->merge($packagePrices)
-                    ->groupBy(static fn ($value, $key) => (int) $key)
-                    ->map(static function ($values) {
-                        return collect($values)
-                            ->map(static fn ($value) => (float) $value)
-                            ->filter(static fn (float $value) => $value > 0)
-                            ->min();
-                    })
-                    ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+                if (count($packagePriceColumns) > 1) {
+                    $packagePrices = DB::table('accommodation_packages')
+                        ->whereIn('property_id', $propertyLookupIds->all())
+                        ->when(Schema::hasColumn('accommodation_packages', 'is_active'), static function ($query) {
+                            $query->where('is_active', 1);
+                        })
+                        ->get($packagePriceColumns)
+                        ->groupBy(static fn ($row) => (int) ($row->property_id ?? 0))
+                        ->map(static function ($rows) {
+                            return collect($rows)
+                                ->map(static function ($row) {
+                                    $perNight = isset($row->price_per_night) ? (float) ($row->price_per_night ?? 0) : 0;
+                                    $base = isset($row->base_price) ? (float) ($row->base_price ?? 0) : 0;
+                                    return $perNight > 0 ? $perNight : $base;
+                                })
+                                ->filter(static fn (float $value) => $value > 0)
+                                ->min();
+                        })
+                        ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+
+                    $combinedRoomPricesByProperty = $combinedRoomPricesByProperty
+                        ->merge($packagePrices)
+                        ->groupBy(static fn ($value, $key) => (int) $key)
+                        ->map(static function ($values) {
+                            return collect($values)
+                                ->map(static fn ($value) => (float) $value)
+                                ->filter(static fn (float $value) => $value > 0)
+                                ->min();
+                        })
+                        ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+                }
             }
 
             if (Schema::hasTable('accommodation_rooms') && Schema::hasColumn('accommodation_rooms', 'property_id')) {

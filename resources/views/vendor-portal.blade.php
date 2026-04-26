@@ -3408,25 +3408,54 @@
 
                 function applyAvailabilityTargetSelectionFor(form) {
                     if (!form) return;
+                    const parentSelect = form.querySelector('[data-availability-parent]');
                     const targetSelect = form.querySelector('[data-availability-target]');
                     if (!targetSelect) return;
+
+                    const selectedParentValue = parentSelect ? String(parentSelect.value || '').trim() : '';
+                    Array.from(targetSelect.options).forEach((option, index) => {
+                        if (index === 0) {
+                            option.hidden = false;
+                            option.disabled = false;
+                            return;
+                        }
+
+                        const parentValue = String(option.getAttribute('data-parent-value') || '').trim();
+                        const matchesParent = selectedParentValue === '' || selectedParentValue === parentValue;
+                        option.hidden = !matchesParent;
+                        option.disabled = !matchesParent;
+                    });
+
+                    if (targetSelect.selectedIndex > 0) {
+                        const currentOption = targetSelect.options[targetSelect.selectedIndex] || null;
+                        if (!currentOption || currentOption.disabled) {
+                            targetSelect.value = '';
+                        }
+                    }
 
                     const selectedOption = targetSelect.options[targetSelect.selectedIndex] || null;
                     const propertyId = selectedOption ? String(selectedOption.getAttribute('data-property-id') || '').trim() : '';
                     const serviceId = selectedOption ? String(selectedOption.getAttribute('data-service-id') || '').trim() : '';
                     const roomId = selectedOption ? String(selectedOption.getAttribute('data-room-id') || '').trim() : '';
                     const routeName = selectedOption ? String(selectedOption.getAttribute('data-route-name') || '').trim() : '';
+                    const optionParentValue = selectedOption ? String(selectedOption.getAttribute('data-parent-value') || '').trim() : '';
 
                     const propertyInput = form.querySelector('[data-availability-role="property"]');
                     const serviceInput = form.querySelector('[data-availability-role="service"]');
                     const roomInput = form.querySelector('[data-availability-role="room"]');
                     const routeInput = form.querySelector('[data-availability-role="route"]');
+                    const inventoryInput = form.querySelector('[data-availability-inventory]');
+
+                    if (parentSelect && optionParentValue !== '' && String(parentSelect.value || '').trim() !== optionParentValue) {
+                        parentSelect.value = optionParentValue;
+                    }
 
                     if (propertyInput) propertyInput.value = propertyId;
                     if (serviceInput) serviceInput.value = serviceId;
                     if (roomInput) roomInput.value = roomId;
-                    if (routeInput && routeName !== '' && String(routeInput.value || '').trim() === '') {
-                        routeInput.value = routeName;
+                    if (routeInput) routeInput.value = routeName;
+                    if (inventoryInput && String(inventoryInput.value || '').trim() === '') {
+                        inventoryInput.value = '1';
                     }
 
                     renderAvailabilityCalendar(form);
@@ -3483,6 +3512,7 @@
                 }
 
                 availabilityForms.forEach((form) => {
+                    const parentSelect = form.querySelector('[data-availability-parent]');
                     const targetSelect = form.querySelector('[data-availability-target]');
                     const initialStates = parseAvailabilityCalendarStates(form);
                     availabilityCalendarByForm.set(form, {
@@ -3547,6 +3577,12 @@
                     if (!targetSelect) {
                         renderAvailabilityCalendar(form);
                         return;
+                    }
+
+                    if (parentSelect) {
+                        parentSelect.addEventListener('change', function () {
+                            applyAvailabilityTargetSelectionFor(form);
+                        });
                     }
 
                     targetSelect.addEventListener('change', function () {

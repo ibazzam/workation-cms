@@ -1658,6 +1658,12 @@
             gap: 10px;
         }
 
+        .transfer-rate-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
         .transfer-rate-box {
             border: 1px solid #dbe7f0;
             border-radius: 12px;
@@ -1681,6 +1687,60 @@
             gap: 8px;
             color: #36586d;
             font-size: 0.84rem;
+        }
+
+        .transfer-rate-table-compact {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.84rem;
+            color: #214964;
+        }
+
+        .transfer-rate-table-compact thead th {
+            text-align: left;
+            font-size: 0.74rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #577589;
+            padding: 0 0 6px;
+            border-bottom: 1px solid #d7e5f0;
+        }
+
+        .transfer-rate-table-compact tbody td {
+            padding: 9px 0;
+            border-bottom: 1px solid #e3edf5;
+            vertical-align: middle;
+        }
+
+        .transfer-rate-table-compact tbody tr:last-child td {
+            border-bottom: none;
+            padding-bottom: 2px;
+        }
+
+        .transfer-mode {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #244a62;
+            font-weight: 600;
+        }
+
+        .transfer-mode .icon {
+            width: 18px;
+            text-align: center;
+            color: #2f6b89;
+        }
+
+        .transfer-rate-amount {
+            color: #123b56;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .transfer-base-note {
+            margin: 4px 0 0;
+            font-size: 0.78rem;
+            color: #5a7488;
         }
 
         .transfer-policy-summary {
@@ -2356,6 +2416,7 @@
             .room-offer-row { grid-template-columns: minmax(0, 1fr) 76px minmax(170px, 0.9fr); }
             .policies-grid { grid-template-columns: 1fr; }
             .transfer-rate-table { grid-template-columns: 1fr; }
+            .transfer-rate-grid { grid-template-columns: 1fr; }
             .nearby-grid { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
             .location-layout { grid-template-columns: 1fr; }
         }
@@ -2564,12 +2625,22 @@
         $starString = str_repeat('★', $starCount) . str_repeat('☆', 5 - $starCount);
         $ratingOutOfTen = $ratingValue > 0 ? min(10, $ratingValue * 2) : 0;
         $reviewLabel = $ratingOutOfTen >= 9.0 ? 'Excellent' : ($ratingOutOfTen >= 8.0 ? 'Great' : ($ratingOutOfTen > 0 ? 'Good' : 'No rating yet'));
-        $rawMapLat = $property->map_latitude ?? $property->latitude ?? $property->lat ?? $property->location_lat ?? $property->geo_lat ?? null;
-        $rawMapLng = $property->map_longitude ?? $property->longitude ?? $property->lng ?? $property->location_lng ?? $property->geo_lng ?? null;
+        $detailsMapLat = $propertyDetails['map_latitude'] ?? $propertyDetails['latitude'] ?? $propertyDetails['lat'] ?? $propertyDetails['location_lat'] ?? $propertyDetails['geo_lat'] ?? null;
+        $detailsMapLng = $propertyDetails['map_longitude'] ?? $propertyDetails['longitude'] ?? $propertyDetails['lng'] ?? $propertyDetails['location_lng'] ?? $propertyDetails['geo_lng'] ?? null;
+        $rawMapLat = $detailsMapLat ?? $property->map_latitude ?? $property->latitude ?? $property->lat ?? $property->location_lat ?? $property->geo_lat ?? null;
+        $rawMapLng = $detailsMapLng ?? $property->map_longitude ?? $property->longitude ?? $property->lng ?? $property->location_lng ?? $property->geo_lng ?? null;
         $mapLat = is_numeric($rawMapLat) ? (float) $rawMapLat : null;
         $mapLng = is_numeric($rawMapLng) ? (float) $rawMapLng : null;
         $hasExactCoordinates = $mapLat !== null && $mapLng !== null && $mapLat >= -90 && $mapLat <= 90 && $mapLng >= -180 && $mapLng <= 180;
-        $mapQuery = $locationLine !== '' ? $locationLine : ((string) ($property->name ?? 'Workation'));
+        $mapQueryParts = array_values(array_filter([
+            trim((string) ($property->name ?? '')),
+            $locationLine,
+            'Maldives',
+        ], static fn ($value) => trim((string) $value) !== ''));
+        $mapQuery = implode(', ', $mapQueryParts);
+        if ($mapQuery === '') {
+            $mapQuery = 'Maldives';
+        }
         $mapUrl = $hasExactCoordinates
             ? ('https://www.google.com/maps/search/?api=1&query=' . urlencode($mapLat . ',' . $mapLng))
             : ('https://www.google.com/maps/search/?api=1&query=' . urlencode($mapQuery));
@@ -2661,6 +2732,15 @@
                 || $item['base_charge_foreign'] > 0
             )
             ->values();
+        $transferModeIconCatalog = [
+            'speedboat' => 'fa-solid fa-ship',
+            'domestic_flight' => 'fa-solid fa-plane-departure',
+            'seaplane' => 'fa-solid fa-plane',
+            'ferry' => 'fa-solid fa-ferry',
+            'private_transfer' => 'fa-solid fa-car-side',
+        ];
+        $transferBaseLocal = max(0, (float) ($propertyDetails['transfer_base_local'] ?? 0));
+        $transferBaseForeign = max(0, (float) ($propertyDetails['transfer_base_foreign'] ?? 0));
         $shareUrl = url()->current();
         $shareText = trim((string) ($property->name ?? 'Property')) . ' on Workation';
         $shareEncodedText = urlencode($shareText . ' ' . $shareUrl);
@@ -3376,36 +3456,84 @@
                 <h2>Transfer Policy &amp; Rates</h2>
                 <div class="transfer-policy-grid">
                     <p class="transfer-policy-intro">Available transfer modes for this property are visible here before room selection. Guests still choose their transfer during the booking flow after selecting a room, and the applicable fare is calculated according to whether the guest is a local resident or a foreign national.</p>
-                    @foreach ($transferChoices as $transferChoice)
-                        <article class="transfer-rate-card">
-                            <div class="transfer-rate-head">
-                                <div>
-                                    <h3 class="transfer-rate-title">{{ $transferChoice['label'] }}</h3>
-                                    <p class="transfer-rate-note">Charges below are shown per passenger unless a base charge is listed separately.</p>
-                                </div>
-                                <span class="transfer-pill"><i class="fa-solid fa-route" aria-hidden="true"></i> Available at checkout</span>
+                    <article class="transfer-rate-card">
+                        <div class="transfer-rate-head">
+                            <div>
+                                <h3 class="transfer-rate-title">Transfer Fare Matrix</h3>
+                                <p class="transfer-rate-note">Mode of transport and per-passenger fares by residency type.</p>
                             </div>
-                            <div class="transfer-rate-table">
-                                <div class="transfer-rate-box">
-                                    <h3>Local Resident</h3>
-                                    <div class="transfer-rate-line"><span>Adult fare</span><strong>{{ $currency }} {{ number_format((float) ($transferChoice['local_adult_rate'] ?? 0), 2) }}</strong></div>
-                                    <div class="transfer-rate-line"><span>Child fare</span><strong>{{ $currency }} {{ number_format((float) ($transferChoice['local_child_rate'] ?? 0), 2) }}</strong></div>
-                                    @if ((float) ($transferChoice['base_charge_local'] ?? 0) > 0)
-                                        <div class="transfer-rate-line"><span>Base charge</span><strong>{{ $currency }} {{ number_format((float) ($transferChoice['base_charge_local'] ?? 0), 2) }}</strong></div>
-                                    @endif
-                                </div>
-                                <div class="transfer-rate-box">
-                                    <h3>Foreigner</h3>
-                                    <div class="transfer-rate-line"><span>Adult fare</span><strong>{{ $currency }} {{ number_format((float) ($transferChoice['foreign_adult_rate'] ?? 0), 2) }}</strong></div>
-                                    <div class="transfer-rate-line"><span>Child fare</span><strong>{{ $currency }} {{ number_format((float) ($transferChoice['foreign_child_rate'] ?? 0), 2) }}</strong></div>
-                                    @if ((float) ($transferChoice['base_charge_foreign'] ?? 0) > 0)
-                                        <div class="transfer-rate-line"><span>Base charge</span><strong>{{ $currency }} {{ number_format((float) ($transferChoice['base_charge_foreign'] ?? 0), 2) }}</strong></div>
-                                    @endif
-                                </div>
+                            <span class="transfer-pill"><i class="fa-solid fa-route" aria-hidden="true"></i> Available at checkout</span>
+                        </div>
+                        <div class="transfer-rate-grid">
+                            <div class="transfer-rate-box">
+                                <h3>Local Resident</h3>
+                                <table class="transfer-rate-table-compact" aria-label="Local resident transfer fares">
+                                    <thead>
+                                        <tr>
+                                            <th>Mode of transport</th>
+                                            <th>Adult fare</th>
+                                            <th>Child fare</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($transferChoices as $transferChoice)
+                                            @php
+                                                $modeKey = (string) ($transferChoice['key'] ?? '');
+                                                $modeIcon = (string) ($transferModeIconCatalog[$modeKey] ?? 'fa-solid fa-route');
+                                            @endphp
+                                            <tr>
+                                                <td>
+                                                    <span class="transfer-mode">
+                                                        <i class="icon {{ $modeIcon }}" aria-hidden="true"></i>
+                                                        <span>{{ (string) ($transferChoice['label'] ?? 'Transfer') }}</span>
+                                                    </span>
+                                                </td>
+                                                <td><span class="transfer-rate-amount">{{ $currency }} {{ number_format((float) ($transferChoice['local_adult_rate'] ?? 0), 2) }}</span></td>
+                                                <td><span class="transfer-rate-amount">{{ $currency }} {{ number_format((float) ($transferChoice['local_child_rate'] ?? 0), 2) }}</span></td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                                @if ($transferBaseLocal > 0)
+                                    <p class="transfer-base-note">Base local charge: <strong>{{ $currency }} {{ number_format($transferBaseLocal, 2) }}</strong></p>
+                                @endif
                             </div>
-                            <p class="transfer-policy-summary">Transfer selection remains part of the existing booking flow, so this section is informational and does not change the current checkout behavior.</p>
-                        </article>
-                    @endforeach
+                            <div class="transfer-rate-box">
+                                <h3>Foreigner</h3>
+                                <table class="transfer-rate-table-compact" aria-label="Foreigner transfer fares">
+                                    <thead>
+                                        <tr>
+                                            <th>Mode of transport</th>
+                                            <th>Adult fare</th>
+                                            <th>Child fare</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($transferChoices as $transferChoice)
+                                            @php
+                                                $modeKey = (string) ($transferChoice['key'] ?? '');
+                                                $modeIcon = (string) ($transferModeIconCatalog[$modeKey] ?? 'fa-solid fa-route');
+                                            @endphp
+                                            <tr>
+                                                <td>
+                                                    <span class="transfer-mode">
+                                                        <i class="icon {{ $modeIcon }}" aria-hidden="true"></i>
+                                                        <span>{{ (string) ($transferChoice['label'] ?? 'Transfer') }}</span>
+                                                    </span>
+                                                </td>
+                                                <td><span class="transfer-rate-amount">{{ $currency }} {{ number_format((float) ($transferChoice['foreign_adult_rate'] ?? 0), 2) }}</span></td>
+                                                <td><span class="transfer-rate-amount">{{ $currency }} {{ number_format((float) ($transferChoice['foreign_child_rate'] ?? 0), 2) }}</span></td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                                @if ($transferBaseForeign > 0)
+                                    <p class="transfer-base-note">Base foreigner charge: <strong>{{ $currency }} {{ number_format($transferBaseForeign, 2) }}</strong></p>
+                                @endif
+                            </div>
+                        </div>
+                        <p class="transfer-policy-summary">Transfer selection remains part of the existing booking flow, so this section is informational and does not change the current checkout behavior.</p>
+                    </article>
                 </div>
             </section>
         @endif

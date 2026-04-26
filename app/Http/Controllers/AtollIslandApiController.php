@@ -13,11 +13,26 @@ class AtollIslandApiController extends Controller
      */
     public function getAllAtolls(): JsonResponse
     {
-        $atolls = Atoll::select('id', 'name', 'slug', 'code')
+        $atolls = Atoll::with(['islands:id,atoll_id,name'])
+            ->select('id', 'name', 'slug', 'code')
             ->orderedByCode()
             ->get();
 
-        return response()->json($atolls);
+        return response()->json($atolls->map(static function (Atoll $atoll): array {
+            return [
+                'id' => $atoll->id,
+                'name' => $atoll->name,
+                'slug' => $atoll->slug,
+                'code' => $atoll->code,
+                'islands' => $atoll->islands
+                    ->map(static fn (Island $island): array => [
+                        'id' => $island->id,
+                        'name' => $island->name,
+                    ])
+                    ->values()
+                    ->all(),
+            ];
+        }));
     }
 
     /**

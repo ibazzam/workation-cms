@@ -722,7 +722,7 @@
 
                     <div class="grid">
                         @if ($categoryKey === 'excursion')
-                            <div class="field full"><label for="serviceStartDate">Activity Date</label><input id="serviceStartDate" name="service_start_date" type="date" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field full"><label for="serviceStartDate">Activity Date</label><input id="serviceStartDate" name="service_start_date" type="date" min="{{ (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
                             <div class="field full">
                                 <label for="primaryFirstName">Lead Guest / Group Head</label>
                                 <input id="primaryFirstName" name="primary_first_name" type="text" value="{{ old('primary_first_name', trim(((string) ($prefill['primary_first_name'] ?? '')) . ' ' . ((string) ($prefill['primary_last_name'] ?? '')))) }}" class="{{ $errors->has('primary_first_name') ? 'input-error' : '' }}" placeholder="Name of lead guest">
@@ -775,8 +775,8 @@
                                 <textarea id="serviceNotes" name="service_notes" placeholder="Any dietary, timing, or service request?">{{ old('service_notes', (string) ($prefill['service_notes'] ?? '')) }}</textarea>
                             </div>
                         @else
-                            <div class="field"><label for="serviceStartDate">{{ (string) ($dateLabels['start'] ?? 'Service Start Date') }}</label><input id="serviceStartDate" name="service_start_date" type="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? 'datetime-local' : 'date' }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
-                            <div class="field"><label for="serviceEndDate">{{ (string) ($dateLabels['end'] ?? 'Service End Date') }}</label><input id="serviceEndDate" name="service_end_date" type="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? 'datetime-local' : 'date' }}" value="{{ old('service_end_date', (string) ($prefill['service_end_date'] ?? '')) }}" class="{{ $errors->has('service_end_date') ? 'input-error' : '' }}">@error('service_end_date')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="serviceStartDate">{{ (string) ($dateLabels['start'] ?? 'Service Start Date') }}</label><input id="serviceStartDate" name="service_start_date" type="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? 'datetime-local' : 'date' }}" min="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? ((string) ($todayDate ?? now()->toDateString()) . 'T00:00') : (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="serviceEndDate">{{ (string) ($dateLabels['end'] ?? 'Service End Date') }}</label><input id="serviceEndDate" name="service_end_date" type="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? 'datetime-local' : 'date' }}" min="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? ((string) ($todayDate ?? now()->toDateString()) . 'T00:00') : (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_end_date', (string) ($prefill['service_end_date'] ?? '')) }}" class="{{ $errors->has('service_end_date') ? 'input-error' : '' }}">@error('service_end_date')<p class="error-text">{{ $message }}</p>@enderror</div>
                             <div class="field"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}" class="{{ $errors->has('adults') ? 'input-error' : '' }}" required>@error('adults')<p class="error-text">{{ $message }}</p>@enderror</div>
                             <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}" class="{{ $errors->has('children') ? 'input-error' : '' }}">@error('children')<p class="error-text">{{ $message }}</p>@enderror</div>
 
@@ -849,6 +849,7 @@
                         {{ $categoryKey === 'excursion' ? 'Your selected activity, date, lead guest, quantities, and additional request are carried directly into checkout. You can revise date and guest counts before final payment.' : 'Service-first checkout logic: core service requirements are captured before payment confirmation to reduce vendor-side revalidation.' }}
                         Tax: {{ number_format((float) ($pricingConfig['tax_rate'] ?? 16), 2) }}% • Discount: {{ number_format((float) ($pricingConfig['discount_percent'] ?? 0), 2) }}%
                     </div>
+                    <p class="error-text" data-service-date-error style="display:none; margin:10px 0 0;"></p>
 
                     <div class="actions">
                         <button class="btn primary" type="submit">{{ $categoryKey === 'excursion' ? 'Book Now' : 'Proceed to Checkout' }}</button>
@@ -924,6 +925,100 @@
                     }
                 });
             }
+
+            const serviceStartInput = document.getElementById('serviceStartDate');
+            const serviceEndInput = document.getElementById('serviceEndDate');
+            const serviceDateError = document.querySelector('[data-service-date-error]');
+            const todayDate = @json((string) ($todayDate ?? now()->toDateString()));
+            const unavailableDates = @json($unavailableDates ?? ['blocked' => [], 'reserved' => []]);
+            const blockedDateSet = new Set(Array.isArray(unavailableDates?.blocked) ? unavailableDates.blocked : []);
+            const reservedDateSet = new Set(Array.isArray(unavailableDates?.reserved) ? unavailableDates.reserved : []);
+
+            const normalizeToDate = (value) => {
+                const normalized = String(value || '').trim();
+                if (normalized === '') {
+                    return '';
+                }
+
+                return normalized.length >= 10 ? normalized.slice(0, 10) : normalized;
+            };
+
+            const setServiceDateError = (message) => {
+                const text = String(message || '').trim();
+                [serviceStartInput, serviceEndInput].forEach((input) => {
+                    if (!input) {
+                        return;
+                    }
+                    input.setCustomValidity(text);
+                });
+
+                if (!serviceDateError) {
+                    return;
+                }
+
+                serviceDateError.textContent = text;
+                serviceDateError.style.display = text === '' ? 'none' : 'block';
+            };
+
+            const validateServiceDates = () => {
+                if (!serviceStartInput) {
+                    return true;
+                }
+
+                const startDate = normalizeToDate(serviceStartInput.value);
+                const endDateRaw = serviceEndInput ? serviceEndInput.value : '';
+                const endDate = normalizeToDate(endDateRaw);
+                const effectiveEndDate = endDate !== '' ? endDate : startDate;
+
+                if (startDate === '') {
+                    setServiceDateError('');
+                    return true;
+                }
+
+                if (startDate < todayDate) {
+                    setServiceDateError('Selected start date cannot be in the past.');
+                    return false;
+                }
+
+                if (effectiveEndDate !== '' && effectiveEndDate < startDate) {
+                    setServiceDateError('End date must be after or equal to start date.');
+                    return false;
+                }
+
+                let cursor = new Date(startDate + 'T00:00:00');
+                const endBoundary = new Date(effectiveEndDate + 'T00:00:00');
+                while (cursor <= endBoundary) {
+                    const dateKey = cursor.toISOString().slice(0, 10);
+                    if (blockedDateSet.has(dateKey) || reservedDateSet.has(dateKey)) {
+                        setServiceDateError(`Selected date range includes unavailable day (${dateKey}).`);
+                        return false;
+                    }
+                    cursor.setDate(cursor.getDate() + 1);
+                }
+
+                setServiceDateError('');
+                return true;
+            };
+
+            [serviceStartInput, serviceEndInput].forEach((input) => {
+                if (!input) {
+                    return;
+                }
+
+                input.addEventListener('input', validateServiceDates);
+                input.addEventListener('change', validateServiceDates);
+            });
+
+            const bookingForm = document.getElementById('categoryServiceBookingForm');
+            if (bookingForm) {
+                bookingForm.addEventListener('submit', function (event) {
+                    if (!validateServiceDates()) {
+                        event.preventDefault();
+                    }
+                });
+            }
+
+            validateServiceDates();
         });
     </script>
 

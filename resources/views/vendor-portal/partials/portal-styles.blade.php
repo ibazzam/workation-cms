@@ -914,6 +914,13 @@
             overflow: hidden;
         }
 
+        .map-picker [data-edit-map-wrap] {
+            width: 100%;
+            height: 260px;
+            background: #eef4f9;
+            display: block;
+        }
+
         #propertyMap {
             width: 100%;
             height: 260px;

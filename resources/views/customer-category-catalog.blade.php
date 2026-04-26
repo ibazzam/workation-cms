@@ -3339,6 +3339,23 @@
                 await Promise.all(Array.from(atollIdByName.entries()).map(async function (entry) {
                     const atollName = entry[0];
                     const atollId = entry[1];
+
+                    const atollRow = (Array.isArray(atolls) ? atolls : []).find(function (atoll) {
+                        return Number(atoll && atoll.id ? atoll.id : 0) === Number(atollId);
+                    });
+
+                    const embeddedNames = Array.isArray(atollRow && atollRow.islands ? atollRow.islands : null)
+                        ? atollRow.islands
+                            .map(function (island) { return String(island && island.name ? island.name : '').trim(); })
+                            .filter(function (name) { return name !== ''; })
+                        : [];
+
+                    if (embeddedNames.length > 0) {
+                        islandsByAtollName.set(atollName, embeddedNames);
+                        embeddedNames.forEach(function (name) { allIslandNames.add(name); });
+                        return;
+                    }
+
                     try {
                         const islands = await fetchJson('/api/atoll-island/atolls/' + atollId + '/islands');
                         const names = (Array.isArray(islands) ? islands : [])

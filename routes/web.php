@@ -150,6 +150,95 @@ if (!function_exists('workationDateSeries')) {
     }
 }
 
+if (!function_exists('workationDerivedListingBasePrice')) {
+    function workationDerivedListingBasePrice(object $property): float
+    {
+        $existingBasePrice = isset($property->base_price) ? (float) ($property->base_price ?? 0) : 0.0;
+        if ($existingBasePrice > 0) {
+            return $existingBasePrice;
+        }
+
+        $rawDetails = $property->listing_details ?? ($property->details ?? null);
+        if (!is_string($rawDetails) || trim($rawDetails) === '') {
+            return 0.0;
+        }
+
+        $details = json_decode($rawDetails, true);
+        if (!is_array($details) || $details === []) {
+            return 0.0;
+        }
+
+        $normalizePrice = static function ($value): float {
+            if (is_numeric($value)) {
+                return (float) $value;
+            }
+
+            if (is_string($value)) {
+                $normalized = trim($value);
+                if ($normalized === '') {
+                    return 0.0;
+                }
+
+                $normalized = str_replace(',', '', $normalized);
+                $normalized = preg_replace('/[^0-9.\-]+/', '', $normalized) ?? '';
+                if ($normalized === '' || !is_numeric($normalized)) {
+                    return 0.0;
+                }
+
+                return (float) $normalized;
+            }
+
+            return 0.0;
+        };
+
+        $candidateKeys = [
+            'base_price',
+            'starting_price',
+            'from_price',
+            'starting_from_price',
+            'price_per_night',
+            'base_price_per_night',
+            'price_per_day',
+            'daily_rate',
+            'hourly_rate',
+            'adult_price',
+            'price_per_adult',
+            'meal_plan_room_only_price',
+            'meal_plan_breakfast_price',
+            'meal_plan_half_board_price',
+            'meal_plan_full_board_price',
+            'meal_plan_all_inclusive_price',
+        ];
+
+        $candidates = [];
+        foreach ($candidateKeys as $key) {
+            $normalized = $normalizePrice($details[$key] ?? null);
+            if ($normalized > 0) {
+                $candidates[] = $normalized;
+            }
+        }
+
+        foreach (['pricing', 'pricing_config', 'price_config'] as $nestedKey) {
+            if (!is_array($details[$nestedKey] ?? null)) {
+                continue;
+            }
+
+            foreach ($candidateKeys as $key) {
+                $normalized = $normalizePrice($details[$nestedKey][$key] ?? null);
+                if ($normalized > 0) {
+                    $candidates[] = $normalized;
+                }
+            }
+        }
+
+        if ($candidates === []) {
+            return 0.0;
+        }
+
+        return (float) min($candidates);
+    }
+}
+
 if (!function_exists('workationOverlappingReservationCount')) {
     function workationOverlappingReservationCount(int $vendorUserId, int $vendorPropertyId, Carbon $start, Carbon $endExclusive, ?int $roomId = null, ?int $serviceId = null): int
     {
@@ -2014,72 +2103,16 @@ Route::get('/', function () {
                 });
             }
 
-            // Derive service prices from listing_details when base_price was never
-            // persisted (legacy records created before dedicated table price sync).
+            // Derive card price from listing details when base_price was not persisted.
             $allProperties = $allProperties->map(static function ($property) {
                 $category = strtolower(trim((string) ($property->listing_category ?? '')));
-                $basePrice = isset($property->base_price) ? (float) ($property->base_price ?? 0) : 0;
-
-                if ($category === 'accommodation' || $basePrice > 0) {
+                if ($category === 'accommodation') {
                     return $property;
                 }
 
-                $rawDetails = $property->listing_details ?? ($property->details ?? null);
-                $details = [];
-                if (is_string($rawDetails) && trim($rawDetails) !== '') {
-                    $decoded = json_decode($rawDetails, true);
-                    if (is_array($decoded)) {
-                        $details = $decoded;
-                    }
-                }
-
-                if ($details === []) {
-                    return $property;
-                }
-
-                $candidates = [];
-                foreach ([
-                    'base_price',
-                    'price_per_adult',
-                    'price_per_child',
-                    'hourly_rate',
-                    'daily_rate',
-                    'meal_plan_room_only_price',
-                ] as $priceKey) {
-                    $value = isset($details[$priceKey]) ? (float) $details[$priceKey] : 0;
-                    if ($value > 0) {
-                        $candidates[] = $value;
-                    }
-                }
-
-                foreach (['transfer_rates', 'transfer_rates_local_adult', 'transfer_rates_local_child', 'transfer_rates_foreign_adult', 'transfer_rates_foreign_child'] as $rateKey) {
-                    if (!is_array($details[$rateKey] ?? null)) {
-                        continue;
-                    }
-                    foreach ($details[$rateKey] as $rateValue) {
-                        $normalized = (float) $rateValue;
-                        if ($normalized > 0) {
-                            $candidates[] = $normalized;
-                        }
-                    }
-                }
-
-                if (is_array($details['transfer_rate_matrix'] ?? null)) {
-                    foreach ($details['transfer_rate_matrix'] as $matrixRow) {
-                        if (!is_array($matrixRow)) {
-                            continue;
-                        }
-                        foreach (['local_adult_charge', 'local_child_charge', 'foreign_adult_charge', 'foreign_child_charge'] as $matrixKey) {
-                            $normalized = isset($matrixRow[$matrixKey]) ? (float) $matrixRow[$matrixKey] : 0;
-                            if ($normalized > 0) {
-                                $candidates[] = $normalized;
-                            }
-                        }
-                    }
-                }
-
-                if ($candidates !== []) {
-                    $property->base_price = min($candidates);
+                $derivedPrice = workationDerivedListingBasePrice($property);
+                if ($derivedPrice > 0) {
+                    $property->base_price = $derivedPrice;
                 }
 
                 return $property;
@@ -4689,6 +4722,15 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 ->filter(static fn (int $id) => $id > 0)
                 ->unique()
                 ->values();
+        } else {
+            $catalogProperties = $catalogProperties->map(static function ($property) {
+                $derivedPrice = workationDerivedListingBasePrice($property);
+                if ($derivedPrice > 0) {
+                    $property->base_price = $derivedPrice;
+                }
+
+                return $property;
+            })->values();
         }
 
         if (Schema::hasTable('vendor_listing_media') && $propertyLookupIds->isNotEmpty()) {

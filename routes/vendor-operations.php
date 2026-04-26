@@ -1604,9 +1604,27 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
             $transferRates = is_array($details['transfer_rates'] ?? null)
                 ? $details['transfer_rates']
                 : [];
+            $transferRateMatrix = is_array($details['transfer_rate_matrix'] ?? null)
+                ? $details['transfer_rate_matrix']
+                : [];
             foreach ($transferOptions as $transferOption) {
-                $transferRate = $transferRates[$transferOption] ?? null;
-                if (!is_numeric($transferRate) || (float) $transferRate <= 0) {
+                $legacyRate = is_numeric($transferRates[$transferOption] ?? null)
+                    ? (float) $transferRates[$transferOption]
+                    : null;
+                $matrixRow = is_array($transferRateMatrix[$transferOption] ?? null)
+                    ? $transferRateMatrix[$transferOption]
+                    : [];
+                $matrixRates = [
+                    is_numeric($matrixRow['local_adult_charge'] ?? null) ? (float) $matrixRow['local_adult_charge'] : null,
+                    is_numeric($matrixRow['local_child_charge'] ?? null) ? (float) $matrixRow['local_child_charge'] : null,
+                    is_numeric($matrixRow['foreign_adult_charge'] ?? null) ? (float) $matrixRow['foreign_adult_charge'] : null,
+                    is_numeric($matrixRow['foreign_child_charge'] ?? null) ? (float) $matrixRow['foreign_child_charge'] : null,
+                ];
+
+                $hasConfiguredRate = ($legacyRate !== null && $legacyRate > 0)
+                    || collect($matrixRates)->contains(static fn ($rate) => $rate !== null && $rate > 0);
+
+                if (!$hasConfiguredRate) {
                     $errors[] = 'Set a transfer charge greater than zero for each selected transfer option.';
                     break;
                 }
@@ -4276,6 +4294,21 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
     ];
 
     DB::transaction(function () use ($property, $vendorUserId, $updatePayload, $canonicalListingCategory, $resolvedLocation, $resolvedBasePrice, $normalizedMaxGuests, $existingDetails, $validated, $resolvedStatus): void {
+        if (Schema::hasTable('vendor_properties')) {
+            $legacyPropertyUpdate = $updatePayload;
+            if (Schema::hasColumn('vendor_properties', 'listing_details')) {
+                $legacyPropertyUpdate['listing_details'] = empty($existingDetails) ? null : json_encode($existingDetails);
+            }
+            if (Schema::hasColumn('vendor_properties', 'currency')) {
+                $legacyPropertyUpdate['currency'] = 'MVR';
+            }
+
+            DB::table('vendor_properties')
+                ->where('id', $property)
+                ->where('vendor_user_id', $vendorUserId)
+                ->update($legacyPropertyUpdate);
+        }
+
         if ($canonicalListingCategory !== null) {
             vendorPortalSyncCategoryListingRecord(
                 $canonicalListingCategory,

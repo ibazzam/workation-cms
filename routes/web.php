@@ -154,18 +154,12 @@ if (!function_exists('workationDerivedListingBasePrice')) {
     function workationDerivedListingBasePrice(object $property): float
     {
         $existingBasePrice = isset($property->base_price) ? (float) ($property->base_price ?? 0) : 0.0;
-        if ($existingBasePrice > 0) {
-            return $existingBasePrice;
-        }
 
         $rawDetails = $property->listing_details ?? ($property->details ?? null);
-        if (!is_string($rawDetails) || trim($rawDetails) === '') {
-            return 0.0;
-        }
-
-        $details = json_decode($rawDetails, true);
-        if (!is_array($details) || $details === []) {
-            return 0.0;
+        $details = null;
+        if (is_string($rawDetails) && trim($rawDetails) !== '') {
+            $decoded = json_decode($rawDetails, true);
+            $details = is_array($decoded) ? $decoded : null;
         }
 
         $normalizePrice = static function ($value): float {
@@ -203,6 +197,15 @@ if (!function_exists('workationDerivedListingBasePrice')) {
             'hourly_rate',
             'adult_price',
             'price_per_adult',
+            'child_price',
+            'price_per_child',
+            'infant_price',
+            'price_per_infant',
+            'per_person_rate',
+            'per_pax_rate',
+            'per_trip_rate',
+            'starting_hourly_rate',
+            'starting_daily_rate',
             'meal_plan_room_only_price',
             'meal_plan_breakfast_price',
             'meal_plan_half_board_price',
@@ -211,6 +214,14 @@ if (!function_exists('workationDerivedListingBasePrice')) {
         ];
 
         $candidates = [];
+        if ($existingBasePrice > 0) {
+            $candidates[] = $existingBasePrice;
+        }
+
+        if (!is_array($details) || $details === []) {
+            return $candidates === [] ? 0.0 : (float) min($candidates);
+        }
+
         foreach ($candidateKeys as $key) {
             $normalized = $normalizePrice($details[$key] ?? null);
             if ($normalized > 0) {

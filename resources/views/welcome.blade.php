@@ -3034,9 +3034,30 @@
                     return;
                 }
 
+                const addDays = function (dateString, days) {
+                    const normalized = String(dateString || '').trim();
+                    if (normalized === '') {
+                        return '';
+                    }
+
+                    const dt = new Date(normalized + 'T00:00:00');
+                    if (Number.isNaN(dt.getTime())) {
+                        return '';
+                    }
+
+                    dt.setDate(dt.getDate() + days);
+                    return dt.toISOString().slice(0, 10);
+                };
+
+                const strictCheckoutPair = (pair[0] === 'checkin' && pair[1] === 'checkout')
+                    || (pair[0] === 'workCheckIn' && pair[1] === 'workCheckOut');
+
                 const syncPair = function () {
                     const startValue = String(startInput.value || '').trim();
-                    endInput.min = startValue !== '' ? startValue : todayString;
+                    const minEnd = startValue !== ''
+                        ? (strictCheckoutPair ? addDays(startValue, 1) : startValue)
+                        : todayString;
+                    endInput.min = minEnd !== '' ? minEnd : todayString;
 
                     if (startValue !== '' && startValue < todayString) {
                         startInput.setCustomValidity('Date cannot be in the past.');
@@ -3045,10 +3066,16 @@
                     }
 
                     const endValue = String(endInput.value || '').trim();
-                    if (endValue !== '' && startValue !== '' && endValue < startValue) {
-                        endInput.setCustomValidity('End date must be after or equal to start date.');
+                    if (endValue !== '' && endInput.min !== '' && endValue < endInput.min) {
+                        endInput.setCustomValidity(strictCheckoutPair
+                            ? 'Check-out date must be after check-in date.'
+                            : 'End date must be after or equal to start date.');
                     } else {
                         endInput.setCustomValidity('');
+                    }
+
+                    if (endValue !== '' && endInput.min !== '' && endValue < endInput.min) {
+                        endInput.value = endInput.min;
                     }
                 };
 

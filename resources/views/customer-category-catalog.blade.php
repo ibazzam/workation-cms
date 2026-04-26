@@ -3449,10 +3449,29 @@
                     return;
                 }
 
+                const addDays = function (dateString, days) {
+                    const normalized = String(dateString || '').trim();
+                    if (normalized === '') {
+                        return '';
+                    }
+
+                    const dt = new Date(normalized + 'T00:00:00');
+                    if (Number.isNaN(dt.getTime())) {
+                        return '';
+                    }
+
+                    dt.setDate(dt.getDate() + days);
+                    return dt.toISOString().slice(0, 10);
+                };
+
+                const strictCheckoutPair = startInput.id === 'checkin' && endInput.id === 'checkout';
+
                 const sync = function () {
                     const startValue = String(startInput.value || '').trim();
                     const startDateOnly = startValue.slice(0, 10);
-                    const minimumEnd = startDateOnly !== '' ? startValue : (endInput.type === 'datetime-local' ? todayString + 'T00:00' : todayString);
+                    const minimumEnd = startDateOnly !== ''
+                        ? (strictCheckoutPair ? addDays(startDateOnly, 1) : startValue)
+                        : (endInput.type === 'datetime-local' ? todayString + 'T00:00' : todayString);
                     endInput.min = minimumEnd;
 
                     if (startDateOnly !== '' && startDateOnly < todayString) {
@@ -3463,8 +3482,15 @@
 
                     const endValue = String(endInput.value || '').trim();
                     if (startValue !== '' && endValue !== '') {
-                        const isInvalid = allowEqual ? endValue < startValue : endValue <= startValue;
-                        endInput.setCustomValidity(isInvalid ? 'End date must be after start date.' : '');
+                        const boundary = String(endInput.min || '').trim();
+                        const isInvalid = boundary !== '' ? endValue < boundary : (allowEqual ? endValue < startValue : endValue <= startValue);
+                        endInput.setCustomValidity(isInvalid
+                            ? (strictCheckoutPair ? 'Check-out date must be after check-in date.' : 'End date must be after start date.')
+                            : '');
+
+                        if (isInvalid && boundary !== '') {
+                            endInput.value = boundary;
+                        }
                     } else {
                         endInput.setCustomValidity('');
                     }

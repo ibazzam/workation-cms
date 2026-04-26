@@ -11,8 +11,10 @@
     $sidebarCategoryLinks = $sidebarCategoryOrder
         ->filter(static fn ($categoryKey) => $sidebarSelectedVendorCategories->contains($categoryKey))
         ->values();
+    $sidebarHasServiceAccess = $sidebarCategoryLinks->isNotEmpty();
     $sidebarOverviewOpen = in_array($activePortalPage ?? 'overview', ['overview', 'reports'], true);
     $sidebarListingsOpen = ($activePortalPage ?? '') === 'listings';
+    $sidebarOperationsOpen = in_array($activePortalPage ?? '', ['reservations', 'operations', 'availability', 'pricing'], true);
     $sidebarGrowthOpen = in_array($activePortalPage ?? '', ['promotions', 'engagement', 'billing'], true);
     $sidebarAccountOpen = in_array($activePortalPage ?? '', ['profile', 'api'], true);
 @endphp
@@ -39,27 +41,45 @@
         </div>
     </div>
 
-    <div class="nav-group">
-        <button class="nav-group-header" type="button" data-vendor-nav-toggle="listings" aria-expanded="{{ $sidebarListingsOpen ? 'true' : 'false' }}">
-            <span>Listings</span>
-            <span class="nav-chevron" aria-hidden="true">▾</span>
-        </button>
-        <div class="nav-group-body {{ $sidebarListingsOpen ? 'is-open' : '' }}" data-vendor-nav-group="listings">
-            <a class="nav-item-link {{ ($activePortalPage ?? '') === 'listings' && ($forcedListingCategory ?? '') === '' ? 'prominent' : '' }}" href="/vendor/listings" data-panel-key="listings">All Listings</a>
-            @foreach ($sidebarCategoryLinks as $categoryKey)
-                @php
-                    $categoryLabel = (string) ($sidebarVendorCategoryMap[$categoryKey] ?? ucwords(str_replace('_', ' ', $categoryKey)));
-                    $isActiveCategory = ($activePortalPage ?? '') === 'listings' && (($forcedListingCategory ?? '') === $categoryKey);
-                @endphp
-                <a
-                    class="nav-sub-link {{ $isActiveCategory ? 'prominent' : '' }}"
-                    href="{{ '/vendor/listings/' . $categoryKey }}"
-                    data-panel-key="listings"
-                    data-vendor-category-target="{{ $categoryKey }}"
-                >{{ $categoryLabel }}</a>
-            @endforeach
+    @if ($sidebarHasServiceAccess)
+        <div class="nav-group">
+            <button class="nav-group-header" type="button" data-vendor-nav-toggle="listings" aria-expanded="{{ $sidebarListingsOpen ? 'true' : 'false' }}">
+                <span>Listings</span>
+                <span class="nav-chevron" aria-hidden="true">▾</span>
+            </button>
+            <div class="nav-group-body {{ $sidebarListingsOpen ? 'is-open' : '' }}" data-vendor-nav-group="listings">
+                <a class="nav-item-link {{ ($activePortalPage ?? '') === 'listings' && ($forcedListingCategory ?? '') === '' ? 'prominent' : '' }}" href="/vendor/listings" data-panel-key="listings">All Listings</a>
+                @foreach ($sidebarCategoryLinks as $categoryKey)
+                    @php
+                        $categoryLabel = (string) ($sidebarVendorCategoryMap[$categoryKey] ?? ucwords(str_replace('_', ' ', $categoryKey)));
+                        $isActiveCategory = ($activePortalPage ?? '') === 'listings' && (($forcedListingCategory ?? '') === $categoryKey);
+                    @endphp
+                    <a
+                        class="nav-sub-link {{ $isActiveCategory ? 'prominent' : '' }}"
+                        href="{{ '/vendor/listings/' . $categoryKey }}"
+                        data-panel-key="listings"
+                        data-vendor-category-target="{{ $categoryKey }}"
+                    >{{ $categoryLabel }}</a>
+                @endforeach
+            </div>
         </div>
-    </div>
+
+        <div class="nav-group">
+            <button class="nav-group-header" type="button" data-vendor-nav-toggle="operations" aria-expanded="{{ $sidebarOperationsOpen ? 'true' : 'false' }}">
+                <span>Operations</span>
+                <span class="nav-chevron" aria-hidden="true">▾</span>
+            </button>
+            <div class="nav-group-body {{ $sidebarOperationsOpen ? 'is-open' : '' }}" data-vendor-nav-group="operations">
+                <a class="nav-item-link {{ in_array($activePortalPage ?? '', ['reservations', 'operations'], true) ? 'prominent' : '' }}" href="/vendor/reservations" data-panel-key="reservations">Reservations Queue</a>
+                <a class="nav-item-link {{ ($activePortalPage ?? '') === 'availability' ? 'prominent' : '' }}" href="/vendor/availability" data-panel-key="reservations">Availability Calendar</a>
+                <a class="nav-item-link {{ ($activePortalPage ?? '') === 'pricing' ? 'prominent' : '' }}" href="/vendor/pricing" data-panel-key="reservations">Pricing &amp; Tariffs</a>
+            </div>
+        </div>
+    @else
+        <div class="nav-group">
+            <p class="nav-locked-note">Listings and operations unlock after category verification by admin.</p>
+        </div>
+    @endif
 
     <div class="nav-group">
         <button class="nav-group-header" type="button" data-vendor-nav-toggle="growth" aria-expanded="{{ $sidebarGrowthOpen ? 'true' : 'false' }}">
@@ -67,8 +87,8 @@
             <span class="nav-chevron" aria-hidden="true">▾</span>
         </button>
         <div class="nav-group-body {{ $sidebarGrowthOpen ? 'is-open' : '' }}" data-vendor-nav-group="growth">
-            <a class="nav-item-link {{ in_array($activePortalPage ?? '', ['engagement', 'promotions'], true) ? 'prominent' : '' }}" href="/vendor/promotions" data-panel-key="engagement">Promotions &amp; Loyalty</a>
-            <a class="nav-item-link {{ ($activePortalPage ?? '') === 'billing' ? 'prominent' : '' }}" href="/vendor/billing" data-panel-key="billing">Billing &amp; Refunds</a>
+            <a class="nav-item-link {{ ($activePortalPage ?? '') === 'billing' ? 'prominent' : '' }}" href="/vendor/billing" data-panel-key="billing">Collections &amp; Payouts</a>
+            <a class="nav-item-link {{ in_array($activePortalPage ?? '', ['engagement', 'promotions'], true) ? 'prominent' : '' }}" href="/vendor/promotions" data-panel-key="engagement">Customers, Reviews &amp; Loyalty</a>
         </div>
     </div>
 

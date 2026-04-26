@@ -4,6 +4,66 @@
                 <span class="ops-chip">{{ $vendorPricingRules->count() }} active + historical</span>
             </div>
             @php
+                $allowedCategorySet = collect($vendorAllowedCategoryKeys ?? $selectedVendorCategories ?? [])
+                    ->map(static function ($categoryKey) {
+                        return vendorPortalCanonicalCategory((string) $categoryKey);
+                    })
+                    ->filter(static fn ($categoryKey) => is_string($categoryKey) && $categoryKey !== '')
+                    ->unique()
+                    ->values();
+
+                $filteredVendorProperties = $vendorProperties->filter(static function ($property) use ($allowedCategorySet): bool {
+                    $category = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
+                    return is_string($category) && $category !== '' && $allowedCategorySet->contains($category);
+                })->values();
+
+                $filteredVendorServices = $vendorServices->filter(static function ($service) use ($allowedCategorySet): bool {
+                    $category = vendorPortalCanonicalCategory((string) ($service->listing_category ?? ''));
+                    return is_string($category) && $category !== '' && $allowedCategorySet->contains($category);
+                })->values();
+
+                $propertyCategoryById = $filteredVendorProperties
+                    ->mapWithKeys(static function ($property): array {
+                        return [
+                            (int) ($property->id ?? 0) => vendorPortalCanonicalCategory((string) ($property->listing_category ?? '')),
+                        ];
+                    });
+
+                $filteredVendorRooms = $vendorRooms->filter(static function ($room) use ($propertyCategoryById, $allowedCategorySet): bool {
+                    $propertyId = (int) ($room->vendor_property_id ?? 0);
+                    $roomCategory = $propertyCategoryById->get($propertyId);
+                    if (!is_string($roomCategory) || $roomCategory === '') {
+                        $roomCategory = 'accommodation';
+                    }
+
+                    return $allowedCategorySet->contains($roomCategory);
+                })->values();
+                $filteredPropertyIds = $filteredVendorProperties->pluck('id')->map(static fn ($id) => (int) $id)->filter(static fn ($id) => $id > 0)->values();
+                $filteredServiceIds = $filteredVendorServices->pluck('id')->map(static fn ($id) => (int) $id)->filter(static fn ($id) => $id > 0)->values();
+                $filteredRoomIds = $filteredVendorRooms->pluck('id')->map(static fn ($id) => (int) $id)->filter(static fn ($id) => $id > 0)->values();
+                $hasPricingAccess = $allowedCategorySet->isNotEmpty();
+                $filteredPricingRules = $vendorPricingRules->filter(static function ($rule) use ($filteredPropertyIds, $filteredServiceIds, $filteredRoomIds, $hasPricingAccess): bool {
+                    if (!$hasPricingAccess) {
+                        return false;
+                    }
+
+                    $propertyId = (int) ($rule->vendor_property_id ?? 0);
+                    $serviceId = (int) ($rule->vendor_service_id ?? 0);
+                    $roomId = (int) ($rule->vendor_room_category_id ?? 0);
+
+                    if ($propertyId > 0) {
+                        return $filteredPropertyIds->contains($propertyId);
+                    }
+                    if ($serviceId > 0) {
+                        return $filteredServiceIds->contains($serviceId);
+                    }
+                    if ($roomId > 0) {
+                        return $filteredRoomIds->contains($roomId);
+                    }
+
+                    return true;
+                })->values();
+
                 $recentReservationRows = $vendorReservations->filter(function ($reservation) {
                     $startAt = (string) ($reservation->start_at ?? $reservation->created_at ?? '');
                     $ts = strtotime($startAt);
@@ -72,7 +132,7 @@
 
                 $pricingSuggestions = collect();
 
-                foreach ($vendorProperties as $property) {
+                foreach ($filteredVendorProperties as $property) {
                     $propertyId = (int) ($property->id ?? 0);
                     $basePrice = (float) ($property->base_price ?? 0);
                     $bookings = (int) ($propertyDemandMap->get($propertyId, 0));
@@ -82,7 +142,7 @@
                     }
                 }
 
-                foreach ($vendorServices as $service) {
+                foreach ($filteredVendorServices as $service) {
                     $serviceId = (int) ($service->id ?? 0);
                     $basePrice = (float) ($service->price ?? 0);
                     $bookings = (int) ($serviceDemandMap->get($serviceId, 0));
@@ -92,7 +152,7 @@
                     }
                 }
 
-                foreach ($vendorRooms as $room) {
+                foreach ($filteredVendorRooms as $room) {
                     $roomId = (int) ($room->id ?? 0);
                     $basePrice = (float) ($room->base_price ?? 0);
                     $bookings = (int) ($roomDemandMap->get($roomId, 0));
@@ -107,8 +167,11 @@
                     ->take(30)
                     ->values();
             @endphp
+            @if (!$hasPricingAccess)
+                <p class="wizard-note" style="margin-bottom:10px;">Pricing and tariff controls are hidden until at least one category is approved by admin.</p>
+            @endif
             <div class="ops-grid">
-                <form class="ops-form" method="POST" action="/portal/vendor/pricing/create">
+                <form class="ops-form" method="POST" action="/portal/vendor/pricing/create" @if (!$hasPricingAccess) hidden @endif>
                     @csrf
                     <div class="ops-form-grid">
                         <div class="ops-field">
@@ -152,7 +215,7 @@
                         </div>
                     </div>
                     <p class="standards-note">Use Weekend Markup for peak days. Use Demand/Promo Discount when reservations soften to auto-run promotions across properties, services, and rooms.</p>
-                    <button class="btn btn-primary" type="submit">Save Pricing Rule</button>
+                    <button class="btn btn-primary" type="submit">Create Pricing Rule</button>
                 </form>
 
                 <div class="ops-table-wrap">
@@ -194,7 +257,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="ops-empty">No suggestions yet. Add room/service prices and reservations to generate recommendations.</td>
+                                    <td colspan="6" class="ops-empty">No suggestions yet. Publish pricing for listings and process bookings to enable recommendation signals.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -214,7 +277,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse ($vendorPricingRules->take(12) as $rule)
+                            @forelse ($filteredPricingRules->take(12) as $rule)
                                 <tr>
                                     <td>{{ $rule->name }}</td>
                                     <td>
@@ -235,7 +298,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="ops-empty">No pricing rules yet.</td>
+                                    <td colspan="6" class="ops-empty">No pricing rules available for unlocked categories yet. Create a first rule to standardize your commercial policy.</td>
                                 </tr>
                             @endforelse
                         </tbody>

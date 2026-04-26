@@ -187,25 +187,38 @@
                         'restaurant' => 'vendor-portal.partials.forms.create.restaurant',
                         'vehicle_rental' => 'vendor-portal.partials.forms.create.vehicle_rental',
                     ];
-                    $createCategoryFallback = vendorPortalCanonicalCategory((string) ($selectedVendorCategories[0] ?? 'accommodation'));
+                    $allowedCategoryKeys = collect($listingCategoryViewOrder ?? [])
+                        ->map(static fn ($categoryKey) => vendorPortalCanonicalCategory((string) $categoryKey))
+                        ->filter(static fn ($categoryKey) => is_string($categoryKey) && $categoryKey !== '')
+                        ->values();
+                    $canManageAnyCategory = $allowedCategoryKeys->isNotEmpty();
+                    $createCategoryFallback = vendorPortalCanonicalCategory((string) ($allowedCategoryKeys->first() ?? 'accommodation'));
                     $activeCreateCategory = vendorPortalCanonicalCategory((string) ($forcedListingCategory !== '' ? $forcedListingCategory : $createCategoryFallback));
+                    if (!$allowedCategoryKeys->contains($activeCreateCategory)) {
+                        $activeCreateCategory = $createCategoryFallback;
+                    }
                     $activeCreateFormPartial = $createFormPartialMap[$activeCreateCategory] ?? 'vendor-portal.partials.forms.create.accommodation';
                 @endphp
-                @if ($showCreatePropertyForm)
+                @if (!$canManageAnyCategory)
+                    <article class="ops-form ops-field-wide">
+                        <p class="wizard-note" style="margin:0;">No category is unlocked for this account yet. Ask admin to verify at least one registered category before creating or editing listings.</p>
+                    </article>
+                @endif
+                @if ($showCreatePropertyForm && $canManageAnyCategory)
                     <article class="ops-form ops-field-wide">
                         @include($activeCreateFormPartial)
 
                     </article>
                 @endif
-                <div class="category-listings-stack" aria-label="Category listing views">
-                    @foreach ($listingCategoryViewOrder as $categoryKey)
+                <div class="category-listings-stack" aria-label="Category listing views" @if (!$canManageAnyCategory) hidden @endif>
+                    @foreach ($allowedCategoryKeys as $categoryKey)
                         @php
                             $categoryProperties = $propertiesByCategory->get($categoryKey, collect());
                             $categoryLabel = $listingCategoryLabelMap[$categoryKey] ?? strtoupper(str_replace('_', ' ', $categoryKey));
                         @endphp
                         <article class="category-listing-section" id="category-view-{{ $categoryKey }}" data-category-view="{{ $categoryKey }}">
                             @if ($categoryProperties->isEmpty())
-                                <p class="ops-empty">No {{ strtolower((string) $categoryLabel) }} listings yet.</p>
+                                <p class="ops-empty">No {{ strtolower((string) $categoryLabel) }} listings yet. Use <strong>Add {{ $categoryLabel }}</strong> to create the first listing for this category.</p>
                             @else
                                 <div class="ops-table-wrap">
                                     <table class="ops-table is-compact listing-management-table" aria-label="{{ $categoryLabel }} listings table">
@@ -325,15 +338,15 @@
                                                                     @if ($listingModerationStatus === 'pending_review')
                                                                         <span class="ops-chip is-pending">Under Review</span>
                                                                     @else
-                                                                        <form method="POST" action="/portal/vendor/properties/{{ $propertyId }}/delete" onsubmit="return confirm('Remove this listing?');">
+                                                                        <form method="POST" action="/portal/vendor/properties/{{ $propertyId }}/delete" onsubmit="return confirm('Delete this listing?');">
                                                                             @csrf
-                                                                            <button class="btn btn-danger" type="submit">Remove</button>
+                                                                            <button class="btn btn-danger" type="submit">Delete Listing</button>
                                                                         </form>
                                                                     @endif
                                                                     @if (in_array($listingModerationStatus, ['draft', 'rejected'], true))
                                                                         <form method="POST" action="/portal/vendor/properties/{{ $propertyId }}/submit-for-review">
                                                                             @csrf
-                                                                            <button class="btn btn-primary" type="submit">Publish Listing</button>
+                                                                            <button class="btn btn-primary" type="submit">Submit For Approval</button>
                                                                         </form>
                                                                     @elseif ($listingModerationStatus === 'approved')
                                                                         <span class="ops-chip is-active">Live for bookings</span>
@@ -377,7 +390,7 @@
                                                                     </div>
                                                                 </form>
                                                                 @if ($propertyMediaItems->isEmpty())
-                                                                    <p class="ops-empty">No listing photos uploaded yet.</p>
+                                                                    <p class="ops-empty">No listing photos uploaded yet. Upload at least one cover photo for better conversion.</p>
                                                                 @else
                                                                     <form class="gallery-media-form" method="POST" action="/portal/vendor/media/bulk-delete" onsubmit="return confirm('Remove selected photos?');" data-gallery-selection-form>
                                                                         @csrf
@@ -432,7 +445,7 @@
                                                             <div class="accommodation-room-stretch">
                                                                 <p class="property-subsection-head">Rooms Under This Property ({{ $propertyRooms->count() }})</p>
                                                                 @if ($propertyRooms->isEmpty())
-                                                                    <p class="ops-empty">No rooms for this listing yet.</p>
+                                                                    <p class="ops-empty">No rooms for this listing yet. Add room types to start taking accommodation bookings.</p>
                                                                 @else
                                                                     <div class="ops-table-wrap">
                                                                         <table class="ops-table is-compact room-management-table" aria-label="Rooms for property {{ $propertyId }}">

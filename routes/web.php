@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Models\User;
 use App\Models\BlogPost;
@@ -1076,7 +1076,11 @@ if (!function_exists('vendorMediaStorageUrlFromPath')) {
             return null;
         }
 
-        if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
+        if (str_starts_with($normalized, 'http://')) {
+            return 'https://' . ltrim(substr($normalized, 7), '/');
+        }
+
+        if (str_starts_with($normalized, 'https://')) {
             return $normalized;
         }
 
@@ -1438,6 +1442,32 @@ Route::get('/', function () {
     $homeTrendingCards = $applyHomeDestinationImages($homeTrendingCards);
     $homeLovedCards = $applyHomeDestinationImages($homeLovedCards);
 
+    $homeDefaultDestinationImages = array_values(array_filter($homeCuratedDestinationImages, static fn ($img) => is_string($img) && trim($img) !== ''));
+    $applyHomeImageSafetyFallback = static function ($cards) use ($homeDefaultDestinationImages) {
+        return collect($cards)->values()->map(static function ($card, $index) use ($homeDefaultDestinationImages) {
+            if (!is_array($card)) {
+                return $card;
+            }
+
+            $primary = trim((string) ($card['image_url'] ?? ''));
+            $fallback = trim((string) ($card['fallback_image_url'] ?? ''));
+            if ($primary !== '' || $fallback !== '' || empty($homeDefaultDestinationImages)) {
+                return $card;
+            }
+
+            $safeImage = (string) ($homeDefaultDestinationImages[$index % count($homeDefaultDestinationImages)] ?? '');
+            if ($safeImage !== '') {
+                $card['image_url'] = $safeImage;
+                $card['fallback_image_url'] = $safeImage;
+            }
+
+            return $card;
+        });
+    };
+
+    $homeTrendingCards = $applyHomeImageSafetyFallback($homeTrendingCards);
+    $homeLovedCards = $applyHomeImageSafetyFallback($homeLovedCards);
+
     $homeListingMediaByProperty = collect();
     $homeTransportDestinationOptions = collect();
 
@@ -1448,6 +1478,16 @@ Route::get('/', function () {
             ->pluck('id')
             ->map(static fn ($id) => (int) $id)
             ->filter(static fn (int $id) => $id > 0)
+            ->values();
+        $propertyLookupIds = $allProperties
+            ->flatMap(static function ($property) {
+                return [
+                    (int) ($property->id ?? 0),
+                    (int) ($property->dedicated_row_id ?? 0),
+                ];
+            })
+            ->filter(static fn (int $id) => $id > 0)
+            ->unique()
             ->values();
         // Hydrate property base_price from the lowest valid room price so home/category
         // cards always show a real "From" value.
@@ -1495,7 +1535,7 @@ Route::get('/', function () {
 
                 if (!empty($legacyPriceColumns)) {
                     $legacyRoomRows = DB::table('vendor_property_room_categories')
-                        ->whereIn($legacyRoomPropertyColumn, $propertyIds->all())
+                        ->whereIn($legacyRoomPropertyColumn, $propertyLookupIds->all())
                         ->get(array_merge([$legacyRoomPropertyColumn], $legacyPriceColumns));
 
                     $legacyRoomPrices = $legacyRoomRows
@@ -1529,7 +1569,7 @@ Route::get('/', function () {
 
                 if (count($roomPriceColumns) > 1) {
                     $roomRows = DB::table('accommodation_rooms')
-                        ->whereIn('property_id', $propertyIds->all())
+                        ->whereIn('property_id', $propertyLookupIds->all())
                         ->when($hasRoomActiveColumn, static function ($query) {
                             $query->where('is_active', 1);
                         })
@@ -1566,7 +1606,7 @@ Route::get('/', function () {
                 && Schema::hasColumn('accommodation_packages', 'property_id')
                 && Schema::hasColumn('accommodation_packages', 'base_price')) {
                 $packagePrices = DB::table('accommodation_packages')
-                    ->whereIn('property_id', $propertyIds->all())
+                    ->whereIn('property_id', $propertyLookupIds->all())
                     ->when(Schema::hasColumn('accommodation_packages', 'is_active'), static function ($query) {
                         $query->where('is_active', 1);
                     })
@@ -1605,16 +1645,29 @@ Route::get('/', function () {
             }
         }
 
-        if (Schema::hasTable('vendor_listing_media') && $propertyIds->isNotEmpty()) {
+        if (Schema::hasTable('vendor_listing_media') && $propertyLookupIds->isNotEmpty()) {
             $mediaRows = DB::table('vendor_listing_media')
                 ->where('entity_type', 'property')
-                ->whereIn('entity_id', $propertyIds->all())
+                ->whereIn('entity_id', $propertyLookupIds->all())
                 ->orderByDesc('is_primary')
                 ->orderByDesc('created_at')
                 ->limit(1200)
                 ->get();
 
-            $homeListingMediaByProperty = $mediaRows->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
+            $mediaByEntityId = $mediaRows->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
+            $homeListingMediaByProperty = $allProperties
+                ->mapWithKeys(static function ($property) use ($mediaByEntityId) {
+                    $canonicalId = (int) ($property->id ?? 0);
+                    $dedicatedId = (int) ($property->dedicated_row_id ?? 0);
+
+                    $mediaItems = collect($mediaByEntityId->get($canonicalId, collect()));
+                    if ($mediaItems->isEmpty() && $dedicatedId > 0) {
+                        $mediaItems = collect($mediaByEntityId->get($dedicatedId, collect()));
+                    }
+
+                    return [$canonicalId => $mediaItems];
+                })
+                ->filter(static fn ($items, $key) => (int) $key > 0);
         }
 
         $transportRows = $allProperties
@@ -1894,6 +1947,7 @@ Route::get('/', function () {
                 ->values();
 
             $homeTrendingCards = $applyHomeDestinationImages($homeTrendingCards);
+            $homeTrendingCards = $applyHomeImageSafetyFallback($homeTrendingCards);
         }
 
         $priceSorted = $allProperties
@@ -1965,6 +2019,7 @@ Route::get('/', function () {
                 }
 
                 $homeLovedCards = $applyHomeDestinationImages($homeLovedCards);
+                $homeLovedCards = $applyHomeImageSafetyFallback($homeLovedCards);
             }
         }
     }
@@ -3827,6 +3882,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             ->map(static function ($row) {
                 // Normalize id to vendor_property_id so media lookups and detail-page URLs
                 // work correctly for both old migrated rows and new self-referencing rows.
+                $row->dedicated_row_id = isset($row->id) ? (int) $row->id : 0;
                 $row->id = (int) ($row->vendor_property_id ?? $row->id ?? 0);
                 return $row;
             });
@@ -3834,6 +3890,16 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             ->pluck('id')
             ->map(static fn ($id) => (int) $id)
             ->filter(static fn (int $id) => $id > 0)
+            ->values();
+        $propertyLookupIds = $catalogProperties
+            ->flatMap(static function ($row) {
+                return [
+                    (int) ($row->id ?? 0),
+                    (int) ($row->dedicated_row_id ?? 0),
+                ];
+            })
+            ->filter(static fn (int $id) => $id > 0)
+            ->unique()
             ->values();
 
         // For accommodation, override base_price with the cheapest valid room price.
@@ -3872,7 +3938,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
 
                 if (!empty($legacyPriceColumns)) {
                 $legacyRoomPrices = DB::table('vendor_property_room_categories')
-                    ->whereIn($legacyRoomPropertyColumn, $propertyIds->all())
+                    ->whereIn($legacyRoomPropertyColumn, $propertyLookupIds->all())
                     ->get(array_merge([$legacyRoomPropertyColumn], $legacyPriceColumns))
                     ->groupBy(static function ($row) use ($legacyRoomPropertyColumn) {
                         return (int) ($row->{$legacyRoomPropertyColumn} ?? 0);
@@ -3896,7 +3962,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 && Schema::hasColumn('accommodation_packages', 'property_id')
                 && Schema::hasColumn('accommodation_packages', 'base_price')) {
                 $packagePrices = DB::table('accommodation_packages')
-                    ->whereIn('property_id', $propertyIds->all())
+                    ->whereIn('property_id', $propertyLookupIds->all())
                     ->when(Schema::hasColumn('accommodation_packages', 'is_active'), static function ($query) {
                         $query->where('is_active', 1);
                     })
@@ -3938,7 +4004,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                     }
 
                     $roomPriceRows = DB::table('accommodation_rooms')
-                        ->whereIn('property_id', $propertyIds->all())
+                        ->whereIn('property_id', $propertyLookupIds->all())
                         ->when($hasRoomActiveColumn, static function ($query) {
                             $query->where('is_active', 1);
                         })
@@ -4006,18 +4072,41 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 ->map(static fn ($id) => (int) $id)
                 ->filter(static fn (int $id) => $id > 0)
                 ->values();
+            $propertyLookupIds = $catalogProperties
+                ->flatMap(static function ($row) {
+                    return [
+                        (int) ($row->id ?? 0),
+                        (int) ($row->dedicated_row_id ?? 0),
+                    ];
+                })
+                ->filter(static fn (int $id) => $id > 0)
+                ->unique()
+                ->values();
         }
 
-        if (Schema::hasTable('vendor_listing_media') && $propertyIds->isNotEmpty()) {
+        if (Schema::hasTable('vendor_listing_media') && $propertyLookupIds->isNotEmpty()) {
             $mediaRows = DB::table('vendor_listing_media')
                 ->where('entity_type', 'property')
-                ->whereIn('entity_id', $propertyIds->all())
+                ->whereIn('entity_id', $propertyLookupIds->all())
                 ->orderByDesc('is_primary')
                 ->orderByDesc('created_at')
                 ->limit(600)
                 ->get();
 
-            $catalogPropertyMediaByProperty = $mediaRows->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
+            $mediaByEntityId = $mediaRows->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
+            $catalogPropertyMediaByProperty = $catalogProperties
+                ->mapWithKeys(static function ($property) use ($mediaByEntityId) {
+                    $canonicalId = (int) ($property->id ?? 0);
+                    $dedicatedId = (int) ($property->dedicated_row_id ?? 0);
+
+                    $mediaItems = collect($mediaByEntityId->get($canonicalId, collect()));
+                    if ($mediaItems->isEmpty() && $dedicatedId > 0) {
+                        $mediaItems = collect($mediaByEntityId->get($dedicatedId, collect()));
+                    }
+
+                    return [$canonicalId => $mediaItems];
+                })
+                ->filter(static fn ($items, $key) => (int) $key > 0);
         }
 
         $atollOptions = VendorPropertyCompatibilityReader::distinctOptionValues($dbCategoryKey, 'atoll', 120);
@@ -4126,7 +4215,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
 });
 
 Route::get('/property/{property}', function (Request $request, int $property) {
-    $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById($property);
+    $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById($property, $dbCategoryKey);
 
     if (!$propertyRow) {
         abort(404);
@@ -4204,10 +4293,15 @@ Route::get('/property/{property}', function (Request $request, int $property) {
     $roomMediaByRoom = collect();
 
     if (Schema::hasTable('vendor_listing_media')) {
+        $propertyMediaEntityIds = collect([
+            (int) ($propertyRow->id ?? 0),
+            (int) ($propertyRow->dedicated_row_id ?? 0),
+        ])->filter(static fn (int $id) => $id > 0)->unique()->values();
+
         $mediaQuery = DB::table('vendor_listing_media');
-        $mediaQuery->where(function ($query) use ($propertyRow, $roomIds) {
-            $query->orWhere(function ($inner) use ($propertyRow) {
-                $inner->where('entity_type', 'property')->where('entity_id', (int) $propertyRow->id);
+        $mediaQuery->where(function ($query) use ($propertyMediaEntityIds, $roomIds) {
+            $query->orWhere(function ($inner) use ($propertyMediaEntityIds) {
+                $inner->where('entity_type', 'property')->whereIn('entity_id', $propertyMediaEntityIds->all());
             });
 
             if ($roomIds->isNotEmpty()) {
@@ -6281,6 +6375,11 @@ SVG;
     }
 
     if ($resolvedBinary === null) {
+        $directUrl = vendorMediaStorageUrlFromPath($originalPath);
+        if (is_string($directUrl) && trim($directUrl) !== '' && !str_starts_with($directUrl, '/media/')) {
+            return redirect()->away($directUrl, 302);
+        }
+
         return $placeholderResponse();
     }
 

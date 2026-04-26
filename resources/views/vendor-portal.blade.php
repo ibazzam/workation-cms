@@ -86,8 +86,19 @@
         $roomsByPropertyId = $vendorRooms->groupBy(static function ($room) {
             return (int) ($room->vendor_property_id ?? 0);
         });
-        $propertyMediaByPropertyId = $propertyMediaAssets->groupBy(static function ($media) {
+        $propertyMediaByEntityId = $propertyMediaAssets->groupBy(static function ($media) {
             return (int) ($media->entity_id ?? 0);
+        });
+        $propertyMediaByPropertyId = $vendorProperties->mapWithKeys(static function ($property) use ($propertyMediaByEntityId) {
+            $canonicalId = (int) ($property->id ?? 0);
+            $dedicatedId = (int) ($property->dedicated_row_id ?? 0);
+
+            $mediaItems = collect($propertyMediaByEntityId->get($canonicalId, collect()));
+            if ($mediaItems->isEmpty() && $dedicatedId > 0) {
+                $mediaItems = collect($propertyMediaByEntityId->get($dedicatedId, collect()));
+            }
+
+            return [$canonicalId => $mediaItems];
         });
         $roomMediaByRoomId = $roomMediaAssets->groupBy(static function ($media) {
             return (int) ($media->entity_id ?? 0);

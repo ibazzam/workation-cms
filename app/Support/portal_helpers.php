@@ -272,8 +272,16 @@ if (!function_exists('blogResolveCoverImageUrl')) {
             }
         }
 
-        // All other external URLs — return as-is
+        // All other external URLs — normalize to https where possible.
         if (Str::startsWith($value, ['https://', 'http://', '//'])) {
+            if (Str::startsWith($value, 'http://')) {
+                return 'https://' . ltrim(substr($value, 7), '/');
+            }
+
+            if (Str::startsWith($value, '//')) {
+                return 'https:' . $value;
+            }
+
             return $value;
         }
 

@@ -143,6 +143,23 @@
                     .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
                     .then(function (atolls) {
                         if (!Array.isArray(atolls) || atolls.length === 0) throw new Error('empty');
+                        var hasEmbeddedIslands = atolls.some(function (atoll) {
+                            return Array.isArray(atoll && atoll.islands) && atoll.islands.length > 0;
+                        });
+
+                        if (hasEmbeddedIslands) {
+                            var embeddedTree = {};
+                            atolls.forEach(function (atoll) {
+                                var atollName = String(atoll && atoll.name ? atoll.name : '').trim();
+                                if (!atollName) return;
+                                var islands = Array.isArray(atoll && atoll.islands)
+                                    ? atoll.islands.map(function (i) { return String(i && i.name ? i.name : '').trim(); }).filter(Boolean)
+                                    : [];
+                                embeddedTree[atollName] = islands;
+                            });
+                            if (Object.keys(embeddedTree).length > 0) return embeddedTree;
+                        }
+
                         return Promise.all(atolls.map(function (atoll) {
                             var id = Number(atoll && atoll.id ? atoll.id : 0);
                             var name = String(atoll && atoll.name ? atoll.name : '').trim();
@@ -153,11 +170,13 @@
                                     return { atollName: name, islandNames: (Array.isArray(islands) ? islands : []).map(function (i) { return String(i && i.name ? i.name : '').trim(); }).filter(Boolean) };
                                 })
                                 .catch(function () { return { atollName: name, islandNames: [] }; });
-                        }));
+                        })).then(function (rows) {
+                            var fallbackTree = {};
+                            (rows || []).forEach(function (row) { if (row && row.atollName) fallbackTree[row.atollName] = row.islandNames || []; });
+                            return fallbackTree;
+                        });
                     })
-                    .then(function (rows) {
-                        var tree = {};
-                        (rows || []).forEach(function (row) { if (row && row.atollName) tree[row.atollName] = row.islandNames || []; });
+                    .then(function (tree) {
                         resolve(applyLocationTree(Object.keys(tree).length > 0 ? Object.assign({}, FALLBACK_LOCATION_TREE, { Maldives: tree }) : getCurrentLocationTree()));
                     })
                     .catch(function () { resolve(getCurrentLocationTree()); });

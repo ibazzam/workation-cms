@@ -2859,11 +2859,11 @@
                 </div>
                 <div class="top-search-field">
                     <label for="topCheckin">Check-in</label>
-                    <input id="topCheckin" type="date" name="checkin" value="{{ (string) ($prefill['checkin'] ?? '') }}">
+                    <input id="topCheckin" type="date" name="checkin" min="{{ (string) ($todayDate ?? now()->toDateString()) }}" value="{{ (string) ($prefill['checkin'] ?? '') }}">
                 </div>
                 <div class="top-search-field">
                     <label for="topCheckout">Check-out</label>
-                    <input id="topCheckout" type="date" name="checkout" value="{{ (string) ($prefill['checkout'] ?? '') }}">
+                    <input id="topCheckout" type="date" name="checkout" min="{{ (string) ($todayDate ?? now()->toDateString()) }}" value="{{ (string) ($prefill['checkout'] ?? '') }}">
                 </div>
                 <div class="top-search-field">
                     <label for="topGuests">Guests</label>
@@ -2916,11 +2916,11 @@
                     </div>
                     <div class="hero-avail-field">
                         <label for="availCheckin">Check-in</label>
-                        <input id="availCheckin" type="date" name="checkin" value="{{ (string) ($prefill['checkin'] ?? '') }}">
+                        <input id="availCheckin" type="date" name="checkin" min="{{ (string) ($todayDate ?? now()->toDateString()) }}" value="{{ (string) ($prefill['checkin'] ?? '') }}">
                     </div>
                     <div class="hero-avail-field">
                         <label for="availCheckout">Check-out</label>
-                        <input id="availCheckout" type="date" name="checkout" value="{{ (string) ($prefill['checkout'] ?? '') }}">
+                        <input id="availCheckout" type="date" name="checkout" min="{{ (string) ($todayDate ?? now()->toDateString()) }}" value="{{ (string) ($prefill['checkout'] ?? '') }}">
                     </div>
                     <div class="hero-avail-field">
                         <label for="availRooms">Rooms</label>
@@ -2936,6 +2936,7 @@
                     </div>
                     <button type="submit" class="hero-avail-btn">Search</button>
                 </form>
+                <p class="wizard-note" data-availability-date-error style="display:none; margin:10px 0 0; color:#8b1f2f; font-weight:600;"></p>
                 @if ($transferChoices->isNotEmpty())
                     <div class="hero-transfer-shell" aria-label="Transfer options">
                         <div class="hero-transfer-field">
@@ -4261,6 +4262,11 @@
             const startingSoldout = document.querySelector('[data-starting-soldout]');
             const rateSummaries = Array.from(document.querySelectorAll('[data-rate-summary]'));
             const reserveButtons = Array.from(document.querySelectorAll('.reserve-btn[data-base-room-link]'));
+            const dateValidationMessage = document.querySelector('[data-availability-date-error]');
+            const todayDate = @json((string) ($todayDate ?? now()->toDateString()));
+            const unavailableDates = @json($unavailableDates ?? ['blocked' => [], 'reserved' => []]);
+            const blockedDateSet = new Set(Array.isArray(unavailableDates?.blocked) ? unavailableDates.blocked : []);
+            const reservedDateSet = new Set(Array.isArray(unavailableDates?.reserved) ? unavailableDates.reserved : []);
 
             if (startingTotal || rateSummaries.length > 0 || reserveButtons.length > 0) {
                 const pluralize = (value, singular) => `${value} ${singular}${value === 1 ? '' : 's'}`;
@@ -4268,6 +4274,91 @@
                     const parsed = Number(value);
                     if (!Number.isFinite(parsed)) return minimum;
                     return Math.max(minimum, Math.floor(parsed));
+                };
+                const toDateOnly = (value) => {
+                    const normalized = String(value || '').trim();
+                    if (normalized === '') {
+                        return '';
+                    }
+
+                    if (normalized.length >= 10) {
+                        return normalized.slice(0, 10);
+                    }
+
+                    return normalized;
+                };
+
+                const setDateValidationError = (message) => {
+                    const normalizedMessage = String(message || '').trim();
+                    [topCheckin, topCheckout, availCheckin, availCheckout].forEach((input) => {
+                        if (!input) {
+                            return;
+                        }
+                        input.setCustomValidity(normalizedMessage);
+                    });
+
+                    if (!dateValidationMessage) {
+                        return;
+                    }
+
+                    dateValidationMessage.textContent = normalizedMessage;
+                    dateValidationMessage.style.display = normalizedMessage === '' ? 'none' : 'block';
+                };
+
+                const validateDateRange = (checkinValue, checkoutValue) => {
+                    const checkinDate = toDateOnly(checkinValue);
+                    const checkoutDate = toDateOnly(checkoutValue);
+
+                    if (checkinDate === '' || checkoutDate === '') {
+                        setDateValidationError('');
+                        return true;
+                    }
+
+                    if (checkinDate < todayDate) {
+                        setDateValidationError('Check-in date cannot be in the past.');
+                        return false;
+                    }
+
+                    if (checkoutDate <= checkinDate) {
+                        setDateValidationError('Check-out date must be after check-in date.');
+                        return false;
+                    }
+
+                    let cursor = new Date(checkinDate + 'T00:00:00');
+                    const checkout = new Date(checkoutDate + 'T00:00:00');
+                    while (cursor < checkout) {
+                        const dateKey = cursor.toISOString().slice(0, 10);
+                        if (blockedDateSet.has(dateKey) || reservedDateSet.has(dateKey)) {
+                            setDateValidationError(`Selected dates include unavailable day (${dateKey}). Please choose different dates.`);
+                            return false;
+                        }
+                        cursor.setDate(cursor.getDate() + 1);
+                    }
+
+                    setDateValidationError('');
+                    return true;
+                };
+
+                const applyReserveButtonDateState = (isDateRangeValid) => {
+                    reserveButtons.forEach((button) => {
+                        const wasDateDisabled = button.dataset.dateDisabled === '1';
+                        const isVendorDisabled = button.getAttribute('aria-disabled') === 'true' && !wasDateDisabled;
+
+                        if (!isDateRangeValid && !isVendorDisabled) {
+                            button.dataset.dateDisabled = '1';
+                            button.setAttribute('aria-disabled', 'true');
+                            button.style.pointerEvents = 'none';
+                            button.style.opacity = '.45';
+                            return;
+                        }
+
+                        if (isDateRangeValid && wasDateDisabled) {
+                            button.dataset.dateDisabled = '0';
+                            button.removeAttribute('aria-disabled');
+                            button.style.pointerEvents = '';
+                            button.style.opacity = '';
+                        }
+                    });
                 };
 
                 const calculateNights = (checkinValue, checkoutValue) => {
@@ -4323,6 +4414,7 @@
                     const transferTotal = (adultsCount * transferAdultRate) + (childrenCount * transferChildRate);
 
                     syncTopGuestText(adultsCount, childrenCount, roomsCount);
+                    const isDateRangeValid = validateDateRange(checkinValue, checkoutValue);
 
                     if (transferSummary) {
                         if (selectedTransferOption !== '') {
@@ -4378,6 +4470,8 @@
 
                         button.href = url.pathname + '?' + url.searchParams.toString();
                     });
+
+                    applyReserveButtonDateState(isDateRangeValid);
 
                     if (startingSoldout) {
                         const hasEnabledReserve = reserveButtons.some((button) => button.getAttribute('aria-disabled') !== 'true');

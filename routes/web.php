@@ -192,6 +192,13 @@ if (!function_exists('workationSlotAvailabilityCheck')) {
             return ['ok' => true, 'reason' => null, 'checked' => false];
         }
 
+        $hasRoomColumn = Schema::hasColumn('vendor_availability_slots', 'vendor_room_category_id');
+        $hasListingCategoryColumn = Schema::hasColumn('vendor_availability_slots', 'listing_category');
+        $hasRouteNameColumn = Schema::hasColumn('vendor_availability_slots', 'route_name');
+
+        $normalizedListingCategory = trim((string) ($listingCategory ?? ''));
+        $normalizedRouteName = trim((string) ($routeName ?? ''));
+
         $slotsQuery = DB::table('vendor_availability_slots')
             ->where('vendor_user_id', $vendorUserId)
             ->where('vendor_property_id', $vendorPropertyId)
@@ -201,33 +208,94 @@ if (!function_exists('workationSlotAvailabilityCheck')) {
             $slotsQuery->where('vendor_service_id', $serviceId);
         }
 
-        if ($roomCategoryId !== null && $roomCategoryId > 0 && Schema::hasColumn('vendor_availability_slots', 'vendor_room_category_id')) {
-            $slotsQuery->where('vendor_room_category_id', $roomCategoryId);
+        if ($roomCategoryId !== null && $roomCategoryId > 0 && $hasRoomColumn) {
+            $slotsQuery->where(function ($query) use ($roomCategoryId) {
+                $query->where('vendor_room_category_id', $roomCategoryId)
+                    ->orWhereNull('vendor_room_category_id');
+            });
         }
 
-        if ($listingCategory !== null && trim($listingCategory) !== '' && Schema::hasColumn('vendor_availability_slots', 'listing_category')) {
-            $slotsQuery->where('listing_category', trim($listingCategory));
+        if ($normalizedListingCategory !== '' && $hasListingCategoryColumn) {
+            $slotsQuery->where(function ($query) use ($normalizedListingCategory) {
+                $query->where('listing_category', $normalizedListingCategory)
+                    ->orWhereNull('listing_category')
+                    ->orWhere('listing_category', '');
+            });
         }
 
-        if ($routeName !== null && trim($routeName) !== '' && Schema::hasColumn('vendor_availability_slots', 'route_name')) {
-            $slotsQuery->where('route_name', trim($routeName));
+        if ($normalizedRouteName !== '' && $hasRouteNameColumn) {
+            $slotsQuery->where(function ($query) use ($normalizedRouteName) {
+                $query->where('route_name', $normalizedRouteName)
+                    ->orWhereNull('route_name')
+                    ->orWhere('route_name', '');
+            });
         }
 
-        $slots = $slotsQuery->get(['slot_date', 'inventory', 'reserved_count', 'is_closed']);
+        $slotColumns = ['slot_date', 'inventory', 'reserved_count', 'is_closed'];
+        if ($hasRoomColumn) {
+            $slotColumns[] = 'vendor_room_category_id';
+        }
+        if (Schema::hasColumn('vendor_availability_slots', 'vendor_service_id')) {
+            $slotColumns[] = 'vendor_service_id';
+        }
+        if ($hasListingCategoryColumn) {
+            $slotColumns[] = 'listing_category';
+        }
+        if ($hasRouteNameColumn) {
+            $slotColumns[] = 'route_name';
+        }
+
+        $slots = $slotsQuery->get($slotColumns);
         if ($slots->isEmpty()) {
             return ['ok' => true, 'reason' => null, 'checked' => false];
         }
 
-        $byDate = $slots->keyBy(static fn ($slot) => (string) ($slot->slot_date ?? ''));
+        $byDate = $slots->groupBy(static fn ($slot) => (string) ($slot->slot_date ?? ''));
         foreach ($slotDates as $slotDate) {
-            $slot = $byDate->get($slotDate);
-            if (!$slot) {
+            $candidates = collect($byDate->get($slotDate, []));
+            if ($candidates->isEmpty()) {
                 continue;
             }
 
-            $isClosed = (bool) ($slot->is_closed ?? false);
-            if ($isClosed) {
+            $blockedSlot = $candidates->first(static fn ($slot) => (bool) ($slot->is_closed ?? false));
+            if ($blockedSlot) {
                 return ['ok' => false, 'reason' => 'blocked', 'checked' => true, 'date' => $slotDate];
+            }
+
+            $slot = $candidates->first(function ($candidate) use ($hasRoomColumn, $roomCategoryId, $hasListingCategoryColumn, $normalizedListingCategory, $hasRouteNameColumn, $normalizedRouteName) {
+                if ($hasRoomColumn && $roomCategoryId !== null && $roomCategoryId > 0) {
+                    if ((int) ($candidate->vendor_room_category_id ?? 0) !== $roomCategoryId) {
+                        return false;
+                    }
+                }
+
+                if ($hasListingCategoryColumn && $normalizedListingCategory !== '') {
+                    if (trim((string) ($candidate->listing_category ?? '')) !== $normalizedListingCategory) {
+                        return false;
+                    }
+                }
+
+                if ($hasRouteNameColumn && $normalizedRouteName !== '') {
+                    if (trim((string) ($candidate->route_name ?? '')) !== $normalizedRouteName) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+
+            if (!$slot) {
+                $slot = $candidates->first(function ($candidate) use ($hasRoomColumn, $roomCategoryId) {
+                    if ($hasRoomColumn && $roomCategoryId !== null && $roomCategoryId > 0) {
+                        return (int) ($candidate->vendor_room_category_id ?? 0) === 0;
+                    }
+
+                    return true;
+                });
+            }
+
+            if (!$slot) {
+                continue;
             }
 
             $inventory = max(0, (int) ($slot->inventory ?? 0));
@@ -248,32 +316,76 @@ if (!function_exists('workationReserveAvailabilitySlots')) {
             return;
         }
 
+        $hasRoomColumn = Schema::hasColumn('vendor_availability_slots', 'vendor_room_category_id');
+        $hasListingCategoryColumn = Schema::hasColumn('vendor_availability_slots', 'listing_category');
+        $hasRouteNameColumn = Schema::hasColumn('vendor_availability_slots', 'route_name');
+        $normalizedListingCategory = trim((string) ($listingCategory ?? ''));
+        $normalizedRouteName = trim((string) ($routeName ?? ''));
+
         foreach (workationDateSeries($start, $endExclusive) as $slotDate) {
-            $query = DB::table('vendor_availability_slots')
+            $baseQuery = DB::table('vendor_availability_slots')
                 ->where('vendor_user_id', $vendorUserId)
                 ->where('vendor_property_id', $vendorPropertyId)
                 ->where('slot_date', $slotDate);
 
             if ($serviceId !== null && $serviceId > 0 && Schema::hasColumn('vendor_availability_slots', 'vendor_service_id')) {
-                $query->where('vendor_service_id', $serviceId);
+                $baseQuery->where('vendor_service_id', $serviceId);
             }
 
-            if ($roomCategoryId !== null && $roomCategoryId > 0 && Schema::hasColumn('vendor_availability_slots', 'vendor_room_category_id')) {
-                $query->where('vendor_room_category_id', $roomCategoryId);
-            }
-
-            if ($listingCategory !== null && trim($listingCategory) !== '' && Schema::hasColumn('vendor_availability_slots', 'listing_category')) {
-                $query->where('listing_category', trim($listingCategory));
-            }
-
-            if ($routeName !== null && trim($routeName) !== '' && Schema::hasColumn('vendor_availability_slots', 'route_name')) {
-                $query->where('route_name', trim($routeName));
-            }
-
-            $query->update([
+            $updatePayload = [
                 'reserved_count' => DB::raw('COALESCE(reserved_count, 0) + ' . (int) $units),
                 'updated_at' => now(),
-            ]);
+            ];
+
+            if ($roomCategoryId !== null && $roomCategoryId > 0 && $hasRoomColumn) {
+                $exactQuery = clone $baseQuery;
+                $exactQuery->where('vendor_room_category_id', $roomCategoryId);
+
+                if ($normalizedListingCategory !== '' && $hasListingCategoryColumn) {
+                    $exactQuery->where('listing_category', $normalizedListingCategory);
+                }
+
+                if ($normalizedRouteName !== '' && $hasRouteNameColumn) {
+                    $exactQuery->where('route_name', $normalizedRouteName);
+                }
+
+                $updated = $exactQuery->update($updatePayload);
+                if ($updated > 0) {
+                    continue;
+                }
+
+                $fallbackQuery = clone $baseQuery;
+                $fallbackQuery->whereNull('vendor_room_category_id');
+
+                if ($normalizedListingCategory !== '' && $hasListingCategoryColumn) {
+                    $fallbackQuery->where(function ($query) use ($normalizedListingCategory) {
+                        $query->where('listing_category', $normalizedListingCategory)
+                            ->orWhereNull('listing_category')
+                            ->orWhere('listing_category', '');
+                    });
+                }
+
+                if ($normalizedRouteName !== '' && $hasRouteNameColumn) {
+                    $fallbackQuery->where(function ($query) use ($normalizedRouteName) {
+                        $query->where('route_name', $normalizedRouteName)
+                            ->orWhereNull('route_name')
+                            ->orWhere('route_name', '');
+                    });
+                }
+
+                $fallbackQuery->update($updatePayload);
+                continue;
+            }
+
+            if ($normalizedListingCategory !== '' && $hasListingCategoryColumn) {
+                $baseQuery->where('listing_category', $normalizedListingCategory);
+            }
+
+            if ($normalizedRouteName !== '' && $hasRouteNameColumn) {
+                $baseQuery->where('route_name', $normalizedRouteName);
+            }
+
+            $baseQuery->update($updatePayload);
         }
     }
 }
@@ -1901,6 +2013,77 @@ Route::get('/', function () {
                     return $property;
                 });
             }
+
+            // Derive service prices from listing_details when base_price was never
+            // persisted (legacy records created before dedicated table price sync).
+            $allProperties = $allProperties->map(static function ($property) {
+                $category = strtolower(trim((string) ($property->listing_category ?? '')));
+                $basePrice = isset($property->base_price) ? (float) ($property->base_price ?? 0) : 0;
+
+                if ($category === 'accommodation' || $basePrice > 0) {
+                    return $property;
+                }
+
+                $rawDetails = $property->listing_details ?? ($property->details ?? null);
+                $details = [];
+                if (is_string($rawDetails) && trim($rawDetails) !== '') {
+                    $decoded = json_decode($rawDetails, true);
+                    if (is_array($decoded)) {
+                        $details = $decoded;
+                    }
+                }
+
+                if ($details === []) {
+                    return $property;
+                }
+
+                $candidates = [];
+                foreach ([
+                    'base_price',
+                    'price_per_adult',
+                    'price_per_child',
+                    'hourly_rate',
+                    'daily_rate',
+                    'meal_plan_room_only_price',
+                ] as $priceKey) {
+                    $value = isset($details[$priceKey]) ? (float) $details[$priceKey] : 0;
+                    if ($value > 0) {
+                        $candidates[] = $value;
+                    }
+                }
+
+                foreach (['transfer_rates', 'transfer_rates_local_adult', 'transfer_rates_local_child', 'transfer_rates_foreign_adult', 'transfer_rates_foreign_child'] as $rateKey) {
+                    if (!is_array($details[$rateKey] ?? null)) {
+                        continue;
+                    }
+                    foreach ($details[$rateKey] as $rateValue) {
+                        $normalized = (float) $rateValue;
+                        if ($normalized > 0) {
+                            $candidates[] = $normalized;
+                        }
+                    }
+                }
+
+                if (is_array($details['transfer_rate_matrix'] ?? null)) {
+                    foreach ($details['transfer_rate_matrix'] as $matrixRow) {
+                        if (!is_array($matrixRow)) {
+                            continue;
+                        }
+                        foreach (['local_adult_charge', 'local_child_charge', 'foreign_adult_charge', 'foreign_child_charge'] as $matrixKey) {
+                            $normalized = isset($matrixRow[$matrixKey]) ? (float) $matrixRow[$matrixKey] : 0;
+                            if ($normalized > 0) {
+                                $candidates[] = $normalized;
+                            }
+                        }
+                    }
+                }
+
+                if ($candidates !== []) {
+                    $property->base_price = min($candidates);
+                }
+
+                return $property;
+            })->values();
         }
 
         if (Schema::hasTable('vendor_listing_media') && $propertyLookupIds->isNotEmpty()) {
@@ -5075,6 +5258,83 @@ Route::get('/property/{property}', function (Request $request, int $property) {
             ->values();
     }
 
+    $todayDate = now()->toDateString();
+    $unavailableDates = [
+        'blocked' => [],
+        'reserved' => [],
+    ];
+
+    if (Schema::hasTable('vendor_availability_slots')) {
+        $slotQuery = DB::table('vendor_availability_slots')
+            ->where('vendor_property_id', (int) ($propertyRow->id ?? 0))
+            ->whereDate('slot_date', '>=', $todayDate);
+
+        if (Schema::hasColumn('vendor_availability_slots', 'listing_category')) {
+            $slotQuery->where(function ($query) {
+                $query->where('listing_category', 'accommodation')
+                    ->orWhereNull('listing_category')
+                    ->orWhere('listing_category', '');
+            });
+        }
+
+        $slotRows = $slotQuery->limit(1200)->get(['slot_date', 'inventory', 'reserved_count', 'is_closed']);
+        foreach ($slotRows as $slotRow) {
+            $slotDate = trim((string) ($slotRow->slot_date ?? ''));
+            if ($slotDate === '') {
+                continue;
+            }
+
+            if ((bool) ($slotRow->is_closed ?? false)) {
+                $unavailableDates['blocked'][$slotDate] = true;
+                continue;
+            }
+
+            $inventory = max(0, (int) ($slotRow->inventory ?? 0));
+            $reservedCount = max(0, (int) ($slotRow->reserved_count ?? 0));
+            if ($inventory > 0 && $reservedCount >= $inventory) {
+                $unavailableDates['reserved'][$slotDate] = true;
+            }
+        }
+    }
+
+    if (Schema::hasTable('vendor_reservations')) {
+        $reservationQuery = DB::table('vendor_reservations')
+            ->where('vendor_property_id', (int) ($propertyRow->id ?? 0))
+            ->whereNotIn('status', ['cancelled', 'rejected', 'expired', 'failed'])
+            ->whereDate('end_at', '>=', $todayDate);
+
+        if (Schema::hasColumn('vendor_reservations', 'listing_category')) {
+            $reservationQuery->where(function ($query) {
+                $query->where('listing_category', 'accommodation')
+                    ->orWhereNull('listing_category')
+                    ->orWhere('listing_category', '');
+            });
+        }
+
+        $reservationRows = $reservationQuery->limit(500)->get(['start_at', 'end_at']);
+        foreach ($reservationRows as $reservationRow) {
+            try {
+                $startDay = Carbon::parse((string) ($reservationRow->start_at ?? ''))->startOfDay();
+                $endExclusive = Carbon::parse((string) ($reservationRow->end_at ?? ''))->startOfDay();
+            } catch (\Throwable $ignored) {
+                continue;
+            }
+
+            if ($endExclusive->lessThanOrEqualTo($startDay)) {
+                $endExclusive = $startDay->copy()->addDay();
+            }
+
+            foreach (workationDateSeries($startDay, $endExclusive) as $slotDate) {
+                if ($slotDate >= $todayDate) {
+                    $unavailableDates['reserved'][$slotDate] = true;
+                }
+            }
+        }
+    }
+
+    $unavailableDates['blocked'] = array_values(array_keys($unavailableDates['blocked']));
+    $unavailableDates['reserved'] = array_values(array_keys($unavailableDates['reserved']));
+
     return view('property-profile', [
         'property' => $propertyRow,
         'propertyMedia' => $propertyMedia,
@@ -5096,6 +5356,8 @@ Route::get('/property/{property}', function (Request $request, int $property) {
         'nearbyProperties' => $nearbyProperties,
         'nearbyRadiusKm' => $nearbyRadiusKm,
         'nearbyUsesCoordinateRadius' => $nearbyUsesCoordinateRadius,
+        'todayDate' => $todayDate,
+        'unavailableDates' => $unavailableDates,
     ]);
 });
 
@@ -5234,7 +5496,7 @@ Route::post('/booking/reserve', function (Request $request) {
     $payload = $request->validate([
         'property_id' => ['required', 'integer', 'min:1'],
         'room_id' => ['required', 'integer', 'min:1'],
-        'checkin' => ['required', 'date'],
+        'checkin' => ['required', 'date', 'after_or_equal:today'],
         'checkout' => ['required', 'date', 'after:checkin'],
         'adults' => ['required', 'integer', 'min:1', 'max:20'],
         'children' => ['nullable', 'integer', 'min:0', 'max:20'],
@@ -5259,6 +5521,7 @@ Route::post('/booking/reserve', function (Request $request) {
         'primary_email.email' => 'Please enter a valid email address for the primary guest.',
         'primary_mobile.required' => 'Primary guest mobile is required.',
         'primary_mobile.regex' => 'Please enter a valid primary guest mobile number.',
+        'checkin.after_or_equal' => 'Check-in date cannot be in the past.',
         'checkout.after' => 'Checkout date must be after check-in date.',
     ], [
         'primary_first_name' => 'primary guest first name',
@@ -5730,6 +5993,83 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
     $prefillFirstName = (string) ($nameParts[0] ?? '');
     $prefillLastName = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
 
+    $todayDate = now()->toDateString();
+    $unavailableDates = [
+        'blocked' => [],
+        'reserved' => [],
+    ];
+
+    if (Schema::hasTable('vendor_availability_slots')) {
+        $slotQuery = DB::table('vendor_availability_slots')
+            ->where('vendor_property_id', (int) ($propertyRow->id ?? 0))
+            ->whereDate('slot_date', '>=', $todayDate);
+
+        if (Schema::hasColumn('vendor_availability_slots', 'listing_category')) {
+            $slotQuery->where(function ($query) use ($dbCategoryKey) {
+                $query->where('listing_category', $dbCategoryKey)
+                    ->orWhereNull('listing_category')
+                    ->orWhere('listing_category', '');
+            });
+        }
+
+        $slotRows = $slotQuery->limit(1200)->get(['slot_date', 'inventory', 'reserved_count', 'is_closed']);
+        foreach ($slotRows as $slotRow) {
+            $slotDate = trim((string) ($slotRow->slot_date ?? ''));
+            if ($slotDate === '') {
+                continue;
+            }
+
+            if ((bool) ($slotRow->is_closed ?? false)) {
+                $unavailableDates['blocked'][$slotDate] = true;
+                continue;
+            }
+
+            $inventory = max(0, (int) ($slotRow->inventory ?? 0));
+            $reservedCount = max(0, (int) ($slotRow->reserved_count ?? 0));
+            if ($inventory > 0 && $reservedCount >= $inventory) {
+                $unavailableDates['reserved'][$slotDate] = true;
+            }
+        }
+    }
+
+    if (Schema::hasTable('vendor_reservations')) {
+        $reservationQuery = DB::table('vendor_reservations')
+            ->where('vendor_property_id', (int) ($propertyRow->id ?? 0))
+            ->whereNotIn('status', ['cancelled', 'rejected', 'expired', 'failed'])
+            ->whereDate('end_at', '>=', $todayDate);
+
+        if (Schema::hasColumn('vendor_reservations', 'listing_category')) {
+            $reservationQuery->where(function ($query) use ($dbCategoryKey) {
+                $query->where('listing_category', $dbCategoryKey)
+                    ->orWhereNull('listing_category')
+                    ->orWhere('listing_category', '');
+            });
+        }
+
+        $reservationRows = $reservationQuery->limit(500)->get(['start_at', 'end_at']);
+        foreach ($reservationRows as $reservationRow) {
+            try {
+                $startDay = Carbon::parse((string) ($reservationRow->start_at ?? ''))->startOfDay();
+                $endExclusive = Carbon::parse((string) ($reservationRow->end_at ?? ''))->startOfDay();
+            } catch (\Throwable $ignored) {
+                continue;
+            }
+
+            if ($endExclusive->lessThanOrEqualTo($startDay)) {
+                $endExclusive = $startDay->copy()->addDay();
+            }
+
+            foreach (workationDateSeries($startDay, $endExclusive) as $slotDate) {
+                if ($slotDate >= $todayDate) {
+                    $unavailableDates['reserved'][$slotDate] = true;
+                }
+            }
+        }
+    }
+
+    $unavailableDates['blocked'] = array_values(array_keys($unavailableDates['blocked']));
+    $unavailableDates['reserved'] = array_values(array_keys($unavailableDates['reserved']));
+
     return view('category-booking', [
         'categoryKey' => $categoryKey,
         'categoryLabel' => (string) ($categoryMap[$categoryKey]['label'] ?? 'Category'),
@@ -5776,6 +6116,8 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             'dropoff_location' => trim((string) $request->query('dropoff_location', '')),
             'service_notes' => trim((string) $request->query('service_notes', '')),
         ],
+        'todayDate' => $todayDate,
+        'unavailableDates' => $unavailableDates,
     ]);
 });
 
@@ -5850,7 +6192,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
     $baseRules = [
         'category_key' => ['required', 'string', 'in:' . implode(',', array_keys($categoryMap))],
         'property_id' => ['required', 'integer', 'min:1'],
-        'service_start_date' => ['required', 'date'],
+        'service_start_date' => ['required', 'date', 'after_or_equal:today'],
         'service_end_date' => ['nullable', 'date', 'after_or_equal:service_start_date'],
         'adults' => ['required', 'integer', 'min:1', 'max:20'],
         'children' => ['nullable', 'integer', 'min:0', 'max:20'],
@@ -5874,6 +6216,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'primary_mobile.required' => 'Primary guest mobile is required.',
         'primary_mobile.regex' => 'Please enter a valid primary guest mobile number.',
         'service_start_date.required' => $startDateLabel . ' is required.',
+        'service_start_date.after_or_equal' => $startDateLabel . ' cannot be in the past.',
         'service_end_date.after_or_equal' => $endDateLabel . ' must be after or equal to ' . strtolower($startDateLabel) . '.',
     ], array_merge([
         'primary_first_name' => 'primary guest first name',

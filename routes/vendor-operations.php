@@ -338,7 +338,9 @@ if (!function_exists('vendorPortalCreateCategoryListingRecord')) {
         string $description,
         int $maxGuests,
         array $details,
-        string $moderationStatus = 'draft'
+        string $moderationStatus = 'draft',
+        float $basePrice = 0,
+        string $currency = 'MVR'
     ): int {
         $tableName = vendorPortalCategoryStorageTable($listingCategory);
         if ($tableName === null) {
@@ -359,6 +361,15 @@ if (!function_exists('vendorPortalCreateCategoryListingRecord')) {
             'created_at' => now(),
             'updated_at' => now(),
         ];
+
+        if (Schema::hasColumn($tableName, 'base_price')) {
+            $payload['base_price'] = max(0, (float) $basePrice);
+        }
+
+        if (Schema::hasColumn($tableName, 'currency')) {
+            $normalizedCurrency = strtoupper(trim($currency));
+            $payload['currency'] = $normalizedCurrency !== '' ? $normalizedCurrency : 'MVR';
+        }
 
         if (Schema::hasColumn($tableName, 'listing_moderation_status')) {
             $payload['listing_moderation_status'] = $moderationStatus;
@@ -4005,7 +4016,9 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
             trim((string) ($validated['description'] ?? '')),
             $normalizedMaxGuests,
             $propertyDetails,
-            'draft'
+            'draft',
+            $canonicalListingCategory === 'accommodation' ? 0 : (float) ($validated['base_price'] ?? 0),
+            'MVR'
         );
     });
 
@@ -4133,8 +4146,13 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'child_policy' => ['nullable', 'string', 'max:3000'],
         'early_check_in_fee' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
         'late_check_out_fee' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
-        'status' => ['required', Rule::in(['active', 'inactive'])],
+        'status' => ['nullable', Rule::in(['active', 'inactive'])],
     ]);
+    $resolvedStatus = (string) ($validated['status'] ?? $propertyRecord->status ?? 'active');
+    if (!in_array($resolvedStatus, ['active', 'inactive'], true)) {
+        $resolvedStatus = 'active';
+    }
+
 
     $canonicalListingCategory = vendorPortalCanonicalCategory((string) ($propertyRecord->listing_category ?? ''));
     $existingDetails = [];
@@ -4253,18 +4271,18 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'description' => trim((string) ($validated['description'] ?? '')),
         'base_price' => $resolvedBasePrice,
         'max_guests' => $normalizedMaxGuests,
-        'status' => (string) $validated['status'],
+        'status' => $resolvedStatus,
         'updated_at' => now(),
     ];
 
-    DB::transaction(function () use ($property, $vendorUserId, $updatePayload, $canonicalListingCategory, $resolvedLocation, $resolvedBasePrice, $normalizedMaxGuests, $existingDetails, $validated): void {
+    DB::transaction(function () use ($property, $vendorUserId, $updatePayload, $canonicalListingCategory, $resolvedLocation, $resolvedBasePrice, $normalizedMaxGuests, $existingDetails, $validated, $resolvedStatus): void {
         if ($canonicalListingCategory !== null) {
             vendorPortalSyncCategoryListingRecord(
                 $canonicalListingCategory,
                 $property,
                 $vendorUserId,
                 trim((string) ($validated['name'] ?? '')),
-                (string) ($validated['status'] ?? 'active'),
+                $resolvedStatus,
                 $resolvedLocation,
                 trim((string) ($validated['description'] ?? '')),
                 $resolvedBasePrice,

@@ -1344,6 +1344,32 @@
                                 throw new Error('No atolls returned from API');
                             }
 
+                            const hasEmbeddedIslands = atolls.some(function (atoll) {
+                                return Array.isArray(atoll && atoll.islands) && atoll.islands.length > 0;
+                            });
+
+                            if (hasEmbeddedIslands) {
+                                const maldivesTree = {};
+                                atolls.forEach(function (atoll) {
+                                    const atollName = String(atoll && atoll.name ? atoll.name : '').trim();
+                                    if (atollName === '') {
+                                        return;
+                                    }
+                                    const islandNames = Array.isArray(atoll && atoll.islands)
+                                        ? atoll.islands
+                                            .map(function (island) {
+                                                return String(island && island.name ? island.name : '').trim();
+                                            })
+                                            .filter(function (name) { return name !== ''; })
+                                        : [];
+                                    maldivesTree[atollName] = islandNames;
+                                });
+
+                                if (Object.keys(maldivesTree).length > 0) {
+                                    return maldivesTree;
+                                }
+                            }
+
                             const atollRequests = atolls.map(function (atoll) {
                                 const atollId = Number(atoll && atoll.id ? atoll.id : 0);
                                 const atollName = String(atoll && atoll.name ? atoll.name : '').trim();
@@ -1380,17 +1406,18 @@
                                     });
                             });
 
-                            return Promise.all(atollRequests);
-                        })
-                        .then(function (atollIslandRows) {
-                            const maldivesTree = {};
-                            (atollIslandRows || []).forEach(function (row) {
-                                if (!row || !row.atollName) {
-                                    return;
-                                }
-                                maldivesTree[row.atollName] = Array.isArray(row.islandNames) ? row.islandNames : [];
+                            return Promise.all(atollRequests).then(function (atollIslandRows) {
+                                const maldivesTree = {};
+                                (atollIslandRows || []).forEach(function (row) {
+                                    if (!row || !row.atollName) {
+                                        return;
+                                    }
+                                    maldivesTree[row.atollName] = Array.isArray(row.islandNames) ? row.islandNames : [];
+                                });
+                                return maldivesTree;
                             });
-
+                        })
+                        .then(function (maldivesTree) {
                             if (Object.keys(maldivesTree).length === 0) {
                                 resolve(getCurrentLocationTree());
                                 return;

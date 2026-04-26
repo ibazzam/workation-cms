@@ -2990,5 +2990,63 @@
             init();
         })();
     </script>
+
+    <script>
+        (function () {
+            const searchForm = document.getElementById('homeCatalogSearchForm');
+            if (!searchForm) {
+                return;
+            }
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayString = today.toISOString().slice(0, 10);
+
+            const dateInputs = Array.from(searchForm.querySelectorAll('input[type="date"]'));
+            dateInputs.forEach(function (input) {
+                input.min = todayString;
+            });
+
+            const pairConfigs = [
+                ['checkin', 'checkout'],
+                ['workCheckIn', 'workCheckOut'],
+                ['marineDeparture', 'marineReturn'],
+                ['landDeparture', 'landReturn'],
+                ['rentalPickup', 'rentalReturn'],
+            ];
+
+            pairConfigs.forEach(function (pair) {
+                const startInput = document.getElementById(pair[0]);
+                const endInput = document.getElementById(pair[1]);
+                if (!startInput || !endInput) {
+                    return;
+                }
+
+                const syncPair = function () {
+                    const startValue = String(startInput.value || '').trim();
+                    endInput.min = startValue !== '' ? startValue : todayString;
+
+                    if (startValue !== '' && startValue < todayString) {
+                        startInput.setCustomValidity('Date cannot be in the past.');
+                    } else {
+                        startInput.setCustomValidity('');
+                    }
+
+                    const endValue = String(endInput.value || '').trim();
+                    if (endValue !== '' && startValue !== '' && endValue < startValue) {
+                        endInput.setCustomValidity('End date must be after or equal to start date.');
+                    } else {
+                        endInput.setCustomValidity('');
+                    }
+                };
+
+                startInput.addEventListener('change', syncPair);
+                startInput.addEventListener('input', syncPair);
+                endInput.addEventListener('change', syncPair);
+                endInput.addEventListener('input', syncPair);
+                syncPair();
+            });
+        })();
+    </script>
 </body>
 </html>

@@ -2068,6 +2068,52 @@ Route::get('/', function () {
                 ->groupBy(static fn ($property) => $normalizeHomeCategoryKey((string) ($property->listing_category ?? ''))
                 )->map(static fn ($group) => $group->first());
 
+            $homeCategoryPriceBucket = static function ($property): string {
+                $category = str_replace('-', '_', strtolower(trim((string) ($property->listing_category ?? ''))));
+                $transportMode = strtolower(trim((string) ($property->transport_mode ?? '')));
+                $name = strtolower(trim((string) ($property->name ?? '')));
+                $metaText = trim($transportMode . ' ' . $name);
+
+                if ($category === 'transport') {
+                    if (preg_match('/speed\\s*boat|ferry|boat|dhoni|yacht|launch|catamaran|seaplane/i', $metaText) === 1) {
+                        return 'marine_transport';
+                    }
+
+                    if (preg_match('/car|van|taxi|bus|coach|bike|suv|land/i', $metaText) === 1) {
+                        return 'land_transport';
+                    }
+
+                    return 'marine_transport';
+                }
+
+                if ($category === 'water_sports') {
+                    return 'excursion';
+                }
+
+                return $category;
+            };
+
+            $categoryMinPriceRows = $allProperties
+                ->map(static function ($property) use ($homeCategoryPriceBucket) {
+                    return [
+                        'bucket' => $homeCategoryPriceBucket($property),
+                        'price' => (float) ($property->base_price ?? 0),
+                        'currency' => strtoupper(trim((string) ($property->currency ?? 'MVR'))),
+                    ];
+                })
+                ->filter(static fn (array $row) => $row['bucket'] !== '' && $row['price'] > 0)
+                ->groupBy(static fn (array $row) => $row['bucket'])
+                ->map(static function ($rows) {
+                    return collect($rows)
+                        ->sortBy(static fn (array $row) => (float) ($row['price'] ?? 0))
+                        ->first();
+                });
+
+            $globalMinPriceRow = collect($categoryMinPriceRows->values())
+                ->filter(static fn ($row) => is_array($row) && (float) ($row['price'] ?? 0) > 0)
+                ->sortBy(static fn (array $row) => (float) ($row['price'] ?? 0))
+                ->first();
+
             $homeTopCategoryLinks = $homeTopCategoryLinks->map(function (array $card) use ($categoryCounts) {
                 $key = strtolower(trim((string) ($card['title'] ?? '')));
                 $categoryHint = match ($key) {
@@ -2118,7 +2164,7 @@ Route::get('/', function () {
                 return $card;
             });
 
-            $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categorySamples, $resolvePropertyImage, $resolvePropertyFallbackImage, $propertyLocationLabel) {
+            $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categorySamples, $categoryMinPriceRows, $globalMinPriceRow, $resolvePropertyImage, $resolvePropertyFallbackImage, $propertyLocationLabel) {
                 $categoryHint = match ($card['title']) {
                     'Stay Options' => 'accommodation',
                     'Marine Transport' => 'marine_transport',
@@ -2151,6 +2197,18 @@ Route::get('/', function () {
                 if ($samplePrice > 0) {
                     $sampleCurrency = strtoupper(trim((string) ($sample->currency ?? 'MVR')));
                     $card['price_label'] = $sampleCurrency . ' ' . number_format($samplePrice, 2);
+                }
+
+                $priceSource = null;
+                if ($categoryHint === 'accommodation' && ($card['title'] ?? '') === 'Deals Zone' && is_array($globalMinPriceRow)) {
+                    $priceSource = $globalMinPriceRow;
+                } elseif (is_array($categoryMinPriceRows->get($categoryHint))) {
+                    $priceSource = $categoryMinPriceRows->get($categoryHint);
+                }
+
+                if (is_array($priceSource) && (float) ($priceSource['price'] ?? 0) > 0) {
+                    $currency = strtoupper(trim((string) ($priceSource['currency'] ?? 'MVR')));
+                    $card['price_label'] = $currency . ' ' . number_format((float) ($priceSource['price'] ?? 0), 2);
                 }
 
                 return $card;

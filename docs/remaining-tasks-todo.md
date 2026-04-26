@@ -2,6 +2,10 @@
 
 This plan converts remaining launch work into an ordered, owner-assigned schedule.
 
+## Immediate Tomorrow Execution
+- Booking + checkout readiness runbook for 2026-04-27:
+  - `docs/booking-checkout-readiness-2026-04-27.md`
+
 ## Planning Window
 - Plan start: 2026-03-11
 - Target launch-readiness signoff: 2026-03-18

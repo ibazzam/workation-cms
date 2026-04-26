@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -12,6 +13,8 @@ class VendorPropertyCompatibilityReader
     private static array $tableExistsCache = [];
     private static array $columnExistsCache = [];
     private static array $dedicatedSelectColumnsCache = [];
+    private static array $allActiveListingsCache = [];
+    private static array $propertyByIdCache = [];
 
     public static function categoryTableNameFor(string $categoryKey): string
     {
@@ -171,6 +174,15 @@ class VendorPropertyCompatibilityReader
      */
     public static function allActiveListings(int $limit = 300): Collection
     {
+        $normalizedLimit = max(1, $limit);
+        if (array_key_exists($normalizedLimit, self::$allActiveListingsCache)) {
+            return self::$allActiveListingsCache[$normalizedLimit];
+        }
+
+        $cachedRows = Cache::remember(
+            'vendor_property_compatibility_reader:all_active_listings:' . $normalizedLimit,
+            now()->addMinutes(5),
+            static function () use ($normalizedLimit) {
         $categoryTableMap = self::categoryTableMap();
         $all = collect();
 
@@ -188,7 +200,7 @@ class VendorPropertyCompatibilityReader
                 $query->where('listing_moderation_status', 'approved');
             }
 
-            $rows = $query->limit($limit)->get($selectCols);
+            $rows = $query->limit($normalizedLimit)->get($selectCols);
 
             $rows = $rows->map(static function ($row) use ($categoryKey) {
                 // Shape to match the legacy vendor_properties column names
@@ -205,7 +217,14 @@ class VendorPropertyCompatibilityReader
             $all = $all->concat($rows);
         }
 
-        return $all->take($limit)->values();
+        return $all->take($normalizedLimit)->values();
+            }
+        );
+
+        $result = $cachedRows instanceof Collection ? $cachedRows->values() : collect($cachedRows)->values();
+        self::$allActiveListingsCache[$normalizedLimit] = $result;
+
+        return $result;
     }
 
     /**
@@ -215,19 +234,30 @@ class VendorPropertyCompatibilityReader
      */
     public static function loadPropertyById(int $id, ?string $categoryHint = null): ?object
     {
+        $normalizedId = max(0, $id);
+        $normalizedCategoryHint = $categoryHint !== null ? trim((string) $categoryHint) : null;
+        $memoKey = ($normalizedCategoryHint ?? '*') . ':' . $normalizedId;
+        if (array_key_exists($memoKey, self::$propertyByIdCache)) {
+            return self::$propertyByIdCache[$memoKey];
+        }
+
+        $resolved = Cache::remember(
+            'vendor_property_compatibility_reader:property_by_id:' . md5($memoKey),
+            now()->addMinutes(3),
+            static function () use ($normalizedId, $normalizedCategoryHint) {
         // Try to load from the appropriate dedicated table first.
-        if ($categoryHint !== null) {
-            $tableName = self::categoryTableMap()[$categoryHint] ?? null;
+        if ($normalizedCategoryHint !== null) {
+            $tableName = self::categoryTableMap()[$normalizedCategoryHint] ?? null;
             if ($tableName !== null && self::hasTable($tableName)) {
-                $row = DB::table($tableName)->where('vendor_property_id', $id)->first();
+                $row = DB::table($tableName)->where('vendor_property_id', $normalizedId)->first();
                 if ($row) {
-                    return self::shapeDedicatedRow($row, $categoryHint);
+                    return self::shapeDedicatedRow($row, $normalizedCategoryHint);
                 }
 
                 // Safety fallback: support links that still use dedicated-table internal id.
-                $row = DB::table($tableName)->where('id', $id)->first();
+                $row = DB::table($tableName)->where('id', $normalizedId)->first();
                 if ($row) {
-                    return self::shapeDedicatedRow($row, $categoryHint);
+                    return self::shapeDedicatedRow($row, $normalizedCategoryHint);
                 }
             }
         }
@@ -237,13 +267,13 @@ class VendorPropertyCompatibilityReader
             if (!self::hasTable($tableName)) {
                 continue;
             }
-            $row = DB::table($tableName)->where('vendor_property_id', $id)->first();
+            $row = DB::table($tableName)->where('vendor_property_id', $normalizedId)->first();
             if ($row) {
                 return self::shapeDedicatedRow($row, $categoryKey);
             }
 
             // Safety fallback: support links that still use dedicated-table internal id.
-            $row = DB::table($tableName)->where('id', $id)->first();
+            $row = DB::table($tableName)->where('id', $normalizedId)->first();
             if ($row) {
                 return self::shapeDedicatedRow($row, $categoryKey);
             }
@@ -254,7 +284,13 @@ class VendorPropertyCompatibilityReader
             return null;
         }
 
-        return DB::table('vendor_properties')->where('id', $id)->first();
+        return DB::table('vendor_properties')->where('id', $normalizedId)->first();
+            }
+        );
+
+        self::$propertyByIdCache[$memoKey] = is_object($resolved) ? $resolved : null;
+
+        return self::$propertyByIdCache[$memoKey];
     }
 
     /**

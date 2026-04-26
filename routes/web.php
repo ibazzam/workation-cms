@@ -1724,30 +1724,53 @@ Route::get('/', function () {
         return '';
     };
 
-    $resolveHomeCuratedDestinationImage = static function (array $card) use ($homeCuratedDestinationImages, $homeDatabaseDestinationImages, $resolveHomeDestinationKey): ?string {
-        $destinationKey = $resolveHomeDestinationKey($card);
-        if ($destinationKey === '') {
+    $resolveDestinationImageByKey = static function (string $destinationKey, array $firstSource, array $secondSource): ?string {
+        $key = strtolower(trim($destinationKey));
+        if ($key === '') {
             return null;
         }
 
-        if (array_key_exists($destinationKey, $homeDatabaseDestinationImages)) {
-            return $homeDatabaseDestinationImages[$destinationKey] ?? null;
+        $variants = collect([
+            $key,
+            preg_replace('/_(island|atoll|city|maldives)$/', '', $key) ?? $key,
+            str_replace('_island', '', $key),
+            str_replace('_atoll', '', $key),
+            str_replace('_city', '', $key),
+            str_replace('_maldives', '', $key),
+        ])->map(static fn ($value) => strtolower(trim((string) $value)))
+            ->filter(static fn ($value) => $value !== '')
+            ->unique()
+            ->values();
+
+        foreach ($variants as $variantKey) {
+            if (array_key_exists($variantKey, $firstSource)) {
+                $candidate = trim((string) ($firstSource[$variantKey] ?? ''));
+                if ($candidate !== '') {
+                    return $candidate;
+                }
+            }
         }
 
-        return $homeCuratedDestinationImages[$destinationKey] ?? null;
+        foreach ($variants as $variantKey) {
+            if (array_key_exists($variantKey, $secondSource)) {
+                $candidate = trim((string) ($secondSource[$variantKey] ?? ''));
+                if ($candidate !== '') {
+                    return $candidate;
+                }
+            }
+        }
+
+        return null;
     };
-    
-    $resolveHomePreferredDestinationArt = static function (array $card) use ($homeCuratedDestinationImages, $homeDatabaseDestinationImages, $resolveHomeDestinationKey): ?string {
+
+    $resolveHomeCuratedDestinationImage = static function (array $card) use ($homeCuratedDestinationImages, $homeDatabaseDestinationImages, $resolveHomeDestinationKey, $resolveDestinationImageByKey): ?string {
         $destinationKey = $resolveHomeDestinationKey($card);
-        if ($destinationKey === '') {
-            return null;
-        }
+        return $resolveDestinationImageByKey($destinationKey, $homeDatabaseDestinationImages, $homeCuratedDestinationImages);
+    };
 
-        if (array_key_exists($destinationKey, $homeCuratedDestinationImages)) {
-            return $homeCuratedDestinationImages[$destinationKey] ?? null;
-        }
-
-        return $homeDatabaseDestinationImages[$destinationKey] ?? null;
+    $resolveHomePreferredDestinationArt = static function (array $card) use ($homeCuratedDestinationImages, $homeDatabaseDestinationImages, $resolveHomeDestinationKey, $resolveDestinationImageByKey): ?string {
+        $destinationKey = $resolveHomeDestinationKey($card);
+        return $resolveDestinationImageByKey($destinationKey, $homeCuratedDestinationImages, $homeDatabaseDestinationImages);
     };
 
     $resolveHomeDestinationOverrideImage = static function (array $card) use ($homeDestinationMediaOverrides, $resolveHomeDestinationKey): ?string {
@@ -2344,9 +2367,14 @@ Route::get('/', function () {
 
             $categoryMinPriceRows = $allProperties
                 ->map(static function ($property) use ($homeCategoryPriceBucket) {
+                    $derivedPrice = (float) ($property->base_price ?? 0);
+                    if ($derivedPrice <= 0) {
+                        $derivedPrice = workationDerivedListingBasePrice($property);
+                    }
+
                     return [
                         'bucket' => $homeCategoryPriceBucket($property),
-                        'price' => (float) ($property->base_price ?? 0),
+                        'price' => (float) $derivedPrice,
                         'currency' => strtoupper(trim((string) ($property->currency ?? 'MVR'))),
                     ];
                 })
@@ -2525,8 +2553,10 @@ Route::get('/', function () {
                     $sample = $row['sample_property'] ?? null;
                     $sampleId = (int) ($sample->id ?? 0);
                     $sampleCategory = strtolower(trim((string) ($sample->listing_category ?? 'accommodation')));
+                    $samplePrice = $sample ? max(0, workationDerivedListingBasePrice($sample)) : 0;
+                    $sampleCurrency = strtoupper(trim((string) ($sample->currency ?? 'MVR')));
 
-                    return [
+                    $payload = [
                         'title' => $row['title'],
                         'subtitle' => $row['count'] . ' listings',
                         'url' => '/catalog/accommodation?q=' . urlencode($row['title']),
@@ -2534,6 +2564,12 @@ Route::get('/', function () {
                         'fallback_image_url' => $resolvePropertyFallbackImage($sampleId),
                         'category' => $sampleCategory,
                     ];
+
+                    if ($samplePrice > 0) {
+                        $payload['price_label'] = $sampleCurrency . ' ' . number_format($samplePrice, 2);
+                    }
+
+                    return $payload;
                 })
                 ->values();
 
@@ -2602,7 +2638,10 @@ Route::get('/', function () {
 
                     $seenLovedDestinations[$destinationKey] = true;
                     $propertyId = (int) ($property->id ?? 0);
-                    $lovedDestinationCards[] = [
+                    $propertyPrice = max(0, workationDerivedListingBasePrice($property));
+                    $propertyCurrency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
+
+                    $cardPayload = [
                         'title' => $location,
                         'subtitle' => 'Popular Destination',
                         'url' => '/catalog/accommodation?q=' . urlencode($location),
@@ -2610,6 +2649,12 @@ Route::get('/', function () {
                         'fallback_image_url' => $resolvePropertyFallbackImage($propertyId),
                         'meta' => trim((string) ($property->atoll ?? '')),
                     ];
+
+                    if ($propertyPrice > 0) {
+                        $cardPayload['price_label'] = $propertyCurrency . ' ' . number_format($propertyPrice, 2);
+                    }
+
+                    $lovedDestinationCards[] = $cardPayload;
 
                     if (count($lovedDestinationCards) >= 4) {
                         break;

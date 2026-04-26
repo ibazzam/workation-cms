@@ -2026,7 +2026,8 @@ Route::get('/', function () {
 
                 return [
                     'title' => $name,
-                    'subtitle' => 'From ' . $currency . ' ' . $price,
+                    'subtitle' => $place,
+                    'price_label' => $currency . ' ' . $price,
                     'url' => '/property/' . $propertyId,
                     'image_url' => $resolvePropertyImage($propertyId),
                     'fallback_image_url' => $resolvePropertyFallbackImage($propertyId),

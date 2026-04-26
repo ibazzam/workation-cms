@@ -554,6 +554,12 @@ class VendorPropertyCompatibilityReader
             $base[] = 'listing_approved_by_user_id';
         }
 
+        foreach (['view_count', 'wishlist_count', 'bookings_count', 'total_bookings', 'rating', 'average_rating', 'review_score', 'reviews_count', 'review_count'] as $col) {
+            if (Schema::hasColumn($tableName, $col)) {
+                $base[] = $col;
+            }
+        }
+
         // Common category-specific columns (present on some tables)
         foreach (['island', 'atoll', 'city', 'pickup_location', 'dropoff_location', 'origin_point', 'destination_point'] as $col) {
             if (Schema::hasColumn($tableName, $col)) {

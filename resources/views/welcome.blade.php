@@ -2433,35 +2433,23 @@
                             $primaryImage = 'https://' . ltrim(substr($primaryImage, 7), '/');
                         }
                         $resolvedImage = $primaryImage !== '' ? $primaryImage : ($fallbackImage !== '' ? $fallbackImage : $cardSvgFallback);
-                        $cityName = trim((string) ($card['city'] ?? $card['location'] ?? $card['island'] ?? ''));
-                        if ($cityName === '') {
-                            $cityName = trim((string) ($card['subtitle'] ?? ''));
-                        }
-                        $starRank = max(0, min(5, (int) round((float) ($card['star_rating'] ?? $card['stars'] ?? 0))));
                         $reviewScoreRaw = (float) ($card['review_score'] ?? $card['rating'] ?? 0);
                         $reviewScore = $reviewScoreRaw > 0 ? number_format($reviewScoreRaw, 1) : 'N/A';
                         $reviewCount = (int) ($card['review_count'] ?? $card['reviews_count'] ?? 0);
-                        $priceLabel = trim((string) ($card['price_label'] ?? $card['price'] ?? $card['meta'] ?? 'See details'));
+                        $priceLabel = trim((string) ($card['price_label'] ?? $card['price'] ?? ''));
+                        $priceText = $priceLabel !== '' ? ('From ' . $priceLabel) : 'Price on request';
                     @endphp
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
                         <div class="item-card-media">
                             <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && this.src !== '{{ $fallbackImage }}' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $cardSvgFallback }}';};" alt="{{ $card['title'] ?? 'Category' }} thumbnail" loading="lazy">
                         </div>
                         <div class="item-card-body">
-                            <span class="item-card-city">{{ $cityName !== '' ? $cityName : 'Maldives' }}</span>
                             <h3 class="item-card-title">{{ $card['title'] ?? 'Category' }}</h3>
-                            <div class="item-card-stars" aria-label="Star ranking">
-                                @if ($starRank > 0)
-                                    @for ($i = 0; $i < $starRank; $i++)
-                                        <i class="fa-solid fa-star" aria-hidden="true"></i>
-                                    @endfor
-                                @endif
-                            </div>
                             <div class="item-card-review">
                                 <span class="item-card-rating-badge">{{ $reviewScore }}</span>
                                 <span>{{ number_format($reviewCount) }} reviews</span>
                             </div>
-                            <div class="item-card-price">From {{ $priceLabel }}</div>
+                            <div class="item-card-price">{{ $priceText }}</div>
                         </div>
                     </a>
                 @endforeach
@@ -2490,35 +2478,23 @@
                             $primaryImage = 'https://' . ltrim(substr($primaryImage, 7), '/');
                         }
                         $resolvedImage = $primaryImage !== '' ? $primaryImage : ($fallbackImage !== '' ? $fallbackImage : $cardSvgFallback);
-                        $cityName = trim((string) ($card['city'] ?? $card['location'] ?? $card['island'] ?? ''));
-                        if ($cityName === '') {
-                            $cityName = trim((string) ($card['subtitle'] ?? ''));
-                        }
-                        $starRank = max(0, min(5, (int) round((float) ($card['star_rating'] ?? $card['stars'] ?? 0))));
                         $reviewScoreRaw = (float) ($card['review_score'] ?? $card['rating'] ?? 0);
                         $reviewScore = $reviewScoreRaw > 0 ? number_format($reviewScoreRaw, 1) : 'N/A';
                         $reviewCount = (int) ($card['review_count'] ?? $card['reviews_count'] ?? 0);
-                        $priceLabel = trim((string) ($card['price_label'] ?? $card['price'] ?? $card['meta'] ?? 'See details'));
+                        $priceLabel = trim((string) ($card['price_label'] ?? $card['price'] ?? ''));
+                        $priceText = $priceLabel !== '' ? ('From ' . $priceLabel) : 'Price on request';
                     @endphp
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
                         <div class="item-card-media">
                             <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && this.src !== '{{ $fallbackImage }}' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $cardSvgFallback }}';};" alt="{{ $card['title'] ?? 'Trending Destination' }} thumbnail" loading="lazy">
                         </div>
                         <div class="item-card-body">
-                            <span class="item-card-city">{{ $cityName !== '' ? $cityName : 'Maldives' }}</span>
                             <h3 class="item-card-title">{{ $card['title'] ?? 'Trending Destination' }}</h3>
-                            <div class="item-card-stars" aria-label="Star ranking">
-                                @if ($starRank > 0)
-                                    @for ($i = 0; $i < $starRank; $i++)
-                                        <i class="fa-solid fa-star" aria-hidden="true"></i>
-                                    @endfor
-                                @endif
-                            </div>
                             <div class="item-card-review">
                                 <span class="item-card-rating-badge">{{ $reviewScore }}</span>
                                 <span>{{ number_format($reviewCount) }} reviews</span>
                             </div>
-                            <div class="item-card-price">From {{ $priceLabel }}</div>
+                            <div class="item-card-price">{{ $priceText }}</div>
                         </div>
                     </a>
                 @endforeach
@@ -2542,35 +2518,23 @@
                             $primaryImage = 'https://' . ltrim(substr($primaryImage, 7), '/');
                         }
                         $resolvedImage = $primaryImage !== '' ? $primaryImage : ($fallbackImage !== '' ? $fallbackImage : $cardSvgFallback);
-                        $cityName = trim((string) ($card['city'] ?? $card['location'] ?? $card['island'] ?? ''));
-                        if ($cityName === '') {
-                            $cityName = trim((string) ($card['subtitle'] ?? ''));
-                        }
-                        $starRank = max(0, min(5, (int) round((float) ($card['star_rating'] ?? $card['stars'] ?? 0))));
                         $reviewScoreRaw = (float) ($card['review_score'] ?? $card['rating'] ?? 0);
                         $reviewScore = $reviewScoreRaw > 0 ? number_format($reviewScoreRaw, 1) : 'N/A';
                         $reviewCount = (int) ($card['review_count'] ?? $card['reviews_count'] ?? 0);
-                        $priceLabel = trim((string) ($card['price_label'] ?? $card['price'] ?? $card['meta'] ?? 'See details'));
+                        $priceLabel = trim((string) ($card['price_label'] ?? $card['price'] ?? ''));
+                        $priceText = $priceLabel !== '' ? ('From ' . $priceLabel) : 'Price on request';
                     @endphp
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
                         <div class="item-card-media">
                             <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && this.src !== '{{ $fallbackImage }}' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $cardSvgFallback }}';};" alt="{{ $card['title'] ?? 'Weekend Deal' }} thumbnail" loading="lazy">
                         </div>
                         <div class="item-card-body">
-                            <span class="item-card-city">{{ $cityName !== '' ? $cityName : 'Maldives' }}</span>
                             <h3 class="item-card-title">{{ $card['title'] ?? 'Weekend Deal' }}</h3>
-                            <div class="item-card-stars" aria-label="Star ranking">
-                                @if ($starRank > 0)
-                                    @for ($i = 0; $i < $starRank; $i++)
-                                        <i class="fa-solid fa-star" aria-hidden="true"></i>
-                                    @endfor
-                                @endif
-                            </div>
                             <div class="item-card-review">
                                 <span class="item-card-rating-badge">{{ $reviewScore }}</span>
                                 <span>{{ number_format($reviewCount) }} reviews</span>
                             </div>
-                            <div class="item-card-price">From {{ $priceLabel }}</div>
+                            <div class="item-card-price">{{ $priceText }}</div>
                         </div>
                     </a>
                 @endforeach
@@ -2594,35 +2558,23 @@
                             $primaryImage = 'https://' . ltrim(substr($primaryImage, 7), '/');
                         }
                         $resolvedImage = $primaryImage !== '' ? $primaryImage : ($fallbackImage !== '' ? $fallbackImage : $cardSvgFallback);
-                        $cityName = trim((string) ($card['city'] ?? $card['location'] ?? $card['island'] ?? ''));
-                        if ($cityName === '') {
-                            $cityName = trim((string) ($card['subtitle'] ?? ''));
-                        }
-                        $starRank = max(0, min(5, (int) round((float) ($card['star_rating'] ?? $card['stars'] ?? 0))));
                         $reviewScoreRaw = (float) ($card['review_score'] ?? $card['rating'] ?? 0);
                         $reviewScore = $reviewScoreRaw > 0 ? number_format($reviewScoreRaw, 1) : 'N/A';
                         $reviewCount = (int) ($card['review_count'] ?? $card['reviews_count'] ?? 0);
-                        $priceLabel = trim((string) ($card['price_label'] ?? $card['price'] ?? $card['meta'] ?? 'See details'));
+                        $priceLabel = trim((string) ($card['price_label'] ?? $card['price'] ?? ''));
+                        $priceText = $priceLabel !== '' ? ('From ' . $priceLabel) : 'Price on request';
                     @endphp
                     <a class="item-card" href="{{ $card['url'] ?? '/customer' }}">
                         <div class="item-card-media">
                             <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && this.src !== '{{ $fallbackImage }}' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $cardSvgFallback }}';};" alt="{{ $card['title'] ?? 'Loved Place' }} thumbnail" loading="lazy">
                         </div>
                         <div class="item-card-body">
-                            <span class="item-card-city">{{ $cityName !== '' ? $cityName : 'Maldives' }}</span>
                             <h3 class="item-card-title">{{ $card['title'] ?? 'Loved Place' }}</h3>
-                            <div class="item-card-stars" aria-label="Star ranking">
-                                @if ($starRank > 0)
-                                    @for ($i = 0; $i < $starRank; $i++)
-                                        <i class="fa-solid fa-star" aria-hidden="true"></i>
-                                    @endfor
-                                @endif
-                            </div>
                             <div class="item-card-review">
                                 <span class="item-card-rating-badge">{{ $reviewScore }}</span>
                                 <span>{{ number_format($reviewCount) }} reviews</span>
                             </div>
-                            <div class="item-card-price">From {{ $priceLabel }}</div>
+                            <div class="item-card-price">{{ $priceText }}</div>
                         </div>
                     </a>
                 @endforeach

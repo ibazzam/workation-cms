@@ -1456,10 +1456,10 @@ Route::get('/', function () {
     ]);
 
     $homeTrendingCards = collect([
-        ['title' => 'Maafushi Island', 'subtitle' => 'Most searched for affordable island escapes.', 'url' => '/catalog/accommodation?q=Maafushi'],
-        ['title' => 'Male City', 'subtitle' => 'Convenient urban stays and transfer access.', 'url' => '/catalog/accommodation?q=Male'],
-        ['title' => 'Baa Atoll', 'subtitle' => 'Nature-rich stays and iconic snorkeling spots.', 'url' => '/catalog/accommodation?q=Baa+Atoll'],
-        ['title' => 'Ari Atoll', 'subtitle' => 'Popular for diving and premium island resorts.', 'url' => '/catalog/accommodation?q=Ari+Atoll'],
+        ['title' => 'Maafushi Island', 'subtitle' => 'Most searched for affordable island escapes.', 'url' => '/catalog/accommodation?q=Maafushi', 'image_url' => '/images/home/destinations/maafushi-island.svg', 'fallback_image_url' => '/images/home/destinations/maafushi-island.svg'],
+        ['title' => 'Male City', 'subtitle' => 'Convenient urban stays and transfer access.', 'url' => '/catalog/accommodation?q=Male', 'image_url' => '/images/home/destinations/male-city.svg', 'fallback_image_url' => '/images/home/destinations/male-city.svg'],
+        ['title' => 'Baa Atoll', 'subtitle' => 'Nature-rich stays and iconic snorkeling spots.', 'url' => '/catalog/accommodation?q=Baa+Atoll', 'image_url' => '/images/home/destinations/baa-atoll.svg', 'fallback_image_url' => '/images/home/destinations/baa-atoll.svg'],
+        ['title' => 'Ari Atoll', 'subtitle' => 'Popular for diving and premium island resorts.', 'url' => '/catalog/accommodation?q=Ari+Atoll', 'image_url' => '/images/home/destinations/ari-atoll.svg', 'fallback_image_url' => '/images/home/destinations/ari-atoll.svg'],
     ]);
 
     $homeWeekendDealCards = collect([
@@ -1470,10 +1470,10 @@ Route::get('/', function () {
     ]);
 
     $homeLovedCards = collect([
-        ['title' => 'Hulhumale Seafront', 'subtitle' => 'Consistently high ratings for convenience.', 'url' => '/catalog/accommodation?q=Hulhumale'],
-        ['title' => 'Thulusdhoo Island', 'subtitle' => 'Guest favorite for surf culture and charm.', 'url' => '/catalog/accommodation?q=Thulusdhoo'],
-        ['title' => 'Ukulhas Island', 'subtitle' => 'Loved for clean beaches and relaxed stays.', 'url' => '/catalog/accommodation?q=Ukulhas'],
-        ['title' => 'Dhigurah Island', 'subtitle' => 'Strong demand for reef and marine experiences.', 'url' => '/catalog/accommodation?q=Dhigurah'],
+        ['title' => 'Hulhumale Seafront', 'subtitle' => 'Consistently high ratings for convenience.', 'url' => '/catalog/accommodation?q=Hulhumale', 'image_url' => '/images/home/destinations/hulhumale-seafront.svg', 'fallback_image_url' => '/images/home/destinations/hulhumale-seafront.svg'],
+        ['title' => 'Thulusdhoo Island', 'subtitle' => 'Guest favorite for surf culture and charm.', 'url' => '/catalog/accommodation?q=Thulusdhoo', 'image_url' => '/images/home/destinations/thulusdhoo-island.svg', 'fallback_image_url' => '/images/home/destinations/thulusdhoo-island.svg'],
+        ['title' => 'Ukulhas Island', 'subtitle' => 'Loved for clean beaches and relaxed stays.', 'url' => '/catalog/accommodation?q=Ukulhas', 'image_url' => '/images/home/destinations/ukulhas-island.svg', 'fallback_image_url' => '/images/home/destinations/ukulhas-island.svg'],
+        ['title' => 'Dhigurah Island', 'subtitle' => 'Strong demand for reef and marine experiences.', 'url' => '/catalog/accommodation?q=Dhigurah', 'image_url' => '/images/home/destinations/dhigurah-island.svg', 'fallback_image_url' => '/images/home/destinations/dhigurah-island.svg'],
     ]);
 
     $homeTrendingCards = $applyHomeDestinationArtPreference($applyHomeDestinationImages($homeTrendingCards));
@@ -1685,8 +1685,17 @@ Route::get('/', function () {
             if ($combinedRoomPricesByProperty->isNotEmpty()) {
                 $allProperties = $allProperties->map(static function ($property) use ($combinedRoomPricesByProperty) {
                     $propertyId = (int) ($property->id ?? 0);
+                    $dedicatedId = (int) ($property->dedicated_row_id ?? 0);
+                    $lookupId = null;
+
                     if ($propertyId > 0 && $combinedRoomPricesByProperty->has($propertyId)) {
-                        $property->base_price = (float) $combinedRoomPricesByProperty->get($propertyId);
+                        $lookupId = $propertyId;
+                    } elseif ($dedicatedId > 0 && $combinedRoomPricesByProperty->has($dedicatedId)) {
+                        $lookupId = $dedicatedId;
+                    }
+
+                    if ($lookupId !== null) {
+                        $property->base_price = (float) $combinedRoomPricesByProperty->get($lookupId);
                     }
 
                     return $property;
@@ -2000,7 +2009,7 @@ Route::get('/', function () {
         }
 
         $priceSorted = $allProperties
-            ->filter(static fn ($property) => isset($property->base_price) && is_numeric($property->base_price))
+            ->filter(static fn ($property) => isset($property->base_price) && is_numeric($property->base_price) && (float) ($property->base_price ?? 0) > 0)
             ->sortBy(static fn ($property) => (float) $property->base_price)
             ->values();
 
@@ -2017,7 +2026,8 @@ Route::get('/', function () {
 
                 return [
                     'title' => $name,
-                    'subtitle' => 'From ' . $currency . ' ' . $price,
+                    'subtitle' => $place,
+                    'price_label' => $currency . ' ' . $price,
                     'url' => '/property/' . $propertyId,
                     'image_url' => $resolvePropertyImage($propertyId),
                     'fallback_image_url' => $resolvePropertyFallbackImage($propertyId),
@@ -2034,7 +2044,32 @@ Route::get('/', function () {
         }
 
         {
-            $lovedRows = $allProperties->sortByDesc('updated_at')->take(120)->values();
+            $homeLovedScore = static function ($property): float {
+                $viewCount = (float) ($property->view_count ?? 0);
+                $wishlistCount = (float) ($property->wishlist_count ?? 0);
+                $bookingsCount = (float) ($property->bookings_count ?? $property->total_bookings ?? 0);
+                $reviewCount = (float) ($property->reviews_count ?? $property->review_count ?? 0);
+                $rating = (float) ($property->review_score ?? $property->average_rating ?? $property->rating ?? 0);
+
+                // Weight real engagement ahead of freshness; fallback to updated_at below if all are zero.
+                return ($viewCount * 1.0)
+                    + ($wishlistCount * 3.0)
+                    + ($bookingsCount * 4.0)
+                    + ($reviewCount * 2.0)
+                    + ($rating * 5.0);
+            };
+
+            $lovedRows = $allProperties
+                ->sortByDesc(static function ($property) use ($homeLovedScore) {
+                    $score = $homeLovedScore($property);
+                    if ($score > 0) {
+                        return $score;
+                    }
+
+                    return strtotime((string) ($property->updated_at ?? '')) ?: 0;
+                })
+                ->take(120)
+                ->values();
 
             if ($lovedRows->isNotEmpty()) {
                 $lovedDestinationCards = [];
@@ -4103,8 +4138,11 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             $catalogProperties = $catalogProperties->map(static function ($prop) use ($combinedRoomPricesByProperty) {
                 $prop->base_price = 0;
                 $pid = (int) ($prop->id ?? 0);
+                $dedicatedId = (int) ($prop->dedicated_row_id ?? 0);
                 if ($pid > 0 && $combinedRoomPricesByProperty->has($pid)) {
                     $prop->base_price = (float) $combinedRoomPricesByProperty->get($pid);
+                } elseif ($dedicatedId > 0 && $combinedRoomPricesByProperty->has($dedicatedId)) {
+                    $prop->base_price = (float) $combinedRoomPricesByProperty->get($dedicatedId);
                 }
                 return $prop;
             });

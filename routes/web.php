@@ -3823,7 +3823,13 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             $propertiesQuery->orderByDesc('updated_at');
         }
 
-        $catalogProperties = $propertiesQuery->limit(80)->get();
+        $catalogProperties = $propertiesQuery->limit(80)->get()
+            ->map(static function ($row) {
+                // Normalize id to vendor_property_id so media lookups and detail-page URLs
+                // work correctly for both old migrated rows and new self-referencing rows.
+                $row->id = (int) ($row->vendor_property_id ?? $row->id ?? 0);
+                return $row;
+            });
         $propertyIds = $catalogProperties
             ->pluck('id')
             ->map(static fn ($id) => (int) $id)

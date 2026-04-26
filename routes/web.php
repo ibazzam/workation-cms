@@ -2043,7 +2043,32 @@ Route::get('/', function () {
         }
 
         {
-            $lovedRows = $allProperties->sortByDesc('updated_at')->take(120)->values();
+            $homeLovedScore = static function ($property): float {
+                $viewCount = (float) ($property->view_count ?? 0);
+                $wishlistCount = (float) ($property->wishlist_count ?? 0);
+                $bookingsCount = (float) ($property->bookings_count ?? $property->total_bookings ?? 0);
+                $reviewCount = (float) ($property->reviews_count ?? $property->review_count ?? 0);
+                $rating = (float) ($property->review_score ?? $property->average_rating ?? $property->rating ?? 0);
+
+                // Weight real engagement ahead of freshness; fallback to updated_at below if all are zero.
+                return ($viewCount * 1.0)
+                    + ($wishlistCount * 3.0)
+                    + ($bookingsCount * 4.0)
+                    + ($reviewCount * 2.0)
+                    + ($rating * 5.0);
+            };
+
+            $lovedRows = $allProperties
+                ->sortByDesc(static function ($property) use ($homeLovedScore) {
+                    $score = $homeLovedScore($property);
+                    if ($score > 0) {
+                        return $score;
+                    }
+
+                    return strtotime((string) ($property->updated_at ?? '')) ?: 0;
+                })
+                ->take(120)
+                ->values();
 
             if ($lovedRows->isNotEmpty()) {
                 $lovedDestinationCards = [];

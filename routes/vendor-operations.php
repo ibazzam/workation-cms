@@ -959,7 +959,7 @@ if (!function_exists('vendorPortalListingsBackResponse')) {
     {
         $normalizedStep = max(1, min(4, $wizardStep));
 
-        $response = redirect('/vendor-portal?page=listings#listings')
+        $response = redirect('/vendor?page=listings#listings')
             ->with('portal_notice', $message)
             ->with('portal_active_panel', 'listings')
             ->with('listing_wizard_step', $normalizedStep);
@@ -4272,6 +4272,10 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
                 $normalizedMaxGuests,
                 $existingDetails
             );
+
+            if ($canonicalListingCategory === 'accommodation' && function_exists('vendorPortalSyncAccommodationStructuredData')) {
+                vendorPortalSyncAccommodationStructuredData($property, $vendorUserId, $existingDetails);
+            }
         }
     });
 

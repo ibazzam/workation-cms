@@ -1215,11 +1215,19 @@
             gap: 10px;
         }
 
+        .availability-ops-grid .ops-form-availability {
+            grid-column: 1 / -1;
+        }
+
         .ops-form {
             border: 1px solid #d7e0e6;
             border-radius: 10px;
             background: #fff;
             padding: 10px;
+        }
+
+        .ops-form-availability {
+            padding: 10px 12px 12px;
         }
 
         .ops-category-card .ops-form > .btn {
@@ -1238,6 +1246,12 @@
             gap: 10px;
         }
 
+        .ops-form-grid-compact {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px 10px;
+            align-items: start;
+        }
+
         .ops-field {
             display: flex;
             flex-direction: column;
@@ -1249,11 +1263,16 @@
         }
 
         .ops-field label {
-            font-size: 0.74rem;
+            font-size: 0.7rem;
             color: var(--muted);
             text-transform: uppercase;
             letter-spacing: 0.06em;
             font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .ops-field-compact-note .small {
+            margin: 2px 0 0;
+            line-height: 1.25;
         }
 
         .ops-input,
@@ -1261,12 +1280,13 @@
         .ops-textarea {
             width: 100%;
             border: 1px solid #c8d3df;
-            border-radius: 10px;
-            padding: 9px 11px;
-            font-size: 0.88rem;
+            border-radius: 9px;
+            padding: 7px 10px;
+            font-size: 0.82rem;
             font-family: "Outfit", "Trebuchet MS", sans-serif;
             color: #1d3045;
             background: #fff;
+            min-height: 38px;
         }
 
         .ops-input.is-invalid,
@@ -1282,8 +1302,13 @@
         }
 
         .ops-textarea {
-            min-height: 90px;
+            min-height: 74px;
             resize: vertical;
+        }
+
+        .availability-inline-note {
+            margin: 8px 0 0;
+            text-align: right;
         }
 
         .form-error-banner {

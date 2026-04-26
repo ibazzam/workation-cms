@@ -134,6 +134,150 @@ if (!function_exists('workationApplyReservationPaymentEvent')) {
     }
 }
 
+if (!function_exists('workationDateSeries')) {
+    function workationDateSeries(Carbon $start, Carbon $endExclusive): array
+    {
+        $dates = [];
+        $cursor = $start->copy()->startOfDay();
+        $last = $endExclusive->copy()->startOfDay();
+
+        while ($cursor->lessThan($last)) {
+            $dates[] = $cursor->toDateString();
+            $cursor->addDay();
+        }
+
+        return $dates;
+    }
+}
+
+if (!function_exists('workationOverlappingReservationCount')) {
+    function workationOverlappingReservationCount(int $vendorUserId, int $vendorPropertyId, Carbon $start, Carbon $endExclusive, ?int $roomId = null, ?int $serviceId = null): int
+    {
+        if ($vendorUserId <= 0 || $vendorPropertyId <= 0 || !Schema::hasTable('vendor_reservations')) {
+            return 0;
+        }
+
+        $query = DB::table('vendor_reservations')
+            ->where('vendor_user_id', $vendorUserId)
+            ->where('vendor_property_id', $vendorPropertyId)
+            ->whereNotIn('status', ['cancelled', 'rejected', 'expired', 'failed'])
+            ->where('start_at', '<', $endExclusive->copy()->startOfDay())
+            ->where('end_at', '>', $start->copy()->startOfDay());
+
+        if ($serviceId !== null && $serviceId > 0 && Schema::hasColumn('vendor_reservations', 'vendor_service_id')) {
+            $query->where('vendor_service_id', $serviceId);
+        }
+
+        if ($roomId !== null && $roomId > 0) {
+            $roomNeedle = '"room_id":' . $roomId;
+            $query->where(function ($roomQuery) use ($roomNeedle) {
+                $roomQuery->where('notes', 'like', '%' . $roomNeedle . '%')
+                    ->orWhereNull('notes');
+            });
+        }
+
+        return (int) $query->count();
+    }
+}
+
+if (!function_exists('workationSlotAvailabilityCheck')) {
+    function workationSlotAvailabilityCheck(int $vendorUserId, int $vendorPropertyId, Carbon $start, Carbon $endExclusive, int $unitsRequested = 1, ?int $roomCategoryId = null, ?int $serviceId = null, ?string $listingCategory = null, ?string $routeName = null): array
+    {
+        if ($vendorUserId <= 0 || $vendorPropertyId <= 0 || !Schema::hasTable('vendor_availability_slots')) {
+            return ['ok' => true, 'reason' => null, 'checked' => false];
+        }
+
+        $slotDates = workationDateSeries($start, $endExclusive);
+        if ($slotDates === []) {
+            return ['ok' => true, 'reason' => null, 'checked' => false];
+        }
+
+        $slotsQuery = DB::table('vendor_availability_slots')
+            ->where('vendor_user_id', $vendorUserId)
+            ->where('vendor_property_id', $vendorPropertyId)
+            ->whereIn('slot_date', $slotDates);
+
+        if ($serviceId !== null && $serviceId > 0 && Schema::hasColumn('vendor_availability_slots', 'vendor_service_id')) {
+            $slotsQuery->where('vendor_service_id', $serviceId);
+        }
+
+        if ($roomCategoryId !== null && $roomCategoryId > 0 && Schema::hasColumn('vendor_availability_slots', 'vendor_room_category_id')) {
+            $slotsQuery->where('vendor_room_category_id', $roomCategoryId);
+        }
+
+        if ($listingCategory !== null && trim($listingCategory) !== '' && Schema::hasColumn('vendor_availability_slots', 'listing_category')) {
+            $slotsQuery->where('listing_category', trim($listingCategory));
+        }
+
+        if ($routeName !== null && trim($routeName) !== '' && Schema::hasColumn('vendor_availability_slots', 'route_name')) {
+            $slotsQuery->where('route_name', trim($routeName));
+        }
+
+        $slots = $slotsQuery->get(['slot_date', 'inventory', 'reserved_count', 'is_closed']);
+        if ($slots->isEmpty()) {
+            return ['ok' => true, 'reason' => null, 'checked' => false];
+        }
+
+        $byDate = $slots->keyBy(static fn ($slot) => (string) ($slot->slot_date ?? ''));
+        foreach ($slotDates as $slotDate) {
+            $slot = $byDate->get($slotDate);
+            if (!$slot) {
+                continue;
+            }
+
+            $isClosed = (bool) ($slot->is_closed ?? false);
+            if ($isClosed) {
+                return ['ok' => false, 'reason' => 'blocked', 'checked' => true, 'date' => $slotDate];
+            }
+
+            $inventory = max(0, (int) ($slot->inventory ?? 0));
+            $reservedCount = max(0, (int) ($slot->reserved_count ?? 0));
+            if ($inventory > 0 && ($reservedCount + max(1, $unitsRequested)) > $inventory) {
+                return ['ok' => false, 'reason' => 'inventory', 'checked' => true, 'date' => $slotDate];
+            }
+        }
+
+        return ['ok' => true, 'reason' => null, 'checked' => true];
+    }
+}
+
+if (!function_exists('workationReserveAvailabilitySlots')) {
+    function workationReserveAvailabilitySlots(int $vendorUserId, int $vendorPropertyId, Carbon $start, Carbon $endExclusive, int $units = 1, ?int $roomCategoryId = null, ?int $serviceId = null, ?string $listingCategory = null, ?string $routeName = null): void
+    {
+        if ($vendorUserId <= 0 || $vendorPropertyId <= 0 || $units <= 0 || !Schema::hasTable('vendor_availability_slots')) {
+            return;
+        }
+
+        foreach (workationDateSeries($start, $endExclusive) as $slotDate) {
+            $query = DB::table('vendor_availability_slots')
+                ->where('vendor_user_id', $vendorUserId)
+                ->where('vendor_property_id', $vendorPropertyId)
+                ->where('slot_date', $slotDate);
+
+            if ($serviceId !== null && $serviceId > 0 && Schema::hasColumn('vendor_availability_slots', 'vendor_service_id')) {
+                $query->where('vendor_service_id', $serviceId);
+            }
+
+            if ($roomCategoryId !== null && $roomCategoryId > 0 && Schema::hasColumn('vendor_availability_slots', 'vendor_room_category_id')) {
+                $query->where('vendor_room_category_id', $roomCategoryId);
+            }
+
+            if ($listingCategory !== null && trim($listingCategory) !== '' && Schema::hasColumn('vendor_availability_slots', 'listing_category')) {
+                $query->where('listing_category', trim($listingCategory));
+            }
+
+            if ($routeName !== null && trim($routeName) !== '' && Schema::hasColumn('vendor_availability_slots', 'route_name')) {
+                $query->where('route_name', trim($routeName));
+            }
+
+            $query->update([
+                'reserved_count' => DB::raw('COALESCE(reserved_count, 0) + ' . (int) $units),
+                'updated_at' => now(),
+            ]);
+        }
+    }
+}
+
 if (!function_exists('bootstrapPasswordMatches')) {
     function bootstrapPasswordMatches(string $expected, string $provided): bool
     {
@@ -1340,6 +1484,20 @@ Route::get('/', function () {
                 continue;
             }
 
+            $normalized = str_replace(['male_city_city', 'city_male_city'], 'male_city', $normalized);
+
+            $aliases = [
+                'male' => 'male_city',
+                'malecity' => 'male_city',
+                'male_city' => 'male_city',
+                'male_town' => 'male_city',
+                'male_capital' => 'male_city',
+            ];
+
+            if (array_key_exists($normalized, $aliases)) {
+                return $aliases[$normalized];
+            }
+
             return $normalized;
         }
 
@@ -1608,7 +1766,10 @@ Route::get('/', function () {
                     $roomRows = DB::table('accommodation_rooms')
                         ->whereIn('property_id', $propertyLookupIds->all())
                         ->when($hasRoomActiveColumn, static function ($query) {
-                            $query->where('is_active', 1);
+                            $query->where(static function ($activeQuery) {
+                                $activeQuery->where('is_active', 1)
+                                    ->orWhereNull('is_active');
+                            });
                         })
                         ->get($roomPriceColumns);
 
@@ -1650,13 +1811,44 @@ Route::get('/', function () {
                 }
 
                 if (count($packagePriceColumns) > 1) {
-                $packagePrices = DB::table('accommodation_packages')
-                    ->whereIn('property_id', $propertyLookupIds->all())
-                    ->when(Schema::hasColumn('accommodation_packages', 'is_active'), static function ($query) {
-                        $query->where('is_active', 1);
+                $packageRowsQuery = DB::table('accommodation_packages as ap');
+
+                if (Schema::hasTable('accommodation_rooms')
+                    && Schema::hasColumn('accommodation_packages', 'room_id')
+                    && Schema::hasColumn('accommodation_rooms', 'id')
+                    && Schema::hasColumn('accommodation_rooms', 'property_id')) {
+                    $packageRowsQuery->leftJoin('accommodation_rooms as ar', 'ar.id', '=', 'ap.room_id')
+                        ->where(static function ($query) use ($propertyLookupIds) {
+                            $query->whereIn('ap.property_id', $propertyLookupIds->all())
+                                ->orWhereIn('ar.property_id', $propertyLookupIds->all());
+                        });
+                } else {
+                    $packageRowsQuery->whereIn('ap.property_id', $propertyLookupIds->all());
+                }
+
+                $packageRowsQuery->when(Schema::hasColumn('accommodation_packages', 'is_active'), static function ($query) {
+                    $query->where(static function ($activeQuery) {
+                        $activeQuery->where('ap.is_active', 1)
+                            ->orWhereNull('ap.is_active');
+                    });
+                });
+
+                $packageSelectColumns = [];
+                foreach ($packagePriceColumns as $column) {
+                    $packageSelectColumns[] = 'ap.' . $column;
+                }
+                $packageSelectColumns[] = 'ar.property_id as room_property_id';
+
+                $packagePrices = $packageRowsQuery
+                    ->get($packageSelectColumns)
+                    ->groupBy(static function ($row) {
+                        $directPropertyId = (int) ($row->property_id ?? 0);
+                        if ($directPropertyId > 0) {
+                            return $directPropertyId;
+                        }
+
+                        return (int) ($row->room_property_id ?? 0);
                     })
-                    ->get($packagePriceColumns)
-                    ->groupBy(static fn ($row) => (int) ($row->property_id ?? 0))
                     ->map(static function ($rows) {
                         return collect($rows)
                             ->map(static function ($row) {
@@ -1965,28 +2157,66 @@ Route::get('/', function () {
             })->values();
         }
 
+        $propertyEngagementScore = static function ($property): float {
+            $viewCount = (float) ($property->view_count ?? 0);
+            $wishlistCount = (float) ($property->wishlist_count ?? 0);
+            $bookingsCount = (float) ($property->bookings_count ?? $property->total_bookings ?? 0);
+            $reviewCount = (float) ($property->reviews_count ?? $property->review_count ?? 0);
+            $rating = (float) ($property->review_score ?? $property->average_rating ?? $property->rating ?? 0);
+
+            return ($viewCount * 1.0)
+                + ($wishlistCount * 3.0)
+                + ($bookingsCount * 4.0)
+                + ($reviewCount * 2.0)
+                + ($rating * 5.0);
+        };
+
         $locationScores = [];
         foreach ($allProperties as $property) {
-            $location = trim((string) ($property->island ?? ''));
-            if ($location === '') {
-                $location = trim((string) ($property->city ?? ''));
-            }
-            if ($location === '') {
-                $location = trim((string) ($property->atoll ?? ''));
-            }
+            $location = $propertyLocationValue($property);
             if ($location === '') {
                 continue;
             }
 
-            $key = strtolower($location);
+            $normalizedLocation = portalNormalizeDestinationMediaKey($location);
+            if ($normalizedLocation === 'male') {
+                $normalizedLocation = 'male_city';
+            }
+            if ($normalizedLocation === '') {
+                continue;
+            }
+
+            $displayLocation = $normalizedLocation === 'male_city' ? 'Male City' : $location;
+            $engagementScore = $propertyEngagementScore($property);
+
+            $key = strtolower($normalizedLocation);
             if (!array_key_exists($key, $locationScores)) {
-                $locationScores[$key] = ['title' => $location, 'count' => 0, 'sample_property' => $property];
+                $locationScores[$key] = [
+                    'title' => $displayLocation,
+                    'count' => 0,
+                    'engagement_score' => 0.0,
+                    'sample_property' => $property,
+                ];
             }
             $locationScores[$key]['count']++;
+            $locationScores[$key]['engagement_score'] += $engagementScore;
+
+            if ($engagementScore > (float) ($locationScores[$key]['sample_score'] ?? -1)) {
+                $locationScores[$key]['sample_property'] = $property;
+                $locationScores[$key]['sample_score'] = $engagementScore;
+            }
         }
 
         if (!empty($locationScores)) {
-            uasort($locationScores, static fn (array $a, array $b) => $b['count'] <=> $a['count']);
+            uasort($locationScores, static function (array $a, array $b) {
+                $scoreA = (float) ($a['engagement_score'] ?? 0);
+                $scoreB = (float) ($b['engagement_score'] ?? 0);
+                if ($scoreA !== $scoreB) {
+                    return $scoreB <=> $scoreA;
+                }
+
+                return ((int) ($b['count'] ?? 0)) <=> ((int) ($a['count'] ?? 0));
+            });
             $homeTrendingCards = collect(array_slice(array_values($locationScores), 0, 4))
                 ->map(function (array $row) use ($resolvePropertyImage, $resolvePropertyFallbackImage) {
                     $sample = $row['sample_property'] ?? null;
@@ -2044,24 +2274,9 @@ Route::get('/', function () {
         }
 
         {
-            $homeLovedScore = static function ($property): float {
-                $viewCount = (float) ($property->view_count ?? 0);
-                $wishlistCount = (float) ($property->wishlist_count ?? 0);
-                $bookingsCount = (float) ($property->bookings_count ?? $property->total_bookings ?? 0);
-                $reviewCount = (float) ($property->reviews_count ?? $property->review_count ?? 0);
-                $rating = (float) ($property->review_score ?? $property->average_rating ?? $property->rating ?? 0);
-
-                // Weight real engagement ahead of freshness; fallback to updated_at below if all are zero.
-                return ($viewCount * 1.0)
-                    + ($wishlistCount * 3.0)
-                    + ($bookingsCount * 4.0)
-                    + ($reviewCount * 2.0)
-                    + ($rating * 5.0);
-            };
-
             $lovedRows = $allProperties
-                ->sortByDesc(static function ($property) use ($homeLovedScore) {
-                    $score = $homeLovedScore($property);
+                ->sortByDesc(static function ($property) use ($propertyEngagementScore) {
+                    $score = $propertyEngagementScore($property);
                     if ($score > 0) {
                         return $score;
                     }
@@ -4053,13 +4268,44 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 }
 
                 if (count($packagePriceColumns) > 1) {
-                    $packagePrices = DB::table('accommodation_packages')
-                        ->whereIn('property_id', $propertyLookupIds->all())
-                        ->when(Schema::hasColumn('accommodation_packages', 'is_active'), static function ($query) {
-                            $query->where('is_active', 1);
+                    $packageRowsQuery = DB::table('accommodation_packages as ap');
+
+                    if (Schema::hasTable('accommodation_rooms')
+                        && Schema::hasColumn('accommodation_packages', 'room_id')
+                        && Schema::hasColumn('accommodation_rooms', 'id')
+                        && Schema::hasColumn('accommodation_rooms', 'property_id')) {
+                        $packageRowsQuery->leftJoin('accommodation_rooms as ar', 'ar.id', '=', 'ap.room_id')
+                            ->where(static function ($query) use ($propertyLookupIds) {
+                                $query->whereIn('ap.property_id', $propertyLookupIds->all())
+                                    ->orWhereIn('ar.property_id', $propertyLookupIds->all());
+                            });
+                    } else {
+                        $packageRowsQuery->whereIn('ap.property_id', $propertyLookupIds->all());
+                    }
+
+                    $packageRowsQuery->when(Schema::hasColumn('accommodation_packages', 'is_active'), static function ($query) {
+                        $query->where(static function ($activeQuery) {
+                            $activeQuery->where('ap.is_active', 1)
+                                ->orWhereNull('ap.is_active');
+                        });
+                    });
+
+                    $packageSelectColumns = [];
+                    foreach ($packagePriceColumns as $column) {
+                        $packageSelectColumns[] = 'ap.' . $column;
+                    }
+                    $packageSelectColumns[] = 'ar.property_id as room_property_id';
+
+                    $packagePrices = $packageRowsQuery
+                        ->get($packageSelectColumns)
+                        ->groupBy(static function ($row) {
+                            $directPropertyId = (int) ($row->property_id ?? 0);
+                            if ($directPropertyId > 0) {
+                                return $directPropertyId;
+                            }
+
+                            return (int) ($row->room_property_id ?? 0);
                         })
-                        ->get($packagePriceColumns)
-                        ->groupBy(static fn ($row) => (int) ($row->property_id ?? 0))
                         ->map(static function ($rows) {
                             return collect($rows)
                                 ->map(static function ($row) {
@@ -4102,7 +4348,10 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                     $roomPriceRows = DB::table('accommodation_rooms')
                         ->whereIn('property_id', $propertyLookupIds->all())
                         ->when($hasRoomActiveColumn, static function ($query) {
-                            $query->where('is_active', 1);
+                            $query->where(static function ($activeQuery) {
+                                $activeQuery->where('is_active', 1)
+                                    ->orWhereNull('is_active');
+                            });
                         })
                         ->get($roomPriceColumns);
 
@@ -4849,6 +5098,39 @@ Route::post('/booking/reserve', function (Request $request) {
 
     $checkin = Carbon::parse((string) $payload['checkin']);
     $checkout = Carbon::parse((string) $payload['checkout']);
+    $bookingStart = $checkin->copy()->startOfDay();
+    $bookingEndExclusive = $checkout->copy()->startOfDay();
+
+    $slotAvailability = workationSlotAvailabilityCheck(
+        (int) ($propertyRow->vendor_user_id ?? 0),
+        (int) ($propertyRow->id ?? 0),
+        $bookingStart,
+        $bookingEndExclusive,
+        1,
+        (int) ($roomRow->id ?? 0),
+        null,
+        'accommodation',
+        null
+    );
+
+    if (($slotAvailability['ok'] ?? true) !== true) {
+        $slotDate = (string) ($slotAvailability['date'] ?? 'selected dates');
+        return back()->withErrors(['booking' => 'This room is not available on ' . $slotDate . '. Please choose different dates.'])->withInput();
+    }
+
+    $overlapCount = workationOverlappingReservationCount(
+        (int) ($propertyRow->vendor_user_id ?? 0),
+        (int) ($propertyRow->id ?? 0),
+        $bookingStart,
+        $bookingEndExclusive,
+        (int) ($roomRow->id ?? 0),
+        null
+    );
+
+    if ($overlapCount > 0) {
+        return back()->withErrors(['booking' => 'This room is already reserved for the selected dates. Please choose another room or dates.'])->withInput();
+    }
+
     $nights = max(1, $checkin->diffInDays($checkout));
     $adults = (int) $payload['adults'];
     $children = (int) ($payload['children'] ?? 0);
@@ -5007,6 +5289,18 @@ Route::post('/booking/reserve', function (Request $request) {
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        workationReserveAvailabilitySlots(
+            (int) ($propertyRow->vendor_user_id ?? 0),
+            (int) ($propertyRow->id ?? 0),
+            $bookingStart,
+            $bookingEndExclusive,
+            1,
+            (int) ($roomRow->id ?? 0),
+            null,
+            'accommodation',
+            null
+        );
     }
 
     $checkoutUrl = '/booking/checkout'
@@ -5432,6 +5726,56 @@ Route::post('/booking/reserve-category', function (Request $request) {
     $serviceEnd = $serviceEndInput !== ''
         ? Carbon::parse($serviceEndInput)->startOfDay()
         : $serviceStart->copy();
+    $serviceEndExclusive = $serviceEnd->copy()->addDay()->startOfDay();
+
+    $routeName = '';
+    if (in_array($categoryKey, ['marine-transport', 'land-transport'], true)) {
+        $origin = trim((string) ($payload['origin_point'] ?? ''));
+        $destination = trim((string) ($payload['destination_point'] ?? ''));
+        if ($origin !== '' || $destination !== '') {
+            $routeName = trim($origin . ' -> ' . $destination);
+        }
+    }
+
+    $unitsRequested = match ($categoryKey) {
+        'accommodation' => max(1, (int) ($payload['rooms'] ?? 1)),
+        'conference_room' => max(1, (int) ($payload['expected_capacity'] ?? ($adults + $children))),
+        'marine-transport', 'land-transport', 'excursion', 'resort_day_visit', 'restaurant' => max(1, $adults + $children),
+        default => 1,
+    };
+
+    $slotAvailability = workationSlotAvailabilityCheck(
+        (int) ($propertyRow->vendor_user_id ?? 0),
+        (int) ($propertyRow->id ?? 0),
+        $serviceStart,
+        $serviceEndExclusive,
+        $unitsRequested,
+        null,
+        null,
+        str_replace('-', '_', $categoryKey),
+        $routeName !== '' ? $routeName : null
+    );
+
+    if (($slotAvailability['ok'] ?? true) !== true) {
+        $slotDate = (string) ($slotAvailability['date'] ?? 'selected dates');
+        return back()->withErrors(['booking' => 'This listing is not available on ' . $slotDate . '. Please choose different dates.'])->withInput();
+    }
+
+    $repeatableCategories = ['excursion', 'resort_day_visit'];
+    if (!in_array($categoryKey, $repeatableCategories, true)) {
+        $overlapCount = workationOverlappingReservationCount(
+            (int) ($propertyRow->vendor_user_id ?? 0),
+            (int) ($propertyRow->id ?? 0),
+            $serviceStart,
+            $serviceEndExclusive,
+            null,
+            null
+        );
+
+        if ($overlapCount > 0) {
+            return back()->withErrors(['booking' => 'This listing is already reserved for the selected dates. Please choose another date range.'])->withInput();
+        }
+    }
 
     $units = max(1, $serviceStart->diffInDays($serviceEnd) + 1);
     $adults = (int) $payload['adults'];
@@ -5593,6 +5937,18 @@ Route::post('/booking/reserve-category', function (Request $request) {
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        workationReserveAvailabilitySlots(
+            (int) ($propertyRow->vendor_user_id ?? 0),
+            (int) ($propertyRow->id ?? 0),
+            $serviceStart,
+            $serviceEndExclusive,
+            $unitsRequested,
+            null,
+            null,
+            str_replace('-', '_', $categoryKey),
+            $routeName !== '' ? $routeName : null
+        );
     }
 
     $checkoutUrl = '/booking/checkout'

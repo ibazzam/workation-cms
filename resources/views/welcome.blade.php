@@ -1327,7 +1327,7 @@
             background: #f8fcff;
             overflow: hidden;
             display: grid;
-            grid-template-rows: 220px auto;
+            grid-template-rows: 180px auto;
             transition: box-shadow 0.15s ease, border-color 0.15s ease;
         }
 
@@ -1339,7 +1339,7 @@
         .blog-teaser-media {
             overflow: hidden;
             width: 100%;
-            height: 220px;
+            height: 180px;
         }
 
         .blog-teaser-media img {
@@ -1355,9 +1355,9 @@
         }
 
         .blog-teaser-body {
-            padding: 12px 14px;
+            padding: 10px 12px;
             display: grid;
-            gap: 4px;
+            gap: 3px;
             align-content: start;
         }
 
@@ -1371,9 +1371,9 @@
 
         .blog-teaser-title {
             margin: 0;
-            font-size: 0.94rem;
+            font-size: 0.9rem;
             font-weight: 700;
-            line-height: 1.35;
+            line-height: 1.3;
             color: #15364e;
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -1393,9 +1393,9 @@
         }
 
         .blog-teaser-date {
-            font-size: 0.72rem;
+            font-size: 0.7rem;
             color: #7a96aa;
-            margin-top: 4px;
+            margin-top: 2px;
         }
 
         .blog-teaser-footer {
@@ -1424,7 +1424,7 @@
             color: #1b3f58;
             display: grid;
             overflow: hidden;
-            min-height: 300px;
+            min-height: 0;
             grid-template-rows: auto 1fr;
         }
 
@@ -1451,9 +1451,9 @@
         }
 
         .item-card-body {
-            padding: 10px;
+            padding: 9px;
             display: grid;
-            gap: 6px;
+            gap: 5px;
             align-content: start;
             background: #fbfdff;
         }
@@ -1510,9 +1510,9 @@
         }
 
         .item-card-price {
-            margin-top: 2px;
+            margin-top: 0;
             color: #0d2e44;
-            font-size: 0.88rem;
+            font-size: 0.84rem;
             font-weight: 700;
         }
 
@@ -2599,7 +2599,6 @@
                             : $postCoverSource;
                         $postTitle = (string) ($post->title ?? 'Read Article');
                         $postSlug = (string) ($post->slug ?? '');
-                        $postExcerpt = trim((string) ($post->excerpt ?? ''));
                         $postCategory = ucwords(str_replace('-', ' ', (string) ($post->blog_category_slug ?? 'travel')));
                         $postDate = optional($post->published_at ?? $post->created_at)->format('M j, Y') ?? '';
                         $blogTeaserFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22800%22 height=%22420%22 viewBox=%220 0 800 420%22%3E%3Crect width=%22800%22 height=%22420%22 fill=%22%23d7eaf5%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2224%22%3EBlog Image%3C%2Ftext%3E%3C%2Fsvg%3E";
@@ -2611,9 +2610,6 @@
                         <div class="blog-teaser-body">
                             <span class="blog-teaser-cat">{{ $postCategory }}</span>
                             <h3 class="blog-teaser-title">{{ $postTitle }}</h3>
-                            @if ($postExcerpt !== '')
-                                <p class="blog-teaser-excerpt">{{ $postExcerpt }}</p>
-                            @endif
                             @if ($postDate !== '')
                                 <span class="blog-teaser-date">{{ $postDate }}</span>
                             @endif

@@ -3148,6 +3148,7 @@
                 const pricingRoomInput = document.getElementById('pricing_room_id');
                 const availabilityForms = Array.from(document.querySelectorAll('[data-availability-form]'));
                 const transferRateForms = Array.from(document.querySelectorAll('[data-transfer-rate-form]'));
+                const availabilityCalendarByForm = new Map();
 
                 function categoryScopesFor(category) {
                     const normalized = normalizeCategoryKey(category);
@@ -3359,6 +3360,8 @@
                     if (routeInput && routeName !== '' && String(routeInput.value || '').trim() === '') {
                         routeInput.value = routeName;
                     }
+
+                    renderAvailabilityCalendar(form);
                 }
 
                 function parseTransferOptions(rawValue) {
@@ -3413,7 +3416,71 @@
 
                 availabilityForms.forEach((form) => {
                     const targetSelect = form.querySelector('[data-availability-target]');
-                    if (!targetSelect) return;
+                    const initialStates = parseAvailabilityCalendarStates(form);
+                    availabilityCalendarByForm.set(form, {
+                        states: initialStates,
+                        monthCursor: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+                        isSaving: false,
+                    });
+
+                    const calendarRoot = form.querySelector('[data-availability-calendar]');
+                    if (calendarRoot) {
+                        const prevButton = calendarRoot.querySelector('[data-calendar-nav="prev"]');
+                        const nextButton = calendarRoot.querySelector('[data-calendar-nav="next"]');
+                        const calendarGrid = calendarRoot.querySelector('[data-calendar-grid]');
+
+                        if (prevButton) {
+                            prevButton.addEventListener('click', function () {
+                                const calendarMeta = availabilityCalendarByForm.get(form);
+                                if (!calendarMeta) {
+                                    return;
+                                }
+                                calendarMeta.monthCursor = new Date(calendarMeta.monthCursor.getFullYear(), calendarMeta.monthCursor.getMonth() - 1, 1);
+                                renderAvailabilityCalendar(form);
+                            });
+                        }
+
+                        if (nextButton) {
+                            nextButton.addEventListener('click', function () {
+                                const calendarMeta = availabilityCalendarByForm.get(form);
+                                if (!calendarMeta) {
+                                    return;
+                                }
+                                calendarMeta.monthCursor = new Date(calendarMeta.monthCursor.getFullYear(), calendarMeta.monthCursor.getMonth() + 1, 1);
+                                renderAvailabilityCalendar(form);
+                            });
+                        }
+
+                        if (calendarGrid) {
+                            calendarGrid.addEventListener('click', function (event) {
+                                const dayButton = event.target instanceof Element
+                                    ? event.target.closest('[data-calendar-date]')
+                                    : null;
+                                if (!dayButton || !(dayButton instanceof HTMLButtonElement) || dayButton.disabled) {
+                                    return;
+                                }
+
+                                const dateKey = String(dayButton.getAttribute('data-calendar-date') || '').trim();
+                                if (dateKey === '') {
+                                    return;
+                                }
+
+                                const targetKey = selectedAvailabilityTargetKey(form);
+                                const dayState = dayStateForTarget(form, dateKey, targetKey);
+                                if (dayState.isBooked) {
+                                    return;
+                                }
+
+                                submitAvailabilityCalendarToggle(form, dateKey, !dayState.isClosed, dayState);
+                            });
+                        }
+                    }
+
+                    if (!targetSelect) {
+                        renderAvailabilityCalendar(form);
+                        return;
+                    }
+
                     targetSelect.addEventListener('change', function () {
                         applyAvailabilityTargetSelectionFor(form);
                     });
@@ -3456,6 +3523,7 @@
                     }
 
                     applyAvailabilityTargetSelectionFor(form);
+                    renderAvailabilityCalendar(form);
                 });
 
                 transferRateForms.forEach((form) => {
@@ -3512,6 +3580,235 @@
                     const month = String(now.getMonth() + 1).padStart(2, '0');
                     const day = String(now.getDate()).padStart(2, '0');
                     return year + '-' + month + '-' + day;
+                }
+
+                function isoFromDate(date) {
+                    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+                        return '';
+                    }
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return year + '-' + month + '-' + day;
+                }
+
+                function parseAvailabilityCalendarStates(form) {
+                    const jsonNode = form ? form.querySelector('[data-availability-calendar-state]') : null;
+                    if (!jsonNode) {
+                        return {};
+                    }
+                    try {
+                        const parsed = JSON.parse(String(jsonNode.textContent || '{}'));
+                        return parsed && typeof parsed === 'object' ? parsed : {};
+                    } catch (error) {
+                        console.warn('Failed to parse availability calendar payload', error);
+                        return {};
+                    }
+                }
+
+                function selectedAvailabilityTargetKey(form) {
+                    const targetSelect = form ? form.querySelector('[data-availability-target]') : null;
+                    const selectedValue = targetSelect ? String(targetSelect.value || '').trim() : '';
+                    return selectedValue !== '' ? selectedValue : '__generic__';
+                }
+
+                function normalizeCalendarDayState(rawState) {
+                    const inventory = Number(rawState && rawState.inventory ? rawState.inventory : 0);
+                    const reserved = Number(rawState && rawState.reserved ? rawState.reserved : 0);
+                    const isClosed = Boolean(rawState && rawState.is_closed);
+                    const hasBooking = Boolean(rawState && rawState.has_booking) || reserved > 0;
+                    const isFullyReserved = inventory > 0 && reserved >= inventory;
+                    return {
+                        inventory,
+                        reserved,
+                        isClosed,
+                        hasBooking,
+                        isBooked: hasBooking || isFullyReserved,
+                    };
+                }
+
+                function dayStateForTarget(form, dateKey, targetKey) {
+                    const calendarMeta = availabilityCalendarByForm.get(form);
+                    if (!calendarMeta || !calendarMeta.states || typeof calendarMeta.states !== 'object') {
+                        return normalizeCalendarDayState(null);
+                    }
+
+                    const targetStates = calendarMeta.states[targetKey] && typeof calendarMeta.states[targetKey] === 'object'
+                        ? calendarMeta.states[targetKey]
+                        : {};
+                    const genericStates = calendarMeta.states.__generic__ && typeof calendarMeta.states.__generic__ === 'object'
+                        ? calendarMeta.states.__generic__
+                        : {};
+                    const rawState = targetStates[dateKey] || (targetKey !== '__generic__' ? genericStates[dateKey] : null) || null;
+                    return normalizeCalendarDayState(rawState);
+                }
+
+                function renderAvailabilityCalendar(form) {
+                    if (!form) {
+                        return;
+                    }
+
+                    const calendarMeta = availabilityCalendarByForm.get(form);
+                    const calendarGrid = form.querySelector('[data-calendar-grid]');
+                    const monthLabel = form.querySelector('[data-calendar-month-label]');
+                    const calendarHint = form.querySelector('[data-calendar-hint]');
+                    if (!calendarMeta || !calendarGrid || !monthLabel) {
+                        return;
+                    }
+
+                    const targetSelect = form.querySelector('[data-availability-target]');
+                    const selectedTargetKey = selectedAvailabilityTargetKey(form);
+                    const isTargetSelected = targetSelect ? String(targetSelect.value || '').trim() !== '' : false;
+
+                    const listingCategoryInput = form.querySelector('input[name="listing_category"]');
+                    const listingCategory = String(listingCategoryInput ? listingCategoryInput.value : '').trim().toLowerCase();
+                    const requiresSpecificTarget = listingCategory === 'accommodation';
+
+                    if (calendarHint) {
+                        calendarHint.textContent = requiresSpecificTarget && !isTargetSelected
+                            ? 'Select a room first. Grey dates are already booked and locked.'
+                            : 'Click open/blocked dates to toggle. Booked days are disabled.';
+                    }
+
+                    const monthCursor = calendarMeta.monthCursor instanceof Date
+                        ? new Date(calendarMeta.monthCursor.getFullYear(), calendarMeta.monthCursor.getMonth(), 1)
+                        : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+                    calendarMeta.monthCursor = monthCursor;
+
+                    monthLabel.textContent = monthCursor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+                    const firstDayOfMonth = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
+                    const mondayOffset = (firstDayOfMonth.getDay() + 6) % 7;
+                    const firstGridDate = new Date(firstDayOfMonth);
+                    firstGridDate.setDate(firstGridDate.getDate() - mondayOffset);
+
+                    const today = todayIsoDate();
+                    calendarGrid.innerHTML = '';
+
+                    for (let idx = 0; idx < 42; idx += 1) {
+                        const dayDate = new Date(firstGridDate);
+                        dayDate.setDate(firstGridDate.getDate() + idx);
+                        const dateKey = isoFromDate(dayDate);
+                        const inCurrentMonth = dayDate.getMonth() === monthCursor.getMonth();
+                        const dayState = dayStateForTarget(form, dateKey, selectedTargetKey);
+
+                        const dayButton = document.createElement('button');
+                        dayButton.type = 'button';
+                        dayButton.className = 'availability-calendar-day';
+                        dayButton.setAttribute('data-calendar-date', dateKey);
+                        dayButton.textContent = String(dayDate.getDate());
+
+                        if (!inCurrentMonth) {
+                            dayButton.classList.add('is-outside');
+                        }
+                        if (dateKey === today) {
+                            dayButton.classList.add('is-today');
+                        }
+                        if (dayState.isBooked) {
+                            dayButton.classList.add('is-booked');
+                            dayButton.disabled = true;
+                        } else if (dayState.isClosed) {
+                            dayButton.classList.add('is-blocked');
+                        } else {
+                            dayButton.classList.add('is-open');
+                        }
+
+                        if (requiresSpecificTarget && !isTargetSelected) {
+                            dayButton.disabled = true;
+                            dayButton.classList.add('is-disabled-target');
+                        }
+
+                        const titleParts = [dateKey];
+                        titleParts.push(dayState.isBooked ? 'Booked' : (dayState.isClosed ? 'Blocked' : 'Open'));
+                        titleParts.push('Inventory: ' + dayState.inventory);
+                        titleParts.push('Reserved: ' + dayState.reserved);
+                        dayButton.title = titleParts.join(' | ');
+
+                        calendarGrid.appendChild(dayButton);
+                    }
+                }
+
+                async function submitAvailabilityCalendarToggle(form, dateKey, shouldClose, currentState) {
+                    if (!form || !dateKey) {
+                        return;
+                    }
+
+                    const listingCategoryInput = form.querySelector('input[name="listing_category"]');
+                    const listingCategory = String(listingCategoryInput ? listingCategoryInput.value : '').trim().toLowerCase();
+                    const roomInput = form.querySelector('[data-availability-role="room"]');
+                    if (listingCategory === 'accommodation' && String(roomInput ? roomInput.value : '').trim() === '') {
+                        window.alert('Select a room first before editing accommodation dates.');
+                        return;
+                    }
+
+                    const calendarMeta = availabilityCalendarByForm.get(form);
+                    if (!calendarMeta || calendarMeta.isSaving) {
+                        return;
+                    }
+                    calendarMeta.isSaving = true;
+
+                    const inventoryInput = form.querySelector('input[name="inventory"]');
+                    const parsedInventory = Number(currentState && Number.isFinite(currentState.inventory)
+                        ? currentState.inventory
+                        : Number(inventoryInput ? inventoryInput.value : 0));
+                    const nextInventory = shouldClose
+                        ? Math.max(0, Number.isFinite(parsedInventory) ? parsedInventory : 0)
+                        : Math.max(1, Number.isFinite(parsedInventory) ? parsedInventory : 1);
+
+                    const dateInput = form.querySelector('input[name="slot_date"]');
+                    const rangeFromInput = form.querySelector('input[name="apply_range_from"]');
+                    const rangeToInput = form.querySelector('input[name="apply_range_to"]');
+                    const scheduleProfileInput = form.querySelector('select[name="schedule_profile"]');
+                    const closedSelect = form.querySelector('select[name="is_closed"]');
+                    if (inventoryInput) inventoryInput.value = String(nextInventory);
+                    if (dateInput) dateInput.value = dateKey;
+                    if (rangeFromInput) rangeFromInput.value = dateKey;
+                    if (rangeToInput) rangeToInput.value = dateKey;
+                    if (scheduleProfileInput) scheduleProfileInput.value = 'one_off';
+                    if (closedSelect) closedSelect.value = shouldClose ? '1' : '0';
+
+                    const formData = new FormData(form);
+                    formData.set('slot_date', dateKey);
+                    formData.set('apply_range_from', dateKey);
+                    formData.set('apply_range_to', dateKey);
+                    formData.set('schedule_profile', 'one_off');
+                    formData.set('inventory', String(nextInventory));
+                    formData.set('is_closed', shouldClose ? '1' : '0');
+
+                    const csrfToken = String(formData.get('_token') || '');
+                    try {
+                        const response = await fetch(String(form.getAttribute('action') || '/portal/vendor/availability/save'), {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': csrfToken,
+                            },
+                            body: formData,
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Update failed with status ' + response.status);
+                        }
+
+                        const targetKey = selectedAvailabilityTargetKey(form);
+                        if (!calendarMeta.states[targetKey] || typeof calendarMeta.states[targetKey] !== 'object') {
+                            calendarMeta.states[targetKey] = {};
+                        }
+                        const existingRaw = calendarMeta.states[targetKey][dateKey] || {};
+                        calendarMeta.states[targetKey][dateKey] = {
+                            inventory: nextInventory,
+                            reserved: Number(existingRaw.reserved || 0),
+                            is_closed: shouldClose,
+                            has_booking: Boolean(existingRaw.has_booking),
+                        };
+                    } catch (error) {
+                        console.error('Unable to save availability update', error);
+                        window.alert('Could not save this availability change. Please try again.');
+                    } finally {
+                        calendarMeta.isSaving = false;
+                        renderAvailabilityCalendar(form);
+                    }
                 }
 
                 document.querySelectorAll('[data-availability-pick-target]').forEach((button) => {

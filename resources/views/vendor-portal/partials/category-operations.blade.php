@@ -222,8 +222,10 @@
                 }
 
                 $reservationRowsByCategory = [];
+                $reservationDailyCountsByCategory = [];
                 foreach ($allVendorCategoryKeys as $categoryKey) {
                     $reservationRowsByCategory[$categoryKey] = collect();
+                    $reservationDailyCountsByCategory[$categoryKey] = [];
                 }
 
                 foreach ($vendorReservations as $reservation) {
@@ -266,26 +268,66 @@
                     }
 
                     $reservationTargetLabel = 'Global / Unlinked';
+                    $reservationTargetValue = '';
                     if ($reservationRoomId > 0) {
                         $roomItem = $roomById->get($reservationRoomId);
                         $reservationTargetLabel = $roomItem instanceof \stdClass
                             ? ('Room #' . $reservationRoomId . ' - ' . (string) ($roomItem->name ?? ('Room ' . $reservationRoomId)))
                             : ('Room #' . $reservationRoomId);
+                        $reservationTargetValue = 'room:' . $reservationRoomId;
                     } elseif ($reservationServiceId > 0) {
                         $serviceItem = $serviceById->get($reservationServiceId);
                         $reservationTargetLabel = $serviceItem instanceof \stdClass
                             ? ('Service #' . $reservationServiceId . ' - ' . (string) ($serviceItem->name ?? ('Service ' . $reservationServiceId)))
                             : ('Service #' . $reservationServiceId);
+                        $reservationTargetValue = 'service:' . $reservationServiceId;
                     } elseif ($reservationPropertyId > 0) {
                         $propertyItem = $propertyById->get($reservationPropertyId);
                         $reservationTargetLabel = $propertyItem instanceof \stdClass
                             ? ('Property #' . $reservationPropertyId . ' - ' . (string) ($propertyItem->name ?? ('Property ' . $reservationPropertyId)))
                             : ('Property #' . $reservationPropertyId);
+                        $reservationTargetValue = 'property:' . $reservationPropertyId;
+                    }
+
+                    $startDay = null;
+                    $endDay = null;
+                    try {
+                        $startDay = (new \DateTimeImmutable((string) ($reservation->start_at ?? '')))->setTime(0, 0);
+                    } catch (\Exception $ignored) {
+                        $startDay = null;
+                    }
+                    try {
+                        $endDay = (new \DateTimeImmutable((string) ($reservation->end_at ?? '')))->setTime(0, 0);
+                    } catch (\Exception $ignored) {
+                        $endDay = null;
+                    }
+
+                    if ($startDay instanceof \DateTimeImmutable) {
+                        $lastDay = $startDay;
+                        if ($endDay instanceof \DateTimeImmutable && $endDay > $startDay) {
+                            $lastDay = $endDay->sub(new \DateInterval('P1D'));
+                        }
+
+                        $targetKey = $reservationTargetValue !== '' ? $reservationTargetValue : '__generic__';
+                        $cursor = $startDay;
+                        $guard = 0;
+                        while ($cursor <= $lastDay && $guard < 370) {
+                            $dateKey = $cursor->format('Y-m-d');
+                            if (!isset($reservationDailyCountsByCategory[$reservationCategory][$targetKey])) {
+                                $reservationDailyCountsByCategory[$reservationCategory][$targetKey] = [];
+                            }
+                            $reservationDailyCountsByCategory[$reservationCategory][$targetKey][$dateKey] =
+                                (int) ($reservationDailyCountsByCategory[$reservationCategory][$targetKey][$dateKey] ?? 0) + 1;
+
+                            $cursor = $cursor->add(new \DateInterval('P1D'));
+                            $guard++;
+                        }
                     }
 
                     $reservationRowsByCategory[$reservationCategory]->push([
                         'id' => (int) ($reservation->id ?? 0),
                         'target_label' => $reservationTargetLabel,
+                        'target_value' => $reservationTargetValue,
                         'customer_name' => (string) ($reservation->customer_name ?? ''),
                         'customer_email' => (string) ($reservation->customer_email ?? ''),
                         'start_at' => (string) ($reservation->start_at ?? ''),
@@ -302,6 +344,54 @@
                         'cgst_total' => (float) ($reservation->cgst_total ?? 0),
                         'room_pricing' => $roomPricingBreakdown,
                     ]);
+                }
+
+                $calendarStateByCategory = [];
+                foreach ($allVendorCategoryKeys as $categoryKey) {
+                    $calendarStateByCategory[$categoryKey] = [];
+
+                    $categorySlots = $availabilityRowsByCategory[$categoryKey] ?? collect();
+                    foreach ($categorySlots as $slotRow) {
+                        $dateKey = (string) ($slotRow['slot_date'] ?? '');
+                        if ($dateKey === '') {
+                            continue;
+                        }
+
+                        $targetKey = (string) ($slotRow['target_value'] ?? '');
+                        if ($targetKey === '') {
+                            $targetKey = '__generic__';
+                        }
+
+                        if (!isset($calendarStateByCategory[$categoryKey][$targetKey])) {
+                            $calendarStateByCategory[$categoryKey][$targetKey] = [];
+                        }
+
+                        $calendarStateByCategory[$categoryKey][$targetKey][$dateKey] = [
+                            'inventory' => (int) ($slotRow['inventory'] ?? 0),
+                            'reserved' => (int) ($slotRow['reserved_count'] ?? 0),
+                            'is_closed' => (bool) ($slotRow['is_closed'] ?? false),
+                            'has_booking' => false,
+                        ];
+                    }
+
+                    $reservationCountsForCategory = $reservationDailyCountsByCategory[$categoryKey] ?? [];
+                    foreach ($reservationCountsForCategory as $targetKey => $dateCounts) {
+                        if (!isset($calendarStateByCategory[$categoryKey][$targetKey])) {
+                            $calendarStateByCategory[$categoryKey][$targetKey] = [];
+                        }
+                        foreach ($dateCounts as $dateKey => $reservationCount) {
+                            $existing = $calendarStateByCategory[$categoryKey][$targetKey][$dateKey] ?? [
+                                'inventory' => 0,
+                                'reserved' => 0,
+                                'is_closed' => false,
+                                'has_booking' => false,
+                            ];
+
+                            $existing['reserved'] = max((int) ($existing['reserved'] ?? 0), (int) $reservationCount);
+                            $existing['has_booking'] = ((int) $reservationCount > 0) || (bool) ($existing['has_booking'] ?? false);
+                            $calendarStateByCategory[$categoryKey][$targetKey][$dateKey] = $existing;
+                        }
+                    }
                 }
             @endphp
 
@@ -429,11 +519,35 @@
                         <div class="ops-grid">
                             <form class="ops-form" method="POST" action="/portal/vendor/availability/save" data-availability-form="{{ $categoryKey }}">
                                 @csrf
+                                <script type="application/json" data-availability-calendar-state>
+                                    @json($calendarStateByCategory[$categoryKey] ?? [])
+                                </script>
                                 <input type="hidden" name="listing_category" value="{{ $categoryKey }}">
                                 <input type="hidden" name="vendor_property_id" value="" data-availability-role="property">
                                 <input type="hidden" name="vendor_service_id" value="" data-availability-role="service">
                                 <input type="hidden" name="vendor_room_category_id" value="" data-availability-role="room">
                                 <div class="ops-form-grid">
+                                    <div class="ops-field ops-field-wide">
+                                        <label>Visual Calendar (click dates to block/unblock)</label>
+                                        <div class="availability-calendar" data-availability-calendar>
+                                            <div class="availability-calendar-toolbar">
+                                                <button type="button" class="availability-calendar-nav" data-calendar-nav="prev" aria-label="Previous month">&lt;</button>
+                                                <strong data-calendar-month-label>Month</strong>
+                                                <button type="button" class="availability-calendar-nav" data-calendar-nav="next" aria-label="Next month">&gt;</button>
+                                            </div>
+                                            <div class="availability-calendar-legend">
+                                                <span class="availability-calendar-pill is-open">Open</span>
+                                                <span class="availability-calendar-pill is-blocked">Blocked</span>
+                                                <span class="availability-calendar-pill is-booked">Booked</span>
+                                                <span class="availability-calendar-pill is-selected">Today</span>
+                                            </div>
+                                            <div class="availability-calendar-weekdays" aria-hidden="true">
+                                                <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                                            </div>
+                                            <div class="availability-calendar-grid" data-calendar-grid></div>
+                                            <p class="small" data-calendar-hint>Select listing/room above. Grey dates are already booked and cannot be edited.</p>
+                                        </div>
+                                    </div>
                                     <div class="ops-field ops-field-wide">
                                         <label for="availability_target_{{ $categorySlug }}">Listing / Product / Room</label>
                                         <select id="availability_target_{{ $categorySlug }}" class="ops-select" data-availability-target>

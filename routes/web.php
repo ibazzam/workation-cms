@@ -2071,11 +2071,6 @@ Route::get('/', function () {
 
             $normalizeHomeCategoryKey = static fn (?string $value): string => str_replace('-', '_', strtolower(trim((string) $value)));
 
-            $categorySamples = $allProperties
-                ->filter(static fn ($property) => trim((string) ($property->listing_category ?? '')) !== '')
-                ->groupBy(static fn ($property) => $normalizeHomeCategoryKey((string) ($property->listing_category ?? ''))
-                )->map(static fn ($group) => $group->first());
-
             $homeCategoryPriceBucket = static function ($property): string {
                 $category = str_replace('-', '_', strtolower(trim((string) ($property->listing_category ?? ''))));
                 if (in_array($category, ['marine_transport', 'land_transport'], true)) {
@@ -2114,6 +2109,11 @@ Route::get('/', function () {
 
                 return $category;
             };
+
+            $categorySamples = $allProperties
+                ->filter(static fn ($property) => trim((string) ($property->listing_category ?? '')) !== '')
+                ->groupBy(static fn ($property) => $homeCategoryPriceBucket($property))
+                ->map(static fn ($group) => $group->first());
 
             $categoryMinPriceRows = $allProperties
                 ->map(static function ($property) use ($homeCategoryPriceBucket) {

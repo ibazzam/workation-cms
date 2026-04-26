@@ -2468,7 +2468,7 @@
                     const scope = String(field.getAttribute('data-property-edit-scope') || '').trim().toLowerCase();
                     const shouldShow = scope !== '' && activeScopes.includes(scope);
                     field.hidden = !shouldShow;
-                    field.style.display = shouldShow ? '' : 'none';
+                    field.style.display = shouldShow ? 'revert' : 'none';
                     if ('disabled' in field) {
                         field.disabled = !shouldShow;
                     }
@@ -2565,7 +2565,17 @@
                     return;
                 }
                 const mapEl = document.getElementById('editPropertyMap_' + propertyId);
-                if (!mapEl || mapEl.dataset.mapReady === '1') {
+                if (!mapEl) {
+                    return;
+                }
+
+                if (mapEl.dataset.mapReady === '1') {
+                    const existingMap = mapEl._workationLeafletMap;
+                    if (existingMap && typeof existingMap.invalidateSize === 'function') {
+                        setTimeout(function () {
+                            existingMap.invalidateSize();
+                        }, 180);
+                    }
                     return;
                 }
 
@@ -2617,6 +2627,7 @@
                     updatePin(marker.getLatLng());
                 });
 
+                mapEl._workationLeafletMap = map;
                 mapEl.dataset.mapReady = '1';
                 setTimeout(function () {
                     map.invalidateSize();

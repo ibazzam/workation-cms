@@ -674,11 +674,8 @@
                                     <input type="hidden" name="route_name" value="" data-availability-role="route">
                                 </div>
                                 <button class="btn btn-primary" type="submit">Apply Block / Unblock</button>
+                                <p class="small availability-inline-note">Transfer and tariff changes are managed from <a href="#vendorPricingSection">Pricing Rules</a>.</p>
                             </form>
-                            <div class="ops-form" aria-live="polite">
-                                <p class="label">Pricing & Tariffs</p>
-                                <p class="small" style="margin:0;">Transfer and tariff changes are managed from <a href="#vendorPricingSection">Pricing Rules</a> to keep this page focused on reservations and availability blocking.</p>
-                            </div>
 
                             @if ($categoryKey === 'transport')
                                 <form class="ops-form" method="POST" action="/portal/vendor/transport/tariff/save">

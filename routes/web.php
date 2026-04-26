@@ -1076,7 +1076,11 @@ if (!function_exists('vendorMediaStorageUrlFromPath')) {
             return null;
         }
 
-        if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
+        if (str_starts_with($normalized, 'http://')) {
+            return 'https://' . ltrim(substr($normalized, 7), '/');
+        }
+
+        if (str_starts_with($normalized, 'https://')) {
             return $normalized;
         }
 
@@ -1437,6 +1441,32 @@ Route::get('/', function () {
 
     $homeTrendingCards = $applyHomeDestinationImages($homeTrendingCards);
     $homeLovedCards = $applyHomeDestinationImages($homeLovedCards);
+
+    $homeDefaultDestinationImages = array_values(array_filter($homeCuratedDestinationImages, static fn ($img) => is_string($img) && trim($img) !== ''));
+    $applyHomeImageSafetyFallback = static function ($cards) use ($homeDefaultDestinationImages) {
+        return collect($cards)->values()->map(static function ($card, $index) use ($homeDefaultDestinationImages) {
+            if (!is_array($card)) {
+                return $card;
+            }
+
+            $primary = trim((string) ($card['image_url'] ?? ''));
+            $fallback = trim((string) ($card['fallback_image_url'] ?? ''));
+            if ($primary !== '' || $fallback !== '' || empty($homeDefaultDestinationImages)) {
+                return $card;
+            }
+
+            $safeImage = (string) ($homeDefaultDestinationImages[$index % count($homeDefaultDestinationImages)] ?? '');
+            if ($safeImage !== '') {
+                $card['image_url'] = $safeImage;
+                $card['fallback_image_url'] = $safeImage;
+            }
+
+            return $card;
+        });
+    };
+
+    $homeTrendingCards = $applyHomeImageSafetyFallback($homeTrendingCards);
+    $homeLovedCards = $applyHomeImageSafetyFallback($homeLovedCards);
 
     $homeListingMediaByProperty = collect();
     $homeTransportDestinationOptions = collect();
@@ -1917,6 +1947,7 @@ Route::get('/', function () {
                 ->values();
 
             $homeTrendingCards = $applyHomeDestinationImages($homeTrendingCards);
+            $homeTrendingCards = $applyHomeImageSafetyFallback($homeTrendingCards);
         }
 
         $priceSorted = $allProperties
@@ -1988,6 +2019,7 @@ Route::get('/', function () {
                 }
 
                 $homeLovedCards = $applyHomeDestinationImages($homeLovedCards);
+                $homeLovedCards = $applyHomeImageSafetyFallback($homeLovedCards);
             }
         }
     }
@@ -6343,6 +6375,11 @@ SVG;
     }
 
     if ($resolvedBinary === null) {
+        $directUrl = vendorMediaStorageUrlFromPath($originalPath);
+        if (is_string($directUrl) && trim($directUrl) !== '' && !str_starts_with($directUrl, '/media/')) {
+            return redirect()->away($directUrl, 302);
+        }
+
         return $placeholderResponse();
     }
 

@@ -313,6 +313,10 @@ if (!function_exists('vendorPortalSyncCategoryListingRecord')) {
             ['vendor_property_id' => $vendorPropertyId],
             array_merge($payload, ['created_at' => now()])
         );
+
+        if ($listingCategory === 'accommodation' && function_exists('vendorPortalSyncAccommodationStructuredData')) {
+            vendorPortalSyncAccommodationStructuredData($vendorPropertyId, $vendorUserId, $details);
+        }
     }
 }
 
@@ -366,6 +370,10 @@ if (!function_exists('vendorPortalCreateCategoryListingRecord')) {
         // canonical vendor_property_id used across all related tables.
         DB::table($tableName)->where('id', $newId)->update(['vendor_property_id' => $newId]);
 
+        if ($listingCategory === 'accommodation' && function_exists('vendorPortalSyncAccommodationStructuredData')) {
+            vendorPortalSyncAccommodationStructuredData($newId, $vendorUserId, $details);
+        }
+
         return $newId;
     }
 }
@@ -381,6 +389,154 @@ if (!function_exists('vendorPortalDeleteCategoryListingRecord')) {
         DB::table($tableName)
             ->where('vendor_property_id', $vendorPropertyId)
             ->delete();
+
+        if ($listingCategory === 'accommodation') {
+            if (Schema::hasTable('vendor_accommodation_transfer_rates')) {
+                DB::table('vendor_accommodation_transfer_rates')
+                    ->where('vendor_property_id', $vendorPropertyId)
+                    ->delete();
+            }
+            if (Schema::hasTable('vendor_accommodation_features')) {
+                DB::table('vendor_accommodation_features')
+                    ->where('vendor_property_id', $vendorPropertyId)
+                    ->delete();
+            }
+            if (Schema::hasTable('vendor_accommodation_policies')) {
+                DB::table('vendor_accommodation_policies')
+                    ->where('vendor_property_id', $vendorPropertyId)
+                    ->delete();
+            }
+        }
+    }
+}
+
+if (!function_exists('vendorPortalSyncAccommodationStructuredData')) {
+    function vendorPortalSyncAccommodationStructuredData(int $vendorPropertyId, int $vendorUserId, array $details): void
+    {
+        if ($vendorPropertyId <= 0 || $vendorUserId <= 0) {
+            return;
+        }
+
+        $transferOptions = collect(is_array($details['transfer_options'] ?? null) ? $details['transfer_options'] : [])
+            ->map(static fn ($item): string => strtolower(trim((string) $item)))
+            ->filter(static fn (string $item): bool => $item !== '')
+            ->unique()
+            ->values()
+            ->all();
+        $transferRates = is_array($details['transfer_rates'] ?? null) ? $details['transfer_rates'] : [];
+        $transferRateMatrix = is_array($details['transfer_rate_matrix'] ?? null) ? $details['transfer_rate_matrix'] : [];
+        $baseLocal = isset($details['transfer_base_local']) && is_numeric($details['transfer_base_local'])
+            ? max(0, (float) $details['transfer_base_local'])
+            : 0.0;
+        $baseForeign = isset($details['transfer_base_foreign']) && is_numeric($details['transfer_base_foreign'])
+            ? max(0, (float) $details['transfer_base_foreign'])
+            : 0.0;
+
+        if (Schema::hasTable('vendor_accommodation_transfer_rates')) {
+            DB::table('vendor_accommodation_transfer_rates')
+                ->where('vendor_property_id', $vendorPropertyId)
+                ->delete();
+
+            foreach ($transferOptions as $transferMode) {
+                $modeMatrix = is_array($transferRateMatrix[$transferMode] ?? null)
+                    ? $transferRateMatrix[$transferMode]
+                    : [];
+
+                $localAdult = isset($modeMatrix['local_adult_charge']) && is_numeric($modeMatrix['local_adult_charge'])
+                    ? (float) $modeMatrix['local_adult_charge']
+                    : 0.0;
+                $localChild = isset($modeMatrix['local_child_charge']) && is_numeric($modeMatrix['local_child_charge'])
+                    ? (float) $modeMatrix['local_child_charge']
+                    : 0.0;
+                $foreignAdult = isset($modeMatrix['foreign_adult_charge']) && is_numeric($modeMatrix['foreign_adult_charge'])
+                    ? (float) $modeMatrix['foreign_adult_charge']
+                    : (isset($transferRates[$transferMode]) && is_numeric($transferRates[$transferMode]) ? (float) $transferRates[$transferMode] : 0.0);
+                $foreignChild = isset($modeMatrix['foreign_child_charge']) && is_numeric($modeMatrix['foreign_child_charge'])
+                    ? (float) $modeMatrix['foreign_child_charge']
+                    : 0.0;
+
+                $rows = [
+                    ['resident_type' => 'local', 'passenger_type' => 'adult', 'rate' => $localAdult, 'base_charge' => $baseLocal],
+                    ['resident_type' => 'local', 'passenger_type' => 'child', 'rate' => $localChild, 'base_charge' => $baseLocal],
+                    ['resident_type' => 'foreigner', 'passenger_type' => 'adult', 'rate' => $foreignAdult, 'base_charge' => $baseForeign],
+                    ['resident_type' => 'foreigner', 'passenger_type' => 'child', 'rate' => $foreignChild, 'base_charge' => $baseForeign],
+                ];
+
+                foreach ($rows as $item) {
+                    DB::table('vendor_accommodation_transfer_rates')->insert([
+                        'vendor_property_id' => $vendorPropertyId,
+                        'transfer_mode' => $transferMode,
+                        'resident_type' => (string) $item['resident_type'],
+                        'passenger_type' => (string) $item['passenger_type'],
+                        'rate' => round(max(0, (float) $item['rate']), 2),
+                        'base_charge' => round(max(0, (float) $item['base_charge']), 2),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+        }
+
+        if (Schema::hasTable('vendor_accommodation_features')) {
+            DB::table('vendor_accommodation_features')
+                ->where('vendor_property_id', $vendorPropertyId)
+                ->delete();
+
+            $amenities = collect(is_array($details['property_amenities'] ?? null) ? $details['property_amenities'] : [])
+                ->map(static fn ($item): string => trim((string) $item))
+                ->filter(static fn (string $item): bool => $item !== '')
+                ->unique()
+                ->values()
+                ->all();
+            foreach ($amenities as $amenityKey) {
+                DB::table('vendor_accommodation_features')->insert([
+                    'vendor_property_id' => $vendorPropertyId,
+                    'feature_type' => 'amenity',
+                    'feature_key' => $amenityKey,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            $facilities = collect(is_array($details['property_features'] ?? null) ? $details['property_features'] : [])
+                ->map(static fn ($item): string => trim((string) $item))
+                ->filter(static fn (string $item): bool => $item !== '')
+                ->unique()
+                ->values()
+                ->all();
+            foreach ($facilities as $facilityKey) {
+                DB::table('vendor_accommodation_features')->insert([
+                    'vendor_property_id' => $vendorPropertyId,
+                    'feature_type' => 'facility',
+                    'feature_key' => $facilityKey,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+
+        if (Schema::hasTable('vendor_accommodation_policies')) {
+            DB::table('vendor_accommodation_policies')->updateOrInsert(
+                ['vendor_property_id' => $vendorPropertyId],
+                [
+                    'check_in_time' => trim((string) ($details['check_in_time'] ?? '')) ?: null,
+                    'check_out_time' => trim((string) ($details['check_out_time'] ?? '')) ?: null,
+                    'check_in_grace_minutes' => isset($details['check_in_grace_minutes']) && is_numeric($details['check_in_grace_minutes']) ? (int) $details['check_in_grace_minutes'] : null,
+                    'early_check_in_allowed' => trim((string) ($details['early_check_in_allowed'] ?? '')) ?: null,
+                    'late_check_out_allowed' => trim((string) ($details['late_check_out_allowed'] ?? '')) ?: null,
+                    'minimum_nights' => isset($details['minimum_nights']) && is_numeric($details['minimum_nights']) ? (int) $details['minimum_nights'] : null,
+                    'house_rules' => trim((string) ($details['house_rules'] ?? '')) ?: null,
+                    'child_policy' => trim((string) ($details['child_policy'] ?? '')) ?: null,
+                    'cancellation_policy' => trim((string) ($details['cancellation_policy'] ?? '')) ?: null,
+                    'early_check_in_fee' => isset($details['early_check_in_fee']) && is_numeric($details['early_check_in_fee']) ? round((float) $details['early_check_in_fee'], 2) : null,
+                    'late_check_out_fee' => isset($details['late_check_out_fee']) && is_numeric($details['late_check_out_fee']) ? round((float) $details['late_check_out_fee'], 2) : null,
+                    'property_type' => trim((string) ($details['property_type'] ?? '')) ?: null,
+                    'star_rating' => isset($details['star_rating']) && is_numeric($details['star_rating']) ? (int) $details['star_rating'] : null,
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ]
+            );
+        }
     }
 }
 
@@ -803,7 +959,7 @@ if (!function_exists('vendorPortalListingsBackResponse')) {
     {
         $normalizedStep = max(1, min(4, $wizardStep));
 
-        $response = back()
+        $response = redirect('/vendor-portal?page=listings#listings')
             ->with('portal_notice', $message)
             ->with('portal_active_panel', 'listings')
             ->with('listing_wizard_step', $normalizedStep);
@@ -3853,7 +4009,10 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         );
     });
 
-    return vendorPortalListingsBackResponse('Property/service listing added.', 2);
+    return vendorPortalListingsBackResponse('Property/service listing added.', 2, [
+        'portal_listing_mode' => 'manage',
+        'portal_listing_category' => (string) $canonicalListingCategory,
+    ]);
 });
 
 Route::post('/portal/vendor/properties/{property}/update', function (Request $request, int $property) {
@@ -4116,7 +4275,10 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         }
     });
 
-    return vendorPortalListingsBackResponse('Property listing updated.', 2);
+    return vendorPortalListingsBackResponse('Property listing updated.', 2, [
+        'portal_listing_mode' => 'manage',
+        'portal_listing_category' => (string) ($canonicalListingCategory ?? ''),
+    ]);
 });
 
 Route::post('/portal/vendor/properties/{property}/delete', function (int $property) {
@@ -4606,6 +4768,9 @@ Route::post('/portal/vendor/transfer/rates/save', function (Request $request) {
     $currentTransferRates = is_array($details['transfer_rates'] ?? null)
         ? $details['transfer_rates']
         : [];
+    $currentTransferRateMatrix = is_array($details['transfer_rate_matrix'] ?? null)
+        ? $details['transfer_rate_matrix']
+        : [];
 
     foreach ($submittedTransferOptions as $transferOption) {
         $candidateRate = $submittedTransferRates[$transferOption] ?? null;
@@ -4614,12 +4779,27 @@ Route::post('/portal/vendor/transfer/rates/save', function (Request $request) {
         }
 
         $currentTransferRates[$transferOption] = round((float) $candidateRate, 2);
+
+        $existingMatrix = is_array($currentTransferRateMatrix[$transferOption] ?? null)
+            ? $currentTransferRateMatrix[$transferOption]
+            : [];
+        $currentTransferRateMatrix[$transferOption] = [
+            'local_adult_charge' => max(0, (float) ($existingMatrix['local_adult_charge'] ?? 0)),
+            'local_child_charge' => max(0, (float) ($existingMatrix['local_child_charge'] ?? 0)),
+            // Operations-level transfer update is a single per-pax rate.
+            // Keep local matrix values untouched and sync the foreign adult value shown on property pages.
+            'foreign_adult_charge' => round((float) $candidateRate, 2),
+            'foreign_child_charge' => max(0, (float) ($existingMatrix['foreign_child_charge'] ?? 0)),
+            'base_charge_local' => max(0, (float) ($existingMatrix['base_charge_local'] ?? ($details['transfer_base_local'] ?? 0))),
+            'base_charge_foreign' => max(0, (float) ($existingMatrix['base_charge_foreign'] ?? ($details['transfer_base_foreign'] ?? 0))),
+        ];
     }
 
     $details['listing_category'] = $listingCategory;
     $details['transfer_pricing_basis'] = 'per_pax';
     $details['transfer_options'] = array_values(array_unique($configuredTransferOptions));
     $details['transfer_rates'] = $currentTransferRates;
+    $details['transfer_rate_matrix'] = $currentTransferRateMatrix;
 
     $tableName = vendorPortalCategoryStorageTable($listingCategory);
     if ($tableName !== null && Schema::hasTable($tableName)) {
@@ -4627,6 +4807,10 @@ Route::post('/portal/vendor/transfer/rates/save', function (Request $request) {
             ->where('vendor_property_id', (int) $validated['vendor_property_id'])
             ->where('vendor_user_id', $vendorUserId)
             ->update(['details' => json_encode($details), 'updated_at' => now()]);
+    }
+
+    if ($listingCategory === 'accommodation' && function_exists('vendorPortalSyncAccommodationStructuredData')) {
+        vendorPortalSyncAccommodationStructuredData((int) $validated['vendor_property_id'], $vendorUserId, $details);
     }
 
     return back()->with('portal_notice', 'Transfer rates updated for availability and bookings.');

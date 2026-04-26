@@ -1490,12 +1490,20 @@ Route::get('/', function () {
                 'male' => 'male_city',
                 'malecity' => 'male_city',
                 'male_city' => 'male_city',
+                'male_city_maldives' => 'male_city',
+                'male_maldives' => 'male_city',
+                'maldives_male_city' => 'male_city',
+                'male_city_kaafu' => 'male_city',
                 'male_town' => 'male_city',
                 'male_capital' => 'male_city',
             ];
 
             if (array_key_exists($normalized, $aliases)) {
                 return $aliases[$normalized];
+            }
+
+            if (str_contains($normalized, 'male_city') || $normalized === 'male_city') {
+                return 'male_city';
             }
 
             return $normalized;
@@ -2070,7 +2078,21 @@ Route::get('/', function () {
 
             $homeCategoryPriceBucket = static function ($property): string {
                 $category = str_replace('-', '_', strtolower(trim((string) ($property->listing_category ?? ''))));
+                if (in_array($category, ['marine_transport', 'land_transport'], true)) {
+                    return $category;
+                }
+
                 $transportMode = strtolower(trim((string) ($property->transport_mode ?? '')));
+                if ($transportMode === '') {
+                    $decodedDetails = null;
+                    if (isset($property->listing_details) && is_string($property->listing_details) && trim((string) $property->listing_details) !== '') {
+                        $decoded = json_decode((string) $property->listing_details, true);
+                        $decodedDetails = is_array($decoded) ? $decoded : null;
+                    }
+                    if (is_array($decodedDetails)) {
+                        $transportMode = strtolower(trim((string) ($decodedDetails['transport_mode'] ?? '')));
+                    }
+                }
                 $name = strtolower(trim((string) ($property->name ?? '')));
                 $metaText = trim($transportMode . ' ' . $name);
 
@@ -2193,11 +2215,7 @@ Route::get('/', function () {
                     $card['subtitle'] = $location;
                 }
 
-                $samplePrice = (float) ($sample->base_price ?? 0);
-                if ($samplePrice > 0) {
-                    $sampleCurrency = strtoupper(trim((string) ($sample->currency ?? 'MVR')));
-                    $card['price_label'] = $sampleCurrency . ' ' . number_format($samplePrice, 2);
-                }
+                unset($card['price_label']);
 
                 $priceSource = null;
                 if ($categoryHint === 'accommodation' && ($card['title'] ?? '') === 'Deals Zone' && is_array($globalMinPriceRow)) {
@@ -4751,6 +4769,119 @@ Route::get('/property/{property}', function (Request $request, int $property) {
         $details = [];
     }
 
+    $currentListingCategory = str_replace('-', '_', strtolower(trim((string) ($propertyRow->listing_category ?? ''))));
+    if ($currentListingCategory === 'accommodation') {
+        if (Schema::hasTable('vendor_accommodation_transfer_rates')) {
+            $transferRows = DB::table('vendor_accommodation_transfer_rates')
+                ->where('vendor_property_id', (int) $propertyRow->id)
+                ->get(['transfer_mode', 'resident_type', 'passenger_type', 'rate', 'base_charge']);
+
+            if ($transferRows->isNotEmpty()) {
+                $transferOptions = [];
+                $transferRates = [];
+                $transferRateMatrix = [];
+                $transferBaseLocal = 0.0;
+                $transferBaseForeign = 0.0;
+
+                foreach ($transferRows as $transferRow) {
+                    $mode = strtolower(trim((string) ($transferRow->transfer_mode ?? '')));
+                    $residentType = strtolower(trim((string) ($transferRow->resident_type ?? '')));
+                    $passengerType = strtolower(trim((string) ($transferRow->passenger_type ?? '')));
+                    $rate = is_numeric($transferRow->rate ?? null) ? (float) $transferRow->rate : 0.0;
+                    $baseCharge = is_numeric($transferRow->base_charge ?? null) ? (float) $transferRow->base_charge : 0.0;
+
+                    if ($mode === '') {
+                        continue;
+                    }
+
+                    $transferOptions[$mode] = true;
+                    if (!isset($transferRateMatrix[$mode])) {
+                        $transferRateMatrix[$mode] = [
+                            'local_adult_charge' => 0.0,
+                            'local_child_charge' => 0.0,
+                            'foreign_adult_charge' => 0.0,
+                            'foreign_child_charge' => 0.0,
+                        ];
+                    }
+
+                    if ($residentType === 'local' && $passengerType === 'adult') {
+                        $transferRateMatrix[$mode]['local_adult_charge'] = max(0, $rate);
+                    } elseif ($residentType === 'local' && $passengerType === 'child') {
+                        $transferRateMatrix[$mode]['local_child_charge'] = max(0, $rate);
+                    } elseif ($residentType === 'foreigner' && $passengerType === 'adult') {
+                        $transferRateMatrix[$mode]['foreign_adult_charge'] = max(0, $rate);
+                        $transferRates[$mode] = max(0, $rate);
+                    } elseif ($residentType === 'foreigner' && $passengerType === 'child') {
+                        $transferRateMatrix[$mode]['foreign_child_charge'] = max(0, $rate);
+                    }
+
+                    if ($residentType === 'local') {
+                        $transferBaseLocal = max($transferBaseLocal, max(0, $baseCharge));
+                    } elseif ($residentType === 'foreigner') {
+                        $transferBaseForeign = max($transferBaseForeign, max(0, $baseCharge));
+                    }
+                }
+
+                $details['transfer_options'] = array_values(array_keys($transferOptions));
+                $details['transfer_rates'] = $transferRates;
+                $details['transfer_rate_matrix'] = $transferRateMatrix;
+                $details['transfer_base_local'] = $transferBaseLocal;
+                $details['transfer_base_foreign'] = $transferBaseForeign;
+            }
+        }
+
+        if (Schema::hasTable('vendor_accommodation_features')) {
+            $featureRows = DB::table('vendor_accommodation_features')
+                ->where('vendor_property_id', (int) $propertyRow->id)
+                ->get(['feature_type', 'feature_key']);
+
+            if ($featureRows->isNotEmpty()) {
+                $amenities = [];
+                $facilities = [];
+                foreach ($featureRows as $featureRow) {
+                    $featureType = strtolower(trim((string) ($featureRow->feature_type ?? '')));
+                    $featureKey = trim((string) ($featureRow->feature_key ?? ''));
+                    if ($featureKey === '') {
+                        continue;
+                    }
+
+                    if ($featureType === 'amenity') {
+                        $amenities[] = $featureKey;
+                    } elseif ($featureType === 'facility') {
+                        $facilities[] = $featureKey;
+                    }
+                }
+
+                $details['property_amenities'] = array_values(array_unique($amenities));
+                $details['property_features'] = array_values(array_unique($facilities));
+            }
+        }
+
+        if (Schema::hasTable('vendor_accommodation_policies')) {
+            $policyRow = DB::table('vendor_accommodation_policies')
+                ->where('vendor_property_id', (int) $propertyRow->id)
+                ->first();
+
+            if ($policyRow) {
+                $details['check_in_time'] = trim((string) ($policyRow->check_in_time ?? ($details['check_in_time'] ?? '')));
+                $details['check_out_time'] = trim((string) ($policyRow->check_out_time ?? ($details['check_out_time'] ?? '')));
+                $details['check_in_grace_minutes'] = is_numeric($policyRow->check_in_grace_minutes ?? null) ? (int) $policyRow->check_in_grace_minutes : ($details['check_in_grace_minutes'] ?? null);
+                $details['early_check_in_allowed'] = trim((string) ($policyRow->early_check_in_allowed ?? ($details['early_check_in_allowed'] ?? '')));
+                $details['late_check_out_allowed'] = trim((string) ($policyRow->late_check_out_allowed ?? ($details['late_check_out_allowed'] ?? '')));
+                $details['minimum_nights'] = is_numeric($policyRow->minimum_nights ?? null) ? (int) $policyRow->minimum_nights : ($details['minimum_nights'] ?? null);
+                $details['house_rules'] = trim((string) ($policyRow->house_rules ?? ($details['house_rules'] ?? '')));
+                $details['child_policy'] = trim((string) ($policyRow->child_policy ?? ($details['child_policy'] ?? '')));
+                $details['cancellation_policy'] = trim((string) ($policyRow->cancellation_policy ?? ($details['cancellation_policy'] ?? '')));
+                $details['early_check_in_fee'] = is_numeric($policyRow->early_check_in_fee ?? null) ? (float) $policyRow->early_check_in_fee : ($details['early_check_in_fee'] ?? null);
+                $details['late_check_out_fee'] = is_numeric($policyRow->late_check_out_fee ?? null) ? (float) $policyRow->late_check_out_fee : ($details['late_check_out_fee'] ?? null);
+                $details['property_type'] = trim((string) ($policyRow->property_type ?? ($details['property_type'] ?? '')));
+                $details['star_rating'] = is_numeric($policyRow->star_rating ?? null) ? (int) $policyRow->star_rating : ($details['star_rating'] ?? null);
+            }
+        }
+
+        $propertyRow->listing_details = json_encode($details);
+    }
+
     $facilityCandidates = [];
     foreach (['facilities', 'amenities', 'accommodation_facilities', 'property_amenities', 'property_features'] as $key) {
         if (!array_key_exists($key, $details)) {
@@ -5173,7 +5304,12 @@ Route::post('/booking/reserve', function (Request $request) {
 
     if (($slotAvailability['ok'] ?? true) !== true) {
         $slotDate = (string) ($slotAvailability['date'] ?? 'selected dates');
-        return back()->withErrors(['booking' => 'This room is not available on ' . $slotDate . '. Please choose different dates.'])->withInput();
+        $slotReason = (string) ($slotAvailability['reason'] ?? '');
+        if ($slotReason === 'blocked') {
+            return back()->withErrors(['booking' => 'This room is unavailable on ' . $slotDate . ' (blocked by the operator: sold out/scratched/unavailable). Please choose different dates.'])->withInput();
+        }
+
+        return back()->withErrors(['booking' => 'This room is sold out on ' . $slotDate . '. Please choose different dates.'])->withInput();
     }
 
     $overlapCount = workationOverlappingReservationCount(
@@ -5816,7 +5952,12 @@ Route::post('/booking/reserve-category', function (Request $request) {
 
     if (($slotAvailability['ok'] ?? true) !== true) {
         $slotDate = (string) ($slotAvailability['date'] ?? 'selected dates');
-        return back()->withErrors(['booking' => 'This listing is not available on ' . $slotDate . '. Please choose different dates.'])->withInput();
+        $slotReason = (string) ($slotAvailability['reason'] ?? '');
+        if ($slotReason === 'blocked') {
+            return back()->withErrors(['booking' => 'This listing is unavailable on ' . $slotDate . ' (blocked by the operator: sold out/scratched/unavailable). Please choose different dates.'])->withInput();
+        }
+
+        return back()->withErrors(['booking' => 'This listing is sold out on ' . $slotDate . '. Please choose different dates.'])->withInput();
     }
 
     $repeatableCategories = ['excursion', 'resort_day_visit'];

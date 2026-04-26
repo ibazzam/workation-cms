@@ -561,16 +561,82 @@
                                         </div>
                                     </div>
                                     <div class="ops-field ops-field-wide">
-                                        <label for="availability_target_{{ $categorySlug }}">Listing / Product / Room</label>
+                                        @php
+                                            $parentTargets = collect($categoryTargets)
+                                                ->map(static function ($targetOption): array {
+                                                    $propertyId = trim((string) ($targetOption['property_id'] ?? ''));
+                                                    $serviceId = trim((string) ($targetOption['service_id'] ?? ''));
+                                                    $roomId = trim((string) ($targetOption['room_id'] ?? ''));
+
+                                                    if ($propertyId !== '') {
+                                                        $parentValue = 'property:' . $propertyId;
+                                                        $parentLabel = trim((string) ($targetOption['property_name'] ?? ''));
+                                                        if ($parentLabel === '') {
+                                                            $parentLabel = 'Property #' . $propertyId;
+                                                        }
+
+                                                        return ['value' => $parentValue, 'label' => $parentLabel];
+                                                    }
+
+                                                    if ($serviceId !== '') {
+                                                        return [
+                                                            'value' => 'service:' . $serviceId,
+                                                            'label' => 'Service #' . $serviceId,
+                                                        ];
+                                                    }
+
+                                                    $targetKind = trim((string) ($targetOption['kind'] ?? ''));
+                                                    $targetId = trim((string) ($targetOption['id'] ?? ''));
+                                                    $fallbackValue = $targetKind . ':' . $targetId;
+
+                                                    return [
+                                                        'value' => $fallbackValue,
+                                                        'label' => trim((string) ($targetOption['label'] ?? $fallbackValue)),
+                                                    ];
+                                                })
+                                                ->filter(static fn ($item): bool => trim((string) ($item['value'] ?? '')) !== '')
+                                                ->unique('value')
+                                                ->values();
+                                        @endphp
+                                        <label for="availability_parent_{{ $categorySlug }}">Step 1: Property / Service</label>
+                                        <select id="availability_parent_{{ $categorySlug }}" class="ops-select" data-availability-parent>
+                                            <option value="">Select parent listing</option>
+                                            @foreach ($parentTargets as $parentTarget)
+                                                <option value="{{ (string) ($parentTarget['value'] ?? '') }}">{{ (string) ($parentTarget['label'] ?? '') }}</option>
+                                            @endforeach
+                                        </select>
+                                        <p class="small">Choose parent first, then select a specific room/service target below.</p>
+                                    </div>
+                                    <div class="ops-field ops-field-wide">
+                                        <label for="availability_target_{{ $categorySlug }}">Step 2: Room / Service Target</label>
                                         <select id="availability_target_{{ $categorySlug }}" class="ops-select" data-availability-target>
-                                            @if ($categoryKey === 'accommodation')
-                                                <option value="">Select room for accommodation availability</option>
-                                            @else
-                                                <option value="">Generic slot for {{ $labelForCategory($categoryKey) }}</option>
-                                            @endif
+                                            <option value="">Select specific target</option>
                                             @foreach ($categoryTargets as $targetOption)
+                                                @php
+                                                    $propertyId = trim((string) ($targetOption['property_id'] ?? ''));
+                                                    $serviceId = trim((string) ($targetOption['service_id'] ?? ''));
+                                                    $targetKind = trim((string) ($targetOption['kind'] ?? ''));
+                                                    $targetId = trim((string) ($targetOption['id'] ?? ''));
+                                                    $targetValue = $targetKind . ':' . $targetId;
+
+                                                    if ($propertyId !== '') {
+                                                        $parentValue = 'property:' . $propertyId;
+                                                        $parentLabel = trim((string) ($targetOption['property_name'] ?? ''));
+                                                        if ($parentLabel === '') {
+                                                            $parentLabel = 'Property #' . $propertyId;
+                                                        }
+                                                    } elseif ($serviceId !== '') {
+                                                        $parentValue = 'service:' . $serviceId;
+                                                        $parentLabel = 'Service #' . $serviceId;
+                                                    } else {
+                                                        $parentValue = $targetValue;
+                                                        $parentLabel = trim((string) ($targetOption['label'] ?? $targetValue));
+                                                    }
+                                                @endphp
                                                 <option
-                                                    value="{{ (string) ($targetOption['kind'] ?? '') }}:{{ (string) ($targetOption['id'] ?? '') }}"
+                                                    value="{{ $targetValue }}"
+                                                    data-parent-value="{{ $parentValue }}"
+                                                    data-parent-label="{{ $parentLabel }}"
                                                     data-property-id="{{ (string) ($targetOption['property_id'] ?? '') }}"
                                                     data-service-id="{{ (string) ($targetOption['service_id'] ?? '') }}"
                                                     data-room-id="{{ (string) ($targetOption['room_id'] ?? '') }}"
@@ -578,117 +644,41 @@
                                                 >{{ (string) ($targetOption['label'] ?? '') }}</option>
                                             @endforeach
                                         </select>
-                                        <p class="small">Manage only {{ strtolower($labelForCategory($categoryKey)) }} listings in this section.</p>
+                                        <p class="small">Booked and today statuses are automatic. Only block/unblock is manual from this panel.</p>
                                     </div>
                                     <div class="ops-field">
                                         <label for="availability_date_{{ $categorySlug }}">Date</label>
                                         <input id="availability_date_{{ $categorySlug }}" name="slot_date" class="ops-input" type="date">
                                     </div>
                                     <div class="ops-field">
-                                        <label for="availability_from_{{ $categorySlug }}">Range From (optional)</label>
+                                        <label for="availability_from_{{ $categorySlug }}">Block/Unblock From (optional)</label>
                                         <input id="availability_from_{{ $categorySlug }}" name="apply_range_from" class="ops-input" type="date">
                                     </div>
                                     <div class="ops-field">
-                                        <label for="availability_to_{{ $categorySlug }}">Range To (optional)</label>
+                                        <label for="availability_to_{{ $categorySlug }}">Block/Unblock To (optional)</label>
                                         <input id="availability_to_{{ $categorySlug }}" name="apply_range_to" class="ops-input" type="date">
                                     </div>
                                     <div class="ops-field">
-                                        <label for="availability_schedule_profile_{{ $categorySlug }}">Schedule Profile</label>
-                                        <select id="availability_schedule_profile_{{ $categorySlug }}" name="schedule_profile" class="ops-select">
-                                            <option value="one_off">One-off day</option>
-                                            <option value="daily">Daily in selected range</option>
-                                            <option value="weekly_6">Weekly 6 days (Mon-Sat)</option>
-                                            <option value="weekly_3">Weekly 3 days (default Mon/Wed/Fri)</option>
-                                            <option value="weekly_custom">Weekly custom days</option>
-                                        </select>
-                                    </div>
-                                    <div class="ops-field ops-field-wide">
-                                        <label>Service Days (for weekly profiles)</label>
-                                        <div class="feature-checklist">
-                                            <label class="feature-item"><input type="checkbox" name="service_days[]" value="1"> Mon</label>
-                                            <label class="feature-item"><input type="checkbox" name="service_days[]" value="2"> Tue</label>
-                                            <label class="feature-item"><input type="checkbox" name="service_days[]" value="3"> Wed</label>
-                                            <label class="feature-item"><input type="checkbox" name="service_days[]" value="4"> Thu</label>
-                                            <label class="feature-item"><input type="checkbox" name="service_days[]" value="5"> Fri</label>
-                                            <label class="feature-item"><input type="checkbox" name="service_days[]" value="6"> Sat</label>
-                                            <label class="feature-item"><input type="checkbox" name="service_days[]" value="0"> Sun</label>
-                                        </div>
-                                    </div>
-                                    <div class="ops-field">
-                                        <label for="availability_route_name_{{ $categorySlug }}">Route Name (ferry/speedboat)</label>
-                                        <input id="availability_route_name_{{ $categorySlug }}" name="route_name" class="ops-input" type="text" maxlength="120" placeholder="e.g. Male -> Maafushi 07:30" data-availability-role="route">
-                                    </div>
-                                    <div class="ops-field">
-                                        <label for="availability_inventory_{{ $categorySlug }}">Inventory</label>
-                                        <input id="availability_inventory_{{ $categorySlug }}" name="inventory" class="ops-input" type="number" min="0" max="100000" required>
-                                    </div>
-                                    <div class="ops-field">
-                                        <label for="availability_closed_{{ $categorySlug }}">Closed Day</label>
+                                        <label for="availability_closed_{{ $categorySlug }}">Action</label>
                                         <select id="availability_closed_{{ $categorySlug }}" name="is_closed" class="ops-select">
-                                            <option value="0">Open</option>
-                                            <option value="1">Closed</option>
+                                            <option value="1">Block (hide from booking calendar)</option>
+                                            <option value="0">Unblock (make bookable)</option>
                                         </select>
                                     </div>
                                     <div class="ops-field ops-field-wide">
-                                        <label for="availability_notes_{{ $categorySlug }}">Notes</label>
-                                        <textarea id="availability_notes_{{ $categorySlug }}" name="notes" class="ops-textarea" maxlength="2000"></textarea>
+                                        <label for="availability_notes_{{ $categorySlug }}">Unavailable Note (optional)</label>
+                                        <textarea id="availability_notes_{{ $categorySlug }}" name="notes" class="ops-textarea" maxlength="2000" placeholder="e.g. Sold out, scratched, maintenance, weather disruption"></textarea>
                                     </div>
+                                    <input type="hidden" name="schedule_profile" value="daily">
+                                    <input type="hidden" name="inventory" value="1" data-availability-inventory>
+                                    <input type="hidden" name="route_name" value="" data-availability-role="route">
                                 </div>
-                                <button class="btn btn-primary" type="submit">Save {{ $labelForCategory($categoryKey) }} Availability</button>
+                                <button class="btn btn-primary" type="submit">Apply Block / Unblock</button>
                             </form>
-
-                            @if (in_array($categoryKey, ['accommodation', 'remote_workspace'], true))
-                                <form class="ops-form" method="POST" action="/portal/vendor/transfer/rates/save" data-transfer-rate-form="{{ $categoryKey }}">
-                                    @csrf
-                                    <p class="label">Transfer Rate Updates (Availability + Bookings)</p>
-                                    <div class="ops-form-grid">
-                                        <div class="ops-field ops-field-wide">
-                                            <label for="transfer_rate_property_{{ $categorySlug }}">Property / Workspace Listing</label>
-                                            <select id="transfer_rate_property_{{ $categorySlug }}" name="vendor_property_id" class="ops-select" data-transfer-rate-target required>
-                                                <option value="">Select listing</option>
-                                                @foreach ($categoryTransferRateTargets as $transferTarget)
-                                                    @php
-                                                        $configuredTransferOptions = collect(is_array($transferTarget['transfer_options'] ?? null) ? $transferTarget['transfer_options'] : [])
-                                                            ->map(static fn ($item): string => strtolower(trim((string) $item)))
-                                                            ->filter(static fn (string $item): bool => $item !== '')
-                                                            ->values()
-                                                            ->all();
-                                                        $configuredTransferRates = is_array($transferTarget['transfer_rates'] ?? null)
-                                                            ? $transferTarget['transfer_rates']
-                                                            : [];
-                                                    @endphp
-                                                    <option
-                                                        value="{{ (int) ($transferTarget['id'] ?? 0) }}"
-                                                        data-transfer-options="{{ implode(',', $configuredTransferOptions) }}"
-                                                        @foreach ($transferOptionLabels as $transferKey => $transferLabel)
-                                                            data-transfer-rate-{{ $transferKey }}="{{ isset($configuredTransferRates[$transferKey]) && is_numeric($configuredTransferRates[$transferKey]) ? (string) ((float) $configuredTransferRates[$transferKey]) : '' }}"
-                                                        @endforeach
-                                                    >{{ (string) ($transferTarget['label'] ?? ('Property #' . (int) ($transferTarget['id'] ?? 0))) }}</option>
-                                                @endforeach
-                                            </select>
-                                            <p class="small">Only selected transfer options are updated. Keep base transfer options managed at listing setup.</p>
-                                        </div>
-                                        @foreach ($transferOptionLabels as $transferKey => $transferLabel)
-                                            <div class="ops-field">
-                                                <label class="feature-item" style="margin-bottom:6px; display:flex; align-items:center; gap:8px;">
-                                                    <input type="checkbox" name="transfer_options[]" value="{{ $transferKey }}" data-transfer-option-check>
-                                                    {{ $transferLabel }}
-                                                </label>
-                                                <input
-                                                    name="transfer_rates[{{ $transferKey }}]"
-                                                    class="ops-input"
-                                                    type="number"
-                                                    min="0"
-                                                    step="0.01"
-                                                    data-transfer-rate-input="{{ $transferKey }}"
-                                                    placeholder="Rate per pax (MVR)"
-                                                >
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                    <button class="btn btn-secondary" type="submit">Update Transfer Rates</button>
-                                </form>
-                            @endif
+                            <div class="ops-form" aria-live="polite">
+                                <p class="label">Pricing & Tariffs</p>
+                                <p class="small" style="margin:0;">Transfer and tariff changes are managed from <a href="#vendorPricingSection">Pricing Rules</a> to keep this page focused on reservations and availability blocking.</p>
+                            </div>
 
                             @if ($categoryKey === 'transport')
                                 <form class="ops-form" method="POST" action="/portal/vendor/transport/tariff/save">

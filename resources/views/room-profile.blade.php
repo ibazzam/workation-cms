@@ -116,7 +116,15 @@
         $roomFeatures = $roomFeatures ?? collect();
         $transferOptions = $transferOptions ?? collect();
         $pricingConfig = $pricingConfig ?? ['tax_rate' => 16, 'discount_percent' => 0];
-        $bookingPolicies = $bookingPolicies ?? ['inclusives' => [], 'cancellation_policy' => 'Standard cancellation terms apply.'];
+        $bookingPolicies = $bookingPolicies ?? [
+            'inclusives' => [],
+            'cancellation_policy' => 'Standard cancellation terms apply.',
+            'check_in_time' => '',
+            'check_out_time' => '',
+            'child_policy' => '',
+            'house_rules' => '',
+            'minimum_nights' => null,
+        ];
         $mediaUrl = $mediaUrl ?? static fn () => null;
         $prefill = $prefill ?? ['checkin' => '', 'checkout' => '', 'adults' => 2, 'children' => 0];
         $currency = strtoupper(trim((string) ($room->currency ?? $property->currency ?? 'MVR')));
@@ -139,9 +147,15 @@
         $roomNonSmoking = (int) ($room->non_smoking ?? 1) === 1;
         $roomHasWindow = (int) ($room->has_window ?? 1) === 1;
         $roomHasWifi = $roomFeatures->contains(static fn ($feature) => str_contains(strtolower((string) $feature), 'wifi') || str_contains(strtolower((string) $feature), 'wi-fi'));
-        $roomCheckinStart = '15:00';
+        $roomCheckinStart = trim((string) ($bookingPolicies['check_in_time'] ?? ''));
+        if ($roomCheckinStart === '') {
+            $roomCheckinStart = '15:00';
+        }
         $roomCheckinEnd = '06:00';
-        $roomCheckoutBefore = '12:00';
+        $roomCheckoutBefore = trim((string) ($bookingPolicies['check_out_time'] ?? ''));
+        if ($roomCheckoutBefore === '') {
+            $roomCheckoutBefore = '12:00';
+        }
         $checkinDate = trim((string) ($prefill['checkin'] ?? ''));
         $checkoutDate = trim((string) ($prefill['checkout'] ?? ''));
         $parsedCheckin = $checkinDate !== '' ? \Carbon\Carbon::parse($checkinDate) : null;
@@ -161,8 +175,9 @@
         $ratingCount = (int) (collect(['review_count', 'rating_count', 'total_reviews'])
             ->map(static fn ($column) => (int) ($property->{$column} ?? 0))
             ->first(static fn ($value) => $value > 0) ?: 2508);
-        $roomChildPolicy = trim((string) ($room->child_policy ?? 'Children of all ages can stay in this room. Additional fees may be charged for children using existing beds.'));
+        $roomChildPolicy = trim((string) ($bookingPolicies['child_policy'] ?? ($room->child_policy ?? 'Children of all ages can stay in this room. Additional fees may be charged for children using existing beds.')));
         $roomExtraBedPolicy = trim((string) ($room->extra_bed_policy ?? 'Extra beds and cots are not available for this room type.'));
+        $roomHouseRules = trim((string) ($bookingPolicies['house_rules'] ?? ''));
     @endphp
 
     <main class="page">
@@ -233,6 +248,9 @@
                     <section class="sum-section" aria-label="Cancellation policy">
                         <h2 class="sum-title"><span class="sum-title-number">5</span> Cancellation Policy</h2>
                         <p class="sum-policy-text">Free cancellation before {{ $cancelDeadlineLabel }}.</p>
+                        @if (isset($bookingPolicies['minimum_nights']) && is_numeric($bookingPolicies['minimum_nights']) && (int) $bookingPolicies['minimum_nights'] > 1)
+                            <p class="sum-policy-text">Minimum stay: {{ (int) $bookingPolicies['minimum_nights'] }} nights.</p>
+                        @endif
                         <p class="sum-policy-text">{{ $cancellationPolicy }}</p>
                     </section>
 
@@ -240,6 +258,9 @@
                         <h2 class="sum-title"><span class="sum-title-number">6</span> Guest Policy</h2>
                         <p class="sum-policy-text">{{ $roomChildPolicy }}</p>
                         <p class="sum-policy-text">{{ $roomExtraBedPolicy }}</p>
+                        @if ($roomHouseRules !== '')
+                            <p class="sum-policy-text">House rules: {{ $roomHouseRules }}</p>
+                        @endif
                     </section>
 
                 </aside>

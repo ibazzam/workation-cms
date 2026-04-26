@@ -5475,6 +5475,13 @@ Route::get('/room/{room}', function (Request $request, int $room) {
     $bookingPolicies = [
         'inclusives' => collect($propertyDetails['inclusives'] ?? [])->map(static fn ($v) => trim((string) $v))->filter()->values()->all(),
         'cancellation_policy' => trim((string) ($propertyDetails['cancellation_policy'] ?? 'Free cancellation up to 72 hours before check-in.')),
+        'check_in_time' => trim((string) ($propertyDetails['check_in_time'] ?? '')),
+        'check_out_time' => trim((string) ($propertyDetails['check_out_time'] ?? '')),
+        'child_policy' => trim((string) ($propertyDetails['child_policy'] ?? '')),
+        'house_rules' => trim((string) ($propertyDetails['house_rules'] ?? '')),
+        'minimum_nights' => isset($propertyDetails['minimum_nights']) && is_numeric($propertyDetails['minimum_nights'])
+            ? (int) $propertyDetails['minimum_nights']
+            : null,
     ];
 
     $mediaUrl = static function ($media, string $variant = 'banner'): ?string {

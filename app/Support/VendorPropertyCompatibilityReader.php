@@ -189,9 +189,7 @@ class VendorPropertyCompatibilityReader
             $rows = $rows->map(static function ($row) use ($categoryKey) {
                 // Shape to match the legacy vendor_properties column names
                 $row->listing_category = $categoryKey;
-                if (!isset($row->id)) {
-                    $row->id = $row->vendor_property_id ?? 0;
-                }
+                $row->id = (int) ($row->vendor_property_id ?? $row->id ?? 0);
                 if (isset($row->details) && !isset($row->listing_details)) {
                     $row->listing_details = $row->details;
                 }
@@ -220,6 +218,12 @@ class VendorPropertyCompatibilityReader
                 if ($row) {
                     return self::shapeDedicatedRow($row, $categoryHint);
                 }
+
+                // Safety fallback: support links that still use dedicated-table internal id.
+                $row = DB::table($tableName)->where('id', $id)->first();
+                if ($row) {
+                    return self::shapeDedicatedRow($row, $categoryHint);
+                }
             }
         }
 
@@ -229,6 +233,12 @@ class VendorPropertyCompatibilityReader
                 continue;
             }
             $row = DB::table($tableName)->where('vendor_property_id', $id)->first();
+            if ($row) {
+                return self::shapeDedicatedRow($row, $categoryKey);
+            }
+
+            // Safety fallback: support links that still use dedicated-table internal id.
+            $row = DB::table($tableName)->where('id', $id)->first();
             if ($row) {
                 return self::shapeDedicatedRow($row, $categoryKey);
             }
@@ -557,9 +567,7 @@ class VendorPropertyCompatibilityReader
     private static function shapeDedicatedRow(object $row, string $categoryKey): object
     {
         $row->listing_category = $categoryKey;
-        if (!isset($row->id)) {
-            $row->id = $row->vendor_property_id ?? 0;
-        }
+        $row->id = (int) ($row->vendor_property_id ?? $row->id ?? 0);
         if (isset($row->details) && !isset($row->listing_details)) {
             $row->listing_details = $row->details;
         }

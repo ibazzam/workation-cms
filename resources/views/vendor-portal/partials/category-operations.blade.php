@@ -1,14 +1,26 @@
+@php
+    $allVendorCategoryKeys = collect($vendorAllowedCategoryKeys ?? $selectedVendorCategories ?? [])
+        ->map(static function ($categoryKey) {
+            return vendorPortalCanonicalCategory((string) $categoryKey);
+        })
+        ->filter(static fn ($categoryKey) => is_string($categoryKey) && $categoryKey !== '')
+        ->unique()
+        ->values()
+        ->all();
+@endphp
 <section id="vendorAvailabilitySection" class="card ops-section" aria-label="Vendor availability calendar" data-panel-group="reservations">
             <div class="ops-header">
                 <p class="ops-title">Category Operations</p>
                 <span class="ops-chip">{{ count($allVendorCategoryKeys ?? []) }} categories</span>
             </div>
+            @if (empty($allVendorCategoryKeys))
+                <p class="wizard-note" style="margin-bottom:10px;">Availability and reservation controls are locked until at least one category is approved by admin.</p>
+            @endif
             <div class="panel-links" aria-label="Category operations actions">
                 <a href="#vendorAvailabilitySection">Availability + Reservations</a>
                 <a href="#vendorPricingSection">Pricing Rules</a>
             </div>
             @php
-                $allVendorCategoryKeys = array_keys($vendorCategoryMap);
                 $propertyById = $vendorProperties->keyBy(static fn ($property) => (int) ($property->id ?? 0));
                 $serviceById = $vendorServices->keyBy(static fn ($service) => (int) ($service->id ?? 0));
                 $roomById = $vendorRooms->keyBy(static fn ($room) => (int) ($room->id ?? 0));
@@ -764,7 +776,7 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="6" class="ops-empty">No availability slots for {{ strtolower($labelForCategory($categoryKey)) }} yet.</td>
+                                                <td colspan="6" class="ops-empty">No availability slots for {{ strtolower($labelForCategory($categoryKey)) }} yet. Select a target above and block/open dates using the calendar.</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
@@ -841,13 +853,13 @@
                                                         <option value="paid" @selected(($reservationRow['payment_status'] ?? '') === 'paid')>Paid</option>
                                                         <option value="refunded" @selected(($reservationRow['payment_status'] ?? '') === 'refunded')>Refunded</option>
                                                     </select>
-                                                    <button class="btn btn-secondary" type="submit">Update</button>
+                                                    <button class="btn btn-secondary" type="submit">Save Status</button>
                                                 </form>
                                             </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="5" class="ops-empty">No reservations for {{ strtolower($labelForCategory($categoryKey)) }} yet.</td>
+                                            <td colspan="5" class="ops-empty">No reservations for {{ strtolower($labelForCategory($categoryKey)) }} yet. Keep availability open and publish approved listings to receive bookings.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>

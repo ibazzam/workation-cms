@@ -31,6 +31,13 @@
         $vendorRooms = $vendorRooms ?? $vendorRoomCategories;
         $vendorMediaAssets = $vendorMediaAssets ?? collect();
         $vendorCanManageListings = (bool) ($vendorCanManageListings ?? false);
+        $approvedVendorCategories = collect($vendorProfile['approved_categories'] ?? [])
+            ->map(static function ($categoryKey) {
+                return vendorPortalCanonicalCategory((string) $categoryKey);
+            })
+            ->filter(static fn ($categoryKey) => is_string($categoryKey) && $categoryKey !== '')
+            ->unique()
+            ->values();
         $vendorTaxComponents = $vendorTaxComponents ?? collect();
         $vendorEngagement = is_array($vendorEngagement ?? null) ? $vendorEngagement : [];
         $engagementInquiriesTable = (string) ($vendorEngagement['inquiries_table'] ?? '');
@@ -42,6 +49,32 @@
         $engagementLoyaltyPrograms = collect($vendorEngagement['loyalty_programs'] ?? []);
         $engagementLoyalCustomers = collect($vendorEngagement['loyal_customers'] ?? []);
         $categorySet = collect($selectedVendorCategories)->flip();
+        $registeredVendorCategories = collect($selectedVendorCategories ?? [])
+            ->map(static function ($categoryKey) {
+                return vendorPortalCanonicalCategory((string) $categoryKey);
+            })
+            ->filter(static fn ($categoryKey) => is_string($categoryKey) && $categoryKey !== '')
+            ->unique()
+            ->values();
+        $vendorAllowedCategoryKeys = $approvedVendorCategories->isNotEmpty()
+            ? ($registeredVendorCategories->isNotEmpty()
+                ? $registeredVendorCategories->intersect($approvedVendorCategories)->values()
+                : $approvedVendorCategories->values())
+            : $registeredVendorCategories->values();
+        $pendingVendorCategories = $approvedVendorCategories->isNotEmpty()
+            ? $registeredVendorCategories->diff($approvedVendorCategories)->values()
+            : collect();
+        $vendorAllowedCategoryLabels = $vendorAllowedCategoryKeys
+            ->map(static function ($categoryKey) use ($vendorCategoryMap) {
+                return (string) ($vendorCategoryMap[$categoryKey] ?? ucwords(str_replace('_', ' ', (string) $categoryKey)));
+            })
+            ->values();
+        $vendorPendingCategoryLabels = $pendingVendorCategories
+            ->map(static function ($categoryKey) use ($vendorCategoryMap) {
+                return (string) ($vendorCategoryMap[$categoryKey] ?? ucwords(str_replace('_', ' ', (string) $categoryKey)));
+            })
+            ->values();
+        $hasCategoryAccess = $vendorAllowedCategoryKeys->isNotEmpty();
         $supportsAccommodation = $categorySet->has('accommodation');
         $hasSelectedCategories = count($selectedVendorCategories) > 0;
         $listingWizardStep = (int) session('listing_wizard_step', 1);
@@ -77,7 +110,12 @@
         $roomMediaAssets = $vendorMediaAssets->filter(static function ($media): bool {
             return strtolower((string) ($media->entity_type ?? '')) === 'room';
         });
-        $listingCategoryViewOrder = ['accommodation', 'marine_transport', 'land_transport', 'water_sports', 'excursion', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
+        $listingCategoryViewOrder = collect(['accommodation', 'marine_transport', 'land_transport', 'water_sports', 'excursion', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'])
+            ->filter(static function (string $categoryKey) use ($vendorAllowedCategoryKeys): bool {
+                return $vendorAllowedCategoryKeys->contains($categoryKey);
+            })
+            ->values()
+            ->all();
         $listingCategoryLabelMap = array_merge($vendorCategoryMap, [
             'marine_transport' => 'Marine Transport',
             'land_transport' => 'Land Transport',
@@ -200,14 +238,8 @@
             <div class="hero-top">
                 <div class="hero-head">
                     <span class="eyebrow">Vendor Workspace</span>
-                    <h1>My Listings</h1>
-                    <p>Manage listings, reservations, availability, pricing, reports, payouts, refunds, and customer care from one vendor dashboard.</p>
-                    <div class="hero-links">
-                        <a class="hero-link" href="/">Back to Home</a>
-                        <a class="hero-link" href="/admin">Go to Admin Portal</a>
-                        <a class="hero-link" href="#vendorPropertiesSection">Open My Listings</a>
-                        <a class="hero-link" href="#vendorDailyCollectionSection">Open Billing &amp; Refunds</a>
-                    </div>
+                    <h1>Partner Operations Center</h1>
+                    <p>A clean single workspace for listings, reservations, availability, pricing, collections, payouts, and customer engagement.</p>
                 </div>
                 <div class="hero-actions">
                     <div class="auth-bar">
@@ -241,32 +273,68 @@
                     <p class="hero-highlight-meta">Listings, pricing, availability, and billing readiness</p>
                 </article>
             </div>
+            <div class="hero-links" aria-label="Quick actions">
+                <a class="hero-link" href="/vendor/listings">Manage Listings</a>
+                <a class="hero-link" href="/vendor/reservations">Moderate Reservations</a>
+                <a class="hero-link" href="/vendor/availability">Update Availability</a>
+                <a class="hero-link" href="/vendor/pricing">Adjust Pricing</a>
+                <a class="hero-link" href="/vendor/billing">Collections &amp; Payouts</a>
+            </div>
+        </section>
+
+        <section class="card vendor-trust-strip" aria-label="Vendor category verification status">
+            <div class="vendor-trust-strip-head">
+                <p class="label">Service Access &amp; Verification</p>
+                <span class="ops-chip">Admin-governed</span>
+            </div>
+            <div class="vendor-trust-strip-grid">
+                <article class="vendor-trust-metric">
+                    <p class="metric-label">Unlocked Categories</p>
+                    <p class="metric-value">{{ $vendorAllowedCategoryLabels->count() }}</p>
+                    <p class="small">Only these categories are visible in Listings, Operations, Availability, and Pricing.</p>
+                </article>
+                <article class="vendor-trust-metric">
+                    <p class="metric-label">Pending Verification</p>
+                    <p class="metric-value">{{ $vendorPendingCategoryLabels->count() }}</p>
+                    <p class="small">Pending categories stay hidden until approved by admin.</p>
+                </article>
+            </div>
+            <div class="vendor-trust-chips" aria-label="Category access tags">
+                @forelse ($vendorAllowedCategoryLabels as $categoryLabel)
+                    <span class="vendor-status-chip is-approved">{{ $categoryLabel }} - Unlocked</span>
+                @empty
+                    <span class="vendor-status-chip is-pending">No category unlocked yet</span>
+                @endforelse
+                @foreach ($vendorPendingCategoryLabels as $categoryLabel)
+                    <span class="vendor-status-chip is-pending">{{ $categoryLabel }} - Pending admin verification</span>
+                @endforeach
+            </div>
         </section>
 
         @if ($showOverviewPage)
         <section class="card" data-panel-group="overview" aria-label="Vendor operating scope" style="margin-top:10px;">
-            <p class="label">Vendor Action Center</p>
-            <p class="small" style="margin-top:0;">Use this home page as the working dashboard for listing growth, reservation handling, payout tracking, and customer care follow-up.</p>
+            <p class="label">How To Operate The Portal</p>
+            <p class="small" style="margin-top:0;">Follow this sequence for reliable daily operations: listings -> reservations -> availability -> pricing -> billing -> customer care.</p>
             <div class="ops-metrics" style="margin-top:10px;">
                 <article class="ops-metric">
                     <p class="metric-label">My Listings</p>
-                    <p class="metric-value">Create / Edit / Archive</p>
+                    <p class="metric-value">Create / Update / Remove</p>
                 </article>
                 <article class="ops-metric">
                     <p class="metric-label">Reservations</p>
-                    <p class="metric-value">Manage / Confirm / Update</p>
+                    <p class="metric-value">Review / Confirm / Complete</p>
                 </article>
                 <article class="ops-metric">
                     <p class="metric-label">Availability</p>
-                    <p class="metric-value">Category-wise calendar</p>
+                    <p class="metric-value">Daily slot calendar</p>
                 </article>
                 <article class="ops-metric">
                     <p class="metric-label">Pricing</p>
-                    <p class="metric-value">Rates / tariffs / offers</p>
+                    <p class="metric-value">Rates / Tariffs / Rules</p>
                 </article>
                 <article class="ops-metric">
-                    <p class="metric-label">Customer Care</p>
-                    <p class="metric-value">Complaints / reviews / replies</p>
+                    <p class="metric-label">Collections &amp; Payouts</p>
+                    <p class="metric-value">Invoice -> Collection -> Payout</p>
                 </article>
             </div>
         </section>

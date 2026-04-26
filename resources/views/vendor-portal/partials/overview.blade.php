@@ -113,3 +113,68 @@
                 </table>
             </div>
         </section>
+
+        @php
+            $activityTimelineRows = collect();
+
+            foreach (($vendorReservations ?? collect())->take(60) as $reservation) {
+                $rawAt = (string) ($reservation->updated_at ?? $reservation->created_at ?? '');
+                $atTs = strtotime($rawAt) ?: 0;
+                $activityTimelineRows->push([
+                    'at_ts' => $atTs,
+                    'at_text' => $atTs > 0 ? date('Y-m-d H:i', $atTs) : 'Unknown time',
+                    'kind' => 'reservation',
+                    'title' => 'Reservation #' . (int) ($reservation->id ?? 0),
+                    'detail' => 'Status: ' . strtoupper((string) ($reservation->status ?? 'pending')) . ' | Payment: ' . strtoupper((string) ($reservation->payment_status ?? 'unpaid')),
+                ]);
+            }
+
+            foreach (($vendorPricingRules ?? collect())->take(40) as $rule) {
+                $rawAt = (string) ($rule->updated_at ?? $rule->created_at ?? '');
+                $atTs = strtotime($rawAt) ?: 0;
+                $activityTimelineRows->push([
+                    'at_ts' => $atTs,
+                    'at_text' => $atTs > 0 ? date('Y-m-d H:i', $atTs) : 'Unknown time',
+                    'kind' => 'pricing',
+                    'title' => 'Pricing Rule: ' . (string) ($rule->name ?? 'Unnamed Rule'),
+                    'detail' => strtoupper((string) ($rule->rule_type ?? 'rule')) . ' | Value: ' . number_format((float) ($rule->value ?? 0), 2),
+                ]);
+            }
+
+            foreach (($vendorProperties ?? collect())->take(40) as $property) {
+                $rawAt = (string) ($property->updated_at ?? $property->created_at ?? '');
+                $atTs = strtotime($rawAt) ?: 0;
+                $activityTimelineRows->push([
+                    'at_ts' => $atTs,
+                    'at_text' => $atTs > 0 ? date('Y-m-d H:i', $atTs) : 'Unknown time',
+                    'kind' => 'listing',
+                    'title' => 'Listing: ' . (string) ($property->name ?? ('Property #' . (int) ($property->id ?? 0))),
+                    'detail' => 'Moderation: ' . strtoupper((string) ($property->listing_moderation_status ?? 'draft')),
+                ]);
+            }
+
+            $activityTimelineRows = $activityTimelineRows
+                ->sortByDesc('at_ts')
+                ->take(14)
+                ->values();
+        @endphp
+
+        <section id="vendorRecentActivity" class="card" aria-label="Recent vendor activity timeline" data-panel-group="overview">
+            <div class="ops-header">
+                <p class="ops-title">Recent Activity Timeline</p>
+                <span class="ops-chip">Audit friendly</span>
+            </div>
+            @if ($activityTimelineRows->isEmpty())
+                <p class="ops-empty">No recent activity yet. Start by creating a listing, setting availability, and processing your first reservation.</p>
+            @else
+                <ul class="activity-timeline" aria-label="Recent actions">
+                    @foreach ($activityTimelineRows as $row)
+                        <li class="activity-timeline-item kind-{{ (string) ($row['kind'] ?? 'general') }}">
+                            <p class="activity-timeline-time">{{ (string) ($row['at_text'] ?? '-') }}</p>
+                            <p class="activity-timeline-title">{{ (string) ($row['title'] ?? 'Activity') }}</p>
+                            <p class="activity-timeline-detail">{{ (string) ($row['detail'] ?? '') }}</p>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </section>

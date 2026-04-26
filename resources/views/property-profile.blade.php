@@ -2679,13 +2679,26 @@
             'private_transfer' => 'Private transfer',
         ];
         $transferOptions = collect(is_array($propertyDetails['transfer_options'] ?? null) ? $propertyDetails['transfer_options'] : [])
-            ->map(static fn ($item) => strtolower(trim((string) $item)))
+            ->map(static function ($item) {
+                if (is_array($item)) {
+                    return strtolower(trim((string) ($item['code'] ?? '')));
+                }
+
+                return strtolower(trim((string) $item));
+            })
             ->filter(static fn ($item) => $item !== '')
             ->unique()
             ->values();
         $transferRates = is_array($propertyDetails['transfer_rates'] ?? null) ? $propertyDetails['transfer_rates'] : [];
         $transferRateMatrix = is_array($propertyDetails['transfer_rate_matrix'] ?? null) ? $propertyDetails['transfer_rate_matrix'] : [];
-        $transferChoices = $transferOptions
+        $transferModeKeys = $transferOptions
+            ->merge(collect(array_keys($transferRates))->map(static fn ($item) => strtolower(trim((string) $item))))
+            ->merge(collect(array_keys($transferRateMatrix))->map(static fn ($item) => strtolower(trim((string) $item))))
+            ->filter(static fn ($item) => $item !== '')
+            ->unique()
+            ->values();
+
+        $transferChoices = $transferModeKeys
             ->map(static function (string $transferKey) use ($transferOptionCatalog, $transferRates, $transferRateMatrix) {
                 $matrix = is_array($transferRateMatrix[$transferKey] ?? null)
                     ? $transferRateMatrix[$transferKey]
@@ -2723,14 +2736,6 @@
                     'child_rate' => max(0, $foreignChildRate),
                 ];
             })
-            ->filter(static fn (array $item) =>
-                $item['local_adult_rate'] > 0
-                || $item['local_child_rate'] > 0
-                || $item['foreign_adult_rate'] > 0
-                || $item['foreign_child_rate'] > 0
-                || $item['base_charge_local'] > 0
-                || $item['base_charge_foreign'] > 0
-            )
             ->values();
         $transferModeIconCatalog = [
             'speedboat' => 'fa-solid fa-ship',
@@ -3539,26 +3544,54 @@
             </section>
         @endif
 
+        @php
+            $policyCheckIn = trim((string) ($propertyDetails['check_in_time'] ?? ''));
+            $policyCheckOut = trim((string) ($propertyDetails['check_out_time'] ?? ''));
+            $policyChild = trim((string) ($propertyDetails['child_policy'] ?? ''));
+            $policyHouseRules = trim((string) ($propertyDetails['house_rules'] ?? ''));
+            $policyCancellation = trim((string) ($propertyDetails['cancellation_policy'] ?? ''));
+            $policyEarlyCheckIn = trim((string) ($propertyDetails['early_check_in_allowed'] ?? ''));
+            $policyLateCheckOut = trim((string) ($propertyDetails['late_check_out_allowed'] ?? ''));
+            $policyMinNights = isset($propertyDetails['minimum_nights']) && is_numeric($propertyDetails['minimum_nights'])
+                ? max(1, (int) $propertyDetails['minimum_nights'])
+                : null;
+
+            $policyCheckInOutText = ($policyCheckIn !== '' || $policyCheckOut !== '')
+                ? ('Check-in ' . ($policyCheckIn !== '' ? ('from ' . $policyCheckIn) : 'time available on request')
+                    . ' and check-out '
+                    . ($policyCheckOut !== '' ? ('before ' . $policyCheckOut) : 'time available on request')
+                    . '.')
+                : 'Check-in and check-out timing details will be confirmed by the property.';
+
+            $policyFlexText = collect([
+                $policyEarlyCheckIn !== '' ? ('Early check-in: ' . str_replace('_', ' ', ucfirst($policyEarlyCheckIn))) : null,
+                $policyLateCheckOut !== '' ? ('Late check-out: ' . str_replace('_', ' ', ucfirst($policyLateCheckOut))) : null,
+                $policyMinNights !== null ? ('Minimum stay: ' . $policyMinNights . ' night' . ($policyMinNights > 1 ? 's' : '')) : null,
+            ])->filter()->implode(' | ');
+        @endphp
+
         <section id="policies-section" class="section policies-section" aria-label="Property policies">
             <h2>Property Policies</h2>
             <div class="policies-grid">
                 <div class="policy-label">Check-in and Check-out</div>
-                <div class="policy-value">Check-in after 15:00 and check-out before 12:00. Front desk support may be available 24/7 depending on operations.</div>
+                <div class="policy-value">
+                    {{ $policyCheckInOutText }}
+                    @if ($policyFlexText !== '')
+                        {{ ' ' . $policyFlexText }}.
+                    @endif
+                </div>
 
                 <div class="policy-label">Child Policies</div>
-                <div class="policy-value">Children are welcome. Additional fees may apply based on room occupancy and selected meal plan.</div>
+                <div class="policy-value">{{ $policyChild !== '' ? $policyChild : 'Children are welcome. Additional fees may apply based on room occupancy and selected meal plan.' }}</div>
 
-                <div class="policy-label">Cots and Extra Beds</div>
-                <div class="policy-value">Cot and extra bed availability depends on room category and should be confirmed during reservation.</div>
+                <div class="policy-label">House Rules</div>
+                <div class="policy-value">{{ $policyHouseRules !== '' ? $policyHouseRules : 'Property-specific house rules will be shared during booking confirmation.' }}</div>
 
-                <div class="policy-label">Breakfast</div>
-                <div class="policy-value">Breakfast inclusion varies by selected room offer. Please check the room choice details before reserving.</div>
+                <div class="policy-label">Cancellation Policy</div>
+                <div class="policy-value">{{ $policyCancellation !== '' ? $policyCancellation : 'Cancellation terms depend on selected room offer and seasonality.' }}</div>
 
-                <div class="policy-label">Deposit Policy</div>
-                <div class="policy-value">A deposit may be required to secure selected offers during peak periods.</div>
-
-                <div class="policy-label">Pets</div>
-                <div class="policy-value">Please contact property support for the latest pet policy before arrival.</div>
+                <div class="policy-label">Booking Notes</div>
+                <div class="policy-value">Breakfast inclusion, extra bed availability, deposits, and pet rules may vary by room offer and can be confirmed at checkout.</div>
             </div>
         </section>
 

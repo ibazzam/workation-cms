@@ -1604,9 +1604,27 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
             $transferRates = is_array($details['transfer_rates'] ?? null)
                 ? $details['transfer_rates']
                 : [];
+            $transferRateMatrix = is_array($details['transfer_rate_matrix'] ?? null)
+                ? $details['transfer_rate_matrix']
+                : [];
             foreach ($transferOptions as $transferOption) {
-                $transferRate = $transferRates[$transferOption] ?? null;
-                if (!is_numeric($transferRate) || (float) $transferRate <= 0) {
+                $legacyRate = is_numeric($transferRates[$transferOption] ?? null)
+                    ? (float) $transferRates[$transferOption]
+                    : null;
+                $matrixRow = is_array($transferRateMatrix[$transferOption] ?? null)
+                    ? $transferRateMatrix[$transferOption]
+                    : [];
+                $matrixRates = [
+                    is_numeric($matrixRow['local_adult_charge'] ?? null) ? (float) $matrixRow['local_adult_charge'] : null,
+                    is_numeric($matrixRow['local_child_charge'] ?? null) ? (float) $matrixRow['local_child_charge'] : null,
+                    is_numeric($matrixRow['foreign_adult_charge'] ?? null) ? (float) $matrixRow['foreign_adult_charge'] : null,
+                    is_numeric($matrixRow['foreign_child_charge'] ?? null) ? (float) $matrixRow['foreign_child_charge'] : null,
+                ];
+
+                $hasConfiguredRate = ($legacyRate !== null && $legacyRate > 0)
+                    || collect($matrixRates)->contains(static fn ($rate) => $rate !== null && $rate > 0);
+
+                if (!$hasConfiguredRate) {
                     $errors[] = 'Set a transfer charge greater than zero for each selected transfer option.';
                     break;
                 }
@@ -4141,11 +4159,18 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'property_features' => ['nullable', 'array'],
         'property_features.*' => ['required', 'string', 'max:80'],
         'check_in_grace_minutes' => ['nullable', 'integer', 'min:0', 'max:720'],
+        'check_in_time' => ['nullable', 'date_format:H:i'],
+        'check_out_time' => ['nullable', 'date_format:H:i'],
+        'minimum_nights' => ['nullable', 'integer', 'min:1', 'max:365'],
+        'house_rules' => ['nullable', 'string', 'max:2000'],
         'early_check_in_allowed' => ['nullable', Rule::in(['yes', 'no', 'subject_to_availability'])],
         'late_check_out_allowed' => ['nullable', Rule::in(['yes', 'no', 'subject_to_availability'])],
         'child_policy' => ['nullable', 'string', 'max:3000'],
+        'cancellation_policy' => ['nullable', 'string', 'max:2000'],
         'early_check_in_fee' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
         'late_check_out_fee' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+        'property_type' => ['nullable', Rule::in(['hotel', 'resort', 'guest_house', 'villa', 'apartment', 'bungalow', 'hostel'])],
+        'star_rating' => ['nullable', 'integer', 'min:1', 'max:5'],
         'status' => ['nullable', Rule::in(['active', 'inactive'])],
     ]);
     $resolvedStatus = (string) ($validated['status'] ?? $propertyRecord->status ?? 'active');
@@ -4211,6 +4236,16 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
     }
 
     if ($canonicalListingCategory !== null) {
+        if (in_array($canonicalListingCategory, ['accommodation', 'remote_workspace'], true)) {
+            // Preserve intentional clears from checkbox-based transfer UI.
+            $validated['transfer_options'] = $request->input('transfer_options', []);
+            $validated['transfer_rates'] = $request->input('transfer_rates', []);
+            $validated['transfer_rates_local_adult'] = $request->input('transfer_rates_local_adult', []);
+            $validated['transfer_rates_local_child'] = $request->input('transfer_rates_local_child', []);
+            $validated['transfer_rates_foreign_adult'] = $request->input('transfer_rates_foreign_adult', []);
+            $validated['transfer_rates_foreign_child'] = $request->input('transfer_rates_foreign_child', []);
+        }
+
         $mergedDetailsInput = array_merge($existingDetails, $validated);
         $mergedDetails = vendorPortalBuildPropertyDetails($mergedDetailsInput, $canonicalListingCategory);
         $detailErrors = vendorPortalValidatePropertyDetails($canonicalListingCategory, $mergedDetails);
@@ -4276,6 +4311,21 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
     ];
 
     DB::transaction(function () use ($property, $vendorUserId, $updatePayload, $canonicalListingCategory, $resolvedLocation, $resolvedBasePrice, $normalizedMaxGuests, $existingDetails, $validated, $resolvedStatus): void {
+        if (Schema::hasTable('vendor_properties')) {
+            $legacyPropertyUpdate = $updatePayload;
+            if (Schema::hasColumn('vendor_properties', 'listing_details')) {
+                $legacyPropertyUpdate['listing_details'] = empty($existingDetails) ? null : json_encode($existingDetails);
+            }
+            if (Schema::hasColumn('vendor_properties', 'currency')) {
+                $legacyPropertyUpdate['currency'] = 'MVR';
+            }
+
+            DB::table('vendor_properties')
+                ->where('id', $property)
+                ->where('vendor_user_id', $vendorUserId)
+                ->update($legacyPropertyUpdate);
+        }
+
         if ($canonicalListingCategory !== null) {
             vendorPortalSyncCategoryListingRecord(
                 $canonicalListingCategory,

@@ -2960,6 +2960,18 @@
                             return;
                         }
 
+                        const embeddedIslands = Array.isArray(atoll && atoll.islands ? atoll.islands : null)
+                            ? atoll.islands
+                                .map(function (island) { return String(island && island.name ? island.name : '').trim(); })
+                                .filter(function (name) { return name !== ''; })
+                            : [];
+
+                        if (embeddedIslands.length > 0) {
+                            islandsByAtoll.set(atollName, embeddedIslands);
+                            embeddedIslands.forEach(function (name) { allIslands.add(name); });
+                            return;
+                        }
+
                         try {
                             const islands = await fetchJson('/api/atoll-island/atolls/' + atollId + '/islands');
                             const islandNames = (Array.isArray(islands) ? islands : [])

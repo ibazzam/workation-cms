@@ -2611,7 +2611,11 @@
         }
         $mediaUrl = $mediaUrl ?? static fn () => null;
         $currency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
-        $basePrice = number_format((float) ($property->base_price ?? 0), 2);
+        $basePriceNumeric = (float) ($property->base_price ?? 0);
+        if ($basePriceNumeric <= 0 && function_exists('workationDerivedListingBasePrice')) {
+            $basePriceNumeric = (float) workationDerivedListingBasePrice($property);
+        }
+        $basePrice = number_format(max(0, $basePriceNumeric), 2);
         $propertyDetails = [];
         if (isset($property->listing_details)) {
             $decodedPropertyDetails = json_decode((string) ($property->listing_details ?? ''), true);
@@ -2739,11 +2743,41 @@
             ->values();
         $transferModeIconCatalog = [
             'speedboat' => 'fa-solid fa-ship',
+            'shared_speedboat' => 'fa-solid fa-ship',
+            'private_speedboat' => 'fa-solid fa-ship',
             'domestic_flight' => 'fa-solid fa-plane-departure',
+            'domestic-plane' => 'fa-solid fa-plane-departure',
             'seaplane' => 'fa-solid fa-plane',
             'ferry' => 'fa-solid fa-ferry',
+            'public_ferry' => 'fa-solid fa-ferry',
             'private_transfer' => 'fa-solid fa-car-side',
+            'airport_pickup' => 'fa-solid fa-car-side',
+            'airport_dropoff' => 'fa-solid fa-car-side',
+            'airport_roundtrip' => 'fa-solid fa-car-side',
+            'inter_island' => 'fa-solid fa-route',
+            'resort_shuttle' => 'fa-solid fa-van-shuttle',
         ];
+        $resolveTransferModeIcon = static function (string $modeKey) use ($transferModeIconCatalog): string {
+            $normalized = strtolower(trim($modeKey));
+            if ($normalized !== '' && isset($transferModeIconCatalog[$normalized])) {
+                return (string) $transferModeIconCatalog[$normalized];
+            }
+
+            if (str_contains($normalized, 'speedboat') || str_contains($normalized, 'boat')) {
+                return 'fa-solid fa-ship';
+            }
+            if (str_contains($normalized, 'seaplane') || str_contains($normalized, 'flight') || str_contains($normalized, 'plane')) {
+                return 'fa-solid fa-plane-departure';
+            }
+            if (str_contains($normalized, 'ferry')) {
+                return 'fa-solid fa-ferry';
+            }
+            if (str_contains($normalized, 'shuttle') || str_contains($normalized, 'airport') || str_contains($normalized, 'transfer')) {
+                return 'fa-solid fa-car-side';
+            }
+
+            return 'fa-solid fa-route';
+        };
         $transferBaseLocal = max(0, (float) ($propertyDetails['transfer_base_local'] ?? 0));
         $transferBaseForeign = max(0, (float) ($propertyDetails['transfer_base_foreign'] ?? 0));
         $shareUrl = url()->current();
@@ -2946,13 +2980,18 @@
                     <div class="hero-transfer-shell" aria-label="Transfer options">
                         <div class="hero-transfer-field">
                             <label for="transferOptionSelect">Transfer Option</label>
+                            <span id="transferOptionIcon" class="transfer-pill" style="align-self:flex-start;"><i class="fa-solid fa-route" aria-hidden="true"></i> Mode icon</span>
                             <select id="transferOptionSelect" class="hero-transfer-select">
                                 <option value="">No transfer</option>
                                 @foreach ($transferChoices as $transferChoice)
+                                    @php
+                                        $transferChoiceIcon = $resolveTransferModeIcon((string) ($transferChoice['key'] ?? ''));
+                                    @endphp
                                     <option
                                         value="{{ $transferChoice['key'] }}"
                                         data-adult-rate="{{ number_format((float) ($transferChoice['adult_rate'] ?? 0), 2, '.', '') }}"
                                         data-child-rate="{{ number_format((float) ($transferChoice['child_rate'] ?? 0), 2, '.', '') }}"
+                                        data-icon-class="{{ $transferChoiceIcon }}"
                                     >
                                         {{ $transferChoice['label'] }}
                                     </option>
@@ -3485,7 +3524,7 @@
                                         @foreach ($transferChoices as $transferChoice)
                                             @php
                                                 $modeKey = (string) ($transferChoice['key'] ?? '');
-                                                $modeIcon = (string) ($transferModeIconCatalog[$modeKey] ?? 'fa-solid fa-route');
+                                                $modeIcon = $resolveTransferModeIcon($modeKey);
                                             @endphp
                                             <tr>
                                                 <td>
@@ -3518,7 +3557,7 @@
                                         @foreach ($transferChoices as $transferChoice)
                                             @php
                                                 $modeKey = (string) ($transferChoice['key'] ?? '');
-                                                $modeIcon = (string) ($transferModeIconCatalog[$modeKey] ?? 'fa-solid fa-route');
+                                                $modeIcon = $resolveTransferModeIcon($modeKey);
                                             @endphp
                                             <tr>
                                                 <td>
@@ -3568,6 +3607,22 @@
                 $policyLateCheckOut !== '' ? ('Late check-out: ' . str_replace('_', ' ', ucfirst($policyLateCheckOut))) : null,
                 $policyMinNights !== null ? ('Minimum stay: ' . $policyMinNights . ' night' . ($policyMinNights > 1 ? 's' : '')) : null,
             ])->filter()->implode(' | ');
+
+            $policyBookingNotes = trim((string) (
+                $propertyDetails['booking_notes']
+                ?? $propertyDetails['booking_note']
+                ?? $propertyDetails['additional_booking_notes']
+                ?? ''
+            ));
+
+            if ($policyBookingNotes === '') {
+                $noteBits = collect([
+                    trim((string) ($propertyDetails['deposit_policy'] ?? '')),
+                    trim((string) ($propertyDetails['pet_policy'] ?? '')),
+                    trim((string) ($propertyDetails['breakfast_policy'] ?? '')),
+                ])->filter()->values();
+                $policyBookingNotes = $noteBits->implode(' ');
+            }
         @endphp
 
         <section id="policies-section" class="section policies-section" aria-label="Property policies">
@@ -3591,7 +3646,7 @@
                 <div class="policy-value">{{ $policyCancellation !== '' ? $policyCancellation : 'Cancellation terms depend on selected room offer and seasonality.' }}</div>
 
                 <div class="policy-label">Booking Notes</div>
-                <div class="policy-value">Breakfast inclusion, extra bed availability, deposits, and pet rules may vary by room offer and can be confirmed at checkout.</div>
+                <div class="policy-value">{{ $policyBookingNotes !== '' ? $policyBookingNotes : 'No additional booking notes have been provided by this property.' }}</div>
             </div>
         </section>
 
@@ -4290,6 +4345,7 @@
             const availAdults = document.getElementById('availAdults');
             const availChildren = document.getElementById('availChildren');
             const transferOptionSelect = document.getElementById('transferOptionSelect');
+            const transferOptionIcon = document.getElementById('transferOptionIcon');
             const transferSummary = document.querySelector('[data-transfer-summary]');
             const startingTotal = document.querySelector('[data-starting-total]');
             const startingSoldout = document.querySelector('[data-starting-soldout]');
@@ -4431,6 +4487,38 @@
                     if (availCheckout && topCheckout) availCheckout.value = topCheckout.value;
                 };
 
+                const addDaysToDateString = (dateString, days) => {
+                    const normalized = toDateOnly(dateString);
+                    if (normalized === '') {
+                        return '';
+                    }
+
+                    const dt = new Date(normalized + 'T00:00:00');
+                    if (Number.isNaN(dt.getTime())) {
+                        return '';
+                    }
+
+                    dt.setDate(dt.getDate() + days);
+                    return dt.toISOString().slice(0, 10);
+                };
+
+                const syncCheckoutBounds = () => {
+                    const checkinValue = toDateOnly(topCheckin?.value || availCheckin?.value || '');
+                    const minCheckout = checkinValue !== '' ? addDaysToDateString(checkinValue, 1) : todayDate;
+
+                    [topCheckout, availCheckout].forEach((checkoutInput) => {
+                        if (!checkoutInput) {
+                            return;
+                        }
+
+                        checkoutInput.min = minCheckout;
+                        const currentValue = toDateOnly(checkoutInput.value || '');
+                        if (currentValue !== '' && currentValue < minCheckout) {
+                            checkoutInput.value = minCheckout;
+                        }
+                    });
+                };
+
                 const refreshTotals = () => {
                     const checkinValue = (topCheckin?.value || '').trim();
                     const checkoutValue = (topCheckout?.value || '').trim();
@@ -4444,6 +4532,7 @@
                         : null;
                     const transferAdultRate = Number(selectedTransferElement?.dataset?.adultRate || 0);
                     const transferChildRate = Number(selectedTransferElement?.dataset?.childRate || 0);
+                    const transferIconClass = String(selectedTransferElement?.dataset?.iconClass || 'fa-solid fa-route').trim() || 'fa-solid fa-route';
                     const transferTotal = (adultsCount * transferAdultRate) + (childrenCount * transferChildRate);
 
                     syncTopGuestText(adultsCount, childrenCount, roomsCount);
@@ -4454,6 +4543,14 @@
                             transferSummary.textContent = `Transfer charge estimate: MVR ${transferTotal.toFixed(2)} total (${adultsCount} adults, ${childrenCount} children).`;
                         } else {
                             transferSummary.textContent = 'Optional transfer can be added to room reservation.';
+                        }
+                    }
+
+                    if (transferOptionIcon) {
+                        if (selectedTransferOption !== '') {
+                            transferOptionIcon.innerHTML = `<i class="${transferIconClass}" aria-hidden="true"></i> Selected mode`;
+                        } else {
+                            transferOptionIcon.innerHTML = '<i class="fa-solid fa-route" aria-hidden="true"></i> Mode icon';
                         }
                     }
 
@@ -4516,6 +4613,7 @@
                     if (!input) return;
                     input.addEventListener('change', () => {
                         syncAvailabilityDates();
+                        syncCheckoutBounds();
                         refreshTotals();
                     });
                 });
@@ -4524,10 +4622,12 @@
                     if (!input) return;
                     input.addEventListener('input', () => {
                         syncFromAvailability();
+                        syncCheckoutBounds();
                         refreshTotals();
                     });
                     input.addEventListener('change', () => {
                         syncFromAvailability();
+                        syncCheckoutBounds();
                         refreshTotals();
                     });
                 });
@@ -4536,6 +4636,7 @@
                     transferOptionSelect.addEventListener('change', refreshTotals);
                 }
 
+                syncCheckoutBounds();
                 refreshTotals();
             }
 

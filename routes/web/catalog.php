@@ -479,13 +479,13 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             // This prevents stale vendor_properties.base_price from showing on cards.
             $catalogProperties = $catalogProperties->map(static function ($prop) use ($combinedRoomPricesByProperty) {
                 $prop->base_price = 0;
-                $pid = (int) ($prop->id ?? 0);
-                $dedicatedId = (int) ($prop->dedicated_row_id ?? 0);
-                if ($pid > 0 && $combinedRoomPricesByProperty->has($pid)) {
-                    $prop->base_price = (float) $combinedRoomPricesByProperty->get($pid);
-                } elseif ($dedicatedId > 0 && $combinedRoomPricesByProperty->has($dedicatedId)) {
-                    $prop->base_price = (float) $combinedRoomPricesByProperty->get($dedicatedId);
+                $lookupId = collect(workationPropertyLookupIds($prop))
+                    ->first(static fn (int $candidateId) => $combinedRoomPricesByProperty->has($candidateId));
+
+                if (is_int($lookupId) && $lookupId > 0) {
+                    $prop->base_price = (float) ($combinedRoomPricesByProperty->get($lookupId) ?? 0);
                 }
+
                 return $prop;
             });
 

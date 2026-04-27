@@ -87,6 +87,7 @@ Route::get('/', function () {
     ];
 
     $homeDatabaseDestinationImages = [];
+    $homeIslandDirectoryDisplayNames = [];
     if (Schema::hasTable('islands')) {
         // Island and atoll photos are always stored on the public disk
         // (Storage::disk('public')), not the portal managed media disk.
@@ -128,6 +129,8 @@ Route::get('/', function () {
                 continue;
             }
 
+            $displayName = trim((string) ($row->name ?? ''));
+
             $nameKey = portalNormalizeDestinationMediaKey((string) ($row->name ?? ''));
             $slugKey = portalNormalizeDestinationMediaKey((string) ($row->slug ?? ''));
             $islandNameKey = $nameKey !== '' ? portalNormalizeDestinationMediaKey((string) ($row->name ?? '') . ' island') : '';
@@ -138,6 +141,20 @@ Route::get('/', function () {
                     continue;
                 }
                 $homeDatabaseDestinationImages[$candidateKey] = $imageUrl;
+                if ($displayName !== '' && !array_key_exists($candidateKey, $homeIslandDirectoryDisplayNames)) {
+                    $homeIslandDirectoryDisplayNames[$candidateKey] = $displayName;
+                }
+            }
+
+            if (in_array($nameKey, ['male', 'malecity', 'male_city'], true) && $displayName !== '') {
+                foreach (['male', 'malecity', 'male_city'] as $maleAlias) {
+                    if (!array_key_exists($maleAlias, $homeDatabaseDestinationImages)) {
+                        $homeDatabaseDestinationImages[$maleAlias] = $imageUrl;
+                    }
+                    if (!array_key_exists($maleAlias, $homeIslandDirectoryDisplayNames)) {
+                        $homeIslandDirectoryDisplayNames[$maleAlias] = 'Male City';
+                    }
+                }
             }
         }
     }
@@ -1173,6 +1190,35 @@ Route::get('/', function () {
                 + ($rating * 5.0);
         };
 
+        $canonicalLocationKey = static function (string $location): string {
+            $normalized = portalNormalizeDestinationMediaKey($location);
+            if ($normalized === '') {
+                return '';
+            }
+
+            $normalized = str_replace(['male_city_city', 'city_male_city'], 'male_city', $normalized);
+            $aliases = [
+                'male' => 'male_city',
+                'male_city' => 'male_city',
+                'malecity' => 'male_city',
+                'male_city_maldives' => 'male_city',
+                'male_maldives' => 'male_city',
+                'male_city_kaafu' => 'male_city',
+                'city_male' => 'male_city',
+                'mal_city' => 'male_city',
+            ];
+
+            if (array_key_exists($normalized, $aliases)) {
+                return $aliases[$normalized];
+            }
+
+            if (str_contains($normalized, 'male_city')) {
+                return 'male_city';
+            }
+
+            return $normalized;
+        };
+
         $locationScores = [];
         foreach ($allProperties as $property) {
             $location = $propertyLocationValue($property);
@@ -1180,15 +1226,15 @@ Route::get('/', function () {
                 continue;
             }
 
-            $normalizedLocation = portalNormalizeDestinationMediaKey($location);
-            if ($normalizedLocation === 'male') {
-                $normalizedLocation = 'male_city';
-            }
+            $normalizedLocation = $canonicalLocationKey($location);
             if ($normalizedLocation === '') {
                 continue;
             }
 
-            $displayLocation = $normalizedLocation === 'male_city' ? 'Male City' : $location;
+            $displayLocation = trim((string) ($homeIslandDirectoryDisplayNames[$normalizedLocation] ?? ''));
+            if ($displayLocation === '') {
+                $displayLocation = $normalizedLocation === 'male_city' ? 'Male City' : $location;
+            }
             $engagementScore = $propertyEngagementScore($property);
 
             $key = strtolower($normalizedLocation);
@@ -1224,7 +1270,10 @@ Route::get('/', function () {
                     $sample = $row['sample_property'] ?? null;
                     $sampleId = (int) ($sample->id ?? 0);
                     $sampleCategory = strtolower(trim((string) ($sample->listing_category ?? 'accommodation')));
-                    $samplePrice = $sample ? max(0, workationDerivedListingBasePrice($sample)) : 0;
+                    $samplePrice = $sample ? (float) ($sample->base_price ?? 0) : 0;
+                    if ($samplePrice <= 0 && $sample) {
+                        $samplePrice = max(0, workationDerivedListingBasePrice($sample));
+                    }
                     $sampleCurrency = strtoupper(trim((string) ($sample->currency ?? 'MVR')));
 
                     $payload = [
@@ -1254,7 +1303,21 @@ Route::get('/', function () {
             ->values();
 
         if ($priceSorted->isNotEmpty()) {
-            $homeWeekendDealCards = $priceSorted->take(4)->map(function ($property) use ($resolvePropertyImage, $resolvePropertyFallbackImage) {
+            $accommodationDeals = $priceSorted
+                ->filter(static function ($property) {
+                    return strtolower(trim((string) ($property->listing_category ?? ''))) === 'accommodation';
+                })
+                ->values();
+
+            $weekendCandidates = $accommodationDeals;
+            if ($weekendCandidates->count() < 4) {
+                $weekendCandidates = $accommodationDeals
+                    ->concat($priceSorted)
+                    ->unique(static fn ($property) => (int) ($property->id ?? 0))
+                    ->values();
+            }
+
+            $homeWeekendDealCards = $weekendCandidates->take(4)->map(function ($property) use ($resolvePropertyImage, $resolvePropertyFallbackImage) {
                 $name = trim((string) ($property->name ?? 'Weekend Offer'));
                 $currency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
                 $price = number_format((float) ($property->base_price ?? 0), 2);

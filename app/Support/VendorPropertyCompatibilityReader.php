@@ -186,6 +186,7 @@ class VendorPropertyCompatibilityReader
 
         if (!self::cachingEnabled()) {
             $categoryTableMap = self::categoryTableMap();
+            $perTableLimit = max(12, (int) ceil($normalizedLimit / max(1, count($categoryTableMap))));
             $all = collect();
 
             foreach ($categoryTableMap as $categoryKey => $tableName) {
@@ -202,7 +203,7 @@ class VendorPropertyCompatibilityReader
                     $query->where('listing_moderation_status', 'approved');
                 }
 
-                $rows = $query->limit($normalizedLimit)->get($selectCols);
+                $rows = $query->limit($perTableLimit)->get($selectCols);
 
                 $rows = $rows->map(static function ($row) use ($categoryKey) {
                     $row->listing_category = $categoryKey;
@@ -218,14 +219,18 @@ class VendorPropertyCompatibilityReader
                 $all = $all->concat($rows);
             }
 
-            return $all->take($normalizedLimit)->values();
+            return $all
+                ->sortByDesc(static fn ($row) => (string) ($row->updated_at ?? ''))
+                ->take($normalizedLimit)
+                ->values();
         }
 
         $cachedRows = Cache::remember(
-            'vendor_property_compatibility_reader:all_active_listings:' . $normalizedLimit,
+            'vendor_property_compatibility_reader:all_active_listings:v2:' . $normalizedLimit,
             now()->addMinutes(5),
             static function () use ($normalizedLimit) {
         $categoryTableMap = self::categoryTableMap();
+        $perTableLimit = max(12, (int) ceil($normalizedLimit / max(1, count($categoryTableMap))));
         $all = collect();
 
         foreach ($categoryTableMap as $categoryKey => $tableName) {
@@ -242,7 +247,7 @@ class VendorPropertyCompatibilityReader
                 $query->where('listing_moderation_status', 'approved');
             }
 
-            $rows = $query->limit($normalizedLimit)->get($selectCols);
+            $rows = $query->limit($perTableLimit)->get($selectCols);
 
             $rows = $rows->map(static function ($row) use ($categoryKey) {
                 // Shape to match the legacy vendor_properties column names
@@ -259,7 +264,10 @@ class VendorPropertyCompatibilityReader
             $all = $all->concat($rows);
         }
 
-        return $all->take($normalizedLimit)->values();
+        return $all
+            ->sortByDesc(static fn ($row) => (string) ($row->updated_at ?? ''))
+            ->take($normalizedLimit)
+            ->values();
             }
         );
 

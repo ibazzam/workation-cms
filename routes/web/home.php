@@ -116,12 +116,14 @@ Route::get('/', function () {
             }
         };
 
-        $islandRows = DB::table('islands')
-            ->select(['name', 'slug', 'photo_path'])
-            ->whereNotNull('photo_path')
-            ->where('photo_path', '!=', '')
-            ->limit(1500)
-            ->get();
+        $islandRows = Cache::remember('home:island-photo-rows:v1', now()->addMinutes(20), static function () {
+            return DB::table('islands')
+                ->select(['name', 'slug', 'photo_path'])
+                ->whereNotNull('photo_path')
+                ->where('photo_path', '!=', '')
+                ->limit(1500)
+                ->get();
+        });
 
         foreach ($islandRows as $row) {
             $imageUrl = $resolveAtlasPhotoUrl((string) ($row->photo_path ?? ''));
@@ -160,12 +162,14 @@ Route::get('/', function () {
     }
 
     if (Schema::hasTable('atolls')) {
-        $atollRows = DB::table('atolls')
-            ->select(['name', 'slug', 'code', 'photo_path'])
-            ->whereNotNull('photo_path')
-            ->where('photo_path', '!=', '')
-            ->limit(300)
-            ->get();
+        $atollRows = Cache::remember('home:atoll-photo-rows:v1', now()->addMinutes(20), static function () {
+            return DB::table('atolls')
+                ->select(['name', 'slug', 'code', 'photo_path'])
+                ->whereNotNull('photo_path')
+                ->where('photo_path', '!=', '')
+                ->limit(300)
+                ->get();
+        });
 
         foreach ($atollRows as $row) {
             $imageUrl = $resolveAtlasPhotoUrl((string) ($row->photo_path ?? ''));
@@ -189,9 +193,11 @@ Route::get('/', function () {
 
     $homeDestinationMediaOverrides = collect();
     if (Schema::hasTable('portal_destination_media_overrides')) {
-        $homeDestinationMediaOverrides = DB::table('portal_destination_media_overrides')
-            ->orderBy('destination_name')
-            ->pluck('image_value', 'destination_key');
+        $homeDestinationMediaOverrides = Cache::remember('home:destination-media-overrides:v1', now()->addMinutes(10), static function () {
+            return DB::table('portal_destination_media_overrides')
+                ->orderBy('destination_name')
+                ->pluck('image_value', 'destination_key');
+        });
     }
 
     $resolveHomeDestinationKey = static function (array $card): string {

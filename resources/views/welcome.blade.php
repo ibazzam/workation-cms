@@ -3018,7 +3018,21 @@
                 }
             }
 
-            init();
+            let initialized = false;
+
+            const lazyInit = function () {
+                if (initialized) {
+                    return;
+                }
+
+                initialized = true;
+                init();
+            };
+
+            ['focus', 'mousedown', 'touchstart'].forEach(function (eventName) {
+                atollSelect.addEventListener(eventName, lazyInit, { once: true, passive: true });
+                islandSelect.addEventListener(eventName, lazyInit, { once: true, passive: true });
+            });
         })();
     </script>
 

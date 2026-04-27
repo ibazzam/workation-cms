@@ -3,6 +3,10 @@
                 <p class="ops-title">Pricing Rules</p>
                 <span class="ops-chip">{{ $vendorPricingRules->count() }} active + historical</span>
             </div>
+            <p class="wizard-note" style="margin:0 0 10px;">
+                Enter round, all-inclusive sell prices (room/service + taxes + service charge + Workation commission + gateway fee).
+                Workation commission is 12%. Gateway fee policy: MIB/BML 4%, Stripe 6.5%. Taxes are shown to guests as included values, not added again.
+            </p>
             @php
                 $allowedCategorySet = collect($vendorAllowedCategoryKeys ?? $selectedVendorCategories ?? [])
                     ->map(static function ($categoryKey) {

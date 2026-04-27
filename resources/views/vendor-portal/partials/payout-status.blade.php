@@ -53,6 +53,10 @@
                     <th>Reservation</th>
                     <th>Check-in</th>
                     <th>Check-out</th>
+                    <th>Payment Collected</th>
+                    <th>Processing Since</th>
+                    <th>Expected Payout</th>
+                    <th>Paid Date</th>
                     <th>Your Payout</th>
                     <th>Currency</th>
                     <th>Payout Status</th>
@@ -71,6 +75,10 @@
                     </td>
                     <td style="font-size:.8rem;">{{ $row->check_in ?? '—' }}</td>
                     <td style="font-size:.8rem;">{{ $row->check_out ?? '—' }}</td>
+                    <td style="font-size:.78rem;">{{ !empty($row->payment_collected_at) ? \Illuminate\Support\Carbon::parse((string) $row->payment_collected_at)->format('Y-m-d') : '—' }}</td>
+                    <td style="font-size:.78rem;">{{ !empty($row->payout_processing_at) ? \Illuminate\Support\Carbon::parse((string) $row->payout_processing_at)->format('Y-m-d') : '—' }}</td>
+                    <td style="font-size:.78rem;">{{ !empty($row->payout_expected_at) ? \Illuminate\Support\Carbon::parse((string) $row->payout_expected_at)->format('Y-m-d') : '—' }}</td>
+                    <td style="font-size:.78rem;">{{ !empty($row->payout_paid_at) ? \Illuminate\Support\Carbon::parse((string) $row->payout_paid_at)->format('Y-m-d') : '—' }}</td>
                     <td style="font-weight:700;font-family:monospace;">
                         @if($row->vendor_payout_amount)
                             {{ number_format($row->vendor_payout_amount, 2) }}
@@ -117,7 +125,7 @@
     </div>
 
     @else
-    <p class="ops-empty">No payout records yet. Reservations will appear here once payment has been collected.</p>
+    <p class="ops-empty">No payout records yet. Reservations will appear here once payment has been collected and payout processing starts.</p>
     @endif
 
     <p class="small" style="margin:12px 0 0;color:#7a8ea0;">

@@ -174,8 +174,13 @@
             $paymentStatus = (string) ($reservation->payment_status ?? 'unpaid');
             $bookingStatus = (string) ($reservation->status ?? 'pending');
             $isSettled = $paymentStatus === 'paid' && in_array($bookingStatus, ['confirmed', 'completed'], true);
-            $commission = $isSettled ? round($gross * $commissionRate, 2) : 0.0;
-            $payout = max(0, round($gross - $commission, 2));
+            $commission = $isSettled
+                ? round((float) ($reservation->commission_amount ?? ($gross * $commissionRate)), 2)
+                : 0.0;
+            $gatewayFee = $isSettled
+                ? round((float) ($reservation->gateway_fee_amount ?? 0), 2)
+                : 0.0;
+            $payout = max(0, round($gross - $commission - $gatewayFee, 2));
             $invoiceRef = 'INV-' . str_pad((string) ($reservation->id ?? '0'), 6, '0', STR_PAD_LEFT);
             $collectionDate = (string) ($reservation->start_at ?? $reservation->created_at ?? '');
             $collectionDay = strlen($collectionDate) >= 10 ? substr($collectionDate, 0, 10) : 'N/A';
@@ -194,6 +199,7 @@
                 'guest_is_foreigner' => (bool) ($reservation->guest_is_foreigner ?? true),
                 'gross' => $gross,
                 'commission' => $commission,
+                'gateway_fee' => $gatewayFee,
                 'payout' => $payout,
                 'currency' => (string) ($reservation->currency ?? 'MVR'),
                 'payment_status' => $paymentStatus,
@@ -205,6 +211,7 @@
             return [
                 'gross' => (float) $rows->sum('gross'),
                 'commission' => (float) $rows->sum('commission'),
+                'gateway_fee' => (float) $rows->sum('gateway_fee'),
                 'payout' => (float) $rows->sum('payout'),
                 'count' => (int) $rows->count(),
             ];
@@ -212,6 +219,7 @@
         $settledInvoicesCount = (int) $billingLedgerRows->where('is_settled', true)->count();
         $grossCollectionsTotal = (float) ($billingLedgerRows->sum('gross') ?: ($vendorDashboardSnapshot['gross_collections_total'] ?? 0));
         $commissionTotal = (float) $billingLedgerRows->sum('commission');
+        $gatewayFeeTotal = (float) $billingLedgerRows->sum('gateway_fee');
         $payoutTotal = (float) $billingLedgerRows->sum('payout');
         $expectedPayoutTotal = (float) $billingLedgerRows->where('is_settled', false)->sum('payout');
         $settledPayoutTotal = (float) $billingLedgerRows->where('is_settled', true)->sum('payout');
@@ -388,6 +396,7 @@
 
         @if ($showBillingPage)
             @include('vendor-portal.partials.billing-collection')
+            @include('vendor-portal.partials.payout-status')
         @endif
 
         <section class="layout" id="vendorAuthApi" data-panel-group="api">
@@ -436,6 +445,11 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
         (function () {
+            if (window.__vendorPortalPrimaryInitDone === true) {
+                return;
+            }
+            window.__vendorPortalPrimaryInitDone = true;
+
             const root = document.querySelector(".page");
             const apiBase = root ? root.getAttribute("data-api-base") : "";
             const tokenInput = document.getElementById("tokenInput");
@@ -3116,6 +3130,10 @@
     </script>
     <script>
         (function () {
+            if (window.__vendorPortalPrimaryInitDone === true) {
+                return;
+            }
+
             function normalizeCategoryKey(value) {
                 return String(value || "")
                     .trim()

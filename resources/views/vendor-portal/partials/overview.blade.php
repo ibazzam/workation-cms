@@ -42,7 +42,7 @@
                 <article class="progress-card">
                     <p class="progress-label">Revenue Collected</p>
                     <p class="progress-value">MVR {{ number_format($grossCollectionsTotal, 2) }}</p>
-                    <p class="progress-meta">Gross collections before Workation commission deductions</p>
+                    <p class="progress-meta">Gross collections before Workation commission and gateway fee deductions</p>
                 </article>
                 <article class="progress-card">
                     <p class="progress-label">Expected Payout</p>

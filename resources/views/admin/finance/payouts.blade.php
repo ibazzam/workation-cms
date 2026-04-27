@@ -121,6 +121,7 @@
               <form method="POST" action="/portal/admin/finance/payouts/{{ $batch->id }}/send" style="display:inline;" onsubmit="return confirmSend(this)">
                 @csrf
                 <input name="bank_reference" placeholder="Bank ref" required style="border:1px solid #c8d3df;border-radius:6px;padding:4px 7px;font-size:.76rem;width:110px;">
+                <input type="date" name="expected_payout_date" title="Expected payout date" style="border:1px solid #c8d3df;border-radius:6px;padding:4px 7px;font-size:.76rem;">
                 <button type="submit" class="btn-warn" style="padding:5px 9px;font-size:.76rem;">Mark Sent</button>
               </form>
               @elseif($batch->status === 'processing')

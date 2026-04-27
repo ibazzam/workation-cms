@@ -30,7 +30,8 @@ Route::get('/vendor', function () {
     $loadAvailabilityData = in_array($activePortalPage, ['availability', 'operations'], true);
     $loadPricingData = $activePortalPage === 'pricing' || $loadEngagementData;
     $loadBillingData = $activePortalPage === 'billing';
-    $vendorPortalCacheTtlSeconds = 45;
+    $loadListingsContextData = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'pricing', 'engagement', 'promotions'], true);
+    $vendorPortalCacheTtlSeconds = 900;
 
     $vendorCategoryMap = vendorPortalCategoryMap();
     $selectedVendorCategories = vendorPortalSelectedCategories($vendorUser);
@@ -49,6 +50,7 @@ Route::get('/vendor', function () {
     $vendorBilling = null;
     $vendorRoomCategories = collect();
     $vendorMediaAssets = collect();
+    $payoutStatusRows = collect();
     $vendorEngagement = [
         'inquiries_table' => null,
         'inquiries' => collect(),
@@ -76,16 +78,18 @@ Route::get('/vendor', function () {
     ];
 
     if ($vendorUserId > 0) {
-        // Load vendor listings from dedicated category tables.
-        $vendorProperties = collect(Cache::remember(
-            'vendor:portal:listings:v3:' . $vendorUserId,
-            now()->addSeconds($vendorPortalCacheTtlSeconds),
-            static function () use ($vendorUserId) {
-                return \App\Support\VendorPropertyCompatibilityReader::loadVendorListings($vendorUserId, 200)
-                    ->values()
-                    ->all();
-            }
-        ));
+        if ($loadListingsContextData) {
+            // Load vendor listings from dedicated category tables only for pages that render listing-level data.
+            $vendorProperties = collect(Cache::remember(
+                'vendor:portal:listings:v3:' . $vendorUserId,
+                now()->addSeconds($vendorPortalCacheTtlSeconds),
+                static function () use ($vendorUserId) {
+                    return \App\Support\VendorPropertyCompatibilityReader::loadVendorListings($vendorUserId, 200)
+                        ->values()
+                        ->all();
+                }
+            ));
+        }
 
         $accommodationPropertyIds = $vendorProperties
             ->filter(static fn ($property) => vendorPortalCanonicalCategory((string) ($property->listing_category ?? '')) === 'accommodation')
@@ -269,7 +273,7 @@ Route::get('/vendor', function () {
             ->filter(static fn ($property) => strtolower(trim((string) ($property->status ?? 'active'))) === 'active')
             ->count();
 
-        if (Schema::hasTable('vendor_services')) {
+        if ($loadListingsContextData && Schema::hasTable('vendor_services')) {
             $serviceLimit = $loadListingsHeavyData ? 250 : 80;
             $vendorServices = collect(Cache::remember(
                 'vendor:portal:services:v2:' . $vendorUserId . ':' . $serviceLimit,
@@ -292,12 +296,31 @@ Route::get('/vendor', function () {
             if ($existingServiceCategories !== []) {
                 $selectedVendorCategories = array_values(array_unique(array_merge($selectedVendorCategories, $existingServiceCategories)));
             }
+        }
 
-            $vendorDashboardSnapshot['listing_total'] += (int) $vendorServices->count();
-            $vendorDashboardSnapshot['listing_active'] += (int) $vendorServices
-                ->filter(static fn ($service) => strtolower(trim((string) ($service->status ?? 'active'))) === 'active')
+        // Keep overview metrics accurate even when listing collections are intentionally skipped.
+        $vendorListingCountFromDb = 0;
+        $vendorActiveListingCountFromDb = 0;
+        if (Schema::hasTable('vendor_properties')) {
+            $vendorListingCountFromDb += (int) DB::table('vendor_properties')
+                ->where('vendor_user_id', $vendorUserId)
+                ->count();
+            $vendorActiveListingCountFromDb += (int) DB::table('vendor_properties')
+                ->where('vendor_user_id', $vendorUserId)
+                ->whereRaw("LOWER(TRIM(COALESCE(status, 'active'))) = 'active'")
                 ->count();
         }
+        if (Schema::hasTable('vendor_services')) {
+            $vendorListingCountFromDb += (int) DB::table('vendor_services')
+                ->where('vendor_user_id', $vendorUserId)
+                ->count();
+            $vendorActiveListingCountFromDb += (int) DB::table('vendor_services')
+                ->where('vendor_user_id', $vendorUserId)
+                ->whereRaw("LOWER(TRIM(COALESCE(status, 'active'))) = 'active'")
+                ->count();
+        }
+        $vendorDashboardSnapshot['listing_total'] = max((int) ($vendorDashboardSnapshot['listing_total'] ?? 0), $vendorListingCountFromDb);
+        $vendorDashboardSnapshot['listing_active'] = max((int) ($vendorDashboardSnapshot['listing_active'] ?? 0), $vendorActiveListingCountFromDb);
 
         if ($isOverviewPage) {
             $vendorDashboardSnapshot = Cache::remember(
@@ -370,6 +393,38 @@ Route::get('/vendor', function () {
                         ->all();
                 }
             ));
+
+            $payoutStatusRows = $vendorReservations
+                ->filter(static function ($reservation): bool {
+                    $status = strtolower(trim((string) ($reservation->payment_status ?? '')));
+                    $payoutStatus = strtolower(trim((string) ($reservation->payout_status ?? '')));
+                    return $status === 'paid' || $payoutStatus !== '';
+                })
+                ->map(static function ($reservation) {
+                    $notes = json_decode((string) ($reservation->notes ?? ''), true);
+                    $notes = is_array($notes) ? $notes : [];
+
+                    $checkIn = (string) ($reservation->start_at ?? '');
+                    $checkOut = (string) ($reservation->end_at ?? '');
+
+                    return (object) [
+                        'id' => (int) ($reservation->id ?? 0),
+                        'reservation_code' => 'RSV-' . str_pad((string) ((int) ($reservation->id ?? 0)), 6, '0', STR_PAD_LEFT),
+                        'check_in' => $checkIn !== '' ? substr($checkIn, 0, 10) : '—',
+                        'check_out' => $checkOut !== '' ? substr($checkOut, 0, 10) : '—',
+                        'payout_status' => strtolower(trim((string) ($reservation->payout_status ?? 'queued'))),
+                        'payout_currency' => strtoupper(trim((string) ($reservation->payout_currency ?? $reservation->currency ?? 'MVR'))),
+                        'vendor_payout_amount' => (float) ($reservation->vendor_payout_amount ?? 0),
+                        'payment_collected_at' => (string) ($reservation->payment_collected_at ?? $reservation->payment_verified_at ?? null),
+                        'payout_processing_at' => (string) ($reservation->payout_processing_at ?? null),
+                        'payout_expected_at' => (string) ($reservation->payout_expected_at ?? null),
+                        'payout_paid_at' => (string) ($reservation->payout_paid_at ?? null),
+                        'has_open_dispute' => in_array(strtolower((string) ($notes['dispute_status'] ?? '')), ['open', 'under_review', 'processing'], true),
+                        'has_refund_case' => in_array(strtolower((string) ($notes['refund_status'] ?? '')), ['requested', 'under_review', 'approved', 'processing'], true),
+                    ];
+                })
+                ->sortByDesc(static fn ($row) => strtotime((string) ($row->payment_collected_at ?? '')) ?: 0)
+                ->values();
         }
 
         if ($loadPricingData && Schema::hasTable('vendor_pricing_rules')) {
@@ -665,6 +720,7 @@ Route::get('/vendor', function () {
         'vendorRoomCategories' => $vendorRoomCategories,
         'vendorRooms' => $vendorRoomCategories,
         'vendorMediaAssets' => $vendorMediaAssets,
+        'payoutStatusRows' => $payoutStatusRows,
         'vendorEngagement' => $vendorEngagement,
         'vendorDashboardSnapshot' => $vendorDashboardSnapshot,
         'transportModeOptions' => vendorPortalListingOptions('transport_mode'),
@@ -1203,7 +1259,7 @@ Route::get('/vendor/reports/export', function () {
     $csvLines = [];
     $csvLines[] = implode(',', [
         'Invoice Ref', 'Customer Name', 'Customer Email',
-        'Date', 'Subtotal', 'Tax Total', 'Gross', 'Commission (12%)', 'Expected Payout',
+        'Date', 'Subtotal', 'Tax Total', 'Gross', 'Commission', 'Gateway Fee', 'Expected Payout',
         'Payment Status', 'Booking Status',
     ]);
 
@@ -1214,8 +1270,13 @@ Route::get('/vendor/reports/export', function () {
         $paymentStatus = (string) ($reservation->payment_status ?? 'unpaid');
         $bookingStatus = (string) ($reservation->status ?? 'pending');
         $isSettled = $paymentStatus === 'paid' && in_array($bookingStatus, ['confirmed', 'completed'], true);
-        $commission = $isSettled ? round($gross * $commissionRate, 2) : 0.0;
-        $payout = max(0, round($gross - $commission, 2));
+        $commission = $isSettled
+            ? round((float) ($reservation->commission_amount ?? ($gross * $commissionRate)), 2)
+            : 0.0;
+        $gatewayFee = $isSettled
+            ? round((float) ($reservation->gateway_fee_amount ?? 0), 2)
+            : 0.0;
+        $payout = max(0, round($gross - $commission - $gatewayFee, 2));
         $invoiceRef = 'INV-' . str_pad((string) ($reservation->id ?? '0'), 6, '0', STR_PAD_LEFT);
         $collectionDate = (string) ($reservation->start_at ?? $reservation->created_at ?? '');
         $collectionDay = strlen($collectionDate) >= 10 ? substr($collectionDate, 0, 10) : 'N/A';
@@ -1230,6 +1291,7 @@ Route::get('/vendor/reports/export', function () {
             number_format($taxTotal, 2, '.', ''),
             number_format($gross, 2, '.', ''),
             number_format($commission, 2, '.', ''),
+            number_format($gatewayFee, 2, '.', ''),
             number_format($payout, 2, '.', ''),
             $paymentStatus,
             $bookingStatus,
@@ -1246,4 +1308,3 @@ Route::get('/vendor/reports/export', function () {
         'Pragma' => 'no-cache',
     ]);
 });
-

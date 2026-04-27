@@ -206,6 +206,13 @@
                 @endif
                 @if ($showCreatePropertyForm && $canManageAnyCategory)
                     <article class="ops-form ops-field-wide">
+                        <section class="ops-note" style="margin-bottom:12px; border:1px solid #cfe0eb; border-radius:10px; padding:10px 12px; background:#f7fbff;">
+                            <p style="margin:0 0 6px; font-weight:700; color:#1d4b66;">Pricing Guidance For Vendors</p>
+                            <p style="margin:0; color:#416479; font-size:0.84rem; line-height:1.45;">
+                                Enter customer-facing sell prices as all-inclusive amounts. Your listed price must already include: 12% Workation commission, payment gateway fee (MIB/BML 4% or Stripe 6.5%), and applicable taxes/fees.
+                                These items are shown as an included breakdown to guests and are not added again at checkout.
+                            </p>
+                        </section>
                         @include($activeCreateFormPartial)
 
                     </article>

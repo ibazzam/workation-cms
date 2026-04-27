@@ -78,11 +78,7 @@
         'headerShowSearch' => false,
         'headerMode' => 'checkout',
         'headerCategoryLinks' => [],
-        'headerCheckoutContext' => [
-            'property' => (string) ($property->name ?? 'Checkout'),
-            'dates' => $checkoutDatesLabel,
-            'guests' => $checkoutGuestsLabel,
-        ],
+        'headerCheckoutContext' => [],
         'headerContinueUrl' => (string) request()->fullUrl(),
     ])
 
@@ -120,6 +116,9 @@
         $transferAppliedChildRate = max(0, (float) ($summary['transfer_applied_child_rate'] ?? 0));
         $transferOptions = collect($summary['property_transfer_options'] ?? [])->filter(static fn ($option) => is_array($option))->values();
         $selectedTransferCode = strtolower(trim((string) ($summary['transfer_option'] ?? '')));
+        if (in_array($selectedTransferCode, ['none', 'no_transfer', 'decline', 'declined'], true)) {
+            $selectedTransferCode = '';
+        }
         $baseTotalBeforeTransfer = max(0, ((float) ($summary['total'] ?? 0)) - $transferAmount);
         $inclusives = collect($inclusives ?? [])->map(static fn ($v) => trim((string) $v))->filter()->values();
         $cancellationPolicy = trim((string) ($cancellationPolicy ?? 'Standard cancellation terms apply.'));
@@ -135,7 +134,7 @@
             ->filter(static fn ($option) => ($option['provider'] ?? '') !== '')
             ->unique('provider')
             ->values();
-        $lockedPaymentCurrency = strtoupper(trim((string) ($paymentPolicy['currency'] ?? $currency)));
+        $lockedPaymentCurrency = $currency;
         $lockedPaymentGateway = trim((string) ($paymentPolicy['gateway'] ?? ''));
         $lockedPaymentProvider = strtolower(trim((string) ($paymentPolicy['provider'] ?? '')));
         $paymentGatewayLabel = trim((string) ($paymentPolicy['gateway_label'] ?? 'Card Gateway'));
@@ -179,11 +178,7 @@
                         </div>
                     @endif
                     <p class="payment-note">{{ $paymentNotice }}</p>
-                    <div class="payment-stat">
-                        <span class="k">Payment Collection Status</span>
-                        <span class="v">{{ strtoupper($customerPaymentStatus) }}</span>
-                        <span class="payment-note" style="margin-top:4px;">Collected at: {{ $customerPaymentCollectedAt !== '' ? \Illuminate\Support\Carbon::parse($customerPaymentCollectedAt)->format('Y-m-d H:i') : 'Pending' }}</span>
-                    </div>
+                    <p class="payment-note">All amounts shown in checkout are in {{ $currency }} and must match the final total shown before payment.</p>
                 </div>
 
                 <aside class="mini-panel checkout-summary" aria-label="Reservation compact summary">
@@ -211,19 +206,16 @@
                     <section class="mini-section" aria-label="Price details">
                         <h2 class="mini-title">3. Price details</h2>
                         <div class="invoice-row"><span>1 room x 1 night</span><strong>{{ $currency }} {{ number_format($roomSubtotal, 2) }}</strong></div>
-                        <div class="invoice-row"><span>Price before discount</span><span class="price-muted">{{ $currency }} {{ number_format($priceBeforeDiscount, 2) }}</span></div>
-                        <div class="invoice-row"><span>Limited Time Offer</span><strong>- {{ $currency }} {{ number_format($limitedTimeOffer, 2) }}</strong></div>
-                        <div class="invoice-row"><span>First Booking Deal</span><strong>- {{ $currency }} {{ number_format($firstBookingDeal, 2) }}</strong></div>
-                        <div class="invoice-row"><span>New user promo code</span><strong>- {{ $currency }} {{ number_format($promoCodeDiscount, 2) }}</strong></div>
-                        <div class="invoice-row"><span>Special Discount</span><strong>- {{ $currency }} {{ number_format($specialDiscount, 2) }}</strong></div>
+                        @if ($discountAmount > 0)
+                            <div class="invoice-row"><span>Discount</span><strong>- {{ $currency }} {{ number_format($discountAmount, 2) }}</strong></div>
+                        @endif
                         <div class="invoice-row"><span>Taxes & fees (included)</span><strong>{{ $currency }} {{ number_format($taxAmount, 2) }}</strong></div>
-                        <div class="invoice-row"><span>Tourism tax</span><strong>{{ $currency }} {{ number_format($tourismTax, 2) }}</strong></div>
-                        <div class="invoice-row"><span>Sales service tax</span><strong>{{ $currency }} {{ number_format($salesServiceTax, 2) }}</strong></div>
                         <div class="invoice-row"><span>Transfer charges</span><strong id="transferChargeDisplay">{{ $currency }} {{ number_format($transferAmount, 2) }}</strong></div>
                         <div class="total"><span>Total</span><span id="invoiceTotalDisplay">{{ $currency }} {{ $total }}</span></div>
-                        <div class="price-save">You've saved {{ $currency }} {{ $savedAmount }} on this booking!</div>
-                        <div class="fine-print" style="margin-top:6px;">Entered vendor prices are treated as all-inclusive. Tax is shown as a backward calculation and is not added again.</div>
-                        <div class="fine-print">We Price Match</div>
+                        @if ($discountAmount > 0)
+                            <div class="price-save">You've saved {{ $currency }} {{ $savedAmount }} on this booking.</div>
+                        @endif
+                        <div class="fine-print" style="margin-top:6px;">Vendor prices are treated as all-inclusive. Tax is shown for transparency and is not added again.</div>
                     </section>
 
                     <section class="mini-section" aria-label="Cancellation policy">
@@ -268,6 +260,25 @@
                         @if ($transferOptions->isNotEmpty())
                             <div class="policy" style="margin-bottom:8px; width:100%;">
                                 <h3>Transfer Selection</h3>
+                                <label style="display:flex; gap:10px; align-items:flex-start; margin:8px 0; color:#335a71;">
+                                    <input
+                                        type="radio"
+                                        name="transfer_option_checkout"
+                                        value=""
+                                        data-label="No transfer"
+                                        data-local-adult-rate="0.00"
+                                        data-local-child-rate="0.00"
+                                        data-foreign-adult-rate="0.00"
+                                        data-foreign-child-rate="0.00"
+                                        data-base-local-rate="0.00"
+                                        data-base-foreign-rate="0.00"
+                                        {{ $selectedTransferCode === '' ? 'checked' : '' }}
+                                    >
+                                    <span>
+                                        <strong>No transfer</strong>
+                                        <span style="display:block; font-size:0.8rem; color:#516e82;">I do not need pickup/drop-off from the property.</span>
+                                    </span>
+                                </label>
                                 @foreach ($transferOptions as $option)
                                     @php
                                         $optionCode = strtolower(trim((string) ($option['code'] ?? '')));
@@ -291,7 +302,7 @@
                                             data-foreign-child-rate="{{ number_format($foreignChildRate, 2, '.', '') }}"
                                             data-base-local-rate="{{ number_format($baseLocalRate, 2, '.', '') }}"
                                             data-base-foreign-rate="{{ number_format($baseForeignRate, 2, '.', '') }}"
-                                            {{ $optionCode !== '' && ($optionCode === $selectedTransferCode || ($selectedTransferCode === '' && $loop->first)) ? 'checked' : '' }}
+                                            {{ $optionCode !== '' && $optionCode === $selectedTransferCode ? 'checked' : '' }}
                                         >
                                         <span>
                                             <strong>{{ $optionLabel }}</strong>
@@ -472,19 +483,18 @@
                     }
                 }
 
-                var currency = matched ? String(matched.currency || '').trim() : '';
                 var gateway = matched ? String(matched.gateway || '').trim() : '';
 
-                if (currencyDisplay && currency !== '') {
-                    currencyDisplay.textContent = currency;
+                if (currencyDisplay) {
+                    currencyDisplay.textContent = currencyCode;
                 }
 
                 if (gatewayDisplay && providerLabel !== '') {
                     gatewayDisplay.textContent = providerLabel;
                 }
 
-                if (hiddenCurrency && currency !== '') {
-                    hiddenCurrency.value = currency;
+                if (hiddenCurrency) {
+                    hiddenCurrency.value = currencyCode;
                 }
 
                 if (hiddenGateway && gateway !== '') {

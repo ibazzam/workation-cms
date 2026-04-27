@@ -217,6 +217,13 @@ Route::post('/booking/reserve', function (Request $request) {
     $customerEmail = $primaryEmail;
     $additionalGuestDetails = trim((string) ($payload['additional_guest_details'] ?? ''));
 
+    $paymentQuote = CheckoutPaymentRouter::buildPaymentQuote([
+        'primary_nationality' => $primaryNationality,
+        'guest_residency' => $guestResidency,
+        'reservation_currency' => strtoupper(trim((string) ($roomRow->currency ?? $propertyRow->currency ?? 'MVR'))),
+        'amount' => $totalAmount,
+    ]);
+
     provisionCustomerAccountFromBooking($customerEmail, $customerName);
 
     $reservationId = null;
@@ -276,6 +283,17 @@ Route::post('/booking/reserve', function (Request $request) {
                 'tax_amount' => (float) ($pricing['total_tax_amount'] ?? $taxAmount),
                 'tax_lines' => $pricing['tax_lines'] ?? [],
                 'invoice_total_amount' => (float) ($pricing['invoice_total_amount'] ?? $totalAmount),
+                'quote_source_currency' => (string) ($paymentQuote['source_currency'] ?? ''),
+                'quote_source_amount' => (float) ($paymentQuote['source_amount'] ?? 0),
+                'quote_payment_currency' => (string) ($paymentQuote['currency'] ?? ''),
+                'quote_payment_amount' => (float) ($paymentQuote['amount'] ?? 0),
+                'quote_gateway' => (string) ($paymentQuote['gateway'] ?? ''),
+                'quote_provider' => (string) ($paymentQuote['provider'] ?? ''),
+                'quote_gateway_label' => (string) ($paymentQuote['gateway_label'] ?? ''),
+                'quote_provider_label' => (string) ($paymentQuote['provider_label'] ?? ''),
+                'quote_fx_rate' => (float) ($paymentQuote['fx_rate'] ?? 1),
+                'quote_fx_base_currency' => (string) ($paymentQuote['fx_base_currency'] ?? 'MVR'),
+                'quote_quoted_at' => (string) ($paymentQuote['quoted_at'] ?? now()->toIso8601String()),
                 'vendor_tax_overrides' => $vendorTaxOverrides,
                 'policy_snapshot' => $pricing['policy_snapshot'] ?? [],
                 'inclusives' => $propertyDetails['inclusives'] ?? [],
@@ -1047,6 +1065,13 @@ Route::post('/booking/reserve-category', function (Request $request) {
     $customerEmail = $primaryEmail;
     $categoryLabel = (string) ($categoryMap[$categoryKey]['label'] ?? 'Category');
 
+    $paymentQuote = CheckoutPaymentRouter::buildPaymentQuote([
+        'primary_nationality' => $primaryNationality,
+        'guest_residency' => $guestResidency,
+        'reservation_currency' => strtoupper(trim((string) ($propertyRow->currency ?? 'MVR'))),
+        'amount' => $totalAmount,
+    ]);
+
     provisionCustomerAccountFromBooking($customerEmail, $customerName);
 
     $categoryDetails = [];
@@ -1121,6 +1146,17 @@ Route::post('/booking/reserve-category', function (Request $request) {
                 'transfer_applied_adult_rate' => (float) ($pricing['transfer_applied_adult_rate'] ?? 0),
                 'transfer_applied_child_rate' => (float) ($pricing['transfer_applied_child_rate'] ?? 0),
                 'invoice_total_amount' => (float) ($pricing['invoice_total_amount'] ?? $totalAmount),
+                'quote_source_currency' => (string) ($paymentQuote['source_currency'] ?? ''),
+                'quote_source_amount' => (float) ($paymentQuote['source_amount'] ?? 0),
+                'quote_payment_currency' => (string) ($paymentQuote['currency'] ?? ''),
+                'quote_payment_amount' => (float) ($paymentQuote['amount'] ?? 0),
+                'quote_gateway' => (string) ($paymentQuote['gateway'] ?? ''),
+                'quote_provider' => (string) ($paymentQuote['provider'] ?? ''),
+                'quote_gateway_label' => (string) ($paymentQuote['gateway_label'] ?? ''),
+                'quote_provider_label' => (string) ($paymentQuote['provider_label'] ?? ''),
+                'quote_fx_rate' => (float) ($paymentQuote['fx_rate'] ?? 1),
+                'quote_fx_base_currency' => (string) ($paymentQuote['fx_base_currency'] ?? 'MVR'),
+                'quote_quoted_at' => (string) ($paymentQuote['quoted_at'] ?? now()->toIso8601String()),
                 'vendor_tax_overrides' => $vendorTaxOverrides,
                 'policy_snapshot' => $pricing['policy_snapshot'] ?? [],
                 'inclusives' => $listingDetails['inclusives'] ?? [],
@@ -1351,13 +1387,24 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
     }
 
     $paymentContext = [
-        'primary_nationality' => trim((string) $request->query('primary_nationality', (string) ($reservationNotes['primary_nationality'] ?? ''))),
-        'guest_residency' => trim((string) $request->query('guest_residency', (string) ($reservationNotes['guest_residency'] ?? ''))),
-        'requested_gateway' => trim((string) $request->query('payment_gateway', '')),
+        'primary_nationality' => $reservationRow
+            ? trim((string) ($reservationNotes['primary_nationality'] ?? ''))
+            : trim((string) $request->query('primary_nationality', '')),
+        'guest_residency' => $reservationRow
+            ? trim((string) ($reservationNotes['guest_residency'] ?? ''))
+            : trim((string) $request->query('guest_residency', '')),
+        'requested_gateway' => $reservationRow
+            ? trim((string) ($reservationNotes['quote_provider'] ?? $reservationNotes['quote_gateway'] ?? ''))
+            : trim((string) $request->query('payment_gateway', '')),
         'reservation_currency' => strtoupper(trim((string) ($reservationRow->currency ?? $roomRow->currency ?? $propertyRow->currency ?? 'MVR'))),
-        'amount' => (float) $request->query('total', (float) ($reservationNotes['invoice_total_amount'] ?? ($reservationRow->total_amount ?? 0))),
+        'amount' => (float) ($reservationNotes['invoice_total_amount'] ?? $request->query('total', (float) ($reservationRow->total_amount ?? 0))),
     ];
-    $paymentPolicy = CheckoutPaymentRouter::buildPaymentPolicy($paymentContext, trim((string) $request->query('payment_currency', '')));
+    $paymentPolicy = CheckoutPaymentRouter::buildPaymentPolicy(
+        $paymentContext,
+        $reservationRow
+            ? trim((string) ($reservationNotes['quote_payment_currency'] ?? ''))
+            : trim((string) $request->query('payment_currency', ''))
+    );
 
     return view('booking-checkout', [
         'reservation' => $reservationRow,
@@ -1381,19 +1428,31 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
             'infants' => max(0, (int) $request->query('infants', (int) ($reservationNotes['infants'] ?? 0))),
             'primary_first_name' => trim((string) $request->query('primary_first_name', (string) ($reservationNotes['primary_first_name'] ?? ''))),
             'primary_last_name' => trim((string) $request->query('primary_last_name', (string) ($reservationNotes['primary_last_name'] ?? ''))),
-            'primary_nationality' => trim((string) $request->query('primary_nationality', (string) ($reservationNotes['primary_nationality'] ?? ''))),
-            'guest_residency' => trim((string) $request->query('guest_residency', (string) ($reservationNotes['guest_residency'] ?? ''))),
+            'primary_nationality' => $reservationRow
+                ? trim((string) ($reservationNotes['primary_nationality'] ?? ''))
+                : trim((string) $request->query('primary_nationality', '')),
+            'guest_residency' => $reservationRow
+                ? trim((string) ($reservationNotes['guest_residency'] ?? ''))
+                : trim((string) $request->query('guest_residency', '')),
             'primary_email' => trim((string) $request->query('primary_email', (string) ($reservationNotes['primary_email'] ?? (string) ($reservationRow->customer_email ?? '')))),
             'primary_mobile' => trim((string) $request->query('primary_mobile', (string) ($reservationNotes['primary_mobile'] ?? ''))),
             'additional_guest_details' => trim((string) $request->query('additional_guest_details', (string) ($reservationNotes['additional_guest_details'] ?? ''))),
             'service_notes' => trim((string) $request->query('service_notes', (string) ($reservationNotes['service_notes'] ?? ''))),
-            'transfer_option' => trim((string) $request->query('transfer_option', (string) ($reservationNotes['transfer_option'] ?? ''))),
-            'transfer_option_label' => trim((string) $request->query('transfer_option_label', (string) ($reservationNotes['transfer_option_label'] ?? ''))),
+            'transfer_option' => $reservationRow
+                ? trim((string) ($reservationNotes['transfer_option'] ?? ''))
+                : trim((string) $request->query('transfer_option', '')),
+            'transfer_option_label' => $reservationRow
+                ? trim((string) ($reservationNotes['transfer_option_label'] ?? ''))
+                : trim((string) $request->query('transfer_option_label', '')),
             'property_transfer_options' => is_array($reservationNotes['property_transfer_options'] ?? null)
                 ? $reservationNotes['property_transfer_options']
                 : [],
-            'transfer_charge' => (float) $request->query('transfer_charge', (float) ($reservationNotes['transfer_charge'] ?? 0)),
-            'transfer_charge_total' => (float) $request->query('transfer_charge_total', (float) ($reservationNotes['transfer_charge_total'] ?? ($reservationNotes['transfer_charge'] ?? 0))),
+            'transfer_charge' => $reservationRow
+                ? (float) ($reservationNotes['transfer_charge'] ?? 0)
+                : (float) $request->query('transfer_charge', 0),
+            'transfer_charge_total' => $reservationRow
+                ? (float) ($reservationNotes['transfer_charge_total'] ?? ($reservationNotes['transfer_charge'] ?? 0))
+                : (float) $request->query('transfer_charge_total', 0),
             'transfer_local_adult_rate' => (float) $request->query('transfer_local_adult_rate', (float) ($reservationNotes['transfer_local_adult_rate'] ?? 0)),
             'transfer_local_child_rate' => (float) $request->query('transfer_local_child_rate', (float) ($reservationNotes['transfer_local_child_rate'] ?? 0)),
             'transfer_foreign_adult_rate' => (float) $request->query('transfer_foreign_adult_rate', (float) ($reservationNotes['transfer_foreign_adult_rate'] ?? 0)),
@@ -1419,7 +1478,18 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
                 : (json_decode((string) $request->query('tax_lines', '[]'), true) ?: []),
             'discount_percent' => (float) $request->query('discount_percent', (float) ($reservationNotes['discount_percent'] ?? 0)),
             'tax_rate' => (float) $request->query('tax_rate', (float) ($reservationNotes['tax_rate'] ?? 0)),
-            'total' => (float) $request->query('total', (float) ($reservationNotes['invoice_total_amount'] ?? ($reservationRow->total_amount ?? 0))),
+            'total' => (float) ($reservationNotes['invoice_total_amount'] ?? $request->query('total', (float) ($reservationRow->total_amount ?? 0))),
+            'quote_source_currency' => trim((string) ($reservationNotes['quote_source_currency'] ?? '')),
+            'quote_source_amount' => (float) ($reservationNotes['quote_source_amount'] ?? 0),
+            'quote_payment_currency' => trim((string) ($reservationNotes['quote_payment_currency'] ?? '')),
+            'quote_payment_amount' => (float) ($reservationNotes['quote_payment_amount'] ?? 0),
+            'quote_gateway' => trim((string) ($reservationNotes['quote_gateway'] ?? '')),
+            'quote_provider' => trim((string) ($reservationNotes['quote_provider'] ?? '')),
+            'quote_gateway_label' => trim((string) ($reservationNotes['quote_gateway_label'] ?? '')),
+            'quote_provider_label' => trim((string) ($reservationNotes['quote_provider_label'] ?? '')),
+            'quote_fx_rate' => (float) ($reservationNotes['quote_fx_rate'] ?? 1),
+            'quote_fx_base_currency' => trim((string) ($reservationNotes['quote_fx_base_currency'] ?? 'MVR')),
+            'quote_quoted_at' => trim((string) ($reservationNotes['quote_quoted_at'] ?? '')),
         ],
     ]);
 });
@@ -1439,8 +1509,8 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         'payment_gateway' => ['nullable', 'string', 'min:2', 'max:64'],
         'payment_provider' => ['nullable', 'string', 'min:2', 'max:64'],
         'payment_selection' => ['nullable', 'string', 'max:120'],
-        'primary_nationality' => ['required', 'string', 'max:120'],
-        'guest_residency' => ['required', Rule::in(['local_resident', 'foreign_national'])],
+        'primary_nationality' => ['nullable', 'string', 'max:120'],
+        'guest_residency' => ['nullable', Rule::in(['local_resident', 'foreign_national'])],
         'transfer_option' => ['nullable', 'string', 'max:80'],
         'transfer_option_label' => ['nullable', 'string', 'max:160'],
         'transfer_charge' => ['nullable', 'numeric', 'min:0'],
@@ -1456,21 +1526,24 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
     }
 
     $notes = workationReservationPaymentNotes($reservationRow);
-    $primaryNationality = trim((string) ($validated['primary_nationality'] ?? ''));
-    $guestResidency = trim((string) ($validated['guest_residency'] ?? ''));
+    $primaryNationality = trim((string) ($notes['primary_nationality'] ?? ($validated['primary_nationality'] ?? '')));
+    $guestResidency = strtolower(trim((string) ($notes['guest_residency'] ?? ($validated['guest_residency'] ?? ''))));
+    if (!in_array($guestResidency, ['local_resident', 'foreign_national'], true)) {
+        $guestResidency = ReservationPricingPolicy::isForeigner($primaryNationality, null)
+            ? 'foreign_national'
+            : 'local_resident';
+    }
 
     $notes['primary_nationality'] = $primaryNationality;
     $notes['guest_residency'] = $guestResidency;
-    $notes['transfer_option'] = trim((string) ($validated['transfer_option'] ?? ($notes['transfer_option'] ?? '')));
-    $notes['transfer_option_label'] = trim((string) ($validated['transfer_option_label'] ?? ($notes['transfer_option_label'] ?? '')));
-    $notes['transfer_charge'] = max(0, (float) ($validated['transfer_charge'] ?? ($notes['transfer_charge'] ?? 0)));
+    $notes['transfer_option'] = trim((string) ($notes['transfer_option'] ?? ($validated['transfer_option'] ?? '')));
+    $notes['transfer_option_label'] = trim((string) ($notes['transfer_option_label'] ?? ($validated['transfer_option_label'] ?? '')));
+    $notes['transfer_charge'] = max(0, (float) ($notes['transfer_charge'] ?? ($validated['transfer_charge'] ?? 0)));
     $notes['transfer_charge_total'] = $notes['transfer_charge'];
-    if (array_key_exists('invoice_total_amount', $validated) && is_numeric($validated['invoice_total_amount'])) {
-        $notes['invoice_total_amount'] = max(0, (float) $validated['invoice_total_amount']);
-    }
+    $notes['invoice_total_amount'] = max(0, (float) ($notes['invoice_total_amount'] ?? ($validated['invoice_total_amount'] ?? ($reservationRow->total_amount ?? 0))));
 
-    $requestedGateway = trim((string) ($validated['payment_provider'] ?? ($validated['payment_gateway'] ?? '')));
-    $requestedCurrency = trim((string) ($validated['payment_currency'] ?? ''));
+    $requestedGateway = trim((string) ($notes['quote_provider'] ?? $notes['quote_gateway'] ?? ($validated['payment_provider'] ?? ($validated['payment_gateway'] ?? ''))));
+    $requestedCurrency = trim((string) ($notes['quote_payment_currency'] ?? ($validated['payment_currency'] ?? '')));
     $selection = trim((string) ($validated['payment_selection'] ?? ''));
     if ($selection !== '' && str_contains($selection, '|')) {
         [$selectionGateway, $selectionCurrency] = array_pad(explode('|', $selection, 2), 2, '');
@@ -1520,6 +1593,24 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
             'updated_at' => now(),
         ]);
 
+    $checkoutUrl = trim((string) ($intent['checkout_url'] ?? ''));
+    if ($checkoutUrl !== '') {
+        $query = http_build_query([
+            'intent_id' => (string) ($intent['intent_id'] ?? ''),
+            'reservation_id' => $reservation,
+            'amount' => number_format((float) ($intent['amount'] ?? 0), 2, '.', ''),
+            'currency' => (string) ($intent['currency'] ?? ''),
+            'provider' => (string) ($intent['provider'] ?? ''),
+            'gateway' => (string) ($intent['gateway'] ?? ''),
+            'return_url' => url('/booking/checkout/' . $reservation),
+            'cancel_url' => url('/booking/checkout/' . $reservation),
+            'webhook_url' => url('/booking/payment/webhooks/' . (string) ($intent['gateway'] ?? '')),
+        ]);
+        $target = $checkoutUrl . (str_contains($checkoutUrl, '?') ? '&' : '?') . $query;
+
+        return redirect()->away($target);
+    }
+
     return redirect('/booking/payment/hosted/' . $reservation . '?intent=' . urlencode((string) $intent['intent_id']));
 });
 
@@ -1564,6 +1655,28 @@ Route::post('/booking/payment/hosted/{reservation}/complete', function (Request 
 
     if ((string) $validated['intent_id'] !== (string) ($reservationRow->payment_intent_id ?? '')) {
         return back()->withErrors(['payment' => 'Payment session no longer matches this reservation.']);
+    }
+
+    $payload = json_decode((string) ($reservationRow->payment_payload_json ?? ''), true);
+    if (!is_array($payload)) {
+        $payload = [];
+    }
+    $checkoutUrl = trim((string) ($payload['checkout_url'] ?? ''));
+    if ($checkoutUrl !== '') {
+        $query = http_build_query([
+            'intent_id' => (string) ($reservationRow->payment_intent_id ?? ''),
+            'reservation_id' => $reservation,
+            'amount' => number_format((float) ($reservationRow->payment_amount ?? 0), 2, '.', ''),
+            'currency' => strtoupper(trim((string) ($reservationRow->payment_currency ?? 'MVR'))),
+            'provider' => (string) ($payload['provider'] ?? ''),
+            'gateway' => (string) ($payload['gateway'] ?? ''),
+            'return_url' => url('/booking/checkout/' . $reservation),
+            'cancel_url' => url('/booking/checkout/' . $reservation),
+            'webhook_url' => url('/booking/payment/webhooks/' . (string) ($payload['gateway'] ?? '')),
+        ]);
+        $target = $checkoutUrl . (str_contains($checkoutUrl, '?') ? '&' : '?') . $query;
+
+        return redirect()->away($target);
     }
 
     workationApplyReservationPaymentEvent($reservationRow, [

@@ -33,6 +33,13 @@ $stripeSupportedCurrencies = $parseCurrencyList(
 );
 
 return [
+    // FX conversion uses this base: each rate means "how many MVR for 1 unit of that currency".
+    'fx_base_currency' => strtoupper(trim((string) env('WORKATION_PAYMENT_FX_BASE_CURRENCY', 'MVR'))),
+    'fx_rates' => [
+        'MVR' => 1.0,
+        'USD' => (float) env('WORKATION_PAYMENT_FX_MVR_PER_USD', 15.42),
+    ],
+
     'commission_rate_percent' => 12.0,
 
     'provider_fee_rate_percent' => [

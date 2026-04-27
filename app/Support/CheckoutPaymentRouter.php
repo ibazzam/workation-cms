@@ -43,6 +43,68 @@ class CheckoutPaymentRouter
         return Str::headline(str_replace('_', ' ', $provider));
     }
 
+    private static function fxRateToBase(string $currency): float
+    {
+        $currencyCode = strtoupper(trim($currency));
+        $rates = (array) config('checkout_payments.fx_rates', []);
+        $rate = (float) ($rates[$currencyCode] ?? 0);
+
+        if ($rate <= 0) {
+            throw new InvalidArgumentException('Missing FX rate for currency: ' . $currencyCode);
+        }
+
+        return $rate;
+    }
+
+    private static function convertAmount(float $amount, string $fromCurrency, string $toCurrency): float
+    {
+        $from = strtoupper(trim($fromCurrency));
+        $to = strtoupper(trim($toCurrency));
+        if ($from === '' || $to === '') {
+            throw new InvalidArgumentException('Currency conversion requires both source and target currencies.');
+        }
+        if ($from === $to) {
+            return round(max(0, $amount), 2);
+        }
+
+        $fromRateToBase = self::fxRateToBase($from);
+        $toRateToBase = self::fxRateToBase($to);
+
+        // Rates are configured as "MVR per 1 unit" (base-relative).
+        // amount(base) = amount(from) * fromRateToBase
+        // amount(to)   = amount(base) / toRateToBase
+        $amountInBase = max(0, $amount) * $fromRateToBase;
+        $amountInTarget = $amountInBase / $toRateToBase;
+
+        return round($amountInTarget, 2);
+    }
+
+    public static function buildPaymentQuote(array $context, ?string $requestedCurrency = null, ?string $requestedGateway = null): array
+    {
+        $policyContext = $context;
+        $policyContext['requested_gateway'] = $requestedGateway;
+        $policy = self::buildPaymentPolicy($policyContext, $requestedCurrency);
+
+        $sourceCurrency = strtoupper(trim((string) ($context['reservation_currency'] ?? $policy['currency'] ?? 'MVR')));
+        $targetCurrency = strtoupper(trim((string) ($policy['currency'] ?? $sourceCurrency)));
+        $sourceAmount = round(max(0, (float) ($context['amount'] ?? 0)), 2);
+        $convertedAmount = self::convertAmount($sourceAmount, $sourceCurrency, $targetCurrency);
+
+        $sourceRateToBase = self::fxRateToBase($sourceCurrency);
+        $targetRateToBase = self::fxRateToBase($targetCurrency);
+        $effectiveRate = $targetRateToBase > 0 ? round($sourceRateToBase / $targetRateToBase, 8) : 1.0;
+
+        return $policy + [
+            'source_amount' => $sourceAmount,
+            'source_currency' => $sourceCurrency,
+            'amount' => $convertedAmount,
+            'currency' => $targetCurrency,
+            'fx_rate' => $effectiveRate,
+            'fx_base_currency' => strtoupper(trim((string) config('checkout_payments.fx_base_currency', 'MVR'))),
+            'quoted_at' => now()->toIso8601String(),
+        ];
+    }
+
     public static function availableOptions(array $context): array
     {
         $segment = self::resolveCustomerSegment(
@@ -200,6 +262,7 @@ class CheckoutPaymentRouter
             'provider' => (string) ($option['provider'] ?? ''),
             'provider_label' => (string) ($option['provider_label'] ?? ''),
             'gateway_mode' => (string) ($gatewayConfig['mode'] ?? 'internal'),
+            'checkout_url' => trim((string) ($gatewayConfig['checkout_url'] ?? '')),
             'available_options' => self::availableOptions($context),
             'customer_notice' => $segment === self::SEGMENT_LOCAL
                 ? 'Local guests can use MVR bank APIs or Stripe. Local cards are blocked on MIB/BML USD APIs.'
@@ -209,13 +272,10 @@ class CheckoutPaymentRouter
 
     public static function createIntentPayload(array $context, ?string $requestedCurrency = null, ?string $requestedGateway = null): array
     {
-        $policyContext = $context;
-        $policyContext['requested_gateway'] = $requestedGateway;
-        $policy = self::buildPaymentPolicy($policyContext, $requestedCurrency);
+        $quote = self::buildPaymentQuote($context, $requestedCurrency, $requestedGateway);
 
-        return $policy + [
+        return $quote + [
             'intent_id' => 'payint_' . Str::lower(Str::random(28)),
-            'amount' => round(max(0, (float) ($context['amount'] ?? 0)), 2),
         ];
     }
 

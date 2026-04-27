@@ -34,6 +34,8 @@
         $gatewayLabel = trim((string) ($paymentPayload['gateway_label'] ?? 'Card Gateway'));
         $paymentCurrency = strtoupper(trim((string) ($reservation->payment_currency ?? $reservation->currency ?? 'MVR')));
         $paymentAmount = number_format((float) ($reservation->payment_amount ?? $reservation->total_amount ?? 0), 2);
+        $sourceCurrency = strtoupper(trim((string) ($paymentPayload['source_currency'] ?? $reservation->currency ?? 'MVR')));
+        $sourceAmount = number_format((float) ($paymentPayload['source_amount'] ?? $reservation->total_amount ?? 0), 2);
     @endphp
 
     <main class="page">
@@ -47,6 +49,7 @@
                 <div class="cell"><span class="k">Reservation</span><span class="v">#{{ (int) ($reservation->id ?? 0) }}</span></div>
                 <div class="cell"><span class="k">Gateway</span><span class="v">{{ $gatewayLabel }}</span></div>
                 <div class="cell"><span class="k">Amount</span><span class="v">{{ $paymentCurrency }} {{ $paymentAmount }}</span></div>
+                <div class="cell"><span class="k">Booking Amount</span><span class="v">{{ $sourceCurrency }} {{ $sourceAmount }}</span></div>
             </div>
 
             <div class="actions">

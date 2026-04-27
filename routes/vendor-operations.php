@@ -2005,6 +2005,14 @@ Route::get('/vendor', function () {
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
     $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
 
+    $activePortalPage = strtolower(trim((string) request()->query('page', 'overview')));
+    if (!in_array($activePortalPage, ['overview', 'reports', 'profile', 'listings', 'reservations', 'operations', 'availability', 'pricing', 'billing', 'engagement', 'promotions'], true)) {
+        $activePortalPage = 'overview';
+    }
+
+    $loadListingsHeavyData = $activePortalPage === 'listings';
+    $loadEngagementData = in_array($activePortalPage, ['engagement', 'promotions'], true);
+
     $vendorCategoryMap = vendorPortalCategoryMap();
     $selectedVendorCategories = vendorPortalSelectedCategories($vendorUser);
     if ($selectedVendorCategories === []) {
@@ -2051,7 +2059,7 @@ Route::get('/vendor', function () {
             ->unique()
             ->values();
 
-        if ($accommodationPropertyIds->isNotEmpty()) {
+        if ($loadListingsHeavyData && $accommodationPropertyIds->isNotEmpty()) {
             $transferRowsByPropertyId = collect();
             $featureRowsByPropertyId = collect();
             $policyRowsByPropertyId = collect();
@@ -2264,7 +2272,7 @@ Route::get('/vendor', function () {
                 ->first();
         }
 
-        if (Schema::hasTable('vendor_property_room_categories')) {
+        if ($loadListingsHeavyData && Schema::hasTable('vendor_property_room_categories')) {
             $vendorRoomCategories = DB::table('vendor_property_room_categories')
                 ->where('vendor_user_id', $vendorUserId)
                 ->orderByDesc('updated_at')
@@ -2272,7 +2280,7 @@ Route::get('/vendor', function () {
                 ->get();
         }
 
-        if (Schema::hasTable('vendor_listing_media')) {
+        if ($loadListingsHeavyData && Schema::hasTable('vendor_listing_media')) {
             $vendorMediaAssets = DB::table('vendor_listing_media')
                 ->where('vendor_user_id', $vendorUserId)
                 ->orderByDesc('created_at')
@@ -2286,214 +2294,215 @@ Route::get('/vendor', function () {
             ->filter(static fn (int $id): bool => $id > 0)
             ->values();
 
-        $reviewTableCandidates = ['vendor_property_reviews', 'vendor_reviews', 'customer_reviews', 'property_reviews'];
-        foreach ($reviewTableCandidates as $reviewTable) {
-            if (!Schema::hasTable($reviewTable)) {
-                continue;
+        if ($loadEngagementData) {
+            $reviewTableCandidates = ['vendor_property_reviews', 'vendor_reviews', 'customer_reviews', 'property_reviews'];
+            foreach ($reviewTableCandidates as $reviewTable) {
+                if (!Schema::hasTable($reviewTable)) {
+                    continue;
+                }
+
+                $columns = Schema::getColumnListing($reviewTable);
+                $idColumn = collect(['id', 'review_id'])->first(static fn ($column) => in_array($column, $columns, true));
+                if ($idColumn === null) {
+                    continue;
+                }
+
+                $vendorColumn = collect(['vendor_user_id', 'vendor_id', 'owner_user_id'])->first(static fn ($column) => in_array($column, $columns, true));
+                $propertyColumn = collect(['vendor_property_id', 'property_id', 'listing_id', 'entity_id'])->first(static fn ($column) => in_array($column, $columns, true));
+                $dateColumn = collect(['created_at', 'reviewed_at', 'updated_at'])->first(static fn ($column) => in_array($column, $columns, true));
+
+                $query = DB::table($reviewTable);
+                if ($vendorColumn !== null) {
+                    $query->where($vendorColumn, $vendorUserId);
+                } elseif ($propertyColumn !== null && $vendorPropertyIds->isNotEmpty()) {
+                    $query->whereIn($propertyColumn, $vendorPropertyIds->all());
+                } else {
+                    continue;
+                }
+
+                if ($dateColumn !== null) {
+                    $query->orderByDesc($dateColumn);
+                }
+
+                $ratingColumn = collect(['rating', 'score', 'review_score'])->first(static fn ($column) => in_array($column, $columns, true));
+                $titleColumn = collect(['title', 'subject', 'headline'])->first(static fn ($column) => in_array($column, $columns, true));
+                $commentColumn = collect(['comment', 'review_text', 'message', 'body'])->first(static fn ($column) => in_array($column, $columns, true));
+                $statusColumn = collect(['status', 'review_status'])->first(static fn ($column) => in_array($column, $columns, true));
+                $nameColumn = collect(['customer_name', 'guest_name', 'reviewer_name', 'name'])->first(static fn ($column) => in_array($column, $columns, true));
+                $responseColumn = collect(['vendor_response', 'response_text', 'reply_text', 'response'])->first(static fn ($column) => in_array($column, $columns, true));
+
+                $selectColumns = collect([$idColumn, $propertyColumn, $ratingColumn, $titleColumn, $commentColumn, $statusColumn, $nameColumn, $responseColumn, $dateColumn])
+                    ->filter(static fn ($column) => is_string($column) && $column !== '')
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                $rows = $query->limit(80)->get($selectColumns);
+                if ($rows->isEmpty()) {
+                    continue;
+                }
+
+                $vendorEngagement['reviews_table'] = $reviewTable;
+                $vendorEngagement['reviews'] = $rows->map(static function ($row) use ($idColumn, $propertyColumn, $ratingColumn, $titleColumn, $commentColumn, $statusColumn, $nameColumn, $responseColumn, $dateColumn) {
+                    return [
+                        'id' => (int) (($row->{$idColumn} ?? 0) ?: 0),
+                        'vendor_property_id' => $propertyColumn ? (int) (($row->{$propertyColumn} ?? 0) ?: 0) : 0,
+                        'rating' => $ratingColumn ? (float) (($row->{$ratingColumn} ?? 0) ?: 0) : 0,
+                        'title' => trim((string) ($titleColumn ? ($row->{$titleColumn} ?? '') : '')),
+                        'comment' => trim((string) ($commentColumn ? ($row->{$commentColumn} ?? '') : '')),
+                        'status' => strtolower(trim((string) ($statusColumn ? ($row->{$statusColumn} ?? 'pending') : 'pending'))),
+                        'customer_name' => trim((string) ($nameColumn ? ($row->{$nameColumn} ?? 'Guest') : 'Guest')),
+                        'response' => trim((string) ($responseColumn ? ($row->{$responseColumn} ?? '') : '')),
+                        'created_at' => trim((string) ($dateColumn ? ($row->{$dateColumn} ?? '') : '')),
+                    ];
+                })->values();
+
+                break;
             }
 
-            $columns = Schema::getColumnListing($reviewTable);
-            $idColumn = collect(['id', 'review_id'])->first(static fn ($column) => in_array($column, $columns, true));
-            if ($idColumn === null) {
-                continue;
+            $inquiryTableCandidates = ['vendor_customer_inquiries', 'vendor_inquiries', 'customer_inquiries', 'vendor_messages'];
+            foreach ($inquiryTableCandidates as $inquiryTable) {
+                if (!Schema::hasTable($inquiryTable)) {
+                    continue;
+                }
+
+                $columns = Schema::getColumnListing($inquiryTable);
+                $idColumn = collect(['id', 'inquiry_id', 'message_id'])->first(static fn ($column) => in_array($column, $columns, true));
+                if ($idColumn === null) {
+                    continue;
+                }
+
+                $vendorColumn = collect(['vendor_user_id', 'vendor_id', 'owner_user_id'])->first(static fn ($column) => in_array($column, $columns, true));
+                $propertyColumn = collect(['vendor_property_id', 'property_id', 'listing_id', 'entity_id'])->first(static fn ($column) => in_array($column, $columns, true));
+                $dateColumn = collect(['created_at', 'submitted_at', 'sent_at', 'updated_at'])->first(static fn ($column) => in_array($column, $columns, true));
+
+                $query = DB::table($inquiryTable);
+                if ($vendorColumn !== null) {
+                    $query->where($vendorColumn, $vendorUserId);
+                } elseif ($propertyColumn !== null && $vendorPropertyIds->isNotEmpty()) {
+                    $query->whereIn($propertyColumn, $vendorPropertyIds->all());
+                } else {
+                    continue;
+                }
+
+                if ($dateColumn !== null) {
+                    $query->orderByDesc($dateColumn);
+                }
+
+                $subjectColumn = collect(['subject', 'topic', 'title'])->first(static fn ($column) => in_array($column, $columns, true));
+                $messageColumn = collect(['message', 'body', 'content', 'inquiry_text'])->first(static fn ($column) => in_array($column, $columns, true));
+                $statusColumn = collect(['status', 'inquiry_status', 'state'])->first(static fn ($column) => in_array($column, $columns, true));
+                $nameColumn = collect(['customer_name', 'guest_name', 'sender_name', 'name'])->first(static fn ($column) => in_array($column, $columns, true));
+                $emailColumn = collect(['customer_email', 'guest_email', 'sender_email', 'email'])->first(static fn ($column) => in_array($column, $columns, true));
+                $responseColumn = collect(['vendor_response', 'response_text', 'reply_text', 'response', 'resolution_note'])->first(static fn ($column) => in_array($column, $columns, true));
+                $respondedAtColumn = collect(['responded_at', 'replied_at', 'response_at'])->first(static fn ($column) => in_array($column, $columns, true));
+
+                $selectColumns = collect([$idColumn, $propertyColumn, $subjectColumn, $messageColumn, $statusColumn, $nameColumn, $emailColumn, $responseColumn, $respondedAtColumn, $dateColumn])
+                    ->filter(static fn ($column) => is_string($column) && $column !== '')
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                $rows = $query->limit(100)->get($selectColumns);
+                if ($rows->isEmpty()) {
+                    continue;
+                }
+
+                $vendorEngagement['inquiries_table'] = $inquiryTable;
+                $vendorEngagement['inquiries'] = $rows->map(static function ($row) use ($idColumn, $propertyColumn, $subjectColumn, $messageColumn, $statusColumn, $nameColumn, $emailColumn, $responseColumn, $respondedAtColumn, $dateColumn) {
+                    return [
+                        'id' => (int) (($row->{$idColumn} ?? 0) ?: 0),
+                        'vendor_property_id' => $propertyColumn ? (int) (($row->{$propertyColumn} ?? 0) ?: 0) : 0,
+                        'subject' => trim((string) ($subjectColumn ? ($row->{$subjectColumn} ?? '') : '')),
+                        'message' => trim((string) ($messageColumn ? ($row->{$messageColumn} ?? '') : '')),
+                        'status' => strtolower(trim((string) ($statusColumn ? ($row->{$statusColumn} ?? 'open') : 'open'))),
+                        'customer_name' => trim((string) ($nameColumn ? ($row->{$nameColumn} ?? 'Guest') : 'Guest')),
+                        'customer_email' => trim((string) ($emailColumn ? ($row->{$emailColumn} ?? '') : '')),
+                        'response' => trim((string) ($responseColumn ? ($row->{$responseColumn} ?? '') : '')),
+                        'responded_at' => trim((string) ($respondedAtColumn ? ($row->{$respondedAtColumn} ?? '') : '')),
+                        'created_at' => trim((string) ($dateColumn ? ($row->{$dateColumn} ?? '') : '')),
+                    ];
+                })->values();
+
+                break;
             }
 
-            $vendorColumn = collect(['vendor_user_id', 'vendor_id', 'owner_user_id'])->first(static fn ($column) => in_array($column, $columns, true));
-            $propertyColumn = collect(['vendor_property_id', 'property_id', 'listing_id', 'entity_id'])->first(static fn ($column) => in_array($column, $columns, true));
-            $dateColumn = collect(['created_at', 'reviewed_at', 'submitted_at', 'updated_at'])->first(static fn ($column) => in_array($column, $columns, true));
+            $vendorEngagement['promotions'] = $vendorPricingRules
+                ->filter(static fn ($rule) => in_array(strtolower(trim((string) ($rule->rule_type ?? ''))), ['promo_discount', 'demand_discount', 'weekend_markup'], true))
+                ->map(static function ($rule) {
+                    return [
+                        'id' => (int) ($rule->id ?? 0),
+                        'name' => trim((string) ($rule->name ?? 'Promotion Rule')),
+                        'rule_type' => strtolower(trim((string) ($rule->rule_type ?? 'promo_discount'))),
+                        'value' => (float) ($rule->value ?? 0),
+                        'is_active' => (bool) ($rule->is_active ?? true),
+                        'starts_on' => (string) ($rule->starts_on ?? ''),
+                        'ends_on' => (string) ($rule->ends_on ?? ''),
+                    ];
+                })
+                ->sortByDesc('id')
+                ->take(20)
+                ->values();
 
-            $query = DB::table($reviewTable);
-            if ($vendorColumn !== null) {
-                $query->where($vendorColumn, $vendorUserId);
-            } elseif ($propertyColumn !== null && $vendorPropertyIds->isNotEmpty()) {
-                $query->whereIn($propertyColumn, $vendorPropertyIds->all());
-            } else {
-                continue;
+            $loyaltyTableCandidates = ['vendor_loyalty_programs', 'vendor_loyalty_tiers', 'vendor_loyalty_configs'];
+            foreach ($loyaltyTableCandidates as $loyaltyTable) {
+                if (!Schema::hasTable($loyaltyTable)) {
+                    continue;
+                }
+
+                $columns = Schema::getColumnListing($loyaltyTable);
+                $vendorColumn = collect(['vendor_user_id', 'vendor_id', 'owner_user_id'])->first(static fn ($column) => in_array($column, $columns, true));
+                if ($vendorColumn === null) {
+                    continue;
+                }
+
+                $nameColumn = collect(['name', 'program_name', 'tier_name', 'title'])->first(static fn ($column) => in_array($column, $columns, true));
+                $pointsColumn = collect(['points_per_booking', 'points_rate', 'points_multiplier'])->first(static fn ($column) => in_array($column, $columns, true));
+                $statusColumn = collect(['status', 'is_active'])->first(static fn ($column) => in_array($column, $columns, true));
+                $dateColumn = collect(['updated_at', 'created_at'])->first(static fn ($column) => in_array($column, $columns, true));
+
+                $query = DB::table($loyaltyTable)->where($vendorColumn, $vendorUserId);
+                if ($dateColumn !== null) {
+                    $query->orderByDesc($dateColumn);
+                }
+
+                $selectColumns = collect([$nameColumn, $pointsColumn, $statusColumn, $dateColumn])
+                    ->filter(static fn ($column) => is_string($column) && $column !== '')
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                $rows = $query->limit(20)->get($selectColumns);
+                $vendorEngagement['loyalty_table'] = $loyaltyTable;
+                $vendorEngagement['loyalty_programs'] = $rows->map(static function ($row) use ($nameColumn, $pointsColumn, $statusColumn, $dateColumn) {
+                    return [
+                        'name' => trim((string) ($nameColumn ? ($row->{$nameColumn} ?? 'Loyalty Program') : 'Loyalty Program')),
+                        'points_rate' => $pointsColumn ? (float) (($row->{$pointsColumn} ?? 0) ?: 0) : 0,
+                        'status' => strtolower(trim((string) ($statusColumn ? ($row->{$statusColumn} ?? 'active') : 'active'))),
+                        'updated_at' => trim((string) ($dateColumn ? ($row->{$dateColumn} ?? '') : '')),
+                    ];
+                })->values();
+                break;
             }
 
-            if ($dateColumn !== null) {
-                $query->orderByDesc($dateColumn);
-            }
-
-            $ratingColumn = collect(['rating', 'rating_value', 'review_score', 'score'])->first(static fn ($column) => in_array($column, $columns, true));
-            $commentColumn = collect(['review_comment', 'comment', 'review_text', 'feedback', 'notes'])->first(static fn ($column) => in_array($column, $columns, true));
-            $statusColumn = collect(['status', 'review_status', 'moderation_status'])->first(static fn ($column) => in_array($column, $columns, true));
-            $nameColumn = collect(['customer_name', 'guest_name', 'reviewer_name', 'name'])->first(static fn ($column) => in_array($column, $columns, true));
-            $emailColumn = collect(['customer_email', 'guest_email', 'reviewer_email', 'email'])->first(static fn ($column) => in_array($column, $columns, true));
-            $responseColumn = collect(['vendor_response', 'response_text', 'reply_text', 'response'])->first(static fn ($column) => in_array($column, $columns, true));
-            $respondedAtColumn = collect(['responded_at', 'replied_at', 'response_at'])->first(static fn ($column) => in_array($column, $columns, true));
-
-            $selectColumns = collect([$idColumn, $propertyColumn, $ratingColumn, $commentColumn, $statusColumn, $nameColumn, $emailColumn, $responseColumn, $respondedAtColumn, $dateColumn])
-                ->filter(static fn ($column) => is_string($column) && $column !== '')
-                ->unique()
-                ->values()
-                ->all();
-
-            $rows = $query->limit(80)->get($selectColumns);
-            if ($rows->isEmpty()) {
-                continue;
-            }
-
-            $vendorEngagement['reviews_table'] = $reviewTable;
-            $vendorEngagement['reviews'] = $rows->map(static function ($row) use ($idColumn, $propertyColumn, $ratingColumn, $commentColumn, $statusColumn, $nameColumn, $emailColumn, $responseColumn, $respondedAtColumn, $dateColumn) {
-                return [
-                    'id' => (int) (($row->{$idColumn} ?? 0) ?: 0),
-                    'vendor_property_id' => $propertyColumn ? (int) (($row->{$propertyColumn} ?? 0) ?: 0) : 0,
-                    'rating' => $ratingColumn ? (float) (($row->{$ratingColumn} ?? 0) ?: 0) : 0,
-                    'comment' => trim((string) ($commentColumn ? ($row->{$commentColumn} ?? '') : '')),
-                    'status' => strtolower(trim((string) ($statusColumn ? ($row->{$statusColumn} ?? 'pending') : 'pending'))),
-                    'customer_name' => trim((string) ($nameColumn ? ($row->{$nameColumn} ?? 'Guest') : 'Guest')),
-                    'customer_email' => trim((string) ($emailColumn ? ($row->{$emailColumn} ?? '') : '')),
-                    'response' => trim((string) ($responseColumn ? ($row->{$responseColumn} ?? '') : '')),
-                    'responded_at' => trim((string) ($respondedAtColumn ? ($row->{$respondedAtColumn} ?? '') : '')),
-                    'created_at' => trim((string) ($dateColumn ? ($row->{$dateColumn} ?? '') : '')),
-                ];
-            })->values();
-
-            break;
+            $vendorEngagement['loyal_customers'] = $vendorReservations
+                ->filter(static fn ($reservation) => trim((string) ($reservation->customer_email ?? '')) !== '')
+                ->groupBy(static fn ($reservation) => strtolower(trim((string) ($reservation->customer_email ?? ''))))
+                ->map(static function ($rows, $email) {
+                    $rows = collect($rows);
+                    $latest = $rows->sortByDesc(static fn ($row) => (string) ($row->start_at ?? $row->created_at ?? ''))->first();
+                    return [
+                        'customer_email' => (string) $email,
+                        'customer_name' => trim((string) ($latest->customer_name ?? 'Returning Guest')),
+                        'reservations_count' => (int) $rows->count(),
+                        'total_spend' => (float) $rows->sum(static fn ($row) => (float) ($row->invoice_total_amount ?? $row->total_amount ?? 0)),
+                    ];
+                })
+                ->sortByDesc('reservations_count')
+                ->take(20)
+                ->values();
         }
 
-        $inquiryTableCandidates = ['vendor_customer_inquiries', 'vendor_inquiries', 'customer_inquiries', 'vendor_messages'];
-        foreach ($inquiryTableCandidates as $inquiryTable) {
-            if (!Schema::hasTable($inquiryTable)) {
-                continue;
-            }
-
-            $columns = Schema::getColumnListing($inquiryTable);
-            $idColumn = collect(['id', 'inquiry_id', 'message_id'])->first(static fn ($column) => in_array($column, $columns, true));
-            if ($idColumn === null) {
-                continue;
-            }
-
-            $vendorColumn = collect(['vendor_user_id', 'vendor_id', 'owner_user_id'])->first(static fn ($column) => in_array($column, $columns, true));
-            $propertyColumn = collect(['vendor_property_id', 'property_id', 'listing_id', 'entity_id'])->first(static fn ($column) => in_array($column, $columns, true));
-            $dateColumn = collect(['created_at', 'submitted_at', 'sent_at', 'updated_at'])->first(static fn ($column) => in_array($column, $columns, true));
-
-            $query = DB::table($inquiryTable);
-            if ($vendorColumn !== null) {
-                $query->where($vendorColumn, $vendorUserId);
-            } elseif ($propertyColumn !== null && $vendorPropertyIds->isNotEmpty()) {
-                $query->whereIn($propertyColumn, $vendorPropertyIds->all());
-            } else {
-                continue;
-            }
-
-            if ($dateColumn !== null) {
-                $query->orderByDesc($dateColumn);
-            }
-
-            $subjectColumn = collect(['subject', 'topic', 'title'])->first(static fn ($column) => in_array($column, $columns, true));
-            $messageColumn = collect(['message', 'body', 'content', 'inquiry_text'])->first(static fn ($column) => in_array($column, $columns, true));
-            $statusColumn = collect(['status', 'inquiry_status', 'state'])->first(static fn ($column) => in_array($column, $columns, true));
-            $nameColumn = collect(['customer_name', 'guest_name', 'sender_name', 'name'])->first(static fn ($column) => in_array($column, $columns, true));
-            $emailColumn = collect(['customer_email', 'guest_email', 'sender_email', 'email'])->first(static fn ($column) => in_array($column, $columns, true));
-            $responseColumn = collect(['vendor_response', 'response_text', 'reply_text', 'response', 'resolution_note'])->first(static fn ($column) => in_array($column, $columns, true));
-            $respondedAtColumn = collect(['responded_at', 'replied_at', 'response_at'])->first(static fn ($column) => in_array($column, $columns, true));
-
-            $selectColumns = collect([$idColumn, $propertyColumn, $subjectColumn, $messageColumn, $statusColumn, $nameColumn, $emailColumn, $responseColumn, $respondedAtColumn, $dateColumn])
-                ->filter(static fn ($column) => is_string($column) && $column !== '')
-                ->unique()
-                ->values()
-                ->all();
-
-            $rows = $query->limit(100)->get($selectColumns);
-            if ($rows->isEmpty()) {
-                continue;
-            }
-
-            $vendorEngagement['inquiries_table'] = $inquiryTable;
-            $vendorEngagement['inquiries'] = $rows->map(static function ($row) use ($idColumn, $propertyColumn, $subjectColumn, $messageColumn, $statusColumn, $nameColumn, $emailColumn, $responseColumn, $respondedAtColumn, $dateColumn) {
-                return [
-                    'id' => (int) (($row->{$idColumn} ?? 0) ?: 0),
-                    'vendor_property_id' => $propertyColumn ? (int) (($row->{$propertyColumn} ?? 0) ?: 0) : 0,
-                    'subject' => trim((string) ($subjectColumn ? ($row->{$subjectColumn} ?? '') : '')),
-                    'message' => trim((string) ($messageColumn ? ($row->{$messageColumn} ?? '') : '')),
-                    'status' => strtolower(trim((string) ($statusColumn ? ($row->{$statusColumn} ?? 'open') : 'open'))),
-                    'customer_name' => trim((string) ($nameColumn ? ($row->{$nameColumn} ?? 'Guest') : 'Guest')),
-                    'customer_email' => trim((string) ($emailColumn ? ($row->{$emailColumn} ?? '') : '')),
-                    'response' => trim((string) ($responseColumn ? ($row->{$responseColumn} ?? '') : '')),
-                    'responded_at' => trim((string) ($respondedAtColumn ? ($row->{$respondedAtColumn} ?? '') : '')),
-                    'created_at' => trim((string) ($dateColumn ? ($row->{$dateColumn} ?? '') : '')),
-                ];
-            })->values();
-
-            break;
-        }
-
-        $vendorEngagement['promotions'] = $vendorPricingRules
-            ->filter(static fn ($rule) => in_array(strtolower(trim((string) ($rule->rule_type ?? ''))), ['promo_discount', 'demand_discount', 'weekend_markup'], true))
-            ->map(static function ($rule) {
-                return [
-                    'id' => (int) ($rule->id ?? 0),
-                    'name' => trim((string) ($rule->name ?? 'Promotion Rule')),
-                    'rule_type' => strtolower(trim((string) ($rule->rule_type ?? 'promo_discount'))),
-                    'value' => (float) ($rule->value ?? 0),
-                    'is_active' => (bool) ($rule->is_active ?? true),
-                    'starts_on' => (string) ($rule->starts_on ?? ''),
-                    'ends_on' => (string) ($rule->ends_on ?? ''),
-                ];
-            })
-            ->sortByDesc('id')
-            ->take(20)
-            ->values();
-
-        $loyaltyTableCandidates = ['vendor_loyalty_programs', 'vendor_loyalty_tiers', 'vendor_loyalty_configs'];
-        foreach ($loyaltyTableCandidates as $loyaltyTable) {
-            if (!Schema::hasTable($loyaltyTable)) {
-                continue;
-            }
-
-            $columns = Schema::getColumnListing($loyaltyTable);
-            $vendorColumn = collect(['vendor_user_id', 'vendor_id', 'owner_user_id'])->first(static fn ($column) => in_array($column, $columns, true));
-            if ($vendorColumn === null) {
-                continue;
-            }
-
-            $nameColumn = collect(['name', 'program_name', 'tier_name', 'title'])->first(static fn ($column) => in_array($column, $columns, true));
-            $pointsColumn = collect(['points_per_booking', 'points_rate', 'points_multiplier'])->first(static fn ($column) => in_array($column, $columns, true));
-            $statusColumn = collect(['status', 'is_active'])->first(static fn ($column) => in_array($column, $columns, true));
-            $dateColumn = collect(['updated_at', 'created_at'])->first(static fn ($column) => in_array($column, $columns, true));
-
-            $query = DB::table($loyaltyTable)->where($vendorColumn, $vendorUserId);
-            if ($dateColumn !== null) {
-                $query->orderByDesc($dateColumn);
-            }
-
-            $selectColumns = collect([$nameColumn, $pointsColumn, $statusColumn, $dateColumn])
-                ->filter(static fn ($column) => is_string($column) && $column !== '')
-                ->unique()
-                ->values()
-                ->all();
-
-            $rows = $query->limit(20)->get($selectColumns);
-            $vendorEngagement['loyalty_table'] = $loyaltyTable;
-            $vendorEngagement['loyalty_programs'] = $rows->map(static function ($row) use ($nameColumn, $pointsColumn, $statusColumn, $dateColumn) {
-                return [
-                    'name' => trim((string) ($nameColumn ? ($row->{$nameColumn} ?? 'Loyalty Program') : 'Loyalty Program')),
-                    'points_rate' => $pointsColumn ? (float) (($row->{$pointsColumn} ?? 0) ?: 0) : 0,
-                    'status' => strtolower(trim((string) ($statusColumn ? ($row->{$statusColumn} ?? 'active') : 'active'))),
-                    'updated_at' => trim((string) ($dateColumn ? ($row->{$dateColumn} ?? '') : '')),
-                ];
-            })->values();
-            break;
-        }
-
-        $vendorEngagement['loyal_customers'] = $vendorReservations
-            ->filter(static fn ($reservation) => trim((string) ($reservation->customer_email ?? '')) !== '')
-            ->groupBy(static fn ($reservation) => strtolower(trim((string) ($reservation->customer_email ?? ''))))
-            ->map(static function ($rows, $email) {
-                $rows = collect($rows);
-                $latest = $rows->sortByDesc(static fn ($row) => (string) ($row->start_at ?? $row->created_at ?? ''))->first();
-                return [
-                    'customer_email' => (string) $email,
-                    'customer_name' => trim((string) ($latest->customer_name ?? 'Returning Guest')),
-                    'reservations_count' => (int) $rows->count(),
-                    'total_spend' => (float) $rows->sum(static fn ($row) => (float) ($row->invoice_total_amount ?? $row->total_amount ?? 0)),
-                ];
-            })
-            ->sortByDesc('reservations_count')
-            ->take(20)
-            ->values();
     }
 
     return view('vendor-portal', [

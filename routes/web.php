@@ -859,12 +859,22 @@ if (!function_exists('customerConnectionName')) {
 if (!function_exists('customerSchemaHasColumn')) {
     function customerSchemaHasColumn(string $column): bool
     {
+        static $columnCache = [];
+
+        if (array_key_exists($column, $columnCache)) {
+            return $columnCache[$column];
+        }
+
         $connection = customerConnectionName();
         $table = customerTableName();
 
-        return $connection
+        $exists = $connection
             ? Schema::connection($connection)->hasColumn($table, $column)
             : Schema::hasColumn($table, $column);
+
+        $columnCache[$column] = $exists;
+
+        return $exists;
     }
 }
 
@@ -1010,6 +1020,13 @@ if (!function_exists('findCustomerByEmail')) {
             return null;
         }
 
+        $query = \App\Models\Customer::query();
+        $customer = $query->where('email', $normalized)->first();
+
+        if ($customer) {
+            return $customer;
+        }
+
         return \App\Models\Customer::query()
             ->whereRaw('LOWER(email) = ?', [$normalized])
             ->first();
@@ -1022,6 +1039,16 @@ if (!function_exists('findActiveVendorByEmail')) {
         $normalized = strtolower(trim($email));
         if ($normalized === '') {
             return null;
+        }
+
+        $vendor = \App\Models\User::query()
+            ->where('email', $normalized)
+            ->where('portal_enabled', true)
+            ->whereIn('portal_role', ['VENDOR', 'vendor'])
+            ->first();
+
+        if ($vendor) {
+            return $vendor;
         }
 
         return \App\Models\User::query()

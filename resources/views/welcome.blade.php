@@ -2951,13 +2951,18 @@
                     rebuildSelect(atollSelect, atollNames, 'All Atolls', '');
 
                     const islandsByAtoll = new Map();
-                    const allIslands = new Set();
+                    const atollIdByName = new Map();
+                    const allEmbeddedIslands = new Set();
 
-                    await Promise.all(atollRows.map(async function (atoll) {
+                    atollRows.forEach(function (atoll) {
                         const atollId = Number(atoll && atoll.id ? atoll.id : 0);
                         const atollName = String(atoll && atoll.name ? atoll.name : '').trim();
-                        if (atollId <= 0 || atollName === '') {
+                        if (atollName === '') {
                             return;
+                        }
+
+                        if (atollId > 0) {
+                            atollIdByName.set(atollName, atollId);
                         }
 
                         const embeddedIslands = Array.isArray(atoll && atoll.islands ? atoll.islands : null)
@@ -2968,32 +2973,46 @@
 
                         if (embeddedIslands.length > 0) {
                             islandsByAtoll.set(atollName, embeddedIslands);
-                            embeddedIslands.forEach(function (name) { allIslands.add(name); });
+                            embeddedIslands.forEach(function (name) { allEmbeddedIslands.add(name); });
+                        }
+                    });
+
+                    async function updateIslandSelect() {
+                        const selectedAtoll = String(atollSelect.value || '').trim();
+
+                        if (selectedAtoll === '') {
+                            rebuildSelect(islandSelect, Array.from(allEmbeddedIslands), 'All Islands', '');
                             return;
                         }
+
+                        if (islandsByAtoll.has(selectedAtoll)) {
+                            rebuildSelect(islandSelect, islandsByAtoll.get(selectedAtoll) || [], 'All Islands', '');
+                            return;
+                        }
+
+                        const atollId = Number(atollIdByName.get(selectedAtoll) || 0);
+                        if (atollId <= 0) {
+                            rebuildSelect(islandSelect, [], 'All Islands', '');
+                            return;
+                        }
+
+                        rebuildSelect(islandSelect, [], 'Loading islands...', '');
 
                         try {
                             const islands = await fetchJson('/api/atoll-island/atolls/' + atollId + '/islands');
                             const islandNames = (Array.isArray(islands) ? islands : [])
                                 .map(function (island) { return String(island && island.name ? island.name : '').trim(); })
                                 .filter(function (name) { return name !== ''; });
-                            islandsByAtoll.set(atollName, islandNames);
-                            islandNames.forEach(function (name) { allIslands.add(name); });
+                            islandsByAtoll.set(selectedAtoll, islandNames);
+                            rebuildSelect(islandSelect, islandNames, 'All Islands', '');
                         } catch (error) {
-                            islandsByAtoll.set(atollName, []);
+                            islandsByAtoll.set(selectedAtoll, []);
+                            rebuildSelect(islandSelect, [], 'All Islands', '');
                         }
-                    }));
-
-                    function updateIslandSelect() {
-                        const selectedAtoll = String(atollSelect.value || '').trim();
-                        const islandNames = selectedAtoll === ''
-                            ? Array.from(allIslands)
-                            : (islandsByAtoll.get(selectedAtoll) || []);
-                        rebuildSelect(islandSelect, islandNames, 'All Islands', '');
                     }
 
                     atollSelect.addEventListener('change', updateIslandSelect);
-                    updateIslandSelect();
+                    await updateIslandSelect();
                 } catch (error) {
                     // Keep search usable even when location API is unavailable.
                 }

@@ -1627,14 +1627,17 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
             ->all();
 
         $portalUser = null;
+        $linkedVendorForEmail = null;
 
         // Admin/vendor login: users table; customer login: User table with vendor bridge.
         if (in_array('ADMIN', $config['allowed_roles'], true) || in_array('VENDOR', $config['allowed_roles'], true)) {
             if (Schema::hasColumns('users', ['username', 'portal_enabled', 'portal_role'])) {
                 $portalCandidates = \App\Models\User::query()
-                    ->where(function ($query) use ($usernameLower) {
-                        $query->whereRaw('LOWER(username) = ?', [$usernameLower])
-                            ->orWhereRaw('LOWER(email) = ?', [$usernameLower]);
+                    ->where(function ($query) use ($username, $usernameLower) {
+                        $query->where('username', $username)
+                            ->orWhere('email', $username)
+                            ->orWhere('username', $usernameLower)
+                            ->orWhere('email', $usernameLower);
                     })
                     ->where('portal_enabled', true)
                     ->get();
@@ -1657,6 +1660,7 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
                     // Allow vendors to sign in with customer password if both identities share email.
                     $candidateVendor = findActiveVendorByEmail($usernameLower);
                     $candidateCustomer = findCustomerByEmail($usernameLower);
+                    $linkedVendorForEmail = $candidateVendor;
 
                     if (
                         $candidateVendor instanceof \App\Models\User
@@ -1670,20 +1674,19 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
             }
         } else {
             $directCustomer = findCustomerByEmail($usernameLower);
+            $linkedVendorForEmail = findActiveVendorByEmail($usernameLower);
 
             if ($directCustomer instanceof \App\Models\Customer && Hash::check($password, (string) $directCustomer->password)) {
                 $portalUser = $directCustomer;
 
                 // If this customer is also an active vendor, keep vendor password aligned for single credential use.
-                $linkedVendor = findActiveVendorByEmail($usernameLower);
-                if ($linkedVendor instanceof \App\Models\User) {
-                    syncVendorPasswordFromCustomer($linkedVendor, $password);
+                if ($linkedVendorForEmail instanceof \App\Models\User) {
+                    syncVendorPasswordFromCustomer($linkedVendorForEmail, $password);
                 }
             } else {
                 // Active vendors can always access customer portal with the same credentials.
-                $linkedVendor = findActiveVendorByEmail($usernameLower);
-                if ($linkedVendor instanceof \App\Models\User && Hash::check($password, (string) $linkedVendor->password)) {
-                    $portalUser = upsertCustomerFromVendorIdentity($linkedVendor, $password);
+                if ($linkedVendorForEmail instanceof \App\Models\User && Hash::check($password, (string) $linkedVendorForEmail->password)) {
+                    $portalUser = upsertCustomerFromVendorIdentity($linkedVendorForEmail, $password);
                 } else {
                     $portalUser = $directCustomer;
                 }
@@ -1737,7 +1740,7 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
             $portal === 'customer'
             && $portalUser instanceof \App\Models\Customer
             && !customerEmailIsVerified($portalUser)
-            && !findActiveVendorByEmail((string) ($portalUser->email ?? ''))
+            && !($linkedVendorForEmail instanceof \App\Models\User)
         ) {
             RateLimiter::hit($throttleKey, $decaySeconds);
 

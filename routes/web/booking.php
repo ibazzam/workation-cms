@@ -296,6 +296,32 @@ Route::post('/booking/reserve', function (Request $request) {
             'accommodation',
             null
         );
+
+        // Notify vendor of new booking
+        $vendorEmailForNotif = (string) (DB::table('users')->where('id', (int) ($propertyRow->vendor_user_id ?? 0))->value('email') ?? '');
+        $bookingRefNotif = '#' . $reservationId;
+        $nightsLabel = $nights . ' night' . ($nights === 1 ? '' : 's');
+        $bookingEmailBody = implode("\n", [
+            'Dear Vendor,',
+            '',
+            'A new booking has been received for your listing.',
+            '',
+            'Booking Reference: ' . $bookingRefNotif,
+            'Listing: ' . (string) ($propertyRow->name ?? ''),
+            'Room: ' . (string) ($roomRow->name ?? ''),
+            'Customer: ' . $customerName,
+            'Check-in: ' . $checkin->toDateString(),
+            'Check-out: ' . $checkout->toDateString(),
+            'Duration: ' . $nightsLabel,
+            'Guests: ' . $guestCount,
+            'Total Amount: ' . strtoupper((string) ($roomRow->currency ?? $propertyRow->currency ?? 'MVR')) . ' ' . number_format($totalAmount, 2),
+            '',
+            'The booking is pending payment. You will receive a further notification once payment is confirmed.',
+            '',
+            'Thank you,',
+            'Workation Team',
+        ]);
+        workationSendVendorEmailSafe($vendorEmailForNotif, 'New Booking Received – ' . $customerName . ' – Booking ' . $bookingRefNotif, $bookingEmailBody);
     }
 
     $checkoutUrl = '/booking/checkout'
@@ -1115,6 +1141,30 @@ Route::post('/booking/reserve-category', function (Request $request) {
             str_replace('-', '_', $categoryKey),
             $routeName !== '' ? $routeName : null
         );
+
+        // Notify vendor of new category booking
+        $vendorEmailCatNotif = (string) (DB::table('users')->where('id', (int) ($propertyRow->vendor_user_id ?? 0))->value('email') ?? '');
+        $catBookingRef = '#' . $reservationId;
+        $catEmailBody = implode("\n", [
+            'Dear Vendor,',
+            '',
+            'A new booking has been received for your listing.',
+            '',
+            'Booking Reference: ' . $catBookingRef,
+            'Listing: ' . (string) ($propertyRow->name ?? ''),
+            'Service Type: ' . $categoryLabel,
+            'Customer: ' . $customerName,
+            'Service Start: ' . $serviceStart->toDateString(),
+            'Service End: ' . $serviceEnd->toDateString(),
+            'Guests: ' . $guestCount,
+            'Total Amount: ' . strtoupper((string) ($propertyRow->currency ?? 'MVR')) . ' ' . number_format($totalAmount, 2),
+            '',
+            'The booking is pending payment. You will receive a further notification once payment is confirmed.',
+            '',
+            'Thank you,',
+            'Workation Team',
+        ]);
+        workationSendVendorEmailSafe($vendorEmailCatNotif, 'New Booking Received – ' . $customerName . ' – Booking ' . $catBookingRef, $catEmailBody);
     }
 
     $checkoutUrl = '/booking/checkout'

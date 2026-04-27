@@ -134,7 +134,65 @@ if (!function_exists('workationApplyReservationPaymentEvent')) {
                 'updated_at' => now(),
             ]);
 
+        if ($status === 'paid') {
+            $vendorUserId = (int) ($reservationRow->vendor_user_id ?? 0);
+            $vendorEmail = $vendorUserId > 0
+                ? (string) (DB::table('users')->where('id', $vendorUserId)->value('email') ?? '')
+                : '';
+            $bookingRef = '#' . $reservationId;
+            $customerName = (string) ($reservationRow->customer_name ?? 'Guest');
+            $totalAmt = number_format((float) ($reservationRow->total_amount ?? 0), 2);
+            $payoutAmt = number_format((float) ($reservationRow->vendor_payout_amount ?? 0), 2);
+            $commissionAmt = number_format((float) ($reservationRow->commission_amount ?? 0), 2);
+            $gatewayFeeAmt = number_format((float) ($reservationRow->gateway_fee_amount ?? 0), 2);
+            $currency = strtoupper((string) ($reservationRow->currency ?? 'MVR'));
+            $startAt = trim((string) ($reservationRow->start_at ?? ''));
+            $endAt = trim((string) ($reservationRow->end_at ?? ''));
+            $dateInfo = $startAt !== '' ? ('Service Dates: ' . $startAt . ($endAt !== '' ? ' to ' . $endAt : '')) : null;
+            $emailBody = implode("\n", array_filter([
+                'Dear Vendor,',
+                '',
+                'A payment has been confirmed for one of your bookings.',
+                '',
+                'Booking Reference: ' . $bookingRef,
+                'Customer: ' . $customerName,
+                $dateInfo,
+                '',
+                'Payment Summary (' . $currency . '):',
+                '  Total Collected:   ' . $totalAmt,
+                '  Commission:        ' . $commissionAmt,
+                '  Gateway Fee:       ' . $gatewayFeeAmt,
+                '  Your Net Payout:   ' . $payoutAmt,
+                '',
+                'Your payout will be included in the next scheduled payout run.',
+                '',
+                'Thank you,',
+                'Workation Team',
+            ], static fn ($l) => $l !== null));
+            workationSendVendorEmailSafe($vendorEmail, 'Payment Confirmed – Booking ' . $bookingRef, $emailBody);
+        }
+
         return ['status' => $paymentStatus];
+    }
+}
+
+if (!function_exists('workationSendVendorEmailSafe')) {
+    function workationSendVendorEmailSafe(string $to, string $subject, string $body): void
+    {
+        if ($to === '' || !str_contains($to, '@')) {
+            return;
+        }
+        try {
+            \Illuminate\Support\Facades\Mail::raw($body, static function ($msg) use ($to, $subject): void {
+                $msg->to($to)->subject($subject);
+            });
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('workationSendVendorEmailSafe: failed to send email', [
+                'to' => $to,
+                'subject' => $subject,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }
 

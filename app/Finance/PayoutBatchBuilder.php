@@ -6,6 +6,8 @@ namespace App\Finance;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 /**
@@ -72,6 +74,7 @@ final class PayoutBatchBuilder
                 'vr.gateway_fee_rate_percent',
                 'vr.vendor_payout_amount',
                 'vendor_users.name as vendor_name',
+                'vendor_users.email as vendor_email',
             ]);
 
         if ($eligible->isEmpty()) {
@@ -99,6 +102,7 @@ final class PayoutBatchBuilder
                 $groups[$key]['vendors'][$vendorId] = [
                     'vendor_user_id'   => $vendorId,
                     'vendor_name'      => (string) ($row->vendor_name ?? ''),
+                    'vendor_email'     => (string) ($row->vendor_email ?? ''),
                     'reservation_ids'  => [],
                     'gross_amount'     => 0.0,
                     'commission_amount' => 0.0,
@@ -199,6 +203,38 @@ final class PayoutBatchBuilder
                             'actor_user_id'  => $actorUserId,
                         ]);
                     }
+
+                    // ── Notify vendor of payout queued ────────────────────────
+                    $vendorPayoutEmail = (string) ($vendorData['vendor_email'] ?? '');
+                    if ($vendorPayoutEmail !== '' && str_contains($vendorPayoutEmail, '@')) {
+                        $queuedNetFmt = number_format($vendorData['net_payout_amount'], 2);
+                        $queuedBody = implode("\n", [
+                            'Dear Vendor,',
+                            '',
+                            'Your payout has been queued and will be processed shortly.',
+                            '',
+                            'Batch Reference: ' . $batchRef,
+                            'Currency: ' . $group['currency'],
+                            'Reservations Included: ' . count($vendorData['reservation_ids']),
+                            'Net Payout Amount: ' . $group['currency'] . ' ' . $queuedNetFmt,
+                            '',
+                            'You will receive a further notification once the payout has been submitted to your bank.',
+                            '',
+                            'Thank you,',
+                            'Workation Team',
+                        ]);
+                        try {
+                            Mail::raw($queuedBody, static function ($msg) use ($vendorPayoutEmail, $batchRef): void {
+                                $msg->to($vendorPayoutEmail)->subject('Payout Queued – Batch ' . $batchRef);
+                            });
+                        } catch (\Throwable $e) {
+                            Log::warning('PayoutBatchBuilder: failed to send payout queued email', [
+                                'vendor_user_id' => $vendorData['vendor_user_id'],
+                                'batch_ref' => $batchRef,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    }
                 }
 
                 $createdBatches[$groupKey] = [
@@ -267,6 +303,48 @@ final class PayoutBatchBuilder
                     'actor_user_id'    => $actorUserId,
                 ]);
             }
+
+            // ── Notify each vendor that their payout is now in progress ───────
+            $batchRef = (string) ($batch->batch_ref ?? '');
+            $batchCurrency = strtoupper((string) ($batch->currency ?? ''));
+            $expectedLabel = $expectedPayoutAt !== null ? $expectedPayoutAt->toDateString() : 'as soon as possible';
+            $vendorItems = DB::table('finance_payout_batch_items as fpi')
+                ->leftJoin('users', 'users.id', '=', 'fpi.vendor_user_id')
+                ->where('fpi.batch_id', $batchId)
+                ->get(['fpi.vendor_user_id', 'fpi.net_payout_amount', 'users.email as vendor_email']);
+            foreach ($vendorItems as $vItem) {
+                $vEmail = (string) ($vItem->vendor_email ?? '');
+                if ($vEmail === '' || !str_contains($vEmail, '@')) {
+                    continue;
+                }
+                $sentNetFmt = number_format((float) ($vItem->net_payout_amount ?? 0), 2);
+                $sentBody = implode("\n", [
+                    'Dear Vendor,',
+                    '',
+                    'Your payout has been submitted to your bank and is now being processed.',
+                    '',
+                    'Batch Reference: ' . $batchRef,
+                    'Currency: ' . $batchCurrency,
+                    'Net Payout Amount: ' . $batchCurrency . ' ' . $sentNetFmt,
+                    'Expected Settlement: ' . $expectedLabel,
+                    '',
+                    'Please allow 1–3 business days for the funds to appear in your account.',
+                    '',
+                    'Thank you,',
+                    'Workation Team',
+                ]);
+                try {
+                    Mail::raw($sentBody, static function ($msg) use ($vEmail, $batchRef): void {
+                        $msg->to($vEmail)->subject('Payout In Progress – Batch ' . $batchRef);
+                    });
+                } catch (\Throwable $e) {
+                    Log::warning('PayoutBatchBuilder: failed to send payout sent email', [
+                        'vendor_user_id' => (int) ($vItem->vendor_user_id ?? 0),
+                        'batch_id' => $batchId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
         }
     }
 
@@ -320,6 +398,47 @@ final class PayoutBatchBuilder
                 'actor_role'    => 'ADMIN_FINANCE',
                 'actor_user_id' => $actorUserId,
             ]);
+        }
+
+        // ── Notify each vendor that their payout has been confirmed/settled ──
+        $confirmedBatchRef = (string) ($batch->batch_ref ?? '');
+        $confirmedCurrency = strtoupper((string) ($batch->currency ?? ''));
+        $confirmedVendorItems = DB::table('finance_payout_batch_items as fpi')
+            ->leftJoin('users', 'users.id', '=', 'fpi.vendor_user_id')
+            ->where('fpi.batch_id', $batchId)
+            ->get(['fpi.vendor_user_id', 'fpi.net_payout_amount', 'users.email as vendor_email']);
+        foreach ($confirmedVendorItems as $cvItem) {
+            $cvEmail = (string) ($cvItem->vendor_email ?? '');
+            if ($cvEmail === '' || !str_contains($cvEmail, '@')) {
+                continue;
+            }
+            $confirmedNetFmt = number_format((float) ($cvItem->net_payout_amount ?? 0), 2);
+            $confirmedBody = implode("\n", [
+                'Dear Vendor,',
+                '',
+                'Your payout has been confirmed and settled.',
+                '',
+                'Batch Reference: ' . $confirmedBatchRef,
+                'Currency: ' . $confirmedCurrency,
+                'Net Payout Amount: ' . $confirmedCurrency . ' ' . $confirmedNetFmt,
+                '',
+                'The funds should now be available in your registered bank account.',
+                'Please log in to your vendor portal to view the updated billing ledger.',
+                '',
+                'Thank you,',
+                'Workation Team',
+            ]);
+            try {
+                Mail::raw($confirmedBody, static function ($msg) use ($cvEmail, $confirmedBatchRef): void {
+                    $msg->to($cvEmail)->subject('Payout Confirmed – Batch ' . $confirmedBatchRef);
+                });
+            } catch (\Throwable $e) {
+                Log::warning('PayoutBatchBuilder: failed to send payout confirmed email', [
+                    'vendor_user_id' => (int) ($cvItem->vendor_user_id ?? 0),
+                    'batch_id' => $batchId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
     }
 

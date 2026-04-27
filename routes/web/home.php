@@ -51,7 +51,7 @@ Route::get('/', function () {
         ['icon' => 'fa-solid fa-water', 'title' => 'Marine Transport', 'subtitle' => 'Speedboats & water transfers', 'url' => '/catalog/marine-transport'],
         ['icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers', 'url' => '/catalog/land-transport'],
         ['icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'subtitle' => 'Tours and activities', 'url' => '/catalog/excursion'],
-        ['icon' => 'fa-solid fa-map-location-dot', 'title' => 'Things to Do', 'subtitle' => 'Must-try island activities', 'url' => '/blog'],
+        ['icon' => 'fa-solid fa-map-location-dot', 'title' => 'Blog', 'subtitle' => 'Travel stories and island picks', 'url' => '/blog'],
         ['icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces', 'url' => '/catalog/remote_workspace'],
         ['icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces', 'url' => '/catalog/conference_room'],
         ['icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'subtitle' => 'Day-use resort offers', 'url' => '/catalog/resort_day_visit'],
@@ -441,7 +441,9 @@ Route::get('/', function () {
     $homeTransportDestinationOptions = collect();
 
     {
-        $allProperties = VendorPropertyCompatibilityReader::allActiveListings(300);
+        $allProperties = collect(Cache::remember('home:active-listings:v2', now()->addMinutes(3), static function () {
+            return VendorPropertyCompatibilityReader::allActiveListings(300)->values()->all();
+        }));
 
         $propertyIds = $allProperties
             ->pluck('id')
@@ -670,10 +672,10 @@ Route::get('/', function () {
                 });
             }
 
-            // Derive card price from listing details when base_price was not persisted.
+            // Derive card price from listing details when base_price is still missing.
             $allProperties = $allProperties->map(static function ($property) {
-                $category = strtolower(trim((string) ($property->listing_category ?? '')));
-                if ($category === 'accommodation') {
+                $existingPrice = (float) ($property->base_price ?? 0);
+                if ($existingPrice > 0) {
                     return $property;
                 }
 
@@ -1316,12 +1318,6 @@ Route::get('/', function () {
                 ->values();
 
             $weekendCandidates = $accommodationDeals;
-            if ($weekendCandidates->count() < 4) {
-                $weekendCandidates = $accommodationDeals
-                    ->concat($priceSorted)
-                    ->unique(static fn ($property) => (int) ($property->id ?? 0))
-                    ->values();
-            }
 
             $homeWeekendDealCards = $weekendCandidates->take(4)->map(function ($property) use ($resolvePropertyImage, $resolvePropertyFallbackImage) {
                 $name = trim((string) ($property->name ?? 'Weekend Offer'));

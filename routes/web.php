@@ -258,7 +258,8 @@ if (!function_exists('workationDerivedListingBasePrice')) {
             }
         }
 
-        // Fallback: recursively scan nested payloads for numeric fields that are clearly price/rate related.
+        // Fallback: recursively scan nested payloads for numeric fields that are likely pricing.
+        // Guard against common non-price numeric keys like total_beds, max_guests, ratings, counts, etc.
         $collectNestedPriceCandidates = static function ($value, int $depth = 0) use (&$collectNestedPriceCandidates, &$candidates, $normalizePrice): void {
             if ($depth > 5) {
                 return;
@@ -272,8 +273,78 @@ if (!function_exists('workationDerivedListingBasePrice')) {
                     }
 
                     $keyText = strtolower(trim((string) $nestedKey));
-                    $looksLikePriceField = $keyText !== ''
-                        && preg_match('/price|rate|fare|charge|cost|amount|fee|nightly|daily|hourly|per_?pax|per_?person|starting|from|subtotal|total/', $keyText) === 1;
+                    if ($keyText === '') {
+                        continue;
+                    }
+
+                    $keyTokens = array_values(array_filter(explode('_', (string) (preg_replace('/[^a-z0-9]+/', '_', $keyText) ?? ''))));
+                    if ($keyTokens === []) {
+                        continue;
+                    }
+
+                    $priceTokens = [
+                        'price',
+                        'fare',
+                        'charge',
+                        'cost',
+                        'fee',
+                        'rate',
+                        'amount',
+                        'subtotal',
+                        'total',
+                        'nightly',
+                        'daily',
+                        'hourly',
+                    ];
+                    $excludeTokens = [
+                        'rating',
+                        'review',
+                        'reviews',
+                        'star',
+                        'stars',
+                        'bed',
+                        'beds',
+                        'guest',
+                        'guests',
+                        'room',
+                        'rooms',
+                        'count',
+                        'qty',
+                        'quantity',
+                        'capacity',
+                        'occupancy',
+                        'distance',
+                        'latitude',
+                        'longitude',
+                        'lat',
+                        'lng',
+                        'adults',
+                        'children',
+                        'infants',
+                        'nights',
+                        'days',
+                        'hours',
+                        'minutes',
+                        'duration',
+                    ];
+
+                    $hasPriceToken = false;
+                    foreach ($keyTokens as $token) {
+                        if (in_array($token, $priceTokens, true)) {
+                            $hasPriceToken = true;
+                            break;
+                        }
+                    }
+
+                    $hasExcludedToken = false;
+                    foreach ($keyTokens as $token) {
+                        if (in_array($token, $excludeTokens, true)) {
+                            $hasExcludedToken = true;
+                            break;
+                        }
+                    }
+
+                    $looksLikePriceField = $hasPriceToken && !$hasExcludedToken;
 
                     if (!$looksLikePriceField) {
                         continue;
@@ -2203,11 +2274,6 @@ Route::get('/', function () {
 
                     if (is_int($lookupId) && $lookupId > 0) {
                         $property->base_price = (float) ($combinedRoomPricesByProperty->get($lookupId) ?? 0);
-                    } elseif (strtolower(trim((string) ($property->listing_category ?? ''))) === 'accommodation') {
-                        $fallbackDerivedPrice = workationDerivedListingBasePrice($property);
-                        if ($fallbackDerivedPrice > 0) {
-                            $property->base_price = $fallbackDerivedPrice;
-                        }
                     }
 
                     return $property;
@@ -2455,13 +2521,14 @@ Route::get('/', function () {
 
             $categoryMinPriceRows = $allProperties
                 ->map(static function ($property) use ($homeCategoryPriceBucket) {
+                    $bucket = $homeCategoryPriceBucket($property);
                     $derivedPrice = (float) ($property->base_price ?? 0);
-                    if ($derivedPrice <= 0) {
+                    if ($derivedPrice <= 0 && $bucket !== 'accommodation') {
                         $derivedPrice = workationDerivedListingBasePrice($property);
                     }
 
                     return [
-                        'bucket' => $homeCategoryPriceBucket($property),
+                        'bucket' => $bucket,
                         'price' => (float) $derivedPrice,
                         'currency' => strtoupper(trim((string) ($property->currency ?? 'MVR'))),
                     ];
@@ -4813,11 +4880,6 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                     $prop->base_price = (float) $combinedRoomPricesByProperty->get($pid);
                 } elseif ($dedicatedId > 0 && $combinedRoomPricesByProperty->has($dedicatedId)) {
                     $prop->base_price = (float) $combinedRoomPricesByProperty->get($dedicatedId);
-                } else {
-                    $fallbackDerivedPrice = workationDerivedListingBasePrice($prop);
-                    if ($fallbackDerivedPrice > 0) {
-                        $prop->base_price = $fallbackDerivedPrice;
-                    }
                 }
                 return $prop;
             });

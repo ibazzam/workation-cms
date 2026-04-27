@@ -8,10 +8,55 @@
 
     @php
         $savedTransferOptions = is_array($propertyDetails['transfer_options'] ?? null) ? $propertyDetails['transfer_options'] : [];
+        $savedTransferRateMatrix = is_array($propertyDetails['transfer_rate_matrix'] ?? null) ? $propertyDetails['transfer_rate_matrix'] : [];
+        $savedTransferRates = is_array($propertyDetails['transfer_rates'] ?? null) ? $propertyDetails['transfer_rates'] : [];
         $savedTransferRatesLocalAdult = is_array($propertyDetails['transfer_rates_local_adult'] ?? null) ? $propertyDetails['transfer_rates_local_adult'] : [];
         $savedTransferRatesLocalChild = is_array($propertyDetails['transfer_rates_local_child'] ?? null) ? $propertyDetails['transfer_rates_local_child'] : [];
         $savedTransferRatesForeignAdult = is_array($propertyDetails['transfer_rates_foreign_adult'] ?? null) ? $propertyDetails['transfer_rates_foreign_adult'] : [];
         $savedTransferRatesForeignChild = is_array($propertyDetails['transfer_rates_foreign_child'] ?? null) ? $propertyDetails['transfer_rates_foreign_child'] : [];
+
+        foreach ($savedTransferRateMatrix as $transferKey => $transferRow) {
+            if (!is_array($transferRow)) {
+                continue;
+            }
+            $transferKey = trim((string) $transferKey);
+            if ($transferKey === '') {
+                continue;
+            }
+
+            if (!array_key_exists($transferKey, $savedTransferRatesLocalAdult) && isset($transferRow['local_adult_charge']) && is_numeric($transferRow['local_adult_charge'])) {
+                $savedTransferRatesLocalAdult[$transferKey] = (float) $transferRow['local_adult_charge'];
+            }
+            if (!array_key_exists($transferKey, $savedTransferRatesLocalChild) && isset($transferRow['local_child_charge']) && is_numeric($transferRow['local_child_charge'])) {
+                $savedTransferRatesLocalChild[$transferKey] = (float) $transferRow['local_child_charge'];
+            }
+            if (!array_key_exists($transferKey, $savedTransferRatesForeignAdult) && isset($transferRow['foreign_adult_charge']) && is_numeric($transferRow['foreign_adult_charge'])) {
+                $savedTransferRatesForeignAdult[$transferKey] = (float) $transferRow['foreign_adult_charge'];
+            }
+            if (!array_key_exists($transferKey, $savedTransferRatesForeignChild) && isset($transferRow['foreign_child_charge']) && is_numeric($transferRow['foreign_child_charge'])) {
+                $savedTransferRatesForeignChild[$transferKey] = (float) $transferRow['foreign_child_charge'];
+            }
+        }
+
+        foreach ($savedTransferRates as $transferKey => $legacyRate) {
+            $transferKey = trim((string) $transferKey);
+            if ($transferKey === '' || !is_numeric($legacyRate)) {
+                continue;
+            }
+            if (!array_key_exists($transferKey, $savedTransferRatesForeignAdult)) {
+                $savedTransferRatesForeignAdult[$transferKey] = (float) $legacyRate;
+            }
+        }
+
+        if ($savedTransferOptions === []) {
+            $savedTransferOptions = array_values(array_unique(array_filter(array_merge(
+                array_keys($savedTransferRatesLocalAdult),
+                array_keys($savedTransferRatesLocalChild),
+                array_keys($savedTransferRatesForeignAdult),
+                array_keys($savedTransferRatesForeignChild)
+            ), static fn ($value) => is_string($value) && trim($value) !== '')));
+        }
+
         $savedPropertyAmenities = is_array($propertyDetails['property_amenities'] ?? null) ? $propertyDetails['property_amenities'] : [];
         $savedPropertyFeatures = is_array($propertyDetails['property_features'] ?? null) ? $propertyDetails['property_features'] : [];
     @endphp

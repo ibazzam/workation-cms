@@ -1209,6 +1209,12 @@ Route::post('/booking/reserve-category', function (Request $request) {
 });
 
 Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int $reservation = null) {
+    if (!(bool) session('portal_customer_authenticated', false)) {
+        $continueUrl = urlencode((string) $request->fullUrl());
+        return redirect('/portal/customer/login?continue=' . $continueUrl)
+            ->withErrors(['auth' => 'Please sign in to continue checkout.']);
+    }
+
     $categoryLabelMap = [
         'accommodation' => ['start' => 'Check-in', 'end' => 'Check-out'],
         'transport' => ['start' => 'Travel Date', 'end' => 'Return Date'],
@@ -1425,6 +1431,12 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
 });
 
 Route::post('/booking/checkout/{reservation}/payment-intent', function (Request $request, int $reservation) {
+    if (!(bool) session('portal_customer_authenticated', false)) {
+        $continueUrl = urlencode('/booking/checkout/' . $reservation);
+        return redirect('/portal/customer/login?continue=' . $continueUrl)
+            ->withErrors(['auth' => 'Please sign in to continue payment.']);
+    }
+
     if (!Schema::hasTable('vendor_reservations')) {
         abort(404);
     }
@@ -1529,6 +1541,12 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
 });
 
 Route::get('/booking/payment/hosted/{reservation}', function (Request $request, int $reservation) {
+    if (!(bool) session('portal_customer_authenticated', false)) {
+        $continueUrl = urlencode((string) $request->fullUrl());
+        return redirect('/portal/customer/login?continue=' . $continueUrl)
+            ->withErrors(['auth' => 'Please sign in to access payment.']);
+    }
+
     if (!Schema::hasTable('vendor_reservations')) {
         abort(404);
     }
@@ -1553,6 +1571,12 @@ Route::get('/booking/payment/hosted/{reservation}', function (Request $request, 
 });
 
 Route::post('/booking/payment/hosted/{reservation}/complete', function (Request $request, int $reservation) {
+    if (!(bool) session('portal_customer_authenticated', false)) {
+        $continueUrl = urlencode('/booking/payment/hosted/' . $reservation);
+        return redirect('/portal/customer/login?continue=' . $continueUrl)
+            ->withErrors(['auth' => 'Please sign in to complete payment.']);
+    }
+
     if (!Schema::hasTable('vendor_reservations')) {
         abort(404);
     }

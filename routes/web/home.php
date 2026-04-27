@@ -27,1919 +27,1443 @@ use Laravel\Socialite\Facades\Socialite;
 use Firebase\JWT\JWT;
 use Firebase\JWT\JWK;
 
-if (!function_exists('workationApiBase')) {
-    function workationApiBase(): string
-    {
-        return rtrim((string) env('WORKATION_API_BASE_URL', 'https://api.workation.mv'), '/');
+Route::get('/', function () {
+    $apiBase = workationApiBase();
+    $homeHeroBackgroundUrl = portalHeroStoredValueForSlot('home');
+    $hasManagedHomeHeroImage = $homeHeroBackgroundUrl !== '';
+
+    if ($hasManagedHomeHeroImage) {
+        $homeHeroBackgroundUrl = '/media/portal/hero/home';
+    } else {
+        $homeHeroBackgroundUrl = portalManagedMediaUrlFromPath($homeHeroBackgroundUrl) ?? $homeHeroBackgroundUrl;
     }
-}
 
-if (!function_exists('portalConfig')) {
-    function portalConfig(string $portal): array
-    {
-        if ($portal === 'admin') {
-            return [
-                'session_key' => 'portal_admin_authenticated',
-                'name' => 'Admin',
-                'allowed_roles' => ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE', 'ADMIN_FINACE', 'ADMIN_MEDIA'],
-            ];
+    if ($homeHeroBackgroundUrl === '') {
+        $seasonalHeroPath = public_path('images/home-hero-seasonal.jpg');
+        if (is_file($seasonalHeroPath)) {
+            $homeHeroBackgroundUrl = '/images/home-hero-seasonal.jpg';
         }
-
-        if ($portal === 'customer') {
-            return [
-                'session_key' => 'portal_customer_authenticated',
-                'name' => 'Member',
-                'allowed_roles' => [],
-            ];
-        }
-
-        return [
-            'session_key' => 'portal_vendor_authenticated',
-            'name' => 'Vendor',
-            'allowed_roles' => ['VENDOR'],
-        ];
     }
-}
 
-if (!function_exists('portalRoutePath')) {
-    function portalRoutePath(string $portal): string
-    {
-        if ($portal === 'admin') {
-            return '/admin';
-        }
+    // Keep home sidebar identical to category pages for uniform navigation.
+    $homeTopCategoryLinks = collect([
+        ['icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas', 'url' => '/catalog/accommodation'],
+        ['icon' => 'fa-solid fa-water', 'title' => 'Marine Transport', 'subtitle' => 'Speedboats & water transfers', 'url' => '/catalog/marine-transport'],
+        ['icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers', 'url' => '/catalog/land-transport'],
+        ['icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'subtitle' => 'Tours and activities', 'url' => '/catalog/excursion'],
+        ['icon' => 'fa-solid fa-map-location-dot', 'title' => 'Blog', 'subtitle' => 'Travel stories and island picks', 'url' => '/blog'],
+        ['icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces', 'url' => '/catalog/remote_workspace'],
+        ['icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces', 'url' => '/catalog/conference_room'],
+        ['icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'subtitle' => 'Day-use resort offers', 'url' => '/catalog/resort_day_visit'],
+        ['icon' => 'fa-solid fa-utensils', 'title' => 'Restaurant', 'subtitle' => 'Dining experiences', 'url' => '/catalog/restaurant'],
+        ['icon' => 'fa-solid fa-car', 'title' => 'Vehicle Rental', 'subtitle' => 'Cars and local rentals', 'url' => '/catalog/vehicle_rental'],
+    ]);
 
-        if ($portal === 'customer') {
-            return '/customer';
-        }
+    $homePromoBanner = [
+        'message' => '🎉 Offers & Promotions: Save up to 25% on selected stays and transfer bundles this week.',
+        'url' => '/catalog/accommodation?sort=price_low_high',
+        'cta' => 'View Promotions',
+    ];
 
-        return '/vendor';
-    }
-}
+    $homeTrendingChips = collect(['Top Islands', 'Top Cities', 'Top Atolls', 'Newly Rising']);
 
-if (!function_exists('firstNonEmptyEnv')) {
-    function firstNonEmptyEnv(array $keys): string
-    {
-        foreach ($keys as $key) {
-            $value = trim((string) env($key, ''));
-            if ($value !== '') {
-                return $value;
+    $homeCuratedDestinationImages = [
+        'maafushi' => '/images/home/destinations/maafushi-island.svg',
+        'maafushi_island' => '/images/home/destinations/maafushi-island.svg',
+        'male' => '/images/home/destinations/male-city.svg',
+        'male_city' => '/images/home/destinations/male-city.svg',
+        'baa_atoll' => '/images/home/destinations/baa-atoll.svg',
+        'ari_atoll' => '/images/home/destinations/ari-atoll.svg',
+        'hulhumale' => '/images/home/destinations/hulhumale-seafront.svg',
+        'hulhumale_seafront' => '/images/home/destinations/hulhumale-seafront.svg',
+        'thulusdhoo' => '/images/home/destinations/thulusdhoo-island.svg',
+        'thulusdhoo_island' => '/images/home/destinations/thulusdhoo-island.svg',
+        'thulhusdhoo' => '/images/home/destinations/thulusdhoo-island.svg',
+        'thulhusdhoo_island' => '/images/home/destinations/thulusdhoo-island.svg',
+        'ukulhas' => '/images/home/destinations/ukulhas-island.svg',
+        'ukulhas_island' => '/images/home/destinations/ukulhas-island.svg',
+        'dhigurah' => '/images/home/destinations/dhigurah-island.svg',
+        'dhigurah_island' => '/images/home/destinations/dhigurah-island.svg',
+    ];
+
+    $homeDatabaseDestinationImages = [];
+    $homeIslandDirectoryDisplayNames = [];
+    if (Schema::hasTable('islands')) {
+        // Island and atoll photos are always stored on the public disk
+        // (Storage::disk('public')), not the portal managed media disk.
+        // Resolve them the same way as islands-index.blade.php does.
+        $resolveAtlasPhotoUrl = static function (string $photoPath): string {
+            if ($photoPath === '') {
+                return '';
             }
-        }
-
-        return '';
-    }
-}
-
-if (!function_exists('workationReservationPaymentNotes')) {
-    function workationReservationPaymentNotes(object $reservationRow): array
-    {
-        $notes = json_decode((string) ($reservationRow->notes ?? ''), true);
-        return is_array($notes) ? $notes : [];
-    }
-}
-
-if (!function_exists('workationApplyReservationPaymentEvent')) {
-    function workationApplyReservationPaymentEvent(object $reservationRow, array $event): array
-    {
-        $reservationId = (int) ($reservationRow->id ?? 0);
-        if ($reservationId <= 0) {
-            return ['status' => 'invalid'];
-        }
-
-        $eventId = trim((string) ($event['event_id'] ?? ''));
-        $intentId = trim((string) ($event['intent_id'] ?? ''));
-        $reference = trim((string) ($event['reference'] ?? ''));
-        $status = strtolower(trim((string) ($event['status'] ?? 'failed')));
-
-        if ($eventId !== '' && trim((string) ($reservationRow->payment_webhook_event_id ?? '')) === $eventId) {
-            return ['status' => 'duplicate'];
-        }
-
-        $paymentStatus = $status === 'paid' ? 'paid' : 'unpaid';
-
-        DB::table('vendor_reservations')
-            ->where('id', $reservationId)
-            ->update([
-                'payment_status' => $paymentStatus,
-                'status' => $status === 'paid' ? 'confirmed' : (string) ($reservationRow->status ?? 'pending'),
-                'payment_reference' => $reference !== '' ? $reference : (string) ($reservationRow->payment_reference ?? ''),
-                'payment_intent_id' => $intentId !== '' ? $intentId : (string) ($reservationRow->payment_intent_id ?? ''),
-                'payment_verified_at' => $status === 'paid' ? now() : ($reservationRow->payment_verified_at ?? null),
-                'payment_webhook_event_id' => $eventId !== '' ? $eventId : (string) ($reservationRow->payment_webhook_event_id ?? ''),
-                'payment_webhook_received_at' => now(),
-                'payment_error' => $status === 'paid' ? null : trim((string) ($event['error'] ?? 'Payment failed verification.')),
-                'updated_at' => now(),
-            ]);
-
-        return ['status' => $paymentStatus];
-    }
-}
-
-if (!function_exists('workationDateSeries')) {
-    function workationDateSeries(Carbon $start, Carbon $endExclusive): array
-    {
-        $dates = [];
-        $cursor = $start->copy()->startOfDay();
-        $last = $endExclusive->copy()->startOfDay();
-
-        while ($cursor->lessThan($last)) {
-            $dates[] = $cursor->toDateString();
-            $cursor->addDay();
-        }
-
-        return $dates;
-    }
-}
-
-if (!function_exists('workationDerivedListingBasePrice')) {
-    function workationDerivedListingBasePrice(object $property): float
-    {
-        $existingBasePrice = isset($property->base_price) ? (float) ($property->base_price ?? 0) : 0.0;
-
-        $rawDetails = $property->listing_details ?? ($property->details ?? null);
-        $details = null;
-        if (is_string($rawDetails) && trim($rawDetails) !== '') {
-            $decoded = json_decode($rawDetails, true);
-            $details = is_array($decoded) ? $decoded : null;
-        }
-
-        $normalizePrice = static function ($value): float {
-            if (is_numeric($value)) {
-                return (float) $value;
+            // Full URLs (http/https) — return as-is (upgrade to https)
+            if (str_starts_with($photoPath, 'https://')) {
+                return $photoPath;
             }
-
-            if (is_string($value)) {
-                $normalized = trim($value);
-                if ($normalized === '') {
-                    return 0.0;
-                }
-
-                $normalized = str_replace(',', '', $normalized);
-                $normalized = preg_replace('/[^0-9.\-]+/', '', $normalized) ?? '';
-                if ($normalized === '' || !is_numeric($normalized)) {
-                    return 0.0;
-                }
-
-                return (float) $normalized;
+            if (str_starts_with($photoPath, 'http://')) {
+                return 'https://' . ltrim(substr($photoPath, 7), '/');
             }
-
-            return 0.0;
-        };
-
-        $candidateKeys = [
-            'base_price',
-            'starting_price',
-            'from_price',
-            'starting_from_price',
-            'price_per_night',
-            'base_price_per_night',
-            'price_per_day',
-            'daily_rate',
-            'hourly_rate',
-            'adult_price',
-            'price_per_adult',
-            'child_price',
-            'price_per_child',
-            'infant_price',
-            'price_per_infant',
-            'per_person_rate',
-            'per_pax_rate',
-            'per_trip_rate',
-            'starting_hourly_rate',
-            'starting_daily_rate',
-            'adult_rate',
-            'child_rate',
-            'adult_charge',
-            'child_charge',
-            'trip_rate',
-            'trip_price',
-            'hourly_price',
-            'daily_price',
-            'base_charge',
-            'booking_fee',
-            'service_fee',
-            'platform_fee',
-            'price',
-            'rate',
-            'cost',
-            'meal_plan_room_only_price',
-            'meal_plan_breakfast_price',
-            'meal_plan_half_board_price',
-            'meal_plan_full_board_price',
-            'meal_plan_all_inclusive_price',
-        ];
-
-        $candidates = [];
-        if ($existingBasePrice > 0) {
-            $candidates[] = $existingBasePrice;
-        }
-
-        if (!is_array($details) || $details === []) {
-            return $candidates === [] ? 0.0 : (float) min($candidates);
-        }
-
-        foreach ($candidateKeys as $key) {
-            $normalized = $normalizePrice($details[$key] ?? null);
-            if ($normalized > 0) {
-                $candidates[] = $normalized;
+            // Internal proxy routes
+            if (str_starts_with($photoPath, '/media/')) {
+                return $photoPath;
             }
-        }
-
-        foreach (['pricing', 'pricing_config', 'price_config'] as $nestedKey) {
-            if (!is_array($details[$nestedKey] ?? null)) {
-                continue;
-            }
-
-            foreach ($candidateKeys as $key) {
-                $normalized = $normalizePrice($details[$nestedKey][$key] ?? null);
-                if ($normalized > 0) {
-                    $candidates[] = $normalized;
-                }
-            }
-        }
-
-        // Fallback: recursively scan nested payloads for numeric fields that are likely pricing.
-        // Guard against common non-price numeric keys like total_beds, max_guests, ratings, counts, etc.
-        $collectNestedPriceCandidates = static function ($value, int $depth = 0) use (&$collectNestedPriceCandidates, &$candidates, $normalizePrice): void {
-            if ($depth > 5) {
-                return;
-            }
-
-            if (is_array($value)) {
-                foreach ($value as $nestedKey => $nestedValue) {
-                    if (is_array($nestedValue) || is_object($nestedValue)) {
-                        $collectNestedPriceCandidates($nestedValue, $depth + 1);
-                        continue;
-                    }
-
-                    $keyText = strtolower(trim((string) $nestedKey));
-                    if ($keyText === '') {
-                        continue;
-                    }
-
-                    $keyTokens = array_values(array_filter(explode('_', (string) (preg_replace('/[^a-z0-9]+/', '_', $keyText) ?? ''))));
-                    if ($keyTokens === []) {
-                        continue;
-                    }
-
-                    $priceTokens = [
-                        'price',
-                        'fare',
-                        'charge',
-                        'cost',
-                        'fee',
-                        'rate',
-                        'amount',
-                        'subtotal',
-                        'total',
-                        'nightly',
-                        'daily',
-                        'hourly',
-                    ];
-                    $excludeTokens = [
-                        'rating',
-                        'review',
-                        'reviews',
-                        'star',
-                        'stars',
-                        'bed',
-                        'beds',
-                        'guest',
-                        'guests',
-                        'room',
-                        'rooms',
-                        'count',
-                        'qty',
-                        'quantity',
-                        'capacity',
-                        'occupancy',
-                        'distance',
-                        'latitude',
-                        'longitude',
-                        'lat',
-                        'lng',
-                        'adults',
-                        'children',
-                        'infants',
-                        'nights',
-                        'days',
-                        'hours',
-                        'minutes',
-                        'duration',
-                    ];
-
-                    $hasPriceToken = false;
-                    foreach ($keyTokens as $token) {
-                        if (in_array($token, $priceTokens, true)) {
-                            $hasPriceToken = true;
-                            break;
-                        }
-                    }
-
-                    $hasExcludedToken = false;
-                    foreach ($keyTokens as $token) {
-                        if (in_array($token, $excludeTokens, true)) {
-                            $hasExcludedToken = true;
-                            break;
-                        }
-                    }
-
-                    $looksLikePriceField = $hasPriceToken && !$hasExcludedToken;
-
-                    if (!$looksLikePriceField) {
-                        continue;
-                    }
-
-                    $normalized = $normalizePrice($nestedValue);
-                    if ($normalized > 0) {
-                        $candidates[] = $normalized;
-                    }
-                }
-
-                return;
-            }
-
-            if (is_object($value)) {
-                $collectNestedPriceCandidates((array) $value, $depth + 1);
+            // Everything else is a relative path on the public disk
+            $normalized = ltrim(str_replace(['public/', 'storage/'], '', str_replace('\\', '/', $photoPath)), '/');
+            try {
+                return Storage::disk('public')->url($normalized);
+            } catch (\Throwable $e) {
+                return '';
             }
         };
 
-        $collectNestedPriceCandidates($details);
+        $islandRows = Cache::remember('home:island-photo-rows:v1', now()->addMinutes(20), static function () {
+            return DB::table('islands')
+                ->select(['name', 'slug', 'photo_path'])
+                ->whereNotNull('photo_path')
+                ->where('photo_path', '!=', '')
+                ->limit(1500)
+                ->get();
+        });
 
-        if ($candidates === []) {
-            return 0.0;
-        }
-
-        return (float) min($candidates);
-    }
-}
-
-if (!function_exists('workationPropertyLookupIds')) {
-    function workationPropertyLookupIds(object $row): array
-    {
-        $candidates = [
-            (int) ($row->id ?? 0),
-            (int) ($row->dedicated_row_id ?? 0),
-            (int) ($row->vendor_property_id ?? 0),
-            (int) ($row->property_id ?? 0),
-            (int) ($row->legacy_property_id ?? 0),
-            (int) ($row->source_property_id ?? 0),
-            (int) ($row->parent_property_id ?? 0),
-        ];
-
-        return array_values(array_filter(array_unique($candidates), static fn (int $id): bool => $id > 0));
-    }
-}
-
-if (!function_exists('workationOverlappingReservationCount')) {
-    function workationOverlappingReservationCount(int $vendorUserId, int $vendorPropertyId, Carbon $start, Carbon $endExclusive, ?int $roomId = null, ?int $serviceId = null): int
-    {
-        if ($vendorUserId <= 0 || $vendorPropertyId <= 0 || !Schema::hasTable('vendor_reservations')) {
-            return 0;
-        }
-
-        $query = DB::table('vendor_reservations')
-            ->where('vendor_user_id', $vendorUserId)
-            ->where('vendor_property_id', $vendorPropertyId)
-            ->whereNotIn('status', ['cancelled', 'rejected', 'expired', 'failed'])
-            ->where('start_at', '<', $endExclusive->copy()->startOfDay())
-            ->where('end_at', '>', $start->copy()->startOfDay());
-
-        if ($serviceId !== null && $serviceId > 0 && Schema::hasColumn('vendor_reservations', 'vendor_service_id')) {
-            $query->where('vendor_service_id', $serviceId);
-        }
-
-        if ($roomId !== null && $roomId > 0) {
-            $roomNeedle = '"room_id":' . $roomId;
-            $query->where(function ($roomQuery) use ($roomNeedle) {
-                $roomQuery->where('notes', 'like', '%' . $roomNeedle . '%')
-                    ->orWhereNull('notes');
-            });
-        }
-
-        return (int) $query->count();
-    }
-}
-
-if (!function_exists('workationSlotAvailabilityCheck')) {
-    function workationSlotAvailabilityCheck(int $vendorUserId, int $vendorPropertyId, Carbon $start, Carbon $endExclusive, int $unitsRequested = 1, ?int $roomCategoryId = null, ?int $serviceId = null, ?string $listingCategory = null, ?string $routeName = null): array
-    {
-        if ($vendorUserId <= 0 || $vendorPropertyId <= 0 || !Schema::hasTable('vendor_availability_slots')) {
-            return ['ok' => true, 'reason' => null, 'checked' => false];
-        }
-
-        $slotDates = workationDateSeries($start, $endExclusive);
-        if ($slotDates === []) {
-            return ['ok' => true, 'reason' => null, 'checked' => false];
-        }
-
-        $hasRoomColumn = Schema::hasColumn('vendor_availability_slots', 'vendor_room_category_id');
-        $hasListingCategoryColumn = Schema::hasColumn('vendor_availability_slots', 'listing_category');
-        $hasRouteNameColumn = Schema::hasColumn('vendor_availability_slots', 'route_name');
-
-        $normalizedListingCategory = trim((string) ($listingCategory ?? ''));
-        $normalizedRouteName = trim((string) ($routeName ?? ''));
-
-        $slotsQuery = DB::table('vendor_availability_slots')
-            ->where('vendor_user_id', $vendorUserId)
-            ->where('vendor_property_id', $vendorPropertyId)
-            ->whereIn('slot_date', $slotDates);
-
-        if ($serviceId !== null && $serviceId > 0 && Schema::hasColumn('vendor_availability_slots', 'vendor_service_id')) {
-            $slotsQuery->where('vendor_service_id', $serviceId);
-        }
-
-        if ($roomCategoryId !== null && $roomCategoryId > 0 && $hasRoomColumn) {
-            $slotsQuery->where(function ($query) use ($roomCategoryId) {
-                $query->where('vendor_room_category_id', $roomCategoryId)
-                    ->orWhereNull('vendor_room_category_id');
-            });
-        }
-
-        if ($normalizedListingCategory !== '' && $hasListingCategoryColumn) {
-            $slotsQuery->where(function ($query) use ($normalizedListingCategory) {
-                $query->where('listing_category', $normalizedListingCategory)
-                    ->orWhereNull('listing_category')
-                    ->orWhere('listing_category', '');
-            });
-        }
-
-        if ($normalizedRouteName !== '' && $hasRouteNameColumn) {
-            $slotsQuery->where(function ($query) use ($normalizedRouteName) {
-                $query->where('route_name', $normalizedRouteName)
-                    ->orWhereNull('route_name')
-                    ->orWhere('route_name', '');
-            });
-        }
-
-        $slotColumns = ['slot_date', 'inventory', 'reserved_count', 'is_closed'];
-        if ($hasRoomColumn) {
-            $slotColumns[] = 'vendor_room_category_id';
-        }
-        if (Schema::hasColumn('vendor_availability_slots', 'vendor_service_id')) {
-            $slotColumns[] = 'vendor_service_id';
-        }
-        if ($hasListingCategoryColumn) {
-            $slotColumns[] = 'listing_category';
-        }
-        if ($hasRouteNameColumn) {
-            $slotColumns[] = 'route_name';
-        }
-
-        $slots = $slotsQuery->get($slotColumns);
-        if ($slots->isEmpty()) {
-            return ['ok' => true, 'reason' => null, 'checked' => false];
-        }
-
-        $byDate = $slots->groupBy(static fn ($slot) => (string) ($slot->slot_date ?? ''));
-        foreach ($slotDates as $slotDate) {
-            $candidates = collect($byDate->get($slotDate, []));
-            if ($candidates->isEmpty()) {
+        foreach ($islandRows as $row) {
+            $imageUrl = $resolveAtlasPhotoUrl((string) ($row->photo_path ?? ''));
+            if ($imageUrl === null || $imageUrl === '') {
                 continue;
             }
 
-            $blockedSlot = $candidates->first(static fn ($slot) => (bool) ($slot->is_closed ?? false));
-            if ($blockedSlot) {
-                return ['ok' => false, 'reason' => 'blocked', 'checked' => true, 'date' => $slotDate];
-            }
+            $displayName = trim((string) ($row->name ?? ''));
 
-            $slot = $candidates->first(function ($candidate) use ($hasRoomColumn, $roomCategoryId, $hasListingCategoryColumn, $normalizedListingCategory, $hasRouteNameColumn, $normalizedRouteName) {
-                if ($hasRoomColumn && $roomCategoryId !== null && $roomCategoryId > 0) {
-                    if ((int) ($candidate->vendor_room_category_id ?? 0) !== $roomCategoryId) {
-                        return false;
-                    }
-                }
+            $nameKey = portalNormalizeDestinationMediaKey((string) ($row->name ?? ''));
+            $slugKey = portalNormalizeDestinationMediaKey((string) ($row->slug ?? ''));
+            $islandNameKey = $nameKey !== '' ? portalNormalizeDestinationMediaKey((string) ($row->name ?? '') . ' island') : '';
+            $cityNameKey = $nameKey !== '' ? portalNormalizeDestinationMediaKey((string) ($row->name ?? '') . ' city') : '';
 
-                if ($hasListingCategoryColumn && $normalizedListingCategory !== '') {
-                    if (trim((string) ($candidate->listing_category ?? '')) !== $normalizedListingCategory) {
-                        return false;
-                    }
-                }
-
-                if ($hasRouteNameColumn && $normalizedRouteName !== '') {
-                    if (trim((string) ($candidate->route_name ?? '')) !== $normalizedRouteName) {
-                        return false;
-                    }
-                }
-
-                return true;
-            });
-
-            if (!$slot) {
-                $slot = $candidates->first(function ($candidate) use ($hasRoomColumn, $roomCategoryId) {
-                    if ($hasRoomColumn && $roomCategoryId !== null && $roomCategoryId > 0) {
-                        return (int) ($candidate->vendor_room_category_id ?? 0) === 0;
-                    }
-
-                    return true;
-                });
-            }
-
-            if (!$slot) {
-                continue;
-            }
-
-            $inventory = max(0, (int) ($slot->inventory ?? 0));
-            $reservedCount = max(0, (int) ($slot->reserved_count ?? 0));
-            if ($inventory > 0 && ($reservedCount + max(1, $unitsRequested)) > $inventory) {
-                return ['ok' => false, 'reason' => 'inventory', 'checked' => true, 'date' => $slotDate];
-            }
-        }
-
-        return ['ok' => true, 'reason' => null, 'checked' => true];
-    }
-}
-
-if (!function_exists('workationReserveAvailabilitySlots')) {
-    function workationReserveAvailabilitySlots(int $vendorUserId, int $vendorPropertyId, Carbon $start, Carbon $endExclusive, int $units = 1, ?int $roomCategoryId = null, ?int $serviceId = null, ?string $listingCategory = null, ?string $routeName = null): void
-    {
-        if ($vendorUserId <= 0 || $vendorPropertyId <= 0 || $units <= 0 || !Schema::hasTable('vendor_availability_slots')) {
-            return;
-        }
-
-        $hasRoomColumn = Schema::hasColumn('vendor_availability_slots', 'vendor_room_category_id');
-        $hasListingCategoryColumn = Schema::hasColumn('vendor_availability_slots', 'listing_category');
-        $hasRouteNameColumn = Schema::hasColumn('vendor_availability_slots', 'route_name');
-        $normalizedListingCategory = trim((string) ($listingCategory ?? ''));
-        $normalizedRouteName = trim((string) ($routeName ?? ''));
-
-        foreach (workationDateSeries($start, $endExclusive) as $slotDate) {
-            $baseQuery = DB::table('vendor_availability_slots')
-                ->where('vendor_user_id', $vendorUserId)
-                ->where('vendor_property_id', $vendorPropertyId)
-                ->where('slot_date', $slotDate);
-
-            if ($serviceId !== null && $serviceId > 0 && Schema::hasColumn('vendor_availability_slots', 'vendor_service_id')) {
-                $baseQuery->where('vendor_service_id', $serviceId);
-            }
-
-            $updatePayload = [
-                'reserved_count' => DB::raw('COALESCE(reserved_count, 0) + ' . (int) $units),
-                'updated_at' => now(),
-            ];
-
-            if ($roomCategoryId !== null && $roomCategoryId > 0 && $hasRoomColumn) {
-                $exactQuery = clone $baseQuery;
-                $exactQuery->where('vendor_room_category_id', $roomCategoryId);
-
-                if ($normalizedListingCategory !== '' && $hasListingCategoryColumn) {
-                    $exactQuery->where('listing_category', $normalizedListingCategory);
-                }
-
-                if ($normalizedRouteName !== '' && $hasRouteNameColumn) {
-                    $exactQuery->where('route_name', $normalizedRouteName);
-                }
-
-                $updated = $exactQuery->update($updatePayload);
-                if ($updated > 0) {
+            foreach ([$nameKey, $slugKey, $islandNameKey, $cityNameKey] as $candidateKey) {
+                if ($candidateKey === '' || array_key_exists($candidateKey, $homeDatabaseDestinationImages)) {
                     continue;
                 }
-
-                $fallbackQuery = clone $baseQuery;
-                $fallbackQuery->whereNull('vendor_room_category_id');
-
-                if ($normalizedListingCategory !== '' && $hasListingCategoryColumn) {
-                    $fallbackQuery->where(function ($query) use ($normalizedListingCategory) {
-                        $query->where('listing_category', $normalizedListingCategory)
-                            ->orWhereNull('listing_category')
-                            ->orWhere('listing_category', '');
-                    });
+                $homeDatabaseDestinationImages[$candidateKey] = $imageUrl;
+                if ($displayName !== '' && !array_key_exists($candidateKey, $homeIslandDirectoryDisplayNames)) {
+                    $homeIslandDirectoryDisplayNames[$candidateKey] = $displayName;
                 }
+            }
 
-                if ($normalizedRouteName !== '' && $hasRouteNameColumn) {
-                    $fallbackQuery->where(function ($query) use ($normalizedRouteName) {
-                        $query->where('route_name', $normalizedRouteName)
-                            ->orWhereNull('route_name')
-                            ->orWhere('route_name', '');
-                    });
+            if (in_array($nameKey, ['male', 'malecity', 'male_city'], true) && $displayName !== '') {
+                foreach (['male', 'malecity', 'male_city'] as $maleAlias) {
+                    if (!array_key_exists($maleAlias, $homeDatabaseDestinationImages)) {
+                        $homeDatabaseDestinationImages[$maleAlias] = $imageUrl;
+                    }
+                    if (!array_key_exists($maleAlias, $homeIslandDirectoryDisplayNames)) {
+                        $homeIslandDirectoryDisplayNames[$maleAlias] = 'Male City';
+                    }
                 }
+            }
+        }
+    }
 
-                $fallbackQuery->update($updatePayload);
+    if (Schema::hasTable('atolls')) {
+        $atollRows = Cache::remember('home:atoll-photo-rows:v1', now()->addMinutes(20), static function () {
+            return DB::table('atolls')
+                ->select(['name', 'slug', 'code', 'photo_path'])
+                ->whereNotNull('photo_path')
+                ->where('photo_path', '!=', '')
+                ->limit(300)
+                ->get();
+        });
+
+        foreach ($atollRows as $row) {
+            $imageUrl = $resolveAtlasPhotoUrl((string) ($row->photo_path ?? ''));
+            if ($imageUrl === null || $imageUrl === '') {
                 continue;
             }
 
-            if ($normalizedListingCategory !== '' && $hasListingCategoryColumn) {
-                $baseQuery->where('listing_category', $normalizedListingCategory);
-            }
+            $nameKey = portalNormalizeDestinationMediaKey((string) ($row->name ?? ''));
+            $slugKey = portalNormalizeDestinationMediaKey((string) ($row->slug ?? ''));
+            $atollNameKey = $nameKey !== '' ? portalNormalizeDestinationMediaKey((string) ($row->name ?? '') . ' atoll') : '';
+            $codeKey = portalNormalizeDestinationMediaKey((string) ($row->code ?? ''));
 
-            if ($normalizedRouteName !== '' && $hasRouteNameColumn) {
-                $baseQuery->where('route_name', $normalizedRouteName);
-            }
-
-            $baseQuery->update($updatePayload);
-        }
-    }
-}
-
-if (!function_exists('bootstrapPasswordMatches')) {
-    function bootstrapPasswordMatches(string $expected, string $provided): bool
-    {
-        if ($expected === '') {
-            return false;
-        }
-
-        $isHash = str_starts_with($expected, '$2y$') || str_starts_with($expected, '$argon2');
-        if ($isHash) {
-            return Hash::check($provided, $expected);
-        }
-
-        return hash_equals($expected, $provided);
-    }
-}
-
-if (!function_exists('normalizePortalRoleValue')) {
-    function normalizePortalRoleValue(string $role): string
-    {
-        $normalized = strtoupper(trim($role));
-        $normalized = preg_replace('/[^A-Z0-9]+/', '_', $normalized) ?? $normalized;
-        $normalized = trim($normalized, '_');
-
-        $aliases = [
-            'ADMIN_FINACE' => 'ADMIN_FINANCE',
-            'ADMINFINACE' => 'ADMIN_FINANCE',
-            'ADMINFINANCE' => 'ADMIN_FINANCE',
-            'ADMINMEDIA' => 'ADMIN_MEDIA',
-            'MEDIA_ADMIN' => 'ADMIN_MEDIA',
-        ];
-
-        return $aliases[$normalized] ?? $normalized;
-    }
-}
-
-if (!function_exists('generatePortalUsernameFromEmail')) {
-    function generatePortalUsernameFromEmail(string $email): string
-    {
-        $baseUsername = \Illuminate\Support\Str::of(strtolower((string) \Illuminate\Support\Str::before($email, '@')))
-            ->replaceMatches('/[^a-z0-9_]+/', '_')
-            ->trim('_')
-            ->value();
-
-        if ($baseUsername === '') {
-            $baseUsername = 'user';
-        }
-
-        $username = $baseUsername;
-        $suffix = 1;
-        while (\App\Models\User::where('username', $username)->exists()) {
-            $username = $baseUsername . '_' . $suffix;
-            $suffix++;
-        }
-
-        return $username;
-    }
-}
-
-if (!function_exists('sendPortalPasswordResetFallbackMail')) {
-    function sendPortalPasswordResetFallbackMail(string $email, string $portal, string $resetUrl, ?string $displayName = null): bool
-    {
-        $normalizedPortal = in_array($portal, ['admin', 'vendor', 'customer'], true) ? $portal : 'admin';
-        $portalLabel = ucfirst($normalizedPortal);
-        $name = trim((string) $displayName);
-        $greeting = $name !== '' ? "Hi {$name}," : 'Hello,';
-
-        Mail::raw(
-            "{$greeting}\n\nWe received a request to reset your {$portalLabel} account password on Workation.\n\nUse the link below to set a new password. This link expires in 60 minutes:\n\n{$resetUrl}\n\nIf you did not request a password reset, you can safely ignore this email. Your password will not change.\n\n— Workation Support",
-            static function ($message) use ($email, $portalLabel) {
-                $message->to($email)->subject('Reset Your ' . $portalLabel . ' Password | Workation');
-            }
-        );
-
-        return true;
-    }
-}
-
-if (!function_exists('supportedVendorSocialProviders')) {
-    function supportedVendorSocialProviders(): array
-    {
-        return ['google', 'facebook', 'apple'];
-    }
-}
-
-if (!function_exists('supportedCustomerSocialProviders')) {
-    function supportedCustomerSocialProviders(): array
-    {
-        return ['google', 'facebook'];
-    }
-}
-
-if (!function_exists('portalOAuthIntentSessionKey')) {
-    function portalOAuthIntentSessionKey(string $provider): string
-    {
-        return 'portal_oauth_intent_' . strtolower(trim($provider));
-    }
-}
-
-if (!function_exists('customerPostAuthRedirectSessionKey')) {
-    function customerPostAuthRedirectSessionKey(): string
-    {
-        return 'customer_post_auth_redirect';
-    }
-}
-
-if (!function_exists('normalizeCustomerPostAuthRedirect')) {
-    function normalizeCustomerPostAuthRedirect(?string $target): ?string
-    {
-        $value = trim((string) $target);
-        if ($value === '') {
-            return null;
-        }
-
-        // Allow in-app relative URLs only.
-        if (str_starts_with($value, '/')) {
-            if (str_starts_with($value, '//') || str_starts_with($value, '/portal/')) {
-                return null;
-            }
-            return $value;
-        }
-
-        // Allow absolute URLs only when host matches APP_URL.
-        $host = strtolower((string) parse_url($value, PHP_URL_HOST));
-        $appHost = strtolower((string) parse_url((string) config('app.url', ''), PHP_URL_HOST));
-        if ($host === '' || $appHost === '' || $host !== $appHost) {
-            return null;
-        }
-
-        $path = (string) parse_url($value, PHP_URL_PATH);
-        if ($path === '' || str_starts_with($path, '/portal/')) {
-            return null;
-        }
-
-        $query = (string) parse_url($value, PHP_URL_QUERY);
-        return $query !== '' ? ($path . '?' . $query) : $path;
-    }
-}
-
-if (!function_exists('rememberCustomerPostAuthRedirect')) {
-    function rememberCustomerPostAuthRedirect(Request $request): void
-    {
-        $candidate = normalizeCustomerPostAuthRedirect((string) $request->query('continue', ''));
-
-        if ($candidate === null) {
-            $candidate = normalizeCustomerPostAuthRedirect((string) $request->headers->get('referer', ''));
-        }
-
-        if ($candidate !== null) {
-            $request->session()->put(customerPostAuthRedirectSessionKey(), $candidate);
-        }
-    }
-}
-
-if (!function_exists('consumeCustomerPostAuthRedirect')) {
-    function consumeCustomerPostAuthRedirect(Request $request, string $fallback = '/'): string
-    {
-        $stored = normalizeCustomerPostAuthRedirect((string) $request->session()->pull(customerPostAuthRedirectSessionKey(), ''));
-        return $stored ?: $fallback;
-    }
-}
-
-if (!function_exists('customerSocialRedirectUrl')) {
-    function customerSocialRedirectUrl(string $provider): string
-    {
-        $provider = strtolower(trim($provider));
-
-        return (string) config(
-            'services.' . $provider . '.customer_redirect',
-            (string) config('services.' . $provider . '.redirect', url('/portal/customer/oauth/' . $provider . '/callback'))
-        );
-    }
-}
-
-if (!function_exists('isCustomerSocialProviderConfigured')) {
-    function isCustomerSocialProviderConfigured(string $provider): bool
-    {
-        return match ($provider) {
-            'google' => trim((string) config('services.google.client_id', '')) !== ''
-                && trim((string) config('services.google.client_secret', '')) !== '',
-            'facebook' => trim((string) config('services.facebook.client_id', '')) !== ''
-                && trim((string) config('services.facebook.client_secret', '')) !== '',
-            default => false,
-        };
-    }
-}
-
-if (!function_exists('customerSocialProviderColumn')) {
-    function customerSocialProviderColumn(string $provider): string
-    {
-        return match (strtolower(trim($provider))) {
-            'google' => 'google_oauth_id',
-            'facebook' => 'facebook_oauth_id',
-            default => '',
-        };
-    }
-}
-
-if (!function_exists('customerVerificationStateCacheKey')) {
-    function customerVerificationStateCacheKey(string $email): string
-    {
-        return 'customer_email_verified:' . sha1(strtolower(trim($email)));
-    }
-}
-
-if (!function_exists('customerProfileMetaCacheKey')) {
-    function customerProfileMetaCacheKey(string $customerId): string
-    {
-        return 'customer_profile_meta:' . sha1(trim($customerId));
-    }
-}
-
-if (!function_exists('customerTableName')) {
-    function customerTableName(): string
-    {
-        return (new \App\Models\Customer())->getTable();
-    }
-}
-
-if (!function_exists('customerConnectionName')) {
-    function customerConnectionName(): ?string
-    {
-        return (new \App\Models\Customer())->getConnectionName();
-    }
-}
-
-if (!function_exists('customerSchemaHasColumn')) {
-    function customerSchemaHasColumn(string $column): bool
-    {
-        static $columnCache = [];
-
-        if (array_key_exists($column, $columnCache)) {
-            return $columnCache[$column];
-        }
-
-        $connection = customerConnectionName();
-        $table = customerTableName();
-
-        $exists = $connection
-            ? Schema::connection($connection)->hasColumn($table, $column)
-            : Schema::hasColumn($table, $column);
-
-        $columnCache[$column] = $exists;
-
-        return $exists;
-    }
-}
-
-if (!function_exists('customerTableInsert')) {
-    function customerTableInsert(array $payload): void
-    {
-        $connection = customerConnectionName();
-        $table = customerTableName();
-
-        if ($connection) {
-            DB::connection($connection)->table($table)->insert($payload);
-            return;
-        }
-
-        DB::table($table)->insert($payload);
-    }
-}
-
-if (!function_exists('customerVerificationTokenCacheKey')) {
-    function customerVerificationTokenCacheKey(string $email): string
-    {
-        return 'customer_email_verify_token:' . sha1(strtolower(trim($email)));
-    }
-}
-
-if (!function_exists('customerEmailIsVerified')) {
-    function customerEmailIsVerified(\App\Models\Customer $customer): bool
-    {
-        if (customerSchemaHasColumn('email_verified_at') && !empty($customer->email_verified_at)) {
-            return true;
-        }
-
-        if (customerSchemaHasColumn('emailVerifiedAt') && !empty($customer->emailVerifiedAt)) {
-            return true;
-        }
-
-        if (customerSchemaHasColumn('emailVerified') && (bool) ($customer->emailVerified ?? false)) {
-            return true;
-        }
-
-        $email = strtolower(trim((string) ($customer->email ?? '')));
-        if ($email === '') {
-            return false;
-        }
-
-        return (bool) cache()->get(customerVerificationStateCacheKey($email), false);
-    }
-}
-
-if (!function_exists('customerMarkEmailVerified')) {
-    function customerMarkEmailVerified(\App\Models\Customer $customer): void
-    {
-        $email = strtolower(trim((string) ($customer->email ?? '')));
-        if ($email === '') {
-            return;
-        }
-
-        $now = now();
-        $dirty = false;
-
-        if (customerSchemaHasColumn('email_verified_at') && empty($customer->email_verified_at)) {
-            $customer->email_verified_at = $now;
-            $dirty = true;
-        }
-        if (customerSchemaHasColumn('emailVerifiedAt') && empty($customer->emailVerifiedAt)) {
-            $customer->emailVerifiedAt = $now;
-            $dirty = true;
-        }
-        if (customerSchemaHasColumn('emailVerified') && !(bool) ($customer->emailVerified ?? false)) {
-            $customer->emailVerified = true;
-            $dirty = true;
-        }
-
-        if ($dirty) {
-            $customer->save();
-        }
-
-        cache()->forever(customerVerificationStateCacheKey($email), true);
-        cache()->forget(customerVerificationTokenCacheKey($email));
-    }
-}
-
-if (!function_exists('customerIssueEmailVerificationToken')) {
-    function customerIssueEmailVerificationToken(string $email): string
-    {
-        $normalizedEmail = strtolower(trim($email));
-        $token = Str::random(64);
-
-        cache()->put(customerVerificationTokenCacheKey($normalizedEmail), [
-            'hash' => Hash::make($token),
-            'created_at' => now()->toIso8601String(),
-        ], now()->addHours(24));
-
-        return $token;
-    }
-}
-
-if (!function_exists('sendCustomerPortalRegistrationNotification')) {
-    function sendCustomerPortalRegistrationNotification(string $email, string $name, bool $requireVerification = false): ?string
-    {
-        $recipient = strtolower(trim($email));
-        if ($recipient === '') {
-            return null;
-        }
-
-        $displayName = trim($name) !== '' ? trim($name) : 'Customer';
-        $verificationToken = $requireVerification ? customerIssueEmailVerificationToken($recipient) : '';
-        $verificationUrl = $verificationToken !== ''
-            ? url('/portal/customer/verify-email?email=' . rawurlencode($recipient) . '&token=' . rawurlencode($verificationToken))
-            : '';
-
-        $body = "Hi {$displayName},\n\nYour Workation member account has been created successfully.";
-        if ($verificationUrl !== '') {
-            $body .= "\n\nBefore signing in, verify your email address using this secure link:\n{$verificationUrl}\n\nThis link expires in 24 hours.";
-        } else {
-            $body .= "\n\nYou can now sign in to your customer portal and start booking experiences.";
-        }
-        $body .= "\n\nIf you did not create this account, please contact support immediately.";
-
-        try {
-            Mail::raw(
-                $body,
-                static function ($message) use ($recipient) {
-                    $message->to($recipient)->subject('Workation Member Account Verification');
+            foreach ([$nameKey, $slugKey, $atollNameKey, $codeKey] as $candidateKey) {
+                if ($candidateKey === '' || array_key_exists($candidateKey, $homeDatabaseDestinationImages)) {
+                    continue;
                 }
-            );
-        } catch (\Throwable $e) {
-            Log::warning('Failed to send customer portal registration email.', [
-                'email' => $recipient,
-                'error' => $e->getMessage(),
-            ]);
+                $homeDatabaseDestinationImages[$candidateKey] = $imageUrl;
+            }
         }
-
-        return $verificationToken !== '' ? $verificationToken : null;
     }
-}
 
-if (!function_exists('findCustomerByEmail')) {
-    function findCustomerByEmail(string $email): ?\App\Models\Customer
-    {
-        $normalized = strtolower(trim($email));
-        if ($normalized === '') {
-            return null;
-        }
-
-        $query = \App\Models\Customer::query();
-        $customer = $query->where('email', $normalized)->first();
-
-        if ($customer) {
-            return $customer;
-        }
-
-        return \App\Models\Customer::query()
-            ->whereRaw('LOWER(email) = ?', [$normalized])
-            ->first();
+    $homeDestinationMediaOverrides = collect();
+    if (Schema::hasTable('portal_destination_media_overrides')) {
+        $homeDestinationMediaOverrides = Cache::remember('home:destination-media-overrides:v1', now()->addMinutes(10), static function () {
+            return DB::table('portal_destination_media_overrides')
+                ->orderBy('destination_name')
+                ->pluck('image_value', 'destination_key');
+        });
     }
-}
 
-if (!function_exists('findActiveVendorByEmail')) {
-    function findActiveVendorByEmail(string $email): ?\App\Models\User
-    {
-        $normalized = strtolower(trim($email));
-        if ($normalized === '') {
-            return null;
-        }
-
-        $vendor = \App\Models\User::query()
-            ->where('email', $normalized)
-            ->where('portal_enabled', true)
-            ->whereIn('portal_role', ['VENDOR', 'vendor'])
-            ->first();
-
-        if ($vendor) {
-            return $vendor;
-        }
-
-        return \App\Models\User::query()
-            ->whereRaw('LOWER(email) = ?', [$normalized])
-            ->where('portal_enabled', true)
-            ->whereRaw('UPPER(portal_role) = ?', ['VENDOR'])
-            ->first();
-    }
-}
-
-if (!function_exists('upsertCustomerFromVendorIdentity')) {
-    function upsertCustomerFromVendorIdentity(\App\Models\User $vendorUser, string $password): ?\App\Models\Customer
-    {
-        $email = strtolower(trim((string) $vendorUser->email));
-        if ($email === '') {
-            return null;
-        }
-
-        $customer = findCustomerByEmail($email);
-
-        if (!$customer) {
-            $now = now();
-            $payload = [
-                'email' => $email,
-                'name' => trim((string) $vendorUser->name) !== '' ? trim((string) $vendorUser->name) : 'Customer',
-                'password' => Hash::make($password),
-            ];
-
-            if (customerSchemaHasColumn('id')) {
-                $payload['id'] = (string) Str::uuid();
-            }
-            if (customerSchemaHasColumn('createdAt')) {
-                $payload['createdAt'] = $now;
-            }
-            if (customerSchemaHasColumn('updatedAt')) {
-                $payload['updatedAt'] = $now;
-            }
-            if (customerSchemaHasColumn('created_at')) {
-                $payload['created_at'] = $now;
-            }
-            if (customerSchemaHasColumn('updated_at')) {
-                $payload['updated_at'] = $now;
-            }
-
-            if (customerSchemaHasColumn('email_verified_at')) {
-                $payload['email_verified_at'] = $now;
-            }
-            if (customerSchemaHasColumn('emailVerifiedAt')) {
-                $payload['emailVerifiedAt'] = $now;
-            }
-            if (customerSchemaHasColumn('emailVerified')) {
-                $payload['emailVerified'] = true;
-            }
-
-            customerTableInsert($payload);
-            $customer = findCustomerByEmail($email);
-        }
-
-        if (!$customer) {
-            return null;
-        }
-
-        $needsSave = false;
-        if (!Hash::check($password, (string) $customer->password)) {
-            $customer->password = Hash::make($password);
-            $needsSave = true;
-        }
-        if (trim((string) $customer->name) === '' && trim((string) $vendorUser->name) !== '') {
-            $customer->name = trim((string) $vendorUser->name);
-            $needsSave = true;
-        }
-
-        if ($needsSave) {
-            $customer->save();
-        }
-
-        customerMarkEmailVerified($customer);
-
-        return $customer;
-    }
-}
-
-if (!function_exists('syncVendorPasswordFromCustomer')) {
-    function syncVendorPasswordFromCustomer(\App\Models\User $vendorUser, string $password): void
-    {
-        if (Hash::check($password, (string) $vendorUser->password)) {
-            return;
-        }
-
-        $vendorUser->password = Hash::make($password);
-        $vendorUser->save();
-    }
-}
-
-if (!function_exists('provisionCustomerAccountFromBooking')) {
-    function provisionCustomerAccountFromBooking(string $email, string $name): ?\App\Models\Customer
-    {
-        $normalizedEmail = strtolower(trim($email));
-        if ($normalizedEmail === '') {
-            return null;
-        }
-
-        $displayName = trim($name) !== '' ? trim($name) : 'Customer';
-        $customer = findCustomerByEmail($normalizedEmail);
-        $created = false;
-
-        if (!$customer) {
-            $now = now();
-            $payload = [
-                'email' => $normalizedEmail,
-                'name' => $displayName,
-                'password' => Hash::make(Str::random(40)),
-            ];
-
-            if (customerSchemaHasColumn('id')) {
-                $payload['id'] = (string) Str::uuid();
-            }
-            if (customerSchemaHasColumn('createdAt')) {
-                $payload['createdAt'] = $now;
-            }
-            if (customerSchemaHasColumn('updatedAt')) {
-                $payload['updatedAt'] = $now;
-            }
-            if (customerSchemaHasColumn('created_at')) {
-                $payload['created_at'] = $now;
-            }
-            if (customerSchemaHasColumn('updated_at')) {
-                $payload['updated_at'] = $now;
-            }
-
-            customerTableInsert($payload);
-            $customer = findCustomerByEmail($normalizedEmail);
-            $created = true;
-        }
-
-        if (!$customer) {
-            return null;
-        }
-
-        if (trim((string) ($customer->name ?? '')) === '' && $displayName !== '') {
-            $customer->name = $displayName;
-            $customer->save();
-        }
-
-        if ($created) {
-            sendCustomerPortalRegistrationNotification($normalizedEmail, $displayName, true);
-
-            try {
-                $token = Password::broker('customer_users')->createToken($customer);
-                $customer->sendPasswordResetNotification($token);
-            } catch (\Throwable $e) {
-                Log::warning('Failed to send customer password setup link after booking.', [
-                    'email' => $normalizedEmail,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
-
-        return $customer;
-    }
-}
-
-if (!function_exists('vendorSocialRedirectUrl')) {
-    function vendorSocialRedirectUrl(string $provider): string
-    {
-        return (string) config('services.' . $provider . '.redirect', url('/portal/vendor/oauth/' . $provider . '/callback'));
-    }
-}
-
-if (!function_exists('isVendorSocialProviderConfigured')) {
-    function isVendorSocialProviderConfigured(string $provider): bool
-    {
-        return match ($provider) {
-            'google' => trim((string) config('services.google.client_id', '')) !== ''
-                && trim((string) config('services.google.client_secret', '')) !== '',
-            'facebook' => trim((string) config('services.facebook.client_id', '')) !== ''
-                && trim((string) config('services.facebook.client_secret', '')) !== '',
-            'apple' => trim((string) config('services.apple.client_id', '')) !== ''
-                && trim((string) config('services.apple.team_id', '')) !== ''
-                && trim((string) config('services.apple.key_id', '')) !== ''
-                && trim((string) config('services.apple.private_key', '')) !== '',
-            default => false,
-        };
-    }
-}
-
-if (!function_exists('vendorSocialHealthSnapshot')) {
-    function vendorSocialHealthSnapshot(): array
-    {
-        $appUrl = rtrim((string) config('app.url', ''), '/');
-        $appHost = strtolower((string) parse_url($appUrl, PHP_URL_HOST));
-
-        $providers = [];
-        foreach (supportedVendorSocialProviders() as $provider) {
-            $redirect = vendorSocialRedirectUrl($provider);
-            $redirectHost = strtolower((string) parse_url($redirect, PHP_URL_HOST));
-
-            $providers[$provider] = [
-                'configured' => isVendorSocialProviderConfigured($provider),
-                'redirect' => $redirect,
-                'redirect_uses_https' => str_starts_with(strtolower($redirect), 'https://'),
-                'redirect_host_matches_app' => $appHost !== '' && $redirectHost === $appHost,
-            ];
-        }
-
-        return [
-            'ok' => true,
-            'app_url' => $appUrl,
-            'providers' => $providers,
+    $resolveHomeDestinationKey = static function (array $card): string {
+        $candidates = [
+            $card['title'] ?? null,
+            $card['city'] ?? null,
+            $card['location'] ?? null,
+            $card['island'] ?? null,
+            $card['atoll'] ?? null,
+            $card['meta'] ?? null,
         ];
-    }
-}
 
-if (!function_exists('vendorEmailOtpCacheKey')) {
-    function vendorEmailOtpCacheKey(string $email): string
-    {
-        return 'vendor_email_otp:' . sha1(strtolower(trim($email)));
-    }
-}
-
-if (!function_exists('portalCanonicalHostRedirect')) {
-    function portalCanonicalHostRedirect(Request $request): ?\Illuminate\Http\RedirectResponse
-    {
-        if (strtolower((string) config('app.env', 'production')) !== 'production') {
-            return null;
+        $url = trim((string) ($card['url'] ?? ''));
+        if ($url !== '') {
+            $queryString = parse_url($url, PHP_URL_QUERY);
+            if (is_string($queryString) && $queryString !== '') {
+                parse_str($queryString, $queryParams);
+                if (isset($queryParams['q'])) {
+                    $candidates[] = $queryParams['q'];
+                }
+            }
         }
 
-        $appUrl = trim((string) config('app.url', ''));
-        $canonicalHost = strtolower((string) parse_url($appUrl, PHP_URL_HOST));
-        if ($canonicalHost === '') {
-            return null;
-        }
-
-        $requestHost = strtolower((string) $request->getHost());
-        if ($requestHost === '' || $requestHost === $canonicalHost) {
-            return null;
-        }
-
-        if (!in_array($request->getMethod(), ['GET', 'HEAD'], true)) {
-            return null;
-        }
-
-        $canonicalScheme = strtolower((string) parse_url($appUrl, PHP_URL_SCHEME));
-        if ($canonicalScheme === '') {
-            $canonicalScheme = $request->getScheme();
-        }
-
-        return redirect()->to($canonicalScheme . '://' . $canonicalHost . $request->getRequestUri(), 302);
-    }
-}
-
-if (!function_exists('canReviewVendorRegistrations')) {
-    function canReviewVendorRegistrations(): bool
-    {
-        if (!session('portal_admin_authenticated', false)) {
-            return false;
-        }
-
-        $role = normalizePortalRoleValue((string) session('portal_admin_role', ''));
-        return in_array($role, ['ADMIN_SUPER', 'ADMIN', 'ADMIN_CARE'], true);
-    }
-}
-
-if (!function_exists('currentPortalAdminRole')) {
-    function currentPortalAdminRole(): string
-    {
-        return normalizePortalRoleValue((string) session('portal_admin_role', ''));
-    }
-}
-
-if (!function_exists('canManageVendorUsers')) {
-    function canManageVendorUsers(): bool
-    {
-        if (!session('portal_admin_authenticated', false)) {
-            return false;
-        }
-
-        $role = currentPortalAdminRole();
-        return in_array($role, ['ADMIN_SUPER', 'ADMIN', 'ADMIN_CARE'], true);
-    }
-}
-
-if (!function_exists('canCreateVendorUsers')) {
-    function canCreateVendorUsers(): bool
-    {
-        if (!session('portal_admin_authenticated', false)) {
-            return false;
-        }
-
-        $role = currentPortalAdminRole();
-        return in_array($role, ['ADMIN_SUPER', 'ADMIN'], true);
-    }
-}
-
-if (!function_exists('canApproveVendorRegistrationRequest')) {
-    function canApproveVendorRegistrationRequest(): bool
-    {
-        if (!session('portal_admin_authenticated', false)) {
-            return false;
-        }
-
-        $role = currentPortalAdminRole();
-        return in_array($role, ['ADMIN_SUPER', 'ADMIN'], true);
-    }
-}
-
-if (!function_exists('canApproveVendorDeleteRequest')) {
-    function canApproveVendorDeleteRequest(): bool
-    {
-        if (!session('portal_admin_authenticated', false)) {
-            return false;
-        }
-
-        return currentPortalAdminRole() === 'ADMIN_SUPER';
-    }
-}
-
-if (!function_exists('canRequestVendorDeleteApproval')) {
-    function canRequestVendorDeleteApproval(): bool
-    {
-        if (!session('portal_admin_authenticated', false)) {
-            return false;
-        }
-
-        return in_array(currentPortalAdminRole(), ['ADMIN_SUPER', 'ADMIN'], true);
-    }
-}
-
-if (!function_exists('canModeratePortalFinance')) {
-    function canModeratePortalFinance(): bool
-    {
-        if (!session('portal_admin_authenticated', false)) {
-            return false;
-        }
-
-        return in_array(currentPortalAdminRole(), ['ADMIN_SUPER', 'ADMIN_FINANCE'], true);
-    }
-}
-
-if (!function_exists('canModerateListings')) {
-    function canModerateListings(): bool
-    {
-        if (!session('portal_admin_authenticated', false)) {
-            return false;
-        }
-
-        return in_array(currentPortalAdminRole(), ['ADMIN_SUPER', 'ADMIN', 'ADMIN_CARE'], true);
-    }
-}
-
-if (!function_exists('canManageContent')) {
-    function canManageContent(): bool
-    {
-        if (!session('portal_admin_authenticated', false)) {
-            return false;
-        }
-
-        return in_array(currentPortalAdminRole(), ['ADMIN_SUPER', 'ADMIN_MEDIA'], true);
-    }
-}
-
-if (!function_exists('canEditorialReview')) {
-    function canEditorialReview(): bool
-    {
-        if (!session('portal_admin_authenticated', false)) {
-            return false;
-        }
-
-        return currentPortalAdminRole() === 'ADMIN_SUPER';
-    }
-}
-
-if (!function_exists('portalFinancePolicySettingKey')) {
-    function portalFinancePolicySettingKey(): string
-    {
-        return 'reservation_tax_transfer_policy';
-    }
-}
-
-if (!function_exists('portalFinanceLoadReservationPolicy')) {
-    function portalFinanceLoadReservationPolicy(): array
-    {
-        return ReservationPricingPolicy::loadPolicy();
-    }
-}
-
-if (!function_exists('portalFinanceSaveReservationPolicy')) {
-    function portalFinanceSaveReservationPolicy(array $policy, ?int $actorUserId = null): void
-    {
-        if (!Schema::hasTable('portal_finance_settings')) {
-            return;
-        }
-
-        DB::table('portal_finance_settings')->updateOrInsert(
-            ['setting_key' => portalFinancePolicySettingKey()],
-            [
-                'value_decimal' => null,
-                'value_string' => null,
-                'value_json' => json_encode(ReservationPricingPolicy::normalizePolicy($policy)),
-                'updated_by_user_id' => $actorUserId,
-                'updated_at' => now(),
-                'created_at' => now(),
-            ]
-        );
-    }
-}
-
-if (!function_exists('portalFinanceTaxComponents')) {
-    function portalFinanceTaxComponents(?array $policy = null): array
-    {
-        $effectivePolicy = ReservationPricingPolicy::normalizePolicy($policy ?? portalFinanceLoadReservationPolicy());
-        $components = $effectivePolicy['tax_components'] ?? [];
-
-        return is_array($components) ? array_values($components) : [];
-    }
-}
-
-if (!function_exists('portalFinanceUpsertTaxComponent')) {
-    function portalFinanceUpsertTaxComponent(array $component, ?int $actorUserId = null): array
-    {
-        $policy = portalFinanceLoadReservationPolicy();
-        $existing = portalFinanceTaxComponents($policy);
-        $normalized = ReservationPricingPolicy::normalizeTaxComponents([$component]);
-        if ($normalized === []) {
-            return $policy;
-        }
-
-        $candidate = $normalized[0];
-        $code = (string) ($candidate['code'] ?? '');
-
-        $updated = [];
-        $replaced = false;
-        foreach ($existing as $row) {
-            if (!is_array($row)) {
+        foreach ($candidates as $candidate) {
+            $normalized = portalNormalizeDestinationMediaKey(is_scalar($candidate) ? (string) $candidate : '');
+            if ($normalized === '') {
                 continue;
             }
 
-            if ((string) ($row['code'] ?? '') === $code) {
-                $updated[] = $candidate;
-                $replaced = true;
-            } else {
-                $updated[] = $row;
+            $normalized = str_replace(['male_city_city', 'city_male_city'], 'male_city', $normalized);
+
+            $aliases = [
+                'male' => 'male_city',
+                'malecity' => 'male_city',
+                'male_city' => 'male_city',
+                'male_city_maldives' => 'male_city',
+                'male_maldives' => 'male_city',
+                'maldives_male_city' => 'male_city',
+                'male_city_kaafu' => 'male_city',
+                'male_town' => 'male_city',
+                'male_capital' => 'male_city',
+            ];
+
+            if (array_key_exists($normalized, $aliases)) {
+                return $aliases[$normalized];
             }
-        }
 
-        if (!$replaced) {
-            $updated[] = $candidate;
-        }
+            if (str_contains($normalized, 'male_city') || $normalized === 'male_city') {
+                return 'male_city';
+            }
 
-        $policy['tax_components'] = array_values($updated);
-        portalFinanceSaveReservationPolicy($policy, $actorUserId);
-
-        return $policy;
-    }
-}
-
-if (!function_exists('portalFinanceDeleteTaxComponent')) {
-    function portalFinanceDeleteTaxComponent(string $code, ?int $actorUserId = null): array
-    {
-        $policy = portalFinanceLoadReservationPolicy();
-        $existing = portalFinanceTaxComponents($policy);
-        $code = strtolower(trim($code));
-
-        $policy['tax_components'] = array_values(array_filter($existing, static function ($row) use ($code): bool {
-            return is_array($row) && strtolower(trim((string) ($row['code'] ?? ''))) !== $code;
-        }));
-
-        portalFinanceSaveReservationPolicy($policy, $actorUserId);
-
-        return $policy;
-    }
-}
-
-if (!function_exists('portalActionRequestsEnabled')) {
-    function portalActionRequestsEnabled(): bool
-    {
-        return Schema::hasTable('portal_admin_action_requests');
-    }
-}
-
-if (!function_exists('createPortalActionRequest')) {
-    function createPortalActionRequest(
-        string $actionType,
-        ?int $targetUserId,
-        ?int $targetRegistrationId,
-        ?string $targetIdentifier,
-        ?string $reason,
-        ?array $payload = null
-    ): int {
-        return (int) DB::table('portal_admin_action_requests')->insertGetId([
-            'action_type' => $actionType,
-            'requested_by_user_id' => is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null,
-            'requested_by_role' => (string) session('portal_admin_role', ''),
-            'target_user_id' => $targetUserId,
-            'target_registration_id' => $targetRegistrationId,
-            'target_identifier' => $targetIdentifier,
-            'reason' => $reason,
-            'payload' => $payload ? json_encode($payload) : null,
-            'status' => 'pending',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-    }
-}
-
-if (!function_exists('portalAdminAuditLog')) {
-    function portalAdminAuditLog(string $action, array $context = []): void
-    {
-        if (!Schema::hasTable('portal_admin_audit_logs')) {
-            return;
-        }
-
-        $actorUserId = session('portal_admin_user_id');
-        $actorRole = session('portal_admin_role');
-        $actorName = session('portal_admin_user');
-
-        $targetUserId = $context['target_user_id'] ?? null;
-        $targetIdentifier = $context['target_identifier'] ?? null;
-        $targetRole = $context['target_role'] ?? null;
-        unset($context['target_user_id'], $context['target_identifier'], $context['target_role']);
-
-        try {
-            DB::table('portal_admin_audit_logs')->insert([
-                'actor_user_id' => is_numeric($actorUserId) ? (int) $actorUserId : null,
-                'actor_name' => is_string($actorName) ? $actorName : null,
-                'actor_role' => is_string($actorRole) ? $actorRole : null,
-                'action' => $action,
-                'target_user_id' => is_numeric($targetUserId) ? (int) $targetUserId : null,
-                'target_identifier' => is_string($targetIdentifier) ? $targetIdentifier : null,
-                'target_role' => is_string($targetRole) ? $targetRole : null,
-                'details' => empty($context) ? null : json_encode($context),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        } catch (\Throwable $e) {
-            Log::warning('Failed to write portal admin audit log.', [
-                'action' => $action,
-                'error' => $e->getMessage(),
-            ]);
-        }
-    }
-}
-
-if (!function_exists('vendorMediaStorageUrlFromPath')) {
-    function vendorMediaStorageUrlFromPath(?string $path): ?string
-    {
-        $normalized = trim(str_replace('\\', '/', (string) $path));
-        if ($normalized === '') {
-            return null;
-        }
-
-        if (str_starts_with($normalized, 'http://')) {
-            return 'https://' . ltrim(substr($normalized, 7), '/');
-        }
-
-        if (str_starts_with($normalized, 'https://')) {
             return $normalized;
         }
 
-        if (preg_match('#/storage/app/public/(.+)$#i', $normalized, $matches) === 1) {
-            $normalized = (string) ($matches[1] ?? '');
-        } elseif (preg_match('#/public/storage/(.+)$#i', $normalized, $matches) === 1) {
-            $normalized = (string) ($matches[1] ?? '');
-        }
-
-        $normalized = ltrim($normalized, '/');
-        if (str_starts_with($normalized, 'public/')) {
-            $normalized = substr($normalized, 7);
-        }
-        if (str_starts_with($normalized, 'storage/')) {
-            $normalized = substr($normalized, 8);
-        }
-
-        $normalized = ltrim($normalized, '/');
-
-        return $normalized !== '' ? ('/storage/' . $normalized) : null;
-    }
-}
-
-if (!function_exists('getAvailableCategories')) {
-    function getAvailableCategories(): array
-    {
-        $defaultCategories = [];
-        
-        // Get all categories from the uniform icon system
-        $allCategoryIcons = UniformIconSystem::getAllCategoryIcons();
-        foreach ($allCategoryIcons as $key => $info) {
-            $defaultCategories[$key] = [
-                'label' => $info['label'] ?? ucfirst(str_replace('_', ' ', $key)),
-                'icon' => $info['icon'] ?? 'fa-solid fa-location-dot',
-                'subtitle' => match ($key) {
-                    'accommodation' => 'Hotels, villas, guesthouses',
-                    'marine-transport' => 'Speedboats, ferries, and water transfers',
-                    'land-transport' => 'Cars, vans, and local ground transfers',
-                    'excursion' => 'Diving, snorkel, island tours',
-                    'remote_workspace' => 'Wi-Fi, desks, quiet corners',
-                    'conference_room' => 'Meeting and event spaces',
-                    'resort_day_visit' => 'Day access and passes',
-                    'restaurant' => 'Dining and local cuisine',
-                    'vehicle_rental' => 'Cars, bikes, vans and more',
-                    default => '',
-                },
-                'color' => $info['color'] ?? '#0f6179',
-            ];
-        }
-
-        try {
-            $dbCategories = VendorPropertyCompatibilityReader::allActiveListings(600)
-                ->pluck('listing_category')
-                ->filter(static fn ($cat) => !empty(trim((string) $cat)))
-                ->map(static fn ($cat) => strtolower(trim((string) $cat)))
-                ->unique()
-                ->values();
-
-            if ($dbCategories->isEmpty()) {
-                return $defaultCategories;
-            }
-
-            $extraCategories = $dbCategories
-                ->reject(static fn ($key) => array_key_exists($key, $defaultCategories))
-                ->mapWithKeys(static fn ($key) => [
-                    $key => [
-                        'label' => ucfirst(str_replace(['_', '-'], ' ', $key)),
-                        'icon' => 'fa-solid fa-location-dot',
-                        'subtitle' => '',
-                        'color' => '#0f6179',
-                    ],
-                ])
-                ->toArray();
-
-            return array_merge($defaultCategories, $extraCategories);
-        } catch (\Throwable $e) {
-            Log::warning('Failed to fetch available categories', ['error' => $e->getMessage()]);
-            return $defaultCategories;
-        }
-    }
-}
-
-require __DIR__ . '/web/home.php';
-Route::get('/privacy-policy', function () {
-    return response()->view('privacy-policy');
-});
-
-Route::get('/terms-of-service', function () {
-    return response()->view('terms-of-service');
-});
-
-Route::get('/things-to-do', function () {
-    return redirect('/catalog/excursion?sort=most_wanted');
-});
-
-require __DIR__ . '/web/blog.php';
-
-require __DIR__ . '/web/media.php';
-require __DIR__ . '/web/customer.php';
-Route::get('/media/vendor/{media}/{variant?}', function (int $media, ?string $variant = 'banner') {
-        $placeholderResponse = static function () {
-                $svg = <<<'SVG'
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
-    <defs>
-        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#d7ebf8"/>
-            <stop offset="100%" stop-color="#c7deef"/>
-        </linearGradient>
-    </defs>
-    <rect width="900" height="520" fill="url(#g)"/>
-    <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#406582" font-family="Arial" font-size="34">Image unavailable</text>
-</svg>
-SVG;
-
-                return response($svg, 404, [
-                        'Content-Type' => 'image/svg+xml; charset=UTF-8',
-                        'Cache-Control' => 'no-store',
-                ]);
-        };
-
-    if (!Schema::hasTable('vendor_listing_media')) {
-                return $placeholderResponse();
-    }
-
-    $mediaRecord = DB::table('vendor_listing_media')
-        ->where('id', $media)
-        ->first(['file_path', 'mime_type']);
-
-    if (!$mediaRecord) {
-        return $placeholderResponse();
-    }
-
-    $originalPath = trim((string) ($mediaRecord->file_path ?? ''));
-    if ($originalPath === '') {
-        return $placeholderResponse();
-    }
-
-    if (str_starts_with($originalPath, 'http://') || str_starts_with($originalPath, 'https://')) {
-        $remoteCandidates = [$originalPath];
-        if (str_starts_with($originalPath, 'http://')) {
-            $remoteCandidates[] = 'https://' . ltrim(substr($originalPath, 7), '/');
-        }
-
-        foreach (array_unique($remoteCandidates) as $remoteUrl) {
-            try {
-                $remoteResponse = Http::retry(1, 200)
-                    ->timeout(10)
-                    ->withHeaders([
-                        'Accept' => 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-                        'User-Agent' => 'WorkationMediaProxy/1.0',
-                    ])
-                    ->get($remoteUrl);
-            } catch (\Throwable $exception) {
-                continue;
-            }
-
-            if (!$remoteResponse->successful()) {
-                continue;
-            }
-
-            $remoteBody = $remoteResponse->body();
-            if ($remoteBody === '') {
-                continue;
-            }
-
-            $remoteContentType = trim((string) $remoteResponse->header('Content-Type', ''));
-            if ($remoteContentType === '') {
-                $remoteContentType = (string) ($mediaRecord->mime_type ?? 'image/jpeg');
-            }
-
-            return response($remoteBody, 200, [
-                'Content-Type' => $remoteContentType,
-                'Cache-Control' => 'public, max-age=86400',
-            ]);
-        }
-
-        return $placeholderResponse();
-    }
-
-    $normalizedVariant = strtolower(trim((string) $variant));
-    if (!in_array($normalizedVariant, ['banner', 'thumb'], true)) {
-        $normalizedVariant = 'banner';
-    }
-
-    $candidatePath = $originalPath;
-    if ($normalizedVariant === 'thumb') {
-        $candidatePath = preg_replace('/-banner(\.[a-z0-9]+)$/i', '-thumb$1', $originalPath) ?? $originalPath;
-    } else {
-        $candidatePath = preg_replace('/-thumb(\.[a-z0-9]+)$/i', '-banner$1', $originalPath) ?? $originalPath;
-    }
-
-    // Some legacy rows have only one generated variant. Try the opposite variant as a fallback.
-    $alternateVariantPath = $normalizedVariant === 'thumb'
-        ? (preg_replace('/-thumb(\.[a-z0-9]+)$/i', '-banner$1', $originalPath) ?? $originalPath)
-        : (preg_replace('/-banner(\.[a-z0-9]+)$/i', '-thumb$1', $originalPath) ?? $originalPath);
-
-    $normalizeDiskPath = static function (string $path): string {
-        $normalized = trim(str_replace('\\', '/', $path));
-        if ($normalized === '') {
-            return '';
-        }
-
-        if (preg_match('#/storage/app/public/(.+)$#i', $normalized, $matches) === 1) {
-            $normalized = (string) ($matches[1] ?? '');
-        } elseif (preg_match('#/public/storage/(.+)$#i', $normalized, $matches) === 1) {
-            $normalized = (string) ($matches[1] ?? '');
-        }
-
-        $normalized = ltrim($normalized, '/');
-        if (str_starts_with($normalized, 'public/')) {
-            $normalized = substr($normalized, 7);
-        }
-        if (str_starts_with($normalized, 'storage/')) {
-            $normalized = substr($normalized, 8);
-        }
-
-        return ltrim($normalized, '/');
+        return '';
     };
 
-    $candidatePaths = collect([
-        $candidatePath,
-        $alternateVariantPath,
-        $originalPath,
-        $normalizeDiskPath($candidatePath),
-        $normalizeDiskPath($alternateVariantPath),
-        $normalizeDiskPath($originalPath),
-    ])->map(static fn ($path) => trim((string) $path))
-      ->filter(static fn ($path) => $path !== '')
-      ->unique()
-      ->values()
-      ->all();
-
-    $resolvedBinary = null;
-    $resolvedMimeType = '';
-
-    $configuredMediaDisk = trim((string) config('filesystems.vendor_media_disk', 'public'));
-    $diskNames = array_values(array_unique(array_filter([
-        $configuredMediaDisk !== '' ? $configuredMediaDisk : null,
-        'public',
-    ])));
-
-    foreach ($diskNames as $diskName) {
-        try {
-            $disk = Storage::disk($diskName);
-        } catch (\Throwable $exception) {
-            continue;
+    $resolveDestinationImageByKey = static function (string $destinationKey, array $firstSource, array $secondSource): ?string {
+        $key = strtolower(trim($destinationKey));
+        if ($key === '') {
+            return null;
         }
 
-        foreach ($candidatePaths as $path) {
-            if (!$disk->exists($path)) {
-                continue;
+        $variants = collect([
+            $key,
+            preg_replace('/_(island|atoll|city|maldives)$/', '', $key) ?? $key,
+            str_replace('_island', '', $key),
+            str_replace('_atoll', '', $key),
+            str_replace('_city', '', $key),
+            str_replace('_maldives', '', $key),
+        ])->map(static fn ($value) => strtolower(trim((string) $value)))
+            ->filter(static fn ($value) => $value !== '')
+            ->unique()
+            ->values();
+
+        foreach ($variants as $variantKey) {
+            if (array_key_exists($variantKey, $firstSource)) {
+                $candidate = trim((string) ($firstSource[$variantKey] ?? ''));
+                if ($candidate !== '') {
+                    return $candidate;
+                }
+            }
+        }
+
+        foreach ($variants as $variantKey) {
+            if (array_key_exists($variantKey, $secondSource)) {
+                $candidate = trim((string) ($secondSource[$variantKey] ?? ''));
+                if ($candidate !== '') {
+                    return $candidate;
+                }
+            }
+        }
+
+        return null;
+    };
+
+    $resolveHomeCuratedDestinationImage = static function (array $card) use ($homeCuratedDestinationImages, $homeDatabaseDestinationImages, $resolveHomeDestinationKey, $resolveDestinationImageByKey): ?string {
+        $destinationKey = $resolveHomeDestinationKey($card);
+        return $resolveDestinationImageByKey($destinationKey, $homeDatabaseDestinationImages, $homeCuratedDestinationImages);
+    };
+
+    $resolveHomePreferredDestinationArt = static function (array $card) use ($homeCuratedDestinationImages, $homeDatabaseDestinationImages, $resolveHomeDestinationKey, $resolveDestinationImageByKey): ?string {
+        $destinationKey = $resolveHomeDestinationKey($card);
+        return $resolveDestinationImageByKey($destinationKey, $homeCuratedDestinationImages, $homeDatabaseDestinationImages);
+    };
+
+    $resolveHomeDestinationOverrideImage = static function (array $card) use ($homeDestinationMediaOverrides, $resolveHomeDestinationKey): ?string {
+        $destinationKey = $resolveHomeDestinationKey($card);
+        if ($destinationKey === '') {
+            return null;
+        }
+
+        $storedValue = trim((string) ($homeDestinationMediaOverrides[$destinationKey] ?? ''));
+        if ($storedValue === '') {
+            return null;
+        }
+
+        return portalManagedMediaUrlFromPath($storedValue) ?? null;
+    };
+
+    $applyHomeDestinationImages = static function ($cards) use ($resolveHomeDestinationOverrideImage, $resolveHomeCuratedDestinationImage, $resolveHomeDestinationKey) {
+        return collect($cards)->map(function ($card) use ($resolveHomeDestinationOverrideImage, $resolveHomeCuratedDestinationImage, $resolveHomeDestinationKey) {
+            if (!is_array($card)) {
+                return $card;
             }
 
-            $resolvedBinary = $disk->get($path);
-            $resolvedMimeType = (string) ($disk->mimeType($path) ?: '');
-            break 2;
-        }
-    }
+            $destinationKey = $resolveHomeDestinationKey($card);
+            if ($destinationKey !== '') {
+                $card['destination_key'] = $destinationKey;
+            }
 
-    if ($resolvedBinary === null) {
-        $localDisk = Storage::disk('local');
-        foreach ($candidatePaths as $path) {
-            foreach ([$path, 'public/' . ltrim($path, '/')] as $localPath) {
-                if (!$localDisk->exists($localPath)) {
+            $overrideImage = $resolveHomeDestinationOverrideImage($card);
+            if ($overrideImage !== null && $overrideImage !== '') {
+                $card['image_url'] = $overrideImage;
+                $card['fallback_image_url'] = $overrideImage;
+
+                return $card;
+            }
+
+            $hasPrimaryImage = trim((string) ($card['image_url'] ?? '')) !== '';
+            $hasFallbackImage = trim((string) ($card['fallback_image_url'] ?? '')) !== '';
+            if ($hasPrimaryImage || $hasFallbackImage) {
+                return $card;
+            }
+
+            $curatedImage = $resolveHomeCuratedDestinationImage($card);
+            if ($curatedImage !== null && $curatedImage !== '') {
+                $card['image_url'] = $curatedImage;
+                $card['fallback_image_url'] = $curatedImage;
+            }
+
+            return $card;
+        })->values();
+    };
+
+    $applyHomeDestinationArtPreference = static function ($cards) use ($resolveHomeDestinationOverrideImage, $resolveHomePreferredDestinationArt) {
+        return collect($cards)->map(function ($card) use ($resolveHomeDestinationOverrideImage, $resolveHomePreferredDestinationArt) {
+            if (!is_array($card)) {
+                return $card;
+            }
+
+            $overrideImage = $resolveHomeDestinationOverrideImage($card);
+            if ($overrideImage !== null && $overrideImage !== '') {
+                $card['image_url'] = $overrideImage;
+                $card['fallback_image_url'] = $overrideImage;
+
+                return $card;
+            }
+
+            $curatedImage = $resolveHomePreferredDestinationArt($card);
+            if ($curatedImage !== null && $curatedImage !== '') {
+                $card['image_url'] = $curatedImage;
+                $card['fallback_image_url'] = $curatedImage;
+            }
+
+            return $card;
+        })->values();
+    };
+
+    $homeBrowseCards = collect([
+        ['title' => 'Stay Options', 'subtitle' => 'Hotels, villas, guesthouses', 'url' => '/catalog/accommodation'],
+        ['title' => 'Marine Transport', 'subtitle' => 'Speedboat, ferry, water transfer', 'url' => '/catalog/marine-transport'],
+        ['title' => 'Land Transport', 'subtitle' => 'Car, van, and island transfers', 'url' => '/catalog/land-transport'],
+        ['title' => 'Experiences', 'subtitle' => 'Diving, snorkel, island tours', 'url' => '/catalog/excursion'],
+        ['title' => 'Work-Friendly', 'subtitle' => 'Wi-Fi, desks, quiet corners', 'url' => '/catalog/remote_workspace'],
+        ['title' => 'Conference Rooms', 'subtitle' => 'Meeting and event-ready spaces', 'url' => '/catalog/conference_room'],
+        ['title' => 'Deals Zone', 'subtitle' => 'Promotions and last-minute value', 'url' => '/catalog/accommodation?sort=price_low_high'],
+    ]);
+
+    $homeTrendingCards = collect([
+        ['title' => 'Maafushi Island', 'subtitle' => 'Most searched for affordable island escapes.', 'url' => '/catalog/accommodation?q=Maafushi', 'image_url' => '/images/home/destinations/maafushi-island.svg', 'fallback_image_url' => '/images/home/destinations/maafushi-island.svg'],
+        ['title' => 'Male City', 'subtitle' => 'Convenient urban stays and transfer access.', 'url' => '/catalog/accommodation?q=Male', 'image_url' => '/images/home/destinations/male-city.svg', 'fallback_image_url' => '/images/home/destinations/male-city.svg'],
+        ['title' => 'Baa Atoll', 'subtitle' => 'Nature-rich stays and iconic snorkeling spots.', 'url' => '/catalog/accommodation?q=Baa+Atoll', 'image_url' => '/images/home/destinations/baa-atoll.svg', 'fallback_image_url' => '/images/home/destinations/baa-atoll.svg'],
+        ['title' => 'Ari Atoll', 'subtitle' => 'Popular for diving and premium island resorts.', 'url' => '/catalog/accommodation?q=Ari+Atoll', 'image_url' => '/images/home/destinations/ari-atoll.svg', 'fallback_image_url' => '/images/home/destinations/ari-atoll.svg'],
+    ]);
+
+    $homeWeekendDealCards = collect([
+        ['title' => '2-Night Beach Stay', 'subtitle' => 'Weekend promo with breakfast included.', 'url' => '/catalog/accommodation?q=beach&sort=price_low_high'],
+        ['title' => 'Stay + Transfer Bundle', 'subtitle' => 'Save when you combine stay and transport.', 'url' => '/catalog/marine-transport?sort=price_low_high'],
+        ['title' => 'Family Weekend Pack', 'subtitle' => 'Room upgrade and activity credits included.', 'url' => '/catalog/accommodation?q=family&sort=most_wanted'],
+        ['title' => 'Couple Escape Offer', 'subtitle' => 'Curated stay options for a quick retreat.', 'url' => '/catalog/accommodation?q=couple&sort=highest_reviews'],
+    ]);
+
+    $homeLovedCards = collect([
+        ['title' => 'Hulhumale Seafront', 'subtitle' => 'Consistently high ratings for convenience.', 'url' => '/catalog/accommodation?q=Hulhumale', 'image_url' => '/images/home/destinations/hulhumale-seafront.svg', 'fallback_image_url' => '/images/home/destinations/hulhumale-seafront.svg'],
+        ['title' => 'Thulusdhoo Island', 'subtitle' => 'Guest favorite for surf culture and charm.', 'url' => '/catalog/accommodation?q=Thulusdhoo', 'image_url' => '/images/home/destinations/thulusdhoo-island.svg', 'fallback_image_url' => '/images/home/destinations/thulusdhoo-island.svg'],
+        ['title' => 'Ukulhas Island', 'subtitle' => 'Loved for clean beaches and relaxed stays.', 'url' => '/catalog/accommodation?q=Ukulhas', 'image_url' => '/images/home/destinations/ukulhas-island.svg', 'fallback_image_url' => '/images/home/destinations/ukulhas-island.svg'],
+        ['title' => 'Dhigurah Island', 'subtitle' => 'Strong demand for reef and marine experiences.', 'url' => '/catalog/accommodation?q=Dhigurah', 'image_url' => '/images/home/destinations/dhigurah-island.svg', 'fallback_image_url' => '/images/home/destinations/dhigurah-island.svg'],
+    ]);
+
+    $homeTrendingCards = $applyHomeDestinationArtPreference($applyHomeDestinationImages($homeTrendingCards));
+    $homeLovedCards = $applyHomeDestinationArtPreference($applyHomeDestinationImages($homeLovedCards));
+
+    $homeDefaultDestinationImages = array_values(array_filter($homeCuratedDestinationImages, static fn ($img) => is_string($img) && trim($img) !== ''));
+    $applyHomeImageSafetyFallback = static function ($cards) use ($homeDefaultDestinationImages) {
+        return collect($cards)->values()->map(static function ($card, $index) use ($homeDefaultDestinationImages) {
+            if (!is_array($card)) {
+                return $card;
+            }
+
+            $primary = trim((string) ($card['image_url'] ?? ''));
+            $fallback = trim((string) ($card['fallback_image_url'] ?? ''));
+            if ($primary !== '' || $fallback !== '' || empty($homeDefaultDestinationImages)) {
+                return $card;
+            }
+
+            $safeImage = (string) ($homeDefaultDestinationImages[$index % count($homeDefaultDestinationImages)] ?? '');
+            if ($safeImage !== '') {
+                $card['image_url'] = $safeImage;
+                $card['fallback_image_url'] = $safeImage;
+            }
+
+            return $card;
+        });
+    };
+
+    $homeTrendingCards = $applyHomeImageSafetyFallback($homeTrendingCards);
+    $homeLovedCards = $applyHomeImageSafetyFallback($homeLovedCards);
+
+    $homeListingMediaByProperty = collect();
+    $homeTransportDestinationOptions = collect();
+
+    {
+        $allProperties = collect(Cache::remember('home:active-listings:v2', now()->addMinutes(3), static function () {
+            return VendorPropertyCompatibilityReader::allActiveListings(300)->values()->all();
+        }));
+
+        $propertyIds = $allProperties
+            ->pluck('id')
+            ->map(static fn ($id) => (int) $id)
+            ->filter(static fn (int $id) => $id > 0)
+            ->values();
+        $propertyLookupIds = $allProperties
+            ->flatMap(static fn ($property) => workationPropertyLookupIds($property))
+            ->filter(static fn (int $id) => $id > 0)
+            ->unique()
+            ->values();
+        // Hydrate property base_price from the lowest valid room price so home/category
+        // cards always show a real "From" value.
+        if ($propertyIds->isNotEmpty()) {
+            $combinedRoomPricesByProperty = collect();
+
+            // Accommodation prices must come from room/package tables.
+            // Reset stale vendor_properties.base_price values first.
+            $allProperties = $allProperties->map(static function ($property) {
+                $category = strtolower(trim((string) ($property->listing_category ?? '')));
+                if ($category === 'accommodation') {
+                    $property->base_price = 0;
+                }
+
+                return $property;
+            })->values();
+
+            $legacyRoomPropertyColumn = null;
+            if (Schema::hasTable('vendor_property_room_categories')) {
+                if (Schema::hasColumn('vendor_property_room_categories', 'vendor_property_id')) {
+                    $legacyRoomPropertyColumn = 'vendor_property_id';
+                } elseif (Schema::hasColumn('vendor_property_room_categories', 'property_id')) {
+                    $legacyRoomPropertyColumn = 'property_id';
+                }
+            }
+
+            if ($legacyRoomPropertyColumn !== null) {
+                $legacyPriceColumns = [];
+                foreach ([
+                    'base_price',
+                    'meal_plan_room_only_price',
+                    'meal_plan_bb_price',
+                    'meal_plan_hb_price',
+                    'meal_plan_fb_price',
+                    'meal_plan_ai_price',
+                    'meal_plan_breakfast_price',
+                    'meal_plan_half_board_price',
+                    'meal_plan_full_board_price',
+                    'meal_plan_all_inclusive_price',
+                ] as $candidateColumn) {
+                    if (Schema::hasColumn('vendor_property_room_categories', $candidateColumn)) {
+                        $legacyPriceColumns[] = $candidateColumn;
+                    }
+                }
+
+                if (!empty($legacyPriceColumns)) {
+                    $legacyRoomRows = DB::table('vendor_property_room_categories')
+                        ->whereIn($legacyRoomPropertyColumn, $propertyLookupIds->all())
+                        ->get(array_merge([$legacyRoomPropertyColumn], $legacyPriceColumns));
+
+                    $legacyRoomPrices = $legacyRoomRows
+                        ->groupBy(static function ($row) use ($legacyRoomPropertyColumn) {
+                            return (int) ($row->{$legacyRoomPropertyColumn} ?? 0);
+                        })
+                        ->map(static function ($rows) use ($legacyPriceColumns) {
+                            return collect($rows)
+                                ->flatMap(static function ($row) use ($legacyPriceColumns) {
+                                    return collect($legacyPriceColumns)
+                                        ->map(static fn ($column) => (float) ($row->{$column} ?? 0));
+                                })
+                                ->filter(static fn (float $value) => $value > 0)
+                                ->min();
+                        })
+                        ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+
+                    $combinedRoomPricesByProperty = $combinedRoomPricesByProperty->union($legacyRoomPrices);
+                }
+            }
+
+            if (Schema::hasTable('accommodation_rooms') && Schema::hasColumn('accommodation_rooms', 'property_id')) {
+                $hasRoomActiveColumn = Schema::hasColumn('accommodation_rooms', 'is_active');
+                $roomPriceColumns = ['property_id'];
+
+                foreach (['base_price_per_night', 'base_price'] as $candidateColumn) {
+                    if (Schema::hasColumn('accommodation_rooms', $candidateColumn)) {
+                        $roomPriceColumns[] = $candidateColumn;
+                    }
+                }
+
+                if (count($roomPriceColumns) > 1) {
+                    $roomRows = DB::table('accommodation_rooms')
+                        ->whereIn('property_id', $propertyLookupIds->all())
+                        ->when($hasRoomActiveColumn, static function ($query) {
+                            $query->where(static function ($activeQuery) {
+                                $activeQuery->where('is_active', 1)
+                                    ->orWhereNull('is_active');
+                            });
+                        })
+                        ->get($roomPriceColumns);
+
+                    $canonicalRoomPrices = $roomRows
+                        ->groupBy(static fn ($row) => (int) ($row->property_id ?? 0))
+                        ->map(static function ($rows) {
+                            return collect($rows)
+                                ->map(static function ($row) {
+                                    $nightly = isset($row->base_price_per_night) ? (float) $row->base_price_per_night : 0;
+                                    $legacy = isset($row->base_price) ? (float) $row->base_price : 0;
+                                    return $nightly > 0 ? $nightly : $legacy;
+                                })
+                                ->filter(static fn (float $value) => $value > 0)
+                                ->min();
+                        })
+                        ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+
+                    foreach ($canonicalRoomPrices as $propertyLookupId => $candidatePrice) {
+                        $normalizedPropertyLookupId = (int) $propertyLookupId;
+                        $normalizedCandidatePrice = (float) $candidatePrice;
+                        if ($normalizedPropertyLookupId <= 0 || $normalizedCandidatePrice <= 0) {
+                            continue;
+                        }
+
+                        if ($combinedRoomPricesByProperty->has($normalizedPropertyLookupId)) {
+                            $existingPrice = (float) ($combinedRoomPricesByProperty->get($normalizedPropertyLookupId) ?? 0);
+                            $combinedRoomPricesByProperty->put(
+                                $normalizedPropertyLookupId,
+                                $existingPrice > 0 ? min($existingPrice, $normalizedCandidatePrice) : $normalizedCandidatePrice
+                            );
+                        } else {
+                            $combinedRoomPricesByProperty->put($normalizedPropertyLookupId, $normalizedCandidatePrice);
+                        }
+                    }
+                }
+            }
+
+            if (Schema::hasTable('accommodation_packages')
+                && Schema::hasColumn('accommodation_packages', 'property_id')) {
+                $packagePriceColumns = ['property_id'];
+                if (Schema::hasColumn('accommodation_packages', 'base_price')) {
+                    $packagePriceColumns[] = 'base_price';
+                }
+                if (Schema::hasColumn('accommodation_packages', 'price_per_night')) {
+                    $packagePriceColumns[] = 'price_per_night';
+                }
+
+                if (count($packagePriceColumns) > 1) {
+                $packageRowsQuery = DB::table('accommodation_packages as ap');
+
+                if (Schema::hasTable('accommodation_rooms')
+                    && Schema::hasColumn('accommodation_packages', 'room_id')
+                    && Schema::hasColumn('accommodation_rooms', 'id')
+                    && Schema::hasColumn('accommodation_rooms', 'property_id')) {
+                    $packageRowsQuery->leftJoin('accommodation_rooms as ar', 'ar.id', '=', 'ap.room_id')
+                        ->where(static function ($query) use ($propertyLookupIds) {
+                            $query->whereIn('ap.property_id', $propertyLookupIds->all())
+                                ->orWhereIn('ar.property_id', $propertyLookupIds->all());
+                        });
+                } else {
+                    $packageRowsQuery->whereIn('ap.property_id', $propertyLookupIds->all());
+                }
+
+                $packageRowsQuery->when(Schema::hasColumn('accommodation_packages', 'is_active'), static function ($query) {
+                    $query->where(static function ($activeQuery) {
+                        $activeQuery->where('ap.is_active', 1)
+                            ->orWhereNull('ap.is_active');
+                    });
+                });
+
+                $packageSelectColumns = [];
+                foreach ($packagePriceColumns as $column) {
+                    $packageSelectColumns[] = 'ap.' . $column;
+                }
+                $packageSelectColumns[] = 'ar.property_id as room_property_id';
+
+                $packagePrices = $packageRowsQuery
+                    ->get($packageSelectColumns)
+                    ->groupBy(static function ($row) {
+                        $directPropertyId = (int) ($row->property_id ?? 0);
+                        if ($directPropertyId > 0) {
+                            return $directPropertyId;
+                        }
+
+                        return (int) ($row->room_property_id ?? 0);
+                    })
+                    ->map(static function ($rows) {
+                        return collect($rows)
+                            ->map(static function ($row) {
+                                $perNight = isset($row->price_per_night) ? (float) ($row->price_per_night ?? 0) : 0;
+                                $base = isset($row->base_price) ? (float) ($row->base_price ?? 0) : 0;
+                                return $perNight > 0 ? $perNight : $base;
+                            })
+                            ->filter(static fn (float $value) => $value > 0)
+                            ->min();
+                    })
+                    ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+
+                foreach ($packagePrices as $propertyLookupId => $candidatePrice) {
+                    $normalizedPropertyLookupId = (int) $propertyLookupId;
+                    $normalizedCandidatePrice = (float) $candidatePrice;
+                    if ($normalizedPropertyLookupId <= 0 || $normalizedCandidatePrice <= 0) {
+                        continue;
+                    }
+
+                    if ($combinedRoomPricesByProperty->has($normalizedPropertyLookupId)) {
+                        $existingPrice = (float) ($combinedRoomPricesByProperty->get($normalizedPropertyLookupId) ?? 0);
+                        $combinedRoomPricesByProperty->put(
+                            $normalizedPropertyLookupId,
+                            $existingPrice > 0 ? min($existingPrice, $normalizedCandidatePrice) : $normalizedCandidatePrice
+                        );
+                    } else {
+                        $combinedRoomPricesByProperty->put($normalizedPropertyLookupId, $normalizedCandidatePrice);
+                    }
+                }
+                }
+            }
+
+            if ($combinedRoomPricesByProperty->isNotEmpty()) {
+                $allProperties = $allProperties->map(static function ($property) use ($combinedRoomPricesByProperty) {
+                    $lookupId = collect(workationPropertyLookupIds($property))
+                        ->first(static fn (int $candidateId) => $combinedRoomPricesByProperty->has($candidateId));
+
+                    if (is_int($lookupId) && $lookupId > 0) {
+                        $property->base_price = (float) ($combinedRoomPricesByProperty->get($lookupId) ?? 0);
+                    }
+
+                    return $property;
+                });
+            }
+
+            // Derive card price from listing details when base_price is still missing.
+            $allProperties = $allProperties->map(static function ($property) {
+                $existingPrice = (float) ($property->base_price ?? 0);
+                if ($existingPrice > 0) {
+                    return $property;
+                }
+
+                $derivedPrice = workationDerivedListingBasePrice($property);
+                if ($derivedPrice > 0) {
+                    $property->base_price = $derivedPrice;
+                }
+
+                return $property;
+            })->values();
+        }
+
+        if (Schema::hasTable('vendor_listing_media') && $propertyLookupIds->isNotEmpty()) {
+            $mediaRows = DB::table('vendor_listing_media')
+                ->where('entity_type', 'property')
+                ->whereIn('entity_id', $propertyLookupIds->all())
+                ->orderByDesc('is_primary')
+                ->orderByDesc('created_at')
+                ->limit(1200)
+                ->get();
+
+            $mediaByEntityId = $mediaRows->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
+            $homeListingMediaByProperty = $allProperties
+                ->mapWithKeys(static function ($property) use ($mediaByEntityId) {
+                    $canonicalId = (int) ($property->id ?? 0);
+                    $dedicatedId = (int) ($property->dedicated_row_id ?? 0);
+
+                    $mediaItems = collect($mediaByEntityId->get($canonicalId, collect()));
+                    if ($mediaItems->isEmpty() && $dedicatedId > 0) {
+                        $mediaItems = collect($mediaByEntityId->get($dedicatedId, collect()));
+                    }
+
+                    return [$canonicalId => $mediaItems];
+                })
+                ->filter(static fn ($items, $key) => (int) $key > 0);
+        }
+
+        $transportRows = $allProperties
+            ->filter(static function ($row) {
+                $category = strtolower(trim(str_replace('-', '_', (string) ($row->listing_category ?? ''))));
+                return in_array($category, ['marine_transport', 'land_transport'], true);
+            })
+            ->take(2000)
+            ->values();
+
+        $transportDestinationMap = [];
+        foreach ($transportRows as $row) {
+            $candidates = [
+                trim((string) (property_exists($row, 'pickup_location') ? $row->pickup_location : '')),
+                trim((string) (property_exists($row, 'dropoff_location') ? $row->dropoff_location : '')),
+                trim((string) (property_exists($row, 'origin_point') ? $row->origin_point : '')),
+                trim((string) (property_exists($row, 'destination_point') ? $row->destination_point : '')),
+                trim((string) (property_exists($row, 'island') ? $row->island : '')),
+                trim((string) (property_exists($row, 'city') ? $row->city : '')),
+                trim((string) (property_exists($row, 'atoll') ? $row->atoll : '')),
+            ];
+
+            foreach ($candidates as $candidate) {
+                if ($candidate === '') {
                     continue;
                 }
 
-                $resolvedBinary = $localDisk->get($localPath);
-                $resolvedMimeType = (string) ($localDisk->mimeType($localPath) ?: '');
-                break 2;
+                $transportDestinationMap[strtolower($candidate)] = $candidate;
+            }
+        }
+
+        if (!empty($transportDestinationMap)) {
+            natcasesort($transportDestinationMap);
+            $homeTransportDestinationOptions = collect(array_values($transportDestinationMap))->values();
+        }
+
+        $resolveDirectMediaUrl = static function ($media): ?string {
+            $filePath = trim((string) ($media->file_path ?? ''));
+            if ($filePath === '') {
+                return null;
+            }
+
+            if (!str_starts_with($filePath, 'http://') && !str_starts_with($filePath, 'https://')) {
+                return null;
+            }
+
+            $resolved = trim((string) $filePath);
+
+            if (str_starts_with($resolved, 'http://')) {
+                $resolved = 'https://' . ltrim(substr($resolved, 7), '/');
+            }
+
+            return $resolved;
+        };
+
+        $resolvePropertyImage = static function (int $propertyId) use ($homeListingMediaByProperty, $resolveDirectMediaUrl): ?string {
+            if ($propertyId <= 0) {
+                return null;
+            }
+
+            $mediaItems = collect($homeListingMediaByProperty->get($propertyId, collect()));
+            $primaryMedia = $mediaItems->first();
+            if (!$primaryMedia) {
+                return null;
+            }
+
+            $directUrl = $resolveDirectMediaUrl($primaryMedia);
+            if ($directUrl !== null && $directUrl !== '') {
+                return $directUrl;
+            }
+
+            $mediaId = (int) ($primaryMedia->id ?? 0);
+            if ($mediaId > 0) {
+                return '/media/vendor/' . $mediaId . '/thumb';
+            }
+
+            return null;
+        };
+
+        $resolvePropertyFallbackImage = static function (int $propertyId) use ($homeListingMediaByProperty, $resolveDirectMediaUrl): ?string {
+            if ($propertyId <= 0) {
+                return null;
+            }
+
+            $mediaItems = collect($homeListingMediaByProperty->get($propertyId, collect()));
+            $primaryMedia = $mediaItems->first();
+            if (!$primaryMedia) {
+                return null;
+            }
+
+            $directUrl = $resolveDirectMediaUrl($primaryMedia);
+            if ($directUrl !== null && $directUrl !== '') {
+                return $directUrl;
+            }
+
+            $mediaId = (int) ($primaryMedia->id ?? 0);
+            if ($mediaId > 0) {
+                return '/media/vendor/' . $mediaId . '/banner';
+            }
+
+            return null;
+        };
+
+        $propertyLocationLabel = static function ($property): string {
+            $island = trim((string) ($property->island ?? ''));
+            $city = trim((string) ($property->city ?? ''));
+            $atoll = trim((string) ($property->atoll ?? ''));
+
+            if ($island !== '' && $atoll !== '') {
+                return $island . ', ' . $atoll;
+            }
+
+            if ($island !== '') {
+                return $island;
+            }
+
+            if ($city !== '') {
+                return $city;
+            }
+
+            return $atoll;
+        };
+
+        $propertyLocationValue = static function ($property): string {
+            $island = trim((string) ($property->island ?? ''));
+            if ($island !== '') {
+                return $island;
+            }
+
+            $city = trim((string) ($property->city ?? ''));
+            if ($city !== '') {
+                return $city;
+            }
+
+            return trim((string) ($property->atoll ?? ''));
+        };
+
+        if ($allProperties->isNotEmpty()) {
+            $normalizeHomeCategoryKey = static function (?string $value): string {
+                $normalized = str_replace('-', '_', strtolower(trim((string) $value)));
+
+                return match ($normalized) {
+                    'conference_rooms' => 'conference_room',
+                    'excursions', 'experience', 'experiences', 'watersports', 'water_sports' => 'excursion',
+                    'workspace', 'work_friendly', 'workfriendly' => 'remote_workspace',
+                    'marine', 'marine_transfer', 'marine_transfers' => 'marine_transport',
+                    'land', 'land_transfer', 'land_transfers' => 'land_transport',
+                    default => $normalized,
+                };
+            };
+
+            $categoryCounts = $allProperties
+                ->groupBy(static fn ($property) => $normalizeHomeCategoryKey((string) ($property->listing_category ?? '')))
+                ->filter(static fn ($group, $key) => $key !== '')
+                ->map(static fn ($group) => $group->count());
+
+            $homeCategoryPriceBucket = static function ($property) use ($normalizeHomeCategoryKey): string {
+                $category = $normalizeHomeCategoryKey((string) ($property->listing_category ?? ''));
+                if (in_array($category, ['marine_transport', 'land_transport'], true)) {
+                    return $category;
+                }
+
+                $transportMode = strtolower(trim((string) ($property->transport_mode ?? '')));
+                if ($transportMode === '') {
+                    $decodedDetails = null;
+                    if (isset($property->listing_details) && is_string($property->listing_details) && trim((string) $property->listing_details) !== '') {
+                        $decoded = json_decode((string) $property->listing_details, true);
+                        $decodedDetails = is_array($decoded) ? $decoded : null;
+                    }
+                    if (is_array($decodedDetails)) {
+                        $transportMode = strtolower(trim((string) ($decodedDetails['transport_mode'] ?? '')));
+                    }
+                }
+                $name = strtolower(trim((string) ($property->name ?? '')));
+                $metaText = trim($transportMode . ' ' . $name);
+
+                if ($category === 'transport') {
+                    if (preg_match('/speed\\s*boat|ferry|boat|dhoni|yacht|launch|catamaran|seaplane/i', $metaText) === 1) {
+                        return 'marine_transport';
+                    }
+
+                    if (preg_match('/car|van|taxi|bus|coach|bike|suv|land/i', $metaText) === 1) {
+                        return 'land_transport';
+                    }
+
+                    return 'marine_transport';
+                }
+
+                if ($category === 'water_sports') {
+                    return 'excursion';
+                }
+
+                return $normalizeHomeCategoryKey($category);
+            };
+
+            $categorySamples = $allProperties
+                ->filter(static fn ($property) => trim((string) ($property->listing_category ?? '')) !== '')
+                ->groupBy(static fn ($property) => $homeCategoryPriceBucket($property))
+                ->map(static fn ($group) => $group->first());
+
+            $homePricingListings = VendorPropertyCompatibilityReader::allActiveListings(2000);
+
+            $categoryMinPriceRows = $homePricingListings
+                ->map(static function ($property) use ($homeCategoryPriceBucket) {
+                    $bucket = $homeCategoryPriceBucket($property);
+                    $derivedPrice = (float) ($property->base_price ?? 0);
+                    if ($derivedPrice <= 0 && $bucket !== 'accommodation') {
+                        $derivedPrice = workationDerivedListingBasePrice($property);
+                    }
+
+                    return [
+                        'bucket' => $bucket,
+                        'price' => (float) $derivedPrice,
+                        'currency' => strtoupper(trim((string) ($property->currency ?? 'MVR'))),
+                    ];
+                })
+                ->filter(static fn (array $row) => $row['bucket'] !== '' && $row['price'] > 0)
+                ->groupBy(static fn (array $row) => $row['bucket'])
+                ->map(static function ($rows) {
+                    return collect($rows)
+                        ->sortBy(static fn (array $row) => (float) ($row['price'] ?? 0))
+                        ->first();
+                });
+
+            // Accommodation home-card pricing must use the true lowest room/package price,
+            // not sampled listing base_price values.
+            $accommodationLookupIds = $homePricingListings
+                ->filter(static fn ($property) => $homeCategoryPriceBucket($property) === 'accommodation')
+                ->flatMap(static fn ($property) => workationPropertyLookupIds($property))
+                ->filter(static fn (int $id) => $id > 0)
+                ->unique()
+                ->values();
+
+            if ($accommodationLookupIds->isNotEmpty()) {
+                $accommodationPriceCandidates = collect();
+
+                $legacyRoomPropertyColumn = null;
+                if (Schema::hasTable('vendor_property_room_categories')) {
+                    if (Schema::hasColumn('vendor_property_room_categories', 'vendor_property_id')) {
+                        $legacyRoomPropertyColumn = 'vendor_property_id';
+                    } elseif (Schema::hasColumn('vendor_property_room_categories', 'property_id')) {
+                        $legacyRoomPropertyColumn = 'property_id';
+                    }
+                }
+
+                if ($legacyRoomPropertyColumn !== null) {
+                    $legacyPriceColumns = [];
+                    foreach ([
+                        'base_price',
+                        'meal_plan_room_only_price',
+                        'meal_plan_bb_price',
+                        'meal_plan_hb_price',
+                        'meal_plan_fb_price',
+                        'meal_plan_ai_price',
+                        'meal_plan_breakfast_price',
+                        'meal_plan_half_board_price',
+                        'meal_plan_full_board_price',
+                        'meal_plan_all_inclusive_price',
+                    ] as $candidateColumn) {
+                        if (Schema::hasColumn('vendor_property_room_categories', $candidateColumn)) {
+                            $legacyPriceColumns[] = $candidateColumn;
+                        }
+                    }
+
+                    if (!empty($legacyPriceColumns)) {
+                        $legacyRows = DB::table('vendor_property_room_categories')
+                            ->whereIn($legacyRoomPropertyColumn, $accommodationLookupIds->all())
+                            ->get(array_merge([$legacyRoomPropertyColumn], $legacyPriceColumns));
+
+                        $legacyMin = collect($legacyRows)
+                            ->flatMap(static function ($row) use ($legacyPriceColumns) {
+                                return collect($legacyPriceColumns)
+                                    ->map(static fn ($column) => (float) ($row->{$column} ?? 0));
+                            })
+                            ->filter(static fn (float $value) => $value > 0)
+                            ->min();
+
+                        if (is_numeric($legacyMin) && (float) $legacyMin > 0) {
+                            $accommodationPriceCandidates->push((float) $legacyMin);
+                        }
+                    }
+                }
+
+                if (Schema::hasTable('accommodation_rooms') && Schema::hasColumn('accommodation_rooms', 'property_id')) {
+                    $roomPriceColumns = [];
+                    if (Schema::hasColumn('accommodation_rooms', 'base_price_per_night')) {
+                        $roomPriceColumns[] = 'base_price_per_night';
+                    }
+                    if (Schema::hasColumn('accommodation_rooms', 'base_price')) {
+                        $roomPriceColumns[] = 'base_price';
+                    }
+
+                    if (!empty($roomPriceColumns)) {
+                        $roomRows = DB::table('accommodation_rooms')
+                            ->whereIn('property_id', $accommodationLookupIds->all())
+                            ->when(Schema::hasColumn('accommodation_rooms', 'is_active'), static function ($query) {
+                                $query->where(static function ($activeQuery) {
+                                    $activeQuery->where('is_active', 1)
+                                        ->orWhereNull('is_active');
+                                });
+                            })
+                            ->get(array_merge(['property_id'], $roomPriceColumns));
+
+                        $roomMin = collect($roomRows)
+                            ->map(static function ($row) {
+                                $nightly = isset($row->base_price_per_night) ? (float) $row->base_price_per_night : 0;
+                                $legacy = isset($row->base_price) ? (float) $row->base_price : 0;
+                                return $nightly > 0 ? $nightly : $legacy;
+                            })
+                            ->filter(static fn (float $value) => $value > 0)
+                            ->min();
+
+                        if (is_numeric($roomMin) && (float) $roomMin > 0) {
+                            $accommodationPriceCandidates->push((float) $roomMin);
+                        }
+                    }
+                }
+
+                if (Schema::hasTable('accommodation_packages') && Schema::hasColumn('accommodation_packages', 'property_id')) {
+                    $packagePriceColumns = [];
+                    if (Schema::hasColumn('accommodation_packages', 'price_per_night')) {
+                        $packagePriceColumns[] = 'price_per_night';
+                    }
+                    if (Schema::hasColumn('accommodation_packages', 'base_price')) {
+                        $packagePriceColumns[] = 'base_price';
+                    }
+
+                    if (!empty($packagePriceColumns)) {
+                        $packageQuery = DB::table('accommodation_packages as ap')
+                            ->whereIn('ap.property_id', $accommodationLookupIds->all())
+                            ->when(Schema::hasColumn('accommodation_packages', 'is_active'), static function ($query) {
+                                $query->where(static function ($activeQuery) {
+                                    $activeQuery->where('ap.is_active', 1)
+                                        ->orWhereNull('ap.is_active');
+                                });
+                            });
+
+                        $packageSelectColumns = [];
+                        foreach ($packagePriceColumns as $column) {
+                            $packageSelectColumns[] = 'ap.' . $column;
+                        }
+
+                        $packageRows = $packageQuery->get($packageSelectColumns);
+                        $packageMin = collect($packageRows)
+                            ->map(static function ($row) {
+                                $perNight = isset($row->price_per_night) ? (float) ($row->price_per_night ?? 0) : 0;
+                                $base = isset($row->base_price) ? (float) ($row->base_price ?? 0) : 0;
+                                return $perNight > 0 ? $perNight : $base;
+                            })
+                            ->filter(static fn (float $value) => $value > 0)
+                            ->min();
+
+                        if (is_numeric($packageMin) && (float) $packageMin > 0) {
+                            $accommodationPriceCandidates->push((float) $packageMin);
+                        }
+                    }
+                }
+
+                $accommodationGlobalMin = $accommodationPriceCandidates
+                    ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0)
+                    ->min();
+
+                if (is_numeric($accommodationGlobalMin) && (float) $accommodationGlobalMin > 0) {
+                    $categoryMinPriceRows->put('accommodation', [
+                        'bucket' => 'accommodation',
+                        'price' => (float) $accommodationGlobalMin,
+                        'currency' => 'MVR',
+                    ]);
+                }
+            }
+
+            $globalMinPriceRow = collect($categoryMinPriceRows->values())
+                ->filter(static fn ($row) => is_array($row) && (float) ($row['price'] ?? 0) > 0)
+                ->sortBy(static fn (array $row) => (float) ($row['price'] ?? 0))
+                ->first();
+
+            $homeTopCategoryLinks = $homeTopCategoryLinks->map(function (array $card) use ($categoryCounts) {
+                $key = strtolower(trim((string) ($card['title'] ?? '')));
+                $categoryHint = match ($key) {
+                    'accommodation' => 'accommodation',
+                    'marine transport' => 'marine_transport',
+                    'land transport' => 'land_transport',
+                    'excursions' => 'excursion',
+                    'remote workspace' => 'remote_workspace',
+                    'conference rooms' => 'conference_room',
+                    'resort day visit' => 'resort_day_visit',
+                    'restaurant' => 'restaurant',
+                    'vehicle rental' => 'vehicle_rental',
+                    default => null,
+                };
+
+                if ($categoryHint === null) {
+                    return $card;
+                }
+
+                $total = (int) ($categoryCounts[$categoryHint] ?? 0);
+                if ($total > 0) {
+                    $card['subtitle'] = $total . ' active listings';
+                }
+
+                return $card;
+            })->values();
+
+            $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categoryCounts) {
+                $categoryHint = match ($card['title']) {
+                    'Stay Options' => 'accommodation',
+                    'Marine Transport' => 'marine_transport',
+                    'Land Transport' => 'land_transport',
+                    'Experiences' => 'excursion',
+                    'Work-Friendly' => 'remote_workspace',
+                    'Conference Rooms' => 'conference_room',
+                    default => null,
+                };
+
+                if ($categoryHint === null) {
+                    return $card;
+                }
+
+                $total = (int) ($categoryCounts[$categoryHint] ?? 0);
+                if ($total > 0) {
+                    $card['subtitle'] = $total . ' active listings available';
+                }
+
+                return $card;
+            });
+
+            $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categorySamples, $categoryMinPriceRows, $globalMinPriceRow, $resolvePropertyImage, $resolvePropertyFallbackImage, $propertyLocationLabel) {
+                $categoryHint = match ($card['title']) {
+                    'Stay Options' => 'accommodation',
+                    'Marine Transport' => 'marine_transport',
+                    'Land Transport' => 'land_transport',
+                    'Experiences' => 'excursion',
+                    'Work-Friendly' => 'remote_workspace',
+                    'Conference Rooms' => 'conference_room',
+                    'Deals Zone' => 'accommodation',
+                    default => null,
+                };
+
+                if ($categoryHint === null) {
+                    return $card;
+                }
+
+                $sample = $categorySamples->get($categoryHint);
+                if (!$sample) {
+                    return $card;
+                }
+
+                $sampleId = (int) ($sample->id ?? 0);
+                $card['image_url'] = $resolvePropertyImage($sampleId);
+                $card['fallback_image_url'] = $resolvePropertyFallbackImage($sampleId);
+                $location = $propertyLocationLabel($sample);
+                if ($location !== '') {
+                    $card['subtitle'] = $location;
+                }
+
+                unset($card['price_label']);
+
+                $priceSource = null;
+                if ($categoryHint === 'accommodation' && ($card['title'] ?? '') === 'Deals Zone' && is_array($globalMinPriceRow)) {
+                    $priceSource = $globalMinPriceRow;
+                } elseif (is_array($categoryMinPriceRows->get($categoryHint))) {
+                    $priceSource = $categoryMinPriceRows->get($categoryHint);
+                }
+
+                if (is_array($priceSource) && (float) ($priceSource['price'] ?? 0) > 0) {
+                    $currency = strtoupper(trim((string) ($priceSource['currency'] ?? 'MVR')));
+                    $card['price_label'] = $currency . ' ' . number_format((float) ($priceSource['price'] ?? 0), 2);
+                }
+
+                return $card;
+            })->values();
+        }
+
+        $propertyEngagementScore = static function ($property): float {
+            $viewCount = (float) ($property->view_count ?? 0);
+            $wishlistCount = (float) ($property->wishlist_count ?? 0);
+            $bookingsCount = (float) ($property->bookings_count ?? $property->total_bookings ?? 0);
+            $reviewCount = (float) ($property->reviews_count ?? $property->review_count ?? 0);
+            $rating = (float) ($property->review_score ?? $property->average_rating ?? $property->rating ?? 0);
+
+            return ($viewCount * 1.0)
+                + ($wishlistCount * 3.0)
+                + ($bookingsCount * 4.0)
+                + ($reviewCount * 2.0)
+                + ($rating * 5.0);
+        };
+
+        $canonicalLocationKey = static function (string $location): string {
+            $normalized = portalNormalizeDestinationMediaKey($location);
+            if ($normalized === '') {
+                return '';
+            }
+
+            $normalized = str_replace(['male_city_city', 'city_male_city'], 'male_city', $normalized);
+            $aliases = [
+                'male' => 'male_city',
+                'male_city' => 'male_city',
+                'malecity' => 'male_city',
+                'male_city_maldives' => 'male_city',
+                'male_maldives' => 'male_city',
+                'male_city_kaafu' => 'male_city',
+                'city_male' => 'male_city',
+                'mal_city' => 'male_city',
+            ];
+
+            if (array_key_exists($normalized, $aliases)) {
+                return $aliases[$normalized];
+            }
+
+            if (str_contains($normalized, 'male_city')) {
+                return 'male_city';
+            }
+
+            return $normalized;
+        };
+
+        $locationScores = [];
+        foreach ($allProperties as $property) {
+            $location = $propertyLocationValue($property);
+            if ($location === '') {
+                continue;
+            }
+
+            $normalizedLocation = $canonicalLocationKey($location);
+            if ($normalizedLocation === '') {
+                continue;
+            }
+
+            $displayLocation = trim((string) ($homeIslandDirectoryDisplayNames[$normalizedLocation] ?? ''));
+            if ($displayLocation === '') {
+                $displayLocation = $normalizedLocation === 'male_city' ? 'Male City' : $location;
+            }
+            $engagementScore = $propertyEngagementScore($property);
+
+            $key = strtolower($normalizedLocation);
+            if (!array_key_exists($key, $locationScores)) {
+                $locationScores[$key] = [
+                    'title' => $displayLocation,
+                    'count' => 0,
+                    'engagement_score' => 0.0,
+                    'sample_property' => $property,
+                ];
+            }
+            $locationScores[$key]['count']++;
+            $locationScores[$key]['engagement_score'] += $engagementScore;
+
+            if ($engagementScore > (float) ($locationScores[$key]['sample_score'] ?? -1)) {
+                $locationScores[$key]['sample_property'] = $property;
+                $locationScores[$key]['sample_score'] = $engagementScore;
+            }
+        }
+
+        if (!empty($locationScores)) {
+            uasort($locationScores, static function (array $a, array $b) {
+                $scoreA = (float) ($a['engagement_score'] ?? 0);
+                $scoreB = (float) ($b['engagement_score'] ?? 0);
+                if ($scoreA !== $scoreB) {
+                    return $scoreB <=> $scoreA;
+                }
+
+                return ((int) ($b['count'] ?? 0)) <=> ((int) ($a['count'] ?? 0));
+            });
+            $homeTrendingCards = collect(array_slice(array_values($locationScores), 0, 4))
+                ->map(function (array $row) use ($resolvePropertyImage, $resolvePropertyFallbackImage) {
+                    $sample = $row['sample_property'] ?? null;
+                    $sampleId = (int) ($sample->id ?? 0);
+                    $sampleCategory = strtolower(trim((string) ($sample->listing_category ?? 'accommodation')));
+                    $samplePrice = $sample ? (float) ($sample->base_price ?? 0) : 0;
+                    if ($samplePrice <= 0 && $sample) {
+                        $samplePrice = max(0, workationDerivedListingBasePrice($sample));
+                    }
+                    $sampleCurrency = strtoupper(trim((string) ($sample->currency ?? 'MVR')));
+
+                    $payload = [
+                        'title' => $row['title'],
+                        'subtitle' => $row['count'] . ' listings',
+                        'url' => '/catalog/accommodation?q=' . urlencode($row['title']),
+                        'image_url' => $resolvePropertyImage($sampleId),
+                        'fallback_image_url' => $resolvePropertyFallbackImage($sampleId),
+                        'category' => $sampleCategory,
+                    ];
+
+                    if ($samplePrice > 0) {
+                        $payload['price_label'] = $sampleCurrency . ' ' . number_format($samplePrice, 2);
+                    }
+
+                    return $payload;
+                })
+                ->values();
+
+            $homeTrendingCards = $applyHomeDestinationArtPreference($applyHomeDestinationImages($homeTrendingCards));
+            $homeTrendingCards = $applyHomeImageSafetyFallback($homeTrendingCards);
+        }
+
+        $priceSorted = $allProperties
+            ->filter(static fn ($property) => isset($property->base_price) && is_numeric($property->base_price) && (float) ($property->base_price ?? 0) > 0)
+            ->sortBy(static fn ($property) => (float) $property->base_price)
+            ->values();
+
+        if ($priceSorted->isNotEmpty()) {
+            $accommodationDeals = $priceSorted
+                ->filter(static function ($property) {
+                    return strtolower(trim((string) ($property->listing_category ?? ''))) === 'accommodation';
+                })
+                ->values();
+
+            $weekendCandidates = $accommodationDeals;
+
+            $homeWeekendDealCards = $weekendCandidates->take(4)->map(function ($property) use ($resolvePropertyImage, $resolvePropertyFallbackImage) {
+                $name = trim((string) ($property->name ?? 'Weekend Offer'));
+                $currency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
+                $price = number_format((float) ($property->base_price ?? 0), 2);
+                $propertyId = (int) ($property->id ?? 0);
+                $place = trim((string) ($property->island ?? ''));
+                if ($place === '') {
+                    $place = trim((string) ($property->atoll ?? ''));
+                }
+
+                return [
+                    'title' => $name,
+                    'subtitle' => $place,
+                    'price_label' => $currency . ' ' . $price,
+                    'url' => '/property/' . $propertyId,
+                    'image_url' => $resolvePropertyImage($propertyId),
+                    'fallback_image_url' => $resolvePropertyFallbackImage($propertyId),
+                    'meta' => $place,
+                ];
+            })->values();
+
+            $lowestPrice = (float) ($priceSorted->first()->base_price ?? 0);
+            $homePromoBanner = [
+                'message' => '🎉 Offers & Promotions: Trending deals now live across stays and services from MVR ' . number_format($lowestPrice, 2) . '.',
+                'url' => '/catalog/accommodation?sort=price_low_high',
+                'cta' => 'Explore Deals',
+            ];
+        }
+
+        {
+            $lovedRows = $allProperties
+                ->sortByDesc(static function ($property) use ($propertyEngagementScore) {
+                    $score = $propertyEngagementScore($property);
+                    if ($score > 0) {
+                        return $score;
+                    }
+
+                    return strtotime((string) ($property->updated_at ?? '')) ?: 0;
+                })
+                ->take(120)
+                ->values();
+
+            if ($lovedRows->isNotEmpty()) {
+                $lovedDestinationCards = [];
+                $seenLovedDestinations = [];
+
+                foreach ($lovedRows as $property) {
+                    $location = $propertyLocationValue($property);
+                    $destinationKey = portalNormalizeDestinationMediaKey($location);
+                    if ($location === '' || $destinationKey === '' || isset($seenLovedDestinations[$destinationKey])) {
+                        continue;
+                    }
+
+                    $seenLovedDestinations[$destinationKey] = true;
+                    $propertyId = (int) ($property->id ?? 0);
+                    $propertyPrice = max(0, workationDerivedListingBasePrice($property));
+                    $propertyCurrency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
+
+                    $cardPayload = [
+                        'title' => $location,
+                        'subtitle' => 'Popular Destination',
+                        'url' => '/catalog/accommodation?q=' . urlencode($location),
+                        'image_url' => $resolvePropertyImage($propertyId),
+                        'fallback_image_url' => $resolvePropertyFallbackImage($propertyId),
+                        'meta' => trim((string) ($property->atoll ?? '')),
+                    ];
+
+                    if ($propertyPrice > 0) {
+                        $cardPayload['price_label'] = $propertyCurrency . ' ' . number_format($propertyPrice, 2);
+                    }
+
+                    $lovedDestinationCards[] = $cardPayload;
+
+                    if (count($lovedDestinationCards) >= 4) {
+                        break;
+                    }
+                }
+
+                if ($lovedDestinationCards !== []) {
+                    $homeLovedCards = collect($lovedDestinationCards)->values();
+                }
+
+                $homeLovedCards = $applyHomeDestinationArtPreference($applyHomeDestinationImages($homeLovedCards));
+                $homeLovedCards = $applyHomeImageSafetyFallback($homeLovedCards);
             }
         }
     }
 
-    if ($resolvedBinary === null) {
-        foreach ($candidatePaths as $path) {
-            $absolutePath = str_replace('\\', '/', (string) $path);
-            if (preg_match('#^[A-Za-z]:/#', $absolutePath) !== 1 && !str_starts_with($absolutePath, '/')) {
-                continue;
-            }
+    $recentBlogPosts = collect();
+    if (Schema::hasTable('blog_posts')) {
+        $recentBlogPosts = BlogPost::query()
+            ->where('is_published', true)
+            ->where(function ($query) {
+                $query->whereNull('published_at')->orWhere('published_at', '<=', now());
+            })
+            ->orderByDesc('is_featured')
+            ->orderByDesc('published_at')
+            ->orderByDesc('created_at')
+            ->limit(3)
+            ->get(array_filter(['id', 'title', 'slug', 'excerpt', \Illuminate\Support\Facades\Schema::hasColumn('blog_posts', 'cover_image_url') ? 'cover_image_url' : null, 'cover_image_path', 'blog_category_slug', 'published_at', 'created_at']));
 
-            if (!is_file($absolutePath) || !is_readable($absolutePath)) {
-                continue;
-            }
-
-            $absoluteBinary = @file_get_contents($absolutePath);
-            if ($absoluteBinary === false) {
-                continue;
-            }
-
-            $resolvedBinary = $absoluteBinary;
-            $absoluteMime = @mime_content_type($absolutePath);
-            $resolvedMimeType = is_string($absoluteMime) ? $absoluteMime : '';
-            break;
+        if (function_exists('blogHydratePostsWithMeta')) {
+            $recentBlogPosts = blogHydratePostsWithMeta($recentBlogPosts);
         }
     }
 
-    if ($resolvedBinary === null) {
-        $directUrl = vendorMediaStorageUrlFromPath($originalPath);
-        if (is_string($directUrl) && trim($directUrl) !== '' && !str_starts_with($directUrl, '/media/')) {
-            return redirect()->away($directUrl, 302);
-        }
-
-        return $placeholderResponse();
-    }
-
-    $mimeType = $resolvedMimeType !== '' ? $resolvedMimeType : ((string) ($mediaRecord->mime_type ?? 'image/jpeg'));
-
-    return response($resolvedBinary, 200, [
-        'Content-Type' => $mimeType,
-        'Cache-Control' => 'public, max-age=31536000, immutable',
+    return view('welcome', [
+        'apiBase' => $apiBase,
+        'homeHeroBackgroundUrl' => $homeHeroBackgroundUrl,
+        'homeTopCategoryLinks' => $homeTopCategoryLinks,
+        'homePromoBanner' => $homePromoBanner,
+        'homeTrendingChips' => $homeTrendingChips,
+        'homeBrowseCards' => $homeBrowseCards,
+        'homeTrendingCards' => $homeTrendingCards,
+        'homeWeekendDealCards' => $homeWeekendDealCards,
+        'homeLovedCards' => $homeLovedCards,
+        'homeTransportDestinationOptions' => $homeTransportDestinationOptions,
+        'recentBlogPosts' => $recentBlogPosts,
+        'activityLinks' => [
+            [
+                'label' => 'Strict Live Preflight PASS - Run 22991556615',
+                'url' => 'https://github.com/ibazzam/workation-cms/actions/runs/22991556615',
+            ],
+            [
+                'label' => 'Strict Live Preflight PASS - Run 22992285238',
+                'url' => 'https://github.com/ibazzam/workation-cms/actions/runs/22992285238',
+            ],
+            [
+                'label' => 'Promotion Evidence - Run 22991538950',
+                'url' => 'https://github.com/ibazzam/workation-cms/actions/runs/22991538950',
+            ],
+        ],
+        'artifactLinks' => [
+            [
+                'label' => 'Launch Approval Record (2026-03-18)',
+                'url' => 'https://github.com/ibazzam/workation-cms/blob/main/docs/launch-final-approval-record-2026-03-18.md',
+            ],
+            [
+                'label' => 'Production Verification Report (2026-03-18)',
+                'url' => 'https://github.com/ibazzam/workation-cms/blob/main/docs/production-verification-report-2026-03-18.md',
+            ],
+            [
+                'label' => 'Alert Routing Verification (2026-03-18)',
+                'url' => 'https://github.com/ibazzam/workation-cms/blob/main/docs/alert-routing-verification-2026-03-18.md',
+            ],
+        ],
     ]);
 });
-
-require __DIR__ . '/web/admin.php';
-require __DIR__ . '/web/portal-auth.php';
-Route::prefix('api/atoll-island')->group(function () {
-    Route::get('atolls', [\App\Http\Controllers\AtollIslandApiController::class, 'getAllAtolls']);
-    Route::get('atolls/{atoll}/islands', [\App\Http\Controllers\AtollIslandApiController::class, 'getIslandsByAtoll']);
-    Route::get('atolls/{atoll}/stats', [\App\Http\Controllers\AtollIslandApiController::class, 'getAtollStats']);
-    Route::get('islands/{island}', [\App\Http\Controllers\AtollIslandApiController::class, 'getIslandWithMedia']);
-    Route::get('islands', [\App\Http\Controllers\AtollIslandApiController::class, 'getFeaturedIslands']);
-});
-
-// Keep these endpoints available only in testing for legacy feature-test coverage.
-if (app()->environment('testing')) {
-    Route::prefix('api')->group(function () {
-        Route::get('workations', [\App\Http\Controllers\WorkationController::class, 'index']);
-        Route::get('workations/{workation}', [\App\Http\Controllers\WorkationController::class, 'show']);
-        Route::post('workations', [\App\Http\Controllers\WorkationController::class, 'store']);
-        Route::put('workations/{workation}', [\App\Http\Controllers\WorkationController::class, 'update']);
-        Route::delete('workations/{workation}', [\App\Http\Controllers\WorkationController::class, 'destroy']);
-
-        Route::post('transport/holds', [\App\Http\Controllers\TransportHoldController::class, 'store']);
-        Route::post('transport/holds/{hold}/confirm', [\App\Http\Controllers\TransportHoldController::class, 'confirm']);
-        Route::post('transport/holds/{hold}/release', [\App\Http\Controllers\TransportHoldController::class, 'release']);
-    });
-}

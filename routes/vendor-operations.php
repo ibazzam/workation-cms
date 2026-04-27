@@ -2040,6 +2040,174 @@ Route::get('/vendor', function () {
         // Load vendor listings from dedicated category tables.
         $vendorProperties = \App\Support\VendorPropertyCompatibilityReader::loadVendorListings($vendorUserId, 200);
 
+        $accommodationPropertyIds = $vendorProperties
+            ->filter(static fn ($property) => vendorPortalCanonicalCategory((string) ($property->listing_category ?? '')) === 'accommodation')
+            ->flatMap(static fn ($property) => [
+                (int) ($property->id ?? 0),
+                (int) ($property->dedicated_row_id ?? 0),
+                (int) ($property->vendor_property_id ?? 0),
+            ])
+            ->filter(static fn (int $id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($accommodationPropertyIds->isNotEmpty()) {
+            $transferRowsByPropertyId = collect();
+            $featureRowsByPropertyId = collect();
+            $policyRowsByPropertyId = collect();
+
+            if (Schema::hasTable('vendor_accommodation_transfer_rates')) {
+                $transferRowsByPropertyId = DB::table('vendor_accommodation_transfer_rates')
+                    ->whereIn('vendor_property_id', $accommodationPropertyIds->all())
+                    ->get(['vendor_property_id', 'transfer_mode', 'resident_type', 'passenger_type', 'rate', 'base_charge'])
+                    ->groupBy(static fn ($row) => (int) ($row->vendor_property_id ?? 0));
+            }
+
+            if (Schema::hasTable('vendor_accommodation_features')) {
+                $featureRowsByPropertyId = DB::table('vendor_accommodation_features')
+                    ->whereIn('vendor_property_id', $accommodationPropertyIds->all())
+                    ->get(['vendor_property_id', 'feature_type', 'feature_key'])
+                    ->groupBy(static fn ($row) => (int) ($row->vendor_property_id ?? 0));
+            }
+
+            if (Schema::hasTable('vendor_accommodation_policies')) {
+                $policyRowsByPropertyId = DB::table('vendor_accommodation_policies')
+                    ->whereIn('vendor_property_id', $accommodationPropertyIds->all())
+                    ->get()
+                    ->keyBy(static fn ($row) => (int) ($row->vendor_property_id ?? 0));
+            }
+
+            $vendorProperties = $vendorProperties->map(static function ($property) use ($transferRowsByPropertyId, $featureRowsByPropertyId, $policyRowsByPropertyId) {
+                if (vendorPortalCanonicalCategory((string) ($property->listing_category ?? '')) !== 'accommodation') {
+                    return $property;
+                }
+
+                $details = [];
+                if (is_string($property->listing_details ?? null) && trim((string) $property->listing_details) !== '') {
+                    $decoded = json_decode((string) $property->listing_details, true);
+                    if (is_array($decoded)) {
+                        $details = $decoded;
+                    }
+                }
+
+                $lookupIds = array_values(array_unique(array_filter([
+                    (int) ($property->id ?? 0),
+                    (int) ($property->dedicated_row_id ?? 0),
+                    (int) ($property->vendor_property_id ?? 0),
+                ], static fn (int $id): bool => $id > 0)));
+
+                $transferRows = collect();
+                $featureRows = collect();
+                $policyRow = null;
+
+                foreach ($lookupIds as $lookupId) {
+                    if ($transferRows->isEmpty()) {
+                        $transferRows = collect($transferRowsByPropertyId->get($lookupId, collect()));
+                    }
+                    if ($featureRows->isEmpty()) {
+                        $featureRows = collect($featureRowsByPropertyId->get($lookupId, collect()));
+                    }
+                    if ($policyRow === null) {
+                        $policyRow = $policyRowsByPropertyId->get($lookupId);
+                    }
+                }
+
+                if ($transferRows->isNotEmpty()) {
+                    $transferOptions = [];
+                    $transferRates = [];
+                    $transferRateMatrix = [];
+                    $transferBaseLocal = 0.0;
+                    $transferBaseForeign = 0.0;
+
+                    foreach ($transferRows as $transferRow) {
+                        $mode = strtolower(trim((string) ($transferRow->transfer_mode ?? '')));
+                        $residentType = strtolower(trim((string) ($transferRow->resident_type ?? '')));
+                        $passengerType = strtolower(trim((string) ($transferRow->passenger_type ?? '')));
+                        $rate = is_numeric($transferRow->rate ?? null) ? (float) $transferRow->rate : 0.0;
+                        $baseCharge = is_numeric($transferRow->base_charge ?? null) ? (float) $transferRow->base_charge : 0.0;
+
+                        if ($mode === '') {
+                            continue;
+                        }
+
+                        $transferOptions[$mode] = true;
+                        if (!isset($transferRateMatrix[$mode])) {
+                            $transferRateMatrix[$mode] = [
+                                'local_adult_charge' => 0.0,
+                                'local_child_charge' => 0.0,
+                                'foreign_adult_charge' => 0.0,
+                                'foreign_child_charge' => 0.0,
+                            ];
+                        }
+
+                        if ($residentType === 'local' && $passengerType === 'adult') {
+                            $transferRateMatrix[$mode]['local_adult_charge'] = max(0, $rate);
+                        } elseif ($residentType === 'local' && $passengerType === 'child') {
+                            $transferRateMatrix[$mode]['local_child_charge'] = max(0, $rate);
+                        } elseif ($residentType === 'foreigner' && $passengerType === 'adult') {
+                            $transferRateMatrix[$mode]['foreign_adult_charge'] = max(0, $rate);
+                            $transferRates[$mode] = max(0, $rate);
+                        } elseif ($residentType === 'foreigner' && $passengerType === 'child') {
+                            $transferRateMatrix[$mode]['foreign_child_charge'] = max(0, $rate);
+                        }
+
+                        if ($residentType === 'local') {
+                            $transferBaseLocal = max($transferBaseLocal, max(0, $baseCharge));
+                        } elseif ($residentType === 'foreigner') {
+                            $transferBaseForeign = max($transferBaseForeign, max(0, $baseCharge));
+                        }
+                    }
+
+                    $details['transfer_options'] = array_values(array_keys($transferOptions));
+                    $details['transfer_rates'] = $transferRates;
+                    $details['transfer_rate_matrix'] = $transferRateMatrix;
+                    $details['transfer_base_local'] = $transferBaseLocal;
+                    $details['transfer_base_foreign'] = $transferBaseForeign;
+                }
+
+                if ($featureRows->isNotEmpty()) {
+                    $amenities = [];
+                    $facilities = [];
+                    foreach ($featureRows as $featureRow) {
+                        $featureType = strtolower(trim((string) ($featureRow->feature_type ?? '')));
+                        $featureKey = trim((string) ($featureRow->feature_key ?? ''));
+                        if ($featureKey === '') {
+                            continue;
+                        }
+
+                        if ($featureType === 'amenity') {
+                            $amenities[] = $featureKey;
+                        } elseif ($featureType === 'facility') {
+                            $facilities[] = $featureKey;
+                        }
+                    }
+
+                    $details['property_amenities'] = array_values(array_unique($amenities));
+                    $details['property_features'] = array_values(array_unique($facilities));
+                }
+
+                if ($policyRow) {
+                    $details['check_in_time'] = trim((string) ($policyRow->check_in_time ?? ($details['check_in_time'] ?? '')));
+                    $details['check_out_time'] = trim((string) ($policyRow->check_out_time ?? ($details['check_out_time'] ?? '')));
+                    $details['check_in_grace_minutes'] = is_numeric($policyRow->check_in_grace_minutes ?? null) ? (int) $policyRow->check_in_grace_minutes : ($details['check_in_grace_minutes'] ?? null);
+                    $details['early_check_in_allowed'] = trim((string) ($policyRow->early_check_in_allowed ?? ($details['early_check_in_allowed'] ?? '')));
+                    $details['late_check_out_allowed'] = trim((string) ($policyRow->late_check_out_allowed ?? ($details['late_check_out_allowed'] ?? '')));
+                    $details['minimum_nights'] = is_numeric($policyRow->minimum_nights ?? null) ? (int) $policyRow->minimum_nights : ($details['minimum_nights'] ?? null);
+                    $details['house_rules'] = trim((string) ($policyRow->house_rules ?? ($details['house_rules'] ?? '')));
+                    $details['child_policy'] = trim((string) ($policyRow->child_policy ?? ($details['child_policy'] ?? '')));
+                    $details['cancellation_policy'] = trim((string) ($policyRow->cancellation_policy ?? ($details['cancellation_policy'] ?? '')));
+                    $details['early_check_in_fee'] = is_numeric($policyRow->early_check_in_fee ?? null) ? (float) $policyRow->early_check_in_fee : ($details['early_check_in_fee'] ?? null);
+                    $details['late_check_out_fee'] = is_numeric($policyRow->late_check_out_fee ?? null) ? (float) $policyRow->late_check_out_fee : ($details['late_check_out_fee'] ?? null);
+                    $details['property_type'] = trim((string) ($policyRow->property_type ?? ($details['property_type'] ?? '')));
+                    $details['star_rating'] = is_numeric($policyRow->star_rating ?? null) ? (int) $policyRow->star_rating : ($details['star_rating'] ?? null);
+                }
+
+                $property->listing_details = json_encode($details);
+
+                return $property;
+            })->values();
+        }
+
         $existingListingCategories = $vendorProperties
             ->map(static fn ($property) => vendorPortalCanonicalCategory((string) ($property->listing_category ?? '')))
             ->filter(static fn ($category) => is_string($category) && $category !== '')

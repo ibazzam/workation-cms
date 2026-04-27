@@ -69,9 +69,11 @@
         .transfer-list { display:grid; gap:8px; }
         .transfer-option { display:grid; grid-template-columns:auto 1fr; gap:9px; align-items:start; border:1px solid #c5daea; border-radius:10px; background:#f8fcff; padding:10px; }
         .transfer-option input { margin-top:2px; }
+        .transfer-option.disabled { opacity:0.65; }
         .transfer-option-title { font-size:0.84rem; font-weight:700; color:#1b3f58; }
         .transfer-option-rates { font-size:0.76rem; color:#486b80; margin-top:2px; }
         .transfer-option-note { font-size:0.72rem; color:#5a778c; margin-top:2px; }
+        .transfer-toggle { display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#274e66; font-weight:600; }
         .promo-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
         .promo-apply { border:1px solid #0f6179; background:#0f6179; color:#ecfcff; border-radius:9px; padding:0 12px; font-weight:700; }
         .promo-chip { display:inline-block; border:1px solid #cfe0eb; background:#edf6f3; color:#24516b; border-radius:999px; font-size:0.74rem; padding:4px 8px; }
@@ -365,8 +367,7 @@
                     <input type="hidden" name="tax_amount" id="taxAmountInput" value="0">
                     <input type="hidden" name="total_amount" id="totalAmountInput" value="0">
                     <input type="hidden" name="primary_mobile" id="primaryMobileHidden" value="{{ old('primary_mobile', '') }}">
-                    <input type="hidden" name="adults" id="adults" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}">
-                    <input type="hidden" name="children" id="children" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}">
+                    <input type="hidden" name="transfer_option" id="transferOptionHidden" value="{{ $oldTransferOption !== '' ? $oldTransferOption : 'none' }}">
 
                     @if ($errors->any())
                         <div class="form-errors" role="alert" aria-live="polite">
@@ -379,6 +380,15 @@
                     @endif
 
                     <div class="guest-form-stack">
+                        <section class="booking-subsection" aria-label="Guest count">
+                            <h3 class="booking-subtitle">Guest Count</h3>
+                            <p class="booking-subnote">Set adult and child quantities before entering guest details.</p>
+                            <div class="booking-grid">
+                                <div class="field"><label for="adults">Adults</label><input id="adults" name="adults" type="number" min="1" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}" class="{{ $errors->has('adults') ? 'input-error' : '' }}" required>@error('adults')<p class="error-text">{{ $message }}</p>@enderror</div>
+                                <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}" class="{{ $errors->has('children') ? 'input-error' : '' }}">@error('children')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            </div>
+                        </section>
+
                         <section class="booking-subsection" aria-label="Guest details">
                             <h3 class="booking-subtitle">Who's staying?</h3>
                             <p class="booking-subnote">Given names and surname must match government-issued documents. For foreigners, use passport details. For locals, use your national ID details.</p>
@@ -391,8 +401,6 @@
                                 <div class="field"><label for="primaryEmail">Email*</label><input id="primaryEmail" name="primary_email" type="email" value="{{ old('primary_email', (string) ($prefill['primary_email'] ?? '')) }}" placeholder="guest@example.com" class="{{ $errors->has('primary_email') ? 'input-error' : '' }}" required>@error('primary_email')<p class="error-text">{{ $message }}</p>@enderror<p class="helper">Booking confirmation will be sent to this email</p></div>
                                 <div class="field"><label for="primaryMobileCountryCode">Phone country code*</label><select id="primaryMobileCountryCode" name="primary_mobile_country_code" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required>@foreach ($countryOptions as $country)<option value="{{ $country['dial'] }}" data-iso="{{ $country['iso'] }}" {{ $oldPhoneCode === $country['dial'] ? 'selected' : '' }}>{{ $country['dial'] }} ({{ $country['name'] }})</option>@endforeach</select></div>
                                 <div class="field"><label for="primaryMobileLocal">Contact number*</label><input id="primaryMobileLocal" name="primary_mobile_local" type="tel" value="{{ $oldPhoneLocal }}" placeholder="7712345" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required inputmode="tel">@error('primary_mobile')<p class="error-text">{{ $message }}</p>@enderror</div>
-                                <div class="field"><label for="adults">Adults</label><input id="adults" name="adults" type="number" min="1" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}" class="{{ $errors->has('adults') ? 'input-error' : '' }}" required>@error('adults')<p class="error-text">{{ $message }}</p>@enderror</div>
-                                <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}" class="{{ $errors->has('children') ? 'input-error' : '' }}">@error('children')<p class="error-text">{{ $message }}</p>@enderror</div>
                                 <div class="field full">
                                     <p class="booking-subnote">In accordance with local regulations, guests who are not nationals or permanent residents may be required to pay tourism tax per room per night (included in total).</p>
                                 </div>
@@ -402,14 +410,11 @@
                         <section class="booking-subsection" aria-label="Transfer option">
                             <h3 class="booking-subtitle">Transfer option</h3>
                             <p class="booking-subnote">Select transfer now so the final payable amount and payment currency are calculated before checkout.</p>
+                            <label class="transfer-toggle">
+                                <input type="checkbox" id="transferEnabled" {{ $oldTransferOption !== 'none' ? 'checked' : '' }}>
+                                Include transfer in this booking
+                            </label>
                             <div class="transfer-list" id="transferOptionsList">
-                                <label class="transfer-option">
-                                    <input type="radio" name="transfer_option" value="none" data-base-charge="0" data-local-adult-rate="0" data-local-child-rate="0" data-foreign-adult-rate="0" data-foreign-child-rate="0" {{ $oldTransferOption === 'none' ? 'checked' : '' }}>
-                                    <span>
-                                        <span class="transfer-option-title">No transfer</span>
-                                        <span class="transfer-option-note">Proceed without property pickup/drop-off.</span>
-                                    </span>
-                                </label>
                                 @foreach ($transferOptions as $option)
                                     @php
                                         $transferCode = strtolower(trim((string) ($option['code'] ?? '')));
@@ -424,7 +429,7 @@
                                     <label class="transfer-option">
                                         <input
                                             type="radio"
-                                            name="transfer_option"
+                                            name="transfer_option_choice"
                                             value="{{ $transferCode }}"
                                             data-base-charge="{{ number_format($transferBaseCharge, 2, '.', '') }}"
                                             data-local-adult-rate="{{ number_format($transferLocalAdultRate, 2, '.', '') }}"
@@ -435,8 +440,8 @@
                                         >
                                         <span>
                                             <span class="transfer-option-title">{{ $transferLabel }}</span>
-                                            <span class="transfer-option-rates">Local: Adult {{ $currency }} {{ number_format($transferLocalAdultRate, 2) }} | Child {{ $currency }} {{ number_format($transferLocalChildRate, 2) }}</span>
-                                            <span class="transfer-option-rates">Foreign: Adult {{ $currency }} {{ number_format($transferForeignAdultRate, 2) }} | Child {{ $currency }} {{ number_format($transferForeignChildRate, 2) }}</span>
+                                            <span class="transfer-option-rates js-transfer-rate">Adult {{ $currency }} {{ number_format($transferLocalAdultRate, 2) }} | Child {{ $currency }} {{ number_format($transferLocalChildRate, 2) }}</span>
+                                            <span class="transfer-option-note">Rates adjust automatically by guest residency.</span>
                                         </span>
                                     </label>
                                 @endforeach
@@ -496,8 +501,10 @@
     <script>
         (function () {
             const form = document.getElementById('roomBookingForm');
-            const transferOptionInputs = Array.from(document.querySelectorAll('input[name="transfer_option"]'));
+            const transferOptionInputs = Array.from(document.querySelectorAll('input[name="transfer_option_choice"]'));
             const transferCharge = document.getElementById('transferCharge');
+            const transferEnabled = document.getElementById('transferEnabled');
+            const transferOptionHidden = document.getElementById('transferOptionHidden');
             const adults = document.getElementById('adults');
             const children = document.getElementById('children');
             const checkin = document.getElementById('checkin');
@@ -534,6 +541,10 @@
 
             if (!form || !transferCharge || !adults || !children || !checkin || !checkout) {
                 return;
+            }
+
+            if (transferOptionInputs.length > 0 && !transferOptionInputs.some(function (input) { return !!input.checked; })) {
+                transferOptionInputs[0].checked = true;
             }
 
             checkin.min = todayDate;
@@ -596,6 +607,33 @@
 
                 const selected = primaryNationality.options[primaryNationality.selectedIndex];
                 return String(selected?.dataset?.iso || '').toUpperCase();
+            }
+
+            function updateTransferRatesByResidency() {
+                const isLocalGuest = currentNationalityIso() === 'MV';
+                const childCount = Math.max(0, Number(children.value || 0));
+
+                transferOptionInputs.forEach(function (input) {
+                    const wrapper = input ? input.closest('.transfer-option') : null;
+                    if (!input || !wrapper) {
+                        return;
+                    }
+
+                    const adultRate = Number(input.dataset[isLocalGuest ? 'localAdultRate' : 'foreignAdultRate'] || 0);
+                    const childRate = Number(input.dataset[isLocalGuest ? 'localChildRate' : 'foreignChildRate'] || 0);
+                    const ratesLabel = wrapper.querySelector('.js-transfer-rate');
+
+                    if (ratesLabel) {
+                        ratesLabel.textContent = childCount > 0
+                            ? 'Adult ' + toCurrency(adultRate) + ' | Child ' + toCurrency(childRate)
+                            : 'Adult ' + toCurrency(adultRate);
+                    }
+
+                    if (transferEnabled) {
+                        input.disabled = !transferEnabled.checked;
+                        wrapper.classList.toggle('disabled', !transferEnabled.checked);
+                    }
+                });
             }
 
             function updatePaymentOptionsByNationality() {
@@ -725,6 +763,7 @@
                 const childCount = Math.max(0, Number(children.value || 0));
                 const nights = calculateNights();
                 const selectedTransfer = transferOptionInputs.find(function (input) { return !!input && input.checked; });
+                const includeTransfer = !!(transferEnabled && transferEnabled.checked);
                 const isLocalGuest = currentNationalityIso() === 'MV';
                 const baseCharge = Number(selectedTransfer?.dataset?.baseCharge || 0);
                 const adultRate = Number(selectedTransfer?.dataset?.[isLocalGuest ? 'localAdultRate' : 'foreignAdultRate'] || 0);
@@ -736,10 +775,16 @@
                 const taxAmount = taxRate > 0
                     ? discountedSubtotal - (discountedSubtotal / (1 + (taxRate / 100)))
                     : 0;
-                const transferTotal = selectedTransfer && selectedTransfer.value !== 'none'
+                const transferTotal = includeTransfer && selectedTransfer
                     ? (baseCharge + (adultRate * adultCount) + (childRate * childCount))
                     : 0;
                 const total = discountedSubtotal + transferTotal;
+
+                if (transferOptionHidden) {
+                    transferOptionHidden.value = includeTransfer && selectedTransfer
+                        ? String(selectedTransfer.value || '')
+                        : 'none';
+                }
 
                 transferCharge.value = transferTotal.toFixed(2);
 
@@ -778,6 +823,8 @@
                 if (discountAmountInput) discountAmountInput.value = discountAmount.toFixed(2);
                 if (taxAmountInput) taxAmountInput.value = taxAmount.toFixed(2);
                 if (totalAmountInput) totalAmountInput.value = total.toFixed(2);
+
+                updateTransferRatesByResidency();
             }
 
             function syncDatesFromSummary() {
@@ -814,6 +861,9 @@
                     }
                     input.addEventListener(eventName, syncSummary);
                 });
+                if (transferEnabled) {
+                    transferEnabled.addEventListener(eventName, syncSummary);
+                }
                 [primaryFirstName, primaryLastName, primaryNationality, primaryEmail, primaryMobileCountryCode, primaryMobileLocal].forEach(function (input) {
                     if (!input) {
                         return;
@@ -829,6 +879,7 @@
                                 primaryMobileCountryCode.value = suggestedDial;
                             }
                             updatePaymentOptionsByNationality();
+                            updateTransferRatesByResidency();
                         }
                     });
                 });

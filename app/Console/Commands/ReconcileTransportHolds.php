@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\TransportHold;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Schema;
 
 class ReconcileTransportHolds extends Command
 {
@@ -12,6 +13,12 @@ class ReconcileTransportHolds extends Command
 
     public function handle(): int
     {
+        if (!Schema::hasTable('transport_holds')) {
+            $this->warn('Skipping hold reconciliation: table transport_holds does not exist.');
+
+            return self::SUCCESS;
+        }
+
         $limit = (int) $this->option('limit');
 
         $expired = TransportHold::where('status', 'held')

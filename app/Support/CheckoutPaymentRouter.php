@@ -79,6 +79,32 @@ class CheckoutPaymentRouter
         return round($amountInTarget, 2);
     }
 
+    public static function buildPaymentQuote(array $context, ?string $requestedCurrency = null, ?string $requestedGateway = null): array
+    {
+        $policyContext = $context;
+        $policyContext['requested_gateway'] = $requestedGateway;
+        $policy = self::buildPaymentPolicy($policyContext, $requestedCurrency);
+
+        $sourceCurrency = strtoupper(trim((string) ($context['reservation_currency'] ?? $policy['currency'] ?? 'MVR')));
+        $targetCurrency = strtoupper(trim((string) ($policy['currency'] ?? $sourceCurrency)));
+        $sourceAmount = round(max(0, (float) ($context['amount'] ?? 0)), 2);
+        $convertedAmount = self::convertAmount($sourceAmount, $sourceCurrency, $targetCurrency);
+
+        $sourceRateToBase = self::fxRateToBase($sourceCurrency);
+        $targetRateToBase = self::fxRateToBase($targetCurrency);
+        $effectiveRate = $targetRateToBase > 0 ? round($sourceRateToBase / $targetRateToBase, 8) : 1.0;
+
+        return $policy + [
+            'source_amount' => $sourceAmount,
+            'source_currency' => $sourceCurrency,
+            'amount' => $convertedAmount,
+            'currency' => $targetCurrency,
+            'fx_rate' => $effectiveRate,
+            'fx_base_currency' => strtoupper(trim((string) config('checkout_payments.fx_base_currency', 'MVR'))),
+            'quoted_at' => now()->toIso8601String(),
+        ];
+    }
+
     public static function availableOptions(array $context): array
     {
         $segment = self::resolveCustomerSegment(
@@ -246,20 +272,10 @@ class CheckoutPaymentRouter
 
     public static function createIntentPayload(array $context, ?string $requestedCurrency = null, ?string $requestedGateway = null): array
     {
-        $policyContext = $context;
-        $policyContext['requested_gateway'] = $requestedGateway;
-        $policy = self::buildPaymentPolicy($policyContext, $requestedCurrency);
+        $quote = self::buildPaymentQuote($context, $requestedCurrency, $requestedGateway);
 
-        $sourceCurrency = strtoupper(trim((string) ($context['reservation_currency'] ?? $policy['currency'] ?? 'MVR')));
-        $targetCurrency = strtoupper(trim((string) ($policy['currency'] ?? $sourceCurrency)));
-        $sourceAmount = round(max(0, (float) ($context['amount'] ?? 0)), 2);
-        $convertedAmount = self::convertAmount($sourceAmount, $sourceCurrency, $targetCurrency);
-
-        return $policy + [
+        return $quote + [
             'intent_id' => 'payint_' . Str::lower(Str::random(28)),
-            'amount' => $convertedAmount,
-            'source_amount' => $sourceAmount,
-            'source_currency' => $sourceCurrency,
         ];
     }
 

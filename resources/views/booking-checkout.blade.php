@@ -119,6 +119,12 @@
         if (in_array($selectedTransferCode, ['none', 'no_transfer', 'decline', 'declined'], true)) {
             $selectedTransferCode = '';
         }
+        $transferOptionDisplayLabel = trim((string) ($summary['transfer_option_label'] ?? ''));
+        if ($transferOptionDisplayLabel === '') {
+            $transferOptionDisplayLabel = $selectedTransferCode !== ''
+                ? Str::headline(str_replace('_', ' ', $selectedTransferCode))
+                : 'No transfer';
+        }
         $baseTotalBeforeTransfer = max(0, ((float) ($summary['total'] ?? 0)) - $transferAmount);
         $inclusives = collect($inclusives ?? [])->map(static fn ($v) => trim((string) $v))->filter()->values();
         $cancellationPolicy = trim((string) ($cancellationPolicy ?? 'Standard cancellation terms apply.'));
@@ -126,23 +132,18 @@
         $categoryDetails = collect($categoryDetails ?? [])->filter(static fn ($item) => is_array($item))->values();
         $paymentPolicy = $paymentPolicy ?? [];
         $paymentOptions = collect($paymentPolicy['available_options'] ?? [])->filter(static fn ($option) => is_array($option))->values();
-        $paymentProviders = $paymentOptions
-            ->map(static fn ($option) => [
-                'provider' => strtolower(trim((string) ($option['provider'] ?? $option['gateway'] ?? ''))),
-                'provider_label' => trim((string) ($option['provider_label'] ?? $option['gateway_label'] ?? 'Gateway')),
-            ])
-            ->filter(static fn ($option) => ($option['provider'] ?? '') !== '')
-            ->unique('provider')
-            ->values();
-        $lockedPaymentCurrency = $currency;
-        $lockedPaymentGateway = trim((string) ($paymentPolicy['gateway'] ?? ''));
-        $lockedPaymentProvider = strtolower(trim((string) ($paymentPolicy['provider'] ?? '')));
-        $paymentGatewayLabel = trim((string) ($paymentPolicy['gateway_label'] ?? 'Card Gateway'));
-        $paymentProviderLabel = trim((string) ($paymentPolicy['provider_label'] ?? $paymentGatewayLabel));
+        $lockedPaymentCurrency = strtoupper(trim((string) ($summary['quote_payment_currency'] ?? ($paymentPolicy['currency'] ?? $currency))));
+        $lockedPaymentGateway = trim((string) ($summary['quote_gateway'] ?? ($paymentPolicy['gateway'] ?? '')));
+        $lockedPaymentProvider = strtolower(trim((string) ($summary['quote_provider'] ?? ($paymentPolicy['provider'] ?? ''))));
+        $paymentGatewayLabel = trim((string) ($summary['quote_gateway_label'] ?? ($paymentPolicy['gateway_label'] ?? 'Card Gateway')));
+        $paymentProviderLabel = trim((string) ($summary['quote_provider_label'] ?? ($paymentPolicy['provider_label'] ?? $paymentGatewayLabel)));
         $paymentNotice = trim((string) ($paymentPolicy['customer_notice'] ?? 'Payment routing is enforced based on customer segment.'));
+        $lockedPaymentAmount = (float) ($summary['quote_payment_amount'] ?? ($summary['total'] ?? 0));
+        $lockedSourceCurrency = strtoupper(trim((string) ($summary['quote_source_currency'] ?? $currency)));
+        $lockedSourceAmount = (float) ($summary['quote_source_amount'] ?? ($summary['total'] ?? 0));
         $checkoutPrimaryNationality = old('primary_nationality', (string) ($summary['primary_nationality'] ?? ''));
         $checkoutGuestResidency = old('guest_residency', (string) ($summary['guest_residency'] ?? ''));
-        $selectedProvider = strtolower(trim((string) old('payment_provider', $lockedPaymentProvider !== '' ? $lockedPaymentProvider : (string) ($paymentProviders->first()['provider'] ?? ''))));
+        $selectedProvider = $lockedPaymentProvider;
         $customerPaymentStatus = strtolower(trim((string) ($reservation->payment_status ?? 'unpaid')));
         $customerPaymentCollectedAt = trim((string) ($reservation->payment_collected_at ?? $reservation->payment_verified_at ?? ''));
     @endphp
@@ -159,7 +160,7 @@
                     <div class="cell"><span class="label">{{ (string) ($dateLabels['start'] ?? 'Check-in') }}</span><div class="value">{{ (string) ($summary['checkin'] ?? '-') }}</div></div>
                     <div class="cell"><span class="label">{{ (string) ($dateLabels['end'] ?? 'Check-out') }}</span><div class="value">{{ (string) ($summary['checkout'] ?? '-') }}</div></div>
                     <div class="cell"><span class="label">Guests</span><div class="value">{{ (int) ($summary['adults'] ?? 1) }} Adults, {{ (int) ($summary['children'] ?? 0) }} Children{{ (int) ($summary['infants'] ?? 0) > 0 ? (', ' . (int) ($summary['infants'] ?? 0) . ' Infant' . ((int) ($summary['infants'] ?? 0) === 1 ? '' : 's')) : '' }}</div></div>
-                    <div class="cell"><span class="label">Transfer Option</span><div class="value" id="transferOptionLabelDisplay">{{ (string) ($summary['transfer_option_label'] ?? $summary['transfer_option'] ?? 'Not selected') }}</div></div>
+                    <div class="cell"><span class="label">Transfer Option</span><div class="value" id="transferOptionLabelDisplay">{{ $transferOptionDisplayLabel }}</div></div>
                     <div class="cell"><span class="label">Primary Guest</span><div class="value">{{ trim(((string) ($summary['primary_first_name'] ?? '')) . ' ' . ((string) ($summary['primary_last_name'] ?? ''))) ?: 'Guest Customer' }}</div></div>
                     <div class="cell"><span class="label">Nationality</span><div class="value">{{ (string) ($summary['primary_nationality'] ?? '-') }}</div></div>
                 </div>
@@ -171,14 +172,12 @@
                         <div class="payment-stat"><span class="k">Payment Currency</span><span class="v" id="paymentCurrencyDisplay">{{ $lockedPaymentCurrency }}</span></div>
                         <div class="payment-stat"><span class="k">Gateway</span><span class="v" id="paymentGatewayDisplay">{{ $paymentProviderLabel }}</span></div>
                     </div>
-                    @if ($paymentProviders->isNotEmpty())
-                        <div class="payment-stat">
-                            <span class="k">Available Providers</span>
-                            <span class="v">{{ $paymentProviders->map(static fn ($option) => (string) ($option['provider_label'] ?? 'Gateway'))->implode(' | ') }}</span>
-                        </div>
-                    @endif
+                    <div class="payment-stat">
+                        <span class="k">Payable Now</span>
+                        <span class="v">{{ $lockedPaymentCurrency }} {{ number_format($lockedPaymentAmount, 2) }}</span>
+                    </div>
                     <p class="payment-note">{{ $paymentNotice }}</p>
-                    <p class="payment-note">All amounts shown in checkout are in {{ $currency }} and must match the final total shown before payment.</p>
+                    <p class="payment-note">Booking total: {{ $lockedSourceCurrency }} {{ number_format($lockedSourceAmount, 2) }}. Converted payable amount is locked from your guest details page.</p>
                 </div>
 
                 <aside class="mini-panel checkout-summary" aria-label="Reservation compact summary">
@@ -256,95 +255,12 @@
                         <input type="hidden" id="primary_nationality" name="primary_nationality" value="{{ $checkoutPrimaryNationality }}">
                         <input type="hidden" id="guest_residency" name="guest_residency" value="{{ $checkoutGuestResidency }}">
                         <input type="hidden" name="transfer_option" id="transfer_option_input" value="{{ (string) ($summary['transfer_option'] ?? '') }}">
-                        <input type="hidden" name="transfer_option_label" id="transfer_option_label_input" value="{{ (string) ($summary['transfer_option_label'] ?? '') }}">
+                        <input type="hidden" name="transfer_option_label" id="transfer_option_label_input" value="{{ $transferOptionDisplayLabel }}">
                         <input type="hidden" name="transfer_charge" id="transfer_charge_input" value="{{ number_format($transferAmount, 2, '.', '') }}">
                         <input type="hidden" name="invoice_total_amount" id="invoice_total_amount_input" value="{{ number_format((float) ($summary['total'] ?? 0), 2, '.', '') }}">
-                        @if ($transferOptions->isNotEmpty())
-                            <div class="policy" style="margin-bottom:8px; width:100%;">
-                                <h3>Transfer Selection</h3>
-                                <label style="display:flex; gap:10px; align-items:flex-start; margin:8px 0; color:#335a71;">
-                                    <input
-                                        type="radio"
-                                        name="transfer_option_checkout"
-                                        value=""
-                                        data-label="No transfer"
-                                        data-local-adult-rate="0.00"
-                                        data-local-child-rate="0.00"
-                                        data-foreign-adult-rate="0.00"
-                                        data-foreign-child-rate="0.00"
-                                        data-base-local-rate="0.00"
-                                        data-base-foreign-rate="0.00"
-                                        {{ $selectedTransferCode === '' ? 'checked' : '' }}
-                                    >
-                                    <span>
-                                        <strong>No transfer</strong>
-                                        <span style="display:block; font-size:0.8rem; color:#516e82;">I do not need pickup/drop-off from the property.</span>
-                                    </span>
-                                </label>
-                                @foreach ($transferOptions as $option)
-                                    @php
-                                        $optionCode = strtolower(trim((string) ($option['code'] ?? '')));
-                                        $optionLabel = trim((string) ($option['label'] ?? Str::headline(str_replace('_', ' ', $optionCode))));
-                                        $localAdultRate = (float) ($option['local_adult_charge'] ?? $option['adult_charge'] ?? 0);
-                                        $localChildRate = (float) ($option['local_child_charge'] ?? $option['child_charge'] ?? 0);
-                                        $foreignAdultRate = (float) ($option['foreign_adult_charge'] ?? $option['adult_charge'] ?? 0);
-                                        $foreignChildRate = (float) ($option['foreign_child_charge'] ?? $option['child_charge'] ?? 0);
-                                        $baseLocalRate = (float) ($option['base_charge_local'] ?? $option['base_charge'] ?? 0);
-                                        $baseForeignRate = (float) ($option['base_charge_foreign'] ?? $option['base_charge'] ?? 0);
-                                    @endphp
-                                    <label style="display:flex; gap:10px; align-items:flex-start; margin:8px 0; color:#335a71;">
-                                        <input
-                                            type="radio"
-                                            name="transfer_option_checkout"
-                                            value="{{ $optionCode }}"
-                                            data-label="{{ $optionLabel }}"
-                                            data-local-adult-rate="{{ number_format($localAdultRate, 2, '.', '') }}"
-                                            data-local-child-rate="{{ number_format($localChildRate, 2, '.', '') }}"
-                                            data-foreign-adult-rate="{{ number_format($foreignAdultRate, 2, '.', '') }}"
-                                            data-foreign-child-rate="{{ number_format($foreignChildRate, 2, '.', '') }}"
-                                            data-base-local-rate="{{ number_format($baseLocalRate, 2, '.', '') }}"
-                                            data-base-foreign-rate="{{ number_format($baseForeignRate, 2, '.', '') }}"
-                                            {{ $optionCode !== '' && $optionCode === $selectedTransferCode ? 'checked' : '' }}
-                                        >
-                                        <span>
-                                            <strong>{{ $optionLabel }}</strong>
-                                            <span style="display:block; font-size:0.8rem; color:#516e82;">
-                                                Local: Adult {{ $currency }} {{ number_format($localAdultRate, 2) }}
-                                                @if ($children > 0)
-                                                    • Child {{ $currency }} {{ number_format($localChildRate, 2) }}
-                                                @endif
-                                            </span>
-                                            <span style="display:block; font-size:0.8rem; color:#516e82;">
-                                                Foreign: Adult {{ $currency }} {{ number_format($foreignAdultRate, 2) }}
-                                                @if ($children > 0)
-                                                    • Child {{ $currency }} {{ number_format($foreignChildRate, 2) }}
-                                                @endif
-                                            </span>
-                                        </span>
-                                    </label>
-                                @endforeach
-                            </div>
-                        @endif
                         <p class="fine-print" style="width:100%; margin:0 0 6px;">
                             Guest nationality and residency are locked from your booking details and cannot be changed at checkout.
                         </p>
-                        @if ($paymentProviders->isNotEmpty())
-                            <label class="label" for="payment_provider_select">Choose payment method</label>
-                            <select id="payment_provider_select" name="payment_provider_select" style="min-width:260px; padding:8px 10px; border:1px solid #c9dbe8; border-radius:10px; margin-right:8px;">
-                                @foreach ($paymentProviders as $providerOption)
-                                    @php
-                                        $providerKey = strtolower(trim((string) ($providerOption['provider'] ?? '')));
-                                        $providerLabel = trim((string) ($providerOption['provider_label'] ?? 'Gateway'));
-                                    @endphp
-                                    <option
-                                        value="{{ $providerKey }}"
-                                        data-provider="{{ $providerKey }}"
-                                        data-provider-label="{{ $providerLabel }}"
-                                        {{ $providerKey === $selectedProvider ? 'selected' : '' }}
-                                    >{{ $providerLabel }}</option>
-                                @endforeach
-                            </select>
-                        @endif
                         <button class="btn" type="submit">Confirm & Pay</button>
                     </form>
                 @else
@@ -359,141 +275,7 @@
 
     <script>
         (function () {
-            var selection = document.getElementById('payment_provider_select');
-            var currencyDisplay = document.getElementById('paymentCurrencyDisplay');
-            var gatewayDisplay = document.getElementById('paymentGatewayDisplay');
-            var form = selection ? selection.closest('form') : document.querySelector('form[action*="/payment-intent"]');
-            var hiddenCurrency = form ? form.querySelector('input[name="payment_currency"]') : null;
-            var hiddenGateway = form ? form.querySelector('input[name="payment_gateway"]') : null;
-            var hiddenProvider = form ? form.querySelector('input[name="payment_provider"]') : null;
-            var transferOptionInput = document.getElementById('transfer_option_input');
-            var transferOptionLabelInput = document.getElementById('transfer_option_label_input');
-            var transferChargeInput = document.getElementById('transfer_charge_input');
-            var invoiceTotalInput = document.getElementById('invoice_total_amount_input');
-            var transferChargeDisplay = document.getElementById('transferChargeDisplay');
-            var invoiceTotalDisplay = document.getElementById('invoiceTotalDisplay');
-            var transferLabelDisplay = document.getElementById('transferOptionLabelDisplay');
-            var guestResidencyInput = document.getElementById('guest_residency');
-            var transferOptionsUi = Array.prototype.slice.call(document.querySelectorAll('input[name="transfer_option_checkout"]'));
-            var adults = {{ $adults }};
-            var children = {{ $children }};
-            var baseTotal = {{ number_format($baseTotalBeforeTransfer, 2, '.', '') }};
-            var currencyCode = @json($currency);
-            var paymentOptions = @json($paymentOptions->values()->all());
-
-            var toCurrency = function (value) {
-                return currencyCode + ' ' + Number(value || 0).toFixed(2);
-            };
-
-            var selectedTransferOption = function () {
-                for (var i = 0; i < transferOptionsUi.length; i++) {
-                    if (transferOptionsUi[i].checked) {
-                        return transferOptionsUi[i];
-                    }
-                }
-                return null;
-            };
-
-            var syncTransferTotal = function () {
-                if (!transferOptionsUi.length) {
-                    return;
-                }
-
-                var selected = selectedTransferOption();
-                var residency = guestResidencyInput ? String(guestResidencyInput.value || '').trim().toLowerCase() : '';
-                var isForeign = residency === 'foreign_national';
-
-                var transferTotal = 0;
-                if (selected) {
-                    var adultRate = Number(selected.getAttribute(isForeign ? 'data-foreign-adult-rate' : 'data-local-adult-rate') || 0);
-                    var childRate = Number(selected.getAttribute(isForeign ? 'data-foreign-child-rate' : 'data-local-child-rate') || 0);
-                    var baseRate = Number(selected.getAttribute(isForeign ? 'data-base-foreign-rate' : 'data-base-local-rate') || 0);
-                    transferTotal = baseRate + (adultRate * Math.max(1, adults)) + (childRate * Math.max(0, children));
-                }
-
-                var grandTotal = baseTotal + transferTotal;
-
-                if (transferOptionInput) {
-                    transferOptionInput.value = selected ? String(selected.value || '').trim() : '';
-                }
-                if (transferOptionLabelInput) {
-                    transferOptionLabelInput.value = selected ? String(selected.getAttribute('data-label') || '').trim() : '';
-                }
-                if (transferChargeInput) {
-                    transferChargeInput.value = transferTotal.toFixed(2);
-                }
-                if (invoiceTotalInput) {
-                    invoiceTotalInput.value = grandTotal.toFixed(2);
-                }
-                if (transferChargeDisplay) {
-                    transferChargeDisplay.textContent = toCurrency(transferTotal);
-                }
-                if (invoiceTotalDisplay) {
-                    invoiceTotalDisplay.textContent = toCurrency(grandTotal);
-                }
-                if (transferLabelDisplay) {
-                    transferLabelDisplay.textContent = selected
-                        ? String(selected.getAttribute('data-label') || selected.value || 'Selected')
-                        : 'Not selected';
-                }
-            };
-
-            var syncSelection = function () {
-                if (!selection) {
-                    return;
-                }
-
-                var selectedOption = selection.options[selection.selectedIndex];
-                if (!selectedOption) {
-                    return;
-                }
-
-                var provider = (selectedOption.getAttribute('data-provider') || '').trim().toLowerCase();
-                var providerLabel = (selectedOption.getAttribute('data-provider-label') || '').trim();
-                var matched = null;
-                for (var i = 0; i < paymentOptions.length; i++) {
-                    var option = paymentOptions[i] || {};
-                    var optionProvider = String(option.provider || option.gateway || '').trim().toLowerCase();
-                    if (optionProvider === provider) {
-                        matched = option;
-                        break;
-                    }
-                }
-
-                var gateway = matched ? String(matched.gateway || '').trim() : '';
-
-                if (currencyDisplay) {
-                    currencyDisplay.textContent = currencyCode;
-                }
-
-                if (gatewayDisplay && providerLabel !== '') {
-                    gatewayDisplay.textContent = providerLabel;
-                }
-
-                if (hiddenCurrency) {
-                    hiddenCurrency.value = currencyCode;
-                }
-
-                if (hiddenGateway && gateway !== '') {
-                    hiddenGateway.value = gateway;
-                }
-
-                if (hiddenProvider) {
-                    hiddenProvider.value = provider;
-                }
-            };
-
-            if (selection) {
-                selection.addEventListener('change', syncSelection);
-            }
-            if (guestResidencyInput) {
-                guestResidencyInput.addEventListener('change', syncTransferTotal);
-            }
-            transferOptionsUi.forEach(function (input) {
-                input.addEventListener('change', syncTransferTotal);
-            });
-            syncSelection();
-            syncTransferTotal();
+            // Checkout is read-only for transfer and pricing decisions; values are locked at reservation stage.
         })();
     </script>
 </body>

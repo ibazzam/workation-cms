@@ -247,6 +247,7 @@
         if ($oldPhoneLocal === '' && trim((string) old('primary_mobile', '')) !== '') {
             $oldPhoneLocal = trim((string) old('primary_mobile', ''));
         }
+        $oldTransferOption = strtolower(trim((string) old('transfer_option', (string) ($prefill['transfer_option'] ?? 'none'))));
     @endphp
 
     <main class="page">
@@ -259,7 +260,7 @@
                 <span class="bph-step">3. Payment Method</span>
                 <span class="bph-step">4. Final Confirmation</span>
             </div>
-            <p class="bph-next">Next step after this page: select transfer option on checkout, then continue to payment confirmation.</p>
+            <p class="bph-next">Next step after this page: review locked checkout summary and continue to payment confirmation.</p>
         </header>
 
         <section class="section" aria-label="Booking">
@@ -358,7 +359,6 @@
                     <input type="hidden" name="room_id" value="{{ (int) ($room->id ?? 0) }}">
                     <input type="hidden" name="checkin" id="checkin" value="{{ old('checkin', (string) ($prefill['checkin'] ?? '')) }}">
                     <input type="hidden" name="checkout" id="checkout" value="{{ old('checkout', (string) ($prefill['checkout'] ?? '')) }}">
-                    <input type="hidden" name="transfer_option" value="">
                     <input type="hidden" name="transfer_charge" id="transferCharge" value="0">
                     <input type="hidden" name="room_subtotal" id="roomSubtotalInput" value="0">
                     <input type="hidden" name="discount_amount" id="discountAmountInput" value="0">
@@ -396,6 +396,50 @@
                                 <div class="field full">
                                     <p class="booking-subnote">In accordance with local regulations, guests who are not nationals or permanent residents may be required to pay tourism tax per room per night (included in total).</p>
                                 </div>
+                            </div>
+                        </section>
+
+                        <section class="booking-subsection" aria-label="Transfer option">
+                            <h3 class="booking-subtitle">Transfer option</h3>
+                            <p class="booking-subnote">Select transfer now so the final payable amount and payment currency are calculated before checkout.</p>
+                            <div class="transfer-list" id="transferOptionsList">
+                                <label class="transfer-option">
+                                    <input type="radio" name="transfer_option" value="none" data-base-charge="0" data-local-adult-rate="0" data-local-child-rate="0" data-foreign-adult-rate="0" data-foreign-child-rate="0" {{ $oldTransferOption === 'none' ? 'checked' : '' }}>
+                                    <span>
+                                        <span class="transfer-option-title">No transfer</span>
+                                        <span class="transfer-option-note">Proceed without property pickup/drop-off.</span>
+                                    </span>
+                                </label>
+                                @foreach ($transferOptions as $option)
+                                    @php
+                                        $transferCode = strtolower(trim((string) ($option['code'] ?? '')));
+                                        $transferLabel = trim((string) ($option['label'] ?? 'Transfer'));
+                                        $transferBaseCharge = (float) ($option['base_charge'] ?? 0);
+                                        $transferLocalAdultRate = (float) ($option['local_adult_charge'] ?? $option['adult_charge'] ?? 0);
+                                        $transferLocalChildRate = (float) ($option['local_child_charge'] ?? $option['child_charge'] ?? 0);
+                                        $transferForeignAdultRate = (float) ($option['foreign_adult_charge'] ?? $option['adult_charge'] ?? 0);
+                                        $transferForeignChildRate = (float) ($option['foreign_child_charge'] ?? $option['child_charge'] ?? 0);
+                                        $isTransferSelected = $oldTransferOption === $transferCode;
+                                    @endphp
+                                    <label class="transfer-option">
+                                        <input
+                                            type="radio"
+                                            name="transfer_option"
+                                            value="{{ $transferCode }}"
+                                            data-base-charge="{{ number_format($transferBaseCharge, 2, '.', '') }}"
+                                            data-local-adult-rate="{{ number_format($transferLocalAdultRate, 2, '.', '') }}"
+                                            data-local-child-rate="{{ number_format($transferLocalChildRate, 2, '.', '') }}"
+                                            data-foreign-adult-rate="{{ number_format($transferForeignAdultRate, 2, '.', '') }}"
+                                            data-foreign-child-rate="{{ number_format($transferForeignChildRate, 2, '.', '') }}"
+                                            {{ $isTransferSelected ? 'checked' : '' }}
+                                        >
+                                        <span>
+                                            <span class="transfer-option-title">{{ $transferLabel }}</span>
+                                            <span class="transfer-option-rates">Local: Adult {{ $currency }} {{ number_format($transferLocalAdultRate, 2) }} | Child {{ $currency }} {{ number_format($transferLocalChildRate, 2) }}</span>
+                                            <span class="transfer-option-rates">Foreign: Adult {{ $currency }} {{ number_format($transferForeignAdultRate, 2) }} | Child {{ $currency }} {{ number_format($transferForeignChildRate, 2) }}</span>
+                                        </span>
+                                    </label>
+                                @endforeach
                             </div>
                         </section>
 
@@ -680,6 +724,11 @@
                 const adultCount = Math.max(1, Number(adults.value || 1));
                 const childCount = Math.max(0, Number(children.value || 0));
                 const nights = calculateNights();
+                const selectedTransfer = transferOptionInputs.find(function (input) { return !!input && input.checked; });
+                const isLocalGuest = currentNationalityIso() === 'MV';
+                const baseCharge = Number(selectedTransfer?.dataset?.baseCharge || 0);
+                const adultRate = Number(selectedTransfer?.dataset?.[isLocalGuest ? 'localAdultRate' : 'foreignAdultRate'] || 0);
+                const childRate = Number(selectedTransfer?.dataset?.[isLocalGuest ? 'localChildRate' : 'foreignChildRate'] || 0);
 
                 const roomSubtotal = nightlyRate * nights;
                 const discountAmount = roomSubtotal * (discountPercent / 100);
@@ -687,7 +736,9 @@
                 const taxAmount = taxRate > 0
                     ? discountedSubtotal - (discountedSubtotal / (1 + (taxRate / 100)))
                     : 0;
-                const transferTotal = 0;
+                const transferTotal = selectedTransfer && selectedTransfer.value !== 'none'
+                    ? (baseCharge + (adultRate * adultCount) + (childRate * childCount))
+                    : 0;
                 const total = discountedSubtotal + transferTotal;
 
                 transferCharge.value = transferTotal.toFixed(2);
@@ -757,6 +808,12 @@
                 if (sumCheckoutInput) {
                     sumCheckoutInput.addEventListener(eventName, syncDatesFromSummary);
                 }
+                transferOptionInputs.forEach(function (input) {
+                    if (!input) {
+                        return;
+                    }
+                    input.addEventListener(eventName, syncSummary);
+                });
                 [primaryFirstName, primaryLastName, primaryNationality, primaryEmail, primaryMobileCountryCode, primaryMobileLocal].forEach(function (input) {
                     if (!input) {
                         return;

@@ -6,6 +6,7 @@ use App\Models\TransportProviderJob;
 use App\Services\HttpTransportProviderAdapter;
 use Illuminate\Support\Str;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Schema;
 
 class ProcessTransportProviderJobs extends Command
 {
@@ -14,6 +15,12 @@ class ProcessTransportProviderJobs extends Command
 
     public function handle(): int
     {
+        if (!Schema::hasTable('transport_provider_jobs')) {
+            $this->warn('Skipping transport job processing: table transport_provider_jobs does not exist.');
+
+            return self::SUCCESS;
+        }
+
         $limit = (int) $this->option('limit');
 
         $jobs = TransportProviderJob::where(function ($q) {

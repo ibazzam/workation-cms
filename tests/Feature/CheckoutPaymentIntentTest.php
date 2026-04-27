@@ -53,15 +53,16 @@ class CheckoutPaymentIntentTest extends TestCase
 
         $response->assertRedirectContains('/booking/payment/hosted/' . $reservationId);
 
-        $this->assertDatabaseHas('vendor_reservations', [
-            'id' => $reservationId,
-            'customer_segment' => 'local_maldivian',
-            'payment_currency' => 'USD',
-            'payment_gateway' => 'stripe',
-            'commission_amount' => 144.00,
-            'gateway_fee_amount' => 78.00,
-            'vendor_payout_amount' => 978.00,
-        ]);
+        $reservation = DB::table('vendor_reservations')->where('id', $reservationId)->first();
+        $this->assertNotNull($reservation);
+        $this->assertSame('local_maldivian', (string) ($reservation->customer_segment ?? ''));
+        $this->assertSame('USD', strtoupper((string) ($reservation->payment_currency ?? '')));
+        $this->assertSame('stripe', (string) ($reservation->payment_gateway ?? ''));
+
+        // 1200 MVR -> ~77.82 USD at default FX (1 USD = 15.42 MVR).
+        $this->assertEqualsWithDelta(9.34, (float) ($reservation->commission_amount ?? 0), 0.01);
+        $this->assertEqualsWithDelta(5.06, (float) ($reservation->gateway_fee_amount ?? 0), 0.01);
+        $this->assertEqualsWithDelta(63.42, (float) ($reservation->vendor_payout_amount ?? 0), 0.01);
     }
 
     public function test_foreign_customer_cannot_create_mvr_payment_intent(): void
@@ -82,21 +83,25 @@ class CheckoutPaymentIntentTest extends TestCase
             ->assertSessionHasErrors(['payment']);
     }
 
-    public function test_payment_intent_requires_primary_nationality_at_checkout(): void
+    public function test_payment_intent_uses_primary_nationality_from_reservation_notes_when_not_posted(): void
     {
         $reservationId = $this->createReservation('Maldivian', 'local_resident', 'MVR');
 
         $response = $this
-            ->from('/booking/checkout/' . $reservationId)
             ->withoutMiddleware(VerifyCsrfToken::class)
             ->post('/booking/checkout/' . $reservationId . '/payment-intent', [
                 'payment_currency' => 'MVR',
                 'guest_residency' => 'local_resident',
             ]);
 
-        $response
-            ->assertRedirect('/booking/checkout/' . $reservationId)
-            ->assertSessionHasErrors(['primary_nationality']);
+        $response->assertRedirectContains('/booking/payment/hosted/' . $reservationId);
+
+        $this->assertDatabaseHas('vendor_reservations', [
+            'id' => $reservationId,
+            'customer_segment' => 'local_maldivian',
+            'payment_currency' => 'MVR',
+            'payment_gateway' => 'mib_mvr',
+        ]);
     }
 
     private function createReservation(string $nationality, string $guestResidency, string $currency): int

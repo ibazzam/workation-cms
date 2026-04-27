@@ -212,6 +212,7 @@ class VendorPropertyCompatibilityReader
                     if (isset($row->details) && !isset($row->listing_details)) {
                         $row->listing_details = $row->details;
                     }
+                    self::normalizeRowBasePrice($row);
 
                     return $row;
                 });
@@ -226,7 +227,7 @@ class VendorPropertyCompatibilityReader
         }
 
         $cachedRows = Cache::remember(
-            'vendor_property_compatibility_reader:all_active_listings:v2:' . $normalizedLimit,
+            'vendor_property_compatibility_reader:all_active_listings:v3:' . $normalizedLimit,
             now()->addMinutes(5),
             static function () use ($normalizedLimit) {
         $categoryTableMap = self::categoryTableMap();
@@ -257,6 +258,7 @@ class VendorPropertyCompatibilityReader
                 if (isset($row->details) && !isset($row->listing_details)) {
                     $row->listing_details = $row->details;
                 }
+                self::normalizeRowBasePrice($row);
 
                 return $row;
             });
@@ -640,6 +642,70 @@ class VendorPropertyCompatibilityReader
     // Private helpers
     // -----------------------------------------------------------------------
 
+    private static function normalizeRowBasePrice(object $row): void
+    {
+        $existingBasePrice = isset($row->base_price) && is_numeric($row->base_price)
+            ? (float) $row->base_price
+            : 0.0;
+        if ($existingBasePrice > 0) {
+            return;
+        }
+
+        $priceCandidates = [];
+        foreach (self::commonPriceColumns() as $column) {
+            $rawValue = $row->{$column} ?? null;
+            if (!is_numeric($rawValue)) {
+                continue;
+            }
+
+            $numericValue = (float) $rawValue;
+            if ($numericValue > 0) {
+                $priceCandidates[] = $numericValue;
+            }
+        }
+
+        if (!empty($priceCandidates)) {
+            $row->base_price = (float) min($priceCandidates);
+        }
+    }
+
+    private static function commonPriceColumns(): array
+    {
+        return [
+            'base_price',
+            'starting_price',
+            'from_price',
+            'starting_from_price',
+            'price_per_night',
+            'base_price_per_night',
+            'price_per_day',
+            'daily_rate',
+            'hourly_rate',
+            'adult_price',
+            'price_per_adult',
+            'child_price',
+            'price_per_child',
+            'per_person_rate',
+            'per_pax_rate',
+            'per_trip_rate',
+            'trip_rate',
+            'trip_price',
+            'hourly_price',
+            'daily_price',
+            'adult_rate',
+            'child_rate',
+            'adult_charge',
+            'child_charge',
+            'base_charge',
+            'booking_fee',
+            'service_fee',
+            'platform_fee',
+            'price',
+            'rate',
+            'cost',
+        ];
+    }
+
     private static function categoryTableMap(): array
     {
         return [
@@ -692,12 +758,20 @@ class VendorPropertyCompatibilityReader
             }
         }
 
+        foreach (self::commonPriceColumns() as $priceColumn) {
+            if (self::hasColumn($tableName, $priceColumn)) {
+                $base[] = $priceColumn;
+            }
+        }
+
         // Common category-specific columns (present on some tables)
         foreach (['island', 'atoll', 'city', 'pickup_location', 'dropoff_location', 'origin_point', 'destination_point'] as $col) {
             if (self::hasColumn($tableName, $col)) {
                 $base[] = $col;
             }
         }
+
+        $base = array_values(array_unique($base));
 
         self::$dedicatedSelectColumnsCache[$tableName] = $base;
 

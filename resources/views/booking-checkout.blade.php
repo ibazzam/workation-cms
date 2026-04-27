@@ -110,6 +110,12 @@
         $taxLines = collect($summary['tax_lines'] ?? [])->filter(static fn ($line) => is_array($line))->values();
         $serviceChargeTotal = max(0, (float) ($summary['service_charge_total'] ?? 0));
         $totalTaxAmount = max(0, (float) ($summary['total_tax_amount'] ?? $taxAmount));
+        $limitedTimeOffer = 0.0;
+        $firstBookingDeal = 0.0;
+        $promoCodeDiscount = 0.0;
+        $specialDiscount = max(0, $discountAmount);
+        $tourismTax = max(0, (float) ($summary['green_tax_total'] ?? 0));
+        $salesServiceTax = max(0, $totalTaxAmount - $tourismTax);
         $transferAppliedAdultRate = max(0, (float) ($summary['transfer_applied_adult_rate'] ?? 0));
         $transferAppliedChildRate = max(0, (float) ($summary['transfer_applied_child_rate'] ?? 0));
         $transferOptions = collect($summary['property_transfer_options'] ?? [])->filter(static fn ($option) => is_array($option))->values();

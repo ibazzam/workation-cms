@@ -365,6 +365,8 @@
                     <input type="hidden" name="tax_amount" id="taxAmountInput" value="0">
                     <input type="hidden" name="total_amount" id="totalAmountInput" value="0">
                     <input type="hidden" name="primary_mobile" id="primaryMobileHidden" value="{{ old('primary_mobile', '') }}">
+                    <input type="hidden" name="adults" id="adults" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}">
+                    <input type="hidden" name="children" id="children" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}">
 
                     @if ($errors->any())
                         <div class="form-errors" role="alert" aria-live="polite">
@@ -389,8 +391,6 @@
                                 <div class="field"><label for="primaryEmail">Email*</label><input id="primaryEmail" name="primary_email" type="email" value="{{ old('primary_email', (string) ($prefill['primary_email'] ?? '')) }}" placeholder="guest@example.com" class="{{ $errors->has('primary_email') ? 'input-error' : '' }}" required>@error('primary_email')<p class="error-text">{{ $message }}</p>@enderror<p class="helper">Booking confirmation will be sent to this email</p></div>
                                 <div class="field"><label for="primaryMobileCountryCode">Phone country code*</label><select id="primaryMobileCountryCode" name="primary_mobile_country_code" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required>@foreach ($countryOptions as $country)<option value="{{ $country['dial'] }}" data-iso="{{ $country['iso'] }}" {{ $oldPhoneCode === $country['dial'] ? 'selected' : '' }}>{{ $country['dial'] }} ({{ $country['name'] }})</option>@endforeach</select></div>
                                 <div class="field"><label for="primaryMobileLocal">Contact number*</label><input id="primaryMobileLocal" name="primary_mobile_local" type="tel" value="{{ $oldPhoneLocal }}" placeholder="7712345" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required inputmode="tel">@error('primary_mobile')<p class="error-text">{{ $message }}</p>@enderror</div>
-                                <div class="field"><label for="adults">Adults</label><input id="adults" name="adults" type="number" min="1" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}" class="{{ $errors->has('adults') ? 'input-error' : '' }}" required>@error('adults')<p class="error-text">{{ $message }}</p>@enderror</div>
-                                <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}" class="{{ $errors->has('children') ? 'input-error' : '' }}">@error('children')<p class="error-text">{{ $message }}</p>@enderror</div>
                                 <div class="field full">
                                     <p class="booking-subnote">In accordance with local regulations, guests who are not nationals or permanent residents may be required to pay tourism tax per room per night (included in total).</p>
                                 </div>

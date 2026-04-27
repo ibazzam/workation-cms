@@ -236,6 +236,7 @@ class CheckoutPaymentRouter
             'provider' => (string) ($option['provider'] ?? ''),
             'provider_label' => (string) ($option['provider_label'] ?? ''),
             'gateway_mode' => (string) ($gatewayConfig['mode'] ?? 'internal'),
+            'checkout_url' => trim((string) ($gatewayConfig['checkout_url'] ?? '')),
             'available_options' => self::availableOptions($context),
             'customer_notice' => $segment === self::SEGMENT_LOCAL
                 ? 'Local guests can use MVR bank APIs or Stripe. Local cards are blocked on MIB/BML USD APIs.'

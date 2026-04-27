@@ -1209,12 +1209,6 @@ Route::post('/booking/reserve-category', function (Request $request) {
 });
 
 Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int $reservation = null) {
-    if (!(bool) session('portal_customer_authenticated', false)) {
-        $continueUrl = urlencode((string) $request->fullUrl());
-        return redirect('/portal/customer/login?continue=' . $continueUrl)
-            ->withErrors(['auth' => 'Please sign in to continue checkout.']);
-    }
-
     $categoryLabelMap = [
         'accommodation' => ['start' => 'Check-in', 'end' => 'Check-out'],
         'transport' => ['start' => 'Travel Date', 'end' => 'Return Date'],
@@ -1431,12 +1425,6 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
 });
 
 Route::post('/booking/checkout/{reservation}/payment-intent', function (Request $request, int $reservation) {
-    if (!(bool) session('portal_customer_authenticated', false)) {
-        $continueUrl = urlencode('/booking/checkout/' . $reservation);
-        return redirect('/portal/customer/login?continue=' . $continueUrl)
-            ->withErrors(['auth' => 'Please sign in to continue payment.']);
-    }
-
     if (!Schema::hasTable('vendor_reservations')) {
         abort(404);
     }
@@ -1537,16 +1525,28 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
             'updated_at' => now(),
         ]);
 
+    $checkoutUrl = trim((string) ($intent['checkout_url'] ?? ''));
+    if ($checkoutUrl !== '') {
+        $query = http_build_query([
+            'intent_id' => (string) ($intent['intent_id'] ?? ''),
+            'reservation_id' => $reservation,
+            'amount' => number_format((float) ($intent['amount'] ?? 0), 2, '.', ''),
+            'currency' => (string) ($intent['currency'] ?? ''),
+            'provider' => (string) ($intent['provider'] ?? ''),
+            'gateway' => (string) ($intent['gateway'] ?? ''),
+            'return_url' => url('/booking/checkout/' . $reservation),
+            'cancel_url' => url('/booking/checkout/' . $reservation),
+            'webhook_url' => url('/booking/payment/webhooks/' . (string) ($intent['gateway'] ?? '')),
+        ]);
+        $target = $checkoutUrl . (str_contains($checkoutUrl, '?') ? '&' : '?') . $query;
+
+        return redirect()->away($target);
+    }
+
     return redirect('/booking/payment/hosted/' . $reservation . '?intent=' . urlencode((string) $intent['intent_id']));
 });
 
 Route::get('/booking/payment/hosted/{reservation}', function (Request $request, int $reservation) {
-    if (!(bool) session('portal_customer_authenticated', false)) {
-        $continueUrl = urlencode((string) $request->fullUrl());
-        return redirect('/portal/customer/login?continue=' . $continueUrl)
-            ->withErrors(['auth' => 'Please sign in to access payment.']);
-    }
-
     if (!Schema::hasTable('vendor_reservations')) {
         abort(404);
     }
@@ -1571,12 +1571,6 @@ Route::get('/booking/payment/hosted/{reservation}', function (Request $request, 
 });
 
 Route::post('/booking/payment/hosted/{reservation}/complete', function (Request $request, int $reservation) {
-    if (!(bool) session('portal_customer_authenticated', false)) {
-        $continueUrl = urlencode('/booking/payment/hosted/' . $reservation);
-        return redirect('/portal/customer/login?continue=' . $continueUrl)
-            ->withErrors(['auth' => 'Please sign in to complete payment.']);
-    }
-
     if (!Schema::hasTable('vendor_reservations')) {
         abort(404);
     }
@@ -1593,6 +1587,28 @@ Route::post('/booking/payment/hosted/{reservation}/complete', function (Request 
 
     if ((string) $validated['intent_id'] !== (string) ($reservationRow->payment_intent_id ?? '')) {
         return back()->withErrors(['payment' => 'Payment session no longer matches this reservation.']);
+    }
+
+    $payload = json_decode((string) ($reservationRow->payment_payload_json ?? ''), true);
+    if (!is_array($payload)) {
+        $payload = [];
+    }
+    $checkoutUrl = trim((string) ($payload['checkout_url'] ?? ''));
+    if ($checkoutUrl !== '') {
+        $query = http_build_query([
+            'intent_id' => (string) ($reservationRow->payment_intent_id ?? ''),
+            'reservation_id' => $reservation,
+            'amount' => number_format((float) ($reservationRow->payment_amount ?? 0), 2, '.', ''),
+            'currency' => strtoupper(trim((string) ($reservationRow->payment_currency ?? 'MVR'))),
+            'provider' => (string) ($payload['provider'] ?? ''),
+            'gateway' => (string) ($payload['gateway'] ?? ''),
+            'return_url' => url('/booking/checkout/' . $reservation),
+            'cancel_url' => url('/booking/checkout/' . $reservation),
+            'webhook_url' => url('/booking/payment/webhooks/' . (string) ($payload['gateway'] ?? '')),
+        ]);
+        $target = $checkoutUrl . (str_contains($checkoutUrl, '?') ? '&' : '?') . $query;
+
+        return redirect()->away($target);
     }
 
     workationApplyReservationPaymentEvent($reservationRow, [

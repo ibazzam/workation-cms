@@ -9,6 +9,7 @@ use App\Support\UniformIconSystem;
 use App\Support\VendorPropertyCompatibilityReader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
@@ -206,6 +207,21 @@ if (!function_exists('workationDerivedListingBasePrice')) {
             'per_trip_rate',
             'starting_hourly_rate',
             'starting_daily_rate',
+            'adult_rate',
+            'child_rate',
+            'adult_charge',
+            'child_charge',
+            'trip_rate',
+            'trip_price',
+            'hourly_price',
+            'daily_price',
+            'base_charge',
+            'booking_fee',
+            'service_fee',
+            'platform_fee',
+            'price',
+            'rate',
+            'cost',
             'meal_plan_room_only_price',
             'meal_plan_breakfast_price',
             'meal_plan_half_board_price',
@@ -241,6 +257,43 @@ if (!function_exists('workationDerivedListingBasePrice')) {
                 }
             }
         }
+
+        // Fallback: recursively scan nested payloads for numeric fields that are clearly price/rate related.
+        $collectNestedPriceCandidates = static function ($value, int $depth = 0) use (&$collectNestedPriceCandidates, &$candidates, $normalizePrice): void {
+            if ($depth > 5) {
+                return;
+            }
+
+            if (is_array($value)) {
+                foreach ($value as $nestedKey => $nestedValue) {
+                    if (is_array($nestedValue) || is_object($nestedValue)) {
+                        $collectNestedPriceCandidates($nestedValue, $depth + 1);
+                        continue;
+                    }
+
+                    $keyText = strtolower(trim((string) $nestedKey));
+                    $looksLikePriceField = $keyText !== ''
+                        && preg_match('/price|rate|fare|charge|cost|amount|fee|nightly|daily|hourly|per_?pax|per_?person|starting|from|subtotal|total/', $keyText) === 1;
+
+                    if (!$looksLikePriceField) {
+                        continue;
+                    }
+
+                    $normalized = $normalizePrice($nestedValue);
+                    if ($normalized > 0) {
+                        $candidates[] = $normalized;
+                    }
+                }
+
+                return;
+            }
+
+            if (is_object($value)) {
+                $collectNestedPriceCandidates((array) $value, $depth + 1);
+            }
+        };
+
+        $collectNestedPriceCandidates($details);
 
         if ($candidates === []) {
             return 0.0;
@@ -2338,15 +2391,26 @@ Route::get('/', function () {
         };
 
         if ($allProperties->isNotEmpty()) {
+            $normalizeHomeCategoryKey = static function (?string $value): string {
+                $normalized = str_replace('-', '_', strtolower(trim((string) $value)));
+
+                return match ($normalized) {
+                    'conference_rooms' => 'conference_room',
+                    'excursions', 'experience', 'experiences', 'watersports', 'water_sports' => 'excursion',
+                    'workspace', 'work_friendly', 'workfriendly' => 'remote_workspace',
+                    'marine', 'marine_transfer', 'marine_transfers' => 'marine_transport',
+                    'land', 'land_transfer', 'land_transfers' => 'land_transport',
+                    default => $normalized,
+                };
+            };
+
             $categoryCounts = $allProperties
-                ->groupBy(static fn ($property) => str_replace('-', '_', strtolower(trim((string) ($property->listing_category ?? '')))))
+                ->groupBy(static fn ($property) => $normalizeHomeCategoryKey((string) ($property->listing_category ?? '')))
                 ->filter(static fn ($group, $key) => $key !== '')
                 ->map(static fn ($group) => $group->count());
 
-            $normalizeHomeCategoryKey = static fn (?string $value): string => str_replace('-', '_', strtolower(trim((string) $value)));
-
-            $homeCategoryPriceBucket = static function ($property): string {
-                $category = str_replace('-', '_', strtolower(trim((string) ($property->listing_category ?? ''))));
+            $homeCategoryPriceBucket = static function ($property) use ($normalizeHomeCategoryKey): string {
+                $category = $normalizeHomeCategoryKey((string) ($property->listing_category ?? ''));
                 if (in_array($category, ['marine_transport', 'land_transport'], true)) {
                     return $category;
                 }
@@ -2381,7 +2445,7 @@ Route::get('/', function () {
                     return 'excursion';
                 }
 
-                return $category;
+                return $normalizeHomeCategoryKey($category);
             };
 
             $categorySamples = $allProperties
@@ -4428,14 +4492,8 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             });
         }
 
-        if ($dbCategoryKey !== 'accommodation' && Schema::hasColumn($categoryTable, 'base_price')) {
-            if ($minPrice > 0) {
-                $propertiesQuery->where('base_price', '>=', $minPrice);
-            }
-            if ($maxPrice > 0) {
-                $propertiesQuery->where('base_price', '<=', $maxPrice);
-            }
-        }
+        // Price filters are applied after derived-price normalization so listings
+        // that store pricing in details JSON are handled correctly.
 
         $popularityColumns = ['bookings_count', 'total_bookings', 'wishlist_count', 'view_count'];
         $bookedColumns = ['bookings_count', 'total_bookings'];
@@ -4532,11 +4590,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             $propertiesQuery->whereRaw($distanceSql . ' <= ?', [$userLat, $userLng, $userLat, $distanceKm]);
         }
 
-        if ($sort === 'price_low_high' && $dbCategoryKey !== 'accommodation' && Schema::hasColumn($categoryTable, 'base_price')) {
-            $propertiesQuery->orderBy('base_price');
-        } elseif ($sort === 'price_high_low' && $dbCategoryKey !== 'accommodation' && Schema::hasColumn($categoryTable, 'base_price')) {
-            $propertiesQuery->orderByDesc('base_price');
-        } elseif ($sort === 'distance_nearest' && $latitudeColumn !== null && $longitudeColumn !== null && $userLat !== 0.0 && $userLng !== 0.0) {
+        if ($sort === 'distance_nearest' && $latitudeColumn !== null && $longitudeColumn !== null && $userLat !== 0.0 && $userLng !== 0.0) {
             $distanceSql = '(6371 * acos(least(1, greatest(-1, cos(radians(?)) * cos(radians(' . $latitudeColumn . ')) * cos(radians(' . $longitudeColumn . ') - radians(?)) + sin(radians(?)) * sin(radians(' . $latitudeColumn . '))))))';
             $propertiesQuery->orderByRaw($distanceSql . ' asc', [$userLat, $userLng, $userLat]);
         } elseif ($sort === 'most_wanted' && $popularityColumn !== null) {
@@ -4806,16 +4860,57 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
 
                 return $property;
             })->values();
+
+            if ($minPrice > 0 || $maxPrice > 0) {
+                $catalogProperties = $catalogProperties->filter(static function ($property) use ($minPrice, $maxPrice) {
+                    $price = (float) ($property->base_price ?? 0);
+                    if ($minPrice > 0 && $price < $minPrice) {
+                        return false;
+                    }
+                    if ($maxPrice > 0 && $price > $maxPrice) {
+                        return false;
+                    }
+                    return true;
+                })->values();
+            }
+
+            if ($sort === 'price_low_high') {
+                $catalogProperties = $catalogProperties
+                    ->sortBy(static fn ($property) => (float) ($property->base_price ?? 0))
+                    ->values();
+            } elseif ($sort === 'price_high_low') {
+                $catalogProperties = $catalogProperties
+                    ->sortByDesc(static fn ($property) => (float) ($property->base_price ?? 0))
+                    ->values();
+            }
+
+            $propertyIds = $catalogProperties
+                ->pluck('id')
+                ->map(static fn ($id) => (int) $id)
+                ->filter(static fn (int $id) => $id > 0)
+                ->values();
+            $propertyLookupIds = $catalogProperties
+                ->flatMap(static fn ($row) => workationPropertyLookupIds($row))
+                ->filter(static fn (int $id) => $id > 0)
+                ->unique()
+                ->values();
         }
 
         if (Schema::hasTable('vendor_listing_media') && $propertyLookupIds->isNotEmpty()) {
-            $mediaRows = DB::table('vendor_listing_media')
-                ->where('entity_type', 'property')
-                ->whereIn('entity_id', $propertyLookupIds->all())
-                ->orderByDesc('is_primary')
-                ->orderByDesc('created_at')
-                ->limit(600)
-                ->get();
+            $mediaRows = collect(Cache::remember(
+                'catalog:property_media:v1:' . md5($propertyLookupIds->implode(',')),
+                now()->addMinutes(3),
+                static function () use ($propertyLookupIds) {
+                    return DB::table('vendor_listing_media')
+                        ->where('entity_type', 'property')
+                        ->whereIn('entity_id', $propertyLookupIds->all())
+                        ->orderByDesc('is_primary')
+                        ->orderByDesc('created_at')
+                        ->limit(360)
+                        ->get()
+                        ->all();
+                }
+            ));
 
             $mediaByEntityId = $mediaRows->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
             $catalogPropertyMediaByProperty = $catalogProperties
@@ -4837,48 +4932,57 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         $islandOptions = VendorPropertyCompatibilityReader::distinctOptionValues($dbCategoryKey, 'island', 120);
 
         {
-            $transportDestinationMap = [];
-            $transportLocationColumns = ['pickup_location', 'dropoff_location', 'origin_point', 'destination_point', 'island', 'city', 'atoll'];
+            $transportDestinationOptions = collect(Cache::remember(
+                'catalog:transport_destination_options:v1',
+                now()->addMinutes(5),
+                static function () {
+                    $transportDestinationMap = [];
+                    $transportLocationColumns = ['pickup_location', 'dropoff_location', 'origin_point', 'destination_point', 'island', 'city', 'atoll'];
 
-            foreach (['vendor_marine_transport_listings', 'vendor_land_transport_listings'] as $transportTable) {
-                if (!Schema::hasTable($transportTable)) {
-                    continue;
-                }
-
-                $transportSelectCols = array_values(array_filter(
-                    $transportLocationColumns,
-                    static fn ($col) => Schema::hasColumn($transportTable, $col)
-                ));
-
-                if (empty($transportSelectCols)) {
-                    continue;
-                }
-
-                $transportRows = DB::table($transportTable)
-                    ->where('status', 'active')
-                    ->when(Schema::hasColumn($transportTable, 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'))
-                    ->select($transportSelectCols)
-                    ->limit(2000)
-                    ->get();
-
-                foreach ($transportRows as $row) {
-                    foreach ($transportLocationColumns as $col) {
-                        if (!property_exists($row, $col)) {
+                    foreach (['vendor_marine_transport_listings', 'vendor_land_transport_listings'] as $transportTable) {
+                        if (!Schema::hasTable($transportTable)) {
                             continue;
                         }
-                        $val = trim((string) ($row->{$col} ?? ''));
-                        if ($val === '') {
+
+                        $transportSelectCols = array_values(array_filter(
+                            $transportLocationColumns,
+                            static fn ($col) => Schema::hasColumn($transportTable, $col)
+                        ));
+
+                        if (empty($transportSelectCols)) {
                             continue;
                         }
-                        $transportDestinationMap[strtolower($val)] = $val;
+
+                        $transportRows = DB::table($transportTable)
+                            ->where('status', 'active')
+                            ->when(Schema::hasColumn($transportTable, 'listing_moderation_status'), fn ($q) => $q->where('listing_moderation_status', 'approved'))
+                            ->select($transportSelectCols)
+                            ->limit(1000)
+                            ->get();
+
+                        foreach ($transportRows as $row) {
+                            foreach ($transportLocationColumns as $col) {
+                                if (!property_exists($row, $col)) {
+                                    continue;
+                                }
+                                $val = trim((string) ($row->{$col} ?? ''));
+                                if ($val === '') {
+                                    continue;
+                                }
+                                $transportDestinationMap[strtolower($val)] = $val;
+                            }
+                        }
                     }
-                }
-            }
 
-            if (!empty($transportDestinationMap)) {
-                natcasesort($transportDestinationMap);
-                $transportDestinationOptions = collect(array_values($transportDestinationMap))->values();
-            }
+                    if (empty($transportDestinationMap)) {
+                        return [];
+                    }
+
+                    natcasesort($transportDestinationMap);
+
+                    return array_values($transportDestinationMap);
+                }
+            ))->values();
         }
     }
 
@@ -4967,80 +5071,108 @@ Route::get('/property/{property}', function (Request $request, int $property) {
         }
     }
 
-    $rooms = collect();
-    $legacyRoomPropertyColumn = null;
-    if (Schema::hasTable('vendor_property_room_categories')) {
-        if (Schema::hasColumn('vendor_property_room_categories', 'vendor_property_id')) {
-            $legacyRoomPropertyColumn = 'vendor_property_id';
-        } elseif (Schema::hasColumn('vendor_property_room_categories', 'property_id')) {
-            $legacyRoomPropertyColumn = 'property_id';
-        }
-    }
-
-    if ($legacyRoomPropertyColumn !== null) {
-        $rooms = DB::table('vendor_property_room_categories')
-            ->where($legacyRoomPropertyColumn, (int) $propertyRow->id)
-            ->orderByDesc('updated_at')
-            ->limit(60)
-            ->get();
-    }
-
-    if ($rooms->isEmpty() && Schema::hasTable('accommodation_rooms')) {
-        $accommodationRoomRows = DB::table('accommodation_rooms')
-            ->where('property_id', (int) $propertyRow->id)
-            ->when(Schema::hasColumn('accommodation_rooms', 'is_active'), static function ($query) {
-                $query->where('is_active', 1);
-            })
-            ->orderByDesc('updated_at')
-            ->limit(60)
-            ->get();
-
-        $rooms = $accommodationRoomRows->map(static function ($room) {
-            $roomType = trim((string) ($room->room_type ?? 'Room'));
-            $roomName = trim((string) ($room->name ?? ''));
-            if ($roomName === '') {
-                $roomName = $roomType !== '' ? ucfirst(str_replace('_', ' ', $roomType)) : 'Room';
+    $rooms = collect(Cache::remember(
+        'property_profile:rooms:v1:' . (int) $propertyRow->id,
+        now()->addMinutes(3),
+        static function () use ($propertyRow) {
+            $loadedRooms = collect();
+            $legacyRoomPropertyColumn = null;
+            if (Schema::hasTable('vendor_property_room_categories')) {
+                if (Schema::hasColumn('vendor_property_room_categories', 'vendor_property_id')) {
+                    $legacyRoomPropertyColumn = 'vendor_property_id';
+                } elseif (Schema::hasColumn('vendor_property_room_categories', 'property_id')) {
+                    $legacyRoomPropertyColumn = 'property_id';
+                }
             }
 
-            $room->name = $roomName;
-            $room->base_price = isset($room->base_price) ? (float) $room->base_price : (float) ($room->base_price_per_night ?? 0);
-            $room->max_occupancy = isset($room->max_occupancy) ? (int) $room->max_occupancy : (int) ($room->capacity_guests ?? 2);
-            $room->amenities = (string) ($room->amenities ?? '');
-            $room->bathroom_amenities = (string) ($room->bathroom_amenities ?? '');
-            $room->bed_type = (string) ($room->bed_type ?? 'Standard Bed');
-            return $room;
-        })->values();
-    }
+            if ($legacyRoomPropertyColumn !== null) {
+                $loadedRooms = DB::table('vendor_property_room_categories')
+                    ->where($legacyRoomPropertyColumn, (int) $propertyRow->id)
+                    ->orderByDesc('updated_at')
+                    ->limit(60)
+                    ->get();
+            }
+
+            if ($loadedRooms->isEmpty() && Schema::hasTable('accommodation_rooms')) {
+                $accommodationRoomRows = DB::table('accommodation_rooms')
+                    ->where('property_id', (int) $propertyRow->id)
+                    ->when(Schema::hasColumn('accommodation_rooms', 'is_active'), static function ($query) {
+                        $query->where('is_active', 1);
+                    })
+                    ->orderByDesc('updated_at')
+                    ->limit(60)
+                    ->get();
+
+                $loadedRooms = $accommodationRoomRows->map(static function ($room) {
+                    $roomType = trim((string) ($room->room_type ?? 'Room'));
+                    $roomName = trim((string) ($room->name ?? ''));
+                    if ($roomName === '') {
+                        $roomName = $roomType !== '' ? ucfirst(str_replace('_', ' ', $roomType)) : 'Room';
+                    }
+
+                    $room->name = $roomName;
+                    $room->base_price = isset($room->base_price) ? (float) $room->base_price : (float) ($room->base_price_per_night ?? 0);
+                    $room->max_occupancy = isset($room->max_occupancy) ? (int) $room->max_occupancy : (int) ($room->capacity_guests ?? 2);
+                    $room->amenities = (string) ($room->amenities ?? '');
+                    $room->bathroom_amenities = (string) ($room->bathroom_amenities ?? '');
+                    $room->bed_type = (string) ($room->bed_type ?? 'Standard Bed');
+                    return $room;
+                })->values();
+            }
+
+            return $loadedRooms->values()->all();
+        }
+    ));
 
     $roomIds = $rooms->pluck('id')->map(static fn ($id) => (int) $id)->filter(static fn (int $id) => $id > 0)->values();
-    $propertyMedia = collect();
-    $roomMediaByRoom = collect();
+    $mediaPayload = Cache::remember(
+        'property_profile:media:v1:' . (int) $propertyRow->id . ':' . md5($roomIds->implode(',')),
+        now()->addMinutes(3),
+        static function () use ($propertyRow, $roomIds) {
+            $payload = [
+                'property_media' => [],
+                'room_media_rows' => [],
+            ];
 
-    if (Schema::hasTable('vendor_listing_media')) {
-        $propertyMediaEntityIds = collect([
-            (int) ($propertyRow->id ?? 0),
-            (int) ($propertyRow->dedicated_row_id ?? 0),
-        ])->filter(static fn (int $id) => $id > 0)->unique()->values();
+            if (!Schema::hasTable('vendor_listing_media')) {
+                return $payload;
+            }
 
-        $mediaQuery = DB::table('vendor_listing_media');
-        $mediaQuery->where(function ($query) use ($propertyMediaEntityIds, $roomIds) {
-            $query->orWhere(function ($inner) use ($propertyMediaEntityIds) {
-                $inner->where('entity_type', 'property')->whereIn('entity_id', $propertyMediaEntityIds->all());
+            $propertyMediaEntityIds = collect([
+                (int) ($propertyRow->id ?? 0),
+                (int) ($propertyRow->dedicated_row_id ?? 0),
+            ])->filter(static fn (int $id) => $id > 0)->unique()->values();
+
+            $mediaQuery = DB::table('vendor_listing_media');
+            $mediaQuery->where(function ($query) use ($propertyMediaEntityIds, $roomIds) {
+                $query->orWhere(function ($inner) use ($propertyMediaEntityIds) {
+                    $inner->where('entity_type', 'property')->whereIn('entity_id', $propertyMediaEntityIds->all());
+                });
+
+                if ($roomIds->isNotEmpty()) {
+                    $query->orWhere(function ($inner) use ($roomIds) {
+                        $inner->where('entity_type', 'room')->whereIn('entity_id', $roomIds->all());
+                    });
+                }
             });
 
-            if ($roomIds->isNotEmpty()) {
-                $query->orWhere(function ($inner) use ($roomIds) {
-                    $inner->where('entity_type', 'room')->whereIn('entity_id', $roomIds->all());
-                });
-            }
-        });
+            $mediaRows = $mediaQuery->orderByDesc('is_primary')->orderByDesc('created_at')->limit(300)->get();
+            $payload['property_media'] = $mediaRows
+                ->filter(static fn ($m) => strtolower((string) ($m->entity_type ?? '')) === 'property')
+                ->values()
+                ->all();
+            $payload['room_media_rows'] = $mediaRows
+                ->filter(static fn ($m) => strtolower((string) ($m->entity_type ?? '')) === 'room')
+                ->values()
+                ->all();
 
-        $mediaRows = $mediaQuery->orderByDesc('is_primary')->orderByDesc('created_at')->limit(500)->get();
-        $propertyMedia = $mediaRows->filter(static fn ($m) => strtolower((string) ($m->entity_type ?? '')) === 'property')->values();
-        $roomMediaByRoom = $mediaRows
-            ->filter(static fn ($m) => strtolower((string) ($m->entity_type ?? '')) === 'room')
-            ->groupBy(static fn ($m) => (int) ($m->entity_id ?? 0));
-    }
+            return $payload;
+        }
+    );
+
+    $propertyMedia = collect((array) ($mediaPayload['property_media'] ?? []))->values();
+    $roomMediaByRoom = collect((array) ($mediaPayload['room_media_rows'] ?? []))
+        ->groupBy(static fn ($m) => (int) ($m->entity_id ?? 0));
 
     $mediaUrl = static function ($media, string $variant = 'banner'): ?string {
         $filePath = trim((string) ($media->file_path ?? ''));
@@ -5071,113 +5203,123 @@ Route::get('/property/{property}', function (Request $request, int $property) {
 
     $currentListingCategory = str_replace('-', '_', strtolower(trim((string) ($propertyRow->listing_category ?? ''))));
     if ($currentListingCategory === 'accommodation') {
-        if (Schema::hasTable('vendor_accommodation_transfer_rates')) {
-            $transferRows = DB::table('vendor_accommodation_transfer_rates')
-                ->where('vendor_property_id', (int) $propertyRow->id)
-                ->get(['transfer_mode', 'resident_type', 'passenger_type', 'rate', 'base_charge']);
+        $details = (array) Cache::remember(
+            'property_profile:details:v1:' . (int) $propertyRow->id . ':' . md5((string) ($propertyRow->listing_details ?? '')),
+            now()->addMinutes(3),
+            static function () use ($propertyRow, $details) {
+                $cachedDetails = $details;
 
-            if ($transferRows->isNotEmpty()) {
-                $transferOptions = [];
-                $transferRates = [];
-                $transferRateMatrix = [];
-                $transferBaseLocal = 0.0;
-                $transferBaseForeign = 0.0;
+                if (Schema::hasTable('vendor_accommodation_transfer_rates')) {
+                    $transferRows = DB::table('vendor_accommodation_transfer_rates')
+                        ->where('vendor_property_id', (int) $propertyRow->id)
+                        ->get(['transfer_mode', 'resident_type', 'passenger_type', 'rate', 'base_charge']);
 
-                foreach ($transferRows as $transferRow) {
-                    $mode = strtolower(trim((string) ($transferRow->transfer_mode ?? '')));
-                    $residentType = strtolower(trim((string) ($transferRow->resident_type ?? '')));
-                    $passengerType = strtolower(trim((string) ($transferRow->passenger_type ?? '')));
-                    $rate = is_numeric($transferRow->rate ?? null) ? (float) $transferRow->rate : 0.0;
-                    $baseCharge = is_numeric($transferRow->base_charge ?? null) ? (float) $transferRow->base_charge : 0.0;
+                    if ($transferRows->isNotEmpty()) {
+                        $transferOptions = [];
+                        $transferRates = [];
+                        $transferRateMatrix = [];
+                        $transferBaseLocal = 0.0;
+                        $transferBaseForeign = 0.0;
 
-                    if ($mode === '') {
-                        continue;
-                    }
+                        foreach ($transferRows as $transferRow) {
+                            $mode = strtolower(trim((string) ($transferRow->transfer_mode ?? '')));
+                            $residentType = strtolower(trim((string) ($transferRow->resident_type ?? '')));
+                            $passengerType = strtolower(trim((string) ($transferRow->passenger_type ?? '')));
+                            $rate = is_numeric($transferRow->rate ?? null) ? (float) $transferRow->rate : 0.0;
+                            $baseCharge = is_numeric($transferRow->base_charge ?? null) ? (float) $transferRow->base_charge : 0.0;
 
-                    $transferOptions[$mode] = true;
-                    if (!isset($transferRateMatrix[$mode])) {
-                        $transferRateMatrix[$mode] = [
-                            'local_adult_charge' => 0.0,
-                            'local_child_charge' => 0.0,
-                            'foreign_adult_charge' => 0.0,
-                            'foreign_child_charge' => 0.0,
-                        ];
-                    }
+                            if ($mode === '') {
+                                continue;
+                            }
 
-                    if ($residentType === 'local' && $passengerType === 'adult') {
-                        $transferRateMatrix[$mode]['local_adult_charge'] = max(0, $rate);
-                    } elseif ($residentType === 'local' && $passengerType === 'child') {
-                        $transferRateMatrix[$mode]['local_child_charge'] = max(0, $rate);
-                    } elseif ($residentType === 'foreigner' && $passengerType === 'adult') {
-                        $transferRateMatrix[$mode]['foreign_adult_charge'] = max(0, $rate);
-                        $transferRates[$mode] = max(0, $rate);
-                    } elseif ($residentType === 'foreigner' && $passengerType === 'child') {
-                        $transferRateMatrix[$mode]['foreign_child_charge'] = max(0, $rate);
-                    }
+                            $transferOptions[$mode] = true;
+                            if (!isset($transferRateMatrix[$mode])) {
+                                $transferRateMatrix[$mode] = [
+                                    'local_adult_charge' => 0.0,
+                                    'local_child_charge' => 0.0,
+                                    'foreign_adult_charge' => 0.0,
+                                    'foreign_child_charge' => 0.0,
+                                ];
+                            }
 
-                    if ($residentType === 'local') {
-                        $transferBaseLocal = max($transferBaseLocal, max(0, $baseCharge));
-                    } elseif ($residentType === 'foreigner') {
-                        $transferBaseForeign = max($transferBaseForeign, max(0, $baseCharge));
-                    }
-                }
+                            if ($residentType === 'local' && $passengerType === 'adult') {
+                                $transferRateMatrix[$mode]['local_adult_charge'] = max(0, $rate);
+                            } elseif ($residentType === 'local' && $passengerType === 'child') {
+                                $transferRateMatrix[$mode]['local_child_charge'] = max(0, $rate);
+                            } elseif ($residentType === 'foreigner' && $passengerType === 'adult') {
+                                $transferRateMatrix[$mode]['foreign_adult_charge'] = max(0, $rate);
+                                $transferRates[$mode] = max(0, $rate);
+                            } elseif ($residentType === 'foreigner' && $passengerType === 'child') {
+                                $transferRateMatrix[$mode]['foreign_child_charge'] = max(0, $rate);
+                            }
 
-                $details['transfer_options'] = array_values(array_keys($transferOptions));
-                $details['transfer_rates'] = $transferRates;
-                $details['transfer_rate_matrix'] = $transferRateMatrix;
-                $details['transfer_base_local'] = $transferBaseLocal;
-                $details['transfer_base_foreign'] = $transferBaseForeign;
-            }
-        }
+                            if ($residentType === 'local') {
+                                $transferBaseLocal = max($transferBaseLocal, max(0, $baseCharge));
+                            } elseif ($residentType === 'foreigner') {
+                                $transferBaseForeign = max($transferBaseForeign, max(0, $baseCharge));
+                            }
+                        }
 
-        if (Schema::hasTable('vendor_accommodation_features')) {
-            $featureRows = DB::table('vendor_accommodation_features')
-                ->where('vendor_property_id', (int) $propertyRow->id)
-                ->get(['feature_type', 'feature_key']);
-
-            if ($featureRows->isNotEmpty()) {
-                $amenities = [];
-                $facilities = [];
-                foreach ($featureRows as $featureRow) {
-                    $featureType = strtolower(trim((string) ($featureRow->feature_type ?? '')));
-                    $featureKey = trim((string) ($featureRow->feature_key ?? ''));
-                    if ($featureKey === '') {
-                        continue;
-                    }
-
-                    if ($featureType === 'amenity') {
-                        $amenities[] = $featureKey;
-                    } elseif ($featureType === 'facility') {
-                        $facilities[] = $featureKey;
+                        $cachedDetails['transfer_options'] = array_values(array_keys($transferOptions));
+                        $cachedDetails['transfer_rates'] = $transferRates;
+                        $cachedDetails['transfer_rate_matrix'] = $transferRateMatrix;
+                        $cachedDetails['transfer_base_local'] = $transferBaseLocal;
+                        $cachedDetails['transfer_base_foreign'] = $transferBaseForeign;
                     }
                 }
 
-                $details['property_amenities'] = array_values(array_unique($amenities));
-                $details['property_features'] = array_values(array_unique($facilities));
-            }
-        }
+                if (Schema::hasTable('vendor_accommodation_features')) {
+                    $featureRows = DB::table('vendor_accommodation_features')
+                        ->where('vendor_property_id', (int) $propertyRow->id)
+                        ->get(['feature_type', 'feature_key']);
 
-        if (Schema::hasTable('vendor_accommodation_policies')) {
-            $policyRow = DB::table('vendor_accommodation_policies')
-                ->where('vendor_property_id', (int) $propertyRow->id)
-                ->first();
+                    if ($featureRows->isNotEmpty()) {
+                        $amenities = [];
+                        $facilities = [];
+                        foreach ($featureRows as $featureRow) {
+                            $featureType = strtolower(trim((string) ($featureRow->feature_type ?? '')));
+                            $featureKey = trim((string) ($featureRow->feature_key ?? ''));
+                            if ($featureKey === '') {
+                                continue;
+                            }
 
-            if ($policyRow) {
-                $details['check_in_time'] = trim((string) ($policyRow->check_in_time ?? ($details['check_in_time'] ?? '')));
-                $details['check_out_time'] = trim((string) ($policyRow->check_out_time ?? ($details['check_out_time'] ?? '')));
-                $details['check_in_grace_minutes'] = is_numeric($policyRow->check_in_grace_minutes ?? null) ? (int) $policyRow->check_in_grace_minutes : ($details['check_in_grace_minutes'] ?? null);
-                $details['early_check_in_allowed'] = trim((string) ($policyRow->early_check_in_allowed ?? ($details['early_check_in_allowed'] ?? '')));
-                $details['late_check_out_allowed'] = trim((string) ($policyRow->late_check_out_allowed ?? ($details['late_check_out_allowed'] ?? '')));
-                $details['minimum_nights'] = is_numeric($policyRow->minimum_nights ?? null) ? (int) $policyRow->minimum_nights : ($details['minimum_nights'] ?? null);
-                $details['house_rules'] = trim((string) ($policyRow->house_rules ?? ($details['house_rules'] ?? '')));
-                $details['child_policy'] = trim((string) ($policyRow->child_policy ?? ($details['child_policy'] ?? '')));
-                $details['cancellation_policy'] = trim((string) ($policyRow->cancellation_policy ?? ($details['cancellation_policy'] ?? '')));
-                $details['early_check_in_fee'] = is_numeric($policyRow->early_check_in_fee ?? null) ? (float) $policyRow->early_check_in_fee : ($details['early_check_in_fee'] ?? null);
-                $details['late_check_out_fee'] = is_numeric($policyRow->late_check_out_fee ?? null) ? (float) $policyRow->late_check_out_fee : ($details['late_check_out_fee'] ?? null);
-                $details['property_type'] = trim((string) ($policyRow->property_type ?? ($details['property_type'] ?? '')));
-                $details['star_rating'] = is_numeric($policyRow->star_rating ?? null) ? (int) $policyRow->star_rating : ($details['star_rating'] ?? null);
+                            if ($featureType === 'amenity') {
+                                $amenities[] = $featureKey;
+                            } elseif ($featureType === 'facility') {
+                                $facilities[] = $featureKey;
+                            }
+                        }
+
+                        $cachedDetails['property_amenities'] = array_values(array_unique($amenities));
+                        $cachedDetails['property_features'] = array_values(array_unique($facilities));
+                    }
+                }
+
+                if (Schema::hasTable('vendor_accommodation_policies')) {
+                    $policyRow = DB::table('vendor_accommodation_policies')
+                        ->where('vendor_property_id', (int) $propertyRow->id)
+                        ->first();
+
+                    if ($policyRow) {
+                        $cachedDetails['check_in_time'] = trim((string) ($policyRow->check_in_time ?? ($cachedDetails['check_in_time'] ?? '')));
+                        $cachedDetails['check_out_time'] = trim((string) ($policyRow->check_out_time ?? ($cachedDetails['check_out_time'] ?? '')));
+                        $cachedDetails['check_in_grace_minutes'] = is_numeric($policyRow->check_in_grace_minutes ?? null) ? (int) $policyRow->check_in_grace_minutes : ($cachedDetails['check_in_grace_minutes'] ?? null);
+                        $cachedDetails['early_check_in_allowed'] = trim((string) ($policyRow->early_check_in_allowed ?? ($cachedDetails['early_check_in_allowed'] ?? '')));
+                        $cachedDetails['late_check_out_allowed'] = trim((string) ($policyRow->late_check_out_allowed ?? ($cachedDetails['late_check_out_allowed'] ?? '')));
+                        $cachedDetails['minimum_nights'] = is_numeric($policyRow->minimum_nights ?? null) ? (int) $policyRow->minimum_nights : ($cachedDetails['minimum_nights'] ?? null);
+                        $cachedDetails['house_rules'] = trim((string) ($policyRow->house_rules ?? ($cachedDetails['house_rules'] ?? '')));
+                        $cachedDetails['child_policy'] = trim((string) ($policyRow->child_policy ?? ($cachedDetails['child_policy'] ?? '')));
+                        $cachedDetails['cancellation_policy'] = trim((string) ($policyRow->cancellation_policy ?? ($cachedDetails['cancellation_policy'] ?? '')));
+                        $cachedDetails['early_check_in_fee'] = is_numeric($policyRow->early_check_in_fee ?? null) ? (float) $policyRow->early_check_in_fee : ($cachedDetails['early_check_in_fee'] ?? null);
+                        $cachedDetails['late_check_out_fee'] = is_numeric($policyRow->late_check_out_fee ?? null) ? (float) $policyRow->late_check_out_fee : ($cachedDetails['late_check_out_fee'] ?? null);
+                        $cachedDetails['property_type'] = trim((string) ($policyRow->property_type ?? ($cachedDetails['property_type'] ?? '')));
+                        $cachedDetails['star_rating'] = is_numeric($policyRow->star_rating ?? null) ? (int) $policyRow->star_rating : ($cachedDetails['star_rating'] ?? null);
+                    }
+                }
+
+                return $cachedDetails;
             }
-        }
+        );
 
         $propertyRow->listing_details = json_encode($details);
     }
@@ -5206,76 +5348,84 @@ Route::get('/property/{property}', function (Request $request, int $property) {
     $reviewColumn = null;
     $reviewCountColumn = null;
 
-    $guestReviews = collect();
-    $reviewTableCandidates = [
-        'vendor_property_reviews',
-        'property_reviews',
-        'customer_reviews',
-        'vendor_reviews',
-    ];
+    $guestReviews = collect(Cache::remember(
+        'property_profile:guest_reviews:v1:' . (int) $propertyRow->id,
+        now()->addMinutes(3),
+        static function () use ($propertyRow) {
+            $resolvedGuestReviews = collect();
+            $reviewTableCandidates = [
+                'vendor_property_reviews',
+                'property_reviews',
+                'customer_reviews',
+                'vendor_reviews',
+            ];
 
-    foreach ($reviewTableCandidates as $reviewTable) {
-        if (!Schema::hasTable($reviewTable)) {
-            continue;
-        }
-
-        $columns = Schema::getColumnListing($reviewTable);
-        $propertyKey = collect(['vendor_property_id', 'property_id', 'listing_id', 'entity_id'])
-            ->first(static fn ($column) => in_array($column, $columns, true));
-        $commentKey = collect(['review_comment', 'comment', 'review_text', 'feedback', 'notes'])
-            ->first(static fn ($column) => in_array($column, $columns, true));
-
-        if ($propertyKey === null || $commentKey === null) {
-            continue;
-        }
-
-        $ratingKey = collect(['rating', 'rating_value', 'review_score', 'score'])
-            ->first(static fn ($column) => in_array($column, $columns, true));
-        $nameKey = collect(['customer_name', 'guest_name', 'reviewer_name', 'name'])
-            ->first(static fn ($column) => in_array($column, $columns, true));
-        $dateKey = collect(['created_at', 'reviewed_at', 'submitted_at', 'updated_at'])
-            ->first(static fn ($column) => in_array($column, $columns, true));
-        $statusKey = collect(['status', 'review_status'])
-            ->first(static fn ($column) => in_array($column, $columns, true));
-
-        $reviewQuery = DB::table($reviewTable)->where($propertyKey, (int) $propertyRow->id);
-
-        if ($statusKey !== null) {
-            $reviewQuery->whereIn($statusKey, ['approved', 'published', 'active']);
-        }
-
-        if ($dateKey !== null) {
-            $reviewQuery->orderByDesc($dateKey);
-        } else {
-            $reviewQuery->orderByDesc('id');
-        }
-
-        $rows = $reviewQuery->limit(8)->get();
-        if ($rows->isEmpty()) {
-            continue;
-        }
-
-        $guestReviews = $rows
-            ->map(function ($row) use ($commentKey, $ratingKey, $nameKey, $dateKey) {
-                $comment = trim((string) ($row->{$commentKey} ?? ''));
-                if ($comment === '') {
-                    return null;
+            foreach ($reviewTableCandidates as $reviewTable) {
+                if (!Schema::hasTable($reviewTable)) {
+                    continue;
                 }
 
-                return [
-                    'name' => trim((string) ($nameKey ? ($row->{$nameKey} ?? '') : '')),
-                    'comment' => $comment,
-                    'rating' => $ratingKey ? (float) ($row->{$ratingKey} ?? 0) : 0.0,
-                    'date' => $dateKey ? (string) ($row->{$dateKey} ?? '') : '',
-                ];
-            })
-            ->filter()
-            ->values();
+                $columns = Schema::getColumnListing($reviewTable);
+                $propertyKey = collect(['vendor_property_id', 'property_id', 'listing_id', 'entity_id'])
+                    ->first(static fn ($column) => in_array($column, $columns, true));
+                $commentKey = collect(['review_comment', 'comment', 'review_text', 'feedback', 'notes'])
+                    ->first(static fn ($column) => in_array($column, $columns, true));
 
-        if ($guestReviews->isNotEmpty()) {
-            break;
+                if ($propertyKey === null || $commentKey === null) {
+                    continue;
+                }
+
+                $ratingKey = collect(['rating', 'rating_value', 'review_score', 'score'])
+                    ->first(static fn ($column) => in_array($column, $columns, true));
+                $nameKey = collect(['customer_name', 'guest_name', 'reviewer_name', 'name'])
+                    ->first(static fn ($column) => in_array($column, $columns, true));
+                $dateKey = collect(['created_at', 'reviewed_at', 'submitted_at', 'updated_at'])
+                    ->first(static fn ($column) => in_array($column, $columns, true));
+                $statusKey = collect(['status', 'review_status'])
+                    ->first(static fn ($column) => in_array($column, $columns, true));
+
+                $reviewQuery = DB::table($reviewTable)->where($propertyKey, (int) $propertyRow->id);
+
+                if ($statusKey !== null) {
+                    $reviewQuery->whereIn($statusKey, ['approved', 'published', 'active']);
+                }
+
+                if ($dateKey !== null) {
+                    $reviewQuery->orderByDesc($dateKey);
+                } else {
+                    $reviewQuery->orderByDesc('id');
+                }
+
+                $rows = $reviewQuery->limit(8)->get();
+                if ($rows->isEmpty()) {
+                    continue;
+                }
+
+                $resolvedGuestReviews = $rows
+                    ->map(function ($row) use ($commentKey, $ratingKey, $nameKey, $dateKey) {
+                        $comment = trim((string) ($row->{$commentKey} ?? ''));
+                        if ($comment === '') {
+                            return null;
+                        }
+
+                        return [
+                            'name' => trim((string) ($nameKey ? ($row->{$nameKey} ?? '') : '')),
+                            'comment' => $comment,
+                            'rating' => $ratingKey ? (float) ($row->{$ratingKey} ?? 0) : 0.0,
+                            'date' => $dateKey ? (string) ($row->{$dateKey} ?? '') : '',
+                        ];
+                    })
+                    ->filter()
+                    ->values();
+
+                if ($resolvedGuestReviews->isNotEmpty()) {
+                    break;
+                }
+            }
+
+            return $resolvedGuestReviews->all();
         }
-    }
+    ));
 
     $locationLine = trim(implode(', ', array_filter([
         trim((string) ($propertyRow->location ?? '')),
@@ -5291,166 +5441,179 @@ Route::get('/property/{property}', function (Request $request, int $property) {
     }
     $nearbyRadiusKm = max(1.0, min(200.0, $nearbyRadiusKm));
     $nearbyUsesCoordinateRadius = false;
-    {
-        $currentCategory = trim((string) ($propertyRow->listing_category ?? ''));
-        $allCategoryListings = \App\Support\VendorPropertyCompatibilityReader::allActiveListings(500);
+    $nearbyProperties = collect(Cache::remember(
+        'property_profile:nearby:v1:' . (int) $propertyRow->id,
+        now()->addMinutes(3),
+        static function () use ($propertyRow) {
+            $currentCategory = trim((string) ($propertyRow->listing_category ?? ''));
+            $allCategoryListings = \App\Support\VendorPropertyCompatibilityReader::allActiveListings(300);
 
-        $candidateRows = $allCategoryListings
-            ->filter(static fn ($row) => $currentCategory === '' || ($row->listing_category ?? '') === $currentCategory)
-            ->filter(static fn ($row) => (int) ($row->id ?? 0) !== (int) $propertyRow->id)
-            ->values();
+            $candidateRows = $allCategoryListings
+                ->filter(static fn ($row) => $currentCategory === '' || ($row->listing_category ?? '') === $currentCategory)
+                ->filter(static fn ($row) => (int) ($row->id ?? 0) !== (int) $propertyRow->id)
+                ->values();
 
-        $preparedNearby = $candidateRows->map(static function ($row) {
-            return [
-                'id' => (int) ($row->id ?? 0),
-                'name' => trim((string) ($row->name ?? 'Property')),
-                'base_price' => (float) ($row->base_price ?? 0),
-                'currency' => strtoupper(trim((string) ($row->currency ?? 'MVR'))),
-                'city' => trim((string) ($row->city ?? '')),
-                'island' => trim((string) ($row->island ?? '')),
-                'atoll' => trim((string) ($row->atoll ?? '')),
-                'lat' => null,
-                'lng' => null,
-                'distance_km' => null,
-                'url' => '/property/' . (int) ($row->id ?? 0),
-            ];
-        })->filter(static fn (array $item) => $item['id'] > 0 && $item['name'] !== '')->values();
+            $preparedNearby = $candidateRows->map(static function ($row) {
+                return [
+                    'id' => (int) ($row->id ?? 0),
+                    'name' => trim((string) ($row->name ?? 'Property')),
+                    'base_price' => (float) ($row->base_price ?? 0),
+                    'currency' => strtoupper(trim((string) ($row->currency ?? 'MVR'))),
+                    'city' => trim((string) ($row->city ?? '')),
+                    'island' => trim((string) ($row->island ?? '')),
+                    'atoll' => trim((string) ($row->atoll ?? '')),
+                    'lat' => null,
+                    'lng' => null,
+                    'distance_km' => null,
+                    'url' => '/property/' . (int) ($row->id ?? 0),
+                ];
+            })->filter(static fn (array $item) => $item['id'] > 0 && $item['name'] !== '')->values();
 
-        $sourceIsland = strtolower(trim((string) ($propertyRow->island ?? '')));
-        $sourceCity = strtolower(trim((string) ($propertyRow->city ?? '')));
-        $sourceAtoll = strtolower(trim((string) ($propertyRow->atoll ?? '')));
+            $sourceIsland = strtolower(trim((string) ($propertyRow->island ?? '')));
+            $sourceCity = strtolower(trim((string) ($propertyRow->city ?? '')));
+            $sourceAtoll = strtolower(trim((string) ($propertyRow->atoll ?? '')));
 
-        $nearbyByLocation = $preparedNearby
-            ->filter(static function (array $item) use ($sourceIsland, $sourceCity, $sourceAtoll): bool {
-                $itemIsland = strtolower(trim((string) ($item['island'] ?? '')));
-                $itemCity = strtolower(trim((string) ($item['city'] ?? '')));
-                $itemAtoll = strtolower(trim((string) ($item['atoll'] ?? '')));
+            $nearbyByLocation = $preparedNearby
+                ->filter(static function (array $item) use ($sourceIsland, $sourceCity, $sourceAtoll): bool {
+                    $itemIsland = strtolower(trim((string) ($item['island'] ?? '')));
+                    $itemCity = strtolower(trim((string) ($item['city'] ?? '')));
+                    $itemAtoll = strtolower(trim((string) ($item['atoll'] ?? '')));
 
-                $matchesIsland = $sourceIsland !== '' && $itemIsland !== '' && $sourceIsland === $itemIsland;
-                $matchesCity = $sourceCity !== '' && $itemCity !== '' && $sourceCity === $itemCity;
-                $matchesAtoll = $sourceAtoll !== '' && $itemAtoll !== '' && $sourceAtoll === $itemAtoll;
+                    $matchesIsland = $sourceIsland !== '' && $itemIsland !== '' && $sourceIsland === $itemIsland;
+                    $matchesCity = $sourceCity !== '' && $itemCity !== '' && $sourceCity === $itemCity;
+                    $matchesAtoll = $sourceAtoll !== '' && $itemAtoll !== '' && $sourceAtoll === $itemAtoll;
 
-                return $matchesIsland || $matchesCity || $matchesAtoll;
-            })
-            ->take(6)
-            ->values();
+                    return $matchesIsland || $matchesCity || $matchesAtoll;
+                })
+                ->take(6)
+                ->values();
 
-        $nearbyProperties = $nearbyByLocation->isNotEmpty() ? $nearbyByLocation : $preparedNearby->take(6)->values();
+            $resolvedNearbyProperties = $nearbyByLocation->isNotEmpty() ? $nearbyByLocation : $preparedNearby->take(6)->values();
 
-        $nearbyPropertyIds = $nearbyProperties->pluck('id')->filter(static fn ($id) => (int) $id > 0)->map(static fn ($id) => (int) $id)->values();
-        $nearbyPropertyThumbById = collect();
+            $nearbyPropertyIds = $resolvedNearbyProperties->pluck('id')->filter(static fn ($id) => (int) $id > 0)->map(static fn ($id) => (int) $id)->values();
+            $nearbyPropertyThumbById = collect();
 
-        if ($nearbyPropertyIds->isNotEmpty() && Schema::hasTable('vendor_listing_media')) {
-            $nearbyPropertyThumbById = DB::table('vendor_listing_media')
-                ->where('entity_type', 'property')
-                ->whereIn('entity_id', $nearbyPropertyIds->all())
-                ->orderByDesc('is_primary')
-                ->orderByDesc('created_at')
-                ->get()
-                ->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0))
-                ->map(static function ($items) {
-                    $firstMedia = collect($items)->first();
-                    if (!$firstMedia) {
-                        return null;
-                    }
+            if ($nearbyPropertyIds->isNotEmpty() && Schema::hasTable('vendor_listing_media')) {
+                $nearbyPropertyThumbById = DB::table('vendor_listing_media')
+                    ->where('entity_type', 'property')
+                    ->whereIn('entity_id', $nearbyPropertyIds->all())
+                    ->orderByDesc('is_primary')
+                    ->orderByDesc('created_at')
+                    ->get()
+                    ->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0))
+                    ->map(static function ($items) {
+                        $firstMedia = collect($items)->first();
+                        if (!$firstMedia) {
+                            return null;
+                        }
 
-                    $mediaId = (int) ($firstMedia->id ?? 0);
-                    return $mediaId > 0 ? ('/media/vendor/' . $mediaId . '/thumb') : null;
-                });
+                        $mediaId = (int) ($firstMedia->id ?? 0);
+                        return $mediaId > 0 ? ('/media/vendor/' . $mediaId . '/thumb') : null;
+                    });
+            }
+
+            return $resolvedNearbyProperties
+                ->map(static function (array $item) use ($nearbyPropertyThumbById): array {
+                    $locationLine = trim(implode(', ', array_filter([
+                        trim((string) ($item['island'] ?? '')),
+                        trim((string) ($item['city'] ?? '')),
+                        trim((string) ($item['atoll'] ?? '')),
+                    ], static fn ($value) => $value !== '')));
+
+                    $item['location_line'] = $locationLine !== '' ? ($locationLine . ', Maldives') : 'Maldives';
+                    $item['thumbnail_url'] = (string) ($nearbyPropertyThumbById->get((int) ($item['id'] ?? 0)) ?? '');
+
+                    return $item;
+                })
+                ->values()
+                ->all();
         }
-
-        $nearbyProperties = $nearbyProperties
-            ->map(static function (array $item) use ($nearbyPropertyThumbById): array {
-                $locationLine = trim(implode(', ', array_filter([
-                    trim((string) ($item['island'] ?? '')),
-                    trim((string) ($item['city'] ?? '')),
-                    trim((string) ($item['atoll'] ?? '')),
-                ], static fn ($value) => $value !== '')));
-
-                $item['location_line'] = $locationLine !== '' ? ($locationLine . ', Maldives') : 'Maldives';
-                $item['thumbnail_url'] = (string) ($nearbyPropertyThumbById->get((int) ($item['id'] ?? 0)) ?? '');
-
-                return $item;
-            })
-            ->values();
-    }
+    ));
 
     $todayDate = now()->toDateString();
-    $unavailableDates = [
-        'blocked' => [],
-        'reserved' => [],
-    ];
+    $unavailableDates = Cache::remember(
+        'property_profile:unavailable_dates:v1:' . (int) ($propertyRow->id ?? 0) . ':' . $todayDate,
+        now()->addMinutes(2),
+        static function () use ($propertyRow, $todayDate) {
+            $resolvedUnavailableDates = [
+                'blocked' => [],
+                'reserved' => [],
+            ];
 
-    if (Schema::hasTable('vendor_availability_slots')) {
-        $slotQuery = DB::table('vendor_availability_slots')
-            ->where('vendor_property_id', (int) ($propertyRow->id ?? 0))
-            ->whereDate('slot_date', '>=', $todayDate);
+            if (Schema::hasTable('vendor_availability_slots')) {
+                $slotQuery = DB::table('vendor_availability_slots')
+                    ->where('vendor_property_id', (int) ($propertyRow->id ?? 0))
+                    ->whereDate('slot_date', '>=', $todayDate);
 
-        if (Schema::hasColumn('vendor_availability_slots', 'listing_category')) {
-            $slotQuery->where(function ($query) {
-                $query->where('listing_category', 'accommodation')
-                    ->orWhereNull('listing_category')
-                    ->orWhere('listing_category', '');
-            });
-        }
+                if (Schema::hasColumn('vendor_availability_slots', 'listing_category')) {
+                    $slotQuery->where(function ($query) {
+                        $query->where('listing_category', 'accommodation')
+                            ->orWhereNull('listing_category')
+                            ->orWhere('listing_category', '');
+                    });
+                }
 
-        $slotRows = $slotQuery->limit(1200)->get(['slot_date', 'inventory', 'reserved_count', 'is_closed']);
-        foreach ($slotRows as $slotRow) {
-            $slotDate = trim((string) ($slotRow->slot_date ?? ''));
-            if ($slotDate === '') {
-                continue;
-            }
+                $slotRows = $slotQuery->limit(600)->get(['slot_date', 'inventory', 'reserved_count', 'is_closed']);
+                foreach ($slotRows as $slotRow) {
+                    $slotDate = trim((string) ($slotRow->slot_date ?? ''));
+                    if ($slotDate === '') {
+                        continue;
+                    }
 
-            if ((bool) ($slotRow->is_closed ?? false)) {
-                $unavailableDates['blocked'][$slotDate] = true;
-                continue;
-            }
+                    if ((bool) ($slotRow->is_closed ?? false)) {
+                        $resolvedUnavailableDates['blocked'][$slotDate] = true;
+                        continue;
+                    }
 
-            $inventory = max(0, (int) ($slotRow->inventory ?? 0));
-            $reservedCount = max(0, (int) ($slotRow->reserved_count ?? 0));
-            if ($inventory > 0 && $reservedCount >= $inventory) {
-                $unavailableDates['reserved'][$slotDate] = true;
-            }
-        }
-    }
-
-    if (Schema::hasTable('vendor_reservations')) {
-        $reservationQuery = DB::table('vendor_reservations')
-            ->where('vendor_property_id', (int) ($propertyRow->id ?? 0))
-            ->whereNotIn('status', ['cancelled', 'rejected', 'expired', 'failed'])
-            ->whereDate('end_at', '>=', $todayDate);
-
-        if (Schema::hasColumn('vendor_reservations', 'listing_category')) {
-            $reservationQuery->where(function ($query) {
-                $query->where('listing_category', 'accommodation')
-                    ->orWhereNull('listing_category')
-                    ->orWhere('listing_category', '');
-            });
-        }
-
-        $reservationRows = $reservationQuery->limit(500)->get(['start_at', 'end_at']);
-        foreach ($reservationRows as $reservationRow) {
-            try {
-                $startDay = Carbon::parse((string) ($reservationRow->start_at ?? ''))->startOfDay();
-                $endExclusive = Carbon::parse((string) ($reservationRow->end_at ?? ''))->startOfDay();
-            } catch (\Throwable $ignored) {
-                continue;
-            }
-
-            if ($endExclusive->lessThanOrEqualTo($startDay)) {
-                $endExclusive = $startDay->copy()->addDay();
-            }
-
-            foreach (workationDateSeries($startDay, $endExclusive) as $slotDate) {
-                if ($slotDate >= $todayDate) {
-                    $unavailableDates['reserved'][$slotDate] = true;
+                    $inventory = max(0, (int) ($slotRow->inventory ?? 0));
+                    $reservedCount = max(0, (int) ($slotRow->reserved_count ?? 0));
+                    if ($inventory > 0 && $reservedCount >= $inventory) {
+                        $resolvedUnavailableDates['reserved'][$slotDate] = true;
+                    }
                 }
             }
-        }
-    }
 
-    $unavailableDates['blocked'] = array_values(array_keys($unavailableDates['blocked']));
-    $unavailableDates['reserved'] = array_values(array_keys($unavailableDates['reserved']));
+            if (Schema::hasTable('vendor_reservations')) {
+                $reservationQuery = DB::table('vendor_reservations')
+                    ->where('vendor_property_id', (int) ($propertyRow->id ?? 0))
+                    ->whereNotIn('status', ['cancelled', 'rejected', 'expired', 'failed'])
+                    ->whereDate('end_at', '>=', $todayDate);
+
+                if (Schema::hasColumn('vendor_reservations', 'listing_category')) {
+                    $reservationQuery->where(function ($query) {
+                        $query->where('listing_category', 'accommodation')
+                            ->orWhereNull('listing_category')
+                            ->orWhere('listing_category', '');
+                    });
+                }
+
+                $reservationRows = $reservationQuery->limit(240)->get(['start_at', 'end_at']);
+                foreach ($reservationRows as $reservationRow) {
+                    try {
+                        $startDay = Carbon::parse((string) ($reservationRow->start_at ?? ''))->startOfDay();
+                        $endExclusive = Carbon::parse((string) ($reservationRow->end_at ?? ''))->startOfDay();
+                    } catch (\Throwable $ignored) {
+                        continue;
+                    }
+
+                    if ($endExclusive->lessThanOrEqualTo($startDay)) {
+                        $endExclusive = $startDay->copy()->addDay();
+                    }
+
+                    foreach (workationDateSeries($startDay, $endExclusive) as $slotDate) {
+                        if ($slotDate >= $todayDate) {
+                            $resolvedUnavailableDates['reserved'][$slotDate] = true;
+                        }
+                    }
+                }
+            }
+
+            $resolvedUnavailableDates['blocked'] = array_values(array_keys($resolvedUnavailableDates['blocked']));
+            $resolvedUnavailableDates['reserved'] = array_values(array_keys($resolvedUnavailableDates['reserved']));
+
+            return $resolvedUnavailableDates;
+        }
+    );
 
     return view('property-profile', [
         'property' => $propertyRow,
@@ -5494,70 +5657,90 @@ Route::get('/room/{room}', function (Request $request, int $room) {
         abort(404);
     }
 
-    $roomMedia = collect();
-    if (Schema::hasTable('vendor_listing_media')) {
-        $roomMedia = DB::table('vendor_listing_media')
-            ->where('entity_type', 'room')
-            ->where('entity_id', (int) $roomRow->id)
-            ->orderByDesc('is_primary')
-            ->orderByDesc('created_at')
-            ->limit(40)
-            ->get();
-    }
+    $roomPayload = (array) Cache::remember(
+        'room_profile:payload:v1:' . (int) $roomRow->id,
+        now()->addMinutes(3),
+        static function () use ($roomRow, $propertyRow) {
+            $roomMedia = collect();
+            if (Schema::hasTable('vendor_listing_media')) {
+                $roomMedia = DB::table('vendor_listing_media')
+                    ->where('entity_type', 'room')
+                    ->where('entity_id', (int) $roomRow->id)
+                    ->orderByDesc('is_primary')
+                    ->orderByDesc('created_at')
+                    ->limit(40)
+                    ->get();
+            }
 
-    $roomFeatures = collect(preg_split('/[,\n]+/', (string) ($roomRow->amenities ?? '')) ?: [])
-        ->merge(collect(preg_split('/[,\n]+/', (string) ($roomRow->bathroom_amenities ?? '')) ?: []))
-        ->map(static fn ($v) => trim((string) $v))
-        ->filter(static fn ($v) => $v !== '')
-        ->unique()
-        ->values();
+            $roomFeatures = collect(preg_split('/[,\n]+/', (string) ($roomRow->amenities ?? '')) ?: [])
+                ->merge(collect(preg_split('/[,\n]+/', (string) ($roomRow->bathroom_amenities ?? '')) ?: []))
+                ->map(static fn ($v) => trim((string) $v))
+                ->filter(static fn ($v) => $v !== '')
+                ->unique()
+                ->values();
 
-    $propertyDetails = json_decode((string) ($propertyRow->listing_details ?? ''), true);
-    if (!is_array($propertyDetails)) {
-        $propertyDetails = [];
-    }
+            $propertyDetails = json_decode((string) ($propertyRow->listing_details ?? ''), true);
+            if (!is_array($propertyDetails)) {
+                $propertyDetails = [];
+            }
 
-    $transferOptions = collect($propertyDetails['transfer_options'] ?? [])->values();
-    if ($transferOptions->isEmpty()) {
-        $transferOptions = collect([
-            ['code' => 'shared_speedboat', 'label' => 'Shared Speedboat', 'adult_charge' => 35, 'child_charge' => 20],
-            ['code' => 'private_speedboat', 'label' => 'Private Speedboat', 'adult_charge' => 120, 'child_charge' => 80],
-            ['code' => 'seaplane', 'label' => 'Seaplane', 'adult_charge' => 420, 'child_charge' => 280],
-        ]);
-    }
+            $transferOptions = collect($propertyDetails['transfer_options'] ?? [])->values();
+            if ($transferOptions->isEmpty()) {
+                $transferOptions = collect([
+                    ['code' => 'shared_speedboat', 'label' => 'Shared Speedboat', 'adult_charge' => 35, 'child_charge' => 20],
+                    ['code' => 'private_speedboat', 'label' => 'Private Speedboat', 'adult_charge' => 120, 'child_charge' => 80],
+                    ['code' => 'seaplane', 'label' => 'Seaplane', 'adult_charge' => 420, 'child_charge' => 280],
+                ]);
+            }
 
-    $transferOptions = $transferOptions->map(function ($option) {
-        $code = trim((string) ($option['code'] ?? Str::slug((string) ($option['label'] ?? 'transfer'))));
-        $label = trim((string) ($option['label'] ?? 'Transfer Option'));
-        $baseCharge = (float) ($option['base_charge'] ?? 0);
-        $adultCharge = (float) ($option['adult_charge'] ?? ($option['charge'] ?? 0));
-        $childCharge = (float) ($option['child_charge'] ?? 0);
+            $transferOptions = $transferOptions->map(function ($option) {
+                $code = trim((string) ($option['code'] ?? Str::slug((string) ($option['label'] ?? 'transfer'))));
+                $label = trim((string) ($option['label'] ?? 'Transfer Option'));
+                $baseCharge = (float) ($option['base_charge'] ?? 0);
+                $adultCharge = (float) ($option['adult_charge'] ?? ($option['charge'] ?? 0));
+                $childCharge = (float) ($option['child_charge'] ?? 0);
 
-        return [
-            'code' => $code,
-            'label' => $label,
-            'base_charge' => $baseCharge,
-            'adult_charge' => $adultCharge,
-            'child_charge' => $childCharge,
-        ];
-    })->values();
+                return [
+                    'code' => $code,
+                    'label' => $label,
+                    'base_charge' => $baseCharge,
+                    'adult_charge' => $adultCharge,
+                    'child_charge' => $childCharge,
+                ];
+            })->values();
 
-    $pricingConfig = [
-        'tax_rate' => (float) ($propertyDetails['tax_rate'] ?? 16),
-        'discount_percent' => (float) ($propertyDetails['promotion_discount_percent'] ?? 0),
-    ];
+            $pricingConfig = [
+                'tax_rate' => (float) ($propertyDetails['tax_rate'] ?? 16),
+                'discount_percent' => (float) ($propertyDetails['promotion_discount_percent'] ?? 0),
+            ];
 
-    $bookingPolicies = [
-        'inclusives' => collect($propertyDetails['inclusives'] ?? [])->map(static fn ($v) => trim((string) $v))->filter()->values()->all(),
-        'cancellation_policy' => trim((string) ($propertyDetails['cancellation_policy'] ?? 'Free cancellation up to 72 hours before check-in.')),
-        'check_in_time' => trim((string) ($propertyDetails['check_in_time'] ?? '')),
-        'check_out_time' => trim((string) ($propertyDetails['check_out_time'] ?? '')),
-        'child_policy' => trim((string) ($propertyDetails['child_policy'] ?? '')),
-        'house_rules' => trim((string) ($propertyDetails['house_rules'] ?? '')),
-        'minimum_nights' => isset($propertyDetails['minimum_nights']) && is_numeric($propertyDetails['minimum_nights'])
-            ? (int) $propertyDetails['minimum_nights']
-            : null,
-    ];
+            $bookingPolicies = [
+                'inclusives' => collect($propertyDetails['inclusives'] ?? [])->map(static fn ($v) => trim((string) $v))->filter()->values()->all(),
+                'cancellation_policy' => trim((string) ($propertyDetails['cancellation_policy'] ?? 'Free cancellation up to 72 hours before check-in.')),
+                'check_in_time' => trim((string) ($propertyDetails['check_in_time'] ?? '')),
+                'check_out_time' => trim((string) ($propertyDetails['check_out_time'] ?? '')),
+                'child_policy' => trim((string) ($propertyDetails['child_policy'] ?? '')),
+                'house_rules' => trim((string) ($propertyDetails['house_rules'] ?? '')),
+                'minimum_nights' => isset($propertyDetails['minimum_nights']) && is_numeric($propertyDetails['minimum_nights'])
+                    ? (int) $propertyDetails['minimum_nights']
+                    : null,
+            ];
+
+            return [
+                'room_media' => $roomMedia->all(),
+                'room_features' => $roomFeatures->all(),
+                'transfer_options' => $transferOptions->all(),
+                'pricing_config' => $pricingConfig,
+                'booking_policies' => $bookingPolicies,
+            ];
+        }
+    );
+
+    $roomMedia = collect((array) ($roomPayload['room_media'] ?? []));
+    $roomFeatures = collect((array) ($roomPayload['room_features'] ?? []))->values();
+    $transferOptions = collect((array) ($roomPayload['transfer_options'] ?? []))->values();
+    $pricingConfig = is_array($roomPayload['pricing_config'] ?? null) ? $roomPayload['pricing_config'] : [];
+    $bookingPolicies = is_array($roomPayload['booking_policies'] ?? null) ? $roomPayload['booking_policies'] : [];
 
     $mediaUrl = static function ($media, string $variant = 'banner'): ?string {
         $filePath = trim((string) ($media->file_path ?? ''));

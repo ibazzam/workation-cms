@@ -226,7 +226,7 @@
                     <li><a href="/catalog/accommodation">Accommodation</a></li>
                     <li><a href="/catalog/excursion">Excursions</a></li>
                     <li><a href="/islands">Island Directory</a></li>
-                    <li><a href="/blog">Travel Picks</a></li>
+                    <li><a href="/blog">Blog</a></li>
                 </ul>
             </section>
 

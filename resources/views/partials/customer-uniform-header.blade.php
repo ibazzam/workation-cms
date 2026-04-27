@@ -10,6 +10,9 @@
     $headerSearchValue = trim((string) ($headerSearchValue ?? ''));
     $headerSearchPlaceholder = trim((string) ($headerSearchPlaceholder ?? 'Destinations, islands, hotels, and experiences'));
     $headerCategoryLinks = collect($headerCategoryLinks ?? [])->filter(static fn ($item) => is_array($item))->values();
+    $headerHasBlogLink = $headerCategoryLinks->contains(static function ($item): bool {
+        return trim((string) ($item['url'] ?? '')) === '/blog';
+    });
     $headerActiveCategoryKey = trim((string) ($headerActiveCategoryKey ?? ''));
     $headerSubline = trim((string) ($headerSubline ?? 'Maldives Travel Market'));
     $headerCheckoutContext = is_array($headerCheckoutContext ?? null) ? $headerCheckoutContext : [];
@@ -22,6 +25,7 @@
     $checkoutGuests = trim((string) ($headerCheckoutContext['guests'] ?? ''));
 
     $headerMenuPanelId = 'customerMenuPanel_' . substr(md5((string) request()->path()), 0, 8);
+    $headerLinksPanelId = 'customerLinksPanel_' . substr(md5((string) request()->path() . '_links'), 0, 8);
 @endphp
 
 @if ($injectUniformHeaderStyles)
@@ -115,6 +119,21 @@
         background: #0f6179;
         border-color: #0f6179;
         color: #ffffff;
+    }
+
+    .uniform-header-links-toggle {
+        display: none;
+        border: 1px solid #c9d9e6;
+        border-radius: 10px;
+        padding: 7px 10px;
+        background: #ffffff;
+        color: #244c66;
+        font-size: 0.78rem;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        white-space: nowrap;
+        flex: 0 0 auto;
     }
 
     .uniform-header-search-mini {
@@ -283,6 +302,25 @@
             flex-wrap: wrap;
         }
 
+        .uniform-header-links-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .uniform-header-links {
+            display: none;
+            width: 100%;
+            overflow-x: visible;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding-top: 2px;
+        }
+
+        .uniform-header-links.is-open {
+            display: flex;
+        }
+
         .uniform-header-search-mini {
             min-width: 0;
             width: 100%;
@@ -322,7 +360,8 @@
                 @endif
             </div>
         @else
-            <nav class="uniform-header-links" aria-label="Primary categories">
+            <button class="uniform-header-links-toggle" type="button" data-header-links-toggle aria-expanded="false" aria-controls="{{ $headerLinksPanelId }}">Categories</button>
+            <nav id="{{ $headerLinksPanelId }}" class="uniform-header-links" aria-label="Primary categories">
                 @foreach ($headerCategoryLinks as $item)
                     @php
                         $itemKey = trim((string) ($item['key'] ?? ''));
@@ -331,7 +370,9 @@
                     @endphp
                     <a class="uniform-header-link{{ $headerActiveCategoryKey !== '' && $headerActiveCategoryKey === $itemKey ? ' is-active' : '' }}" href="{{ $itemUrl }}">{{ $itemTitle }}</a>
                 @endforeach
-                <a class="uniform-header-link" href="/blog">Travel picks</a>
+                @if (!$headerHasBlogLink)
+                    <a class="uniform-header-link" href="/blog">Blog</a>
+                @endif
             </nav>
 
             @if ($headerShowSearch)
@@ -419,6 +460,28 @@
         syncHeaderScrollState();
 
         const menuRoot = header.querySelector('[data-customer-menu]');
+        const linksToggle = header.querySelector('[data-header-links-toggle]');
+        const linksPanel = document.getElementById({{ json_encode($headerLinksPanelId) }});
+
+        if (linksToggle && linksPanel) {
+            linksPanel.classList.remove('is-open');
+            linksPanel.removeAttribute('hidden');
+
+            linksToggle.addEventListener('click', function (event) {
+                event.preventDefault();
+                const willOpen = !linksPanel.classList.contains('is-open');
+                linksPanel.classList.toggle('is-open', willOpen);
+                linksToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            });
+
+            window.addEventListener('resize', function () {
+                if (window.matchMedia('(min-width: 921px)').matches) {
+                    linksPanel.classList.remove('is-open');
+                    linksToggle.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+
         if (!menuRoot) {
             return;
         }

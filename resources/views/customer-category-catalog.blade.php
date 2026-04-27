@@ -544,7 +544,8 @@
 
         .hero-banner-content {
             position: absolute;
-            bottom: 22px;
+            top: 10px;
+            bottom: auto;
             left: 0;
             right: 0;
             margin: 0 auto;
@@ -1755,7 +1756,7 @@
             .hero-banner {
                 min-height: 0;
                 overflow: visible;
-                padding: 126px 0 14px;
+                padding: 10px 0 14px;
             }
 
             .hero-banner-content {
@@ -1763,13 +1764,14 @@
                 left: auto;
                 transform: none;
                 width: calc(100% - 18px);
+                top: auto;
                 bottom: auto;
                 margin: 0 auto;
                 gap: 8px;
             }
 
             .search-box {
-                margin-top: 4px;
+                margin-top: 0;
                 padding: 10px;
             }
 
@@ -1826,6 +1828,7 @@
             ['key' => 'marine-transport',  'icon' => 'fa-solid fa-water',          'title' => 'Marine Transport','subtitle' => 'Speedboats & water transfers'],
             ['key' => 'land-transport',    'icon' => 'fa-solid fa-van-shuttle',    'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers'],
             ['key' => 'excursion',        'icon' => 'fa-solid fa-compass',       'title' => 'Excursion',       'subtitle' => 'Tours and activities'],
+            ['key' => 'blog',             'icon' => 'fa-solid fa-newspaper',     'title' => 'Blog',            'subtitle' => 'Travel stories and picks', 'url' => '/blog'],
             ['key' => 'remote_workspace', 'icon' => 'fa-solid fa-laptop',         'title' => 'Remote Workspace','subtitle' => 'Work-friendly spaces'],
             ['key' => 'conference_room',  'icon' => 'fa-solid fa-object-group',   'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces'],
             ['key' => 'resort_day_visit', 'icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit','subtitle' => 'Day-use resort offers'],
@@ -1903,7 +1906,7 @@
                     ->map(static fn (array $item) => [
                         'key' => (string) ($item['key'] ?? ''),
                         'title' => (string) ($item['title'] ?? 'Category'),
-                        'url' => '/catalog/' . (string) ($item['key'] ?? 'accommodation'),
+                        'url' => (string) ($item['url'] ?? ('/catalog/' . (string) ($item['key'] ?? 'accommodation'))),
                     ])
                     ->values()
                     ->all(),

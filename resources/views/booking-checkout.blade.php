@@ -16,7 +16,8 @@
         .sub { margin:6px 0 0; color:#45667d; }
         .layout { margin-top:12px; display:grid; grid-template-columns:minmax(0,1.2fr) minmax(300px,0.8fr); gap:12px; align-items:start; }
         .checkout-details { grid-column: 1; grid-row: 1; }
-        .checkout-summary { grid-column: 2; grid-row: 1; }
+        .payment-box { grid-column: 1; grid-row: 2; }
+        .checkout-summary { grid-column: 2; grid-row: 1 / span 2; }
         .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
         .cell { border:1px solid #dbe7f0; border-radius:12px; padding:10px; background:#fbfdff; }
         .label { display:block; font-size:0.74rem; text-transform:uppercase; letter-spacing:0.06em; color:#58708a; }
@@ -50,10 +51,15 @@
         .payment-stat .k { font-size:0.7rem; text-transform:uppercase; letter-spacing:0.07em; color:#5c7689; font-weight:700; }
         .payment-stat .v { font-size:0.9rem; font-weight:700; color:#173d54; }
         .payment-note { margin:0; color:#4a687e; font-size:0.82rem; line-height:1.45; }
+        .payment-option-list { display:grid; gap:8px; margin-top:6px; }
+        .payment-option { border:1px solid #dbe7f0; border-radius:10px; background:#fff; padding:10px; display:grid; grid-template-columns:auto 1fr; gap:8px; align-items:start; }
+        .payment-option-title { font-weight:700; color:#173d54; font-size:0.86rem; }
+        .payment-option-meta { color:#4a687e; font-size:0.78rem; }
         .actions { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
         @media (max-width: 980px) {
             .layout { grid-template-columns:1fr; }
             .checkout-details,
+            .payment-box,
             .checkout-summary { grid-column: auto; grid-row: auto; }
         }
         @media (max-width: 760px) {
@@ -141,11 +147,23 @@
         $lockedPaymentAmount = (float) ($summary['quote_payment_amount'] ?? ($summary['total'] ?? 0));
         $lockedSourceCurrency = strtoupper(trim((string) ($summary['quote_source_currency'] ?? $currency)));
         $lockedSourceAmount = (float) ($summary['quote_source_amount'] ?? ($summary['total'] ?? 0));
-        $checkoutPrimaryNationality = old('primary_nationality', (string) ($summary['primary_nationality'] ?? ''));
-        $checkoutGuestResidency = old('guest_residency', (string) ($summary['guest_residency'] ?? ''));
         $selectedProvider = $lockedPaymentProvider;
         $customerPaymentStatus = strtolower(trim((string) ($reservation->payment_status ?? 'unpaid')));
         $customerPaymentCollectedAt = trim((string) ($reservation->payment_collected_at ?? $reservation->payment_verified_at ?? ''));
+        $selectedPaymentOption = '';
+        foreach ($paymentOptions as $paymentOption) {
+            $optionGateway = strtolower(trim((string) ($paymentOption['gateway'] ?? '')));
+            $optionCurrency = strtoupper(trim((string) ($paymentOption['currency'] ?? '')));
+            if ($optionGateway === strtolower($lockedPaymentGateway) && $optionCurrency === $lockedPaymentCurrency) {
+                $selectedPaymentOption = $optionGateway . '|' . $optionCurrency;
+                break;
+            }
+        }
+        if ($selectedPaymentOption === '' && $paymentOptions->isNotEmpty()) {
+            $firstGateway = strtolower(trim((string) ($paymentOptions[0]['gateway'] ?? '')));
+            $firstCurrency = strtoupper(trim((string) ($paymentOptions[0]['currency'] ?? '')));
+            $selectedPaymentOption = $firstGateway . '|' . $firstCurrency;
+        }
     @endphp
 
     <main class="page">
@@ -174,10 +192,43 @@
                     </div>
                     <div class="payment-stat">
                         <span class="k">Payable Now</span>
-                        <span class="v">{{ $lockedPaymentCurrency }} {{ number_format($lockedPaymentAmount, 2) }}</span>
+                        <span class="v" id="paymentAmountDisplay">{{ $lockedPaymentCurrency }} {{ number_format($lockedPaymentAmount, 2) }}</span>
                     </div>
+                    @if ($paymentOptions->isNotEmpty())
+                        <div class="payment-option-list" id="paymentOptionList">
+                            @foreach ($paymentOptions as $paymentOption)
+                                @php
+                                    $optionGateway = strtolower(trim((string) ($paymentOption['gateway'] ?? '')));
+                                    $optionCurrency = strtoupper(trim((string) ($paymentOption['currency'] ?? '')));
+                                    $optionProvider = strtolower(trim((string) ($paymentOption['provider'] ?? '')));
+                                    $optionProviderLabel = trim((string) ($paymentOption['provider_label'] ?? 'Gateway'));
+                                    $optionGatewayLabel = trim((string) ($paymentOption['gateway_label'] ?? $optionProviderLabel));
+                                    $optionAmount = (float) ($paymentOption['amount'] ?? 0);
+                                    $optionSelection = $optionGateway . '|' . $optionCurrency;
+                                    $isChecked = $selectedPaymentOption === $optionSelection;
+                                @endphp
+                                <label class="payment-option">
+                                    <input
+                                        type="radio"
+                                        name="payment_selection_ui"
+                                        value="{{ $optionSelection }}"
+                                        data-gateway="{{ $optionGateway }}"
+                                        data-provider="{{ $optionProvider }}"
+                                        data-currency="{{ $optionCurrency }}"
+                                        data-provider-label="{{ $optionProviderLabel }}"
+                                        data-amount="{{ number_format($optionAmount, 2, '.', '') }}"
+                                        {{ $isChecked ? 'checked' : '' }}
+                                    >
+                                    <span>
+                                        <span class="payment-option-title">{{ $optionProviderLabel }} ({{ $optionCurrency }})</span>
+                                        <span class="payment-option-meta">Route: {{ $optionGatewayLabel }} | Pay {{ $optionCurrency }} {{ number_format($optionAmount, 2) }}</span>
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                    @endif
                     <p class="payment-note">{{ $paymentNotice }}</p>
-                    <p class="payment-note">Booking total: {{ $lockedSourceCurrency }} {{ number_format($lockedSourceAmount, 2) }}. Converted payable amount is locked from your guest details page.</p>
+                    <p class="payment-note">Booking total: {{ $lockedSourceCurrency }} {{ number_format($lockedSourceAmount, 2) }}. Converted payable amount updates based on your selected payment route.</p>
                 </div>
 
                 <aside class="mini-panel checkout-summary" aria-label="Reservation compact summary">
@@ -249,11 +300,10 @@
                 @if (!empty($reservation->id))
                     <form method="post" action="/booking/checkout/{{ (int) $reservation->id }}/payment-intent">
                         @csrf
-                        <input type="hidden" name="payment_currency" value="{{ $lockedPaymentCurrency }}">
-                        <input type="hidden" name="payment_gateway" value="{{ $lockedPaymentGateway }}">
-                        <input type="hidden" name="payment_provider" value="{{ $selectedProvider }}">
-                        <input type="hidden" id="primary_nationality" name="primary_nationality" value="{{ $checkoutPrimaryNationality }}">
-                        <input type="hidden" id="guest_residency" name="guest_residency" value="{{ $checkoutGuestResidency }}">
+                        <input type="hidden" name="payment_selection" id="payment_selection_input" value="{{ $selectedPaymentOption }}">
+                        <input type="hidden" name="payment_currency" id="payment_currency_input" value="{{ $lockedPaymentCurrency }}">
+                        <input type="hidden" name="payment_gateway" id="payment_gateway_input" value="{{ $lockedPaymentGateway }}">
+                        <input type="hidden" name="payment_provider" id="payment_provider_input" value="{{ $selectedProvider }}">
                         <input type="hidden" name="transfer_option" id="transfer_option_input" value="{{ (string) ($summary['transfer_option'] ?? '') }}">
                         <input type="hidden" name="transfer_option_label" id="transfer_option_label_input" value="{{ $transferOptionDisplayLabel }}">
                         <input type="hidden" name="transfer_charge" id="transfer_charge_input" value="{{ number_format($transferAmount, 2, '.', '') }}">
@@ -275,7 +325,59 @@
 
     <script>
         (function () {
-            // Checkout is read-only for transfer and pricing decisions; values are locked at reservation stage.
+            const optionInputs = Array.from(document.querySelectorAll('input[name="payment_selection_ui"]'));
+            const paymentSelectionInput = document.getElementById('payment_selection_input');
+            const paymentCurrencyInput = document.getElementById('payment_currency_input');
+            const paymentGatewayInput = document.getElementById('payment_gateway_input');
+            const paymentProviderInput = document.getElementById('payment_provider_input');
+            const paymentCurrencyDisplay = document.getElementById('paymentCurrencyDisplay');
+            const paymentGatewayDisplay = document.getElementById('paymentGatewayDisplay');
+            const paymentAmountDisplay = document.getElementById('paymentAmountDisplay');
+
+            if (optionInputs.length === 0) {
+                return;
+            }
+
+            const syncPaymentSelection = function () {
+                const selected = optionInputs.find(function (input) { return input.checked; }) || optionInputs[0];
+                if (!selected) {
+                    return;
+                }
+
+                const gateway = String(selected.dataset.gateway || '').trim();
+                const provider = String(selected.dataset.provider || '').trim();
+                const currency = String(selected.dataset.currency || '').trim().toUpperCase();
+                const providerLabel = String(selected.dataset.providerLabel || '').trim();
+                const amount = Number(selected.dataset.amount || 0);
+
+                if (paymentSelectionInput) {
+                    paymentSelectionInput.value = selected.value;
+                }
+                if (paymentCurrencyInput) {
+                    paymentCurrencyInput.value = currency;
+                }
+                if (paymentGatewayInput) {
+                    paymentGatewayInput.value = gateway;
+                }
+                if (paymentProviderInput) {
+                    paymentProviderInput.value = provider;
+                }
+                if (paymentCurrencyDisplay && currency !== '') {
+                    paymentCurrencyDisplay.textContent = currency;
+                }
+                if (paymentGatewayDisplay && providerLabel !== '') {
+                    paymentGatewayDisplay.textContent = providerLabel;
+                }
+                if (paymentAmountDisplay && currency !== '') {
+                    paymentAmountDisplay.textContent = currency + ' ' + amount.toFixed(2);
+                }
+            };
+
+            optionInputs.forEach(function (input) {
+                input.addEventListener('change', syncPaymentSelection);
+            });
+
+            syncPaymentSelection();
         })();
     </script>
 </body>

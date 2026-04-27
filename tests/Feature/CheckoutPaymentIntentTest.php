@@ -12,6 +12,52 @@ class CheckoutPaymentIntentTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_local_customer_can_use_bml_mvr_gateway(): void
+    {
+        $reservationId = $this->createReservation('Maldivian', 'local_resident', 'MVR');
+
+        $response = $this
+            ->withoutMiddleware(VerifyCsrfToken::class)
+            ->post('/booking/checkout/' . $reservationId . '/payment-intent', [
+                'payment_currency' => 'MVR',
+                'payment_provider' => 'bml',
+                'primary_nationality' => 'Maldivian',
+                'guest_residency' => 'local_resident',
+            ]);
+
+        $response->assertRedirectContains('/booking/payment/hosted/' . $reservationId);
+
+        $this->assertDatabaseHas('vendor_reservations', [
+            'id' => $reservationId,
+            'customer_segment' => 'local_maldivian',
+            'payment_currency' => 'MVR',
+            'payment_gateway' => 'bml_mvr',
+        ]);
+    }
+
+    public function test_local_customer_can_use_stripe_in_mvr(): void
+    {
+        $reservationId = $this->createReservation('Maldivian', 'local_resident', 'MVR');
+
+        $response = $this
+            ->withoutMiddleware(VerifyCsrfToken::class)
+            ->post('/booking/checkout/' . $reservationId . '/payment-intent', [
+                'payment_currency' => 'MVR',
+                'payment_provider' => 'stripe',
+                'primary_nationality' => 'Maldivian',
+                'guest_residency' => 'local_resident',
+            ]);
+
+        $response->assertRedirectContains('/booking/payment/hosted/' . $reservationId);
+
+        $this->assertDatabaseHas('vendor_reservations', [
+            'id' => $reservationId,
+            'customer_segment' => 'local_maldivian',
+            'payment_currency' => 'MVR',
+            'payment_gateway' => 'stripe',
+        ]);
+    }
+
     public function test_local_customer_can_create_mvr_payment_intent(): void
     {
         $reservationId = $this->createReservation('Maldivian', 'local_resident', 'MVR');
@@ -81,6 +127,52 @@ class CheckoutPaymentIntentTest extends TestCase
         $response
             ->assertRedirect('/booking/checkout/' . $reservationId)
             ->assertSessionHasErrors(['payment']);
+    }
+
+    public function test_foreign_customer_can_use_mib_usd_gateway(): void
+    {
+        $reservationId = $this->createReservation('German', 'foreign_national', 'USD');
+
+        $response = $this
+            ->withoutMiddleware(VerifyCsrfToken::class)
+            ->post('/booking/checkout/' . $reservationId . '/payment-intent', [
+                'payment_currency' => 'USD',
+                'payment_provider' => 'mib',
+                'primary_nationality' => 'German',
+                'guest_residency' => 'foreign_national',
+            ]);
+
+        $response->assertRedirectContains('/booking/payment/hosted/' . $reservationId);
+
+        $this->assertDatabaseHas('vendor_reservations', [
+            'id' => $reservationId,
+            'customer_segment' => 'foreign_national',
+            'payment_currency' => 'USD',
+            'payment_gateway' => 'mib_usd',
+        ]);
+    }
+
+    public function test_foreign_customer_can_use_bml_usd_gateway(): void
+    {
+        $reservationId = $this->createReservation('German', 'foreign_national', 'USD');
+
+        $response = $this
+            ->withoutMiddleware(VerifyCsrfToken::class)
+            ->post('/booking/checkout/' . $reservationId . '/payment-intent', [
+                'payment_currency' => 'USD',
+                'payment_provider' => 'bml',
+                'primary_nationality' => 'German',
+                'guest_residency' => 'foreign_national',
+            ]);
+
+        $response->assertRedirectContains('/booking/payment/hosted/' . $reservationId);
+
+        $this->assertDatabaseHas('vendor_reservations', [
+            'id' => $reservationId,
+            'customer_segment' => 'foreign_national',
+            'payment_currency' => 'USD',
+            'payment_gateway' => 'bml_usd',
+        ]);
     }
 
     public function test_payment_intent_uses_primary_nationality_from_reservation_notes_when_not_posted(): void

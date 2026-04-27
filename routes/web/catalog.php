@@ -20,7 +20,18 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         'vehicle_rental' => ['label' => 'Vehicle Rental', 'subtitle' => 'Cars, bikes, speedboats, and private vessel hire by island.', 'hero_image_url' => ''],
     ];
 
-    $categoryKey = strtolower(trim($category));
+    $requestedCategoryKey = strtolower(trim($category));
+    $categoryAliases = [
+        'marine_transport' => 'marine-transport',
+        'land_transport' => 'land-transport',
+        'remote-workspace' => 'remote_workspace',
+        'conference-room' => 'conference_room',
+        'resort-day-visit' => 'resort_day_visit',
+        'vehicle-rental' => 'vehicle_rental',
+        'water-sports' => 'water_sports',
+    ];
+
+    $categoryKey = $categoryAliases[$requestedCategoryKey] ?? $requestedCategoryKey;
     if (!array_key_exists($categoryKey, $categoryMap)) {
         abort(404);
     }

@@ -136,6 +136,7 @@ if (!function_exists('workationApplyReservationPaymentEvent')) {
 
         if ($status === 'paid') {
             $vendorUserId = (int) ($reservationRow->vendor_user_id ?? 0);
+            $vendorPropertyId = (int) ($reservationRow->vendor_property_id ?? 0);
             $vendorEmail = $vendorUserId > 0
                 ? (string) (DB::table('users')->where('id', $vendorUserId)->value('email') ?? '')
                 : '';
@@ -170,6 +171,53 @@ if (!function_exists('workationApplyReservationPaymentEvent')) {
                 'Workation Team',
             ], static fn ($l) => $l !== null));
             workationSendVendorEmailSafe($vendorEmail, 'Payment Confirmed – Booking ' . $bookingRef, $emailBody);
+
+            // Block availability slots now that payment is confirmed
+            if ($vendorUserId > 0 && $vendorPropertyId > 0 && $startAt !== '' && $endAt !== '') {
+                $reservationNotes = [];
+                try {
+                    $decoded = json_decode((string) ($reservationRow->notes ?? ''), true);
+                    $reservationNotes = is_array($decoded) ? $decoded : [];
+                } catch (\Throwable $e) {
+                    // Ignore JSON decode errors
+                }
+
+                $startDate = Carbon::parse($startAt)->startOfDay();
+                $endDate = Carbon::parse($endAt)->startOfDay();
+
+                // Check if this is an accommodation booking (has room_id)
+                $roomCategoryId = isset($reservationNotes['room_id']) ? (int) $reservationNotes['room_id'] : 0;
+                if ($roomCategoryId > 0) {
+                    // Accommodation booking - block dates for the room
+                    workationReserveAvailabilitySlots(
+                        $vendorUserId,
+                        $vendorPropertyId,
+                        $startDate,
+                        $endDate,
+                        1,
+                        $roomCategoryId,
+                        null,
+                        'accommodation',
+                        null
+                    );
+                } elseif (isset($reservationNotes['category_key'])) {
+                    // Category booking (services) - block dates for the service
+                    $categoryKey = (string) $reservationNotes['category_key'];
+                    $unitsRequested = isset($reservationNotes['units_requested']) ? (int) $reservationNotes['units_requested'] : 1;
+                    $normalizedCategoryKey = str_replace('-', '_', $categoryKey);
+                    workationReserveAvailabilitySlots(
+                        $vendorUserId,
+                        $vendorPropertyId,
+                        $startDate,
+                        $endDate,
+                        $unitsRequested,
+                        null,
+                        null,
+                        $normalizedCategoryKey,
+                        null
+                    );
+                }
+            }
         }
 
         return ['status' => $paymentStatus];

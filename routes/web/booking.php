@@ -302,44 +302,6 @@ Route::post('/booking/reserve', function (Request $request) {
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-
-        workationReserveAvailabilitySlots(
-            (int) ($propertyRow->vendor_user_id ?? 0),
-            (int) ($propertyRow->id ?? 0),
-            $bookingStart,
-            $bookingEndExclusive,
-            1,
-            (int) ($roomRow->id ?? 0),
-            null,
-            'accommodation',
-            null
-        );
-
-        // Notify vendor of new booking
-        $vendorEmailForNotif = (string) (DB::table('users')->where('id', (int) ($propertyRow->vendor_user_id ?? 0))->value('email') ?? '');
-        $bookingRefNotif = '#' . $reservationId;
-        $nightsLabel = $nights . ' night' . ($nights === 1 ? '' : 's');
-        $bookingEmailBody = implode("\n", [
-            'Dear Vendor,',
-            '',
-            'A new booking has been received for your listing.',
-            '',
-            'Booking Reference: ' . $bookingRefNotif,
-            'Listing: ' . (string) ($propertyRow->name ?? ''),
-            'Room: ' . (string) ($roomRow->name ?? ''),
-            'Customer: ' . $customerName,
-            'Check-in: ' . $checkin->toDateString(),
-            'Check-out: ' . $checkout->toDateString(),
-            'Duration: ' . $nightsLabel,
-            'Guests: ' . $guestCount,
-            'Total Amount: ' . strtoupper((string) ($roomRow->currency ?? $propertyRow->currency ?? 'MVR')) . ' ' . number_format($totalAmount, 2),
-            '',
-            'The booking is pending payment. You will receive a further notification once payment is confirmed.',
-            '',
-            'Thank you,',
-            'Workation Team',
-        ]);
-        workationSendVendorEmailSafe($vendorEmailForNotif, 'New Booking Received – ' . $customerName . ' – Booking ' . $bookingRefNotif, $bookingEmailBody);
     }
 
     $checkoutUrl = '/booking/checkout'
@@ -1102,6 +1064,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
             'payment_status' => 'unpaid',
             'notes' => json_encode([
                 'category_key' => $categoryKey,
+                'units_requested' => $unitsRequested,
                 'category_label' => $categoryLabel,
                 'service_label' => $categoryLabel,
                 'service_start_date' => $serviceStart->toDateString(),
@@ -1165,42 +1128,6 @@ Route::post('/booking/reserve-category', function (Request $request) {
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-
-        workationReserveAvailabilitySlots(
-            (int) ($propertyRow->vendor_user_id ?? 0),
-            (int) ($propertyRow->id ?? 0),
-            $serviceStart,
-            $serviceEndExclusive,
-            $unitsRequested,
-            null,
-            null,
-            str_replace('-', '_', $categoryKey),
-            $routeName !== '' ? $routeName : null
-        );
-
-        // Notify vendor of new category booking
-        $vendorEmailCatNotif = (string) (DB::table('users')->where('id', (int) ($propertyRow->vendor_user_id ?? 0))->value('email') ?? '');
-        $catBookingRef = '#' . $reservationId;
-        $catEmailBody = implode("\n", [
-            'Dear Vendor,',
-            '',
-            'A new booking has been received for your listing.',
-            '',
-            'Booking Reference: ' . $catBookingRef,
-            'Listing: ' . (string) ($propertyRow->name ?? ''),
-            'Service Type: ' . $categoryLabel,
-            'Customer: ' . $customerName,
-            'Service Start: ' . $serviceStart->toDateString(),
-            'Service End: ' . $serviceEnd->toDateString(),
-            'Guests: ' . $guestCount,
-            'Total Amount: ' . strtoupper((string) ($propertyRow->currency ?? 'MVR')) . ' ' . number_format($totalAmount, 2),
-            '',
-            'The booking is pending payment. You will receive a further notification once payment is confirmed.',
-            '',
-            'Thank you,',
-            'Workation Team',
-        ]);
-        workationSendVendorEmailSafe($vendorEmailCatNotif, 'New Booking Received – ' . $customerName . ' – Booking ' . $catBookingRef, $catEmailBody);
     }
 
     $checkoutUrl = '/booking/checkout'
@@ -1406,6 +1333,35 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
             : trim((string) $request->query('payment_currency', ''))
     );
 
+    $quotedPaymentOptions = [];
+    foreach ((array) ($paymentPolicy['available_options'] ?? []) as $availableOption) {
+        if (!is_array($availableOption)) {
+            continue;
+        }
+
+        $optionGateway = trim((string) ($availableOption['gateway'] ?? ''));
+        $optionCurrency = strtoupper(trim((string) ($availableOption['currency'] ?? '')));
+        if ($optionGateway === '' || $optionCurrency === '') {
+            continue;
+        }
+
+        try {
+            $optionQuote = CheckoutPaymentRouter::buildPaymentQuote($paymentContext, $optionCurrency, $optionGateway);
+            $availableOption['amount'] = (float) ($optionQuote['amount'] ?? 0);
+            $availableOption['fx_rate'] = (float) ($optionQuote['fx_rate'] ?? 1);
+            $availableOption['source_currency'] = strtoupper(trim((string) ($optionQuote['source_currency'] ?? '')));
+            $availableOption['source_amount'] = (float) ($optionQuote['source_amount'] ?? 0);
+        } catch (\InvalidArgumentException $exception) {
+            continue;
+        }
+
+        $quotedPaymentOptions[] = $availableOption;
+    }
+
+    if ($quotedPaymentOptions !== []) {
+        $paymentPolicy['available_options'] = $quotedPaymentOptions;
+    }
+
     return view('booking-checkout', [
         'reservation' => $reservationRow,
         'property' => $propertyRow,
@@ -1509,8 +1465,6 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         'payment_gateway' => ['nullable', 'string', 'min:2', 'max:64'],
         'payment_provider' => ['nullable', 'string', 'min:2', 'max:64'],
         'payment_selection' => ['nullable', 'string', 'max:120'],
-        'primary_nationality' => ['nullable', 'string', 'max:120'],
-        'guest_residency' => ['nullable', Rule::in(['local_resident', 'foreign_national'])],
         'transfer_option' => ['nullable', 'string', 'max:80'],
         'transfer_option_label' => ['nullable', 'string', 'max:160'],
         'transfer_charge' => ['nullable', 'numeric', 'min:0'],
@@ -1526,8 +1480,8 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
     }
 
     $notes = workationReservationPaymentNotes($reservationRow);
-    $primaryNationality = trim((string) ($notes['primary_nationality'] ?? ($validated['primary_nationality'] ?? '')));
-    $guestResidency = strtolower(trim((string) ($notes['guest_residency'] ?? ($validated['guest_residency'] ?? ''))));
+    $primaryNationality = trim((string) ($notes['primary_nationality'] ?? ''));
+    $guestResidency = strtolower(trim((string) ($notes['guest_residency'] ?? '')));
     if (!in_array($guestResidency, ['local_resident', 'foreign_national'], true)) {
         $guestResidency = ReservationPricingPolicy::isForeigner($primaryNationality, null)
             ? 'foreign_national'
@@ -1542,8 +1496,8 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
     $notes['transfer_charge_total'] = $notes['transfer_charge'];
     $notes['invoice_total_amount'] = max(0, (float) ($notes['invoice_total_amount'] ?? ($validated['invoice_total_amount'] ?? ($reservationRow->total_amount ?? 0))));
 
-    $requestedGateway = trim((string) ($notes['quote_provider'] ?? $notes['quote_gateway'] ?? ($validated['payment_provider'] ?? ($validated['payment_gateway'] ?? ''))));
-    $requestedCurrency = trim((string) ($notes['quote_payment_currency'] ?? ($validated['payment_currency'] ?? '')));
+    $requestedGateway = trim((string) ($validated['payment_provider'] ?? ($validated['payment_gateway'] ?? '')));
+    $requestedCurrency = trim((string) ($validated['payment_currency'] ?? ''));
     $selection = trim((string) ($validated['payment_selection'] ?? ''));
     if ($selection !== '' && str_contains($selection, '|')) {
         [$selectionGateway, $selectionCurrency] = array_pad(explode('|', $selection, 2), 2, '');
@@ -1553,6 +1507,13 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         if ($requestedCurrency === '') {
             $requestedCurrency = trim((string) $selectionCurrency);
         }
+    }
+
+    if ($requestedGateway === '') {
+        $requestedGateway = trim((string) ($notes['quote_provider'] ?? $notes['quote_gateway'] ?? ''));
+    }
+    if ($requestedCurrency === '') {
+        $requestedCurrency = trim((string) ($notes['quote_payment_currency'] ?? ''));
     }
 
     try {

@@ -253,6 +253,8 @@
                         <input type="hidden" name="payment_currency" value="{{ $lockedPaymentCurrency }}">
                         <input type="hidden" name="payment_gateway" value="{{ $lockedPaymentGateway }}">
                         <input type="hidden" name="payment_provider" value="{{ $selectedProvider }}">
+                        <input type="hidden" id="primary_nationality" name="primary_nationality" value="{{ $checkoutPrimaryNationality }}">
+                        <input type="hidden" id="guest_residency" name="guest_residency" value="{{ $checkoutGuestResidency }}">
                         <input type="hidden" name="transfer_option" id="transfer_option_input" value="{{ (string) ($summary['transfer_option'] ?? '') }}">
                         <input type="hidden" name="transfer_option_label" id="transfer_option_label_input" value="{{ (string) ($summary['transfer_option_label'] ?? '') }}">
                         <input type="hidden" name="transfer_charge" id="transfer_charge_input" value="{{ number_format($transferAmount, 2, '.', '') }}">
@@ -323,28 +325,9 @@
                                 @endforeach
                             </div>
                         @endif
-                        <label class="label" for="primary_nationality">Guest nationality *</label>
-                        <input
-                            id="primary_nationality"
-                            name="primary_nationality"
-                            type="text"
-                            required
-                            maxlength="120"
-                            value="{{ $checkoutPrimaryNationality }}"
-                            style="min-width:220px; padding:8px 10px; border:1px solid #c9dbe8; border-radius:10px; margin-right:8px;"
-                            placeholder="e.g. Maldivian"
-                        >
-                        <label class="label" for="guest_residency">Residency *</label>
-                        <select
-                            id="guest_residency"
-                            name="guest_residency"
-                            required
-                            style="min-width:220px; padding:8px 10px; border:1px solid #c9dbe8; border-radius:10px; margin-right:8px;"
-                        >
-                            <option value="">Select residency</option>
-                            <option value="local_resident" {{ $checkoutGuestResidency === 'local_resident' ? 'selected' : '' }}>Local resident</option>
-                            <option value="foreign_national" {{ $checkoutGuestResidency === 'foreign_national' ? 'selected' : '' }}>Foreign national</option>
-                        </select>
+                        <p class="fine-print" style="width:100%; margin:0 0 6px;">
+                            Guest nationality and residency are locked from your booking details and cannot be changed at checkout.
+                        </p>
                         @if ($paymentProviders->isNotEmpty())
                             <label class="label" for="payment_provider_select">Choose payment method</label>
                             <select id="payment_provider_select" name="payment_provider_select" style="min-width:260px; padding:8px 10px; border:1px solid #c9dbe8; border-radius:10px; margin-right:8px;">
@@ -362,12 +345,6 @@
                                 @endforeach
                             </select>
                         @endif
-                        @error('primary_nationality')
-                            <div class="fine-print" style="color:#a73434; width:100%;">{{ $message }}</div>
-                        @enderror
-                        @error('guest_residency')
-                            <div class="fine-print" style="color:#a73434; width:100%;">{{ $message }}</div>
-                        @enderror
                         <button class="btn" type="submit">Confirm & Pay</button>
                     </form>
                 @else

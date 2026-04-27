@@ -1439,8 +1439,8 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         'payment_gateway' => ['nullable', 'string', 'min:2', 'max:64'],
         'payment_provider' => ['nullable', 'string', 'min:2', 'max:64'],
         'payment_selection' => ['nullable', 'string', 'max:120'],
-        'primary_nationality' => ['required', 'string', 'max:120'],
-        'guest_residency' => ['required', Rule::in(['local_resident', 'foreign_national'])],
+        'primary_nationality' => ['nullable', 'string', 'max:120'],
+        'guest_residency' => ['nullable', Rule::in(['local_resident', 'foreign_national'])],
         'transfer_option' => ['nullable', 'string', 'max:80'],
         'transfer_option_label' => ['nullable', 'string', 'max:160'],
         'transfer_charge' => ['nullable', 'numeric', 'min:0'],
@@ -1456,8 +1456,13 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
     }
 
     $notes = workationReservationPaymentNotes($reservationRow);
-    $primaryNationality = trim((string) ($validated['primary_nationality'] ?? ''));
-    $guestResidency = trim((string) ($validated['guest_residency'] ?? ''));
+    $primaryNationality = trim((string) ($notes['primary_nationality'] ?? ($validated['primary_nationality'] ?? '')));
+    $guestResidency = strtolower(trim((string) ($notes['guest_residency'] ?? ($validated['guest_residency'] ?? ''))));
+    if (!in_array($guestResidency, ['local_resident', 'foreign_national'], true)) {
+        $guestResidency = ReservationPricingPolicy::isForeigner($primaryNationality, null)
+            ? 'foreign_national'
+            : 'local_resident';
+    }
 
     $notes['primary_nationality'] = $primaryNationality;
     $notes['guest_residency'] = $guestResidency;

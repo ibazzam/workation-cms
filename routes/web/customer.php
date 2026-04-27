@@ -1,0 +1,289 @@
+﻿<?php
+
+use App\Models\User;
+use App\Models\BlogPost;
+use App\Support\CheckoutPaymentRouter;
+use App\Support\ReservationPricingPolicy;
+use App\Support\ReservationSettlementCalculator;
+use App\Support\UniformIconSystem;
+use App\Support\VendorPropertyCompatibilityReader;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Laravel\Socialite\Facades\Socialite;
+use Firebase\JWT\JWT;
+use Firebase\JWT\JWK;
+
+Route::get('/customer', function () {
+    $customerProperties = collect();
+    $customerRoomsByProperty = collect();
+    $propertyMediaByProperty = collect();
+    $roomMediaByRoom = collect();
+
+    $customerProperties = VendorPropertyCompatibilityReader::allActiveListings(240)
+        ->sortByDesc(static function ($property) {
+            $updatedAt = strtotime((string) ($property->updated_at ?? ''));
+            return $updatedAt !== false ? $updatedAt : 0;
+        })
+        ->take(24)
+        ->values();
+
+    $propertyIds = $customerProperties->pluck('id')->map(static fn ($id) => (int) $id)->filter(static fn (int $id) => $id > 0)->values();
+
+    if ($propertyIds->isNotEmpty() && Schema::hasTable('vendor_property_room_categories')) {
+        $rooms = DB::table('vendor_property_room_categories')
+            ->whereIn('vendor_property_id', $propertyIds->all())
+            ->orderByDesc('updated_at')
+            ->limit(400)
+            ->get();
+
+        $customerRoomsByProperty = $rooms->groupBy(static fn ($room) => (int) ($room->vendor_property_id ?? 0));
+    }
+
+    $roomIds = $customerRoomsByProperty
+        ->flatten(1)
+        ->pluck('id')
+        ->map(static fn ($id) => (int) $id)
+        ->filter(static fn (int $id) => $id > 0)
+        ->values();
+
+    if (Schema::hasTable('vendor_listing_media') && ($propertyIds->isNotEmpty() || $roomIds->isNotEmpty())) {
+        $mediaQuery = DB::table('vendor_listing_media');
+
+        $mediaQuery->where(function ($query) use ($propertyIds, $roomIds) {
+            if ($propertyIds->isNotEmpty()) {
+                $query->orWhere(function ($propertyQuery) use ($propertyIds) {
+                    $propertyQuery
+                        ->where('entity_type', 'property')
+                        ->whereIn('entity_id', $propertyIds->all());
+                });
+            }
+
+            if ($roomIds->isNotEmpty()) {
+                $query->orWhere(function ($roomQuery) use ($roomIds) {
+                    $roomQuery
+                        ->where('entity_type', 'room')
+                        ->whereIn('entity_id', $roomIds->all());
+                });
+            }
+        });
+
+        $mediaRows = $mediaQuery
+            ->orderByDesc('is_primary')
+            ->orderByDesc('created_at')
+            ->limit(1000)
+            ->get();
+
+        $propertyMediaByProperty = $mediaRows
+            ->filter(static fn ($media) => strtolower((string) ($media->entity_type ?? '')) === 'property')
+            ->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
+
+        $roomMediaByRoom = $mediaRows
+            ->filter(static fn ($media) => strtolower((string) ($media->entity_type ?? '')) === 'room')
+            ->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
+    }
+
+    $customerProfile = [
+        'name' => trim((string) session('portal_customer_user', 'Customer')),
+        'email' => '',
+        'member_since' => '-',
+        'phone' => '',
+        'dob' => '',
+        'nationality' => '',
+        'gender' => '',
+        'preferred_language' => 'en',
+        'address_line' => '',
+        'address_atoll_id' => '',
+        'address_island_id' => '',
+    ];
+
+    $customerUserId = session('portal_customer_user_id');
+    if (is_string($customerUserId) || is_numeric($customerUserId)) {
+        try {
+            $customerRecord = \App\Models\Customer::query()->where('id', (string) $customerUserId)->first();
+            if ($customerRecord) {
+                $customerProfile['name'] = trim((string) ($customerRecord->name ?? $customerProfile['name']));
+                $customerProfile['email'] = strtolower(trim((string) ($customerRecord->email ?? '')));
+
+                $createdAtRaw = $customerRecord->createdAt ?? $customerRecord->created_at ?? null;
+                if ($createdAtRaw) {
+                    $customerProfile['member_since'] = Carbon::parse((string) $createdAtRaw)->format('M Y');
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Unable to load customer profile context for customer portal.', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    if (is_string($customerUserId) || is_numeric($customerUserId)) {
+        $profileMeta = cache()->get(customerProfileMetaCacheKey((string) $customerUserId));
+        if (is_array($profileMeta)) {
+            $customerProfile['phone'] = trim((string) ($profileMeta['phone'] ?? ''));
+            $customerProfile['dob'] = trim((string) ($profileMeta['dob'] ?? ''));
+            $customerProfile['nationality'] = trim((string) ($profileMeta['nationality'] ?? ''));
+            $customerProfile['gender'] = trim((string) ($profileMeta['gender'] ?? ''));
+            $customerProfile['preferred_language'] = trim((string) ($profileMeta['preferred_language'] ?? 'en'));
+            $customerProfile['address_line'] = trim((string) ($profileMeta['address_line'] ?? ''));
+            $customerProfile['address_atoll_id'] = trim((string) ($profileMeta['address_atoll_id'] ?? ''));
+            $customerProfile['address_island_id'] = trim((string) ($profileMeta['address_island_id'] ?? ''));
+        }
+    }
+
+    $summary = [
+        'upcoming_bookings' => 0,
+        'completed_bookings' => 0,
+        'receipts_available' => 0,
+        'notification_state' => 'ACTIVE',
+    ];
+
+    $categoryMeta = [
+        'accommodation'    => ['label' => 'Accommodation'],
+        'marine_transport' => ['label' => 'Marine Transport'],
+        'land_transport'   => ['label' => 'Land Transport'],
+        'excursion'        => ['label' => 'Excursions'],
+        'remote_workspace' => ['label' => 'Remote Workspace'],
+        'resort_day_visit' => ['label' => 'Resort Day Visit'],
+        'restaurant'       => ['label' => 'Restaurant'],
+        'vehicle_rental'   => ['label' => 'Vehicle Rental'],
+        'water_sports'     => ['label' => 'Water Sports'],
+    ];
+
+    $customerBookingsByCategory = collect(array_fill_keys(array_keys($categoryMeta), collect()));
+
+    if (Schema::hasTable('vendor_reservations') && $customerProfile['email'] !== '') {
+        $reservationRows = DB::table('vendor_reservations')
+            ->whereRaw('LOWER(customer_email) = ?', [strtolower($customerProfile['email'])])
+            ->orderByDesc('created_at')
+            ->get(['id', 'vendor_property_id', 'start_at', 'end_at', 'status', 'payment_status', 'total_amount', 'currency', 'notes', 'created_at']);
+
+        $propertyNamesById = collect();
+        $reservationPropertyIds = $reservationRows
+            ->pluck('vendor_property_id')
+            ->map(static fn ($id) => (int) $id)
+            ->filter(static fn (int $id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($reservationPropertyIds->isNotEmpty()) {
+            $propertyNamesById = $reservationPropertyIds
+                ->map(static function (int $propertyId) {
+                    $row = VendorPropertyCompatibilityReader::loadPropertyById($propertyId);
+                    if (!$row) {
+                        return null;
+                    }
+
+                    return (object) [
+                        'id' => $propertyId,
+                        'name' => (string) ($row->name ?? ''),
+                        'listing_category' => (string) ($row->listing_category ?? ''),
+                    ];
+                })
+                ->filter()
+                ->keyBy('id');
+        }
+
+        $today = now()->startOfDay();
+        $summary['upcoming_bookings'] = $reservationRows->filter(function ($row) use ($today) {
+            $startAt = $row->start_at ? Carbon::parse((string) $row->start_at)->startOfDay() : null;
+            return $startAt && $startAt->greaterThanOrEqualTo($today);
+        })->count();
+
+        $summary['completed_bookings'] = $reservationRows->filter(function ($row) use ($today) {
+            $endAt = $row->end_at ? Carbon::parse((string) $row->end_at)->startOfDay() : null;
+            return $endAt && $endAt->lessThan($today);
+        })->count();
+
+        $summary['receipts_available'] = $reservationRows->filter(function ($row) {
+            return strtolower((string) ($row->payment_status ?? '')) === 'paid';
+        })->count();
+
+        $categorized = $reservationRows->map(function ($row) use ($propertyNamesById, $categoryMeta) {
+            $notes = json_decode((string) ($row->notes ?? ''), true);
+            if (!is_array($notes)) {
+                $notes = [];
+            }
+
+            $propertyId = (int) ($row->vendor_property_id ?? 0);
+            $propertyRow = $propertyNamesById->get($propertyId);
+
+            $categoryKey = strtolower(trim((string) ($notes['category_key'] ?? '')));
+            if ($categoryKey === '' && $propertyRow) {
+                $categoryKey = strtolower(trim((string) ($propertyRow->listing_category ?? '')));
+            }
+            if ($categoryKey === '' && !empty($notes['room_id'])) {
+                $categoryKey = 'accommodation';
+            }
+            // Normalise transport variants from search form / legacy data
+            if ($categoryKey === 'transport' || $categoryKey === 'marine-transport' || $categoryKey === 'marine_transport') {
+                $categoryKey = 'marine_transport';
+            } elseif ($categoryKey === 'land-transport') {
+                $categoryKey = 'land_transport';
+            }
+            if (!array_key_exists($categoryKey, $categoryMeta)) {
+                $categoryKey = 'accommodation';
+            }
+
+            $serviceLabel = trim((string) ($notes['service_label'] ?? $notes['room_name'] ?? ''));
+            if ($serviceLabel === '') {
+                $serviceLabel = (string) ($categoryMeta[$categoryKey]['label'] ?? 'Service');
+            }
+
+            return [
+                'id' => (int) ($row->id ?? 0),
+                'category_key' => $categoryKey,
+                'category_label' => (string) ($categoryMeta[$categoryKey]['label'] ?? 'Category'),
+                'property_name' => trim((string) ($propertyRow->name ?? 'Property')),
+                'service_label' => $serviceLabel,
+                'start_at' => $row->start_at ? Carbon::parse((string) $row->start_at)->format('Y-m-d') : '-',
+                'end_at' => $row->end_at ? Carbon::parse((string) $row->end_at)->format('Y-m-d') : '-',
+                'status' => strtoupper(trim((string) ($row->status ?? 'pending'))),
+                'payment_status' => strtoupper(trim((string) ($row->payment_status ?? 'unpaid'))),
+                'total_amount' => (float) ($row->total_amount ?? 0),
+                'currency' => strtoupper(trim((string) ($row->currency ?? 'MVR'))),
+                'created_at' => $row->created_at ? Carbon::parse((string) $row->created_at)->format('Y-m-d') : '-',
+            ];
+        });
+
+        $customerBookingsByCategory = collect(array_keys($categoryMeta))
+            ->mapWithKeys(function (string $categoryKey) use ($categorized) {
+                return [$categoryKey => $categorized->where('category_key', $categoryKey)->values()];
+            });
+    }
+
+    $allBookings = $customerBookingsByCategory->flatten(1)->sortByDesc('created_at')->values();
+    $today = now()->startOfDay();
+    $bookingStatusCounts = [
+        'all'              => $allBookings->count(),
+        'awaiting_payment' => $allBookings->filter(fn ($b) => strtolower((string) ($b['payment_status'] ?? '')) === 'unpaid' && !in_array(strtolower((string) ($b['status'] ?? '')), ['cancelled', 'canceled']))->count(),
+        'upcoming'         => $allBookings->filter(fn ($b) => $b['start_at'] !== '-' && \Carbon\Carbon::parse((string) $b['start_at'])->startOfDay()->greaterThanOrEqualTo($today))->count(),
+        'awaiting_review'  => $allBookings->filter(fn ($b) => !in_array(strtolower((string) ($b['status'] ?? '')), ['pending', 'cancelled', 'canceled']) && ($b['end_at'] === '-' || \Carbon\Carbon::parse((string) $b['end_at'])->isPast()))->count(),
+    ];
+
+    return view('customer-portal', [
+        'summary' => $summary,
+        'customerProfile' => $customerProfile,
+        'customerBookingsByCategory' => $customerBookingsByCategory,
+        'allBookings' => $allBookings,
+        'bookingStatusCounts' => $bookingStatusCounts,
+        'bookingCategoryMeta' => $categoryMeta,
+        'customerProperties' => $customerProperties,
+        'customerRoomsByProperty' => $customerRoomsByProperty,
+        'propertyMediaByProperty' => $propertyMediaByProperty,
+        'roomMediaByRoom' => $roomMediaByRoom,
+    ]);
+});

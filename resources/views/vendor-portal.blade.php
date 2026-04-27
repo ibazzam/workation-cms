@@ -40,6 +40,7 @@
             ->values();
         $vendorTaxComponents = $vendorTaxComponents ?? collect();
         $vendorEngagement = is_array($vendorEngagement ?? null) ? $vendorEngagement : [];
+        $vendorDashboardSnapshot = is_array($vendorDashboardSnapshot ?? null) ? $vendorDashboardSnapshot : [];
         $engagementInquiriesTable = (string) ($vendorEngagement['inquiries_table'] ?? '');
         $engagementInquiries = collect($vendorEngagement['inquiries'] ?? []);
         $engagementReviewsTable = (string) ($vendorEngagement['reviews_table'] ?? '');
@@ -209,17 +210,18 @@
             ];
         })->sortKeysDesc();
         $settledInvoicesCount = (int) $billingLedgerRows->where('is_settled', true)->count();
-        $grossCollectionsTotal = (float) $billingLedgerRows->sum('gross');
+        $grossCollectionsTotal = (float) ($billingLedgerRows->sum('gross') ?: ($vendorDashboardSnapshot['gross_collections_total'] ?? 0));
         $commissionTotal = (float) $billingLedgerRows->sum('commission');
         $payoutTotal = (float) $billingLedgerRows->sum('payout');
         $expectedPayoutTotal = (float) $billingLedgerRows->where('is_settled', false)->sum('payout');
         $settledPayoutTotal = (float) $billingLedgerRows->where('is_settled', true)->sum('payout');
-        $vendorListingCount = (int) ($vendorProperties->count() + $vendorServices->count());
-        $vendorActiveListingCount = (int) ($vendorProperties->where('status', 'active')->count() + $vendorServices->where('status', 'active')->count());
-        $vendorPendingReservationsCount = (int) $vendorReservations->filter(fn ($reservation) => strtolower(trim((string) ($reservation->status ?? ''))) === 'pending')->count();
-        $vendorConfirmedReservationsCount = (int) $vendorReservations->filter(fn ($reservation) => in_array(strtolower(trim((string) ($reservation->status ?? ''))), ['confirmed', 'upcoming'], true))->count();
-        $vendorCompletedReservationsCount = (int) $vendorReservations->filter(fn ($reservation) => strtolower(trim((string) ($reservation->status ?? ''))) === 'completed')->count();
-        $vendorAverageBookingValue = $vendorReservations->count() > 0 ? round($grossCollectionsTotal / max(1, $vendorReservations->count()), 2) : 0.0;
+        $vendorListingCount = (int) (($vendorDashboardSnapshot['listing_total'] ?? 0) ?: ($vendorProperties->count() + $vendorServices->count()));
+        $vendorActiveListingCount = (int) (($vendorDashboardSnapshot['listing_active'] ?? 0) ?: ($vendorProperties->where('status', 'active')->count() + $vendorServices->where('status', 'active')->count()));
+        $vendorPendingReservationsCount = (int) (($vendorDashboardSnapshot['pending_reservations'] ?? 0) ?: $vendorReservations->filter(fn ($reservation) => strtolower(trim((string) ($reservation->status ?? ''))) === 'pending')->count());
+        $vendorConfirmedReservationsCount = (int) (($vendorDashboardSnapshot['confirmed_reservations'] ?? 0) ?: $vendorReservations->filter(fn ($reservation) => in_array(strtolower(trim((string) ($reservation->status ?? ''))), ['confirmed', 'upcoming'], true))->count());
+        $vendorCompletedReservationsCount = (int) (($vendorDashboardSnapshot['completed_reservations'] ?? 0) ?: $vendorReservations->filter(fn ($reservation) => strtolower(trim((string) ($reservation->status ?? ''))) === 'completed')->count());
+        $vendorReservationsCount = (int) (($vendorDashboardSnapshot['reservations_count'] ?? 0) ?: $vendorReservations->count());
+        $vendorAverageBookingValue = $vendorReservationsCount > 0 ? round($grossCollectionsTotal / max(1, $vendorReservationsCount), 2) : 0.0;
         $vendorUnresolvedCareCount = (int) $engagementInquiries->whereNotIn('status', ['resolved', 'closed', 'replied'])->count();
         $vendorPendingReviewResponses = (int) $engagementReviews->filter(fn ($row) => trim((string) ($row['response'] ?? '')) === '')->count();
         $vendorRefundCases = $vendorReservations->filter(function ($reservation) {
@@ -229,8 +231,11 @@
         });
         $vendorRefundCaseCount = (int) $vendorRefundCases->count();
         $vendorRefundExposureTotal = (float) $vendorRefundCases->sum(fn ($reservation) => (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0));
+        $hasPricingSetup = (($vendorDashboardSnapshot['has_pricing_rules'] ?? false) === true) || $vendorPricingRules->count() > 0;
+        $hasAvailabilitySetup = (($vendorDashboardSnapshot['has_availability'] ?? false) === true) || $vendorAvailability->count() > 0;
+        $hasBillingSetup = (($vendorDashboardSnapshot['has_billing'] ?? false) === true) || (bool) $vendorBilling;
         $vendorGoLiveProgress = $vendorListingCount > 0
-            ? min(100, (int) round((($vendorActiveListingCount > 0 ? 35 : 0) + ($vendorPricingRules->count() > 0 ? 20 : 0) + ($vendorAvailability->count() > 0 ? 20 : 0) + ($vendorBilling ? 25 : 0))))
+            ? min(100, (int) round((($vendorActiveListingCount > 0 ? 35 : 0) + ($hasPricingSetup ? 20 : 0) + ($hasAvailabilitySetup ? 20 : 0) + ($hasBillingSetup ? 25 : 0))))
             : 0;
     @endphp
     <main class="page" data-api-base="{{ $apiBase }}">

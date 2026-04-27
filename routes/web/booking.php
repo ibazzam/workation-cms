@@ -401,6 +401,40 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         $listingDetails = [];
     }
 
+    $transferRateMatrix = is_array($listingDetails['transfer_rate_matrix'] ?? null)
+        ? $listingDetails['transfer_rate_matrix']
+        : [];
+    $legacyTransferRates = is_array($listingDetails['transfer_rates'] ?? null)
+        ? $listingDetails['transfer_rates']
+        : [];
+    $transferOptions = collect($listingDetails['transfer_options'] ?? [])->map(function ($option) use ($transferRateMatrix, $legacyTransferRates, $listingDetails) {
+        if (is_array($option)) {
+            $code = strtolower(trim((string) ($option['code'] ?? '')));
+            return $option + ['code' => $code];
+        }
+
+        $code = strtolower(trim((string) $option));
+        if ($code === '') {
+            return null;
+        }
+
+        $matrix = is_array($transferRateMatrix[$code] ?? null) ? $transferRateMatrix[$code] : [];
+        $legacyRate = is_numeric($legacyTransferRates[$code] ?? null) ? (float) $legacyTransferRates[$code] : 0;
+
+        return [
+            'code' => $code,
+            'label' => Str::headline(str_replace('_', ' ', $code)),
+            'local_adult_charge' => (float) ($matrix['local_adult_charge'] ?? 0),
+            'local_child_charge' => (float) ($matrix['local_child_charge'] ?? 0),
+            'foreign_adult_charge' => (float) ($matrix['foreign_adult_charge'] ?? $legacyRate),
+            'foreign_child_charge' => (float) ($matrix['foreign_child_charge'] ?? 0),
+            'base_charge_local' => (float) ($listingDetails['transfer_base_local'] ?? 0),
+            'base_charge_foreign' => (float) ($listingDetails['transfer_base_foreign'] ?? 0),
+            'adult_charge' => $legacyRate,
+            'child_charge' => 0,
+        ];
+    })->filter(static fn ($option) => is_array($option) && trim((string) ($option['code'] ?? '')) !== '')->values();
+
     $propertyMedia = collect();
     if (Schema::hasTable('vendor_listing_media')) {
         $propertyMedia = DB::table('vendor_listing_media')
@@ -637,6 +671,7 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             'primary_last_name' => $prefillLastName,
             'primary_nationality' => '',
             'guest_residency' => trim((string) $request->query('guest_residency', 'foreign_national')),
+            'transfer_option' => trim((string) $request->query('transfer_option', '')),
             'primary_email' => trim((string) session('portal_customer_email', '')),
             'primary_mobile' => '',
             'rooms' => max(1, (int) $request->query('rooms', 1)),
@@ -653,6 +688,7 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         ],
         'todayDate' => $todayDate,
         'unavailableDates' => $unavailableDates,
+        'transferOptions' => $transferOptions,
     ]);
 });
 
@@ -732,12 +768,16 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'adults' => ['required', 'integer', 'min:1', 'max:20'],
         'children' => ['nullable', 'integer', 'min:0', 'max:20'],
         'infants' => ['nullable', 'integer', 'min:0', 'max:20'],
-        'primary_first_name' => ['required_unless:category_key,excursion', 'nullable', 'string', 'max:80'],
-        'primary_last_name' => ['required_unless:category_key,excursion', 'nullable', 'string', 'max:80'],
-        'primary_nationality' => ['required_unless:category_key,excursion', 'nullable', 'string', 'max:120'],
+        'primary_first_name' => ['required', 'string', 'max:80'],
+        'primary_last_name' => ['required', 'string', 'max:80'],
+        'primary_nationality' => ['required', 'string', 'max:120'],
         'guest_residency' => ['nullable', Rule::in(['local_resident', 'foreign_national'])],
-        'primary_email' => ['required_unless:category_key,excursion', 'nullable', 'email', 'max:190'],
-        'primary_mobile' => ['required_unless:category_key,excursion', 'nullable', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s\-()]{5,39}$/'],
+        'primary_email' => ['required', 'email', 'max:190'],
+        'primary_mobile' => ['required', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s\-()]{5,39}$/'],
+        'transfer_option' => ['nullable', 'string', 'max:80'],
+        'transfer_charge' => ['nullable', 'numeric', 'min:0'],
+        'payment_timing' => ['nullable', 'string', 'max:40'],
+        'payment_method' => ['nullable', 'string', 'max:60'],
         'additional_guest_details' => ['nullable', 'string', 'max:4000'],
         'service_notes' => ['nullable', 'string', 'max:4000'],
     ];
@@ -792,6 +832,41 @@ Route::post('/booking/reserve-category', function (Request $request) {
         $listingDetails = [];
     }
 
+    $transferOptionCode = strtolower(trim((string) ($payload['transfer_option'] ?? '')));
+    $transferRateMatrix = is_array($listingDetails['transfer_rate_matrix'] ?? null)
+        ? $listingDetails['transfer_rate_matrix']
+        : [];
+    $legacyTransferRates = is_array($listingDetails['transfer_rates'] ?? null)
+        ? $listingDetails['transfer_rates']
+        : [];
+    $transferOptions = collect($listingDetails['transfer_options'] ?? [])->map(function ($option) use ($transferRateMatrix, $legacyTransferRates, $listingDetails) {
+        if (is_array($option)) {
+            $code = strtolower(trim((string) ($option['code'] ?? '')));
+            return $option + ['code' => $code];
+        }
+
+        $code = strtolower(trim((string) $option));
+        if ($code === '') {
+            return null;
+        }
+
+        $matrix = is_array($transferRateMatrix[$code] ?? null) ? $transferRateMatrix[$code] : [];
+        $legacyRate = is_numeric($legacyTransferRates[$code] ?? null) ? (float) $legacyTransferRates[$code] : 0;
+
+        return [
+            'code' => $code,
+            'label' => Str::headline(str_replace('_', ' ', $code)),
+            'local_adult_charge' => (float) ($matrix['local_adult_charge'] ?? 0),
+            'local_child_charge' => (float) ($matrix['local_child_charge'] ?? 0),
+            'foreign_adult_charge' => (float) ($matrix['foreign_adult_charge'] ?? $legacyRate),
+            'foreign_child_charge' => (float) ($matrix['foreign_child_charge'] ?? 0),
+            'base_charge_local' => (float) ($listingDetails['transfer_base_local'] ?? 0),
+            'base_charge_foreign' => (float) ($listingDetails['transfer_base_foreign'] ?? 0),
+            'adult_charge' => $legacyRate,
+            'child_charge' => 0,
+        ];
+    })->filter(static fn ($option) => is_array($option) && trim((string) ($option['code'] ?? '')) !== '')->values()->all();
+
     $serviceStart = Carbon::parse((string) $payload['service_start_date'])->startOfDay();
 
     $serviceEndInput = trim((string) ($payload['service_end_date'] ?? ''));
@@ -799,6 +874,9 @@ Route::post('/booking/reserve-category', function (Request $request) {
         ? Carbon::parse($serviceEndInput)->startOfDay()
         : $serviceStart->copy();
     $serviceEndExclusive = $serviceEnd->copy()->addDay()->startOfDay();
+    $adults = (int) $payload['adults'];
+    $children = (int) ($payload['children'] ?? 0);
+    $infants = (int) ($payload['infants'] ?? 0);
 
     $routeName = '';
     if (in_array($categoryKey, ['marine-transport', 'land-transport'], true)) {
@@ -855,9 +933,6 @@ Route::post('/booking/reserve-category', function (Request $request) {
     }
 
     $units = max(1, $serviceStart->diffInDays($serviceEnd) + 1);
-    $adults = (int) $payload['adults'];
-    $children = (int) ($payload['children'] ?? 0);
-    $infants = (int) ($payload['infants'] ?? 0);
     $guestCount = $adults + $children;
 
     $basePrice = (float) ($propertyRow->base_price ?? 0);
@@ -890,8 +965,9 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'room_count' => $roomCount,
         'primary_nationality' => (string) ($payload['primary_nationality'] ?? ''),
         'guest_residency' => $guestResidency,
-        'transfer_option' => '',
-        'property_transfer_options' => $listingDetails['transfer_options'] ?? [],
+        'transfer_option' => $transferOptionCode,
+        'property_transfer_options' => $transferOptions,
+        'transfer_charge_override' => $payload['transfer_charge'] ?? null,
         'vendor_tax_overrides' => $vendorTaxOverrides,
     ]);
 
@@ -1002,9 +1078,16 @@ Route::post('/booking/reserve-category', function (Request $request) {
                 'total_tax_amount' => (float) ($pricing['total_tax_amount'] ?? $taxAmount),
                 'tax_amount' => (float) ($pricing['total_tax_amount'] ?? $taxAmount),
                 'tax_lines' => $pricing['tax_lines'] ?? [],
-                'transfer_option' => '',
+                'transfer_option' => $transferOptionCode,
+                'transfer_option_label' => (string) ($pricing['transfer_option_label'] ?? ''),
                 'transfer_charge' => $transferCharge,
                 'transfer_charge_total' => $transferCharge,
+                'transfer_local_adult_rate' => (float) ($pricing['transfer_local_adult_rate'] ?? 0),
+                'transfer_local_child_rate' => (float) ($pricing['transfer_local_child_rate'] ?? 0),
+                'transfer_foreign_adult_rate' => (float) ($pricing['transfer_foreign_adult_rate'] ?? 0),
+                'transfer_foreign_child_rate' => (float) ($pricing['transfer_foreign_child_rate'] ?? 0),
+                'transfer_applied_adult_rate' => (float) ($pricing['transfer_applied_adult_rate'] ?? 0),
+                'transfer_applied_child_rate' => (float) ($pricing['transfer_applied_child_rate'] ?? 0),
                 'invoice_total_amount' => (float) ($pricing['invoice_total_amount'] ?? $totalAmount),
                 'vendor_tax_overrides' => $vendorTaxOverrides,
                 'policy_snapshot' => $pricing['policy_snapshot'] ?? [],
@@ -1046,8 +1129,16 @@ Route::post('/booking/reserve-category', function (Request $request) {
         . '&primary_mobile=' . urlencode($primaryMobile)
         . '&additional_guest_details=' . urlencode($additionalGuestDetails)
         . '&service_notes=' . urlencode($serviceNotes)
-        . '&transfer_option='
+        . '&transfer_option=' . urlencode((string) $transferOptionCode)
+        . '&transfer_option_label=' . urlencode((string) ($pricing['transfer_option_label'] ?? ''))
         . '&transfer_charge=' . urlencode((string) $transferCharge)
+        . '&transfer_charge_total=' . urlencode((string) $transferCharge)
+        . '&transfer_local_adult_rate=' . urlencode((string) ((float) ($pricing['transfer_local_adult_rate'] ?? 0)))
+        . '&transfer_local_child_rate=' . urlencode((string) ((float) ($pricing['transfer_local_child_rate'] ?? 0)))
+        . '&transfer_foreign_adult_rate=' . urlencode((string) ((float) ($pricing['transfer_foreign_adult_rate'] ?? 0)))
+        . '&transfer_foreign_child_rate=' . urlencode((string) ((float) ($pricing['transfer_foreign_child_rate'] ?? 0)))
+        . '&transfer_applied_adult_rate=' . urlencode((string) ((float) ($pricing['transfer_applied_adult_rate'] ?? 0)))
+        . '&transfer_applied_child_rate=' . urlencode((string) ((float) ($pricing['transfer_applied_child_rate'] ?? 0)))
         . '&room_subtotal=' . urlencode((string) $serviceSubtotal)
         . '&discount_amount=' . urlencode((string) $discountAmount)
         . '&tax_amount=' . urlencode((string) $taxAmount)

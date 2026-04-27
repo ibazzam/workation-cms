@@ -395,7 +395,43 @@
         .field textarea { min-height:88px; resize:vertical; }
         .field.full { grid-column:1/-1; }
         .field .input-error { border-color:#c54f4f; background:#fff8f8; }
+        .field-error-state input,
+        .field-error-state select,
+        .field-error-state textarea { border-color:#c54f4f !important; background:#fff4f4 !important; }
         .field .error-text { margin:0; font-size:0.74rem; color:#a32929; }
+        .required-note { margin:0; color:#8f2323; font-size:0.74rem; font-weight:600; }
+
+        .transfer-list { display:grid; gap:8px; }
+        .transfer-option {
+            display:grid;
+            grid-template-columns:auto 1fr;
+            gap:9px;
+            align-items:start;
+            border:1px solid #c5daea;
+            border-radius:10px;
+            background:#f8fcff;
+            padding:10px;
+        }
+        .transfer-option input { margin-top:2px; }
+        .transfer-option-title { font-size:0.84rem; font-weight:700; color:#1b3f58; }
+        .transfer-option-rates { font-size:0.76rem; color:#486b80; margin-top:2px; }
+        .transfer-option-note { font-size:0.72rem; color:#5a778c; margin-top:2px; }
+
+        .payment-choice-list { display:grid; gap:8px; }
+        .payment-choice {
+            border:1px solid #c8dceb;
+            border-radius:10px;
+            background:#f8fcff;
+            padding:9px 10px;
+            display:grid;
+            grid-template-columns:auto 1fr;
+            gap:8px;
+            align-items:center;
+        }
+        .payment-choice.hidden { display:none; }
+        .payment-choice-main { font-size:0.82rem; color:#1f475f; font-weight:600; }
+        .payment-choice-note { font-size:0.74rem; color:#527288; }
+        .payment-hint { margin:0; font-size:0.76rem; color:#486a80; }
 
         .form-errors { margin:0 0 10px; border:1px solid #e6b2b2; background:#fff5f5; color:#8f2323; border-radius:10px; padding:10px 12px; }
         .form-errors ul { margin:0; padding-left:18px; }
@@ -474,6 +510,45 @@
         $servicesAndAmenities = collect($servicesAndAmenities ?? []);
         $descriptionText = trim((string) ($descriptionText ?? ''));
         $vendorPolicy = $vendorPolicy ?? [];
+        $transferOptions = collect($transferOptions ?? [])->filter(static fn ($option) => is_array($option))->values();
+        $countryOptions = [
+            ['name' => 'Maldives', 'iso' => 'MV', 'dial' => '+960'],
+            ['name' => 'India', 'iso' => 'IN', 'dial' => '+91'],
+            ['name' => 'Sri Lanka', 'iso' => 'LK', 'dial' => '+94'],
+            ['name' => 'Bangladesh', 'iso' => 'BD', 'dial' => '+880'],
+            ['name' => 'Pakistan', 'iso' => 'PK', 'dial' => '+92'],
+            ['name' => 'Nepal', 'iso' => 'NP', 'dial' => '+977'],
+            ['name' => 'United Arab Emirates', 'iso' => 'AE', 'dial' => '+971'],
+            ['name' => 'Saudi Arabia', 'iso' => 'SA', 'dial' => '+966'],
+            ['name' => 'Qatar', 'iso' => 'QA', 'dial' => '+974'],
+            ['name' => 'Kuwait', 'iso' => 'KW', 'dial' => '+965'],
+            ['name' => 'Bahrain', 'iso' => 'BH', 'dial' => '+973'],
+            ['name' => 'Oman', 'iso' => 'OM', 'dial' => '+968'],
+            ['name' => 'Singapore', 'iso' => 'SG', 'dial' => '+65'],
+            ['name' => 'Malaysia', 'iso' => 'MY', 'dial' => '+60'],
+            ['name' => 'Thailand', 'iso' => 'TH', 'dial' => '+66'],
+            ['name' => 'Indonesia', 'iso' => 'ID', 'dial' => '+62'],
+            ['name' => 'China', 'iso' => 'CN', 'dial' => '+86'],
+            ['name' => 'Japan', 'iso' => 'JP', 'dial' => '+81'],
+            ['name' => 'South Korea', 'iso' => 'KR', 'dial' => '+82'],
+            ['name' => 'Australia', 'iso' => 'AU', 'dial' => '+61'],
+            ['name' => 'New Zealand', 'iso' => 'NZ', 'dial' => '+64'],
+            ['name' => 'United Kingdom', 'iso' => 'GB', 'dial' => '+44'],
+            ['name' => 'Germany', 'iso' => 'DE', 'dial' => '+49'],
+            ['name' => 'France', 'iso' => 'FR', 'dial' => '+33'],
+            ['name' => 'Italy', 'iso' => 'IT', 'dial' => '+39'],
+            ['name' => 'Spain', 'iso' => 'ES', 'dial' => '+34'],
+            ['name' => 'Netherlands', 'iso' => 'NL', 'dial' => '+31'],
+            ['name' => 'Switzerland', 'iso' => 'CH', 'dial' => '+41'],
+            ['name' => 'United States', 'iso' => 'US', 'dial' => '+1'],
+            ['name' => 'Canada', 'iso' => 'CA', 'dial' => '+1'],
+        ];
+        $oldNationality = trim((string) old('primary_nationality', (string) ($prefill['primary_nationality'] ?? '')));
+        $oldPhoneCode = trim((string) old('primary_mobile_country_code', '+960'));
+        $oldPhoneLocal = trim((string) old('primary_mobile_local', (string) ($prefill['primary_mobile'] ?? '')));
+        if ($oldPhoneLocal === '' && trim((string) old('primary_mobile', '')) !== '') {
+            $oldPhoneLocal = trim((string) old('primary_mobile', ''));
+        }
 
         $mediaUrl = static function ($media, string $variant = 'banner'): ?string {
             $mediaId = (int) ($media->id ?? 0);
@@ -710,6 +785,8 @@
                     @csrf
                     <input type="hidden" name="category_key" value="{{ $categoryKey }}">
                     <input type="hidden" name="property_id" value="{{ (int) ($property->id ?? 0) }}">
+                    <input type="hidden" name="guest_residency" id="guestResidencyInput" value="{{ old('guest_residency', (string) ($prefill['guest_residency'] ?? '')) }}">
+                    <input type="hidden" name="primary_mobile" id="primaryMobileHidden" value="{{ old('primary_mobile', '') }}">
 
                     @if ($errors->any())
                         <div class="form-errors" role="alert" aria-live="polite">
@@ -725,12 +802,8 @@
                         @if ($categoryKey === 'excursion')
                             <div class="field full"><label for="serviceStartDate">Activity Date</label><input id="serviceStartDate" name="service_start_date" type="date" min="{{ (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
                             <div class="field full">
-                                <label for="primaryFirstName">Lead Guest / Group Head</label>
-                                <input id="primaryFirstName" name="primary_first_name" type="text" value="{{ old('primary_first_name', trim(((string) ($prefill['primary_first_name'] ?? '')) . ' ' . ((string) ($prefill['primary_last_name'] ?? '')))) }}" class="{{ $errors->has('primary_first_name') ? 'input-error' : '' }}" placeholder="Name of lead guest">
-                                @error('primary_first_name')<p class="error-text">{{ $message }}</p>@enderror
-                                <input type="hidden" name="primary_last_name" value="{{ old('primary_last_name', (string) ($prefill['primary_last_name'] ?? '')) }}">
-                                <input type="hidden" name="primary_email" value="{{ old('primary_email', (string) ($prefill['primary_email'] ?? '')) }}">
-                                <input type="hidden" name="primary_mobile" value="{{ old('primary_mobile', (string) ($prefill['primary_mobile'] ?? '')) }}">
+                                <label>Lead Guest</label>
+                                <p class="booking-subtitle" style="margin:0;">Fill guest details below exactly as government-issued documents.</p>
                             </div>
                             <div class="field full">
                                 <label>Guests and Unit Price</label>
@@ -832,18 +905,83 @@
                                 @endif
                             @endforeach
 
-                            <div class="field"><label for="primaryFirstName">Primary Guest First Name</label><input id="primaryFirstName" name="primary_first_name" type="text" value="{{ old('primary_first_name', (string) ($prefill['primary_first_name'] ?? '')) }}" class="{{ $errors->has('primary_first_name') ? 'input-error' : '' }}" required>@error('primary_first_name')<p class="error-text">{{ $message }}</p>@enderror</div>
-                            <div class="field"><label for="primaryLastName">Primary Guest Last Name</label><input id="primaryLastName" name="primary_last_name" type="text" value="{{ old('primary_last_name', (string) ($prefill['primary_last_name'] ?? '')) }}" class="{{ $errors->has('primary_last_name') ? 'input-error' : '' }}" required>@error('primary_last_name')<p class="error-text">{{ $message }}</p>@enderror</div>
-                            <div class="field"><label for="primaryNationality">Primary Guest Nationality</label><input id="primaryNationality" name="primary_nationality" type="text" value="{{ old('primary_nationality', (string) ($prefill['primary_nationality'] ?? '')) }}" class="{{ $errors->has('primary_nationality') ? 'input-error' : '' }}" required>@error('primary_nationality')<p class="error-text">{{ $message }}</p>@enderror</div>
-                            <div class="field"><label for="primaryEmail">Primary Guest Email</label><input id="primaryEmail" name="primary_email" type="email" value="{{ old('primary_email', (string) ($prefill['primary_email'] ?? '')) }}" class="{{ $errors->has('primary_email') ? 'input-error' : '' }}" required>@error('primary_email')<p class="error-text">{{ $message }}</p>@enderror</div>
-                            <div class="field full"><label for="primaryMobile">Primary Guest Mobile</label><input id="primaryMobile" name="primary_mobile" type="text" placeholder="+960 ..." value="{{ old('primary_mobile', (string) ($prefill['primary_mobile'] ?? '')) }}" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required>@error('primary_mobile')<p class="error-text">{{ $message }}</p>@enderror</div>
-
                             <div class="field full"><label for="additionalGuestDetails">Additional Guest Details (Optional)</label><textarea id="additionalGuestDetails" name="additional_guest_details">{{ old('additional_guest_details', '') }}</textarea></div>
                             <div class="field full">
                                 <label for="serviceNotes">{{ $categoryKey === 'restaurant' ? 'Special Note for Food Order (Optional)' : 'Service Notes (Optional)' }}</label>
                                 <textarea id="serviceNotes" name="service_notes" placeholder="{{ $categoryKey === 'restaurant' ? 'Tell us what you want to order or any dietary preferences.' : 'Add any service details or requests.' }}">{{ old('service_notes', (string) ($prefill['service_notes'] ?? '')) }}</textarea>
                             </div>
                         @endif
+
+                        <div class="field full">
+                            <label>Guest Details*</label>
+                            <p class="required-note">Given names and surname must match government-issued documents. For foreigners, use passport details. For locals, use ID card details.</p>
+                        </div>
+                        <div class="field"><label for="primaryFirstName">Given names*</label><input id="primaryFirstName" name="primary_first_name" type="text" value="{{ old('primary_first_name', (string) ($prefill['primary_first_name'] ?? '')) }}" class="{{ $errors->has('primary_first_name') ? 'input-error' : '' }}" required>@error('primary_first_name')<p class="error-text">{{ $message }}</p>@enderror</div>
+                        <div class="field"><label for="primaryLastName">Surname*</label><input id="primaryLastName" name="primary_last_name" type="text" value="{{ old('primary_last_name', (string) ($prefill['primary_last_name'] ?? '')) }}" class="{{ $errors->has('primary_last_name') ? 'input-error' : '' }}" required>@error('primary_last_name')<p class="error-text">{{ $message }}</p>@enderror</div>
+                        <div class="field"><label for="primaryNationality">Country / Nationality*</label><select id="primaryNationality" name="primary_nationality" class="{{ $errors->has('primary_nationality') ? 'input-error' : '' }}" required><option value="">Select country</option>@foreach ($countryOptions as $country)<option value="{{ $country['name'] }}" data-iso="{{ $country['iso'] }}" data-dial="{{ $country['dial'] }}" {{ strcasecmp($oldNationality, $country['name']) === 0 ? 'selected' : '' }}>{{ $country['name'] }}</option>@endforeach</select>@error('primary_nationality')<p class="error-text">{{ $message }}</p>@enderror</div>
+                        <div class="field"><label for="primaryEmail">Email*</label><input id="primaryEmail" name="primary_email" type="email" value="{{ old('primary_email', (string) ($prefill['primary_email'] ?? '')) }}" class="{{ $errors->has('primary_email') ? 'input-error' : '' }}" required>@error('primary_email')<p class="error-text">{{ $message }}</p>@enderror</div>
+                        <div class="field"><label for="primaryMobileCountryCode">Phone country code*</label><select id="primaryMobileCountryCode" name="primary_mobile_country_code" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required>@foreach ($countryOptions as $country)<option value="{{ $country['dial'] }}" data-iso="{{ $country['iso'] }}" {{ $oldPhoneCode === $country['dial'] ? 'selected' : '' }}>{{ $country['dial'] }} ({{ $country['name'] }})</option>@endforeach</select></div>
+                        <div class="field"><label for="primaryMobileLocal">Contact number*</label><input id="primaryMobileLocal" name="primary_mobile_local" type="tel" value="{{ $oldPhoneLocal }}" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required inputmode="tel">@error('primary_mobile')<p class="error-text">{{ $message }}</p>@enderror</div>
+
+                        <div class="field full">
+                            <label>Transfer option</label>
+                            @if ($transferOptions->isNotEmpty())
+                                <div class="transfer-list" id="transferOptionsList">
+                                    @foreach ($transferOptions as $index => $option)
+                                        @php
+                                            $transferCode = strtolower(trim((string) ($option['code'] ?? '')));
+                                            $optionSelected = old('transfer_option', (string) ($prefill['transfer_option'] ?? ''));
+                                            $localAdultRate = (float) ($option['local_adult_charge'] ?? $option['adult_charge'] ?? 0);
+                                            $localChildRate = (float) ($option['local_child_charge'] ?? $option['child_charge'] ?? 0);
+                                            $foreignAdultRate = (float) ($option['foreign_adult_charge'] ?? $option['adult_charge'] ?? 0);
+                                            $foreignChildRate = (float) ($option['foreign_child_charge'] ?? $option['child_charge'] ?? 0);
+                                        @endphp
+                                        <label class="transfer-option">
+                                            <input
+                                                type="radio"
+                                                name="transfer_option"
+                                                value="{{ $transferCode }}"
+                                                data-local-adult="{{ $localAdultRate }}"
+                                                data-local-child="{{ $localChildRate }}"
+                                                data-foreign-adult="{{ $foreignAdultRate }}"
+                                                data-foreign-child="{{ $foreignChildRate }}"
+                                                data-base-local="{{ (float) ($option['base_charge_local'] ?? 0) }}"
+                                                data-base-foreign="{{ (float) ($option['base_charge_foreign'] ?? 0) }}"
+                                                {{ ($optionSelected === '' && $index === 0) || strtolower((string) $optionSelected) === $transferCode ? 'checked' : '' }}
+                                            >
+                                            <span>
+                                                <span class="transfer-option-title">{{ (string) ($option['label'] ?? Str::headline(str_replace('_', ' ', $transferCode))) }}</span>
+                                                <span class="transfer-option-rates">Local: Adult {{ $currency }} {{ number_format($localAdultRate, 2) }}, Child {{ $currency }} {{ number_format($localChildRate, 2) }} • Foreigner: Adult {{ $currency }} {{ number_format($foreignAdultRate, 2) }}, Child {{ $currency }} {{ number_format($foreignChildRate, 2) }}</span>
+                                                <span class="transfer-option-note">Tick to include this transfer mode in billing.</span>
+                                            </span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            @else
+                                <p class="booking-subtitle" style="margin:0;">No transfer options configured for this listing.</p>
+                                <input type="hidden" name="transfer_option" value="">
+                            @endif
+                        </div>
+
+                        <div class="field full">
+                            <label for="transferCharge">Transfer charge</label>
+                            <input id="transferCharge" name="transfer_charge" type="number" step="0.01" min="0" value="{{ old('transfer_charge', '0') }}" readonly>
+                        </div>
+
+                        <div class="field full">
+                            <label>Payment preferences</label>
+                            <div class="payment-choice-list">
+                                <label class="payment-choice"><input type="radio" name="payment_timing" value="pay_now" {{ old('payment_timing', 'pay_now') === 'pay_now' ? 'checked' : '' }}><span><span class="payment-choice-main">Pay now</span><span class="payment-choice-note">Secure payment before confirmation.</span></span></label>
+                                <label class="payment-choice"><input type="radio" name="payment_timing" value="pay_at_property" {{ old('payment_timing') === 'pay_at_property' ? 'checked' : '' }}><span><span class="payment-choice-main">Pay at property</span><span class="payment-choice-note">Shown for eligible local bookings.</span></span></label>
+                            </div>
+                            <div class="payment-choice-list" id="paymentMethodList" style="margin-top:8px;">
+                                <label class="payment-choice payment-method-option" data-scope="all"><input type="radio" name="payment_method" value="card" {{ old('payment_method', 'card') === 'card' ? 'checked' : '' }}><span><span class="payment-choice-main">Card</span><span class="payment-choice-note">Credit / debit cards.</span></span></label>
+                                <label class="payment-choice payment-method-option" data-scope="international"><input type="radio" name="payment_method" value="apple_pay" {{ old('payment_method') === 'apple_pay' ? 'checked' : '' }}><span><span class="payment-choice-main">Apple Pay</span><span class="payment-choice-note">International guests where available.</span></span></label>
+                                <label class="payment-choice payment-method-option" data-scope="international"><input type="radio" name="payment_method" value="google_pay" {{ old('payment_method') === 'google_pay' ? 'checked' : '' }}><span><span class="payment-choice-main">Google Pay</span><span class="payment-choice-note">International guests where available.</span></span></label>
+                                <label class="payment-choice payment-method-option" data-scope="local"><input type="radio" name="payment_method" value="bank_transfer_mvr" {{ old('payment_method') === 'bank_transfer_mvr' ? 'checked' : '' }}><span><span class="payment-choice-main">Local Bank Transfer (MVR)</span><span class="payment-choice-note">Recommended for local nationals.</span></span></label>
+                            </div>
+                            <p class="payment-hint" id="paymentHint">Payment methods are auto-filtered by guest nationality.</p>
+                        </div>
                     </div>
 
                     <div class="summary">
@@ -930,6 +1068,21 @@
             const serviceStartInput = document.getElementById('serviceStartDate');
             const serviceEndInput = document.getElementById('serviceEndDate');
             const serviceDateError = document.querySelector('[data-service-date-error]');
+            const bookingForm = document.getElementById('categoryServiceBookingForm');
+            const primaryFirstName = document.getElementById('primaryFirstName');
+            const primaryLastName = document.getElementById('primaryLastName');
+            const primaryNationality = document.getElementById('primaryNationality');
+            const primaryEmail = document.getElementById('primaryEmail');
+            const primaryMobileCountryCode = document.getElementById('primaryMobileCountryCode');
+            const primaryMobileLocal = document.getElementById('primaryMobileLocal');
+            const primaryMobileHidden = document.getElementById('primaryMobileHidden');
+            const guestResidencyInput = document.getElementById('guestResidencyInput');
+            const transferOptionInputs = Array.from(document.querySelectorAll('input[name="transfer_option"]'));
+            const transferChargeInput = document.getElementById('transferCharge');
+            const paymentMethodList = document.getElementById('paymentMethodList');
+            const paymentHint = document.getElementById('paymentHint');
+            const adultsInput = document.getElementById('adults');
+            const childrenInput = document.getElementById('children');
             const todayDate = @json((string) ($todayDate ?? now()->toDateString()));
             const unavailableDates = @json($unavailableDates ?? ['blocked' => [], 'reserved' => []]);
             const blockedDateSet = new Set(Array.isArray(unavailableDates?.blocked) ? unavailableDates.blocked : []);
@@ -1010,16 +1163,255 @@
                 input.addEventListener('change', validateServiceDates);
             });
 
-            const bookingForm = document.getElementById('categoryServiceBookingForm');
+            const fieldWrap = function (element) {
+                return element ? element.closest('.field') : null;
+            };
+
+            const markFieldError = function (element, hasError) {
+                const wrapper = fieldWrap(element);
+                if (!wrapper || !element) {
+                    return;
+                }
+
+                wrapper.classList.toggle('field-error-state', hasError);
+                if (hasError) {
+                    element.setAttribute('aria-invalid', 'true');
+                } else {
+                    element.removeAttribute('aria-invalid');
+                }
+            };
+
+            const syncPrimaryMobile = function () {
+                if (!primaryMobileHidden || !primaryMobileCountryCode || !primaryMobileLocal) {
+                    return;
+                }
+
+                const dial = String(primaryMobileCountryCode.value || '').trim();
+                const local = String(primaryMobileLocal.value || '').trim();
+                primaryMobileHidden.value = (dial + ' ' + local).trim();
+            };
+
+            const currentNationalityIso = function () {
+                if (!primaryNationality) {
+                    return '';
+                }
+
+                const selected = primaryNationality.options[primaryNationality.selectedIndex];
+                return String(selected?.dataset?.iso || '').toUpperCase();
+            };
+
+            const updateGuestResidency = function () {
+                if (!guestResidencyInput) {
+                    return;
+                }
+
+                guestResidencyInput.value = currentNationalityIso() === 'MV'
+                    ? 'local_resident'
+                    : 'foreign_national';
+            };
+
+            const selectedTransferInput = function () {
+                return transferOptionInputs.find(function (input) { return input.checked; }) || null;
+            };
+
+            const transferChargeTotal = function () {
+                const transferSelected = selectedTransferInput();
+                if (!transferSelected) {
+                    return 0;
+                }
+
+                const adults = Math.max(1, Number(adultsInput?.value || 1));
+                const children = Math.max(0, Number(childrenInput?.value || 0));
+                const isLocal = currentNationalityIso() === 'MV';
+                const adultRate = Number(isLocal ? transferSelected.dataset.localAdult : transferSelected.dataset.foreignAdult) || 0;
+                const childRate = Number(isLocal ? transferSelected.dataset.localChild : transferSelected.dataset.foreignChild) || 0;
+                const baseRate = Number(isLocal ? transferSelected.dataset.baseLocal : transferSelected.dataset.baseForeign) || 0;
+
+                return baseRate + (adultRate * adults) + (childRate * children);
+            };
+
+            const syncTransferCharge = function () {
+                if (!transferChargeInput) {
+                    return;
+                }
+
+                transferChargeInput.value = transferChargeTotal().toFixed(2);
+            };
+
+            const updatePaymentOptionsByNationality = function () {
+                if (!paymentMethodList) {
+                    return;
+                }
+
+                const isLocalGuest = currentNationalityIso() === 'MV';
+                const methodOptions = Array.from(paymentMethodList.querySelectorAll('.payment-method-option'));
+
+                methodOptions.forEach(function (option) {
+                    const scope = String(option.dataset.scope || 'all');
+                    const shouldShow = scope === 'all' || (isLocalGuest ? scope === 'local' : scope === 'international');
+                    option.classList.toggle('hidden', !shouldShow);
+
+                    const input = option.querySelector('input[name="payment_method"]');
+                    if (input) {
+                        input.disabled = !shouldShow;
+                    }
+                });
+
+                const visibleEnabledInputs = methodOptions
+                    .map(function (option) { return option.querySelector('input[name="payment_method"]'); })
+                    .filter(function (input) { return !!input && !input.disabled; });
+
+                const anyCheckedVisible = visibleEnabledInputs.some(function (input) { return input.checked; });
+                if (!anyCheckedVisible && visibleEnabledInputs[0]) {
+                    visibleEnabledInputs[0].checked = true;
+                }
+
+                if (paymentHint) {
+                    paymentHint.textContent = isLocalGuest
+                        ? 'Local payment options enabled for Maldivian nationals.'
+                        : 'International payment options enabled for foreign guests.';
+                }
+            };
+
+            const validateMandatoryGuestFields = function () {
+                if (!bookingForm) {
+                    return true;
+                }
+
+                const errors = [];
+                const requiredChecks = [
+                    {
+                        element: primaryFirstName,
+                        check: function (value) { return value.length > 0; },
+                        message: 'Given names are required.'
+                    },
+                    {
+                        element: primaryLastName,
+                        check: function (value) { return value.length > 0; },
+                        message: 'Surname is required.'
+                    },
+                    {
+                        element: primaryNationality,
+                        check: function (value) { return value.length > 0; },
+                        message: 'Country / nationality is required.'
+                    },
+                    {
+                        element: primaryEmail,
+                        check: function (value) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value); },
+                        message: 'Enter a valid email address.'
+                    },
+                    {
+                        element: primaryMobileCountryCode,
+                        check: function (value) { return value.length > 0; },
+                        message: 'Phone country code is required.'
+                    },
+                    {
+                        element: primaryMobileLocal,
+                        check: function (value) { return value.replace(/\D+/g, '').length >= 6; },
+                        message: 'Enter a valid contact number.'
+                    },
+                ];
+
+                requiredChecks.forEach(function (rule) {
+                    if (!rule.element) {
+                        return;
+                    }
+
+                    const value = String(rule.element.value || '').trim();
+                    const isValid = rule.check(value);
+                    markFieldError(rule.element, !isValid);
+                    if (!isValid) {
+                        errors.push(rule.message);
+                    }
+                });
+
+                const existingErrorBox = bookingForm.querySelector('.form-errors.client-errors');
+                if (existingErrorBox) {
+                    existingErrorBox.remove();
+                }
+
+                if (errors.length > 0) {
+                    const errorBox = document.createElement('div');
+                    errorBox.className = 'form-errors client-errors';
+                    errorBox.setAttribute('role', 'alert');
+                    errorBox.setAttribute('aria-live', 'polite');
+                    errorBox.innerHTML = '<ul>' + errors.map(function (error) {
+                        return '<li>' + error + '</li>';
+                    }).join('') + '</ul>';
+                    bookingForm.insertBefore(errorBox, bookingForm.firstElementChild.nextElementSibling);
+                }
+
+                return errors.length === 0;
+            };
+
+            [primaryFirstName, primaryLastName, primaryNationality, primaryEmail, primaryMobileCountryCode, primaryMobileLocal].forEach(function (input) {
+                if (!input) {
+                    return;
+                }
+
+                ['change', 'input'].forEach(function (eventName) {
+                    input.addEventListener(eventName, function () {
+                        markFieldError(input, false);
+                        if (input === primaryNationality) {
+                            const selected = primaryNationality.options[primaryNationality.selectedIndex];
+                            const suggestedDial = String(selected?.dataset?.dial || '').trim();
+                            if (suggestedDial !== '' && primaryMobileCountryCode) {
+                                primaryMobileCountryCode.value = suggestedDial;
+                            }
+                            updateGuestResidency();
+                            updatePaymentOptionsByNationality();
+                            syncTransferCharge();
+                        }
+
+                        syncPrimaryMobile();
+                    });
+                });
+            });
+
+            transferOptionInputs.forEach(function (input) {
+                ['change', 'input'].forEach(function (eventName) {
+                    input.addEventListener(eventName, syncTransferCharge);
+                });
+            });
+
+            [adultsInput, childrenInput].forEach(function (input) {
+                if (!input) {
+                    return;
+                }
+
+                ['change', 'input'].forEach(function (eventName) {
+                    input.addEventListener(eventName, syncTransferCharge);
+                });
+            });
+
+            if (paymentMethodList) {
+                paymentMethodList.addEventListener('change', updatePaymentOptionsByNationality);
+            }
+
             if (bookingForm) {
                 bookingForm.addEventListener('submit', function (event) {
-                    if (!validateServiceDates()) {
+                    syncPrimaryMobile();
+                    updateGuestResidency();
+                    updatePaymentOptionsByNationality();
+                    syncTransferCharge();
+
+                    const datesValid = validateServiceDates();
+                    const guestValid = validateMandatoryGuestFields();
+                    if (!datesValid || !guestValid) {
                         event.preventDefault();
+                        const errorBlock = bookingForm.querySelector('.form-errors.client-errors') || serviceDateError;
+                        if (errorBlock && typeof errorBlock.scrollIntoView === 'function') {
+                            errorBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
                     }
                 });
             }
 
             validateServiceDates();
+            syncPrimaryMobile();
+            updateGuestResidency();
+            updatePaymentOptionsByNationality();
+            syncTransferCharge();
         });
     </script>
 

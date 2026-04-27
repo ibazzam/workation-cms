@@ -1,0 +1,1249 @@
+<?php
+
+use App\Models\User;
+use App\Support\ReservationPricingPolicy;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+
+Route::get('/vendor', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+
+    $activePortalPage = strtolower(trim((string) request()->query('page', 'overview')));
+    if (!in_array($activePortalPage, ['overview', 'reports', 'profile', 'listings', 'reservations', 'operations', 'availability', 'pricing', 'billing', 'engagement', 'promotions'], true)) {
+        $activePortalPage = 'overview';
+    }
+
+    $isOverviewPage = in_array($activePortalPage, ['overview', 'reports'], true);
+    $loadListingsHeavyData = $activePortalPage === 'listings';
+    $loadEngagementData = in_array($activePortalPage, ['engagement', 'promotions'], true);
+    $loadReservationsData = in_array($activePortalPage, ['reservations', 'operations', 'billing'], true) || $loadEngagementData;
+    $loadAvailabilityData = in_array($activePortalPage, ['availability', 'operations'], true);
+    $loadPricingData = $activePortalPage === 'pricing' || $loadEngagementData;
+    $loadBillingData = $activePortalPage === 'billing';
+    $vendorPortalCacheTtlSeconds = 45;
+
+    $vendorCategoryMap = vendorPortalCategoryMap();
+    $selectedVendorCategories = vendorPortalSelectedCategories($vendorUser);
+    if ($selectedVendorCategories === []) {
+        $selectedVendorCategories = ['accommodation'];
+    }
+    $vendorOnboardingStep = ($vendorUser instanceof User && Schema::hasColumn('users', 'vendor_onboarding_step'))
+        ? max(1, min(4, (int) ($vendorUser->vendor_onboarding_step ?? 1)))
+        : 1;
+
+    $vendorProperties = collect();
+    $vendorServices = collect();
+    $vendorAvailability = collect();
+    $vendorReservations = collect();
+    $vendorPricingRules = collect();
+    $vendorBilling = null;
+    $vendorRoomCategories = collect();
+    $vendorMediaAssets = collect();
+    $vendorEngagement = [
+        'inquiries_table' => null,
+        'inquiries' => collect(),
+        'reviews_table' => null,
+        'reviews' => collect(),
+        'promotions' => collect(),
+        'loyalty_table' => null,
+        'loyalty_programs' => collect(),
+        'loyal_customers' => collect(),
+    ];
+
+    $vendorReservationPolicy = ReservationPricingPolicy::loadPolicy();
+    $vendorTaxComponents = collect($vendorReservationPolicy['tax_components'] ?? []);
+    $vendorDashboardSnapshot = [
+        'listing_total' => 0,
+        'listing_active' => 0,
+        'pending_reservations' => 0,
+        'confirmed_reservations' => 0,
+        'completed_reservations' => 0,
+        'reservations_count' => 0,
+        'gross_collections_total' => 0.0,
+        'has_pricing_rules' => false,
+        'has_availability' => false,
+        'has_billing' => false,
+    ];
+
+    if ($vendorUserId > 0) {
+        // Load vendor listings from dedicated category tables.
+        $vendorProperties = collect(Cache::remember(
+            'vendor:portal:listings:v3:' . $vendorUserId,
+            now()->addSeconds($vendorPortalCacheTtlSeconds),
+            static function () use ($vendorUserId) {
+                return \App\Support\VendorPropertyCompatibilityReader::loadVendorListings($vendorUserId, 200)
+                    ->values()
+                    ->all();
+            }
+        ));
+
+        $accommodationPropertyIds = $vendorProperties
+            ->filter(static fn ($property) => vendorPortalCanonicalCategory((string) ($property->listing_category ?? '')) === 'accommodation')
+            ->flatMap(static fn ($property) => [
+                (int) ($property->id ?? 0),
+                (int) ($property->dedicated_row_id ?? 0),
+                (int) ($property->vendor_property_id ?? 0),
+            ])
+            ->filter(static fn (int $id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($loadListingsHeavyData && $accommodationPropertyIds->isNotEmpty()) {
+            $transferRowsByPropertyId = collect();
+            $featureRowsByPropertyId = collect();
+            $policyRowsByPropertyId = collect();
+
+            if (Schema::hasTable('vendor_accommodation_transfer_rates')) {
+                $transferRowsByPropertyId = DB::table('vendor_accommodation_transfer_rates')
+                    ->whereIn('vendor_property_id', $accommodationPropertyIds->all())
+                    ->get(['vendor_property_id', 'transfer_mode', 'resident_type', 'passenger_type', 'rate', 'base_charge'])
+                    ->groupBy(static fn ($row) => (int) ($row->vendor_property_id ?? 0));
+            }
+
+            if (Schema::hasTable('vendor_accommodation_features')) {
+                $featureRowsByPropertyId = DB::table('vendor_accommodation_features')
+                    ->whereIn('vendor_property_id', $accommodationPropertyIds->all())
+                    ->get(['vendor_property_id', 'feature_type', 'feature_key'])
+                    ->groupBy(static fn ($row) => (int) ($row->vendor_property_id ?? 0));
+            }
+
+            if (Schema::hasTable('vendor_accommodation_policies')) {
+                $policyRowsByPropertyId = DB::table('vendor_accommodation_policies')
+                    ->whereIn('vendor_property_id', $accommodationPropertyIds->all())
+                    ->get()
+                    ->keyBy(static fn ($row) => (int) ($row->vendor_property_id ?? 0));
+            }
+
+            $vendorProperties = $vendorProperties->map(static function ($property) use ($transferRowsByPropertyId, $featureRowsByPropertyId, $policyRowsByPropertyId) {
+                if (vendorPortalCanonicalCategory((string) ($property->listing_category ?? '')) !== 'accommodation') {
+                    return $property;
+                }
+
+                $details = [];
+                if (is_string($property->listing_details ?? null) && trim((string) $property->listing_details) !== '') {
+                    $decoded = json_decode((string) $property->listing_details, true);
+                    if (is_array($decoded)) {
+                        $details = $decoded;
+                    }
+                }
+
+                $lookupIds = array_values(array_unique(array_filter([
+                    (int) ($property->id ?? 0),
+                    (int) ($property->dedicated_row_id ?? 0),
+                    (int) ($property->vendor_property_id ?? 0),
+                ], static fn (int $id): bool => $id > 0)));
+
+                $transferRows = collect();
+                $featureRows = collect();
+                $policyRow = null;
+
+                foreach ($lookupIds as $lookupId) {
+                    if ($transferRows->isEmpty()) {
+                        $transferRows = collect($transferRowsByPropertyId->get($lookupId, collect()));
+                    }
+                    if ($featureRows->isEmpty()) {
+                        $featureRows = collect($featureRowsByPropertyId->get($lookupId, collect()));
+                    }
+                    if ($policyRow === null) {
+                        $policyRow = $policyRowsByPropertyId->get($lookupId);
+                    }
+                }
+
+                if ($transferRows->isNotEmpty()) {
+                    $transferOptions = [];
+                    $transferRates = [];
+                    $transferRateMatrix = [];
+                    $transferBaseLocal = 0.0;
+                    $transferBaseForeign = 0.0;
+
+                    foreach ($transferRows as $transferRow) {
+                        $mode = strtolower(trim((string) ($transferRow->transfer_mode ?? '')));
+                        $residentType = strtolower(trim((string) ($transferRow->resident_type ?? '')));
+                        $passengerType = strtolower(trim((string) ($transferRow->passenger_type ?? '')));
+                        $rate = is_numeric($transferRow->rate ?? null) ? (float) $transferRow->rate : 0.0;
+                        $baseCharge = is_numeric($transferRow->base_charge ?? null) ? (float) $transferRow->base_charge : 0.0;
+
+                        if ($mode === '') {
+                            continue;
+                        }
+
+                        $transferOptions[$mode] = true;
+                        if (!isset($transferRateMatrix[$mode])) {
+                            $transferRateMatrix[$mode] = [
+                                'local_adult_charge' => 0.0,
+                                'local_child_charge' => 0.0,
+                                'foreign_adult_charge' => 0.0,
+                                'foreign_child_charge' => 0.0,
+                            ];
+                        }
+
+                        if ($residentType === 'local' && $passengerType === 'adult') {
+                            $transferRateMatrix[$mode]['local_adult_charge'] = max(0, $rate);
+                        } elseif ($residentType === 'local' && $passengerType === 'child') {
+                            $transferRateMatrix[$mode]['local_child_charge'] = max(0, $rate);
+                        } elseif ($residentType === 'foreigner' && $passengerType === 'adult') {
+                            $transferRateMatrix[$mode]['foreign_adult_charge'] = max(0, $rate);
+                            $transferRates[$mode] = max(0, $rate);
+                        } elseif ($residentType === 'foreigner' && $passengerType === 'child') {
+                            $transferRateMatrix[$mode]['foreign_child_charge'] = max(0, $rate);
+                        }
+
+                        if ($residentType === 'local') {
+                            $transferBaseLocal = max($transferBaseLocal, max(0, $baseCharge));
+                        } elseif ($residentType === 'foreigner') {
+                            $transferBaseForeign = max($transferBaseForeign, max(0, $baseCharge));
+                        }
+                    }
+
+                    $details['transfer_options'] = array_values(array_keys($transferOptions));
+                    $details['transfer_rates'] = $transferRates;
+                    $details['transfer_rate_matrix'] = $transferRateMatrix;
+                    $details['transfer_base_local'] = $transferBaseLocal;
+                    $details['transfer_base_foreign'] = $transferBaseForeign;
+                }
+
+                if ($featureRows->isNotEmpty()) {
+                    $amenities = [];
+                    $facilities = [];
+                    foreach ($featureRows as $featureRow) {
+                        $featureType = strtolower(trim((string) ($featureRow->feature_type ?? '')));
+                        $featureKey = trim((string) ($featureRow->feature_key ?? ''));
+                        if ($featureKey === '') {
+                            continue;
+                        }
+
+                        if ($featureType === 'amenity') {
+                            $amenities[] = $featureKey;
+                        } elseif ($featureType === 'facility') {
+                            $facilities[] = $featureKey;
+                        }
+                    }
+
+                    $details['property_amenities'] = array_values(array_unique($amenities));
+                    $details['property_features'] = array_values(array_unique($facilities));
+                }
+
+                if ($policyRow) {
+                    $details['check_in_time'] = trim((string) ($policyRow->check_in_time ?? ($details['check_in_time'] ?? '')));
+                    $details['check_out_time'] = trim((string) ($policyRow->check_out_time ?? ($details['check_out_time'] ?? '')));
+                    $details['check_in_grace_minutes'] = is_numeric($policyRow->check_in_grace_minutes ?? null) ? (int) $policyRow->check_in_grace_minutes : ($details['check_in_grace_minutes'] ?? null);
+                    $details['early_check_in_allowed'] = trim((string) ($policyRow->early_check_in_allowed ?? ($details['early_check_in_allowed'] ?? '')));
+                    $details['late_check_out_allowed'] = trim((string) ($policyRow->late_check_out_allowed ?? ($details['late_check_out_allowed'] ?? '')));
+                    $details['minimum_nights'] = is_numeric($policyRow->minimum_nights ?? null) ? (int) $policyRow->minimum_nights : ($details['minimum_nights'] ?? null);
+                    $details['house_rules'] = trim((string) ($policyRow->house_rules ?? ($details['house_rules'] ?? '')));
+                    $details['child_policy'] = trim((string) ($policyRow->child_policy ?? ($details['child_policy'] ?? '')));
+                    $details['cancellation_policy'] = trim((string) ($policyRow->cancellation_policy ?? ($details['cancellation_policy'] ?? '')));
+                    $details['early_check_in_fee'] = is_numeric($policyRow->early_check_in_fee ?? null) ? (float) $policyRow->early_check_in_fee : ($details['early_check_in_fee'] ?? null);
+                    $details['late_check_out_fee'] = is_numeric($policyRow->late_check_out_fee ?? null) ? (float) $policyRow->late_check_out_fee : ($details['late_check_out_fee'] ?? null);
+                    $details['property_type'] = trim((string) ($policyRow->property_type ?? ($details['property_type'] ?? '')));
+                    $details['star_rating'] = is_numeric($policyRow->star_rating ?? null) ? (int) $policyRow->star_rating : ($details['star_rating'] ?? null);
+                }
+
+                $property->listing_details = json_encode($details);
+
+                return $property;
+            })->values();
+        }
+
+        $existingListingCategories = $vendorProperties
+            ->map(static fn ($property) => vendorPortalCanonicalCategory((string) ($property->listing_category ?? '')))
+            ->filter(static fn ($category) => is_string($category) && $category !== '')
+            ->values()
+            ->all();
+        if ($existingListingCategories !== []) {
+            $selectedVendorCategories = array_values(array_unique(array_merge($selectedVendorCategories, $existingListingCategories)));
+        }
+
+        $vendorDashboardSnapshot['listing_total'] = (int) $vendorProperties->count();
+        $vendorDashboardSnapshot['listing_active'] = (int) $vendorProperties
+            ->filter(static fn ($property) => strtolower(trim((string) ($property->status ?? 'active'))) === 'active')
+            ->count();
+
+        if (Schema::hasTable('vendor_services')) {
+            $serviceLimit = $loadListingsHeavyData ? 250 : 80;
+            $vendorServices = collect(Cache::remember(
+                'vendor:portal:services:v2:' . $vendorUserId . ':' . $serviceLimit,
+                now()->addSeconds($vendorPortalCacheTtlSeconds),
+                static function () use ($vendorUserId, $serviceLimit) {
+                    return DB::table('vendor_services')
+                        ->where('vendor_user_id', $vendorUserId)
+                        ->orderByDesc('updated_at')
+                        ->limit($serviceLimit)
+                        ->get()
+                        ->all();
+                }
+            ));
+
+            $existingServiceCategories = $vendorServices
+                ->map(static fn ($service) => vendorPortalCanonicalCategory((string) ($service->listing_category ?? '')))
+                ->filter(static fn ($category) => is_string($category) && $category !== '')
+                ->values()
+                ->all();
+            if ($existingServiceCategories !== []) {
+                $selectedVendorCategories = array_values(array_unique(array_merge($selectedVendorCategories, $existingServiceCategories)));
+            }
+
+            $vendorDashboardSnapshot['listing_total'] += (int) $vendorServices->count();
+            $vendorDashboardSnapshot['listing_active'] += (int) $vendorServices
+                ->filter(static fn ($service) => strtolower(trim((string) ($service->status ?? 'active'))) === 'active')
+                ->count();
+        }
+
+        if ($isOverviewPage) {
+            $vendorDashboardSnapshot = Cache::remember(
+                'vendor:portal:snapshot:v1:' . $vendorUserId,
+                now()->addSeconds($vendorPortalCacheTtlSeconds),
+                static function () use ($vendorUserId, $vendorDashboardSnapshot): array {
+                    $snapshot = $vendorDashboardSnapshot;
+
+                    if (Schema::hasTable('vendor_reservations')) {
+                        $aggregate = DB::table('vendor_reservations')
+                            ->where('vendor_user_id', $vendorUserId)
+                            ->selectRaw('COUNT(*) as reservations_count')
+                            ->selectRaw("SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) = 'pending' THEN 1 ELSE 0 END) as pending_reservations")
+                            ->selectRaw("SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) IN ('confirmed', 'upcoming') THEN 1 ELSE 0 END) as confirmed_reservations")
+                            ->selectRaw("SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) = 'completed' THEN 1 ELSE 0 END) as completed_reservations")
+                            ->selectRaw('SUM(COALESCE(invoice_total_amount, total_amount, 0)) as gross_collections_total')
+                            ->first();
+
+                        $snapshot['reservations_count'] = (int) ($aggregate->reservations_count ?? 0);
+                        $snapshot['pending_reservations'] = (int) ($aggregate->pending_reservations ?? 0);
+                        $snapshot['confirmed_reservations'] = (int) ($aggregate->confirmed_reservations ?? 0);
+                        $snapshot['completed_reservations'] = (int) ($aggregate->completed_reservations ?? 0);
+                        $snapshot['gross_collections_total'] = (float) ($aggregate->gross_collections_total ?? 0);
+                    }
+
+                    $snapshot['has_pricing_rules'] = Schema::hasTable('vendor_pricing_rules')
+                        ? DB::table('vendor_pricing_rules')->where('vendor_user_id', $vendorUserId)->exists()
+                        : false;
+                    $snapshot['has_availability'] = Schema::hasTable('vendor_availability_slots')
+                        ? DB::table('vendor_availability_slots')->where('vendor_user_id', $vendorUserId)->exists()
+                        : false;
+                    $snapshot['has_billing'] = Schema::hasTable('vendor_billing_details')
+                        ? DB::table('vendor_billing_details')->where('vendor_user_id', $vendorUserId)->exists()
+                        : false;
+
+                    return $snapshot;
+                }
+            );
+        }
+
+        if ($loadAvailabilityData && Schema::hasTable('vendor_availability_slots')) {
+            $availabilityLimit = $activePortalPage === 'availability' ? 365 : 60;
+            $vendorAvailability = collect(Cache::remember(
+                'vendor:portal:availability:v2:' . $vendorUserId . ':' . $availabilityLimit,
+                now()->addSeconds($vendorPortalCacheTtlSeconds),
+                static function () use ($vendorUserId, $availabilityLimit) {
+                    return DB::table('vendor_availability_slots')
+                        ->where('vendor_user_id', $vendorUserId)
+                        ->orderBy('slot_date')
+                        ->limit($availabilityLimit)
+                        ->get()
+                        ->all();
+                }
+            ));
+        }
+
+        if ($loadReservationsData && Schema::hasTable('vendor_reservations')) {
+            $reservationLimit = $loadEngagementData
+                ? 300
+                : (($activePortalPage === 'billing' || $activePortalPage === 'reservations' || $activePortalPage === 'operations') ? 200 : 80);
+            $vendorReservations = collect(Cache::remember(
+                'vendor:portal:reservations:v2:' . $vendorUserId . ':' . $reservationLimit,
+                now()->addSeconds($vendorPortalCacheTtlSeconds),
+                static function () use ($vendorUserId, $reservationLimit) {
+                    return DB::table('vendor_reservations')
+                        ->where('vendor_user_id', $vendorUserId)
+                        ->orderByDesc('start_at')
+                        ->limit($reservationLimit)
+                        ->get()
+                        ->all();
+                }
+            ));
+        }
+
+        if ($loadPricingData && Schema::hasTable('vendor_pricing_rules')) {
+            $pricingLimit = $activePortalPage === 'pricing' ? 200 : 80;
+            $vendorPricingRules = collect(Cache::remember(
+                'vendor:portal:pricing-rules:v2:' . $vendorUserId . ':' . $pricingLimit,
+                now()->addSeconds($vendorPortalCacheTtlSeconds),
+                static function () use ($vendorUserId, $pricingLimit) {
+                    return DB::table('vendor_pricing_rules')
+                        ->where('vendor_user_id', $vendorUserId)
+                        ->orderByDesc('updated_at')
+                        ->limit($pricingLimit)
+                        ->get()
+                        ->all();
+                }
+            ));
+        }
+
+        if ($loadBillingData && Schema::hasTable('vendor_billing_details')) {
+            $vendorBilling = Cache::remember(
+                'vendor:portal:billing:v2:' . $vendorUserId,
+                now()->addSeconds($vendorPortalCacheTtlSeconds),
+                static function () use ($vendorUserId) {
+                    return DB::table('vendor_billing_details')
+                        ->where('vendor_user_id', $vendorUserId)
+                        ->first();
+                }
+            );
+        }
+
+        if ($loadListingsHeavyData && Schema::hasTable('vendor_property_room_categories')) {
+            $vendorRoomCategories = DB::table('vendor_property_room_categories')
+                ->where('vendor_user_id', $vendorUserId)
+                ->orderByDesc('updated_at')
+                ->limit(200)
+                ->get();
+        }
+
+        if ($loadListingsHeavyData && Schema::hasTable('vendor_listing_media')) {
+            $vendorMediaAssets = DB::table('vendor_listing_media')
+                ->where('vendor_user_id', $vendorUserId)
+                ->orderByDesc('created_at')
+                ->limit(200)
+                ->get();
+        }
+
+        $vendorPropertyIds = $vendorProperties
+            ->pluck('id')
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->values();
+
+        if ($loadEngagementData) {
+            $reviewTableCandidates = ['vendor_property_reviews', 'vendor_reviews', 'customer_reviews', 'property_reviews'];
+            foreach ($reviewTableCandidates as $reviewTable) {
+                if (!Schema::hasTable($reviewTable)) {
+                    continue;
+                }
+
+                $columns = Schema::getColumnListing($reviewTable);
+                $idColumn = collect(['id', 'review_id'])->first(static fn ($column) => in_array($column, $columns, true));
+                if ($idColumn === null) {
+                    continue;
+                }
+
+                $vendorColumn = collect(['vendor_user_id', 'vendor_id', 'owner_user_id'])->first(static fn ($column) => in_array($column, $columns, true));
+                $propertyColumn = collect(['vendor_property_id', 'property_id', 'listing_id', 'entity_id'])->first(static fn ($column) => in_array($column, $columns, true));
+                $dateColumn = collect(['created_at', 'reviewed_at', 'updated_at'])->first(static fn ($column) => in_array($column, $columns, true));
+
+                $query = DB::table($reviewTable);
+                if ($vendorColumn !== null) {
+                    $query->where($vendorColumn, $vendorUserId);
+                } elseif ($propertyColumn !== null && $vendorPropertyIds->isNotEmpty()) {
+                    $query->whereIn($propertyColumn, $vendorPropertyIds->all());
+                } else {
+                    continue;
+                }
+
+                if ($dateColumn !== null) {
+                    $query->orderByDesc($dateColumn);
+                }
+
+                $ratingColumn = collect(['rating', 'score', 'review_score'])->first(static fn ($column) => in_array($column, $columns, true));
+                $titleColumn = collect(['title', 'subject', 'headline'])->first(static fn ($column) => in_array($column, $columns, true));
+                $commentColumn = collect(['comment', 'review_text', 'message', 'body'])->first(static fn ($column) => in_array($column, $columns, true));
+                $statusColumn = collect(['status', 'review_status'])->first(static fn ($column) => in_array($column, $columns, true));
+                $nameColumn = collect(['customer_name', 'guest_name', 'reviewer_name', 'name'])->first(static fn ($column) => in_array($column, $columns, true));
+                $responseColumn = collect(['vendor_response', 'response_text', 'reply_text', 'response'])->first(static fn ($column) => in_array($column, $columns, true));
+
+                $selectColumns = collect([$idColumn, $propertyColumn, $ratingColumn, $titleColumn, $commentColumn, $statusColumn, $nameColumn, $responseColumn, $dateColumn])
+                    ->filter(static fn ($column) => is_string($column) && $column !== '')
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                $rows = $query->limit(80)->get($selectColumns);
+                if ($rows->isEmpty()) {
+                    continue;
+                }
+
+                $vendorEngagement['reviews_table'] = $reviewTable;
+                $vendorEngagement['reviews'] = $rows->map(static function ($row) use ($idColumn, $propertyColumn, $ratingColumn, $titleColumn, $commentColumn, $statusColumn, $nameColumn, $responseColumn, $dateColumn) {
+                    return [
+                        'id' => (int) (($row->{$idColumn} ?? 0) ?: 0),
+                        'vendor_property_id' => $propertyColumn ? (int) (($row->{$propertyColumn} ?? 0) ?: 0) : 0,
+                        'rating' => $ratingColumn ? (float) (($row->{$ratingColumn} ?? 0) ?: 0) : 0,
+                        'title' => trim((string) ($titleColumn ? ($row->{$titleColumn} ?? '') : '')),
+                        'comment' => trim((string) ($commentColumn ? ($row->{$commentColumn} ?? '') : '')),
+                        'status' => strtolower(trim((string) ($statusColumn ? ($row->{$statusColumn} ?? 'pending') : 'pending'))),
+                        'customer_name' => trim((string) ($nameColumn ? ($row->{$nameColumn} ?? 'Guest') : 'Guest')),
+                        'response' => trim((string) ($responseColumn ? ($row->{$responseColumn} ?? '') : '')),
+                        'created_at' => trim((string) ($dateColumn ? ($row->{$dateColumn} ?? '') : '')),
+                    ];
+                })->values();
+
+                break;
+            }
+
+            $inquiryTableCandidates = ['vendor_customer_inquiries', 'vendor_inquiries', 'customer_inquiries', 'vendor_messages'];
+            foreach ($inquiryTableCandidates as $inquiryTable) {
+                if (!Schema::hasTable($inquiryTable)) {
+                    continue;
+                }
+
+                $columns = Schema::getColumnListing($inquiryTable);
+                $idColumn = collect(['id', 'inquiry_id', 'message_id'])->first(static fn ($column) => in_array($column, $columns, true));
+                if ($idColumn === null) {
+                    continue;
+                }
+
+                $vendorColumn = collect(['vendor_user_id', 'vendor_id', 'owner_user_id'])->first(static fn ($column) => in_array($column, $columns, true));
+                $propertyColumn = collect(['vendor_property_id', 'property_id', 'listing_id', 'entity_id'])->first(static fn ($column) => in_array($column, $columns, true));
+                $dateColumn = collect(['created_at', 'submitted_at', 'sent_at', 'updated_at'])->first(static fn ($column) => in_array($column, $columns, true));
+
+                $query = DB::table($inquiryTable);
+                if ($vendorColumn !== null) {
+                    $query->where($vendorColumn, $vendorUserId);
+                } elseif ($propertyColumn !== null && $vendorPropertyIds->isNotEmpty()) {
+                    $query->whereIn($propertyColumn, $vendorPropertyIds->all());
+                } else {
+                    continue;
+                }
+
+                if ($dateColumn !== null) {
+                    $query->orderByDesc($dateColumn);
+                }
+
+                $subjectColumn = collect(['subject', 'topic', 'title'])->first(static fn ($column) => in_array($column, $columns, true));
+                $messageColumn = collect(['message', 'body', 'content', 'inquiry_text'])->first(static fn ($column) => in_array($column, $columns, true));
+                $statusColumn = collect(['status', 'inquiry_status', 'state'])->first(static fn ($column) => in_array($column, $columns, true));
+                $nameColumn = collect(['customer_name', 'guest_name', 'sender_name', 'name'])->first(static fn ($column) => in_array($column, $columns, true));
+                $emailColumn = collect(['customer_email', 'guest_email', 'sender_email', 'email'])->first(static fn ($column) => in_array($column, $columns, true));
+                $responseColumn = collect(['vendor_response', 'response_text', 'reply_text', 'response', 'resolution_note'])->first(static fn ($column) => in_array($column, $columns, true));
+                $respondedAtColumn = collect(['responded_at', 'replied_at', 'response_at'])->first(static fn ($column) => in_array($column, $columns, true));
+
+                $selectColumns = collect([$idColumn, $propertyColumn, $subjectColumn, $messageColumn, $statusColumn, $nameColumn, $emailColumn, $responseColumn, $respondedAtColumn, $dateColumn])
+                    ->filter(static fn ($column) => is_string($column) && $column !== '')
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                $rows = $query->limit(100)->get($selectColumns);
+                if ($rows->isEmpty()) {
+                    continue;
+                }
+
+                $vendorEngagement['inquiries_table'] = $inquiryTable;
+                $vendorEngagement['inquiries'] = $rows->map(static function ($row) use ($idColumn, $propertyColumn, $subjectColumn, $messageColumn, $statusColumn, $nameColumn, $emailColumn, $responseColumn, $respondedAtColumn, $dateColumn) {
+                    return [
+                        'id' => (int) (($row->{$idColumn} ?? 0) ?: 0),
+                        'vendor_property_id' => $propertyColumn ? (int) (($row->{$propertyColumn} ?? 0) ?: 0) : 0,
+                        'subject' => trim((string) ($subjectColumn ? ($row->{$subjectColumn} ?? '') : '')),
+                        'message' => trim((string) ($messageColumn ? ($row->{$messageColumn} ?? '') : '')),
+                        'status' => strtolower(trim((string) ($statusColumn ? ($row->{$statusColumn} ?? 'open') : 'open'))),
+                        'customer_name' => trim((string) ($nameColumn ? ($row->{$nameColumn} ?? 'Guest') : 'Guest')),
+                        'customer_email' => trim((string) ($emailColumn ? ($row->{$emailColumn} ?? '') : '')),
+                        'response' => trim((string) ($responseColumn ? ($row->{$responseColumn} ?? '') : '')),
+                        'responded_at' => trim((string) ($respondedAtColumn ? ($row->{$respondedAtColumn} ?? '') : '')),
+                        'created_at' => trim((string) ($dateColumn ? ($row->{$dateColumn} ?? '') : '')),
+                    ];
+                })->values();
+
+                break;
+            }
+
+            $vendorEngagement['promotions'] = $vendorPricingRules
+                ->filter(static fn ($rule) => in_array(strtolower(trim((string) ($rule->rule_type ?? ''))), ['promo_discount', 'demand_discount', 'weekend_markup'], true))
+                ->map(static function ($rule) {
+                    return [
+                        'id' => (int) ($rule->id ?? 0),
+                        'name' => trim((string) ($rule->name ?? 'Promotion Rule')),
+                        'rule_type' => strtolower(trim((string) ($rule->rule_type ?? 'promo_discount'))),
+                        'value' => (float) ($rule->value ?? 0),
+                        'is_active' => (bool) ($rule->is_active ?? true),
+                        'starts_on' => (string) ($rule->starts_on ?? ''),
+                        'ends_on' => (string) ($rule->ends_on ?? ''),
+                    ];
+                })
+                ->sortByDesc('id')
+                ->take(20)
+                ->values();
+
+            $loyaltyTableCandidates = ['vendor_loyalty_programs', 'vendor_loyalty_tiers', 'vendor_loyalty_configs'];
+            foreach ($loyaltyTableCandidates as $loyaltyTable) {
+                if (!Schema::hasTable($loyaltyTable)) {
+                    continue;
+                }
+
+                $columns = Schema::getColumnListing($loyaltyTable);
+                $vendorColumn = collect(['vendor_user_id', 'vendor_id', 'owner_user_id'])->first(static fn ($column) => in_array($column, $columns, true));
+                if ($vendorColumn === null) {
+                    continue;
+                }
+
+                $nameColumn = collect(['name', 'program_name', 'tier_name', 'title'])->first(static fn ($column) => in_array($column, $columns, true));
+                $pointsColumn = collect(['points_per_booking', 'points_rate', 'points_multiplier'])->first(static fn ($column) => in_array($column, $columns, true));
+                $statusColumn = collect(['status', 'is_active'])->first(static fn ($column) => in_array($column, $columns, true));
+                $dateColumn = collect(['updated_at', 'created_at'])->first(static fn ($column) => in_array($column, $columns, true));
+
+                $query = DB::table($loyaltyTable)->where($vendorColumn, $vendorUserId);
+                if ($dateColumn !== null) {
+                    $query->orderByDesc($dateColumn);
+                }
+
+                $selectColumns = collect([$nameColumn, $pointsColumn, $statusColumn, $dateColumn])
+                    ->filter(static fn ($column) => is_string($column) && $column !== '')
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                $rows = $query->limit(20)->get($selectColumns);
+                $vendorEngagement['loyalty_table'] = $loyaltyTable;
+                $vendorEngagement['loyalty_programs'] = $rows->map(static function ($row) use ($nameColumn, $pointsColumn, $statusColumn, $dateColumn) {
+                    return [
+                        'name' => trim((string) ($nameColumn ? ($row->{$nameColumn} ?? 'Loyalty Program') : 'Loyalty Program')),
+                        'points_rate' => $pointsColumn ? (float) (($row->{$pointsColumn} ?? 0) ?: 0) : 0,
+                        'status' => strtolower(trim((string) ($statusColumn ? ($row->{$statusColumn} ?? 'active') : 'active'))),
+                        'updated_at' => trim((string) ($dateColumn ? ($row->{$dateColumn} ?? '') : '')),
+                    ];
+                })->values();
+                break;
+            }
+
+            $vendorEngagement['loyal_customers'] = $vendorReservations
+                ->filter(static fn ($reservation) => trim((string) ($reservation->customer_email ?? '')) !== '')
+                ->groupBy(static fn ($reservation) => strtolower(trim((string) ($reservation->customer_email ?? ''))))
+                ->map(static function ($rows, $email) {
+                    $rows = collect($rows);
+                    $latest = $rows->sortByDesc(static fn ($row) => (string) ($row->start_at ?? $row->created_at ?? ''))->first();
+                    return [
+                        'customer_email' => (string) $email,
+                        'customer_name' => trim((string) ($latest->customer_name ?? 'Returning Guest')),
+                        'reservations_count' => (int) $rows->count(),
+                        'total_spend' => (float) $rows->sum(static fn ($row) => (float) ($row->invoice_total_amount ?? $row->total_amount ?? 0)),
+                    ];
+                })
+                ->sortByDesc('reservations_count')
+                ->take(20)
+                ->values();
+        }
+
+    }
+
+    return view('vendor-portal', [
+        'apiBase' => workationApiBase(),
+        'portalUser' => session('portal_vendor_user', 'Vendor'),
+        'vendorProfile' => [
+            'name' => $vendorUser instanceof User ? (string) $vendorUser->name : (string) session('portal_vendor_user', 'Vendor'),
+            'email' => $vendorUser instanceof User ? (string) $vendorUser->email : '',
+            'phone' => ($vendorUser instanceof User && Schema::hasColumn('users', 'phone')) ? (string) ($vendorUser->phone ?? '') : '',
+            'vendor_id' => $vendorUser instanceof User ? (string) ($vendorUser->portal_vendor_id ?? '') : '',
+            'company_name' => ($vendorUser instanceof User && Schema::hasColumn('users', 'vendor_company_name')) ? (string) ($vendorUser->vendor_company_name ?? '') : '',
+            'business_registration_number' => ($vendorUser instanceof User && Schema::hasColumn('users', 'vendor_business_registration_number')) ? (string) ($vendorUser->vendor_business_registration_number ?? '') : '',
+            'business_license_number' => ($vendorUser instanceof User && Schema::hasColumn('users', 'vendor_business_license_number')) ? (string) ($vendorUser->vendor_business_license_number ?? '') : '',
+            'contact_person_name' => ($vendorUser instanceof User && Schema::hasColumn('users', 'vendor_contact_person_name')) ? (string) ($vendorUser->vendor_contact_person_name ?? '') : '',
+            'contact_person_phone' => ($vendorUser instanceof User && Schema::hasColumn('users', 'vendor_contact_person_phone')) ? (string) ($vendorUser->vendor_contact_person_phone ?? '') : '',
+            'contact_person_email' => ($vendorUser instanceof User && Schema::hasColumn('users', 'vendor_contact_person_email')) ? (string) ($vendorUser->vendor_contact_person_email ?? '') : '',
+            'contact_person_id_number' => ($vendorUser instanceof User && Schema::hasColumn('users', 'vendor_contact_person_id_number')) ? (string) ($vendorUser->vendor_contact_person_id_number ?? '') : '',
+            'verification_status' => vendorPortalVerificationStatus($vendorUser),
+            'verification_notes' => ($vendorUser instanceof User && Schema::hasColumn('users', 'vendor_verification_notes')) ? (string) ($vendorUser->vendor_verification_notes ?? '') : '',
+            'approved_categories' => vendorPortalApprovedCategories($vendorUser),
+        ],
+        'vendorCanManageListings' => vendorPortalCanManageListings($vendorUser),
+        'vendorCategoryMap' => $vendorCategoryMap,
+        'selectedVendorCategories' => $selectedVendorCategories,
+        'vendorOnboardingStep' => $vendorOnboardingStep,
+        'vendorProperties' => $vendorProperties,
+        'vendorServices' => $vendorServices,
+        'vendorAvailability' => $vendorAvailability,
+        'vendorReservations' => $vendorReservations,
+        'vendorPricingRules' => $vendorPricingRules,
+        'vendorBilling' => $vendorBilling,
+        'vendorRoomCategories' => $vendorRoomCategories,
+        'vendorRooms' => $vendorRoomCategories,
+        'vendorMediaAssets' => $vendorMediaAssets,
+        'vendorEngagement' => $vendorEngagement,
+        'vendorDashboardSnapshot' => $vendorDashboardSnapshot,
+        'transportModeOptions' => vendorPortalListingOptions('transport_mode'),
+        'accommodationFacilityOptions' => vendorPortalListingOptions('accommodation_facility'),
+        'roomAmenityOptions' => vendorPortalListingOptions('room_amenity'),
+        'bathroomAmenityOptions' => vendorPortalListingOptions('bathroom_amenity'),
+        'propertyAmenityOptions' => vendorPortalListingOptions('property_amenity'),
+        'propertyFeatureOptions' => vendorPortalListingOptions('property_feature'),
+        'roomBedTypeOptions' => vendorPortalListingOptions('room_bed_type'),
+        'excursionTypeOptions' => vendorPortalListingOptions('excursion_type'),
+        'restaurantMealServiceOptions' => vendorPortalListingOptions('restaurant_meal_service'),
+        'vehicleRentalTypeOptions' => vendorPortalListingOptions('vehicle_rental_type'),
+        'vendorReservationPolicy' => $vendorReservationPolicy,
+        'vendorTaxComponents' => $vendorTaxComponents,
+    ]);
+});
+
+Route::get('/vendor/overview', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    return redirect('/vendor?page=overview')->with('portal_active_panel', 'overview');
+});
+
+Route::get('/vendor/profile', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $section = strtolower(trim((string) request()->query('section', '')));
+    $allowedSections = ['profile', 'categories', 'banking', 'address', 'password', 'all'];
+
+    $target = '/vendor?page=profile';
+    if ($section !== '' && in_array($section, $allowedSections, true)) {
+        $target .= '&section=' . urlencode($section);
+    }
+
+    return redirect($target)->with('portal_active_panel', 'profile');
+});
+
+Route::get('/vendor/listings', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+    if (!vendorPortalCanManageListings($vendorUser)) {
+        return redirect('/vendor?page=profile')
+            ->with('portal_active_panel', 'profile')
+            ->withErrors(['profile' => 'Listings are locked until your vendor profile is verified by admin.']);
+    }
+
+    return redirect('/vendor?page=listings')
+        ->with('portal_active_panel', 'listings')
+        ->with('listing_wizard_step', 1);
+});
+
+Route::get('/vendor/listings/create', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+    if (!vendorPortalCanManageListings($vendorUser)) {
+        return redirect('/vendor?page=profile')
+            ->with('portal_active_panel', 'profile')
+            ->withErrors(['profile' => 'Complete compliance verification in My Account and wait for admin approval before creating listings.']);
+    }
+
+    return redirect('/vendor?page=listings')
+        ->with('portal_active_panel', 'listings')
+        ->with('listing_wizard_step', 1)
+        ->with('portal_listing_mode', 'create');
+});
+
+Route::get('/vendor/listings/create/{category}', function (string $category) {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+    if (!vendorPortalCanManageListings($vendorUser)) {
+        return redirect('/vendor?page=profile')
+            ->with('portal_active_panel', 'profile')
+            ->withErrors(['profile' => 'Complete compliance verification in My Account and wait for admin approval before creating listings.']);
+    }
+
+    $normalizedCategory = vendorPortalNormalizeCategoryToken($category);
+    $allowedCategories = array_merge(array_keys(vendorPortalCategoryMap()), ['marine_transport', 'land_transport']);
+    if (!in_array($normalizedCategory, $allowedCategories, true)) {
+        return redirect('/vendor?page=listings')->withErrors([
+            'profile' => 'Unsupported listing category route.',
+        ]);
+    }
+
+    return redirect('/vendor?page=listings')
+        ->with('portal_active_panel', 'listings')
+        ->with('listing_wizard_step', 1)
+        ->with('portal_listing_mode', 'create')
+        ->with('portal_listing_category', $normalizedCategory);
+});
+
+$vendorListingCategoryAliases = [
+    'accommodation',
+    'marine_transport',
+    'land_transport',
+    'water_sports',
+    'excursion',
+    'remote_workspace',
+    'conference_room',
+    'resort_day_visit',
+    'restaurant',
+    'vehicle_rental',
+];
+
+foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
+    Route::get('/vendor/listings/' . $listingCategoryAlias, function () use ($listingCategoryAlias) {
+        if (!session()->get('portal_vendor_authenticated', false)) {
+            return redirect('/portal/vendor/login');
+        }
+
+        $vendorUserId = (int) session('portal_vendor_user_id', 0);
+        $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+        if (!vendorPortalCanManageListings($vendorUser)) {
+            return redirect('/vendor?page=profile')
+                ->with('portal_active_panel', 'profile')
+                ->withErrors(['profile' => 'Listings are locked until your vendor profile is verified by admin.']);
+        }
+
+        return redirect('/vendor?page=listings')
+            ->with('portal_active_panel', 'listings')
+            ->with('listing_wizard_step', 1)
+            ->with('portal_listing_mode', 'manage')
+            ->with('portal_listing_category', $listingCategoryAlias);
+    })->name('vendor.listings.category.' . $listingCategoryAlias);
+
+    Route::get('/vendor/listings/' . $listingCategoryAlias . '/create', function () use ($listingCategoryAlias) {
+        if (!session()->get('portal_vendor_authenticated', false)) {
+            return redirect('/portal/vendor/login');
+        }
+
+        $vendorUserId = (int) session('portal_vendor_user_id', 0);
+        $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+        if (!vendorPortalCanManageListings($vendorUser)) {
+            return redirect('/vendor?page=profile')
+                ->with('portal_active_panel', 'profile')
+                ->withErrors(['profile' => 'Complete compliance verification in My Account and wait for admin approval before creating listings.']);
+        }
+
+        $approvedCategories = vendorPortalApprovedCategories($vendorUser);
+        if (!in_array($listingCategoryAlias, $approvedCategories, true)) {
+            return redirect('/vendor/listings/' . $listingCategoryAlias)
+                ->withErrors(['profile' => 'This listing category is locked. Contact admin to unlock ' . $listingCategoryAlias . ' for your account.']);
+        }
+
+        $vendorCategoryMap = vendorPortalCategoryMap();
+        $selectedVendorCategories = vendorPortalSelectedCategories($vendorUser);
+        $listingCategoryViewOrder = ['accommodation','marine_transport','land_transport','water_sports','excursion','remote_workspace','conference_room','resort_day_visit','restaurant','vehicle_rental'];
+        $listingCategoryLabelMap = array_merge($vendorCategoryMap, ['marine_transport' => 'Marine Transport', 'land_transport' => 'Land Transport', 'conference_room' => 'Conference Rooms']);
+        $categoryLabel = $listingCategoryLabelMap[$listingCategoryAlias] ?? ucwords(str_replace('_', ' ', $listingCategoryAlias));
+
+        $vendorProfileRow = null;
+        if (Schema::hasTable('vendor_profiles')) {
+            $vendorProfileRow = DB::table('vendor_profiles')
+                ->where('vendor_user_id', $vendorUserId)
+                ->first(['business_name', 'contact_email']);
+        }
+        $vendorProfile = [
+            'name' => (string) ($vendorProfileRow->business_name ?? ($vendorUser->name ?? '')),
+            'email' => (string) ($vendorProfileRow->contact_email ?? ($vendorUser->email ?? '')),
+            'approved_categories' => $approvedCategories,
+        ];
+
+        $transferOptionCatalog = vendorPortalTransferOptionLabelMap();
+        $workspaceAmenityCatalog = [
+            'workdesk' => 'Workdesk',
+            'wifi' => 'WiFi',
+            'printing' => 'Printing',
+            'water_bottles' => 'Water Bottles',
+            'coffee' => 'Coffee',
+            'tea' => 'Tea',
+            'snacks' => 'Snacks',
+        ];
+
+        return view('vendor-portal.listing-form-page', [
+            'category' => $listingCategoryAlias,
+            'categoryLabel' => $categoryLabel,
+            'formType' => 'create',
+            'pageTitle' => 'New ' . $categoryLabel . ' Listing',
+            'pageSubtitle' => 'Complete the form below to create a new ' . strtolower($categoryLabel) . ' listing.',
+            'portalUser' => session('portal_vendor_user_email', $vendorUser->email ?? ''),
+            'vendorProfile' => $vendorProfile,
+            'vendorCategoryMap' => $vendorCategoryMap,
+            'selectedVendorCategories' => $selectedVendorCategories,
+            'listingCategoryViewOrder' => $listingCategoryViewOrder,
+            'listingCategoryLabelMap' => $listingCategoryLabelMap,
+            'activePortalPage' => 'listings',
+            'forcedListingCategory' => $listingCategoryAlias,
+            'transportModeOptions' => vendorPortalListingOptions('transport_mode'),
+            'transportModeOptionsCollection' => collect(vendorPortalListingOptions('transport_mode')),
+            'propertyAmenityOptions' => vendorPortalListingOptions('property_amenity'),
+            'propertyAmenityOptionsCollection' => collect(vendorPortalListingOptions('property_amenity')),
+            'propertyFeatureOptions' => vendorPortalListingOptions('property_feature'),
+            'propertyFeatureOptionsCollection' => collect(vendorPortalListingOptions('property_feature')),
+            'excursionTypeOptions' => vendorPortalListingOptions('excursion_type'),
+            'excursionTypeOptionsCollection' => collect(vendorPortalListingOptions('excursion_type')),
+            'restaurantMealServiceOptions' => vendorPortalListingOptions('restaurant_meal_service'),
+            'restaurantMealServiceOptionsCollection' => collect(vendorPortalListingOptions('restaurant_meal_service')),
+            'vehicleRentalTypeOptions' => vendorPortalListingOptions('vehicle_rental_type'),
+            'vehicleRentalTypeOptionsCollection' => collect(vendorPortalListingOptions('vehicle_rental_type')),
+            'vendorTaxComponents' => collect([]),
+            'transferOptionCatalog' => $transferOptionCatalog,
+            'workspaceAmenityCatalog' => $workspaceAmenityCatalog,
+            'oldTransferOptions' => old('transfer_options', []),
+            'oldTransferRatesInput' => [],
+            'oldPropertyAmenities' => old('property_amenities', []),
+            'oldPropertyFeatures' => old('property_features', []),
+            'oldWorkspaceAmenityStatus' => [],
+        ]);
+    })->name('vendor.listings.category.create.' . $listingCategoryAlias);
+}
+
+foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
+    Route::get('/vendor/listings/' . $listingCategoryAlias . '/{propertyId}/edit', function (int $propertyId) use ($listingCategoryAlias) {
+        if (!session()->get('portal_vendor_authenticated', false)) {
+            return redirect('/portal/vendor/login');
+        }
+
+        $vendorUserId = (int) session('portal_vendor_user_id', 0);
+        $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+        if (!vendorPortalCanManageListings($vendorUser)) {
+            return redirect('/vendor?page=profile')
+                ->with('portal_active_panel', 'profile')
+                ->withErrors(['profile' => 'Complete compliance verification in My Account and wait for admin approval before editing listings.']);
+        }
+
+        $approvedCategories = vendorPortalApprovedCategories($vendorUser);
+        if (!in_array($listingCategoryAlias, $approvedCategories, true)) {
+            return redirect('/vendor/listings/' . $listingCategoryAlias)
+                ->withErrors(['profile' => 'This listing category is locked. Contact admin to unlock ' . $listingCategoryAlias . ' for your account.']);
+        }
+
+        $propertyRow = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById($propertyId, $vendorUserId, $listingCategoryAlias);
+        if (!$propertyRow) {
+            return redirect('/vendor/listings/' . $listingCategoryAlias)
+                ->withErrors(['profile' => 'Listing not found or access denied.']);
+        }
+
+        $propertyDetails = [];
+        $rawDetails = $propertyRow->listing_details ?? ($propertyRow->details ?? null);
+        if (is_string($rawDetails) && trim($rawDetails) !== '') {
+            $decoded = json_decode($rawDetails, true);
+            if (is_array($decoded)) {
+                $propertyDetails = $decoded;
+            }
+        }
+
+        $vendorCategoryMap = vendorPortalCategoryMap();
+        $selectedVendorCategories = vendorPortalSelectedCategories($vendorUser);
+        $listingCategoryViewOrder = ['accommodation','marine_transport','land_transport','water_sports','excursion','remote_workspace','conference_room','resort_day_visit','restaurant','vehicle_rental'];
+        $listingCategoryLabelMap = array_merge($vendorCategoryMap, ['marine_transport' => 'Marine Transport', 'land_transport' => 'Land Transport', 'conference_room' => 'Conference Rooms']);
+        $categoryLabel = $listingCategoryLabelMap[$listingCategoryAlias] ?? ucwords(str_replace('_', ' ', $listingCategoryAlias));
+
+        $vendorProfileRow = null;
+        if (Schema::hasTable('vendor_profiles')) {
+            $vendorProfileRow = DB::table('vendor_profiles')
+                ->where('vendor_user_id', $vendorUserId)
+                ->first(['business_name', 'contact_email']);
+        }
+        $vendorProfile = [
+            'name' => (string) ($vendorProfileRow->business_name ?? ($vendorUser->name ?? '')),
+            'email' => (string) ($vendorProfileRow->contact_email ?? ($vendorUser->email ?? '')),
+            'approved_categories' => $approvedCategories,
+        ];
+
+        $transferOptionCatalog = vendorPortalTransferOptionLabelMap();
+        $workspaceAmenityCatalog = [
+            'workdesk' => 'Workdesk',
+            'wifi' => 'WiFi',
+            'printing' => 'Printing',
+            'water_bottles' => 'Water Bottles',
+            'coffee' => 'Coffee',
+            'tea' => 'Tea',
+            'snacks' => 'Snacks',
+        ];
+
+        return view('vendor-portal.listing-form-page', [
+            'category' => $listingCategoryAlias,
+            'categoryLabel' => $categoryLabel,
+            'formType' => 'edit',
+            'property' => $propertyRow,
+            'propertyId' => $propertyId,
+            'propertyDetails' => $propertyDetails,
+            'pageTitle' => 'Edit: ' . ($propertyRow->name ?? 'Listing #' . $propertyId),
+            'pageSubtitle' => 'Update your ' . strtolower($categoryLabel) . ' listing details.',
+            'portalUser' => session('portal_vendor_user_email', $vendorUser->email ?? ''),
+            'vendorProfile' => $vendorProfile,
+            'vendorCategoryMap' => $vendorCategoryMap,
+            'selectedVendorCategories' => $selectedVendorCategories,
+            'listingCategoryViewOrder' => $listingCategoryViewOrder,
+            'listingCategoryLabelMap' => $listingCategoryLabelMap,
+            'activePortalPage' => 'listings',
+            'forcedListingCategory' => $listingCategoryAlias,
+            'transportModeOptions' => vendorPortalListingOptions('transport_mode'),
+            'transportModeOptionsCollection' => collect(vendorPortalListingOptions('transport_mode')),
+            'propertyAmenityOptions' => vendorPortalListingOptions('property_amenity'),
+            'propertyAmenityOptionsCollection' => collect(vendorPortalListingOptions('property_amenity')),
+            'propertyFeatureOptions' => vendorPortalListingOptions('property_feature'),
+            'propertyFeatureOptionsCollection' => collect(vendorPortalListingOptions('property_feature')),
+            'excursionTypeOptions' => vendorPortalListingOptions('excursion_type'),
+            'excursionTypeOptionsCollection' => collect(vendorPortalListingOptions('excursion_type')),
+            'restaurantMealServiceOptions' => vendorPortalListingOptions('restaurant_meal_service'),
+            'restaurantMealServiceOptionsCollection' => collect(vendorPortalListingOptions('restaurant_meal_service')),
+            'vehicleRentalTypeOptions' => vendorPortalListingOptions('vehicle_rental_type'),
+            'vehicleRentalTypeOptionsCollection' => collect(vendorPortalListingOptions('vehicle_rental_type')),
+            'vendorTaxComponents' => collect([]),
+            'transferOptionCatalog' => $transferOptionCatalog,
+            'workspaceAmenityCatalog' => $workspaceAmenityCatalog,
+            'oldTransferOptions' => old('transfer_options', []),
+            'oldTransferRatesInput' => [],
+            'oldPropertyAmenities' => old('property_amenities', []),
+            'oldPropertyFeatures' => old('property_features', []),
+            'oldWorkspaceAmenityStatus' => [],
+        ]);
+    })->name('vendor.listings.category.edit.' . $listingCategoryAlias);
+}
+
+Route::get('/vendor/listings/{category}', function (string $category) {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+    if (!vendorPortalCanManageListings($vendorUser)) {
+        return redirect('/vendor?page=profile')
+            ->with('portal_active_panel', 'profile')
+            ->withErrors(['profile' => 'Listings are locked until your vendor profile is verified by admin.']);
+    }
+
+    $normalizedCategory = vendorPortalNormalizeCategoryToken($category);
+    $allowedCategories = array_merge(array_keys(vendorPortalCategoryMap()), ['marine_transport', 'land_transport']);
+    if (!in_array($normalizedCategory, $allowedCategories, true)) {
+        return redirect('/vendor?page=listings')->withErrors([
+            'profile' => 'Unsupported listing category route.',
+        ]);
+    }
+
+    return redirect('/vendor?page=listings')
+        ->with('portal_active_panel', 'listings')
+        ->with('listing_wizard_step', 1)
+        ->with('portal_listing_mode', 'manage')
+        ->with('portal_listing_category', $normalizedCategory);
+});
+
+Route::get('/vendor/listings/manage', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+    if (!vendorPortalCanManageListings($vendorUser)) {
+        return redirect('/vendor?page=profile')
+            ->with('portal_active_panel', 'profile')
+            ->withErrors(['profile' => 'Listings are locked until your vendor profile is verified by admin.']);
+    }
+
+    return redirect('/vendor?page=listings')
+        ->with('portal_active_panel', 'listings')
+        ->with('listing_wizard_step', 1)
+        ->with('portal_listing_mode', 'manage');
+});
+
+Route::get('/vendor/listings/manage/{category}', function (string $category) {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+    if (!vendorPortalCanManageListings($vendorUser)) {
+        return redirect('/vendor?page=profile')
+            ->with('portal_active_panel', 'profile')
+            ->withErrors(['profile' => 'Listings are locked until your vendor profile is verified by admin.']);
+    }
+
+    $normalizedCategory = vendorPortalNormalizeCategoryToken($category);
+    $allowedCategories = array_merge(array_keys(vendorPortalCategoryMap()), ['marine_transport', 'land_transport']);
+    if (!in_array($normalizedCategory, $allowedCategories, true)) {
+        return redirect('/vendor?page=listings')->withErrors([
+            'profile' => 'Unsupported listing category route.',
+        ]);
+    }
+
+    return redirect('/vendor?page=listings')
+        ->with('portal_active_panel', 'listings')
+        ->with('listing_wizard_step', 1)
+        ->with('portal_listing_mode', 'manage')
+        ->with('portal_listing_category', $normalizedCategory);
+});
+
+Route::get('/vendor/reservations', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    return redirect('/vendor?page=reservations')->with('portal_active_panel', 'reservations');
+});
+
+Route::get('/vendor/availability', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    return redirect('/vendor?page=reservations')->with('portal_active_panel', 'reservations');
+});
+
+Route::get('/vendor/operations', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+    if (!vendorPortalCanManageListings($vendorUser)) {
+        return redirect('/vendor?page=profile')
+            ->with('portal_active_panel', 'profile')
+            ->withErrors(['profile' => 'Operations are locked until your vendor account is verified and approved by admin.']);
+    }
+
+    return redirect('/vendor?page=reservations')->with('portal_active_panel', 'reservations');
+});
+
+Route::get('/vendor/engagement', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    return redirect('/vendor#engagement')->with('portal_active_panel', 'engagement');
+});
+
+Route::get('/vendor/pricing', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+    if (!vendorPortalCanManageListings($vendorUser)) {
+        return redirect('/vendor?page=profile')
+            ->with('portal_active_panel', 'profile')
+            ->withErrors(['profile' => 'Pricing controls are locked until your vendor account is verified and approved by admin.']);
+    }
+
+    return redirect('/vendor?page=pricing')->with('portal_active_panel', 'reservations');
+});
+
+Route::get('/vendor/billing', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    return redirect('/vendor?page=billing')->with('portal_active_panel', 'billing');
+});
+
+Route::get('/vendor/promotions', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+    if (!vendorPortalCanManageListings($vendorUser)) {
+        return redirect('/vendor?page=profile')
+            ->with('portal_active_panel', 'profile')
+            ->withErrors(['profile' => 'Promotions and customer care tools are locked until your vendor account is verified and approved by admin.']);
+    }
+
+    return redirect('/vendor?page=promotions')->with('portal_active_panel', 'engagement');
+});
+
+Route::get('/vendor/reports', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    return redirect('/vendor?page=reports')->with('portal_active_panel', 'overview');
+});
+
+Route::get('/vendor/reports/export', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+    if (!$vendorUser instanceof User) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $commissionRate = 0.12;
+    $reservationTables = ['vendor_reservations', 'reservations', 'bookings', 'vendor_bookings'];
+    $vendorColumn = null;
+    $reservationTable = null;
+    foreach ($reservationTables as $table) {
+        if (!Schema::hasTable($table)) {
+            continue;
+        }
+        $cols = Schema::getColumnListing($table);
+        $colSet = array_flip($cols);
+        foreach (['vendor_user_id', 'vendor_id', 'user_id'] as $col) {
+            if (isset($colSet[$col])) {
+                $vendorColumn = $col;
+                $reservationTable = $table;
+                break 2;
+            }
+        }
+    }
+
+    $rows = collect();
+    if ($reservationTable !== null && $vendorColumn !== null) {
+        $cols = Schema::getColumnListing($reservationTable);
+        $colSet = array_flip($cols);
+        $rows = DB::table($reservationTable)
+            ->where($vendorColumn, $vendorUserId)
+            ->orderByDesc('id')
+            ->limit(500)
+            ->get();
+    }
+
+    $csvLines = [];
+    $csvLines[] = implode(',', [
+        'Invoice Ref', 'Customer Name', 'Customer Email',
+        'Date', 'Subtotal', 'Tax Total', 'Gross', 'Commission (12%)', 'Expected Payout',
+        'Payment Status', 'Booking Status',
+    ]);
+
+    foreach ($rows as $reservation) {
+        $gross = (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0);
+        $subtotal = (float) ($reservation->subtotal_amount ?? $reservation->total_amount ?? 0);
+        $taxTotal = (float) ($reservation->total_tax_amount ?? 0);
+        $paymentStatus = (string) ($reservation->payment_status ?? 'unpaid');
+        $bookingStatus = (string) ($reservation->status ?? 'pending');
+        $isSettled = $paymentStatus === 'paid' && in_array($bookingStatus, ['confirmed', 'completed'], true);
+        $commission = $isSettled ? round($gross * $commissionRate, 2) : 0.0;
+        $payout = max(0, round($gross - $commission, 2));
+        $invoiceRef = 'INV-' . str_pad((string) ($reservation->id ?? '0'), 6, '0', STR_PAD_LEFT);
+        $collectionDate = (string) ($reservation->start_at ?? $reservation->created_at ?? '');
+        $collectionDay = strlen($collectionDate) >= 10 ? substr($collectionDate, 0, 10) : 'N/A';
+        $customerName = str_replace('"', '""', (string) ($reservation->customer_name ?? ''));
+        $customerEmail = str_replace('"', '""', (string) ($reservation->customer_email ?? ''));
+        $csvLines[] = implode(',', [
+            $invoiceRef,
+            '"' . $customerName . '"',
+            '"' . $customerEmail . '"',
+            $collectionDay,
+            number_format($subtotal, 2, '.', ''),
+            number_format($taxTotal, 2, '.', ''),
+            number_format($gross, 2, '.', ''),
+            number_format($commission, 2, '.', ''),
+            number_format($payout, 2, '.', ''),
+            $paymentStatus,
+            $bookingStatus,
+        ]);
+    }
+
+    $csvContent = implode("\r\n", $csvLines);
+    $filename = 'vendor-report-' . date('Y-m-d') . '.csv';
+
+    return response($csvContent, 200, [
+        'Content-Type' => 'text/csv; charset=UTF-8',
+        'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        'Cache-Control' => 'no-store, no-cache, must-revalidate',
+        'Pragma' => 'no-cache',
+    ]);
+});
+

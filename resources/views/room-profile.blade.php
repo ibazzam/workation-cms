@@ -389,20 +389,14 @@
                                 <div class="field"><label for="primaryEmail">Email*</label><input id="primaryEmail" name="primary_email" type="email" value="{{ old('primary_email', (string) ($prefill['primary_email'] ?? '')) }}" placeholder="guest@example.com" class="{{ $errors->has('primary_email') ? 'input-error' : '' }}" required>@error('primary_email')<p class="error-text">{{ $message }}</p>@enderror<p class="helper">Booking confirmation will be sent to this email</p></div>
                                 <div class="field"><label for="primaryMobileCountryCode">Phone country code*</label><select id="primaryMobileCountryCode" name="primary_mobile_country_code" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required>@foreach ($countryOptions as $country)<option value="{{ $country['dial'] }}" data-iso="{{ $country['iso'] }}" {{ $oldPhoneCode === $country['dial'] ? 'selected' : '' }}>{{ $country['dial'] }} ({{ $country['name'] }})</option>@endforeach</select></div>
                                 <div class="field"><label for="primaryMobileLocal">Contact number*</label><input id="primaryMobileLocal" name="primary_mobile_local" type="tel" value="{{ $oldPhoneLocal }}" placeholder="7712345" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required inputmode="tel">@error('primary_mobile')<p class="error-text">{{ $message }}</p>@enderror</div>
+                                <div class="field"><label for="adults">Adults</label><input id="adults" name="adults" type="number" min="1" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}" class="{{ $errors->has('adults') ? 'input-error' : '' }}" required>@error('adults')<p class="error-text">{{ $message }}</p>@enderror</div>
+                                <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}" class="{{ $errors->has('children') ? 'input-error' : '' }}">@error('children')<p class="error-text">{{ $message }}</p>@enderror</div>
                                 <div class="field full">
                                     <p class="booking-subnote">In accordance with local regulations, guests who are not nationals or permanent residents may be required to pay tourism tax per room per night (included in total).</p>
                                 </div>
                             </div>
                         </section>
 
-                        <section class="booking-subsection" aria-label="Stay details">
-                            <h3 class="booking-subtitle">Stay details</h3>
-                            <div class="booking-grid">
-                                <div class="field"><label for="adults">Adults</label><input id="adults" name="adults" type="number" min="1" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}" class="{{ $errors->has('adults') ? 'input-error' : '' }}" required>@error('adults')<p class="error-text">{{ $message }}</p>@enderror</div>
-                                <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}" class="{{ $errors->has('children') ? 'input-error' : '' }}">@error('children')<p class="error-text">{{ $message }}</p>@enderror</div>
-                                <div class="field full"><p class="booking-subnote">Transfer option is selected in the next step on checkout.</p></div>
-                            </div>
-                        </section>
 
                         <section class="booking-subsection" aria-label="Special requests">
                             <h3 class="booking-subtitle">Special Requests (Optional)</h3>
@@ -415,14 +409,19 @@
                         </section>
 
                         <section class="booking-subsection" aria-label="Promo code">
-                            <h3 class="booking-subtitle">Available for This Booking</h3>
-                            <label class="field" for="promoCode"><span>Enter promo code</span></label>
+                            <h3 class="booking-subtitle">Promo Code</h3>
+                            @if ($discountPercent > 0)
+                                <p class="promo-chip active-promo">
+                                    <span>&#10003; {{ number_format($discountPercent, 0) }}% listing discount — already applied to your total</span>
+                                </p>
+                            @endif
+                            <input type="hidden" id="appliedPromoCode" name="promo_code" value="">
+                            <input type="hidden" id="appliedPromoDiscount" name="promo_discount_percent" value="0">
                             <div class="promo-row">
-                                <input id="promoCode" type="text" placeholder="promoCode">
+                                <input id="promoCode" type="text" placeholder="Enter promo code" autocomplete="off" maxlength="64">
                                 <button type="button" class="promo-apply">Apply</button>
                             </div>
-                            <span class="promo-chip">10% off max discount {{ $currency }} 25.00</span>
-                            <p class="helper">New user promo code (1st booking) • Valid until 23:59, Apr 15, 2026</p>
+                            <p id="promoMessage" class="helper" style="display:none;"></p>
                             <p class="legal-note">Terms and Conditions apply.</p>
                         </section>
 

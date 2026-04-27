@@ -301,23 +301,29 @@ Route::get('/vendor', function () {
         // Keep overview metrics accurate even when listing collections are intentionally skipped.
         $vendorListingCountFromDb = 0;
         $vendorActiveListingCountFromDb = 0;
+        $vendorPropertiesHasStatusColumn = Schema::hasTable('vendor_properties') && Schema::hasColumn('vendor_properties', 'status');
+        $vendorServicesHasStatusColumn = Schema::hasTable('vendor_services') && Schema::hasColumn('vendor_services', 'status');
         if (Schema::hasTable('vendor_properties')) {
             $vendorListingCountFromDb += (int) DB::table('vendor_properties')
                 ->where('vendor_user_id', $vendorUserId)
                 ->count();
-            $vendorActiveListingCountFromDb += (int) DB::table('vendor_properties')
-                ->where('vendor_user_id', $vendorUserId)
-                ->whereRaw("LOWER(TRIM(COALESCE(status, 'active'))) = 'active'")
-                ->count();
+            $vendorPropertiesActiveQuery = DB::table('vendor_properties')
+                ->where('vendor_user_id', $vendorUserId);
+            if ($vendorPropertiesHasStatusColumn) {
+                $vendorPropertiesActiveQuery->whereRaw("LOWER(TRIM(COALESCE(status, 'active'))) = 'active'");
+            }
+            $vendorActiveListingCountFromDb += (int) $vendorPropertiesActiveQuery->count();
         }
         if (Schema::hasTable('vendor_services')) {
             $vendorListingCountFromDb += (int) DB::table('vendor_services')
                 ->where('vendor_user_id', $vendorUserId)
                 ->count();
-            $vendorActiveListingCountFromDb += (int) DB::table('vendor_services')
-                ->where('vendor_user_id', $vendorUserId)
-                ->whereRaw("LOWER(TRIM(COALESCE(status, 'active'))) = 'active'")
-                ->count();
+            $vendorServicesActiveQuery = DB::table('vendor_services')
+                ->where('vendor_user_id', $vendorUserId);
+            if ($vendorServicesHasStatusColumn) {
+                $vendorServicesActiveQuery->whereRaw("LOWER(TRIM(COALESCE(status, 'active'))) = 'active'");
+            }
+            $vendorActiveListingCountFromDb += (int) $vendorServicesActiveQuery->count();
         }
         $vendorDashboardSnapshot['listing_total'] = max((int) ($vendorDashboardSnapshot['listing_total'] ?? 0), $vendorListingCountFromDb);
         $vendorDashboardSnapshot['listing_active'] = max((int) ($vendorDashboardSnapshot['listing_active'] ?? 0), $vendorActiveListingCountFromDb);

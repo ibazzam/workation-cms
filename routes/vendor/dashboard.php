@@ -1302,4 +1302,3 @@ Route::get('/vendor/reports/export', function () {
         'Pragma' => 'no-cache',
     ]);
 });
-

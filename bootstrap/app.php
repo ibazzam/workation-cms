@@ -12,6 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function (): void {
             Route::middleware('web')->group(base_path('routes/vendor-operations.php'));
+            Route::middleware('web')->group(base_path('routes/finance/ledger.php'));
+            Route::middleware('web')->group(base_path('routes/finance/payouts.php'));
+            Route::middleware('web')->group(base_path('routes/finance/refunds.php'));
+            Route::middleware('web')->group(base_path('routes/finance/disputes.php'));
         },
     )
     ->withCommands([

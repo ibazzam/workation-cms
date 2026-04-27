@@ -365,6 +365,8 @@
                     <input type="hidden" name="tax_amount" id="taxAmountInput" value="0">
                     <input type="hidden" name="total_amount" id="totalAmountInput" value="0">
                     <input type="hidden" name="primary_mobile" id="primaryMobileHidden" value="{{ old('primary_mobile', '') }}">
+                    <input type="hidden" name="adults" id="adults" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}">
+                    <input type="hidden" name="children" id="children" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}">
 
                     @if ($errors->any())
                         <div class="form-errors" role="alert" aria-live="polite">

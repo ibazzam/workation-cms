@@ -246,6 +246,7 @@ Route::post('/booking/reserve', function (Request $request) {
                 'additional_guest_details' => $additionalGuestDetails,
                 'transfer_option' => (string) ($pricing['transfer_option'] ?? $transferOptionCode),
                 'transfer_option_label' => (string) ($pricing['transfer_option_label'] ?? ''),
+                'property_transfer_options' => $transferOptions,
                 'transfer_charge' => $transferCharge,
                 'transfer_charge_total' => $transferCharge,
                 'transfer_local_adult_rate' => (float) ($pricing['transfer_local_adult_rate'] ?? 0),
@@ -1080,6 +1081,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
                 'tax_lines' => $pricing['tax_lines'] ?? [],
                 'transfer_option' => $transferOptionCode,
                 'transfer_option_label' => (string) ($pricing['transfer_option_label'] ?? ''),
+                'property_transfer_options' => $transferOptions,
                 'transfer_charge' => $transferCharge,
                 'transfer_charge_total' => $transferCharge,
                 'transfer_local_adult_rate' => (float) ($pricing['transfer_local_adult_rate'] ?? 0),
@@ -1333,6 +1335,9 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
             'service_notes' => trim((string) $request->query('service_notes', (string) ($reservationNotes['service_notes'] ?? ''))),
             'transfer_option' => trim((string) $request->query('transfer_option', (string) ($reservationNotes['transfer_option'] ?? ''))),
             'transfer_option_label' => trim((string) $request->query('transfer_option_label', (string) ($reservationNotes['transfer_option_label'] ?? ''))),
+            'property_transfer_options' => is_array($reservationNotes['property_transfer_options'] ?? null)
+                ? $reservationNotes['property_transfer_options']
+                : [],
             'transfer_charge' => (float) $request->query('transfer_charge', (float) ($reservationNotes['transfer_charge'] ?? 0)),
             'transfer_charge_total' => (float) $request->query('transfer_charge_total', (float) ($reservationNotes['transfer_charge_total'] ?? ($reservationNotes['transfer_charge'] ?? 0))),
             'transfer_local_adult_rate' => (float) $request->query('transfer_local_adult_rate', (float) ($reservationNotes['transfer_local_adult_rate'] ?? 0)),
@@ -1382,6 +1387,10 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         'payment_selection' => ['nullable', 'string', 'max:120'],
         'primary_nationality' => ['required', 'string', 'max:120'],
         'guest_residency' => ['required', Rule::in(['local_resident', 'foreign_national'])],
+        'transfer_option' => ['nullable', 'string', 'max:80'],
+        'transfer_option_label' => ['nullable', 'string', 'max:160'],
+        'transfer_charge' => ['nullable', 'numeric', 'min:0'],
+        'invoice_total_amount' => ['nullable', 'numeric', 'min:0'],
     ]);
 
     if (in_array(strtolower(trim((string) ($reservationRow->status ?? 'pending'))), ['cancelled', 'canceled'], true)) {
@@ -1398,6 +1407,13 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
 
     $notes['primary_nationality'] = $primaryNationality;
     $notes['guest_residency'] = $guestResidency;
+    $notes['transfer_option'] = trim((string) ($validated['transfer_option'] ?? ($notes['transfer_option'] ?? '')));
+    $notes['transfer_option_label'] = trim((string) ($validated['transfer_option_label'] ?? ($notes['transfer_option_label'] ?? '')));
+    $notes['transfer_charge'] = max(0, (float) ($validated['transfer_charge'] ?? ($notes['transfer_charge'] ?? 0)));
+    $notes['transfer_charge_total'] = $notes['transfer_charge'];
+    if (array_key_exists('invoice_total_amount', $validated) && is_numeric($validated['invoice_total_amount'])) {
+        $notes['invoice_total_amount'] = max(0, (float) $validated['invoice_total_amount']);
+    }
 
     $requestedGateway = trim((string) ($validated['payment_provider'] ?? ($validated['payment_gateway'] ?? '')));
     $requestedCurrency = trim((string) ($validated['payment_currency'] ?? ''));
@@ -1438,6 +1454,7 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
             'payment_gateway' => (string) $intent['gateway'],
             'payment_intent_id' => (string) $intent['intent_id'],
             'payment_amount' => (float) $intent['amount'],
+            'total_amount' => (float) ($notes['invoice_total_amount'] ?? ($reservationRow->total_amount ?? 0)),
             'commission_rate_percent' => (float) ($settlement['commission_rate_percent'] ?? 0),
             'commission_amount' => (float) ($settlement['commission_amount'] ?? 0),
             'gateway_fee_rate_percent' => (float) ($settlement['gateway_fee_rate_percent'] ?? 0),

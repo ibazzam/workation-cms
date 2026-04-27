@@ -216,7 +216,7 @@ final class PayoutBatchBuilder
     /**
      * Mark a batch as submitted to the bank/gateway (processing).
      */
-    public function markBatchSent(int $batchId, string $bankReference, int $actorUserId): void
+    public function markBatchSent(int $batchId, string $bankReference, int $actorUserId, ?Carbon $expectedPayoutAt = null): void
     {
         $now = Carbon::now();
 
@@ -240,7 +240,12 @@ final class PayoutBatchBuilder
         DB::table('vendor_reservations')
             ->whereIn('payout_batch_item_id', $itemIds)
             ->where('payout_status', 'queued')
-            ->update(['payout_status' => 'processing', 'updated_at' => $now]);
+            ->update([
+                'payout_status' => 'processing',
+                'payout_processing_at' => $now,
+                'payout_expected_at' => $expectedPayoutAt,
+                'updated_at' => $now,
+            ]);
 
         // Write sent events via ledger
         $batch = DB::table('finance_payout_batches')->find($batchId);
@@ -293,7 +298,11 @@ final class PayoutBatchBuilder
 
         DB::table('vendor_reservations')
             ->whereIn('payout_batch_item_id', $itemIds)
-            ->update(['payout_status' => 'paid', 'updated_at' => $now]);
+            ->update([
+                'payout_status' => 'paid',
+                'payout_paid_at' => $now,
+                'updated_at' => $now,
+            ]);
 
         $resIds = DB::table('vendor_reservations')
             ->whereIn('payout_batch_item_id', $itemIds)

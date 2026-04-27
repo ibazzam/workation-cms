@@ -388,6 +388,7 @@
 
         @if ($showBillingPage)
             @include('vendor-portal.partials.billing-collection')
+            @include('vendor-portal.partials.payout-status')
         @endif
 
         <section class="layout" id="vendorAuthApi" data-panel-group="api">
@@ -436,6 +437,11 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
         (function () {
+            if (window.__vendorPortalPrimaryInitDone === true) {
+                return;
+            }
+            window.__vendorPortalPrimaryInitDone = true;
+
             const root = document.querySelector(".page");
             const apiBase = root ? root.getAttribute("data-api-base") : "";
             const tokenInput = document.getElementById("tokenInput");
@@ -3116,6 +3122,10 @@
     </script>
     <script>
         (function () {
+            if (window.__vendorPortalPrimaryInitDone === true) {
+                return;
+            }
+
             function normalizeCategoryKey(value) {
                 return String(value || "")
                     .trim()

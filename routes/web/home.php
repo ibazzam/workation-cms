@@ -911,7 +911,9 @@ Route::get('/', function () {
                 ->groupBy(static fn ($property) => $homeCategoryPriceBucket($property))
                 ->map(static fn ($group) => $group->first());
 
-            $homePricingListings = VendorPropertyCompatibilityReader::allActiveListings(2000);
+            $homePricingListings = collect(Cache::remember('home:pricing-listings:v1', now()->addMinutes(10), static function () {
+                return VendorPropertyCompatibilityReader::allActiveListings(2000)->values()->all();
+            }));
 
             $categoryMinPriceRows = $homePricingListings
                 ->map(static function ($property) use ($homeCategoryPriceBucket) {

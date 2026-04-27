@@ -110,6 +110,7 @@ Route::middleware('web')->group(function (): void {
 
         $validated = $request->validate([
             'bank_reference' => ['required', 'string', 'max:160'],
+            'expected_payout_date' => ['nullable', 'date'],
         ]);
 
         $batchRow = DB::table('finance_payout_batches')
@@ -127,7 +128,11 @@ Route::middleware('web')->group(function (): void {
         $ledger  = new LedgerWriter();
         $builder = new PayoutBatchBuilder($ledger);
         $actorId = (int) ($user['id'] ?? 0);
-        $builder->markBatchSent((int) $batchRow->id, $validated['bank_reference'], $actorId);
+        $expectedPayoutAt = null;
+        if (!empty($validated['expected_payout_date'])) {
+            $expectedPayoutAt = Carbon::parse((string) $validated['expected_payout_date'])->endOfDay();
+        }
+        $builder->markBatchSent((int) $batchRow->id, $validated['bank_reference'], $actorId, $expectedPayoutAt);
 
         return redirect('/portal/admin/finance/payouts/' . $batchRow->id)
             ->with('success', 'Batch marked as sent for processing.');

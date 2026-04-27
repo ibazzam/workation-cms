@@ -125,6 +125,9 @@ if (!function_exists('workationApplyReservationPaymentEvent')) {
                 'payment_reference' => $reference !== '' ? $reference : (string) ($reservationRow->payment_reference ?? ''),
                 'payment_intent_id' => $intentId !== '' ? $intentId : (string) ($reservationRow->payment_intent_id ?? ''),
                 'payment_verified_at' => $status === 'paid' ? now() : ($reservationRow->payment_verified_at ?? null),
+                'payment_collected_at' => $status === 'paid'
+                    ? ($reservationRow->payment_collected_at ?? now())
+                    : ($reservationRow->payment_collected_at ?? null),
                 'payment_webhook_event_id' => $eventId !== '' ? $eventId : (string) ($reservationRow->payment_webhook_event_id ?? ''),
                 'payment_webhook_received_at' => now(),
                 'payment_error' => $status === 'paid' ? null : trim((string) ($event['error'] ?? 'Payment failed verification.')),

@@ -478,7 +478,6 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             // Force accommodation pricing to come only from room/package tables.
             // This prevents stale vendor_properties.base_price from showing on cards.
             $catalogProperties = $catalogProperties->map(static function ($prop) use ($combinedRoomPricesByProperty) {
-                $originalBasePrice = (float) ($prop->base_price ?? 0);
                 $prop->base_price = 0;
                 $lookupId = collect(workationPropertyLookupIds($prop))
                     ->first(static fn (int $candidateId) => $combinedRoomPricesByProperty->has($candidateId));
@@ -491,8 +490,6 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                     $derivedPrice = workationDerivedListingBasePrice($prop);
                     if ($derivedPrice > 0) {
                         $prop->base_price = $derivedPrice;
-                    } elseif ($originalBasePrice > 0) {
-                        $prop->base_price = $originalBasePrice;
                     }
                 }
 

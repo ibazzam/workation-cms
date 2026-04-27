@@ -33,6 +33,7 @@ class ReservationPricingPolicy
             'transfer_default_foreign_child_rate' => 20.0,
             'transfer_default_base_local' => 0.0,
             'transfer_default_base_foreign' => 0.0,
+            'prices_include_tax' => true,
             'tax_components' => [
                 [
                     'code' => 'service_charge',
@@ -154,6 +155,10 @@ class ReservationPricingPolicy
             $policy['green_tax_room_threshold'] = max(1, (int) $input['green_tax_room_threshold']);
         }
 
+        if (array_key_exists('prices_include_tax', $input)) {
+            $policy['prices_include_tax'] = (bool) $input['prices_include_tax'];
+        }
+
         if (isset($input['taxable_categories']) && is_array($input['taxable_categories'])) {
             $categories = array_values(array_unique(array_filter(array_map(
                 static fn ($value): string => strtolower(trim((string) $value)),
@@ -263,6 +268,7 @@ class ReservationPricingPolicy
 
         $taxableCategories = Arr::get($activePolicy, 'taxable_categories', ['accommodation']);
         $taxApplies = in_array($listingCategory, $taxableCategories, true);
+        $pricesIncludeTax = (bool) Arr::get($payload, 'prices_include_tax', Arr::get($activePolicy, 'prices_include_tax', false));
 
         $vendorTaxOverridesRaw = Arr::get($payload, 'vendor_tax_overrides', []);
         $vendorTaxOverrides = is_array($vendorTaxOverridesRaw) ? $vendorTaxOverridesRaw : [];
@@ -359,6 +365,76 @@ class ReservationPricingPolicy
             }
         }
 
+        if ($taxApplies && $pricesIncludeTax && $taxLines !== []) {
+            $fixedIncludedTotal = round(array_sum(array_map(static function (array $line): float {
+                $mode = (string) ($line['calculation_mode'] ?? 'percent_subtotal');
+                return $mode === 'percent_subtotal' ? 0.0 : (float) ($line['amount'] ?? 0);
+            }, $taxLines)), 2);
+
+            $percentTotalRate = round(array_sum(array_map(static function (array $line): float {
+                $mode = (string) ($line['calculation_mode'] ?? 'percent_subtotal');
+                return $mode === 'percent_subtotal' ? (float) ($line['rate'] ?? 0) : 0.0;
+            }, $taxLines)), 4);
+
+            if ($percentTotalRate > 0) {
+                $percentBaseGross = max(0, $discountedSubtotal - $fixedIncludedTotal);
+                $percentBaseNet = $percentBaseGross / (1 + ($percentTotalRate / 100));
+
+                $taxLines = array_map(static function (array $line) use ($percentBaseNet): array {
+                    $mode = (string) ($line['calculation_mode'] ?? 'percent_subtotal');
+                    if ($mode !== 'percent_subtotal') {
+                        return $line;
+                    }
+
+                    $rate = (float) ($line['rate'] ?? 0);
+                    $line['amount'] = round($percentBaseNet * ($rate / 100), 2);
+                    return $line;
+                }, $taxLines);
+
+                $serviceChargeTotal = 0.0;
+                $greenTaxRatePerPersonPerNight = 0.0;
+                $greenTaxTotal = 0.0;
+                $tgstRatePercent = 0.0;
+                $tgstTotal = 0.0;
+                $gstRatePercent = 0.0;
+                $gstTotal = 0.0;
+
+                foreach ($taxLines as $line) {
+                    $code = (string) ($line['code'] ?? '');
+                    $mode = (string) ($line['calculation_mode'] ?? 'percent_subtotal');
+                    $amount = (float) ($line['amount'] ?? 0);
+                    $rate = (float) ($line['rate'] ?? 0);
+
+                    if ((bool) ($line['is_service_charge'] ?? false)) {
+                        $serviceChargeTotal = round($serviceChargeTotal + $amount, 2);
+                        if ($mode === 'percent_subtotal' && $serviceChargeRatePercent <= 0) {
+                            $serviceChargeRatePercent = $rate;
+                        }
+                        continue;
+                    }
+
+                    if (str_contains($code, 'green_tax')) {
+                        $greenTaxTotal = round($greenTaxTotal + $amount, 2);
+                        if ($mode === 'per_guest_per_night' && $greenTaxRatePerPersonPerNight <= 0) {
+                            $greenTaxRatePerPersonPerNight = $rate;
+                        }
+                    }
+                    if (str_contains($code, 'tgst')) {
+                        $tgstTotal = round($tgstTotal + $amount, 2);
+                        if ($mode === 'percent_subtotal' && $tgstRatePercent <= 0) {
+                            $tgstRatePercent = $rate;
+                        }
+                    }
+                    if (str_contains($code, 'gst') && !str_contains($code, 'tgst')) {
+                        $gstTotal = round($gstTotal + $amount, 2);
+                        if ($mode === 'percent_subtotal' && $gstRatePercent <= 0) {
+                            $gstRatePercent = $rate;
+                        }
+                    }
+                }
+            }
+        }
+
         $totalTaxAmount = round(array_sum(array_map(
             static fn (array $line): float => (bool) ($line['is_service_charge'] ?? false) ? 0.0 : (float) ($line['amount'] ?? 0),
             $taxLines
@@ -375,7 +451,9 @@ class ReservationPricingPolicy
             overrideTotal: Arr::get($payload, 'transfer_charge_override')
         );
 
-        $invoiceTotalAmount = round($discountedSubtotal + $serviceChargeTotal + $totalTaxAmount + $transferConfig['transfer_charge_total'], 2);
+        $invoiceTotalAmount = $pricesIncludeTax
+            ? round($discountedSubtotal + $transferConfig['transfer_charge_total'], 2)
+            : round($discountedSubtotal + $serviceChargeTotal + $totalTaxAmount + $transferConfig['transfer_charge_total'], 2);
 
         return [
             'listing_category' => $listingCategory,
@@ -402,6 +480,7 @@ class ReservationPricingPolicy
             'total_tax_amount' => $totalTaxAmount,
             'tax_and_fee_total' => round($serviceChargeTotal + $totalTaxAmount, 2),
             'tax_lines' => $taxLines,
+            'prices_include_tax' => $pricesIncludeTax,
             'vendor_tax_overrides' => $vendorTaxOverrides,
             'transfer_option' => $transferConfig['transfer_option'],
             'transfer_option_label' => $transferConfig['transfer_option_label'],

@@ -22,7 +22,7 @@
         .chip { border:1px solid #cfe0eb; background:#edf6f3; color:#24516b; border-radius:999px; font-size:0.77rem; padding:6px 10px; }
         .booking-layout { display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:14px; align-items:start; }
         .booking-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-        .booking-page-header { padding:14px 16px; border:1px solid #cbe0ea; border-radius:16px; background:linear-gradient(132deg,#0f6179 0%,#1d848c 58%,#2f9891 100%); color:#ecfcff; margin-bottom:12px; display:grid; gap:10px; }
+        .booking-page-header { padding:14px 16px; border:1px solid #cbe0ea; border-radius:16px; background:linear-gradient(132deg,#0f6179 0%,#1d848c 58%,#2f9891 100%); color:#ecfcff; margin-bottom:12px; display:grid; gap:8px; }
         .bph-back { font-size:0.76rem; color:#cfeff4; text-decoration:none; }
         .bph-back:hover { text-decoration:underline; }
         .bph-process-title { margin:0; font-size:0.86rem; color:#d9f6fa; text-transform:uppercase; letter-spacing:0.08em; font-family:"Space Grotesk","Trebuchet MS",sans-serif; }
@@ -31,7 +31,7 @@
         .bph-step.current { background:#ecfcff; color:#0f6179; font-weight:700; border-color:#ecfcff; }
         .bph-next { margin:0; font-size:0.83rem; color:#e9fbff; }
         .sidebar-summary { border:1px solid #c6dce9; border-radius:16px; background:linear-gradient(180deg,#fbfeff 0%,#f4faff 100%); overflow:hidden; display:grid; gap:0; align-content:start; position:sticky; top:12px; max-height:calc(100vh - 24px); overflow-y:auto; grid-column:2; grid-row:1; box-shadow:0 16px 34px rgba(13,68,96,0.09); }
-        .sum-section { border-bottom:1px solid #dde9f2; padding:12px 14px; display:grid; gap:6px; }
+        .sum-section { border-bottom:1px solid #dde9f2; padding:10px 12px; display:grid; gap:4px; }
         .sum-section:last-child { border-bottom:0; }
         .sum-title { margin:0; font-size:0.69rem; text-transform:uppercase; letter-spacing:0.09em; color:#3c6480; font-family:"Space Grotesk","Trebuchet MS",sans-serif; display:flex; align-items:center; gap:6px; }
         .sum-title-number { width:18px; height:18px; border-radius:999px; background:#1a6d8a; color:#fff; font-size:0.64rem; font-weight:700; display:inline-flex; align-items:center; justify-content:center; flex:0 0 18px; }
@@ -51,8 +51,8 @@
         .sum-revise-field { display:grid; gap:4px; }
         .sum-revise-field label { font-size:0.64rem; text-transform:uppercase; letter-spacing:0.07em; color:#5b768a; }
         .sum-revise-field input { width:100%; border:1px solid #c2dceb; border-radius:8px; padding:7px 8px; font:inherit; font-size:0.76rem; background:#ffffff; }
-        .sum-policy-ul { margin:0; padding-left:16px; color:#4a687e; font-size:0.78rem; line-height:1.55; }
-        .sum-policy-text { margin:0 0 4px; color:#4a687e; font-size:0.78rem; line-height:1.5; }
+        .sum-policy-ul { margin:0; padding-left:16px; color:#4a687e; font-size:0.78rem; line-height:1.35; }
+        .sum-policy-text { margin:0 0 2px; color:#4a687e; font-size:0.78rem; line-height:1.3; }
         .sum-policy-text:last-child { margin-bottom:0; }
         .booking-form-wrap { display:grid; gap:12px; grid-column:1; grid-row:1; }
         .booking-form-title { margin:0; border:1px solid #dbe7f0; border-radius:14px; background:linear-gradient(135deg,#f3f8fc 0%,#edf5fb 100%); padding:12px 16px; font-size:1.04rem; font-weight:700; color:#153f59; display:flex; align-items:center; gap:10px; }
@@ -89,7 +89,16 @@
         .legal-note { margin:0; color:#5a7184; font-size:0.75rem; line-height:1.45; }
         .field { display:grid; gap:5px; }
         .field label { font-size:0.78rem; text-transform:uppercase; letter-spacing:0.07em; color:#3c5f76; }
-        .field input, .field select { width:100%; border:1px solid #b8d9e2; border-radius:10px; padding:10px 11px; font:inherit; background:#f8fdff; }
+        .field input, .field select {
+            width:100%;
+            border:1px solid #b8d9e2;
+            border-radius:10px;
+            padding:10px 11px;
+            min-height:42px;
+            line-height:1.2;
+            font:inherit;
+            background:#f8fdff;
+        }
         .field textarea { width:100%; border:1px solid #b8d9e2; border-radius:10px; padding:10px 11px; font:inherit; background:#f8fdff; min-height:90px; resize:vertical; }
         .field .input-error, .field-error-state input, .field-error-state select { border-color:#c54f4f !important; background:#fff4f4 !important; }
         .field .error-text { margin:0; font-size:0.75rem; color:#a32929; }
@@ -250,7 +259,7 @@
                 <span class="bph-step">3. Payment Method</span>
                 <span class="bph-step">4. Final Confirmation</span>
             </div>
-            <p class="bph-next">Next step after this page: review confirmation and complete secure payment.</p>
+            <p class="bph-next">Next step after this page: select transfer option on checkout, then continue to payment confirmation.</p>
         </header>
 
         <section class="section" aria-label="Booking">
@@ -347,6 +356,10 @@
                     @csrf
                     <input type="hidden" name="property_id" value="{{ (int) ($property->id ?? 0) }}">
                     <input type="hidden" name="room_id" value="{{ (int) ($room->id ?? 0) }}">
+                    <input type="hidden" name="checkin" id="checkin" value="{{ old('checkin', (string) ($prefill['checkin'] ?? '')) }}">
+                    <input type="hidden" name="checkout" id="checkout" value="{{ old('checkout', (string) ($prefill['checkout'] ?? '')) }}">
+                    <input type="hidden" name="transfer_option" value="">
+                    <input type="hidden" name="transfer_charge" id="transferCharge" value="0">
                     <input type="hidden" name="room_subtotal" id="roomSubtotalInput" value="0">
                     <input type="hidden" name="discount_amount" id="discountAmountInput" value="0">
                     <input type="hidden" name="tax_amount" id="taxAmountInput" value="0">
@@ -385,39 +398,9 @@
                         <section class="booking-subsection" aria-label="Stay details">
                             <h3 class="booking-subtitle">Stay details</h3>
                             <div class="booking-grid">
-                                <div class="field"><label for="checkin">Check-in</label><input id="checkin" name="checkin" type="date" min="{{ now()->toDateString() }}" required value="{{ old('checkin', (string) ($prefill['checkin'] ?? '')) }}" class="{{ $errors->has('checkin') ? 'input-error' : '' }}">@error('checkin')<p class="error-text">{{ $message }}</p>@enderror</div>
-                                <div class="field"><label for="checkout">Check-out</label><input id="checkout" name="checkout" type="date" min="{{ now()->toDateString() }}" required value="{{ old('checkout', (string) ($prefill['checkout'] ?? '')) }}" class="{{ $errors->has('checkout') ? 'input-error' : '' }}">@error('checkout')<p class="error-text">{{ $message }}</p>@enderror</div>
                                 <div class="field"><label for="adults">Adults</label><input id="adults" name="adults" type="number" min="1" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}" class="{{ $errors->has('adults') ? 'input-error' : '' }}" required>@error('adults')<p class="error-text">{{ $message }}</p>@enderror</div>
                                 <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}" class="{{ $errors->has('children') ? 'input-error' : '' }}">@error('children')<p class="error-text">{{ $message }}</p>@enderror</div>
-                                <div class="field full"><label>Transfer option*</label>
-                                    @if ($transferOptions->isNotEmpty())
-                                        <div class="transfer-list" id="transferOptionsList">
-                                            @foreach ($transferOptions as $index => $option)
-                                                <label class="transfer-option">
-                                                    <input
-                                                        type="radio"
-                                                        name="transfer_option"
-                                                        value="{{ (string) ($option['code'] ?? '') }}"
-                                                        data-base-charge="{{ (float) ($option['base_charge'] ?? 0) }}"
-                                                        data-adult-charge="{{ (float) ($option['adult_charge'] ?? 0) }}"
-                                                        data-child-charge="{{ (float) ($option['child_charge'] ?? 0) }}"
-                                                        {{ $index === 0 ? 'checked' : '' }}
-                                                        required
-                                                    >
-                                                    <span>
-                                                        <span class="transfer-option-title">{{ (string) ($option['label'] ?? 'Transfer') }}</span>
-                                                        <span class="transfer-option-rates">Adult: {{ $currency }} {{ number_format((float) ($option['adult_charge'] ?? 0), 2) }}{{ (float) ($option['child_charge'] ?? 0) > 0 ? (' • Child: ' . $currency . ' ' . number_format((float) ($option['child_charge'] ?? 0), 2)) : '' }}</span>
-                                                        <span class="transfer-option-note">Tick to include this transfer mode in booking billing.</span>
-                                                    </span>
-                                                </label>
-                                            @endforeach
-                                        </div>
-                                    @else
-                                        <p class="booking-subnote">No transfer option configured for this room. Transfer charge will stay at 0.</p>
-                                        <input type="hidden" name="transfer_option" value="">
-                                    @endif
-                                </div>
-                                <div class="field"><label for="transferCharge">Transfer Charge</label><input id="transferCharge" name="transfer_charge" type="number" min="0" step="0.01" readonly></div>
+                                <div class="field full"><p class="booking-subnote">Transfer option is selected in the next step on checkout.</p></div>
                             </div>
                         </section>
 
@@ -444,69 +427,8 @@
                         </section>
 
                         <section class="booking-subsection" aria-label="Payment options">
-                            <h3 class="booking-subtitle">When would you like to pay?</h3>
-                            <div class="payment-choice-list">
-                                <label class="payment-choice">
-                                    <input type="radio" name="payment_timing" value="pay_now" checked>
-                                    <span>
-                                        <span class="payment-choice-main">Pay now</span>
-                                        <span class="payment-choice-note">Secure payment before confirmation.</span>
-                                    </span>
-                                </label>
-                                <label class="payment-choice">
-                                    <input type="radio" name="payment_timing" value="pay_at_property">
-                                    <span>
-                                        <span class="payment-choice-main">Pay at property</span>
-                                        <span class="payment-choice-note">Available for selected guest nationalities and room rules.</span>
-                                    </span>
-                                </label>
-                            </div>
-                            <h3 class="booking-subtitle">How would you like to pay?</h3>
-                            <div class="payment-choice-list" id="paymentMethodList">
-                                <label class="payment-choice payment-method-option" data-scope="all">
-                                    <input type="radio" name="payment_method" value="card" checked>
-                                    <span>
-                                        <span class="payment-choice-main">Credit / Debit Card</span>
-                                        <span class="payment-choice-note">Visa, Mastercard, UnionPay supported.</span>
-                                    </span>
-                                </label>
-                                <label class="payment-choice payment-method-option" data-scope="international">
-                                    <input type="radio" name="payment_method" value="apple_pay">
-                                    <span>
-                                        <span class="payment-choice-main">Apple Pay</span>
-                                        <span class="payment-choice-note">Shown for international guests where available.</span>
-                                    </span>
-                                </label>
-                                <label class="payment-choice payment-method-option" data-scope="international">
-                                    <input type="radio" name="payment_method" value="google_pay">
-                                    <span>
-                                        <span class="payment-choice-main">Google Pay</span>
-                                        <span class="payment-choice-note">Shown for international guests where available.</span>
-                                    </span>
-                                </label>
-                                <label class="payment-choice payment-method-option" data-scope="local">
-                                    <input type="radio" name="payment_method" value="bank_transfer_mvr">
-                                    <span>
-                                        <span class="payment-choice-main">Local Bank Transfer (MVR)</span>
-                                        <span class="payment-choice-note">Recommended for Maldivian nationals.</span>
-                                    </span>
-                                </label>
-                                <label class="payment-choice payment-method-option" data-scope="local">
-                                    <input type="radio" name="payment_method" value="cash_on_arrival">
-                                    <span>
-                                        <span class="payment-choice-main">Cash on Arrival</span>
-                                        <span class="payment-choice-note">Available only on eligible local bookings.</span>
-                                    </span>
-                                </label>
-                            </div>
-                            <p class="payment-hint" id="paymentHint">Payment methods are auto-filtered by guest nationality.</p>
-                            <div class="card-grid" id="cardDetailsBlock">
-                                <div class="field full"><label for="cardNumber">Bank card no.</label><input id="cardNumber" type="text" placeholder="Card number"></div>
-                                <div class="field full"><label for="cardHolder">Name (as registered for related account)</label><input id="cardHolder" type="text" placeholder="Cardholder name"></div>
-                                <div class="field"><label for="cardExpiry">MM/YY</label><input id="cardExpiry" type="text" placeholder="Expiry date"></div>
-                                <div class="field"><label for="cardCvv">CVV/CVC</label><input id="cardCvv" type="text" placeholder="CVV"></div>
-                            </div>
-                            <p class="helper">Other payment methods are available on next page.</p>
+                            <h3 class="booking-subtitle">Payment</h3>
+                            <p class="booking-subnote">Payment method selection and card/bank details are captured on the next checkout step only.</p>
                         </section>
 
                         <section class="booking-subsection" aria-label="Booking terms">
@@ -592,10 +514,6 @@
 
             function toCurrency(value) {
                 return currency + ' ' + Number(value || 0).toFixed(2);
-            }
-
-            function selectedTransferInput() {
-                return transferOptionInputs.find(function (input) { return input.checked; }) || null;
             }
 
             function syncPrimaryMobile() {
@@ -758,20 +676,18 @@
             }
 
             function syncSummary() {
-                const selected = selectedTransferInput();
-                const adultFare = Number(selected?.dataset?.adultCharge || 0);
-                const childFare = Number(selected?.dataset?.childCharge || 0);
-                const baseFare = Number(selected?.dataset?.baseCharge || 0);
                 const adultCount = Math.max(1, Number(adults.value || 1));
                 const childCount = Math.max(0, Number(children.value || 0));
                 const nights = calculateNights();
 
                 const roomSubtotal = nightlyRate * nights;
                 const discountAmount = roomSubtotal * (discountPercent / 100);
-                const taxableAmount = Math.max(0, roomSubtotal - discountAmount);
-                const taxAmount = taxableAmount * (taxRate / 100);
-                const transferTotal = baseFare + (adultFare * adultCount) + (childFare * childCount);
-                const total = taxableAmount + taxAmount + transferTotal;
+                const discountedSubtotal = Math.max(0, roomSubtotal - discountAmount);
+                const taxAmount = taxRate > 0
+                    ? discountedSubtotal - (discountedSubtotal / (1 + (taxRate / 100)))
+                    : 0;
+                const transferTotal = 0;
+                const total = discountedSubtotal + transferTotal;
 
                 transferCharge.value = transferTotal.toFixed(2);
 
@@ -780,7 +696,7 @@
                 if (invoiceGuests) invoiceGuests.textContent = adultCount + ' Adults, ' + childCount + ' Children';
                 if (invoiceRoomSubtotal) invoiceRoomSubtotal.textContent = toCurrency(roomSubtotal);
                 if (invoiceDiscount) invoiceDiscount.textContent = '- ' + toCurrency(discountAmount);
-                if (invoiceTax) invoiceTax.textContent = toCurrency(taxAmount);
+                if (invoiceTax) invoiceTax.textContent = toCurrency(taxAmount) + ' (included)';
                 if (invoiceTransfer) invoiceTransfer.textContent = toCurrency(transferTotal);
                 if (invoiceTotal) invoiceTotal.textContent = toCurrency(total);
 
@@ -824,9 +740,6 @@
             }
 
             ['change', 'input'].forEach(function (eventName) {
-                transferOptionInputs.forEach(function (input) {
-                    input.addEventListener(eventName, syncSummary);
-                });
                 adults.addEventListener(eventName, syncSummary);
                 children.addEventListener(eventName, syncSummary);
                 checkin.addEventListener(eventName, function () {

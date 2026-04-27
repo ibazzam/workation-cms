@@ -1259,7 +1259,7 @@ Route::get('/vendor/reports/export', function () {
     $csvLines = [];
     $csvLines[] = implode(',', [
         'Invoice Ref', 'Customer Name', 'Customer Email',
-        'Date', 'Subtotal', 'Tax Total', 'Gross', 'Commission (12%)', 'Expected Payout',
+        'Date', 'Subtotal', 'Tax Total', 'Gross', 'Commission', 'Gateway Fee', 'Expected Payout',
         'Payment Status', 'Booking Status',
     ]);
 
@@ -1270,8 +1270,13 @@ Route::get('/vendor/reports/export', function () {
         $paymentStatus = (string) ($reservation->payment_status ?? 'unpaid');
         $bookingStatus = (string) ($reservation->status ?? 'pending');
         $isSettled = $paymentStatus === 'paid' && in_array($bookingStatus, ['confirmed', 'completed'], true);
-        $commission = $isSettled ? round($gross * $commissionRate, 2) : 0.0;
-        $payout = max(0, round($gross - $commission, 2));
+        $commission = $isSettled
+            ? round((float) ($reservation->commission_amount ?? ($gross * $commissionRate)), 2)
+            : 0.0;
+        $gatewayFee = $isSettled
+            ? round((float) ($reservation->gateway_fee_amount ?? 0), 2)
+            : 0.0;
+        $payout = max(0, round($gross - $commission - $gatewayFee, 2));
         $invoiceRef = 'INV-' . str_pad((string) ($reservation->id ?? '0'), 6, '0', STR_PAD_LEFT);
         $collectionDate = (string) ($reservation->start_at ?? $reservation->created_at ?? '');
         $collectionDay = strlen($collectionDate) >= 10 ? substr($collectionDate, 0, 10) : 'N/A';
@@ -1286,6 +1291,7 @@ Route::get('/vendor/reports/export', function () {
             number_format($taxTotal, 2, '.', ''),
             number_format($gross, 2, '.', ''),
             number_format($commission, 2, '.', ''),
+            number_format($gatewayFee, 2, '.', ''),
             number_format($payout, 2, '.', ''),
             $paymentStatus,
             $bookingStatus,

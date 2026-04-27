@@ -33,7 +33,7 @@ class ReservationPricingPolicy
             'transfer_default_foreign_child_rate' => 20.0,
             'transfer_default_base_local' => 0.0,
             'transfer_default_base_foreign' => 0.0,
-            'prices_include_tax' => true,
+            'prices_include_tax' => false,
             'tax_components' => [
                 [
                     'code' => 'service_charge',

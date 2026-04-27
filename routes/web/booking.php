@@ -197,6 +197,8 @@ Route::post('/booking/reserve', function (Request $request) {
         'property_transfer_options' => $transferOptions,
         'transfer_charge_override' => $payload['transfer_charge'] ?? null,
         'vendor_tax_overrides' => $vendorTaxOverrides,
+        // Vendor-managed selling prices are inclusive; tax/service/government charges are extracted backward for display.
+        'prices_include_tax' => true,
     ]);
 
     $discountAmount = (float) ($pricing['discount_amount'] ?? 0);
@@ -970,6 +972,8 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'property_transfer_options' => $transferOptions,
         'transfer_charge_override' => $payload['transfer_charge'] ?? null,
         'vendor_tax_overrides' => $vendorTaxOverrides,
+        // Vendor-managed selling prices are inclusive; tax/service/government charges are extracted backward for display.
+        'prices_include_tax' => true,
     ]);
 
     $discountAmount = (float) ($pricing['discount_amount'] ?? 0);

@@ -395,6 +395,8 @@ Route::get('/admin', function (Request $request) {
             ->selectRaw('SUM(vr.total_amount) as gross_total')
             ->selectRaw("SUM(CASE WHEN vr.payment_status = 'paid' THEN vr.total_amount ELSE 0 END) as collected_total")
             ->selectRaw("SUM(CASE WHEN vr.payment_status = 'paid' AND vr.status IN ('confirmed', 'completed') THEN vr.total_amount ELSE 0 END) as eligible_total")
+            ->selectRaw("SUM(CASE WHEN vr.payment_status = 'paid' AND vr.status IN ('confirmed', 'completed') THEN COALESCE(vr.commission_amount, 0) ELSE 0 END) as commission_total")
+            ->selectRaw("SUM(CASE WHEN vr.payment_status = 'paid' AND vr.status IN ('confirmed', 'completed') THEN COALESCE(vr.gateway_fee_amount, 0) ELSE 0 END) as gateway_fee_total")
             ->groupByRaw('DATE(vr.start_at), vr.vendor_user_id, vendor_users.name, vendor_users.email')
             ->orderByDesc('collection_day')
             ->limit(240)
@@ -443,11 +445,17 @@ Route::get('/admin', function (Request $request) {
         $eligibleTotal = (float) ($row->eligible_total ?? 0);
         $grossTotal = (float) ($row->gross_total ?? 0);
         $collectedTotal = (float) ($row->collected_total ?? 0);
-        $commissionAmount = round($eligibleTotal * $commissionFactor, 2);
+
+        // Use persisted reservation-level deductions when available; fallback to configured commission only for legacy rows.
+        $commissionAmount = (float) ($row->commission_total ?? 0);
+        if ($commissionAmount <= 0 && $eligibleTotal > 0) {
+            $commissionAmount = round($eligibleTotal * $commissionFactor, 2);
+        }
+        $gatewayFeeAmount = round((float) ($row->gateway_fee_total ?? 0), 2);
 
         $lookupKey = (string) $row->vendor_user_id . '|' . (string) $row->collection_day;
         $adjustmentAmount = (float) optional($adjustmentTotalsByVendorDay->get($lookupKey))->adjustment_total;
-        $netPayout = round($eligibleTotal - $commissionAmount + $adjustmentAmount, 2);
+        $netPayout = round($eligibleTotal - $commissionAmount - $gatewayFeeAmount + $adjustmentAmount, 2);
 
         return [
             'collection_day' => (string) ($row->collection_day ?? ''),
@@ -458,7 +466,8 @@ Route::get('/admin', function (Request $request) {
             'gross_total' => $grossTotal,
             'collected_total' => $collectedTotal,
             'eligible_total' => $eligibleTotal,
-            'commission_amount' => $commissionAmount,
+            'commission_amount' => round($commissionAmount, 2),
+            'gateway_fee_amount' => $gatewayFeeAmount,
             'adjustment_amount' => $adjustmentAmount,
             'net_payout' => $netPayout,
         ];

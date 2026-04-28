@@ -70,6 +70,12 @@ Route::get('/vendor', function () {
 
     $vendorReservationPolicy = ReservationPricingPolicy::loadPolicy();
     $vendorTaxComponents = collect($vendorReservationPolicy['tax_components'] ?? []);
+    $vendorReservationVersion = '0';
+    if ($vendorUserId > 0 && Schema::hasTable('vendor_reservations')) {
+        $vendorReservationVersion = (string) (DB::table('vendor_reservations')
+            ->where('vendor_user_id', $vendorUserId)
+            ->max('updated_at') ?? '0');
+    }
     $vendorDashboardSnapshot = [
         'listing_total' => 0,
         'listing_active' => 0,
@@ -338,7 +344,7 @@ Route::get('/vendor', function () {
         $vendorDashboardSnapshot['listing_active'] = max((int) ($vendorDashboardSnapshot['listing_active'] ?? 0), $vendorActiveListingCountFromDb);
 
         $vendorDashboardSnapshot = Cache::remember(
-            'vendor:portal:snapshot:v2:' . $vendorUserId,
+            'vendor:portal:snapshot:v2:' . $vendorUserId . ':' . $vendorReservationVersion,
             now()->addSeconds($vendorPortalCacheTtlSeconds),
             static function () use ($vendorUserId, $vendorDashboardSnapshot): array {
                 $snapshot = $vendorDashboardSnapshot;
@@ -376,7 +382,7 @@ Route::get('/vendor', function () {
 
         if ($loadListingsContextData && $vendorProperties->isNotEmpty() && Schema::hasTable('vendor_reservations')) {
             $vendorReservationSummaryByProperty = collect(Cache::remember(
-                'vendor:portal:reservation-summary-by-property:v1:' . $vendorUserId,
+                'vendor:portal:reservation-summary-by-property:v1:' . $vendorUserId . ':' . $vendorReservationVersion,
                 now()->addSeconds($vendorPortalCacheTtlSeconds),
                 static function () use ($vendorUserId) {
                     return DB::table('vendor_reservations')
@@ -415,7 +421,7 @@ Route::get('/vendor', function () {
                 ? 300
                 : (($activePortalPage === 'billing' || $activePortalPage === 'reservations' || $activePortalPage === 'operations') ? 200 : 80);
             $vendorReservations = collect(Cache::remember(
-                'vendor:portal:reservations:v2:' . $vendorUserId . ':' . $reservationLimit,
+                'vendor:portal:reservations:v2:' . $vendorUserId . ':' . $reservationLimit . ':' . $vendorReservationVersion,
                 now()->addSeconds($vendorPortalCacheTtlSeconds),
                 static function () use ($vendorUserId, $reservationLimit) {
                     return DB::table('vendor_reservations')

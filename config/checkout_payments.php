@@ -85,6 +85,7 @@ return [
             'checkout_signing_secret' => env('WORKATION_PAYMENT_MIB_MVR_CHECKOUT_SIGNING_SECRET', ''),
             'allowed_segments' => ['local_maldivian'],
             'webhook_secret' => env('WORKATION_PAYMENT_MIB_MVR_WEBHOOK_SECRET', env('APP_KEY', 'workation-mib-mvr')),
+            'allow_unsigned_webhook' => (bool) env('WORKATION_PAYMENT_MIB_MVR_ALLOW_UNSIGNED_WEBHOOK', false),
         ],
         'mib_usd' => [
             'label' => env('WORKATION_PAYMENT_MIB_USD_LABEL', 'MIB USD Gateway'),
@@ -95,6 +96,7 @@ return [
             'checkout_signing_secret' => env('WORKATION_PAYMENT_MIB_USD_CHECKOUT_SIGNING_SECRET', ''),
             'allowed_segments' => ['foreign_national'],
             'webhook_secret' => env('WORKATION_PAYMENT_MIB_USD_WEBHOOK_SECRET', env('APP_KEY', 'workation-mib-usd')),
+            'allow_unsigned_webhook' => (bool) env('WORKATION_PAYMENT_MIB_USD_ALLOW_UNSIGNED_WEBHOOK', false),
         ],
         'bml_mvr' => [
             'label' => env('WORKATION_PAYMENT_BML_MVR_LABEL', 'BML MVR Gateway'),
@@ -105,6 +107,7 @@ return [
             'checkout_signing_secret' => env('WORKATION_PAYMENT_BML_MVR_CHECKOUT_SIGNING_SECRET', $bmlSharedCheckoutSigningSecret),
             'allowed_segments' => ['local_maldivian'],
             'webhook_secret' => env('WORKATION_PAYMENT_BML_MVR_WEBHOOK_SECRET', $bmlSharedWebhookSecret),
+            'allow_unsigned_webhook' => (bool) env('WORKATION_PAYMENT_BML_MVR_ALLOW_UNSIGNED_WEBHOOK', false),
         ],
         'bml_usd' => [
             'label' => env('WORKATION_PAYMENT_BML_USD_LABEL', 'BML USD Gateway'),
@@ -115,6 +118,7 @@ return [
             'checkout_signing_secret' => env('WORKATION_PAYMENT_BML_USD_CHECKOUT_SIGNING_SECRET', $bmlSharedCheckoutSigningSecret),
             'allowed_segments' => ['foreign_national'],
             'webhook_secret' => env('WORKATION_PAYMENT_BML_USD_WEBHOOK_SECRET', $bmlSharedWebhookSecret),
+            'allow_unsigned_webhook' => (bool) env('WORKATION_PAYMENT_BML_USD_ALLOW_UNSIGNED_WEBHOOK', false),
         ],
         'stripe' => [
             'label' => env('WORKATION_PAYMENT_STRIPE_LABEL', 'Stripe Checkout'),
@@ -130,6 +134,7 @@ return [
             'checkout_signing_secret' => env('WORKATION_PAYMENT_STRIPE_CHECKOUT_SIGNING_SECRET', ''),
             'allowed_segments' => ['local_maldivian', 'foreign_national'],
             'webhook_secret' => env('WORKATION_PAYMENT_STRIPE_WEBHOOK_SECRET', env('APP_KEY', 'workation-stripe')),
+            'allow_unsigned_webhook' => false,
         ],
     ],
 ];

@@ -383,6 +383,7 @@
         }
 
         .bs-cancelled  { background: #fff0f0; color: #a33030; border: 1px solid #f5c0c0; }
+        .bs-cancel-requested { background: #fff7ea; color: #8b5a00; border: 1px solid #f1d19d; }
         .bs-confirmed  { background: #e8f8ef; color: #1a6e3a; border: 1px solid #a8dfc0; }
         .bs-pending    { background: #fff6e0; color: #7a5c00; border: 1px solid #f5d98a; }
         .bs-completed  { background: #f0f2f5; color: #4a5a6a; border: 1px solid #c8d4df; }
@@ -827,6 +828,18 @@
                 </div>
             @endif
 
+            @if (session('portal_notice'))
+                <div style="background:#eef7ff; border:1px solid #c7dff1; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:0.84rem; color:#1c5574;">
+                    {{ session('portal_notice') }}
+                </div>
+            @endif
+
+            @if ($errors->any())
+                <div style="background:#fff5f5; border:1px solid #efc3c3; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:0.84rem; color:#8d2d2d;">
+                    {{ $errors->first() }}
+                </div>
+            @endif
+
             {{-- ────────── My Bookings ──────────────────────────── --}}
             <section class="portal-section is-active" data-portal-section="bookings">
                 <div class="section-title-row">
@@ -874,6 +887,7 @@
                                         $bStatus       = strtolower(trim((string) ($booking['status'] ?? 'pending')));
                                         $bStatusClass  = match($bStatus) {
                                             'confirmed'           => 'bs-confirmed',
+                                            'cancel_requested'    => 'bs-cancel-requested',
                                             'cancelled','canceled' => 'bs-cancelled',
                                             'completed'           => 'bs-completed',
                                             default               => 'bs-pending',
@@ -925,7 +939,26 @@
                                         </div>
 
                                         <div class="booking-card-actions">
-                                            <button class="btn-outline" type="button">Delete</button>
+                                            @php $isPaidBooking = strtoupper((string) ($booking['payment_status'] ?? 'UNPAID')) === 'PAID'; @endphp
+                                            @php $isCancelledBooking = in_array(strtolower((string) ($booking['status'] ?? '')), ['cancelled', 'canceled', 'cancel_requested'], true); @endphp
+                                            <a class="btn-outline" href="/customer/bookings/{{ (int) ($booking['id'] ?? 0) }}/confirmation.pdf">Reservation PDF</a>
+                                            @if ($isPaidBooking)
+                                                <a class="btn-outline" href="/customer/bookings/{{ (int) ($booking['id'] ?? 0) }}/invoice.pdf">Invoice PDF</a>
+                                            @endif
+                                            @if (!$isPaidBooking)
+                                                <form method="POST" action="/customer/bookings/{{ (int) ($booking['id'] ?? 0) }}/delete" onsubmit="return confirm('Remove this booking from your portal list?');">
+                                                    @csrf
+                                                    <button class="btn-outline" type="submit">Delete</button>
+                                                </form>
+                                            @else
+                                                <button class="btn-outline" type="button" disabled title="Paid bookings cannot be deleted from the portal.">Delete</button>
+                                            @endif
+                                            @if (!$isCancelledBooking)
+                                                <form method="POST" action="/customer/bookings/{{ (int) ($booking['id'] ?? 0) }}/cancel" onsubmit="return confirm('Do you want to cancel this booking?');">
+                                                    @csrf
+                                                    <button class="btn-outline" type="submit">{{ $isPaidBooking ? 'Request Cancel' : 'Cancel Booking' }}</button>
+                                                </form>
+                                            @endif
                                             <a class="btn-outline" href="/">Similar deals</a>
                                             <a class="btn-brand" href="/">Book Again</a>
                                         </div>

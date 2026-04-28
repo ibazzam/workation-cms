@@ -253,17 +253,11 @@
     @endphp
 
     <main class="page">
-        <header class="booking-page-header" aria-label="Property and room">
-            <a class="bph-back" href="{{ url()->previous('/') }}">&larr; Back to property</a>
-            <p class="bph-process-title">Booking Process Highlights</p>
-            <div class="bph-steps" aria-label="Booking progress">
-                <span class="bph-step current">1. Guest Details</span>
-                <span class="bph-step">2. Transfer Selection</span>
-                <span class="bph-step">3. Payment Method</span>
-                <span class="bph-step">4. Final Confirmation</span>
-            </div>
-            <p class="bph-next">Next step after this page: review locked checkout summary and continue to payment confirmation.</p>
-        </header>
+        @include('partials.booking-process-highlights', [
+            'bookingProcessCurrentStep' => 1,
+            'bookingProcessBackUrl' => url()->previous('/'),
+            'bookingProcessNextText' => 'Next step after this page: choose transfer options and continue to payment selection.',
+        ])
 
         <section class="section" aria-label="Booking">
             <div class="booking-layout">

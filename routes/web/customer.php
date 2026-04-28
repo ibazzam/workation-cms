@@ -171,6 +171,17 @@ Route::get('/customer', function () {
             ->orderByDesc('created_at')
             ->get(['id', 'vendor_property_id', 'start_at', 'end_at', 'status', 'payment_status', 'total_amount', 'currency', 'notes', 'created_at']);
 
+        $reservationRows = $reservationRows
+            ->filter(static function ($row): bool {
+                $notes = json_decode((string) ($row->notes ?? ''), true);
+                if (!is_array($notes)) {
+                    return true;
+                }
+
+                return trim((string) ($notes['customer_deleted_at'] ?? '')) === '';
+            })
+            ->values();
+
         $propertyNamesById = collect();
         $reservationPropertyIds = $reservationRows
             ->pluck('vendor_property_id')
@@ -286,4 +297,258 @@ Route::get('/customer', function () {
         'propertyMediaByProperty' => $propertyMediaByProperty,
         'roomMediaByRoom' => $roomMediaByRoom,
     ]);
+});
+
+Route::get('/customer/bookings/{reservation}/invoice.pdf', function (int $reservation) {
+    if (!(bool) session('portal_customer_authenticated', false)) {
+        return redirect('/portal/customer/login')->withErrors([
+            'customer' => 'Sign in to download your invoice.',
+        ]);
+    }
+
+    if (!Schema::hasTable('vendor_reservations')) {
+        return redirect('/customer')->withErrors([
+            'customer' => 'Booking records are not available right now.',
+        ]);
+    }
+
+    $customerEmail = strtolower(trim((string) session('portal_customer_email', '')));
+    if ($customerEmail === '') {
+        return redirect('/customer')->withErrors([
+            'customer' => 'Your member session is missing an email address. Please sign in again.',
+        ]);
+    }
+
+    $reservationRow = DB::table('vendor_reservations')
+        ->where('id', $reservation)
+        ->whereRaw('LOWER(customer_email) = ?', [$customerEmail])
+        ->first();
+    if (!$reservationRow) {
+        return redirect('/customer')->withErrors([
+            'customer' => 'Booking not found for this account.',
+        ]);
+    }
+
+    try {
+        $pdfBinary = workationRenderReservationPdfBinary($reservationRow, 'invoice');
+    } catch (\Throwable $e) {
+        return redirect('/customer')->withErrors([
+            'customer' => 'Invoice could not be generated right now. Please try again shortly.',
+        ]);
+    }
+
+    return response($pdfBinary, 200, [
+        'Content-Type' => 'application/pdf',
+        'Content-Disposition' => 'attachment; filename="' . workationReservationPdfFilename($reservationRow, 'invoice') . '"',
+    ]);
+});
+
+Route::get('/customer/bookings/{reservation}/confirmation.pdf', function (int $reservation) {
+    if (!(bool) session('portal_customer_authenticated', false)) {
+        return redirect('/portal/customer/login')->withErrors([
+            'customer' => 'Sign in to download your reservation confirmation.',
+        ]);
+    }
+
+    if (!Schema::hasTable('vendor_reservations')) {
+        return redirect('/customer')->withErrors([
+            'customer' => 'Booking records are not available right now.',
+        ]);
+    }
+
+    $customerEmail = strtolower(trim((string) session('portal_customer_email', '')));
+    if ($customerEmail === '') {
+        return redirect('/customer')->withErrors([
+            'customer' => 'Your member session is missing an email address. Please sign in again.',
+        ]);
+    }
+
+    $reservationRow = DB::table('vendor_reservations')
+        ->where('id', $reservation)
+        ->whereRaw('LOWER(customer_email) = ?', [$customerEmail])
+        ->first();
+    if (!$reservationRow) {
+        return redirect('/customer')->withErrors([
+            'customer' => 'Booking not found for this account.',
+        ]);
+    }
+
+    try {
+        $pdfBinary = workationRenderReservationPdfBinary($reservationRow, 'confirmation');
+    } catch (\Throwable $e) {
+        return redirect('/customer')->withErrors([
+            'customer' => 'Reservation confirmation could not be generated right now. Please try again shortly.',
+        ]);
+    }
+
+    return response($pdfBinary, 200, [
+        'Content-Type' => 'application/pdf',
+        'Content-Disposition' => 'attachment; filename="' . workationReservationPdfFilename($reservationRow, 'confirmation') . '"',
+    ]);
+});
+
+Route::post('/customer/bookings/{reservation}/cancel', function (Request $request, int $reservation) {
+    if (!(bool) session('portal_customer_authenticated', false)) {
+        return redirect('/portal/customer/login')->withErrors([
+            'customer' => 'Sign in to manage your bookings.',
+        ]);
+    }
+
+    if (!Schema::hasTable('vendor_reservations')) {
+        return redirect('/customer')->withErrors([
+            'customer' => 'Booking records are not available right now.',
+        ]);
+    }
+
+    $customerEmail = strtolower(trim((string) session('portal_customer_email', '')));
+    if ($customerEmail === '') {
+        return redirect('/customer')->withErrors([
+            'customer' => 'Your member session is missing an email address. Please sign in again.',
+        ]);
+    }
+
+    $reservationRow = DB::table('vendor_reservations')
+        ->where('id', $reservation)
+        ->whereRaw('LOWER(customer_email) = ?', [$customerEmail])
+        ->first();
+
+    if (!$reservationRow) {
+        return redirect('/customer')->withErrors([
+            'customer' => 'Booking not found for this account.',
+        ]);
+    }
+
+    $currentStatus = strtolower(trim((string) ($reservationRow->status ?? 'pending')));
+    if (in_array($currentStatus, ['cancelled', 'canceled'], true)) {
+        return redirect('/customer')->with('portal_notice', 'This booking is already cancelled.');
+    }
+
+    $notes = json_decode((string) ($reservationRow->notes ?? ''), true);
+    if (!is_array($notes)) {
+        $notes = [];
+    }
+
+    $paymentStatus = strtolower(trim((string) ($reservationRow->payment_status ?? 'unpaid')));
+    if ($paymentStatus === 'paid') {
+        $notes['customer_cancel_requested_at'] = now()->toIso8601String();
+        $notes['customer_cancel_requested_by'] = 'customer_portal';
+
+        DB::table('vendor_reservations')
+            ->where('id', $reservation)
+            ->update([
+                'status' => 'cancel_requested',
+                'notes' => json_encode($notes),
+                'updated_at' => now(),
+            ]);
+
+        $updatedRow = DB::table('vendor_reservations')->where('id', $reservation)->first();
+        if ($updatedRow) {
+            $bookingRef = '#' . (int) ($updatedRow->id ?? $reservation);
+            $subject = 'Cancellation Request Submitted – Booking ' . $bookingRef;
+            $body = implode("\n", [
+                'A customer submitted a paid-booking cancellation request.',
+                '',
+                'Booking Reference: ' . $bookingRef,
+                'Customer: ' . trim((string) ($updatedRow->customer_name ?? 'Customer')),
+                'Customer Email: ' . trim((string) ($updatedRow->customer_email ?? '')),
+                'Current Status: CANCEL_REQUESTED',
+                'Payment Status: ' . strtoupper(trim((string) ($updatedRow->payment_status ?? 'unpaid'))),
+                '',
+                'Please review refund eligibility and finalize cancellation workflow.',
+                '',
+                'Workation Team',
+            ]);
+            workationNotifyReservationStakeholders($updatedRow, $subject, $body);
+        }
+
+        return redirect('/customer')->with('portal_notice', 'Cancellation request submitted. Our team will confirm refund and cancellation details.');
+    }
+
+    $notes['customer_cancelled_at'] = now()->toIso8601String();
+    $notes['customer_cancelled_by'] = 'customer_portal';
+
+    DB::table('vendor_reservations')
+        ->where('id', $reservation)
+        ->update([
+            'status' => 'cancelled',
+            'notes' => json_encode($notes),
+            'updated_at' => now(),
+        ]);
+
+    $updatedRow = DB::table('vendor_reservations')->where('id', $reservation)->first();
+    if ($updatedRow) {
+        $bookingRef = '#' . (int) ($updatedRow->id ?? $reservation);
+        $subject = 'Booking Cancelled – Booking ' . $bookingRef;
+        $body = implode("\n", [
+            'A customer cancelled an unpaid booking.',
+            '',
+            'Booking Reference: ' . $bookingRef,
+            'Customer: ' . trim((string) ($updatedRow->customer_name ?? 'Customer')),
+            'Customer Email: ' . trim((string) ($updatedRow->customer_email ?? '')),
+            'Current Status: CANCELLED',
+            'Payment Status: ' . strtoupper(trim((string) ($updatedRow->payment_status ?? 'unpaid'))),
+            '',
+            'Workation Team',
+        ]);
+        workationNotifyReservationStakeholders($updatedRow, $subject, $body);
+    }
+
+    return redirect('/customer')->with('portal_notice', 'Booking cancelled successfully.');
+});
+
+Route::post('/customer/bookings/{reservation}/delete', function (Request $request, int $reservation) {
+    if (!(bool) session('portal_customer_authenticated', false)) {
+        return redirect('/portal/customer/login')->withErrors([
+            'customer' => 'Sign in to manage your bookings.',
+        ]);
+    }
+
+    if (!Schema::hasTable('vendor_reservations')) {
+        return redirect('/customer')->withErrors([
+            'customer' => 'Booking records are not available right now.',
+        ]);
+    }
+
+    $customerEmail = strtolower(trim((string) session('portal_customer_email', '')));
+    if ($customerEmail === '') {
+        return redirect('/customer')->withErrors([
+            'customer' => 'Your member session is missing an email address. Please sign in again.',
+        ]);
+    }
+
+    $reservationRow = DB::table('vendor_reservations')
+        ->where('id', $reservation)
+        ->whereRaw('LOWER(customer_email) = ?', [$customerEmail])
+        ->first();
+
+    if (!$reservationRow) {
+        return redirect('/customer')->withErrors([
+            'customer' => 'Booking not found for this account.',
+        ]);
+    }
+
+    $paymentStatus = strtolower(trim((string) ($reservationRow->payment_status ?? 'unpaid')));
+    if ($paymentStatus === 'paid') {
+        return redirect('/customer')->withErrors([
+            'customer' => 'Paid bookings cannot be deleted from the portal. Please contact support for cancellation help.',
+        ]);
+    }
+
+    $notes = json_decode((string) ($reservationRow->notes ?? ''), true);
+    if (!is_array($notes)) {
+        $notes = [];
+    }
+
+    $notes['customer_deleted_at'] = now()->toIso8601String();
+    $notes['customer_deleted_by'] = 'customer_portal';
+
+    DB::table('vendor_reservations')
+        ->where('id', $reservation)
+        ->update([
+            'status' => 'cancelled',
+            'notes' => json_encode($notes),
+            'updated_at' => now(),
+        ]);
+
+    return redirect('/customer')->with('portal_notice', 'Booking removed from your portal list.');
 });

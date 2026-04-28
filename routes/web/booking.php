@@ -71,7 +71,9 @@ if (!function_exists('workationBuildGatewayCheckoutPayload')) {
                 'merchant_reference' => 'WRK-' . $reservationId . '-' . strtoupper(substr(md5($intentId), 0, 8)),
                 'bill_amount' => $amount,
                 'bill_currency' => $currency,
-                'callback_url' => $webhookUrl,
+                // Some bank flows redirect end-users to callback_url via browser GET.
+                // Use return_url for customer redirect and keep webhook_url for server callbacks.
+                'callback_url' => $returnUrl,
             ];
             return $payload;
         }
@@ -180,6 +182,18 @@ if (!function_exists('workationCreateStripeCheckoutSession')) {
             'status' => trim((string) ($json['status'] ?? '')),
             'payment_status' => trim((string) ($json['payment_status'] ?? '')),
         ];
+    }
+}
+
+if (!function_exists('workationPaymentSuccessReturnUrl')) {
+    function workationPaymentSuccessReturnUrl(int $reservationId, ?string $provider = null): string
+    {
+        $providerKey = strtolower(trim((string) $provider));
+        if ($providerKey === 'stripe') {
+            return url('/customer?section=bookings&booking=' . max(1, $reservationId) . '&payment=success');
+        }
+
+        return url('/booking/checkout/' . max(1, $reservationId));
     }
 }
 
@@ -371,7 +385,13 @@ Route::post('/booking/reserve', function (Request $request) {
     }
 
     $discountPercent = (float) ($propertyDetails['promotion_discount_percent'] ?? 0);
-    $transferOptionCode = trim((string) ($payload['transfer_option'] ?? ''));
+    $transferOptionCode = strtolower(trim((string) ($payload['transfer_option'] ?? '')));
+    if (in_array($transferOptionCode, ['', 'none', 'no_transfer', 'decline', 'declined'], true)) {
+        $transferOptionCode = 'none';
+    }
+    $transferChargeOverride = $transferOptionCode === 'none'
+        ? 0.0
+        : ($payload['transfer_charge'] ?? null);
     $transferRateMatrix = is_array($propertyDetails['transfer_rate_matrix'] ?? null)
         ? $propertyDetails['transfer_rate_matrix']
         : [];
@@ -430,7 +450,7 @@ Route::post('/booking/reserve', function (Request $request) {
         'guest_residency' => $guestResidency,
         'transfer_option' => $transferOptionCode,
         'property_transfer_options' => $transferOptions,
-        'transfer_charge_override' => $payload['transfer_charge'] ?? null,
+        'transfer_charge_override' => $transferChargeOverride,
         'vendor_tax_overrides' => $vendorTaxOverrides,
         // Vendor-managed selling prices are inclusive; tax/service/government charges are extracted backward for display.
         'prices_include_tax' => true,
@@ -1208,6 +1228,14 @@ Route::post('/booking/reserve-category', function (Request $request) {
         ? (int) DB::table('vendor_property_room_categories')->where('vendor_property_id', (int) $propertyRow->id)->count()
         : 0;
 
+    $transferOptionCode = strtolower(trim((string) $transferOptionCode));
+    if (in_array($transferOptionCode, ['', 'none', 'no_transfer', 'decline', 'declined'], true)) {
+        $transferOptionCode = 'none';
+    }
+    $transferChargeOverride = $transferOptionCode === 'none'
+        ? 0.0
+        : ($payload['transfer_charge'] ?? null);
+
     $pricing = ReservationPricingPolicy::calculate([
         'listing_category' => $categoryKey,
         'subtotal_amount' => $serviceSubtotal,
@@ -1221,7 +1249,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'guest_residency' => $guestResidency,
         'transfer_option' => $transferOptionCode,
         'property_transfer_options' => $transferOptions,
-        'transfer_charge_override' => $payload['transfer_charge'] ?? null,
+        'transfer_charge_override' => $transferChargeOverride,
         'vendor_tax_overrides' => $vendorTaxOverrides,
         // Vendor-managed selling prices are inclusive; tax/service/government charges are extracted backward for display.
         'prices_include_tax' => true,
@@ -1941,11 +1969,22 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
 
     $notes['primary_nationality'] = $primaryNationality;
     $notes['guest_residency'] = $guestResidency;
-    $notes['transfer_option'] = trim((string) ($notes['transfer_option'] ?? ($validated['transfer_option'] ?? '')));
-    $notes['transfer_option_label'] = trim((string) ($notes['transfer_option_label'] ?? ($validated['transfer_option_label'] ?? '')));
-    $notes['transfer_charge'] = max(0, (float) ($notes['transfer_charge'] ?? ($validated['transfer_charge'] ?? 0)));
+    $notes['transfer_option'] = trim((string) ($validated['transfer_option'] ?? ($notes['transfer_option'] ?? '')));
+    $notes['transfer_option_label'] = trim((string) ($validated['transfer_option_label'] ?? ($notes['transfer_option_label'] ?? '')));
+    $normalizedTransferOption = strtolower(trim((string) ($notes['transfer_option'] ?? '')));
+    $isNoTransfer = in_array($normalizedTransferOption, ['', 'none', 'no_transfer', 'decline', 'declined'], true);
+    if ($isNoTransfer) {
+        $notes['transfer_option'] = 'none';
+        if (trim((string) ($notes['transfer_option_label'] ?? '')) === '') {
+            $notes['transfer_option_label'] = 'No transfer';
+        }
+    }
+
+    $notes['transfer_charge'] = $isNoTransfer
+        ? 0.0
+        : max(0, (float) ($validated['transfer_charge'] ?? ($notes['transfer_charge'] ?? 0)));
     $notes['transfer_charge_total'] = $notes['transfer_charge'];
-    $notes['invoice_total_amount'] = max(0, (float) ($notes['invoice_total_amount'] ?? ($validated['invoice_total_amount'] ?? ($reservationRow->total_amount ?? 0))));
+    $notes['invoice_total_amount'] = max(0, (float) ($validated['invoice_total_amount'] ?? ($notes['invoice_total_amount'] ?? ($reservationRow->total_amount ?? 0))));
 
     $requestedGateway = trim((string) ($validated['payment_provider'] ?? ($validated['payment_gateway'] ?? '')));
     $requestedCurrency = trim((string) ($validated['payment_currency'] ?? ''));
@@ -1978,6 +2017,10 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         return back()->withErrors(['payment' => $exception->getMessage()]);
     }
 
+    $provider = strtolower(trim((string) ($intent['provider'] ?? '')));
+    $successReturnUrl = workationPaymentSuccessReturnUrl($reservation, $provider);
+    $cancelReturnUrl = url('/booking/checkout/' . $reservation);
+
     $stripeSession = null;
     if (strtolower(trim((string) ($intent['provider'] ?? ''))) === 'stripe') {
         $stripeSession = workationCreateStripeCheckoutSession([
@@ -1985,8 +2028,8 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
             'intent_id' => (string) ($intent['intent_id'] ?? ''),
             'amount' => (float) ($intent['amount'] ?? 0),
             'currency' => (string) ($intent['currency'] ?? ''),
-            'return_url' => url('/booking/checkout/' . $reservation),
-            'cancel_url' => url('/booking/checkout/' . $reservation),
+            'return_url' => $successReturnUrl,
+            'cancel_url' => $cancelReturnUrl,
             'customer_email' => (string) ($reservationRow->customer_email ?? ''),
         ]);
 
@@ -2041,8 +2084,8 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
             'amount' => (float) ($intent['amount'] ?? 0),
             'currency' => (string) ($intent['currency'] ?? ''),
             'provider' => (string) ($intent['provider'] ?? ''),
-            'return_url' => url('/booking/checkout/' . $reservation),
-            'cancel_url' => url('/booking/checkout/' . $reservation),
+            'return_url' => $successReturnUrl,
+            'cancel_url' => $cancelReturnUrl,
             'webhook_url' => url('/booking/payment/webhooks/' . $gateway),
             'customer_email' => (string) ($reservationRow->customer_email ?? ''),
         ]);
@@ -2085,14 +2128,18 @@ Route::get('/booking/payment/hosted/{reservation}', function (Request $request, 
     $checkoutUrl = trim((string) ($payload['checkout_url'] ?? ''));
     if ($checkoutUrl !== '') {
         $gateway = (string) ($payload['gateway'] ?? $reservationRow->payment_gateway ?? '');
+        $provider = strtolower(trim((string) ($payload['provider'] ?? '')));
+        $successReturnUrl = workationPaymentSuccessReturnUrl($reservation, $provider);
+        $cancelReturnUrl = url('/booking/checkout/' . $reservation);
+
         $redirectPayload = workationBuildGatewayCheckoutPayload($gateway, [
             'intent_id' => (string) ($reservationRow->payment_intent_id ?? ''),
             'reservation_id' => $reservation,
             'amount' => (float) ($reservationRow->payment_amount ?? 0),
             'currency' => strtoupper(trim((string) ($reservationRow->payment_currency ?? 'MVR'))),
             'provider' => (string) ($payload['provider'] ?? ''),
-            'return_url' => url('/booking/checkout/' . $reservation),
-            'cancel_url' => url('/booking/checkout/' . $reservation),
+            'return_url' => $successReturnUrl,
+            'cancel_url' => $cancelReturnUrl,
             'webhook_url' => url('/booking/payment/webhooks/' . $gateway),
             'customer_email' => (string) ($reservationRow->customer_email ?? ''),
         ]);
@@ -2143,14 +2190,18 @@ Route::post('/booking/payment/hosted/{reservation}/complete', function (Request 
     $checkoutUrl = trim((string) ($payload['checkout_url'] ?? ''));
     if ($checkoutUrl !== '') {
         $gateway = (string) ($payload['gateway'] ?? '');
+        $provider = strtolower(trim((string) ($payload['provider'] ?? '')));
+        $successReturnUrl = workationPaymentSuccessReturnUrl($reservation, $provider);
+        $cancelReturnUrl = url('/booking/checkout/' . $reservation);
+
         $redirectPayload = workationBuildGatewayCheckoutPayload($gateway, [
             'intent_id' => (string) ($reservationRow->payment_intent_id ?? ''),
             'reservation_id' => $reservation,
             'amount' => (float) ($reservationRow->payment_amount ?? 0),
             'currency' => strtoupper(trim((string) ($reservationRow->payment_currency ?? 'MVR'))),
             'provider' => (string) ($payload['provider'] ?? ''),
-            'return_url' => url('/booking/checkout/' . $reservation),
-            'cancel_url' => url('/booking/checkout/' . $reservation),
+            'return_url' => $successReturnUrl,
+            'cancel_url' => $cancelReturnUrl,
             'webhook_url' => url('/booking/payment/webhooks/' . $gateway),
             'customer_email' => (string) ($reservationRow->customer_email ?? ''),
         ]);
@@ -2171,12 +2222,34 @@ Route::post('/booking/payment/hosted/{reservation}/complete', function (Request 
     return redirect('/booking/checkout/' . $reservation)->with('portal_notice', 'Payment recorded and reservation confirmed.');
 });
 
-Route::post('/booking/payment/webhooks/{gateway}', function (Request $request, string $gateway) {
+Route::match(['get', 'post'], '/booking/payment/webhooks/{gateway}', function (Request $request, string $gateway) {
     if (!Schema::hasTable('vendor_reservations')) {
         abort(404);
     }
 
     $gateway = strtolower(trim($gateway));
+
+    // Some gateways return customers to this URL via GET.
+    // Treat GET as a browser-return handoff (not as a signed webhook event).
+    if (strtoupper((string) $request->method()) === 'GET') {
+        $reservationId = (int) $request->query('reservation_id', 0);
+        $intentId = trim((string) $request->query('intent_id', ''));
+
+        if ($reservationId <= 0 && $intentId !== '') {
+            $reservationId = (int) (DB::table('vendor_reservations')
+                ->where('payment_intent_id', $intentId)
+                ->value('id') ?? 0);
+        }
+
+        if ($reservationId > 0) {
+            return redirect(workationPaymentSuccessReturnUrl($reservationId, null))
+                ->with('portal_notice', 'Payment return received. We are verifying your payment status.');
+        }
+
+        return redirect('/customer?section=bookings&payment=processing')
+            ->with('portal_notice', 'Payment return received. Please refresh your bookings in a moment.');
+    }
+
     $raw = (string) $request->getContent();
 
     if ($gateway === 'stripe' && trim((string) $request->header('Stripe-Signature', '')) !== '') {

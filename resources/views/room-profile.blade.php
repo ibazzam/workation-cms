@@ -367,6 +367,8 @@
                     <input type="hidden" name="tax_amount" id="taxAmountInput" value="0">
                     <input type="hidden" name="total_amount" id="totalAmountInput" value="0">
                     <input type="hidden" name="primary_mobile" id="primaryMobileHidden" value="{{ old('primary_mobile', '') }}">
+                    <input type="hidden" name="adults" id="adults" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}">
+                    <input type="hidden" name="children" id="children" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}">
                     <input type="hidden" name="transfer_option" id="transferOptionHidden" value="{{ $oldTransferOption !== '' ? $oldTransferOption : 'none' }}">
 
                     @if ($errors->any())
@@ -380,15 +382,6 @@
                     @endif
 
                     <div class="guest-form-stack">
-                        <section class="booking-subsection" aria-label="Guest count">
-                            <h3 class="booking-subtitle">Guest Count</h3>
-                            <p class="booking-subnote">Set adult and child quantities before entering guest details.</p>
-                            <div class="booking-grid">
-                                <div class="field"><label for="adults">Adults</label><input id="adults" name="adults" type="number" min="1" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}" class="{{ $errors->has('adults') ? 'input-error' : '' }}" required>@error('adults')<p class="error-text">{{ $message }}</p>@enderror</div>
-                                <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}" class="{{ $errors->has('children') ? 'input-error' : '' }}">@error('children')<p class="error-text">{{ $message }}</p>@enderror</div>
-                            </div>
-                        </section>
-
                         <section class="booking-subsection" aria-label="Guest details">
                             <h3 class="booking-subtitle">Who's staying?</h3>
                             <p class="booking-subnote">Given names and surname must match government-issued documents. For foreigners, use passport details. For locals, use your national ID details.</p>
@@ -409,43 +402,7 @@
 
                         <section class="booking-subsection" aria-label="Transfer option">
                             <h3 class="booking-subtitle">Transfer option</h3>
-                            <p class="booking-subnote">Select transfer now so the final payable amount and payment currency are calculated before checkout.</p>
-                            <label class="transfer-toggle">
-                                <input type="checkbox" id="transferEnabled" {{ $oldTransferOption !== 'none' ? 'checked' : '' }}>
-                                Include transfer in this booking
-                            </label>
-                            <div class="transfer-list" id="transferOptionsList">
-                                @foreach ($transferOptions as $option)
-                                    @php
-                                        $transferCode = strtolower(trim((string) ($option['code'] ?? '')));
-                                        $transferLabel = trim((string) ($option['label'] ?? 'Transfer'));
-                                        $transferBaseCharge = (float) ($option['base_charge'] ?? 0);
-                                        $transferLocalAdultRate = (float) ($option['local_adult_charge'] ?? $option['adult_charge'] ?? 0);
-                                        $transferLocalChildRate = (float) ($option['local_child_charge'] ?? $option['child_charge'] ?? 0);
-                                        $transferForeignAdultRate = (float) ($option['foreign_adult_charge'] ?? $option['adult_charge'] ?? 0);
-                                        $transferForeignChildRate = (float) ($option['foreign_child_charge'] ?? $option['child_charge'] ?? 0);
-                                        $isTransferSelected = $oldTransferOption === $transferCode;
-                                    @endphp
-                                    <label class="transfer-option">
-                                        <input
-                                            type="radio"
-                                            name="transfer_option_choice"
-                                            value="{{ $transferCode }}"
-                                            data-base-charge="{{ number_format($transferBaseCharge, 2, '.', '') }}"
-                                            data-local-adult-rate="{{ number_format($transferLocalAdultRate, 2, '.', '') }}"
-                                            data-local-child-rate="{{ number_format($transferLocalChildRate, 2, '.', '') }}"
-                                            data-foreign-adult-rate="{{ number_format($transferForeignAdultRate, 2, '.', '') }}"
-                                            data-foreign-child-rate="{{ number_format($transferForeignChildRate, 2, '.', '') }}"
-                                            {{ $isTransferSelected ? 'checked' : '' }}
-                                        >
-                                        <span>
-                                            <span class="transfer-option-title">{{ $transferLabel }}</span>
-                                            <span class="transfer-option-rates js-transfer-rate">Adult {{ $currency }} {{ number_format($transferLocalAdultRate, 2) }} | Child {{ $currency }} {{ number_format($transferLocalChildRate, 2) }}</span>
-                                            <span class="transfer-option-note">Rates adjust automatically by guest residency.</span>
-                                        </span>
-                                    </label>
-                                @endforeach
-                            </div>
+                            <p class="booking-subnote">Transfer selection is moved to the next step after guest details, where local and foreign rate cards are shown before checkout payment.</p>
                         </section>
 
 

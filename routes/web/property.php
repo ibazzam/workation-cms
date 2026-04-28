@@ -564,6 +564,10 @@ Route::get('/property/{property}', function (Request $request, int $property) {
                     ->whereNotIn('status', ['cancelled', 'rejected', 'expired', 'failed'])
                     ->whereDate('end_at', '>=', $todayDate);
 
+                if (Schema::hasColumn('vendor_reservations', 'payment_status')) {
+                    $reservationQuery->where('payment_status', 'paid');
+                }
+
                 if (Schema::hasColumn('vendor_reservations', 'listing_category')) {
                     $reservationQuery->where(function ($query) {
                         $query->where('listing_category', 'accommodation')

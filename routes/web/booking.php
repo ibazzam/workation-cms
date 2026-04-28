@@ -98,6 +98,41 @@ if (!function_exists('workationSignGatewayCheckoutPayload')) {
     }
 }
 
+if (!function_exists('workationResolvePropertyVendorUserId')) {
+    function workationResolvePropertyVendorUserId(object $propertyRow): int
+    {
+        $candidates = [
+            (int) ($propertyRow->vendor_user_id ?? 0),
+            (int) ($propertyRow->owner_user_id ?? 0),
+            (int) ($propertyRow->user_id ?? 0),
+            (int) ($propertyRow->vendor_id ?? 0),
+        ];
+
+        $resolved = collect($candidates)->first(static fn (int $id): bool => $id > 0);
+        if (is_int($resolved) && $resolved > 0) {
+            return $resolved;
+        }
+
+        $propertyId = (int) ($propertyRow->id ?? $propertyRow->vendor_property_id ?? 0);
+        if ($propertyId <= 0 || !Schema::hasTable('vendor_properties')) {
+            return 0;
+        }
+
+        $lookup = DB::table('vendor_properties')->where('id', $propertyId)->first();
+        if (!$lookup) {
+            return 0;
+        }
+
+        foreach (['vendor_user_id', 'owner_user_id', 'user_id', 'vendor_id'] as $column) {
+            if (isset($lookup->{$column}) && (int) $lookup->{$column} > 0) {
+                return (int) $lookup->{$column};
+            }
+        }
+
+        return 0;
+    }
+}
+
 Route::post('/booking/reserve', function (Request $request) {
     $payload = $request->validate([
         'property_id' => ['required', 'integer', 'min:1'],
@@ -159,8 +194,10 @@ Route::post('/booking/reserve', function (Request $request) {
     $bookingStart = $checkin->copy()->startOfDay();
     $bookingEndExclusive = $checkout->copy()->startOfDay();
 
+    $vendorUserId = workationResolvePropertyVendorUserId($propertyRow);
+
     $slotAvailability = workationSlotAvailabilityCheck(
-        (int) ($propertyRow->vendor_user_id ?? 0),
+        $vendorUserId,
         (int) ($propertyRow->id ?? 0),
         $bookingStart,
         $bookingEndExclusive,
@@ -182,7 +219,7 @@ Route::post('/booking/reserve', function (Request $request) {
     }
 
     $overlapCount = workationOverlappingReservationCount(
-        (int) ($propertyRow->vendor_user_id ?? 0),
+        $vendorUserId,
         (int) ($propertyRow->id ?? 0),
         $bookingStart,
         $bookingEndExclusive,
@@ -300,7 +337,7 @@ Route::post('/booking/reserve', function (Request $request) {
     $reservationId = null;
     if (Schema::hasTable('vendor_reservations')) {
         $reservationId = (int) DB::table('vendor_reservations')->insertGetId([
-            'vendor_user_id' => (int) ($propertyRow->vendor_user_id ?? 0),
+            'vendor_user_id' => $vendorUserId,
             'vendor_property_id' => (int) $propertyRow->id,
             'vendor_service_id' => null,
             'customer_name' => $customerName !== '' ? $customerName : 'Guest Customer',
@@ -687,6 +724,10 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             ->whereNotIn('status', ['cancelled', 'rejected', 'expired', 'failed'])
             ->whereDate('end_at', '>=', $todayDate);
 
+        if (Schema::hasColumn('vendor_reservations', 'payment_status')) {
+            $reservationQuery->where('payment_status', 'paid');
+        }
+
         if (Schema::hasColumn('vendor_reservations', 'listing_category')) {
             $reservationQuery->where(function ($query) use ($dbCategoryKey) {
                 $query->where('listing_category', $dbCategoryKey)
@@ -974,8 +1015,10 @@ Route::post('/booking/reserve-category', function (Request $request) {
         default => 1,
     };
 
+    $vendorUserId = workationResolvePropertyVendorUserId($propertyRow);
+
     $slotAvailability = workationSlotAvailabilityCheck(
-        (int) ($propertyRow->vendor_user_id ?? 0),
+        $vendorUserId,
         (int) ($propertyRow->id ?? 0),
         $serviceStart,
         $serviceEndExclusive,
@@ -999,7 +1042,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
     $repeatableCategories = ['excursion', 'resort_day_visit'];
     if (!in_array($categoryKey, $repeatableCategories, true)) {
         $overlapCount = workationOverlappingReservationCount(
-            (int) ($propertyRow->vendor_user_id ?? 0),
+            $vendorUserId,
             (int) ($propertyRow->id ?? 0),
             $serviceStart,
             $serviceEndExclusive,
@@ -1121,7 +1164,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
     $reservationId = null;
     if (Schema::hasTable('vendor_reservations')) {
         $reservationId = (int) DB::table('vendor_reservations')->insertGetId([
-            'vendor_user_id' => (int) ($propertyRow->vendor_user_id ?? 0),
+            'vendor_user_id' => $vendorUserId,
             'vendor_property_id' => (int) $propertyRow->id,
             'vendor_service_id' => null,
             'customer_name' => $customerName !== '' ? $customerName : 'Guest Customer',
@@ -1614,6 +1657,10 @@ Route::post('/booking/checkout/{reservation}/transfer', function (Request $reque
 
     $includeTransfer = (bool) ($validated['include_transfer'] ?? false);
     $selectedTransferOption = strtolower(trim((string) ($validated['transfer_option'] ?? 'none')));
+
+    if (!$includeTransfer && $selectedTransferOption !== '' && $selectedTransferOption !== 'none') {
+        $includeTransfer = true;
+    }
 
     if ($includeTransfer && $transferOptions->isEmpty()) {
         return back()->withErrors(['transfer' => 'No transfer options are available for this property.']);

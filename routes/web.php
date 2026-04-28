@@ -116,12 +116,17 @@ if (!function_exists('workationApplyReservationPaymentEvent')) {
         }
 
         $paymentStatus = $status === 'paid' ? 'paid' : 'unpaid';
+        $resolvedReservationStatus = match ($status) {
+            'paid' => 'confirmed',
+            'cancelled', 'canceled' => 'cancelled',
+            default => (string) ($reservationRow->status ?? 'pending'),
+        };
 
         DB::table('vendor_reservations')
             ->where('id', $reservationId)
             ->update([
                 'payment_status' => $paymentStatus,
-                'status' => $status === 'paid' ? 'confirmed' : (string) ($reservationRow->status ?? 'pending'),
+                'status' => $resolvedReservationStatus,
                 'payment_reference' => $reference !== '' ? $reference : (string) ($reservationRow->payment_reference ?? ''),
                 'payment_intent_id' => $intentId !== '' ? $intentId : (string) ($reservationRow->payment_intent_id ?? ''),
                 'payment_verified_at' => $status === 'paid' ? now() : ($reservationRow->payment_verified_at ?? null),
@@ -513,6 +518,10 @@ if (!function_exists('workationOverlappingReservationCount')) {
             ->whereNotIn('status', ['cancelled', 'rejected', 'expired', 'failed'])
             ->where('start_at', '<', $endExclusive->copy()->startOfDay())
             ->where('end_at', '>', $start->copy()->startOfDay());
+
+        if (Schema::hasColumn('vendor_reservations', 'payment_status')) {
+            $query->where('payment_status', 'paid');
+        }
 
         if ($serviceId !== null && $serviceId > 0 && Schema::hasColumn('vendor_reservations', 'vendor_service_id')) {
             $query->where('vendor_service_id', $serviceId);

@@ -27,6 +27,77 @@ use Laravel\Socialite\Facades\Socialite;
 use Firebase\JWT\JWT;
 use Firebase\JWT\JWK;
 
+if (!function_exists('workationBuildGatewayCheckoutPayload')) {
+    function workationBuildGatewayCheckoutPayload(string $gateway, array $context): array
+    {
+        $provider = strtolower(trim((string) ($context['provider'] ?? '')));
+        $reservationId = (int) ($context['reservation_id'] ?? 0);
+        $intentId = trim((string) ($context['intent_id'] ?? ''));
+        $amount = number_format((float) ($context['amount'] ?? 0), 2, '.', '');
+        $currency = strtoupper(trim((string) ($context['currency'] ?? 'MVR')));
+        $returnUrl = trim((string) ($context['return_url'] ?? ''));
+        $cancelUrl = trim((string) ($context['cancel_url'] ?? ''));
+        $webhookUrl = trim((string) ($context['webhook_url'] ?? ''));
+        $customerEmail = trim((string) ($context['customer_email'] ?? ''));
+
+        $payload = [
+            'intent_id' => $intentId,
+            'reservation_id' => $reservationId,
+            'amount' => $amount,
+            'currency' => $currency,
+            'provider' => $provider,
+            'gateway' => trim((string) $gateway),
+            'return_url' => $returnUrl,
+            'cancel_url' => $cancelUrl,
+            'webhook_url' => $webhookUrl,
+            'timestamp' => (string) now()->timestamp,
+        ];
+
+        if ($customerEmail !== '') {
+            $payload['customer_email'] = $customerEmail;
+        }
+
+        if ($provider === 'stripe') {
+            $payload += [
+                'client_reference_id' => (string) $reservationId,
+                'success_url' => $returnUrl,
+                'metadata_intent_id' => $intentId,
+            ];
+            return $payload;
+        }
+
+        if (in_array($provider, ['mib', 'bml'], true)) {
+            $payload += [
+                'merchant_reference' => 'WRK-' . $reservationId . '-' . strtoupper(substr(md5($intentId), 0, 8)),
+                'bill_amount' => $amount,
+                'bill_currency' => $currency,
+                'callback_url' => $webhookUrl,
+            ];
+            return $payload;
+        }
+
+        return $payload;
+    }
+}
+
+if (!function_exists('workationSignGatewayCheckoutPayload')) {
+    function workationSignGatewayCheckoutPayload(string $gateway, array $payload): array
+    {
+        $gatewayConfig = CheckoutPaymentRouter::gatewayConfig($gateway);
+        $signingSecret = trim((string) ($gatewayConfig['checkout_signing_secret'] ?? ''));
+        if ($signingSecret === '') {
+            return $payload;
+        }
+
+        $canonicalPayload = $payload;
+        ksort($canonicalPayload);
+        $canonical = http_build_query($canonicalPayload, '', '&', PHP_QUERY_RFC3986);
+        $payload['signature'] = hash_hmac('sha256', $canonical, $signingSecret);
+
+        return $payload;
+    }
+}
+
 Route::post('/booking/reserve', function (Request $request) {
     $payload = $request->validate([
         'property_id' => ['required', 'integer', 'min:1'],
@@ -1741,17 +1812,20 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
 
     $checkoutUrl = trim((string) ($intent['checkout_url'] ?? ''));
     if ($checkoutUrl !== '') {
-        $query = http_build_query([
+        $gateway = (string) ($intent['gateway'] ?? '');
+        $payload = workationBuildGatewayCheckoutPayload($gateway, [
             'intent_id' => (string) ($intent['intent_id'] ?? ''),
             'reservation_id' => $reservation,
-            'amount' => number_format((float) ($intent['amount'] ?? 0), 2, '.', ''),
+            'amount' => (float) ($intent['amount'] ?? 0),
             'currency' => (string) ($intent['currency'] ?? ''),
             'provider' => (string) ($intent['provider'] ?? ''),
-            'gateway' => (string) ($intent['gateway'] ?? ''),
             'return_url' => url('/booking/checkout/' . $reservation),
             'cancel_url' => url('/booking/checkout/' . $reservation),
-            'webhook_url' => url('/booking/payment/webhooks/' . (string) ($intent['gateway'] ?? '')),
+            'webhook_url' => url('/booking/payment/webhooks/' . $gateway),
+            'customer_email' => (string) ($reservationRow->customer_email ?? ''),
         ]);
+        $payload = workationSignGatewayCheckoutPayload($gateway, $payload);
+        $query = http_build_query($payload, '', '&', PHP_QUERY_RFC3986);
         $target = $checkoutUrl . (str_contains($checkoutUrl, '?') ? '&' : '?') . $query;
 
         return redirect()->away($target);
@@ -1809,17 +1883,20 @@ Route::post('/booking/payment/hosted/{reservation}/complete', function (Request 
     }
     $checkoutUrl = trim((string) ($payload['checkout_url'] ?? ''));
     if ($checkoutUrl !== '') {
-        $query = http_build_query([
+        $gateway = (string) ($payload['gateway'] ?? '');
+        $redirectPayload = workationBuildGatewayCheckoutPayload($gateway, [
             'intent_id' => (string) ($reservationRow->payment_intent_id ?? ''),
             'reservation_id' => $reservation,
-            'amount' => number_format((float) ($reservationRow->payment_amount ?? 0), 2, '.', ''),
+            'amount' => (float) ($reservationRow->payment_amount ?? 0),
             'currency' => strtoupper(trim((string) ($reservationRow->payment_currency ?? 'MVR'))),
             'provider' => (string) ($payload['provider'] ?? ''),
-            'gateway' => (string) ($payload['gateway'] ?? ''),
             'return_url' => url('/booking/checkout/' . $reservation),
             'cancel_url' => url('/booking/checkout/' . $reservation),
-            'webhook_url' => url('/booking/payment/webhooks/' . (string) ($payload['gateway'] ?? '')),
+            'webhook_url' => url('/booking/payment/webhooks/' . $gateway),
+            'customer_email' => (string) ($reservationRow->customer_email ?? ''),
         ]);
+        $redirectPayload = workationSignGatewayCheckoutPayload($gateway, $redirectPayload);
+        $query = http_build_query($redirectPayload, '', '&', PHP_QUERY_RFC3986);
         $target = $checkoutUrl . (str_contains($checkoutUrl, '?') ? '&' : '?') . $query;
 
         return redirect()->away($target);

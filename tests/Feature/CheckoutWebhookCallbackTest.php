@@ -94,6 +94,60 @@ class CheckoutWebhookCallbackTest extends TestCase
         ]);
     }
 
+    public function test_webhook_marks_reservation_cancelled_when_gateway_reports_cancellation(): void
+    {
+        $secret = 'test_secret_789';
+        config(['checkout_payments.gateways.stripe.webhook_secret' => $secret]);
+
+        $reservationId = $this->createReservation();
+        DB::table('vendor_reservations')->where('id', $reservationId)->update([
+            'status' => 'confirmed',
+            'payment_status' => 'paid',
+        ]);
+
+        $payload = [
+            'reservation_id' => $reservationId,
+            'event_id' => 'evt_cancelled_001',
+            'intent_id' => 'payint_cancelled_001',
+            'reference' => 'REF-CANCEL-001',
+            'status' => 'cancelled',
+            'error' => 'Customer cancelled checkout.',
+        ];
+
+        $rawPayload = json_encode($payload, JSON_UNESCAPED_SLASHES);
+        $signature = hash_hmac('sha256', (string) $rawPayload, $secret);
+
+        $response = $this
+            ->withoutMiddleware(VerifyCsrfToken::class)
+            ->call(
+                'POST',
+                '/booking/payment/webhooks/stripe',
+                [],
+                [],
+                [],
+                [
+                    'CONTENT_TYPE' => 'application/json',
+                    'HTTP_X-Workation-Signature' => $signature,
+                ],
+                (string) $rawPayload
+            );
+
+        $response
+            ->assertOk()
+            ->assertJson([
+                'ok' => true,
+                'result' => 'unpaid',
+            ]);
+
+        $this->assertDatabaseHas('vendor_reservations', [
+            'id' => $reservationId,
+            'payment_status' => 'unpaid',
+            'status' => 'cancelled',
+            'payment_webhook_event_id' => 'evt_cancelled_001',
+            'payment_error' => 'Customer cancelled checkout.',
+        ]);
+    }
+
     private function createReservation(): int
     {
         $vendor = User::factory()->create();

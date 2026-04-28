@@ -56,7 +56,7 @@
         $isForeigner = strtolower(trim((string) ($summary['guest_residency'] ?? ''))) === 'foreign_national';
         $baseTotal = max(0, (float) ($summary['discounted_subtotal'] ?? ((float) ($summary['invoice_total_amount'] ?? 0))));
         $reservationTotal = max(0, (float) ($summary['invoice_total_amount'] ?? 0));
-        $backUrl = '/booking/checkout/' . (int) ($reservation->id ?? 0);
+        $backUrl = '/';
         $selectedOption = strtolower(trim((string) ($selectedTransferOption ?? 'none')));
         $includeTransfer = (bool) ($includeTransfer ?? false);
     @endphp
@@ -210,7 +210,7 @@
                     <p class="helper">Next step will show payment options (MIB/BML/Stripe) based on your saved nationality and residency.</p>
 
                     <div class="actions">
-                        <a class="btn alt" href="{{ $backUrl }}">Back</a>
+                        <a class="btn alt" href="/">Back</a>
                         <button class="btn" type="submit">Select &amp; Continue</button>
                     </div>
                 </form>

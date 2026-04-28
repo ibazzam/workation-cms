@@ -286,7 +286,10 @@
                         @foreach ($invoiceTaxLines as $taxLine)
                             <div class="invoice-row"><span>{{ (string) ($taxLine['label'] ?? 'Tax') }}</span><strong>{{ $currency }} {{ number_format((float) ($taxLine['amount'] ?? 0), 2) }}</strong></div>
                         @endforeach
-                        @if ($serviceChargeTotal > 0)
+                        @php
+                            $serviceChargeAlreadyRendered = collect($invoiceTaxLines)->contains(fn ($line) => stripos((string) ($line['label'] ?? ''), 'service') !== false);
+                        @endphp
+                        @if ($serviceChargeTotal > 0 && !$serviceChargeAlreadyRendered)
                             <div class="invoice-row"><span>Service charge (included)</span><strong>{{ $currency }} {{ number_format($serviceChargeTotal, 2) }}</strong></div>
                         @endif
                         <div class="invoice-row"><span>Transfer charges</span><strong id="transferChargeDisplay">{{ $currency }} {{ number_format($effectiveTransferAmount, 2) }}</strong></div>
@@ -345,7 +348,7 @@
                 @else
                     <button class="btn" type="button" disabled>Confirm & Pay</button>
                 @endif
-                <a class="btn alt" href="{{ (string) ($backUrl ?? ($room ? ('/room/' . (int) ($room->id ?? 0)) : '/customer')) }}">Back</a>
+                <a class="btn alt" href="/booking/checkout/{{ (int) ($reservation->id ?? 0) }}/transfer">Back</a>
             </div>
         </section>
 

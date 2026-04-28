@@ -98,6 +98,133 @@ if (!function_exists('workationSignGatewayCheckoutPayload')) {
     }
 }
 
+if (!function_exists('workationCreateStripeCheckoutSession')) {
+    function workationCreateStripeCheckoutSession(array $context): ?array
+    {
+        $gatewayConfig = CheckoutPaymentRouter::gatewayConfig('stripe');
+        $secretKey = trim((string) ($gatewayConfig['secret_key'] ?? ''));
+        if ($secretKey === '') {
+            return null;
+        }
+
+        $reservationId = (int) ($context['reservation_id'] ?? 0);
+        $intentId = trim((string) ($context['intent_id'] ?? ''));
+        $amount = max(0, (float) ($context['amount'] ?? 0));
+        $currency = strtolower(trim((string) ($context['currency'] ?? 'usd')));
+        $returnUrl = trim((string) ($context['return_url'] ?? ''));
+        $cancelUrl = trim((string) ($context['cancel_url'] ?? $returnUrl));
+        $customerEmail = trim((string) ($context['customer_email'] ?? ''));
+
+        if ($reservationId <= 0 || $intentId === '' || $returnUrl === '' || $cancelUrl === '' || $amount <= 0 || $currency === '') {
+            return null;
+        }
+
+        $requestData = [
+            'mode' => 'payment',
+            'client_reference_id' => (string) $reservationId,
+            'success_url' => $returnUrl,
+            'cancel_url' => $cancelUrl,
+            'line_items[0][quantity]' => '1',
+            'line_items[0][price_data][currency]' => $currency,
+            'line_items[0][price_data][unit_amount]' => (string) max(1, (int) round($amount * 100)),
+            'line_items[0][price_data][product_data][name]' => 'Workation Reservation #' . $reservationId,
+            'metadata[reservation_id]' => (string) $reservationId,
+            'metadata[intent_id]' => $intentId,
+            'payment_intent_data[metadata][reservation_id]' => (string) $reservationId,
+            'payment_intent_data[metadata][intent_id]' => $intentId,
+        ];
+
+        if ($customerEmail !== '') {
+            $requestData['customer_email'] = $customerEmail;
+        }
+
+        try {
+            $response = Http::withToken($secretKey)
+                ->asForm()
+                ->post('https://api.stripe.com/v1/checkout/sessions', $requestData);
+        } catch (\Throwable $exception) {
+            Log::warning('Stripe checkout session request failed', [
+                'reservation_id' => $reservationId,
+                'intent_id' => $intentId,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        if (!$response->successful()) {
+            Log::warning('Stripe checkout session response error', [
+                'reservation_id' => $reservationId,
+                'intent_id' => $intentId,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return null;
+        }
+
+        $json = $response->json();
+        if (!is_array($json)) {
+            return null;
+        }
+
+        $sessionUrl = trim((string) ($json['url'] ?? ''));
+        $sessionId = trim((string) ($json['id'] ?? ''));
+        if ($sessionUrl === '' || $sessionId === '') {
+            return null;
+        }
+
+        return [
+            'id' => $sessionId,
+            'url' => $sessionUrl,
+            'status' => trim((string) ($json['status'] ?? '')),
+            'payment_status' => trim((string) ($json['payment_status'] ?? '')),
+        ];
+    }
+}
+
+if (!function_exists('workationVerifyStripeWebhookSignature')) {
+    function workationVerifyStripeWebhookSignature(string $rawPayload, ?string $signatureHeader, string $secret, int $toleranceSeconds = 300): bool
+    {
+        $signatureHeader = trim((string) $signatureHeader);
+        $secret = trim((string) $secret);
+        if ($signatureHeader === '' || $secret === '' || $rawPayload === '') {
+            return false;
+        }
+
+        $parts = [];
+        foreach (explode(',', $signatureHeader) as $segment) {
+            [$k, $v] = array_pad(explode('=', trim((string) $segment), 2), 2, '');
+            $k = trim((string) $k);
+            $v = trim((string) $v);
+            if ($k !== '' && $v !== '') {
+                $parts[$k][] = $v;
+            }
+        }
+
+        $timestamp = isset($parts['t'][0]) ? (int) $parts['t'][0] : 0;
+        $v1Signatures = $parts['v1'] ?? [];
+        if ($timestamp <= 0 || $v1Signatures === []) {
+            return false;
+        }
+
+        if (abs(time() - $timestamp) > max(0, $toleranceSeconds)) {
+            return false;
+        }
+
+        $signedPayload = $timestamp . '.' . $rawPayload;
+        $expected = hash_hmac('sha256', $signedPayload, $secret);
+
+        foreach ($v1Signatures as $candidate) {
+            if (hash_equals($expected, (string) $candidate)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
 if (!function_exists('workationResolvePropertyVendorUserId')) {
     function workationResolvePropertyVendorUserId(object $propertyRow): int
     {
@@ -1440,12 +1567,29 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
         'reservation_currency' => strtoupper(trim((string) ($reservationRow->currency ?? $roomRow->currency ?? $propertyRow->currency ?? 'MVR'))),
         'amount' => (float) ($reservationNotes['invoice_total_amount'] ?? $request->query('total', (float) ($reservationRow->total_amount ?? 0))),
     ];
-    $paymentPolicy = CheckoutPaymentRouter::buildPaymentPolicy(
-        $paymentContext,
-        $reservationRow
-            ? trim((string) ($reservationNotes['quote_payment_currency'] ?? ''))
-            : trim((string) $request->query('payment_currency', ''))
-    );
+    try {
+        $paymentPolicy = CheckoutPaymentRouter::buildPaymentPolicy(
+            $paymentContext,
+            $reservationRow
+                ? trim((string) ($reservationNotes['quote_payment_currency'] ?? ''))
+                : trim((string) $request->query('payment_currency', ''))
+        );
+    } catch (\InvalidArgumentException $exception) {
+        $paymentPolicy = [
+            'segment' => CheckoutPaymentRouter::resolveCustomerSegment(
+                (string) ($paymentContext['primary_nationality'] ?? ''),
+                (string) ($paymentContext['guest_residency'] ?? '')
+            ),
+            'currency' => strtoupper(trim((string) ($paymentContext['reservation_currency'] ?? 'MVR'))),
+            'gateway' => '',
+            'gateway_label' => 'Gateway unavailable',
+            'provider' => '',
+            'provider_label' => 'Gateway unavailable',
+            'gateway_mode' => 'internal',
+            'available_options' => [],
+            'customer_notice' => $exception->getMessage(),
+        ];
+    }
 
     $quotedPaymentOptions = [];
     foreach ((array) ($paymentPolicy['available_options'] ?? []) as $availableOption) {
@@ -1830,6 +1974,26 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         return back()->withErrors(['payment' => $exception->getMessage()]);
     }
 
+    $stripeSession = null;
+    if (strtolower(trim((string) ($intent['provider'] ?? ''))) === 'stripe') {
+        $stripeSession = workationCreateStripeCheckoutSession([
+            'reservation_id' => $reservation,
+            'intent_id' => (string) ($intent['intent_id'] ?? ''),
+            'amount' => (float) ($intent['amount'] ?? 0),
+            'currency' => (string) ($intent['currency'] ?? ''),
+            'return_url' => url('/booking/checkout/' . $reservation),
+            'cancel_url' => url('/booking/checkout/' . $reservation),
+            'customer_email' => (string) ($reservationRow->customer_email ?? ''),
+        ]);
+
+        if (is_array($stripeSession)) {
+            $intent['stripe_session_id'] = (string) ($stripeSession['id'] ?? '');
+            $intent['stripe_payment_status'] = (string) ($stripeSession['payment_status'] ?? '');
+            $intent['stripe_session_status'] = (string) ($stripeSession['status'] ?? '');
+            $intent['checkout_url'] = (string) ($stripeSession['url'] ?? '');
+        }
+    }
+
     $settlement = ReservationSettlementCalculator::calculate(
         (float) ($intent['amount'] ?? 0),
         (string) ($intent['gateway'] ?? ''),
@@ -1858,6 +2022,13 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         ]);
 
     $checkoutUrl = trim((string) ($intent['checkout_url'] ?? ''));
+    $gatewayMode = strtolower(trim((string) ($intent['gateway_mode'] ?? 'internal')));
+    $provider = strtolower(trim((string) ($intent['provider'] ?? '')));
+
+    if ($provider === 'stripe' && is_array($stripeSession) && $checkoutUrl !== '') {
+        return redirect()->away($checkoutUrl);
+    }
+
     if ($checkoutUrl !== '') {
         $gateway = (string) ($intent['gateway'] ?? '');
         $payload = workationBuildGatewayCheckoutPayload($gateway, [
@@ -1878,6 +2049,12 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         return redirect()->away($target);
     }
 
+    if ($gatewayMode === 'external') {
+        return back()->withErrors([
+            'payment' => 'Selected payment gateway is configured as external, but its checkout URL is missing. Please contact support to complete payment setup.',
+        ]);
+    }
+
     return redirect('/booking/payment/hosted/' . $reservation . '?intent=' . urlencode((string) $intent['intent_id']));
 });
 
@@ -1894,6 +2071,37 @@ Route::get('/booking/payment/hosted/{reservation}', function (Request $request, 
     $intentId = trim((string) $request->query('intent', ''));
     if ($intentId === '' || $intentId !== trim((string) ($reservationRow->payment_intent_id ?? ''))) {
         abort(404);
+    }
+
+    $payload = json_decode((string) ($reservationRow->payment_payload_json ?? ''), true);
+    if (!is_array($payload)) {
+        $payload = [];
+    }
+    $gatewayMode = strtolower(trim((string) ($payload['gateway_mode'] ?? 'internal')));
+    $checkoutUrl = trim((string) ($payload['checkout_url'] ?? ''));
+    if ($checkoutUrl !== '') {
+        $gateway = (string) ($payload['gateway'] ?? $reservationRow->payment_gateway ?? '');
+        $redirectPayload = workationBuildGatewayCheckoutPayload($gateway, [
+            'intent_id' => (string) ($reservationRow->payment_intent_id ?? ''),
+            'reservation_id' => $reservation,
+            'amount' => (float) ($reservationRow->payment_amount ?? 0),
+            'currency' => strtoupper(trim((string) ($reservationRow->payment_currency ?? 'MVR'))),
+            'provider' => (string) ($payload['provider'] ?? ''),
+            'return_url' => url('/booking/checkout/' . $reservation),
+            'cancel_url' => url('/booking/checkout/' . $reservation),
+            'webhook_url' => url('/booking/payment/webhooks/' . $gateway),
+            'customer_email' => (string) ($reservationRow->customer_email ?? ''),
+        ]);
+        $redirectPayload = workationSignGatewayCheckoutPayload($gateway, $redirectPayload);
+        $query = http_build_query($redirectPayload, '', '&', PHP_QUERY_RFC3986);
+        $target = $checkoutUrl . (str_contains($checkoutUrl, '?') ? '&' : '?') . $query;
+
+        return redirect()->away($target);
+    }
+
+    if ($gatewayMode === 'external') {
+        return redirect('/booking/checkout/' . $reservation)
+            ->withErrors(['payment' => 'Selected payment gateway is configured as external, but checkout URL is missing. Please contact support to complete payment setup.']);
     }
 
     $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById((int) ($reservationRow->vendor_property_id ?? 0));
@@ -1964,7 +2172,64 @@ Route::post('/booking/payment/webhooks/{gateway}', function (Request $request, s
         abort(404);
     }
 
+    $gateway = strtolower(trim($gateway));
     $raw = (string) $request->getContent();
+
+    if ($gateway === 'stripe' && trim((string) $request->header('Stripe-Signature', '')) !== '') {
+        $gatewayConfig = CheckoutPaymentRouter::gatewayConfig('stripe');
+        $stripeSecret = trim((string) ($gatewayConfig['webhook_secret'] ?? ''));
+        $stripeSignature = trim((string) $request->header('Stripe-Signature', ''));
+        if (!workationVerifyStripeWebhookSignature($raw, $stripeSignature, $stripeSecret)) {
+            return response()->json(['ok' => false, 'message' => 'Invalid signature'], 401);
+        }
+
+        $payload = json_decode($raw, true);
+        if (!is_array($payload)) {
+            return response()->json(['ok' => false, 'message' => 'Invalid payload'], 422);
+        }
+
+        $eventId = trim((string) ($payload['id'] ?? ''));
+        $eventType = trim((string) ($payload['type'] ?? ''));
+        $eventObject = $payload['data']['object'] ?? [];
+        if (!is_array($eventObject)) {
+            $eventObject = [];
+        }
+
+        $reservationId = (int) (
+            $eventObject['metadata']['reservation_id']
+            ?? $eventObject['client_reference_id']
+            ?? 0
+        );
+
+        if ($reservationId <= 0) {
+            return response()->json(['ok' => true, 'result' => 'ignored']);
+        }
+
+        $reservationRow = DB::table('vendor_reservations')->where('id', $reservationId)->first();
+        if (!$reservationRow) {
+            return response()->json(['ok' => false, 'message' => 'Reservation not found'], 404);
+        }
+
+        $mappedStatus = 'failed';
+        if (in_array($eventType, ['checkout.session.completed', 'checkout.session.async_payment_succeeded', 'payment_intent.succeeded'], true)) {
+            $mappedStatus = 'paid';
+        } elseif (in_array($eventType, ['payment_intent.canceled'], true)) {
+            $mappedStatus = 'canceled';
+        } elseif ($eventType === 'charge.refunded') {
+            $mappedStatus = 'cancelled';
+        }
+
+        $result = workationApplyReservationPaymentEvent($reservationRow, [
+            'event_id' => $eventId,
+            'intent_id' => (string) ($eventObject['metadata']['intent_id'] ?? $reservationRow->payment_intent_id ?? ''),
+            'reference' => (string) ($eventObject['id'] ?? $eventId),
+            'status' => $mappedStatus,
+            'error' => $mappedStatus === 'failed' ? ('Stripe event: ' . $eventType) : '',
+        ]);
+
+        return response()->json(['ok' => true, 'result' => $result['status'] ?? 'processed']);
+    }
+
     $signature = trim((string) $request->header('X-Workation-Signature', ''));
     if (!CheckoutPaymentRouter::verifySignature($gateway, $raw, $signature)) {
         return response()->json(['ok' => false, 'message' => 'Invalid signature'], 401);

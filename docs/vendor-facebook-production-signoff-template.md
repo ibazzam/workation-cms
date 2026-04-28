@@ -54,7 +54,9 @@ WORKATION_PAYMENT_FX_MVR_PER_USD=15.42
 ## Deployment checklist
 
 1. Set all required keys in the live environment (do not store secrets in repository).
-2. For any gateway set to `external`, ensure `*_CHECKOUT_URL` is not empty.
+2. For external gateways, ensure checkout handoff is configured:
+	- MIB/BML: `*_CHECKOUT_URL` must be set.
+	- Stripe: set either `WORKATION_PAYMENT_STRIPE_SECRET_KEY` (native session) or `WORKATION_PAYMENT_STRIPE_CHECKOUT_URL` (custom handoff).
 3. Redeploy/restart so Laravel loads updated environment values.
 4. Clear cached configuration:
 
@@ -71,7 +73,8 @@ php artisan optimize:clear
 
 - Never paste live API secrets into chat.
 - Use distinct keys for staging vs production.
-- If a gateway is external but missing checkout URL, checkout is blocked by design.
+- If MIB/BML is external but missing checkout URL, checkout is blocked by design.
+- Stripe can run without a checkout URL when `WORKATION_PAYMENT_STRIPE_SECRET_KEY` is set.
 
 ## Stripe key mapping (important)
 
@@ -115,6 +118,34 @@ If BML provides one credential base for both currencies:
 3. If BML gives distinct secrets per gateway later, set per-gateway values:
 	- `WORKATION_PAYMENT_BML_MVR_CHECKOUT_SIGNING_SECRET`, `WORKATION_PAYMENT_BML_MVR_WEBHOOK_SECRET`
 	- `WORKATION_PAYMENT_BML_USD_CHECKOUT_SIGNING_SECRET`, `WORKATION_PAYMENT_BML_USD_WEBHOOK_SECRET`
+
+## BML Connect field mapping (from your screenshots)
+
+You now have two BML apps in Connect:
+
+1. MVR app (local flow)
+2. USD app (foreign flow)
+
+Use them like this:
+
+1. Keep separate checkout endpoints in ENV:
+	- WORKATION_PAYMENT_BML_MVR_CHECKOUT_URL = MVR gateway endpoint
+	- WORKATION_PAYMENT_BML_USD_CHECKOUT_URL = USD gateway endpoint
+
+2. Register webhook endpoints in BML Connect:
+	- MVR webhook URL: https://www.workation.mv/booking/payment/webhooks/bml_mvr
+	- USD webhook URL: https://www.workation.mv/booking/payment/webhooks/bml_usd
+
+3. For signing and webhook secrets in this app:
+	- If BML gives one shared signing/webhook secret, use:
+		- WORKATION_PAYMENT_BML_CHECKOUT_SIGNING_SECRET
+		- WORKATION_PAYMENT_BML_WEBHOOK_SECRET
+	- If BML gives per-app/per-currency secrets, use per-gateway variables instead.
+
+4. BML Connect Application ID / API Key (secret) / Public Key:
+	- These are bank credentials for your BML integration layer.
+	- Do not commit these values to repository files.
+	- Store in production environment variables or secret manager only.
 
 # Facebook Vendor Login Production Sign-Off Worksheet
 

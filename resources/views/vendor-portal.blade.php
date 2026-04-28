@@ -103,6 +103,38 @@
         $forcedPanelKey = (string) session('portal_active_panel', $panelFromPageQuery);
         $forcedListingMode = strtolower(trim((string) session('portal_listing_mode', '')));
         $forcedListingCategory = strtolower(trim((string) request()->query('category', session('portal_listing_category', ''))));
+        $showWorkspaceTabs = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'pricing', 'billing'], true);
+        $workspacePrimaryPage = match (true) {
+            $showListingsPage => 'listings',
+            $showPricingPage => 'pricing',
+            $showBillingPage => 'billing',
+            default => 'reservations',
+        };
+        $workspaceCategoryTabKeys = collect($listingCategoryViewOrder ?? $vendorAllowedCategoryKeys)
+            ->map(static fn ($categoryKey) => vendorPortalCanonicalCategory((string) $categoryKey))
+            ->filter(static fn ($categoryKey) => is_string($categoryKey) && $categoryKey !== '')
+            ->values();
+        $workspaceCategoryQuery = $forcedListingCategory !== '' ? ('?category=' . urlencode($forcedListingCategory)) : '';
+        $workspacePrimaryTabs = [
+            [
+                'key' => 'listings',
+                'label' => 'My Listings',
+                'active' => $showListingsPage,
+                'href' => '/vendor/listings' . $workspaceCategoryQuery,
+            ],
+            [
+                'key' => 'reservations',
+                'label' => 'My Bookings / Reservations',
+                'active' => $showReservationsPage,
+                'href' => '/vendor/reservations' . $workspaceCategoryQuery,
+            ],
+            [
+                'key' => 'billing',
+                'label' => 'Billing / Payments',
+                'active' => $showBillingPage,
+                'href' => '/vendor/billing' . $workspaceCategoryQuery,
+            ],
+        ];
         $forcedMediaPanelType = strtolower(trim((string) session('portal_media_panel_type', '')));
         $forcedMediaPanelId = (int) session('portal_media_panel_id', 0);
         $propertyMediaAssets = $vendorMediaAssets->filter(static function ($media): bool {
@@ -166,7 +198,31 @@
         $showCreatePropertyForm = old('property_form_intent') === '1' || $forcedListingMode === 'create';
         $showCreateRoomForm = old('room_form_intent') === '1';
         $commissionRate = 0.12;
-        $billingLedgerRows = $vendorReservations->take(50)->map(function ($reservation) use ($commissionRate) {
+        $billingReservationsSource = $vendorReservations;
+        if ($forcedListingCategory !== '') {
+            $billingReservationsSource = $billingReservationsSource->filter(function ($reservation) use ($forcedListingCategory, $propertyLookupById) {
+                $notes = json_decode((string) ($reservation->notes ?? ''), true);
+                $notes = is_array($notes) ? $notes : [];
+
+                $reservationCategory = vendorPortalCanonicalCategory((string) ($notes['category_key'] ?? $notes['listing_category'] ?? ''));
+                if (is_string($reservationCategory) && $reservationCategory !== '') {
+                    return $reservationCategory === $forcedListingCategory;
+                }
+
+                $propertyId = (int) ($reservation->vendor_property_id ?? 0);
+                $property = $propertyId > 0 ? $propertyLookupById->get($propertyId) : null;
+                if ($property) {
+                    $propertyCategory = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
+                    if (is_string($propertyCategory) && $propertyCategory !== '') {
+                        return $propertyCategory === $forcedListingCategory;
+                    }
+                }
+
+                return false;
+            })->values();
+        }
+
+        $billingLedgerRows = $billingReservationsSource->take(50)->map(function ($reservation) use ($commissionRate) {
             $gross = (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0);
             $subtotal = (float) ($reservation->subtotal_amount ?? $reservation->total_amount ?? 0);
             $taxTotal = (float) ($reservation->total_tax_amount ?? 0);
@@ -232,7 +288,7 @@
         $vendorAverageBookingValue = $vendorReservationsCount > 0 ? round($grossCollectionsTotal / max(1, $vendorReservationsCount), 2) : 0.0;
         $vendorUnresolvedCareCount = (int) $engagementInquiries->whereNotIn('status', ['resolved', 'closed', 'replied'])->count();
         $vendorPendingReviewResponses = (int) $engagementReviews->filter(fn ($row) => trim((string) ($row['response'] ?? '')) === '')->count();
-        $vendorRefundCases = $vendorReservations->filter(function ($reservation) {
+        $vendorRefundCases = $billingReservationsSource->filter(function ($reservation) {
             $status = strtolower(trim((string) ($reservation->status ?? '')));
             $paymentStatus = strtolower(trim((string) ($reservation->payment_status ?? '')));
             return in_array($status, ['cancelled', 'canceled', 'refunded'], true) || $paymentStatus === 'refunded';
@@ -372,6 +428,48 @@
 
         @if ($errors->any() && !$errors->has('profile'))
             <div class="error" role="alert">{{ $errors->first() }}</div>
+        @endif
+
+        @if ($showWorkspaceTabs)
+            <section class="vendor-workspace-nav" aria-label="Vendor workspace navigation">
+                <div class="workspace-tabs" role="tablist" aria-label="Vendor workspace tabs">
+                    @foreach ($workspacePrimaryTabs as $workspaceTab)
+                        <a
+                            class="workspace-tab {{ $workspaceTab['active'] ? 'is-active' : '' }}"
+                            href="{{ $workspaceTab['href'] }}"
+                            role="tab"
+                            aria-selected="{{ $workspaceTab['active'] ? 'true' : 'false' }}"
+                        >{{ $workspaceTab['label'] }}</a>
+                    @endforeach
+                </div>
+                @if ($workspaceCategoryTabKeys->isNotEmpty())
+                    <div class="workspace-category-tabs" role="tablist" aria-label="Vendor category filter">
+                        <a
+                            class="workspace-category-tab {{ $forcedListingCategory === '' ? 'is-active' : '' }}"
+                            href="{{ '/vendor?page=' . $workspacePrimaryPage }}"
+                            role="tab"
+                            aria-selected="{{ $forcedListingCategory === '' ? 'true' : 'false' }}"
+                        >All Categories</a>
+                        @foreach ($workspaceCategoryTabKeys as $categoryKey)
+                            @php
+                                $categoryLabel = (string) ($listingCategoryLabelMap[$categoryKey] ?? ucwords(str_replace('_', ' ', $categoryKey)));
+                                $categoryHref = match ($workspacePrimaryPage) {
+                                    'listings' => '/vendor/listings/' . $categoryKey,
+                                    'billing' => '/vendor/billing?category=' . urlencode($categoryKey),
+                                    default => '/vendor/reservations?category=' . urlencode($categoryKey),
+                                };
+                                $categoryIsActive = $forcedListingCategory === $categoryKey;
+                            @endphp
+                            <a
+                                class="workspace-category-tab {{ $categoryIsActive ? 'is-active' : '' }}"
+                                href="{{ $categoryHref }}"
+                                role="tab"
+                                aria-selected="{{ $categoryIsActive ? 'true' : 'false' }}"
+                            >{{ $categoryLabel }}</a>
+                        @endforeach
+                    </div>
+                @endif
+            </section>
         @endif
 
         @if ($showProfilePage)

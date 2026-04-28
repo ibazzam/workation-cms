@@ -12,6 +12,7 @@
         ->filter(static fn ($categoryKey) => $sidebarSelectedVendorCategories->contains($categoryKey))
         ->values();
     $sidebarHasServiceAccess = $sidebarCategoryLinks->isNotEmpty();
+    $sidebarCategoryQuery = trim((string) ($forcedListingCategory ?? '')) !== '' ? ('?category=' . urlencode((string) $forcedListingCategory)) : '';
     $sidebarOverviewOpen = in_array($activePortalPage ?? 'overview', ['overview', 'reports'], true);
     $sidebarListingsOpen = ($activePortalPage ?? '') === 'listings';
     $sidebarOperationsOpen = in_array($activePortalPage ?? '', ['reservations', 'operations', 'availability', 'pricing'], true);
@@ -86,7 +87,7 @@
             <span class="nav-chevron" aria-hidden="true">▾</span>
         </button>
         <div class="nav-group-body {{ $sidebarGrowthOpen ? 'is-open' : '' }}" data-vendor-nav-group="growth">
-            <a class="nav-item-link {{ ($activePortalPage ?? '') === 'billing' ? 'prominent' : '' }}" href="/vendor/billing" data-panel-key="billing">Collections &amp; Payouts</a>
+            <a class="nav-item-link {{ ($activePortalPage ?? '') === 'billing' ? 'prominent' : '' }}" href="{{ '/vendor/billing' . $sidebarCategoryQuery }}" data-panel-key="billing">Collections &amp; Payouts</a>
             <a class="nav-item-link {{ in_array($activePortalPage ?? '', ['engagement', 'promotions'], true) ? 'prominent' : '' }}" href="/vendor/promotions" data-panel-key="engagement">Customers, Reviews &amp; Loyalty</a>
         </div>
     </div>

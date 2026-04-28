@@ -610,6 +610,82 @@
             padding: 10px 12px;
         }
 
+        .vendor-workspace-nav {
+            margin-top: 12px;
+            margin-bottom: 12px;
+        }
+
+        .workspace-tabs {
+            display: flex;
+            border-bottom: 2px solid #d8e2eb;
+            margin-bottom: 10px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .workspace-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .workspace-tab {
+            padding: 10px 20px;
+            font-size: 0.84rem;
+            font-weight: 700;
+            color: #5a6b7c;
+            border: none;
+            background: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            white-space: nowrap;
+            text-decoration: none;
+        }
+
+        .workspace-tab:hover {
+            color: #1a2f41;
+        }
+
+        .workspace-tab.is-active {
+            color: #0d4f6a;
+            border-bottom-color: #0f6179;
+        }
+
+        .workspace-category-tabs {
+            display: flex;
+            gap: 2px;
+            overflow-x: auto;
+            background: #e4eaf0;
+            border-radius: 10px;
+            padding: 3px;
+            scrollbar-width: none;
+        }
+
+        .workspace-category-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .workspace-category-tab {
+            white-space: nowrap;
+            padding: 7px 13px;
+            border: none;
+            background: transparent;
+            color: #4a6278;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border-radius: 7px;
+            text-decoration: none;
+            flex-shrink: 0;
+        }
+
+        .workspace-category-tab:hover {
+            background: #ffffff88;
+        }
+
+        .workspace-category-tab.is-active {
+            background: #ffffff;
+            color: #0d4a65;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+        }
+
         .profile-card {
             margin-top: 12px;
         }

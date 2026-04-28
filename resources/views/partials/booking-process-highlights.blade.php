@@ -13,7 +13,7 @@
 
 <style>
     .booking-page-header {
-        margin: 0 0 16px;
+        margin: 0 0 8px;
         border-radius: 18px;
         padding: 16px;
         background: linear-gradient(135deg, #1a7588 0%, #2f9b95 100%);

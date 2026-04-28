@@ -40,9 +40,9 @@
 
     <main class="page">
         <section class="panel">
-            <p class="eyebrow">Hosted Payment</p>
-            <h1>Secure Payment Confirmation</h1>
-            <p class="sub">This internal hosted page is the handoff target for the new payment intent flow. It keeps the checkout path working now and can later be swapped to an external provider without changing the reservation routing rules.</p>
+            <p class="eyebrow">Internal Hosted Payment</p>
+            <h1>Secure Payment Confirmation (Simulator)</h1>
+            <p class="sub">This page appears only when the selected gateway is running in internal mode. Live external gateways bypass this screen and redirect directly to the provider checkout page.</p>
 
             <div class="grid">
                 <div class="cell"><span class="k">Property</span><span class="v">{{ (string) ($property->name ?? 'Property') }}</span></div>

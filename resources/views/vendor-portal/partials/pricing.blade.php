@@ -16,6 +16,11 @@
                     ->unique()
                     ->values();
 
+                $forcedPricingCategory = vendorPortalCanonicalCategory((string) ($forcedListingCategory ?? ''));
+                if (is_string($forcedPricingCategory) && $forcedPricingCategory !== '' && $allowedCategorySet->contains($forcedPricingCategory)) {
+                    $allowedCategorySet = collect([$forcedPricingCategory]);
+                }
+
                 $filteredVendorProperties = $vendorProperties->filter(static function ($property) use ($allowedCategorySet): bool {
                     $category = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
                     return is_string($category) && $category !== '' && $allowedCategorySet->contains($category);

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -194,6 +195,30 @@ class CheckoutPaymentIntentTest extends TestCase
             'payment_currency' => 'MVR',
             'payment_gateway' => 'mib_mvr',
         ]);
+    }
+
+    public function test_external_gateway_without_checkout_url_is_rejected(): void
+    {
+        Config::set('checkout_payments.gateways.mib_mvr.mode', 'external');
+        Config::set('checkout_payments.gateways.mib_mvr.checkout_url', '');
+        Config::set('checkout_payments.gateways.bml_mvr.mode', 'external');
+        Config::set('checkout_payments.gateways.bml_mvr.checkout_url', '');
+        Config::set('checkout_payments.gateways.stripe.mode', 'external');
+        Config::set('checkout_payments.gateways.stripe.checkout_url', '');
+
+        $reservationId = $this->createReservation('Maldivian', 'local_resident', 'MVR');
+
+        $response = $this
+            ->from('/booking/checkout/' . $reservationId)
+            ->withoutMiddleware(VerifyCsrfToken::class)
+            ->post('/booking/checkout/' . $reservationId . '/payment-intent', [
+                'payment_currency' => 'MVR',
+                'guest_residency' => 'local_resident',
+            ]);
+
+        $response
+            ->assertRedirect('/booking/checkout/' . $reservationId)
+            ->assertSessionHasErrors(['payment']);
     }
 
     private function createReservation(string $nationality, string $guestResidency, string $currency): int

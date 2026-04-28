@@ -139,12 +139,20 @@ class CheckoutPaymentRouter
                     continue;
                 }
 
+                $gatewayMode = strtolower(trim((string) ($gatewayConfig['mode'] ?? 'internal')));
+                $checkoutUrl = trim((string) ($gatewayConfig['checkout_url'] ?? ''));
+                $isExternallyReady = $gatewayMode !== 'external' || $checkoutUrl !== '';
+                if (!$isExternallyReady) {
+                    continue;
+                }
+
                 $options[] = [
                     'gateway' => (string) $gatewayKey,
                     'gateway_label' => (string) ($gatewayConfig['label'] ?? Str::headline(str_replace('_', ' ', (string) $gatewayKey))),
                     'provider' => strtolower(trim((string) ($gatewayConfig['provider'] ?? $gatewayKey))),
                     'provider_label' => self::providerLabel((string) ($gatewayConfig['provider'] ?? (string) $gatewayKey)),
                     'gateway_mode' => (string) ($gatewayConfig['mode'] ?? 'internal'),
+                    'checkout_url_configured' => $checkoutUrl !== '',
                     'currency' => $currencyCode,
                 ];
             }
@@ -294,5 +302,45 @@ class CheckoutPaymentRouter
 
         $expected = hash_hmac('sha256', $rawPayload, $secret);
         return hash_equals($expected, trim($signature));
+    }
+
+    public static function verifyStripeWebhookSignature(string $rawPayload, ?string $signatureHeader, ?string $secret = null, int $toleranceSeconds = 300): bool
+    {
+        $resolvedSecret = trim((string) ($secret ?? (self::gatewayConfig('stripe')['webhook_secret'] ?? '')));
+        $header = trim((string) $signatureHeader);
+        if ($resolvedSecret === '' || $header === '' || $rawPayload === '') {
+            return false;
+        }
+
+        $parts = [];
+        foreach (explode(',', $header) as $segment) {
+            [$k, $v] = array_pad(explode('=', trim($segment), 2), 2, '');
+            $key = trim((string) $k);
+            $value = trim((string) $v);
+            if ($key === '' || $value === '') {
+                continue;
+            }
+            $parts[$key][] = $value;
+        }
+
+        $timestamp = isset($parts['t'][0]) ? (int) $parts['t'][0] : 0;
+        $signatures = $parts['v1'] ?? [];
+        if ($timestamp <= 0 || $signatures === []) {
+            return false;
+        }
+
+        if ($toleranceSeconds > 0 && abs(time() - $timestamp) > $toleranceSeconds) {
+            return false;
+        }
+
+        $signedPayload = $timestamp . '.' . $rawPayload;
+        $expected = hash_hmac('sha256', $signedPayload, $resolvedSecret);
+        foreach ($signatures as $candidate) {
+            if (hash_equals($expected, (string) $candidate)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

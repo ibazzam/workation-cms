@@ -7,6 +7,10 @@
         ->unique()
         ->values()
         ->all();
+    $forcedOperationsCategory = vendorPortalCanonicalCategory((string) ($forcedListingCategory ?? ''));
+    if (is_string($forcedOperationsCategory) && $forcedOperationsCategory !== '' && in_array($forcedOperationsCategory, $allVendorCategoryKeys, true)) {
+        $allVendorCategoryKeys = [$forcedOperationsCategory];
+    }
 @endphp
 <section id="vendorAvailabilitySection" class="card ops-section" aria-label="Vendor availability calendar" data-panel-group="reservations">
             <div class="ops-header">

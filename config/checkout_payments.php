@@ -32,6 +32,9 @@ $stripeSupportedCurrencies = $parseCurrencyList(
     array_values(array_unique(array_merge(['MVR'], $foreignAllowedCurrencies)))
 );
 
+$bmlSharedCheckoutSigningSecret = trim((string) env('WORKATION_PAYMENT_BML_CHECKOUT_SIGNING_SECRET', ''));
+$bmlSharedWebhookSecret = trim((string) env('WORKATION_PAYMENT_BML_WEBHOOK_SECRET', env('APP_KEY', 'workation-bml')));
+
 return [
     // FX conversion uses this base: each rate means "how many MVR for 1 unit of that currency".
     'fx_base_currency' => strtoupper(trim((string) env('WORKATION_PAYMENT_FX_BASE_CURRENCY', 'MVR'))),
@@ -99,9 +102,9 @@ return [
             'currency' => 'MVR',
             'mode' => env('WORKATION_PAYMENT_BML_MVR_MODE', 'internal'),
             'checkout_url' => env('WORKATION_PAYMENT_BML_MVR_CHECKOUT_URL', ''),
-            'checkout_signing_secret' => env('WORKATION_PAYMENT_BML_MVR_CHECKOUT_SIGNING_SECRET', ''),
+            'checkout_signing_secret' => env('WORKATION_PAYMENT_BML_MVR_CHECKOUT_SIGNING_SECRET', $bmlSharedCheckoutSigningSecret),
             'allowed_segments' => ['local_maldivian'],
-            'webhook_secret' => env('WORKATION_PAYMENT_BML_MVR_WEBHOOK_SECRET', env('APP_KEY', 'workation-bml-mvr')),
+            'webhook_secret' => env('WORKATION_PAYMENT_BML_MVR_WEBHOOK_SECRET', $bmlSharedWebhookSecret),
         ],
         'bml_usd' => [
             'label' => env('WORKATION_PAYMENT_BML_USD_LABEL', 'BML USD Gateway'),
@@ -109,13 +112,16 @@ return [
             'currency' => 'USD',
             'mode' => env('WORKATION_PAYMENT_BML_USD_MODE', 'internal'),
             'checkout_url' => env('WORKATION_PAYMENT_BML_USD_CHECKOUT_URL', ''),
-            'checkout_signing_secret' => env('WORKATION_PAYMENT_BML_USD_CHECKOUT_SIGNING_SECRET', ''),
+            'checkout_signing_secret' => env('WORKATION_PAYMENT_BML_USD_CHECKOUT_SIGNING_SECRET', $bmlSharedCheckoutSigningSecret),
             'allowed_segments' => ['foreign_national'],
-            'webhook_secret' => env('WORKATION_PAYMENT_BML_USD_WEBHOOK_SECRET', env('APP_KEY', 'workation-bml-usd')),
+            'webhook_secret' => env('WORKATION_PAYMENT_BML_USD_WEBHOOK_SECRET', $bmlSharedWebhookSecret),
         ],
         'stripe' => [
             'label' => env('WORKATION_PAYMENT_STRIPE_LABEL', 'Stripe Checkout'),
             'provider' => 'stripe',
+            'publishable_key' => env('WORKATION_PAYMENT_STRIPE_PUBLISHABLE_KEY', ''),
+            'secret_key' => env('WORKATION_PAYMENT_STRIPE_SECRET_KEY', ''),
+            'webhook_tolerance_seconds' => (int) env('WORKATION_PAYMENT_STRIPE_WEBHOOK_TOLERANCE_SECONDS', 300),
             'currency' => null,
             // Multi-currency is controlled by env, e.g. "MVR,USD,EUR,GBP,AED".
             'supported_currencies' => $stripeSupportedCurrencies,

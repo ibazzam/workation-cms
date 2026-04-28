@@ -51,6 +51,7 @@
         .payment-stat .k { font-size:0.7rem; text-transform:uppercase; letter-spacing:0.07em; color:#5c7689; font-weight:700; }
         .payment-stat .v { font-size:0.9rem; font-weight:700; color:#173d54; }
         .payment-note { margin:0; color:#4a687e; font-size:0.82rem; line-height:1.45; }
+        .payment-warning { margin:0; color:#8a3a12; background:#fff0e8; border:1px solid #f2cab5; border-radius:10px; padding:10px; font-size:0.82rem; line-height:1.45; }
         .payment-option-list { display:grid; gap:8px; margin-top:6px; }
         .payment-option { border:1px solid #dbe7f0; border-radius:10px; background:#fff; padding:10px; display:grid; grid-template-columns:auto 1fr; gap:8px; align-items:start; }
         .payment-option-title { font-weight:700; color:#173d54; font-size:0.86rem; }
@@ -148,6 +149,7 @@
         $lockedSourceCurrency = strtoupper(trim((string) ($summary['quote_source_currency'] ?? $currency)));
         $lockedSourceAmount = (float) ($summary['quote_source_amount'] ?? ($summary['total'] ?? 0));
         $selectedProvider = $lockedPaymentProvider;
+        $hasAvailablePaymentOptions = $paymentOptions->isNotEmpty();
         $customerPaymentStatus = strtolower(trim((string) ($reservation->payment_status ?? 'unpaid')));
         $customerPaymentCollectedAt = trim((string) ($reservation->payment_collected_at ?? $reservation->payment_verified_at ?? ''));
         $selectedPaymentOption = '';
@@ -226,6 +228,8 @@
                                 </label>
                             @endforeach
                         </div>
+                    @else
+                        <p class="payment-warning">No live payment gateway route is currently available for this booking segment/currency. Please contact support to complete gateway setup.</p>
                     @endif
                     <p class="payment-note">{{ $paymentNotice }}</p>
                     <p class="payment-note">Booking total: {{ $lockedSourceCurrency }} {{ number_format($lockedSourceAmount, 2) }}. Converted payable amount updates based on your selected payment route.</p>
@@ -311,7 +315,7 @@
                         <p class="fine-print" style="width:100%; margin:0 0 6px;">
                             Guest nationality and residency are locked from your booking details and cannot be changed at checkout.
                         </p>
-                        <button class="btn" type="submit">Confirm & Pay</button>
+                        <button class="btn" type="submit" {{ $hasAvailablePaymentOptions ? '' : 'disabled' }}>Confirm & Pay</button>
                     </form>
                 @else
                     <button class="btn" type="button" disabled>Confirm & Pay</button>

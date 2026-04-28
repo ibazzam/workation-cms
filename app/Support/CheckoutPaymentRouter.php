@@ -142,9 +142,13 @@ class CheckoutPaymentRouter
                 $gatewayMode = strtolower(trim((string) ($gatewayConfig['mode'] ?? 'internal')));
                 $checkoutUrl = trim((string) ($gatewayConfig['checkout_url'] ?? ''));
                 $providerKey = strtolower(trim((string) ($gatewayConfig['provider'] ?? $gatewayKey)));
-                $stripeSecretKey = trim((string) ($gatewayConfig['secret_key'] ?? ''));
-                $isNativeStripeReady = $providerKey === 'stripe' && $stripeSecretKey !== '';
-                $isExternallyReady = $gatewayMode !== 'external' || $checkoutUrl !== '' || $isNativeStripeReady;
+                $isStripeProvider = $providerKey === 'stripe';
+                // Keep Stripe visible in the chooser for both segments/currencies.
+                // Stripe may use native session creation (secret key) or custom handoff URL.
+                // Non-Stripe external gateways still require a checkout URL to be listed.
+                $isExternallyReady = $isStripeProvider
+                    ? true
+                    : ($gatewayMode !== 'external' || $checkoutUrl !== '');
                 if (!$isExternallyReady) {
                     continue;
                 }

@@ -4,15 +4,16 @@
                     ? (string) ($listingCategoryLabelMap[$forcedListingCategory] ?? ucwords(str_replace('_', ' ', $forcedListingCategory)))
                     : '';
                 $consoleTitleLabel = $consoleCategoryLabel !== '' ? $consoleCategoryLabel . ' Listings' : 'My Listings';
+                $reservationSummaryByProperty = collect($vendorReservationSummaryByProperty ?? []);
                 $overviewPropertyCount = $vendorProperties->count();
-                $overviewReservationCount = $vendorReservations->count();
-                $overviewConfirmedCount = $vendorReservations
+                $overviewReservationCount = (int) ($vendorDashboardSnapshot['reservations_count'] ?? $vendorReservations->count());
+                $overviewConfirmedCount = (int) ($vendorDashboardSnapshot['confirmed_reservations'] ?? $vendorReservations
                     ->filter(static function ($reservation): bool {
                         return strtolower((string) ($reservation->status ?? 'pending')) === 'confirmed';
                     })
-                    ->count();
-                $overviewGrossRevenue = (float) $vendorReservations
-                    ->sum(static fn ($reservation) => (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0));
+                    ->count());
+                $overviewGrossRevenue = (float) ($vendorDashboardSnapshot['gross_collections_total'] ?? $vendorReservations
+                    ->sum(static fn ($reservation) => (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0)));
                 $overviewPendingReviewCount = $vendorProperties
                     ->filter(static fn ($property): bool => strtolower(trim((string) ($property->listing_moderation_status ?? 'draft'))) === 'pending_review')
                     ->count();
@@ -24,33 +25,28 @@
                         ->map(static fn ($id) => (int) $id)
                         ->filter(static fn (int $id): bool => $id > 0)
                         ->values();
-                    $forcedCategoryReservations = $vendorReservations
-                        ->filter(static function ($reservation) use ($forcedCategoryPropertyIds): bool {
-                            return $forcedCategoryPropertyIds->contains((int) ($reservation->vendor_property_id ?? 0));
-                        })
-                        ->values();
+                    $forcedCategoryReservationSummaries = $forcedCategoryPropertyIds
+                        ->map(static fn (int $propertyId) => $reservationSummaryByProperty->get($propertyId))
+                        ->filter();
 
                     $overviewPropertyCount = $forcedCategoryProperties->count();
-                    $overviewReservationCount = $forcedCategoryReservations->count();
-                    $overviewConfirmedCount = $forcedCategoryReservations
-                        ->filter(static function ($reservation): bool {
-                            return strtolower((string) ($reservation->status ?? 'pending')) === 'confirmed';
-                        })
-                        ->count();
-                    $overviewGrossRevenue = (float) $forcedCategoryReservations
-                        ->sum(static fn ($reservation) => (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0));
+                    $overviewReservationCount = (int) $forcedCategoryReservationSummaries->sum(static fn ($summary) => (int) ($summary->reservations_count ?? 0));
+                    $overviewConfirmedCount = (int) $forcedCategoryReservationSummaries->sum(static fn ($summary) => (int) ($summary->confirmed_count ?? 0));
+                    $overviewGrossRevenue = (float) $forcedCategoryReservationSummaries->sum(static fn ($summary) => (float) ($summary->gross_total ?? 0));
                     $overviewPendingReviewCount = $forcedCategoryProperties
                         ->filter(static fn ($property): bool => strtolower(trim((string) ($property->listing_moderation_status ?? 'draft'))) === 'pending_review')
                         ->count();
                 }
+
+                $categoryQuery = $forcedListingCategory !== '' ? ('?category=' . urlencode($forcedListingCategory)) : '';
             @endphp
             <div class="ops-header">
                 <p class="ops-title">{{ $consoleTitleLabel }}</p>
                 @if ($forcedListingCategory !== '')
                     <div class="inline-actions">
                         <a class="btn btn-primary" href="/vendor/listings/{{ $forcedListingCategory }}/create">Add {{ $consoleCategoryLabel }}</a>
-                        <a class="btn btn-secondary" href="/vendor/reservations">Reservations</a>
-                        <a class="btn btn-secondary" href="/vendor/pricing">Pricing</a>
+                        <a class="btn btn-secondary" href="{{ '/vendor/reservations' . $categoryQuery }}#vendorAvailabilitySection">Reservations</a>
+                        <a class="btn btn-secondary" href="{{ '/vendor/pricing' . $categoryQuery }}#vendorPricingSection">Pricing</a>
                         <a class="btn btn-secondary" href="/vendor/billing">Billing</a>
                     </div>
                 @endif

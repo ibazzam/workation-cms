@@ -387,11 +387,19 @@ class VendorPropertyCompatibilityReader
      * Load all listings for a given vendor user from dedicated tables.
      * Shaped to match legacy vendor_properties row format.
      */
-    public static function loadVendorListings(int $vendorUserId, int $limit = 200): Collection
+    public static function loadVendorListings(int $vendorUserId, int $limit = 200, ?string $categoryFilter = null): Collection
     {
         $all = collect();
 
+        $normalizedCategoryFilter = $categoryFilter !== null
+            ? strtolower(trim((string) $categoryFilter))
+            : null;
+
         foreach (self::categoryTableMap() as $categoryKey => $tableName) {
+            if ($normalizedCategoryFilter !== null && $normalizedCategoryFilter !== '' && $categoryKey !== $normalizedCategoryFilter) {
+                continue;
+            }
+
             if (!self::hasTable($tableName)) {
                 continue;
             }

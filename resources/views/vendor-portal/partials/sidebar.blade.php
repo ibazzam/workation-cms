@@ -71,6 +71,7 @@
             </button>
             <div class="nav-group-body {{ $sidebarOperationsOpen ? 'is-open' : '' }}" data-vendor-nav-group="operations">
                 <a class="nav-item-link {{ in_array($activePortalPage ?? '', ['reservations', 'operations'], true) ? 'prominent' : '' }}" href="/vendor/reservations" data-panel-key="reservations">Reservations Queue</a>
+                <a class="nav-item-link {{ ($activePortalPage ?? '') === 'pricing' ? 'prominent' : '' }}" href="/vendor/pricing" data-panel-key="reservations">Pricing Rules</a>
             </div>
         </div>
     @else

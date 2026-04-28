@@ -102,7 +102,7 @@
         $showOverviewPage = in_array($activePortalPage, ['overview', 'reports'], true);
         $forcedPanelKey = (string) session('portal_active_panel', $panelFromPageQuery);
         $forcedListingMode = strtolower(trim((string) session('portal_listing_mode', '')));
-        $forcedListingCategory = strtolower(trim((string) session('portal_listing_category', '')));
+        $forcedListingCategory = strtolower(trim((string) request()->query('category', session('portal_listing_category', ''))));
         $forcedMediaPanelType = strtolower(trim((string) session('portal_media_panel_type', '')));
         $forcedMediaPanelId = (int) session('portal_media_panel_id', 0);
         $propertyMediaAssets = $vendorMediaAssets->filter(static function ($media): bool {

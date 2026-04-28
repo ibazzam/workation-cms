@@ -32,6 +32,11 @@ Route::get('/vendor', function () {
     $loadBillingData = $activePortalPage === 'billing';
     $loadListingsContextData = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'pricing', 'engagement', 'promotions'], true);
     $vendorPortalCacheTtlSeconds = 900;
+    $categoryRouteTokens = array_merge(array_keys(vendorPortalCategoryMap()), ['marine_transport', 'land_transport']);
+    $requestedCategoryScope = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', '')));
+    if (!in_array($requestedCategoryScope, $categoryRouteTokens, true)) {
+        $requestedCategoryScope = '';
+    }
 
     $vendorCategoryMap = vendorPortalCategoryMap();
     $selectedVendorCategories = vendorPortalSelectedCategories($vendorUser);
@@ -51,6 +56,7 @@ Route::get('/vendor', function () {
     $vendorRoomCategories = collect();
     $vendorMediaAssets = collect();
     $payoutStatusRows = collect();
+    $vendorReservationSummaryByProperty = collect();
     $vendorEngagement = [
         'inquiries_table' => null,
         'inquiries' => collect(),
@@ -81,10 +87,10 @@ Route::get('/vendor', function () {
         if ($loadListingsContextData) {
             // Load vendor listings from dedicated category tables only for pages that render listing-level data.
             $vendorProperties = collect(Cache::remember(
-                'vendor:portal:listings:v3:' . $vendorUserId,
+                'vendor:portal:listings:v4:' . $vendorUserId . ':' . ($requestedCategoryScope !== '' ? $requestedCategoryScope : 'all'),
                 now()->addSeconds($vendorPortalCacheTtlSeconds),
-                static function () use ($vendorUserId) {
-                    return \App\Support\VendorPropertyCompatibilityReader::loadVendorListings($vendorUserId, 200)
+                static function () use ($vendorUserId, $requestedCategoryScope) {
+                    return \App\Support\VendorPropertyCompatibilityReader::loadVendorListings($vendorUserId, 200, $requestedCategoryScope !== '' ? $requestedCategoryScope : null)
                         ->values()
                         ->all();
                 }
@@ -276,15 +282,18 @@ Route::get('/vendor', function () {
         if ($loadListingsContextData && Schema::hasTable('vendor_services')) {
             $serviceLimit = $loadListingsHeavyData ? 250 : 80;
             $vendorServices = collect(Cache::remember(
-                'vendor:portal:services:v2:' . $vendorUserId . ':' . $serviceLimit,
+                'vendor:portal:services:v3:' . $vendorUserId . ':' . $serviceLimit . ':' . ($requestedCategoryScope !== '' ? $requestedCategoryScope : 'all'),
                 now()->addSeconds($vendorPortalCacheTtlSeconds),
-                static function () use ($vendorUserId, $serviceLimit) {
-                    return DB::table('vendor_services')
+                static function () use ($vendorUserId, $serviceLimit, $requestedCategoryScope) {
+                    $query = DB::table('vendor_services')
                         ->where('vendor_user_id', $vendorUserId)
-                        ->orderByDesc('updated_at')
-                        ->limit($serviceLimit)
-                        ->get()
-                        ->all();
+                        ->orderByDesc('updated_at');
+
+                    if ($requestedCategoryScope !== '' && Schema::hasColumn('vendor_services', 'listing_category')) {
+                        $query->where('listing_category', $requestedCategoryScope);
+                    }
+
+                    return $query->limit($serviceLimit)->get()->all();
                 }
             ));
 
@@ -328,43 +337,61 @@ Route::get('/vendor', function () {
         $vendorDashboardSnapshot['listing_total'] = max((int) ($vendorDashboardSnapshot['listing_total'] ?? 0), $vendorListingCountFromDb);
         $vendorDashboardSnapshot['listing_active'] = max((int) ($vendorDashboardSnapshot['listing_active'] ?? 0), $vendorActiveListingCountFromDb);
 
-        if ($isOverviewPage) {
-            $vendorDashboardSnapshot = Cache::remember(
-                'vendor:portal:snapshot:v1:' . $vendorUserId,
-                now()->addSeconds($vendorPortalCacheTtlSeconds),
-                static function () use ($vendorUserId, $vendorDashboardSnapshot): array {
-                    $snapshot = $vendorDashboardSnapshot;
+        $vendorDashboardSnapshot = Cache::remember(
+            'vendor:portal:snapshot:v2:' . $vendorUserId,
+            now()->addSeconds($vendorPortalCacheTtlSeconds),
+            static function () use ($vendorUserId, $vendorDashboardSnapshot): array {
+                $snapshot = $vendorDashboardSnapshot;
 
-                    if (Schema::hasTable('vendor_reservations')) {
-                        $aggregate = DB::table('vendor_reservations')
-                            ->where('vendor_user_id', $vendorUserId)
-                            ->selectRaw('COUNT(*) as reservations_count')
-                            ->selectRaw("SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) = 'pending' THEN 1 ELSE 0 END) as pending_reservations")
-                            ->selectRaw("SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) IN ('confirmed', 'upcoming') THEN 1 ELSE 0 END) as confirmed_reservations")
-                            ->selectRaw("SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) = 'completed' THEN 1 ELSE 0 END) as completed_reservations")
-                            ->selectRaw('SUM(COALESCE(invoice_total_amount, total_amount, 0)) as gross_collections_total')
-                            ->first();
+                if (Schema::hasTable('vendor_reservations')) {
+                    $aggregate = DB::table('vendor_reservations')
+                        ->where('vendor_user_id', $vendorUserId)
+                        ->selectRaw('COUNT(*) as reservations_count')
+                        ->selectRaw("SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) = 'pending' THEN 1 ELSE 0 END) as pending_reservations")
+                        ->selectRaw("SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) IN ('confirmed', 'upcoming') THEN 1 ELSE 0 END) as confirmed_reservations")
+                        ->selectRaw("SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) = 'completed' THEN 1 ELSE 0 END) as completed_reservations")
+                        ->selectRaw('SUM(COALESCE(invoice_total_amount, total_amount, 0)) as gross_collections_total')
+                        ->first();
 
-                        $snapshot['reservations_count'] = (int) ($aggregate->reservations_count ?? 0);
-                        $snapshot['pending_reservations'] = (int) ($aggregate->pending_reservations ?? 0);
-                        $snapshot['confirmed_reservations'] = (int) ($aggregate->confirmed_reservations ?? 0);
-                        $snapshot['completed_reservations'] = (int) ($aggregate->completed_reservations ?? 0);
-                        $snapshot['gross_collections_total'] = (float) ($aggregate->gross_collections_total ?? 0);
-                    }
-
-                    $snapshot['has_pricing_rules'] = Schema::hasTable('vendor_pricing_rules')
-                        ? DB::table('vendor_pricing_rules')->where('vendor_user_id', $vendorUserId)->exists()
-                        : false;
-                    $snapshot['has_availability'] = Schema::hasTable('vendor_availability_slots')
-                        ? DB::table('vendor_availability_slots')->where('vendor_user_id', $vendorUserId)->exists()
-                        : false;
-                    $snapshot['has_billing'] = Schema::hasTable('vendor_billing_details')
-                        ? DB::table('vendor_billing_details')->where('vendor_user_id', $vendorUserId)->exists()
-                        : false;
-
-                    return $snapshot;
+                    $snapshot['reservations_count'] = (int) ($aggregate->reservations_count ?? 0);
+                    $snapshot['pending_reservations'] = (int) ($aggregate->pending_reservations ?? 0);
+                    $snapshot['confirmed_reservations'] = (int) ($aggregate->confirmed_reservations ?? 0);
+                    $snapshot['completed_reservations'] = (int) ($aggregate->completed_reservations ?? 0);
+                    $snapshot['gross_collections_total'] = (float) ($aggregate->gross_collections_total ?? 0);
                 }
-            );
+
+                $snapshot['has_pricing_rules'] = Schema::hasTable('vendor_pricing_rules')
+                    ? DB::table('vendor_pricing_rules')->where('vendor_user_id', $vendorUserId)->exists()
+                    : false;
+                $snapshot['has_availability'] = Schema::hasTable('vendor_availability_slots')
+                    ? DB::table('vendor_availability_slots')->where('vendor_user_id', $vendorUserId)->exists()
+                    : false;
+                $snapshot['has_billing'] = Schema::hasTable('vendor_billing_details')
+                    ? DB::table('vendor_billing_details')->where('vendor_user_id', $vendorUserId)->exists()
+                    : false;
+
+                return $snapshot;
+            }
+        );
+
+        if ($loadListingsContextData && $vendorProperties->isNotEmpty() && Schema::hasTable('vendor_reservations')) {
+            $vendorReservationSummaryByProperty = collect(Cache::remember(
+                'vendor:portal:reservation-summary-by-property:v1:' . $vendorUserId,
+                now()->addSeconds($vendorPortalCacheTtlSeconds),
+                static function () use ($vendorUserId) {
+                    return DB::table('vendor_reservations')
+                        ->where('vendor_user_id', $vendorUserId)
+                        ->whereNotNull('vendor_property_id')
+                        ->selectRaw('vendor_property_id')
+                        ->selectRaw('COUNT(*) as reservations_count')
+                        ->selectRaw("SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) IN ('confirmed', 'upcoming') THEN 1 ELSE 0 END) as confirmed_count")
+                        ->selectRaw('SUM(COALESCE(invoice_total_amount, total_amount, 0)) as gross_total')
+                        ->groupBy('vendor_property_id')
+                        ->get()
+                        ->keyBy(static fn ($row) => (int) ($row->vendor_property_id ?? 0))
+                        ->all();
+                }
+            ));
         }
 
         if ($loadAvailabilityData && Schema::hasTable('vendor_availability_slots')) {
@@ -461,27 +488,59 @@ Route::get('/vendor', function () {
             );
         }
 
-        if ($loadListingsHeavyData && Schema::hasTable('vendor_property_room_categories')) {
-            $vendorRoomCategories = DB::table('vendor_property_room_categories')
-                ->where('vendor_user_id', $vendorUserId)
-                ->orderByDesc('updated_at')
-                ->limit(200)
-                ->get();
-        }
-
-        if ($loadListingsHeavyData && Schema::hasTable('vendor_listing_media')) {
-            $vendorMediaAssets = DB::table('vendor_listing_media')
-                ->where('vendor_user_id', $vendorUserId)
-                ->orderByDesc('created_at')
-                ->limit(200)
-                ->get();
-        }
-
         $vendorPropertyIds = $vendorProperties
             ->pluck('id')
             ->map(static fn ($id): int => (int) $id)
             ->filter(static fn (int $id): bool => $id > 0)
             ->values();
+
+        if ($loadListingsHeavyData && Schema::hasTable('vendor_property_room_categories')) {
+            $roomCategoryQuery = DB::table('vendor_property_room_categories')
+                ->where('vendor_user_id', $vendorUserId)
+                ->orderByDesc('updated_at');
+
+            if ($vendorPropertyIds->isNotEmpty()) {
+                $roomCategoryQuery->whereIn('vendor_property_id', $vendorPropertyIds->all());
+            }
+
+            $vendorRoomCategories = $roomCategoryQuery->limit(200)->get();
+        }
+
+        if ($loadListingsHeavyData && Schema::hasTable('vendor_listing_media')) {
+            $roomIds = $vendorRoomCategories
+                ->pluck('id')
+                ->map(static fn ($id): int => (int) $id)
+                ->filter(static fn (int $id): bool => $id > 0)
+                ->values();
+
+            $vendorMediaQuery = DB::table('vendor_listing_media')
+                ->where('vendor_user_id', $vendorUserId)
+                ->orderByDesc('created_at');
+
+            if ($vendorPropertyIds->isNotEmpty() || $roomIds->isNotEmpty()) {
+                $vendorMediaQuery->where(function ($query) use ($vendorPropertyIds, $roomIds) {
+                    $hasCondition = false;
+
+                    if ($vendorPropertyIds->isNotEmpty()) {
+                        $query->where(function ($propertyQuery) use ($vendorPropertyIds) {
+                            $propertyQuery->where('entity_type', 'property')
+                                ->whereIn('entity_id', $vendorPropertyIds->all());
+                        });
+                        $hasCondition = true;
+                    }
+
+                    if ($roomIds->isNotEmpty()) {
+                        $method = $hasCondition ? 'orWhere' : 'where';
+                        $query->{$method}(function ($roomQuery) use ($roomIds) {
+                            $roomQuery->where('entity_type', 'room')
+                                ->whereIn('entity_id', $roomIds->all());
+                        });
+                    }
+                });
+            }
+
+            $vendorMediaAssets = $vendorMediaQuery->limit(200)->get();
+        }
 
         if ($loadEngagementData) {
             $reviewTableCandidates = ['vendor_property_reviews', 'vendor_reviews', 'customer_reviews', 'property_reviews'];
@@ -727,6 +786,7 @@ Route::get('/vendor', function () {
         'vendorRooms' => $vendorRoomCategories,
         'vendorMediaAssets' => $vendorMediaAssets,
         'payoutStatusRows' => $payoutStatusRows,
+        'vendorReservationSummaryByProperty' => $vendorReservationSummaryByProperty,
         'vendorEngagement' => $vendorEngagement,
         'vendorDashboardSnapshot' => $vendorDashboardSnapshot,
         'transportModeOptions' => vendorPortalListingOptions('transport_mode'),
@@ -1138,7 +1198,15 @@ Route::get('/vendor/reservations', function () {
         return redirect('/portal/vendor/login');
     }
 
-    return redirect('/vendor?page=reservations')->with('portal_active_panel', 'reservations');
+    $category = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', '')));
+    $query = '/vendor?page=reservations';
+    if ($category !== '') {
+        $query .= '&category=' . urlencode($category);
+    }
+
+    return redirect($query)
+        ->with('portal_active_panel', 'reservations')
+        ->with('portal_listing_category', $category);
 });
 
 Route::get('/vendor/availability', function () {
@@ -1146,7 +1214,15 @@ Route::get('/vendor/availability', function () {
         return redirect('/portal/vendor/login');
     }
 
-    return redirect('/vendor?page=reservations')->with('portal_active_panel', 'reservations');
+    $category = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', '')));
+    $query = '/vendor?page=reservations';
+    if ($category !== '') {
+        $query .= '&category=' . urlencode($category);
+    }
+
+    return redirect($query)
+        ->with('portal_active_panel', 'reservations')
+        ->with('portal_listing_category', $category);
 });
 
 Route::get('/vendor/operations', function () {
@@ -1162,7 +1238,15 @@ Route::get('/vendor/operations', function () {
             ->withErrors(['profile' => 'Operations are locked until your vendor account is verified and approved by admin.']);
     }
 
-    return redirect('/vendor?page=reservations')->with('portal_active_panel', 'reservations');
+    $category = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', '')));
+    $query = '/vendor?page=reservations';
+    if ($category !== '') {
+        $query .= '&category=' . urlencode($category);
+    }
+
+    return redirect($query)
+        ->with('portal_active_panel', 'reservations')
+        ->with('portal_listing_category', $category);
 });
 
 Route::get('/vendor/engagement', function () {
@@ -1186,7 +1270,15 @@ Route::get('/vendor/pricing', function () {
             ->withErrors(['profile' => 'Pricing controls are locked until your vendor account is verified and approved by admin.']);
     }
 
-    return redirect('/vendor?page=pricing')->with('portal_active_panel', 'reservations');
+    $category = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', '')));
+    $query = '/vendor?page=pricing';
+    if ($category !== '') {
+        $query .= '&category=' . urlencode($category);
+    }
+
+    return redirect($query)
+        ->with('portal_active_panel', 'pricing')
+        ->with('portal_listing_category', $category);
 });
 
 Route::get('/vendor/billing', function () {

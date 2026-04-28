@@ -1286,7 +1286,15 @@ Route::get('/vendor/billing', function () {
         return redirect('/portal/vendor/login');
     }
 
-    return redirect('/vendor?page=billing')->with('portal_active_panel', 'billing');
+    $category = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', '')));
+    $query = '/vendor?page=billing';
+    if ($category !== '') {
+        $query .= '&category=' . urlencode($category);
+    }
+
+    return redirect($query)
+        ->with('portal_active_panel', 'billing')
+        ->with('portal_listing_category', $category);
 });
 
 Route::get('/vendor/promotions', function () {

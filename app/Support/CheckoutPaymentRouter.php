@@ -141,7 +141,10 @@ class CheckoutPaymentRouter
 
                 $gatewayMode = strtolower(trim((string) ($gatewayConfig['mode'] ?? 'internal')));
                 $checkoutUrl = trim((string) ($gatewayConfig['checkout_url'] ?? ''));
-                $isExternallyReady = $gatewayMode !== 'external' || $checkoutUrl !== '';
+                $providerKey = strtolower(trim((string) ($gatewayConfig['provider'] ?? $gatewayKey)));
+                $stripeSecretKey = trim((string) ($gatewayConfig['secret_key'] ?? ''));
+                $isNativeStripeReady = $providerKey === 'stripe' && $stripeSecretKey !== '';
+                $isExternallyReady = $gatewayMode !== 'external' || $checkoutUrl !== '' || $isNativeStripeReady;
                 if (!$isExternallyReady) {
                     continue;
                 }

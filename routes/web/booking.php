@@ -452,12 +452,16 @@ Route::post('/booking/reserve', function (Request $request) {
     $customerEmail = $primaryEmail;
     $additionalGuestDetails = trim((string) ($payload['additional_guest_details'] ?? ''));
 
-    $paymentQuote = CheckoutPaymentRouter::buildPaymentQuote([
-        'primary_nationality' => $primaryNationality,
-        'guest_residency' => $guestResidency,
-        'reservation_currency' => strtoupper(trim((string) ($roomRow->currency ?? $propertyRow->currency ?? 'MVR'))),
-        'amount' => $totalAmount,
-    ]);
+    try {
+        $paymentQuote = CheckoutPaymentRouter::buildPaymentQuote([
+            'primary_nationality' => $primaryNationality,
+            'guest_residency' => $guestResidency,
+            'reservation_currency' => strtoupper(trim((string) ($roomRow->currency ?? $propertyRow->currency ?? 'MVR'))),
+            'amount' => $totalAmount,
+        ]);
+    } catch (\InvalidArgumentException $exception) {
+        return back()->withErrors(['payment' => $exception->getMessage()])->withInput();
+    }
 
     provisionCustomerAccountFromBooking($customerEmail, $customerName);
 

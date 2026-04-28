@@ -116,6 +116,34 @@ If BML provides one credential base for both currencies:
 	- `WORKATION_PAYMENT_BML_MVR_CHECKOUT_SIGNING_SECRET`, `WORKATION_PAYMENT_BML_MVR_WEBHOOK_SECRET`
 	- `WORKATION_PAYMENT_BML_USD_CHECKOUT_SIGNING_SECRET`, `WORKATION_PAYMENT_BML_USD_WEBHOOK_SECRET`
 
+## BML Connect field mapping (from your screenshots)
+
+You now have two BML apps in Connect:
+
+1. MVR app (local flow)
+2. USD app (foreign flow)
+
+Use them like this:
+
+1. Keep separate checkout endpoints in ENV:
+	- WORKATION_PAYMENT_BML_MVR_CHECKOUT_URL = MVR gateway endpoint
+	- WORKATION_PAYMENT_BML_USD_CHECKOUT_URL = USD gateway endpoint
+
+2. Register webhook endpoints in BML Connect:
+	- MVR webhook URL: https://www.workation.mv/booking/payment/webhooks/bml_mvr
+	- USD webhook URL: https://www.workation.mv/booking/payment/webhooks/bml_usd
+
+3. For signing and webhook secrets in this app:
+	- If BML gives one shared signing/webhook secret, use:
+		- WORKATION_PAYMENT_BML_CHECKOUT_SIGNING_SECRET
+		- WORKATION_PAYMENT_BML_WEBHOOK_SECRET
+	- If BML gives per-app/per-currency secrets, use per-gateway variables instead.
+
+4. BML Connect Application ID / API Key (secret) / Public Key:
+	- These are bank credentials for your BML integration layer.
+	- Do not commit these values to repository files.
+	- Store in production environment variables or secret manager only.
+
 # Facebook Vendor Login Production Sign-Off Worksheet
 
 Use this worksheet to complete the remaining Facebook stabilization step in one production verification run.

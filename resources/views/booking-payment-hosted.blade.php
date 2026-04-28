@@ -39,6 +39,12 @@
     @endphp
 
     <main class="page">
+        @include('partials.booking-process-highlights', [
+            'bookingProcessCurrentStep' => 4,
+            'bookingProcessBackUrl' => '/booking/checkout/' . (int) ($reservation->id ?? 0),
+            'bookingProcessNextText' => 'Final step on this page: submit the payment confirmation and finish the reservation.',
+        ])
+
         <section class="panel">
             <p class="eyebrow">Internal Hosted Payment</p>
             <h1>Secure Payment Confirmation (Simulator)</h1>

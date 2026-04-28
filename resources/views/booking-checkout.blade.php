@@ -94,7 +94,8 @@
         $property = $property ?? null;
         $roomName = trim((string) ($roomName ?? ''));
         $currency = strtoupper(trim((string) ($reservation->currency ?? $room->currency ?? $property->currency ?? 'MVR')));
-        $total = number_format((float) ($summary['total'] ?? 0), 2);
+        $totalAmountRaw = (float) ($summary['total'] ?? 0);
+        $total = number_format($totalAmountRaw, 2);
         $checkoutMediaUrl = trim((string) ($checkoutMediaUrl ?? ''));
         $adults = max(1, (int) ($summary['adults'] ?? 1));
         $children = max(0, (int) ($summary['children'] ?? 0));
@@ -132,7 +133,18 @@
                 ? Str::headline(str_replace('_', ' ', $selectedTransferCode))
                 : 'No transfer';
         }
-        $baseTotalBeforeTransfer = max(0, ((float) ($summary['total'] ?? 0)) - $transferAmount);
+        $baseTotalBeforeTransfer = max(0, $totalAmountRaw - $transferAmount);
+        $effectiveTransferAmount = $selectedTransferCode === '' ? 0.0 : $transferAmount;
+        $effectiveInvoiceTotal = max(0, $baseTotalBeforeTransfer + $effectiveTransferAmount);
+        $total = number_format($effectiveInvoiceTotal, 2);
+        $invoiceTaxLines = $taxLines->map(static function (array $line): array {
+            $label = trim((string) ($line['label'] ?? $line['name'] ?? $line['type'] ?? 'Tax'));
+            $amount = (float) ($line['amount'] ?? $line['value'] ?? 0);
+            return [
+                'label' => $label !== '' ? $label : 'Tax',
+                'amount' => max(0, $amount),
+            ];
+        })->filter(static fn (array $line): bool => $line['amount'] > 0)->values();
         $inclusives = collect($inclusives ?? [])->map(static fn ($v) => trim((string) $v))->filter()->values();
         $cancellationPolicy = trim((string) ($cancellationPolicy ?? 'Standard cancellation terms apply.'));
         $dateLabels = $dateLabels ?? ['start' => 'Check-in', 'end' => 'Check-out'];
@@ -166,9 +178,16 @@
             $firstCurrency = strtoupper(trim((string) ($paymentOptions[0]['currency'] ?? '')));
             $selectedPaymentOption = $firstGateway . '|' . $firstCurrency;
         }
+        $bookingProcessBackUrl = '/booking/checkout/' . (int) ($reservation->id ?? 0) . '/transfer';
     @endphp
 
     <main class="page">
+        @include('partials.booking-process-highlights', [
+            'bookingProcessCurrentStep' => 3,
+            'bookingProcessBackUrl' => $bookingProcessBackUrl,
+            'bookingProcessNextText' => 'Next step after this page: complete payment and receive reservation confirmation.',
+        ])
+
         <section class="panel" aria-label="Checkout summary">
             <h1 class="title">Checkout & Reservation</h1>
             <p class="sub">Review your prepared reservation and proceed with payment confirmation.</p>
@@ -263,8 +282,14 @@
                         @if ($discountAmount > 0)
                             <div class="invoice-row"><span>Discount</span><strong>- {{ $currency }} {{ number_format($discountAmount, 2) }}</strong></div>
                         @endif
-                        <div class="invoice-row"><span>Taxes & fees (included)</span><strong>{{ $currency }} {{ number_format($taxAmount, 2) }}</strong></div>
-                        <div class="invoice-row"><span>Transfer charges</span><strong id="transferChargeDisplay">{{ $currency }} {{ number_format($transferAmount, 2) }}</strong></div>
+                        <div class="invoice-row"><span>Taxes & fees (included)</span><strong>{{ $currency }} {{ number_format($totalTaxAmount, 2) }}</strong></div>
+                        @foreach ($invoiceTaxLines as $taxLine)
+                            <div class="invoice-row"><span>{{ (string) ($taxLine['label'] ?? 'Tax') }}</span><strong>{{ $currency }} {{ number_format((float) ($taxLine['amount'] ?? 0), 2) }}</strong></div>
+                        @endforeach
+                        @if ($serviceChargeTotal > 0)
+                            <div class="invoice-row"><span>Service charge (included)</span><strong>{{ $currency }} {{ number_format($serviceChargeTotal, 2) }}</strong></div>
+                        @endif
+                        <div class="invoice-row"><span>Transfer charges</span><strong id="transferChargeDisplay">{{ $currency }} {{ number_format($effectiveTransferAmount, 2) }}</strong></div>
                         <div class="total"><span>Total</span><span id="invoiceTotalDisplay">{{ $currency }} {{ $total }}</span></div>
                         @if ($discountAmount > 0)
                             <div class="price-save">You've saved {{ $currency }} {{ $savedAmount }} on this booking.</div>
@@ -308,10 +333,10 @@
                         <input type="hidden" name="payment_currency" id="payment_currency_input" value="{{ $lockedPaymentCurrency }}">
                         <input type="hidden" name="payment_gateway" id="payment_gateway_input" value="{{ $lockedPaymentGateway }}">
                         <input type="hidden" name="payment_provider" id="payment_provider_input" value="{{ $selectedProvider }}">
-                        <input type="hidden" name="transfer_option" id="transfer_option_input" value="{{ (string) ($summary['transfer_option'] ?? '') }}">
+                        <input type="hidden" name="transfer_option" id="transfer_option_input" value="{{ $selectedTransferCode !== '' ? $selectedTransferCode : 'none' }}">
                         <input type="hidden" name="transfer_option_label" id="transfer_option_label_input" value="{{ $transferOptionDisplayLabel }}">
-                        <input type="hidden" name="transfer_charge" id="transfer_charge_input" value="{{ number_format($transferAmount, 2, '.', '') }}">
-                        <input type="hidden" name="invoice_total_amount" id="invoice_total_amount_input" value="{{ number_format((float) ($summary['total'] ?? 0), 2, '.', '') }}">
+                        <input type="hidden" name="transfer_charge" id="transfer_charge_input" value="{{ number_format($effectiveTransferAmount, 2, '.', '') }}">
+                        <input type="hidden" name="invoice_total_amount" id="invoice_total_amount_input" value="{{ number_format($effectiveInvoiceTotal, 2, '.', '') }}">
                         <p class="fine-print" style="width:100%; margin:0 0 6px;">
                             Guest nationality and residency are locked from your booking details and cannot be changed at checkout.
                         </p>

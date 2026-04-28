@@ -110,17 +110,22 @@ if (!function_exists('workationApplyReservationPaymentEvent')) {
         $intentId = trim((string) ($event['intent_id'] ?? ''));
         $reference = trim((string) ($event['reference'] ?? ''));
         $status = strtolower(trim((string) ($event['status'] ?? 'failed')));
+        $paidStatuses = ['paid', 'success', 'succeeded', 'confirmed', 'complete', 'completed', 'captured', 'settled'];
+        $cancelledStatuses = ['cancelled', 'canceled', 'void', 'voided', 'expired', 'refunded'];
+        $isPaidStatus = in_array($status, $paidStatuses, true);
+        $isCancelledStatus = in_array($status, $cancelledStatuses, true);
 
         if ($eventId !== '' && trim((string) ($reservationRow->payment_webhook_event_id ?? '')) === $eventId) {
             return ['status' => 'duplicate'];
         }
 
-        $paymentStatus = $status === 'paid' ? 'paid' : 'unpaid';
-        $resolvedReservationStatus = match ($status) {
-            'paid' => 'confirmed',
-            'cancelled', 'canceled' => 'cancelled',
-            default => (string) ($reservationRow->status ?? 'pending'),
-        };
+        $paymentStatus = $isPaidStatus ? 'paid' : 'unpaid';
+        $resolvedReservationStatus = (string) ($reservationRow->status ?? 'pending');
+        if ($isPaidStatus) {
+            $resolvedReservationStatus = 'confirmed';
+        } elseif ($isCancelledStatus) {
+            $resolvedReservationStatus = 'cancelled';
+        }
 
         DB::table('vendor_reservations')
             ->where('id', $reservationId)
@@ -129,22 +134,23 @@ if (!function_exists('workationApplyReservationPaymentEvent')) {
                 'status' => $resolvedReservationStatus,
                 'payment_reference' => $reference !== '' ? $reference : (string) ($reservationRow->payment_reference ?? ''),
                 'payment_intent_id' => $intentId !== '' ? $intentId : (string) ($reservationRow->payment_intent_id ?? ''),
-                'payment_verified_at' => $status === 'paid' ? now() : ($reservationRow->payment_verified_at ?? null),
-                'payment_collected_at' => $status === 'paid'
+                'payment_verified_at' => $isPaidStatus ? now() : ($reservationRow->payment_verified_at ?? null),
+                'payment_collected_at' => $isPaidStatus
                     ? ($reservationRow->payment_collected_at ?? now())
                     : ($reservationRow->payment_collected_at ?? null),
                 'payment_webhook_event_id' => $eventId !== '' ? $eventId : (string) ($reservationRow->payment_webhook_event_id ?? ''),
                 'payment_webhook_received_at' => now(),
-                'payment_error' => $status === 'paid' ? null : trim((string) ($event['error'] ?? 'Payment failed verification.')),
+                'payment_error' => $isPaidStatus ? null : trim((string) ($event['error'] ?? 'Payment failed verification.')),
                 'updated_at' => now(),
             ]);
 
-        if ($status === 'paid') {
+        if ($isPaidStatus) {
             $vendorUserId = (int) ($reservationRow->vendor_user_id ?? 0);
             $vendorPropertyId = (int) ($reservationRow->vendor_property_id ?? 0);
             $vendorEmail = $vendorUserId > 0
                 ? (string) (DB::table('users')->where('id', $vendorUserId)->value('email') ?? '')
                 : '';
+            $customerEmail = trim((string) ($reservationRow->customer_email ?? ''));
             $bookingRef = '#' . $reservationId;
             $customerName = (string) ($reservationRow->customer_name ?? 'Guest');
             $totalAmt = number_format((float) ($reservationRow->total_amount ?? 0), 2);
@@ -155,6 +161,33 @@ if (!function_exists('workationApplyReservationPaymentEvent')) {
             $startAt = trim((string) ($reservationRow->start_at ?? ''));
             $endAt = trim((string) ($reservationRow->end_at ?? ''));
             $dateInfo = $startAt !== '' ? ('Service Dates: ' . $startAt . ($endAt !== '' ? ' to ' . $endAt : '')) : null;
+            $invoiceAttachment = null;
+            $confirmationAttachment = null;
+            try {
+                $invoiceAttachment = [
+                    'name' => workationReservationPdfFilename($reservationRow, 'invoice'),
+                    'mime' => 'application/pdf',
+                    'data' => workationRenderReservationPdfBinary($reservationRow, 'invoice'),
+                ];
+                $confirmationAttachment = [
+                    'name' => workationReservationPdfFilename($reservationRow, 'confirmation'),
+                    'mime' => 'application/pdf',
+                    'data' => workationRenderReservationPdfBinary($reservationRow, 'confirmation'),
+                ];
+            } catch (\Throwable $e) {
+                Log::warning('Failed generating reservation PDF attachments.', [
+                    'reservation_id' => $reservationId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            $emailAttachments = [];
+            foreach ([$invoiceAttachment, $confirmationAttachment] as $attachment) {
+                if (is_array($attachment) && isset($attachment['data']) && is_string($attachment['data']) && $attachment['data'] !== '') {
+                    $emailAttachments[] = $attachment;
+                }
+            }
+
             $emailBody = implode("\n", array_filter([
                 'Dear Vendor,',
                 '',
@@ -175,7 +208,52 @@ if (!function_exists('workationApplyReservationPaymentEvent')) {
                 'Thank you,',
                 'Workation Team',
             ], static fn ($l) => $l !== null));
-            workationSendVendorEmailSafe($vendorEmail, 'Payment Confirmed – Booking ' . $bookingRef, $emailBody);
+            workationSendVendorEmailSafe($vendorEmail, 'Payment Confirmed – Booking ' . $bookingRef, $emailBody, $emailAttachments);
+
+            $customerEmailBody = implode("\n", array_filter([
+                'Dear ' . ($customerName !== '' ? $customerName : 'Customer') . ',',
+                '',
+                'Your payment has been confirmed.',
+                '',
+                'Booking Reference: ' . $bookingRef,
+                $dateInfo,
+                'Amount Paid: ' . $currency . ' ' . $totalAmt,
+                '',
+                'You can review this booking in your customer portal under My Bookings.',
+                'Invoice and reservation confirmation PDF are attached for your records.',
+                '',
+                'Thank you for booking with Workation.',
+                'Workation Team',
+            ], static fn ($l) => $l !== null));
+            workationSendVendorEmailSafe($customerEmail, 'Reservation Confirmed + Invoice – Booking ' . $bookingRef, $customerEmailBody, $emailAttachments);
+
+            $adminBody = implode("\n", array_filter([
+                'Dear Admin Team,',
+                '',
+                'A reservation payment has been confirmed.',
+                '',
+                'Booking Reference: ' . $bookingRef,
+                'Customer: ' . $customerName,
+                'Customer Email: ' . ($customerEmail !== '' ? $customerEmail : 'N/A'),
+                'Vendor Email: ' . ($vendorEmail !== '' ? $vendorEmail : 'N/A'),
+                $dateInfo,
+                '',
+                'Payment Summary (' . $currency . '):',
+                '  Total Collected:   ' . $totalAmt,
+                '  Commission:        ' . $commissionAmt,
+                '  Gateway Fee:       ' . $gatewayFeeAmt,
+                '  Net Payout:        ' . $payoutAmt,
+                '',
+                'This notice was generated automatically from the payment event pipeline.',
+                '',
+                'Workation System',
+            ], static fn ($l) => $l !== null));
+            foreach (workationReservationAdminEmails() as $adminEmail) {
+                if ($adminEmail === strtolower(trim($vendorEmail)) || $adminEmail === strtolower(trim($customerEmail))) {
+                    continue;
+                }
+                workationSendVendorEmailSafe((string) $adminEmail, 'Admin Notice – Payment Confirmed ' . $bookingRef, $adminBody, $emailAttachments);
+            }
 
             // Block availability slots now that payment is confirmed
             if ($vendorUserId > 0 && $vendorPropertyId > 0 && $startAt !== '' && $endAt !== '') {
@@ -230,14 +308,24 @@ if (!function_exists('workationApplyReservationPaymentEvent')) {
 }
 
 if (!function_exists('workationSendVendorEmailSafe')) {
-    function workationSendVendorEmailSafe(string $to, string $subject, string $body): void
+    function workationSendVendorEmailSafe(string $to, string $subject, string $body, array $attachments = []): void
     {
         if ($to === '' || !str_contains($to, '@')) {
             return;
         }
         try {
-            \Illuminate\Support\Facades\Mail::raw($body, static function ($msg) use ($to, $subject): void {
+            \Illuminate\Support\Facades\Mail::raw($body, static function ($msg) use ($to, $subject, $attachments): void {
                 $msg->to($to)->subject($subject);
+                foreach ($attachments as $attachment) {
+                    $binary = is_array($attachment) ? ($attachment['data'] ?? null) : null;
+                    $name = is_array($attachment) ? (string) ($attachment['name'] ?? 'document.pdf') : 'document.pdf';
+                    $mime = is_array($attachment) ? (string) ($attachment['mime'] ?? 'application/pdf') : 'application/pdf';
+                    if (!is_string($binary) || $binary === '') {
+                        continue;
+                    }
+
+                    $msg->attachData($binary, $name, ['mime' => $mime]);
+                }
             });
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('workationSendVendorEmailSafe: failed to send email', [
@@ -246,6 +334,129 @@ if (!function_exists('workationSendVendorEmailSafe')) {
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+}
+
+if (!function_exists('workationReservationAdminEmails')) {
+    function workationReservationAdminEmails(): array
+    {
+        $configured = collect(explode(',', (string) env('WORKATION_BOOKING_ADMIN_EMAILS', '')))
+            ->map(static fn ($value) => strtolower(trim((string) $value)))
+            ->filter(static fn ($value) => $value !== '' && str_contains($value, '@'))
+            ->values();
+
+        $roleEmails = collect();
+        if (Schema::hasTable('users') && Schema::hasColumn('users', 'portal_role') && Schema::hasColumn('users', 'email')) {
+            $roleEmails = DB::table('users')
+                ->whereIn('portal_role', ['ADMIN', 'ADMIN_SUPER', 'ADMIN_CARE', 'ADMIN_FINANCE', 'ADMIN_FINACE'])
+                ->whereNotNull('email')
+                ->pluck('email')
+                ->map(static fn ($value) => strtolower(trim((string) $value)))
+                ->filter(static fn ($value) => $value !== '' && str_contains($value, '@'))
+                ->values();
+        }
+
+        return $configured
+            ->merge($roleEmails)
+            ->unique()
+            ->values()
+            ->all();
+    }
+}
+
+if (!function_exists('workationNotifyReservationStakeholders')) {
+    function workationNotifyReservationStakeholders(object $reservationRow, string $subject, string $body, array $attachments = [], array $skipEmails = []): void
+    {
+        $skipMap = collect($skipEmails)
+            ->map(static fn ($value) => strtolower(trim((string) $value)))
+            ->filter(static fn ($value) => $value !== '')
+            ->flip();
+
+        $vendorEmail = '';
+        $vendorUserId = (int) ($reservationRow->vendor_user_id ?? 0);
+        if ($vendorUserId > 0 && Schema::hasTable('users')) {
+            $vendorEmail = strtolower(trim((string) (DB::table('users')->where('id', $vendorUserId)->value('email') ?? '')));
+        }
+
+        $recipients = collect([
+            strtolower(trim((string) ($reservationRow->customer_email ?? ''))),
+            $vendorEmail,
+        ])
+            ->merge(workationReservationAdminEmails())
+            ->filter(static fn ($email) => $email !== '' && str_contains($email, '@'))
+            ->filter(static fn ($email) => !$skipMap->has($email))
+            ->unique()
+            ->values();
+
+        foreach ($recipients as $recipient) {
+            workationSendVendorEmailSafe((string) $recipient, $subject, $body, $attachments);
+        }
+    }
+}
+
+if (!function_exists('workationBuildReservationDocumentData')) {
+    function workationBuildReservationDocumentData(object $reservationRow, string $documentType = 'invoice'): array
+    {
+        $notes = workationReservationPaymentNotes($reservationRow);
+        $currency = strtoupper(trim((string) ($reservationRow->payment_currency ?? $reservationRow->currency ?? 'MVR')));
+        $subtotal = (float) ($notes['subtotal_amount'] ?? $notes['room_subtotal'] ?? $reservationRow->total_amount ?? 0);
+        $serviceCharge = (float) ($notes['service_charge_total'] ?? 0);
+        $transferCharge = (float) ($notes['transfer_charge_total'] ?? $notes['transfer_charge'] ?? 0);
+        $totalTax = (float) ($notes['total_tax_amount'] ?? $notes['tax_amount'] ?? 0);
+        $invoiceTotal = (float) ($notes['invoice_total_amount'] ?? $reservationRow->total_amount ?? 0);
+        $taxLines = collect($notes['tax_lines'] ?? [])->filter(static fn ($line) => is_array($line))->map(static function (array $line): array {
+            $label = trim((string) ($line['label'] ?? $line['name'] ?? $line['type'] ?? 'Tax'));
+            $amount = (float) ($line['amount'] ?? $line['value'] ?? 0);
+            return [
+                'label' => $label !== '' ? $label : 'Tax',
+                'amount' => max(0, $amount),
+            ];
+        })->filter(static fn (array $line): bool => $line['amount'] > 0)->values()->all();
+
+        return [
+            'document_type' => $documentType,
+            'generated_at' => now()->format('Y-m-d H:i:s'),
+            'reservation_id' => (int) ($reservationRow->id ?? 0),
+            'booking_reference' => 'RSV-' . str_pad((string) ((int) ($reservationRow->id ?? 0)), 6, '0', STR_PAD_LEFT),
+            'customer_name' => (string) ($reservationRow->customer_name ?? 'Guest Customer'),
+            'customer_email' => (string) ($reservationRow->customer_email ?? ''),
+            'status' => strtoupper(trim((string) ($reservationRow->status ?? 'pending'))),
+            'payment_status' => strtoupper(trim((string) ($reservationRow->payment_status ?? 'unpaid'))),
+            'payment_gateway' => strtoupper(trim((string) ($reservationRow->payment_gateway ?? ''))),
+            'payment_reference' => trim((string) ($reservationRow->payment_reference ?? '')),
+            'start_at' => trim((string) ($reservationRow->start_at ?? '')),
+            'end_at' => trim((string) ($reservationRow->end_at ?? '')),
+            'currency' => $currency,
+            'subtotal_amount' => max(0, $subtotal),
+            'service_charge_total' => max(0, $serviceCharge),
+            'transfer_charge_total' => max(0, $transferCharge),
+            'total_tax_amount' => max(0, $totalTax),
+            'invoice_total_amount' => max(0, $invoiceTotal),
+            'tax_lines' => $taxLines,
+        ];
+    }
+}
+
+if (!function_exists('workationRenderReservationPdfBinary')) {
+    function workationRenderReservationPdfBinary(object $reservationRow, string $documentType = 'invoice'): string
+    {
+        if (!class_exists('\\Barryvdh\\DomPDF\\Facade\\Pdf')) {
+            throw new \RuntimeException('PDF renderer is not available.');
+        }
+
+        $data = workationBuildReservationDocumentData($reservationRow, $documentType);
+        return \Barryvdh\DomPDF\Facade\Pdf::loadView('documents.reservation-pdf', $data)
+            ->setPaper('a4')
+            ->output();
+    }
+}
+
+if (!function_exists('workationReservationPdfFilename')) {
+    function workationReservationPdfFilename(object $reservationRow, string $documentType = 'invoice'): string
+    {
+        $reservationId = (int) ($reservationRow->id ?? 0);
+        $suffix = strtolower(trim($documentType)) === 'confirmation' ? 'reservation-confirmation' : 'invoice';
+        return 'workation-' . $suffix . '-rsv-' . str_pad((string) max(1, $reservationId), 6, '0', STR_PAD_LEFT) . '.pdf';
     }
 }
 

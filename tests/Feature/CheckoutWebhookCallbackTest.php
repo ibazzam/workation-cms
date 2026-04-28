@@ -148,6 +148,53 @@ class CheckoutWebhookCallbackTest extends TestCase
         ]);
     }
 
+    public function test_webhook_confirmed_status_is_treated_as_paid(): void
+    {
+        $secret = 'test_secret_confirmed';
+        config(['checkout_payments.gateways.stripe.webhook_secret' => $secret]);
+
+        $reservationId = $this->createReservation();
+        $payload = [
+            'reservation_id' => $reservationId,
+            'event_id' => 'evt_confirmed_001',
+            'intent_id' => 'payint_confirmed_001',
+            'reference' => 'REF-CONFIRMED-001',
+            'status' => 'confirmed',
+        ];
+
+        $rawPayload = json_encode($payload, JSON_UNESCAPED_SLASHES);
+        $signature = hash_hmac('sha256', (string) $rawPayload, $secret);
+
+        $response = $this
+            ->withoutMiddleware(VerifyCsrfToken::class)
+            ->call(
+                'POST',
+                '/booking/payment/webhooks/stripe',
+                [],
+                [],
+                [],
+                [
+                    'CONTENT_TYPE' => 'application/json',
+                    'HTTP_X-Workation-Signature' => $signature,
+                ],
+                (string) $rawPayload
+            );
+
+        $response
+            ->assertOk()
+            ->assertJson([
+                'ok' => true,
+                'result' => 'paid',
+            ]);
+
+        $this->assertDatabaseHas('vendor_reservations', [
+            'id' => $reservationId,
+            'payment_status' => 'paid',
+            'status' => 'confirmed',
+            'payment_webhook_event_id' => 'evt_confirmed_001',
+        ]);
+    }
+
     private function createReservation(): int
     {
         $vendor = User::factory()->create();

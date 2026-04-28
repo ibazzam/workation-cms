@@ -71,6 +71,12 @@
     ])
 
     <main class="page">
+        @include('partials.booking-process-highlights', [
+            'bookingProcessCurrentStep' => 2,
+            'bookingProcessBackUrl' => $backUrl,
+            'bookingProcessNextText' => 'Next step after this page: review payment options and confirm the locked checkout summary.',
+        ])
+
         <section class="panel" aria-label="Transfer selection">
             <span class="process-chip">Checkout Process: Step 2 of 3</span>
             <h1 class="title">Select Transfer Option</h1>

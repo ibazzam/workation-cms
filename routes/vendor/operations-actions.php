@@ -423,14 +423,62 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
         'payment_status' => ['required', Rule::in(['unpaid', 'partially_paid', 'paid', 'refunded'])],
     ]);
 
+    $reservationRow = DB::table('vendor_reservations')
+        ->where('id', $reservation)
+        ->where('vendor_user_id', $vendorUserId)
+        ->first();
+    if (!$reservationRow) {
+        return back()->withErrors(['profile' => 'Reservation not found for this vendor account.']);
+    }
+
+    $requestedStatus = strtolower(trim((string) $validated['status']));
+    $requestedPaymentStatus = strtolower(trim((string) $validated['payment_status']));
+    $priorStatus = strtolower(trim((string) ($reservationRow->status ?? 'pending')));
+    $priorPaymentStatus = strtolower(trim((string) ($reservationRow->payment_status ?? 'unpaid')));
+
+    if ($requestedPaymentStatus === 'paid') {
+        workationApplyReservationPaymentEvent($reservationRow, [
+            'event_id' => 'vendor_manual_' . $reservation . '_' . str_replace('.', '', uniqid('', true)),
+            'intent_id' => (string) ($reservationRow->payment_intent_id ?? ''),
+            'reference' => trim((string) ($reservationRow->payment_reference ?? ('MANUAL-' . $reservation))),
+            'status' => 'paid',
+        ]);
+    }
+
     DB::table('vendor_reservations')
         ->where('id', $reservation)
         ->where('vendor_user_id', $vendorUserId)
         ->update([
-            'status' => (string) $validated['status'],
-            'payment_status' => (string) $validated['payment_status'],
+            'status' => $requestedStatus,
+            'payment_status' => $requestedPaymentStatus,
+            'payment_collected_at' => $requestedPaymentStatus === 'paid'
+                ? (($reservationRow->payment_collected_at ?? null) ?: now())
+                : ($requestedPaymentStatus === 'unpaid' ? null : ($reservationRow->payment_collected_at ?? null)),
+            'payment_verified_at' => $requestedPaymentStatus === 'paid'
+                ? (($reservationRow->payment_verified_at ?? null) ?: now())
+                : ($requestedPaymentStatus === 'unpaid' ? null : ($reservationRow->payment_verified_at ?? null)),
             'updated_at' => now(),
         ]);
+
+    $updatedRow = DB::table('vendor_reservations')->where('id', $reservation)->first();
+    if ($updatedRow) {
+        $bookingRef = '#' . (int) ($updatedRow->id ?? $reservation);
+        $subject = 'Reservation Updated – Booking ' . $bookingRef;
+        $body = implode("\n", [
+            'Reservation update notification:',
+            '',
+            'Booking Reference: ' . $bookingRef,
+            'Status: ' . strtoupper($priorStatus) . ' -> ' . strtoupper($requestedStatus),
+            'Payment: ' . strtoupper($priorPaymentStatus) . ' -> ' . strtoupper($requestedPaymentStatus),
+            'Updated by: Vendor portal',
+            'Updated at: ' . now()->format('Y-m-d H:i:s'),
+            '',
+            'This notice is sent to customer, vendor and admin stakeholders for portal synchronization.',
+            '',
+            'Workation Team',
+        ]);
+        workationNotifyReservationStakeholders($updatedRow, $subject, $body);
+    }
 
     return back()->with('portal_notice', 'Reservation status updated.');
 });

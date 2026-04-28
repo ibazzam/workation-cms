@@ -302,9 +302,14 @@ class CheckoutPaymentRouter
 
     public static function verifySignature(string $gateway, string $rawPayload, ?string $signature): bool
     {
-        $secret = (string) (self::gatewayConfig($gateway)['webhook_secret'] ?? '');
-        if ($secret === '' || !is_string($signature) || trim($signature) === '') {
-            return false;
+        $gatewayConfig = self::gatewayConfig($gateway);
+        $secret = (string) ($gatewayConfig['webhook_secret'] ?? '');
+        $allowUnsigned = (bool) ($gatewayConfig['allow_unsigned_webhook'] ?? false);
+        if (!is_string($signature) || trim($signature) === '') {
+            return $allowUnsigned;
+        }
+        if ($secret === '') {
+            return $allowUnsigned;
         }
 
         $expected = hash_hmac('sha256', $rawPayload, $secret);

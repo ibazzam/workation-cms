@@ -254,10 +254,18 @@
                     }
                     $roomPricingBreakdown = is_array($reservationBreakdown['room_pricing'] ?? null) ? $reservationBreakdown['room_pricing'] : null;
 
+                    $reservationNotes = [];
+                    if (isset($reservation->notes) && is_string($reservation->notes) && trim((string) $reservation->notes) !== '') {
+                        $decodedReservationNotes = json_decode((string) $reservation->notes, true);
+                        if (is_array($decodedReservationNotes)) {
+                            $reservationNotes = $decodedReservationNotes;
+                        }
+                    }
+
                     $reservationPropertyId = (int) ($reservation->vendor_property_id ?? 0);
                     $reservationServiceId = (int) ($reservation->vendor_service_id ?? 0);
-                    $reservationRoomId = (int) ($reservation->vendor_room_category_id ?? 0);
-                    $reservationCategory = vendorPortalCanonicalCategory((string) ($reservation->listing_category ?? ''));
+                    $reservationRoomId = (int) (($reservation->vendor_room_category_id ?? 0) ?: ($reservationNotes['room_id'] ?? 0));
+                    $reservationCategory = vendorPortalCanonicalCategory((string) ($reservation->listing_category ?? ($reservationNotes['category_key'] ?? $reservationNotes['listing_category'] ?? '')));
 
                     if ($reservationCategory === null && $reservationRoomId > 0) {
                         $reservationCategory = 'accommodation';
@@ -346,6 +354,9 @@
                         'target_value' => $reservationTargetValue,
                         'customer_name' => (string) ($reservation->customer_name ?? ''),
                         'customer_email' => (string) ($reservation->customer_email ?? ''),
+                        'payment_gateway' => (string) ($reservation->payment_gateway ?? ''),
+                        'payment_currency' => (string) ($reservation->payment_currency ?? $reservation->currency ?? 'MVR'),
+                        'payment_reference' => (string) ($reservation->payment_reference ?? ''),
                         'start_at' => (string) ($reservation->start_at ?? ''),
                         'end_at' => (string) ($reservation->end_at ?? ''),
                         'status' => (string) ($reservation->status ?? 'pending'),
@@ -827,7 +838,9 @@
                                                 Base: {{ (string) ($reservationRow['currency'] ?? 'MVR') }} {{ number_format((float) ($reservationRow['subtotal_amount'] ?? 0), 2) }}<br>
                                                 Service Charge: {{ (string) ($reservationRow['currency'] ?? 'MVR') }} {{ number_format((float) ($reservationRow['service_charge_total'] ?? 0), 2) }}<br>
                                                 Taxes: {{ (string) ($reservationRow['currency'] ?? 'MVR') }} {{ number_format((float) ($reservationRow['total_tax_amount'] ?? 0), 2) }}<br>
-                                                Total: {{ (string) ($reservationRow['currency'] ?? 'MVR') }} {{ number_format((float) ($reservationRow['invoice_total_amount'] ?? 0), 2) }}
+                                                Total: {{ (string) ($reservationRow['currency'] ?? 'MVR') }} {{ number_format((float) ($reservationRow['invoice_total_amount'] ?? 0), 2) }}<br>
+                                                Gateway: {{ strtoupper(trim((string) ($reservationRow['payment_gateway'] ?? 'n/a'))) }}<br>
+                                                Payment Ref: {{ trim((string) ($reservationRow['payment_reference'] ?? '')) !== '' ? (string) ($reservationRow['payment_reference'] ?? '') : 'N/A' }}
                                             </td>
                                             <td>
                                                 <form class="inline-status-form" method="POST" action="/portal/vendor/reservations/{{ (int) ($reservationRow['id'] ?? 0) }}/status">

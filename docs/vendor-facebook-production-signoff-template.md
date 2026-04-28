@@ -54,7 +54,9 @@ WORKATION_PAYMENT_FX_MVR_PER_USD=15.42
 ## Deployment checklist
 
 1. Set all required keys in the live environment (do not store secrets in repository).
-2. For any gateway set to `external`, ensure `*_CHECKOUT_URL` is not empty.
+2. For external gateways, ensure checkout handoff is configured:
+	- MIB/BML: `*_CHECKOUT_URL` must be set.
+	- Stripe: set either `WORKATION_PAYMENT_STRIPE_SECRET_KEY` (native session) or `WORKATION_PAYMENT_STRIPE_CHECKOUT_URL` (custom handoff).
 3. Redeploy/restart so Laravel loads updated environment values.
 4. Clear cached configuration:
 
@@ -71,7 +73,8 @@ php artisan optimize:clear
 
 - Never paste live API secrets into chat.
 - Use distinct keys for staging vs production.
-- If a gateway is external but missing checkout URL, checkout is blocked by design.
+- If MIB/BML is external but missing checkout URL, checkout is blocked by design.
+- Stripe can run without a checkout URL when `WORKATION_PAYMENT_STRIPE_SECRET_KEY` is set.
 
 ## Stripe key mapping (important)
 

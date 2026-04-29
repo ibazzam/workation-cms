@@ -2278,6 +2278,11 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         return redirect()->away($checkoutUrl);
     }
 
+    // BML Connect: URL is already fully formed by the API — redirect directly without appending query params.
+    if ($provider === 'bml' && is_array($bmlTransaction) && $checkoutUrl !== '') {
+        return redirect()->away($checkoutUrl);
+    }
+
     if ($checkoutUrl !== '') {
         if (!filter_var($checkoutUrl, FILTER_VALIDATE_URL)) {
             logger()->warning('External gateway checkout URL is invalid', [
@@ -2384,22 +2389,6 @@ Route::get('/booking/payment/hosted/{reservation}', function (Request $request, 
             $redirectPayload = workationSignGatewayCheckoutPayload($gateway, $redirectPayload);
             $query = http_build_query($redirectPayload, '', '&', PHP_QUERY_RFC3986);
             $target = $checkoutUrl . (str_contains($checkoutUrl, '?') ? '&' : '?') . $query;
-        }
-
-        // Bank hosted gateways do not reliably provide a native cancel/back UX like Stripe's hosted checkout.
-        // Show an interstitial handoff page with explicit Continue + Back buttons.
-        if (in_array($provider, ['bml', 'mib'], true)) {
-            $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById((int) ($reservationRow->vendor_property_id ?? 0));
-            $providerLabel = $provider === 'mib' ? 'MIB' : 'BML';
-
-            return view('booking-payment-hosted', [
-                'reservation' => $reservationRow,
-                'property' => $propertyRow,
-                'intentId' => $intentId,
-                'externalHandoff' => true,
-                'externalHandoffUrl' => $target,
-                'externalHandoffProvider' => $providerLabel,
-            ]);
         }
 
         return redirect()->away($target);

@@ -2089,6 +2089,9 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         ]);
 
     $checkoutUrl = trim((string) ($intent['checkout_url'] ?? ''));
+    if ($checkoutUrl !== '' && !preg_match('/^https?:\/\//i', $checkoutUrl)) {
+        $checkoutUrl = 'https://' . ltrim($checkoutUrl, '/');
+    }
     $gatewayMode = strtolower(trim((string) ($intent['gateway_mode'] ?? 'internal')));
     $provider = strtolower(trim((string) ($intent['provider'] ?? '')));
 
@@ -2106,6 +2109,19 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
     }
 
     if ($checkoutUrl !== '') {
+        if (!filter_var($checkoutUrl, FILTER_VALIDATE_URL)) {
+            logger()->warning('External gateway checkout URL is invalid', [
+                'reservation_id' => $reservation,
+                'gateway' => (string) ($intent['gateway'] ?? ''),
+                'provider' => $provider,
+                'checkout_url' => $checkoutUrl,
+            ]);
+
+            return back()->withErrors([
+                'payment' => 'Selected payment gateway checkout URL is invalid. Please contact support to update gateway configuration.',
+            ]);
+        }
+
         $gateway = (string) ($intent['gateway'] ?? '');
         $payload = workationBuildGatewayCheckoutPayload($gateway, [
             'intent_id' => (string) ($intent['intent_id'] ?? ''),
@@ -2162,7 +2178,15 @@ Route::get('/booking/payment/hosted/{reservation}', function (Request $request, 
     }
     $gatewayMode = strtolower(trim((string) ($payload['gateway_mode'] ?? 'internal')));
     $checkoutUrl = trim((string) ($payload['checkout_url'] ?? ''));
+    if ($checkoutUrl !== '' && !preg_match('/^https?:\/\//i', $checkoutUrl)) {
+        $checkoutUrl = 'https://' . ltrim($checkoutUrl, '/');
+    }
     if ($checkoutUrl !== '') {
+        if (!filter_var($checkoutUrl, FILTER_VALIDATE_URL)) {
+            return redirect('/booking/checkout/' . $reservation)
+                ->withErrors(['payment' => 'Selected payment gateway checkout URL is invalid. Please contact support to update gateway configuration.']);
+        }
+
         $gateway = (string) ($payload['gateway'] ?? $reservationRow->payment_gateway ?? '');
         $provider = strtolower(trim((string) ($payload['provider'] ?? '')));
         $successReturnUrl = workationPaymentSuccessReturnUrl($reservation, $provider);
@@ -2224,7 +2248,14 @@ Route::post('/booking/payment/hosted/{reservation}/complete', function (Request 
         $payload = [];
     }
     $checkoutUrl = trim((string) ($payload['checkout_url'] ?? ''));
+    if ($checkoutUrl !== '' && !preg_match('/^https?:\/\//i', $checkoutUrl)) {
+        $checkoutUrl = 'https://' . ltrim($checkoutUrl, '/');
+    }
     if ($checkoutUrl !== '') {
+        if (!filter_var($checkoutUrl, FILTER_VALIDATE_URL)) {
+            return back()->withErrors(['payment' => 'Selected payment gateway checkout URL is invalid. Please contact support to update gateway configuration.']);
+        }
+
         $gateway = (string) ($payload['gateway'] ?? '');
         $provider = strtolower(trim((string) ($payload['provider'] ?? '')));
         $successReturnUrl = workationPaymentSuccessReturnUrl($reservation, $provider);

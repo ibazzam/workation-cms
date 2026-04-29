@@ -44,6 +44,15 @@
         You will be notified once your payout has been sent.
     </p>
 
+    <div class="policy-box" style="margin:0 0 12px;border:1px solid #d3e2ec;border-radius:12px;background:#f8fcff;padding:10px 12px;">
+        <p class="small" style="margin:0 0 6px;"><strong>Payout Window and Hold Conditions</strong></p>
+        <ul style="margin:0;padding-left:18px;">
+            <li class="small">Standard payout window is T+7 to T+10 calendar days after payment verification.</li>
+            <li class="small">Status <strong>On Hold</strong> may apply when a refund case, dispute, or compliance check is active.</li>
+            <li class="small">Once cleared, payout status moves from <strong>Queued/Processing</strong> to <strong>Paid</strong>.</li>
+        </ul>
+    </div>
+
     @if(isset($payoutStatusRows) && $payoutStatusRows->isNotEmpty())
 
     <div class="ops-table-wrap">

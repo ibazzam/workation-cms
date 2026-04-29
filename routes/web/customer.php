@@ -2,6 +2,8 @@
 
 use App\Models\User;
 use App\Models\BlogPost;
+use App\Finance\LedgerWriter;
+use App\Finance\RefundRouter;
 use App\Support\CheckoutPaymentRouter;
 use App\Support\ReservationPricingPolicy;
 use App\Support\ReservationSettlementCalculator;
@@ -430,8 +432,43 @@ Route::post('/customer/bookings/{reservation}/cancel', function (Request $reques
 
     $paymentStatus = strtolower(trim((string) ($reservationRow->payment_status ?? 'unpaid')));
     if ($paymentStatus === 'paid') {
+        $refundCaseRef = '';
+        if (Schema::hasTable('finance_refund_cases')) {
+            $existingOpenRefundCaseRef = (string) (DB::table('finance_refund_cases')
+                ->where('reservation_id', (int) ($reservationRow->id ?? 0))
+                ->whereNotIn('status', ['completed', 'rejected'])
+                ->value('case_ref') ?? '');
+
+            if ($existingOpenRefundCaseRef !== '') {
+                $refundCaseRef = $existingOpenRefundCaseRef;
+            } else {
+                try {
+                    $refundRouter = new RefundRouter(new LedgerWriter());
+                    $refundCaseRef = $refundRouter->openCase([
+                        'reservation_id' => (int) ($reservationRow->id ?? 0),
+                        'vendor_user_id' => (int) ($reservationRow->vendor_user_id ?? 0),
+                        'customer_user_id' => isset($reservationRow->customer_user_id) ? (int) ($reservationRow->customer_user_id ?? 0) : null,
+                        'refund_amount' => (float) ($reservationRow->payment_amount ?? $reservationRow->invoice_total_amount ?? $reservationRow->total_amount ?? 0),
+                        'refund_type' => 'full',
+                        'reason_code' => 'customer_cancellation',
+                        'reason_notes' => 'Opened automatically from customer portal cancellation request for a paid booking.',
+                        'requested_by_role' => 'CUSTOMER',
+                        'requested_by_user_id' => null,
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::warning('Unable to auto-open refund case from customer cancellation request.', [
+                        'reservation_id' => (int) ($reservationRow->id ?? 0),
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+
         $notes['customer_cancel_requested_at'] = now()->toIso8601String();
         $notes['customer_cancel_requested_by'] = 'customer_portal';
+        if ($refundCaseRef !== '') {
+            $notes['refund_case_ref'] = $refundCaseRef;
+        }
 
         DB::table('vendor_reservations')
             ->where('id', $reservation)
@@ -453,12 +490,17 @@ Route::post('/customer/bookings/{reservation}/cancel', function (Request $reques
                 'Customer Email: ' . trim((string) ($updatedRow->customer_email ?? '')),
                 'Current Status: CANCEL_REQUESTED',
                 'Payment Status: ' . strtoupper(trim((string) ($updatedRow->payment_status ?? 'unpaid'))),
+                $refundCaseRef !== '' ? ('Refund Case: ' . $refundCaseRef) : 'Refund Case: pending creation',
                 '',
                 'Please review refund eligibility and finalize cancellation workflow.',
                 '',
                 'Workation Team',
             ]);
             workationNotifyReservationStakeholders($updatedRow, $subject, $body);
+        }
+
+        if ($refundCaseRef !== '') {
+            return redirect('/customer')->with('portal_notice', 'Cancellation request submitted. Refund case ' . $refundCaseRef . ' is now under review.');
         }
 
         return redirect('/customer')->with('portal_notice', 'Cancellation request submitted. Our team will confirm refund and cancellation details.');

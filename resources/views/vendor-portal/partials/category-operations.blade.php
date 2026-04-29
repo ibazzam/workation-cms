@@ -1,4 +1,14 @@
 @php
+    $operationsViewMode = in_array((string) ($operationsViewMode ?? 'reservations'), ['reservations', 'availability'], true)
+        ? (string) $operationsViewMode
+        : 'reservations';
+    $reservationScope = strtolower(trim((string) request()->query('scope', 'active')));
+    if (!in_array($reservationScope, ['active', 'pending', 'history', 'all'], true)) {
+        $reservationScope = 'active';
+    }
+    $showAvailabilityPanel = $operationsViewMode === 'availability';
+    $showReservationsPanel = $operationsViewMode === 'reservations';
+
     $allVendorCategoryKeys = collect($vendorAllowedCategoryKeys ?? $selectedVendorCategories ?? [])
         ->map(static function ($categoryKey) {
             return vendorPortalCanonicalCategory((string) $categoryKey);
@@ -14,15 +24,23 @@
 @endphp
 <section id="vendorAvailabilitySection" class="card ops-section" aria-label="Vendor availability calendar" data-panel-group="reservations">
             <div class="ops-header">
-                <p class="ops-title">Category Operations</p>
+                <p class="ops-title">{{ $showAvailabilityPanel ? 'Availability Operations' : 'Reservation Operations' }}</p>
                 <span class="ops-chip">{{ count($allVendorCategoryKeys ?? []) }} categories</span>
             </div>
             @if (empty($allVendorCategoryKeys))
                 <p class="wizard-note" style="margin-bottom:10px;">Availability and reservation controls are locked until at least one category is approved by admin.</p>
             @endif
             <div class="panel-links" aria-label="Category operations actions">
-                <a href="#vendorAvailabilitySection">Availability + Reservations</a>
-                <a href="#vendorPricingSection">Pricing Rules</a>
+                @if ($showReservationsPanel)
+                    <a href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=active') : '?scope=active') }}">Active</a>
+                    <a href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=pending') : '?scope=pending') }}">Pending</a>
+                    <a href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=history') : '?scope=history') }}">History</a>
+                    <a href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=all') : '?scope=all') }}">All</a>
+                @endif
+                @if ($showAvailabilityPanel)
+                    <a href="#vendorAvailabilitySection">Availability</a>
+                @endif
+                <a href="{{ '/vendor/pricing' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory)) : '') }}">Pricing Rules</a>
             </div>
             @php
                 $propertyById = $vendorProperties->keyBy(static fn ($property) => (int) ($property->id ?? 0));
@@ -354,8 +372,16 @@
                         'id' => (int) ($reservation->id ?? 0),
                         'target_label' => $reservationTargetLabel,
                         'target_value' => $reservationTargetValue,
+                        'room_label' => trim((string) ($reservationNotes['room_name'] ?? $reservationTargetLabel)),
+                        'meal_plan' => trim((string) ($reservationNotes['meal_plan_label'] ?? $reservationNotes['meal_plan'] ?? 'Not specified')),
+                        'transfer_method' => trim((string) ($reservationNotes['transfer_option_label'] ?? $reservationNotes['transfer_option'] ?? 'Not selected')),
+                        'special_request' => trim((string) ($reservationNotes['service_notes'] ?? $reservationNotes['additional_guest_details'] ?? '')),
                         'customer_name' => (string) ($reservation->customer_name ?? ''),
                         'customer_email' => (string) ($reservation->customer_email ?? ''),
+                        'primary_nationality' => trim((string) ($reservationNotes['primary_nationality'] ?? 'Unknown')),
+                        'adult_guests' => max(1, (int) ($reservation->adult_guests ?? ($reservationNotes['adults'] ?? $reservation->guests ?? 1))),
+                        'child_guests' => max(0, (int) ($reservation->child_guests ?? ($reservationNotes['children'] ?? 0))),
+                        'infant_guests' => max(0, (int) ($reservationNotes['infants'] ?? 0)),
                         'payment_gateway' => (string) ($reservation->payment_gateway ?? ''),
                         'payment_currency' => (string) ($reservation->payment_currency ?? $reservation->currency ?? 'MVR'),
                         'payment_reference' => (string) ($reservation->payment_reference ?? ''),
@@ -364,6 +390,7 @@
                         'status' => (string) ($reservation->status ?? 'pending'),
                         'payment_status' => (string) ($reservation->payment_status ?? 'unpaid'),
                         'currency' => (string) ($reservation->currency ?? 'MVR'),
+                        'paid_amount' => (float) ($reservation->payment_amount ?? $reservation->invoice_total_amount ?? $reservation->total_amount ?? 0),
                         'subtotal_amount' => (float) ($reservation->subtotal_amount ?? $reservation->total_amount ?? 0),
                         'service_charge_total' => (float) ($reservation->service_charge_total ?? 0),
                         'total_tax_amount' => (float) ($reservation->total_tax_amount ?? 0),
@@ -372,6 +399,7 @@
                         'tgst_total' => (float) ($reservation->tgst_total ?? 0),
                         'cgst_total' => (float) ($reservation->cgst_total ?? 0),
                         'room_pricing' => $roomPricingBreakdown,
+                        'is_online_gateway' => in_array(strtolower(trim((string) ($reservation->payment_gateway ?? ''))), ['stripe', 'bml', 'mib', 'stripe_mvr', 'stripe_usd', 'bml_mvr', 'bml_usd', 'mib_mvr', 'mib_usd'], true),
                     ]);
                 }
 
@@ -788,27 +816,42 @@
                             </div>
                         </div>
 
-                        <p class="ops-subtitle" style="margin-top:12px;">{{ $labelForCategory($categoryKey) }} Reservations</p>
+                        @php
+                            $reservationScopeFiltered = $categoryReservations->filter(static function (array $row) use ($reservationScope): bool {
+                                $status = strtolower(trim((string) ($row['status'] ?? 'pending')));
+                                $paymentStatus = strtolower(trim((string) ($row['payment_status'] ?? 'unpaid')));
+
+                                return match ($reservationScope) {
+                                    'active' => in_array($status, ['confirmed', 'upcoming'], true) && $paymentStatus === 'paid',
+                                    'pending' => in_array($status, ['pending'], true) || in_array($paymentStatus, ['unpaid', 'partially_paid'], true),
+                                    'history' => in_array($status, ['cancelled', 'completed', 'expired', 'failed', 'rejected'], true) || in_array($paymentStatus, ['refunded'], true),
+                                    default => true,
+                                };
+                            })->values();
+                        @endphp
+
+                        @if ($showReservationsPanel)
+                        <p class="ops-subtitle" style="margin-top:12px;">{{ $labelForCategory($categoryKey) }} Reservations ({{ strtoupper($reservationScope) }})</p>
                         <div class="billing-ledger-grid" style="margin-bottom:10px;">
                             <article class="billing-ledger-card">
                                 <p class="metric-label">Pending</p>
-                                <p class="metric-value">{{ $reservationPendingCount }}</p>
+                                <p class="metric-value">{{ $reservationScopeFiltered->where('status', 'pending')->count() }}</p>
                             </article>
                             <article class="billing-ledger-card">
                                 <p class="metric-label">Confirmed</p>
-                                <p class="metric-value">{{ $reservationConfirmedCount }}</p>
+                                <p class="metric-value">{{ $reservationScopeFiltered->where('status', 'confirmed')->count() }}</p>
                             </article>
                             <article class="billing-ledger-card">
                                 <p class="metric-label">Completed</p>
-                                <p class="metric-value">{{ $reservationCompletedCount }}</p>
+                                <p class="metric-value">{{ $reservationScopeFiltered->where('status', 'completed')->count() }}</p>
                             </article>
                             <article class="billing-ledger-card">
                                 <p class="metric-label">Cancelled</p>
-                                <p class="metric-value">{{ $reservationCancelledCount }}</p>
+                                <p class="metric-value">{{ $reservationScopeFiltered->where('status', 'cancelled')->count() }}</p>
                             </article>
                             <article class="billing-ledger-card">
                                 <p class="metric-label">Booked Revenue</p>
-                                <p class="metric-value">MVR {{ number_format($reservationRevenueTotal, 2) }}</p>
+                                <p class="metric-value">MVR {{ number_format((float) $reservationScopeFiltered->sum('invoice_total_amount'), 2) }}</p>
                             </article>
                         </div>
 
@@ -816,32 +859,55 @@
                             <table class="ops-table" aria-label="{{ $labelForCategory($categoryKey) }} reservations table">
                                 <thead>
                                     <tr>
-                                        <th>Target</th>
-                                        <th>Customer</th>
-                                        <th>Dates</th>
-                                        <th>Amount</th>
+                                        <th>Booking</th>
+                                        <th>Guest</th>
+                                        <th>Stay</th>
+                                        <th>Service</th>
+                                        <th>Payment</th>
                                         <th>Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @forelse ($categoryReservations->take(30) as $reservationRow)
+                                    @forelse ($reservationScopeFiltered->take(30) as $reservationRow)
+                                        @php
+                                            $adults = max(1, (int) ($reservationRow['adult_guests'] ?? 1));
+                                            $children = max(0, (int) ($reservationRow['child_guests'] ?? 0));
+                                            $infants = max(0, (int) ($reservationRow['infant_guests'] ?? 0));
+                                            $totalGuests = $adults + $children + $infants;
+                                            $nights = 0;
+                                            try {
+                                                $startDate = new \DateTimeImmutable((string) ($reservationRow['start_at'] ?? ''));
+                                                $endDate = new \DateTimeImmutable((string) ($reservationRow['end_at'] ?? ''));
+                                                $nights = max(0, (int) $startDate->diff($endDate)->days);
+                                            } catch (\Exception $ignored) {
+                                                $nights = 0;
+                                            }
+                                        @endphp
                                         <tr>
-                                            <td>{{ (string) ($reservationRow['target_label'] ?? 'Global / Unlinked') }}</td>
+                                            <td>
+                                                {{ (string) ($reservationRow['target_label'] ?? 'Global / Unlinked') }}<br>
+                                                Ref: #{{ (int) ($reservationRow['id'] ?? 0) }}
+                                            </td>
                                             <td>
                                                 {{ (string) ($reservationRow['customer_name'] ?? '') }}<br>
-                                                {{ (string) ($reservationRow['customer_email'] ?? '') }}
+                                                {{ (string) ($reservationRow['customer_email'] ?? '') }}<br>
+                                                Guests: {{ $totalGuests }} (A{{ $adults }} / C{{ $children }} / I{{ $infants }})<br>
+                                                Nationality: {{ (string) ($reservationRow['primary_nationality'] ?? 'Unknown') }}
                                             </td>
-                                            <td>{{ (string) ($reservationRow['start_at'] ?? '-') }}<br>{{ (string) ($reservationRow['end_at'] ?? '-') }}</td>
                                             <td>
-                                                @if (is_array($reservationRow['room_pricing'] ?? null))
-                                                    @php $rp = $reservationRow['room_pricing']; @endphp
-                                                    Room Pricing: {{ (string) ($reservationRow['currency'] ?? 'MVR') }} {{ number_format((float) ($rp['nightly_subtotal'] ?? 0), 2) }} x {{ (int) ($rp['nights'] ?? 1) }} nights<br>
-                                                @endif
-                                                Base: {{ (string) ($reservationRow['currency'] ?? 'MVR') }} {{ number_format((float) ($reservationRow['subtotal_amount'] ?? 0), 2) }}<br>
-                                                Service Charge: {{ (string) ($reservationRow['currency'] ?? 'MVR') }} {{ number_format((float) ($reservationRow['service_charge_total'] ?? 0), 2) }}<br>
-                                                Taxes: {{ (string) ($reservationRow['currency'] ?? 'MVR') }} {{ number_format((float) ($reservationRow['total_tax_amount'] ?? 0), 2) }}<br>
-                                                Total: {{ (string) ($reservationRow['currency'] ?? 'MVR') }} {{ number_format((float) ($reservationRow['invoice_total_amount'] ?? 0), 2) }}<br>
-                                                Gateway: {{ strtoupper(trim((string) ($reservationRow['payment_gateway'] ?? 'n/a'))) }}<br>
+                                                Check-in: {{ (string) ($reservationRow['start_at'] ?? '-') }}<br>
+                                                Check-out: {{ (string) ($reservationRow['end_at'] ?? '-') }}<br>
+                                                Nights: {{ $nights }}
+                                            </td>
+                                            <td>
+                                                Room: {{ (string) ($reservationRow['room_label'] ?? $reservationRow['target_label'] ?? 'N/A') }}<br>
+                                                Meal Plan: {{ (string) ($reservationRow['meal_plan'] ?? 'Not specified') }}<br>
+                                                Transfer: {{ (string) ($reservationRow['transfer_method'] ?? 'Not selected') }}<br>
+                                                Special Request: {{ trim((string) ($reservationRow['special_request'] ?? '')) !== '' ? (string) ($reservationRow['special_request'] ?? '') : 'None' }}
+                                            </td>
+                                            <td>
+                                                Payment Status: {{ strtoupper((string) ($reservationRow['payment_status'] ?? 'unpaid')) }}<br>
+                                                Paid Amount: {{ (string) ($reservationRow['payment_currency'] ?? $reservationRow['currency'] ?? 'MVR') }} {{ number_format((float) ($reservationRow['paid_amount'] ?? 0), 2) }}<br>
                                                 Payment Ref: {{ trim((string) ($reservationRow['payment_reference'] ?? '')) !== '' ? (string) ($reservationRow['payment_reference'] ?? '') : 'N/A' }}
                                             </td>
                                             <td>
@@ -856,7 +922,7 @@
                                                     <select class="ops-select" name="payment_status" required>
                                                         <option value="unpaid" @selected(($reservationRow['payment_status'] ?? '') === 'unpaid')>Unpaid</option>
                                                         <option value="partially_paid" @selected(($reservationRow['payment_status'] ?? '') === 'partially_paid')>Partially Paid</option>
-                                                        <option value="paid" @selected(($reservationRow['payment_status'] ?? '') === 'paid')>Paid</option>
+                                                        <option value="paid" @selected(($reservationRow['payment_status'] ?? '') === 'paid') @disabled((bool) ($reservationRow['is_online_gateway'] ?? false))>Paid</option>
                                                         <option value="refunded" @selected(($reservationRow['payment_status'] ?? '') === 'refunded')>Refunded</option>
                                                     </select>
                                                     <button class="btn btn-secondary" type="submit">Save Status</button>
@@ -865,12 +931,13 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="5" class="ops-empty">No reservations for {{ strtolower($labelForCategory($categoryKey)) }} yet. Keep availability open and publish approved listings to receive bookings.</td>
+                                            <td colspan="6" class="ops-empty">No reservations for {{ strtolower($labelForCategory($categoryKey)) }} in {{ $reservationScope }} scope.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
                             </table>
                         </div>
+                        @endif
                         </div>
                     </article>
                 @endforeach

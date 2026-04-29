@@ -95,7 +95,8 @@
         };
         $showProfilePage = $activePortalPage === 'profile';
         $showListingsPage = $activePortalPage === 'listings';
-        $showReservationsPage = in_array($activePortalPage, ['reservations', 'operations', 'availability'], true);
+        $showReservationsPage = in_array($activePortalPage, ['reservations', 'operations'], true);
+        $showAvailabilityPage = $activePortalPage === 'availability';
         $showPricingPage = $activePortalPage === 'pricing';
         $showBillingPage = $activePortalPage === 'billing';
         $showEngagementPage = in_array($activePortalPage, ['engagement', 'promotions'], true);
@@ -106,6 +107,7 @@
         $showWorkspaceTabs = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'pricing', 'billing'], true);
         $workspacePrimaryPage = match (true) {
             $showListingsPage => 'listings',
+            $showAvailabilityPage => 'reservations',
             $showPricingPage => 'pricing',
             $showBillingPage => 'billing',
             default => 'reservations',
@@ -127,6 +129,18 @@
                 'label' => 'My Bookings / Reservations',
                 'active' => $showReservationsPage,
                 'href' => '/vendor/reservations' . $workspaceCategoryQuery,
+            ],
+            [
+                'key' => 'availability',
+                'label' => 'Availability',
+                'active' => $showAvailabilityPage,
+                'href' => '/vendor/availability' . $workspaceCategoryQuery,
+            ],
+            [
+                'key' => 'pricing',
+                'label' => 'Pricing Rules',
+                'active' => $showPricingPage,
+                'href' => '/vendor/pricing' . $workspaceCategoryQuery,
             ],
             [
                 'key' => 'billing',
@@ -276,6 +290,7 @@
         $grossCollectionsTotal = (float) ($billingLedgerRows->sum('gross') ?: ($vendorDashboardSnapshot['gross_collections_total'] ?? 0));
         $commissionTotal = (float) $billingLedgerRows->sum('commission');
         $gatewayFeeTotal = (float) $billingLedgerRows->sum('gateway_fee');
+        $totalDeductions = $commissionTotal + $gatewayFeeTotal;
         $payoutTotal = (float) $billingLedgerRows->sum('payout');
         $expectedPayoutTotal = (float) $billingLedgerRows->where('is_settled', false)->sum('payout');
         $settledPayoutTotal = (float) $billingLedgerRows->where('is_settled', true)->sum('payout');
@@ -482,7 +497,11 @@
         @endif
 
         @if ($showReservationsPage)
-            @include('vendor-portal.partials.category-operations')
+            @include('vendor-portal.partials.category-operations', ['operationsViewMode' => 'reservations'])
+        @endif
+
+        @if ($showAvailabilityPage)
+            @include('vendor-portal.partials.category-operations', ['operationsViewMode' => 'availability'])
         @endif
 
         @if ($showPricingPage)
@@ -494,6 +513,7 @@
             @include('vendor-portal.partials.payout-status')
         @endif
 
+        @if ($showOverviewPage)
         <section class="layout" id="vendorAuthApi" data-panel-group="api">
             <article class="card" id="vendorAuthCard">
                 <p class="label">Auth</p>
@@ -527,6 +547,7 @@
                 <pre id="output">Ready. Save token, then run an endpoint.</pre>
             </article>
         </section>
+        @endif
 
 
         @if ($showEngagementPage)

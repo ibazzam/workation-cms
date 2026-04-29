@@ -386,11 +386,6 @@
 
     <div class="uniform-header-auth customer-auth">
         @if ($customerLoggedIn)
-            @if ($headerMode === 'checkout')
-                <span class="uniform-auth-link">Signed in as {{ $customerName }}</span>
-            @else
-                <a class="uniform-auth-link" href="/customer#bookings">My bookings</a>
-            @endif
             <div class="uniform-account-menu account-menu" data-customer-menu>
                 <button class="uniform-account-toggle account-menu-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="{{ $headerMenuPanelId }}">Welcome, {{ $customerName }}</button>
                 <div id="{{ $headerMenuPanelId }}" class="uniform-account-panel account-menu-panel" role="menu" hidden>
@@ -425,25 +420,29 @@
 @if ($injectUniformHeaderScripts)
 <script>
     (function () {
-        const header = document.querySelector('[data-uniform-header]');
-        if (!header) {
+        const headers = Array.from(document.querySelectorAll('[data-uniform-header]'));
+        if (headers.length === 0) {
             return;
         }
 
         const revealAtTopOnly = {{ $headerRevealAtTopOnly ? 'true' : 'false' }};
 
-        let lastScrollY = window.scrollY || 0;
+        const lastScrollByHeader = new WeakMap();
+        headers.forEach(function (header) {
+            lastScrollByHeader.set(header, window.scrollY || 0);
+        });
 
-        function syncHeaderScrollState() {
+        function syncHeaderScrollState(header) {
             if (header.getAttribute('data-hide-on-scroll') !== '1') {
                 document.body.classList.remove('is-header-hidden');
                 return;
             }
 
             const currentY = window.scrollY || 0;
+            const lastScrollY = lastScrollByHeader.get(header) || 0;
             if (revealAtTopOnly) {
                 document.body.classList.toggle('is-header-hidden', currentY > 0);
-                lastScrollY = currentY;
+                lastScrollByHeader.set(header, currentY);
                 return;
             }
 
@@ -452,66 +451,76 @@
             const hideThreshold = Math.max(62, header.offsetHeight + 8);
 
             document.body.classList.toggle('is-header-hidden', isDesktop && currentY > hideThreshold && isScrollingDown);
-            lastScrollY = currentY;
+            lastScrollByHeader.set(header, currentY);
         }
 
-        window.addEventListener('scroll', syncHeaderScrollState, { passive: true });
-        window.addEventListener('resize', syncHeaderScrollState);
-        syncHeaderScrollState();
+        window.addEventListener('scroll', function () {
+            headers.forEach(syncHeaderScrollState);
+        }, { passive: true });
 
-        const menuRoot = header.querySelector('[data-customer-menu]');
-        const linksToggle = header.querySelector('[data-header-links-toggle]');
-        const linksPanel = document.getElementById({{ json_encode($headerLinksPanelId) }});
+        window.addEventListener('resize', function () {
+            headers.forEach(syncHeaderScrollState);
+        });
 
-        if (linksToggle && linksPanel) {
-            linksPanel.classList.remove('is-open');
-            linksPanel.removeAttribute('hidden');
+        headers.forEach(syncHeaderScrollState);
 
-            linksToggle.addEventListener('click', function (event) {
+        headers.forEach(function (header) {
+            const menuRoot = header.querySelector('[data-customer-menu]');
+            const linksToggle = header.querySelector('[data-header-links-toggle]');
+            const linksPanelId = linksToggle ? linksToggle.getAttribute('aria-controls') : '';
+            const linksPanel = linksPanelId ? document.getElementById(linksPanelId) : null;
+
+            if (linksToggle && linksPanel) {
+                linksPanel.classList.remove('is-open');
+                linksPanel.removeAttribute('hidden');
+
+                linksToggle.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    const willOpen = !linksPanel.classList.contains('is-open');
+                    linksPanel.classList.toggle('is-open', willOpen);
+                    linksToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+                });
+
+                window.addEventListener('resize', function () {
+                    if (window.matchMedia('(min-width: 921px)').matches) {
+                        linksPanel.classList.remove('is-open');
+                        linksToggle.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
+
+            if (!menuRoot) {
+                return;
+            }
+
+            const menuToggle = menuRoot.querySelector('.account-menu-toggle');
+            const menuPanel = menuRoot.querySelector('.account-menu-panel');
+            if (!menuToggle || !menuPanel) {
+                return;
+            }
+
+            function setMenuOpen(isOpen) {
+                menuPanel.hidden = !isOpen;
+                menuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            }
+
+            menuToggle.addEventListener('click', function (event) {
                 event.preventDefault();
-                const willOpen = !linksPanel.classList.contains('is-open');
-                linksPanel.classList.toggle('is-open', willOpen);
-                linksToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+                event.stopPropagation();
+                setMenuOpen(menuPanel.hidden);
             });
 
-            window.addEventListener('resize', function () {
-                if (window.matchMedia('(min-width: 921px)').matches) {
-                    linksPanel.classList.remove('is-open');
-                    linksToggle.setAttribute('aria-expanded', 'false');
+            document.addEventListener('click', function (event) {
+                if (!menuRoot.contains(event.target)) {
+                    setMenuOpen(false);
                 }
             });
-        }
 
-        if (!menuRoot) {
-            return;
-        }
-
-        const menuToggle = menuRoot.querySelector('.account-menu-toggle');
-        const menuPanel = menuRoot.querySelector('.account-menu-panel');
-        if (!menuToggle || !menuPanel) {
-            return;
-        }
-
-        function setMenuOpen(isOpen) {
-            menuPanel.hidden = !isOpen;
-            menuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-        }
-
-        menuToggle.addEventListener('click', function (event) {
-            event.preventDefault();
-            setMenuOpen(menuPanel.hidden);
-        });
-
-        document.addEventListener('click', function (event) {
-            if (!menuRoot.contains(event.target)) {
-                setMenuOpen(false);
-            }
-        });
-
-        document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape') {
-                setMenuOpen(false);
-            }
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    setMenuOpen(false);
+                }
+            });
         });
     })();
 </script>

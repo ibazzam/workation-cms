@@ -10,12 +10,8 @@
                         <p class="metric-value">MVR {{ number_format($grossCollectionsTotal, 2) }}</p>
                     </article>
                     <article class="billing-ledger-card">
-                        <p class="metric-label">Workation Commission</p>
-                        <p class="metric-value">MVR {{ number_format($commissionTotal, 2) }}</p>
-                    </article>
-                    <article class="billing-ledger-card">
-                        <p class="metric-label">Gateway Fees</p>
-                        <p class="metric-value">MVR {{ number_format($gatewayFeeTotal, 2) }}</p>
+                        <p class="metric-label">Total Deductions</p>
+                        <p class="metric-value">MVR {{ number_format($totalDeductions ?? ($commissionTotal + $gatewayFeeTotal), 2) }}</p>
                     </article>
                     <article class="billing-ledger-card">
                         <p class="metric-label">Net Payout</p>
@@ -35,7 +31,7 @@
                     </article>
                 </div>
 
-                <p class="small" style="margin:10px 0 0;">This ledger tracks gross collections, then deducts only Workation commission and payment gateway fees before vendor payout. Taxes/service/government charges are treated as vendor-inclusive pricing components.</p>
+                <p class="small" style="margin:10px 0 0;">This ledger tracks gross collections, applies total deductions, then shows net payout. Your commission rate and gateway fee policy remain visible at the section header level.</p>
 
                 <div class="ops-table-wrap">
                     <table class="ops-table" aria-label="Vendor daily collection table">
@@ -44,8 +40,7 @@
                                 <th>Date</th>
                                 <th>Transactions</th>
                                 <th>Gross</th>
-                                <th>Commission</th>
-                                <th>Gateway Fee</th>
+                                <th>Total Deductions</th>
                                 <th>Payout</th>
                             </tr>
                         </thead>
@@ -55,13 +50,12 @@
                                     <td>{{ $day }}</td>
                                     <td>{{ $daily['count'] }}</td>
                                     <td>MVR {{ number_format((float) $daily['gross'], 2) }}</td>
-                                    <td>MVR {{ number_format((float) $daily['commission'], 2) }}</td>
-                                    <td>MVR {{ number_format((float) ($daily['gateway_fee'] ?? 0), 2) }}</td>
+                                    <td>MVR {{ number_format((float) $daily['commission'] + (float) ($daily['gateway_fee'] ?? 0), 2) }}</td>
                                     <td>MVR {{ number_format((float) $daily['payout'], 2) }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="ops-empty">No collection data yet. Add reservations to populate this section.</td>
+                                    <td colspan="5" class="ops-empty">No collection data yet. Add reservations to populate this section.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -76,8 +70,7 @@
                             <th>Collected From</th>
                             <th>Status</th>
                             <th>Gross</th>
-                            <th>Commission</th>
-                            <th>Gateway Fee</th>
+                            <th>Total Deductions</th>
                             <th>Payout</th>
                         </tr>
                     </thead>
@@ -88,13 +81,12 @@
                                 <td>{{ $entry['customer_name'] }}<br>{{ $entry['customer_email'] ?: 'N/A' }}</td>
                                 <td>{{ strtoupper($entry['booking_status']) }} / {{ strtoupper($entry['payment_status']) }}<br>{{ $entry['is_settled'] ? 'SETTLED' : 'PENDING' }}</td>
                                 <td>{{ $entry['currency'] }} {{ number_format((float) $entry['gross'], 2) }}</td>
-                                <td>{{ $entry['currency'] }} {{ number_format((float) $entry['commission'], 2) }}</td>
-                                <td>{{ $entry['currency'] }} {{ number_format((float) ($entry['gateway_fee'] ?? 0), 2) }}</td>
+                                <td>{{ $entry['currency'] }} {{ number_format((float) $entry['commission'] + (float) ($entry['gateway_fee'] ?? 0), 2) }}</td>
                                 <td>{{ $entry['currency'] }} {{ number_format((float) $entry['payout'], 2) }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="ops-empty">No invoice ledger data yet.</td>
+                                <td colspan="6" class="ops-empty">No invoice ledger data yet.</td>
                             </tr>
                         @endforelse
                     </tbody>

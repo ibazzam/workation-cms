@@ -436,6 +436,18 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
     $priorStatus = strtolower(trim((string) ($reservationRow->status ?? 'pending')));
     $priorPaymentStatus = strtolower(trim((string) ($reservationRow->payment_status ?? 'unpaid')));
 
+    $paymentGateway = strtolower(trim((string) ($reservationRow->payment_gateway ?? '')));
+    $onlineGatewayProviders = ['stripe', 'bml', 'mib'];
+    $isOnlineGatewayReservation = collect($onlineGatewayProviders)->contains(static function (string $provider) use ($paymentGateway): bool {
+        return $paymentGateway !== '' && str_contains($paymentGateway, $provider);
+    });
+
+    if ($requestedPaymentStatus === 'paid' && $isOnlineGatewayReservation) {
+        return back()->withErrors([
+            'profile' => 'Online gateway payments are marked paid only after gateway verification. Please wait for payment callback confirmation.',
+        ]);
+    }
+
     if ($requestedPaymentStatus === 'paid') {
         workationApplyReservationPaymentEvent($reservationRow, [
             'event_id' => 'vendor_manual_' . $reservation . '_' . str_replace('.', '', uniqid('', true)),

@@ -2111,7 +2111,6 @@
             </div>
             <div class="customer-auth">
                 @if ($customerLoggedIn)
-                    <a class="header-link" href="/customer#bookings">My bookings</a>
                     <div class="account-menu" data-customer-menu>
                         <button class="account-menu-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="customerMenuPanel">
                             <span class="account-avatar" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
@@ -2129,7 +2128,6 @@
                                 <a class="account-panel-link" href="/customer#promos" role="menuitem">Promo codes</a>
                                 <a class="account-panel-link" href="/customer#favourites" role="menuitem">Favourites</a>
                                 <a class="account-panel-link" href="/customer#posts" role="menuitem">My posts</a>
-                                <a class="account-panel-link" href="/customer#alerts" role="menuitem">Flight price alerts</a>
                             </div>
                             <div class="account-panel-foot">
                                 <form method="POST" action="/portal/customer/logout" style="margin:0;">

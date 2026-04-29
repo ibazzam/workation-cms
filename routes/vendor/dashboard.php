@@ -27,7 +27,7 @@ Route::get('/vendor', function () {
     $loadListingsHeavyData = $activePortalPage === 'listings';
     $loadRoomInventoryData = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability'], true);
     $loadEngagementData = in_array($activePortalPage, ['engagement', 'promotions'], true);
-    $loadReservationsData = in_array($activePortalPage, ['reservations', 'operations', 'billing'], true) || $loadEngagementData;
+    $loadReservationsData = in_array($activePortalPage, ['reservations', 'operations', 'availability', 'billing'], true) || $loadEngagementData;
     $loadAvailabilityData = in_array($activePortalPage, ['availability', 'operations'], true);
     $loadPricingData = $activePortalPage === 'pricing' || $loadEngagementData;
     $loadBillingData = $activePortalPage === 'billing';
@@ -1206,7 +1206,12 @@ Route::get('/vendor/reservations', function () {
     }
 
     $category = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', '')));
+    $scope = strtolower(trim((string) request()->query('scope', 'active')));
+    if (!in_array($scope, ['active', 'pending', 'history', 'all'], true)) {
+        $scope = 'active';
+    }
     $query = '/vendor?page=reservations';
+    $query .= '&scope=' . urlencode($scope);
     if ($category !== '') {
         $query .= '&category=' . urlencode($category);
     }
@@ -1222,7 +1227,7 @@ Route::get('/vendor/availability', function () {
     }
 
     $category = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', '')));
-    $query = '/vendor?page=reservations';
+    $query = '/vendor?page=availability';
     if ($category !== '') {
         $query .= '&category=' . urlencode($category);
     }

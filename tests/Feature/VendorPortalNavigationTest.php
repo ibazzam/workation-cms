@@ -27,7 +27,7 @@ class VendorPortalNavigationTest extends TestCase
             ])
             ->get('/vendor/reservations?category=accommodation');
 
-        $reservationsResponse->assertRedirect('/vendor?page=reservations&category=accommodation');
+        $reservationsResponse->assertRedirect('/vendor?page=reservations&scope=active&category=accommodation');
 
         $pricingResponse = $this
             ->withSession([

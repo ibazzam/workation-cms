@@ -149,9 +149,24 @@ class CheckoutPaymentRouter
                 $isExternallyReady = $isStripeProvider
                     ? true
                     : ($gatewayMode !== 'external' || $checkoutUrl !== '');
-                if (!$isExternallyReady) {
+                    $isBmlProvider = $providerKey === 'bml';
+                    if ($isBmlProvider) {
+                        $bmlApiKey = trim((string) ($gatewayConfig['api_key'] ?? ''));
+                        $bmlAppId = trim((string) ($gatewayConfig['app_id'] ?? ''));
+                    $hasBmlConnectCredentials = $bmlApiKey !== '' && $bmlAppId !== '';
+                    $isBmlConnectMode = in_array($gatewayMode, ['production', 'sandbox'], true);
+
+                    // Connect mode requires credentials. Legacy/external mode can still use
+                    // checkout URL handoff if configured.
+                    if ($isBmlConnectMode && !$hasBmlConnectCredentials) {
+                        continue;
+                    }
+                    if (!$isBmlConnectMode && !$hasBmlConnectCredentials && !$isExternallyReady) {
+                            continue;
+                        }
+                } elseif (!$isExternallyReady) {
                     continue;
-                }
+                    }
 
                     // BML Connect gateways require api_key + app_id (transaction URL is obtained
                     // server-side via the BML Connect API — there is no static checkout_url).

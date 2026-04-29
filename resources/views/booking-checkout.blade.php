@@ -135,16 +135,27 @@
         }
         $baseTotalBeforeTransfer = max(0, $totalAmountRaw - $transferAmount);
         $effectiveTransferAmount = $selectedTransferCode === '' ? 0.0 : $transferAmount;
-        $effectiveInvoiceTotal = max(0, $baseTotalBeforeTransfer + $effectiveTransferAmount);
-        $total = number_format($effectiveInvoiceTotal, 2);
+        $transferGstLineAmount = 0.0;
         $invoiceTaxLines = $taxLines->map(static function (array $line): array {
             $label = trim((string) ($line['label'] ?? $line['name'] ?? $line['type'] ?? 'Tax'));
             $amount = (float) ($line['amount'] ?? $line['value'] ?? 0);
+            $code = strtolower(trim((string) ($line['code'] ?? '')));
             return [
                 'label' => $label !== '' ? $label : 'Tax',
                 'amount' => max(0, $amount),
+                'code' => $code,
             ];
         })->filter(static fn (array $line): bool => $line['amount'] > 0)->values();
+        if ($selectedTransferCode === '') {
+            $transferGstLineAmount = (float) $invoiceTaxLines
+                ->filter(static fn (array $line): bool => ($line['code'] ?? '') === 'transfer_gst' || str_starts_with(strtolower((string) ($line['label'] ?? '')), 'transfer gst'))
+                ->sum(static fn (array $line): float => (float) ($line['amount'] ?? 0));
+            $invoiceTaxLines = $invoiceTaxLines
+                ->reject(static fn (array $line): bool => ($line['code'] ?? '') === 'transfer_gst' || str_starts_with(strtolower((string) ($line['label'] ?? '')), 'transfer gst'))
+                ->values();
+        }
+        $effectiveInvoiceTotal = max(0, $baseTotalBeforeTransfer + $effectiveTransferAmount - $transferGstLineAmount);
+        $total = number_format($effectiveInvoiceTotal, 2);
         $inclusives = collect($inclusives ?? [])->map(static fn ($v) => trim((string) $v))->filter()->values();
         $cancellationPolicy = trim((string) ($cancellationPolicy ?? 'Standard cancellation terms apply.'));
         $dateLabels = $dateLabels ?? ['start' => 'Check-in', 'end' => 'Check-out'];
@@ -191,6 +202,16 @@
         <section class="panel" aria-label="Checkout summary">
             <h1 class="title">Checkout & Reservation</h1>
             <p class="sub">Review your prepared reservation and proceed with payment confirmation.</p>
+
+            @if ($errors->any())
+                <div style="border:1px solid #f2b8b5; background:#fff5f5; color:#8e1d1d; border-radius:12px; padding:10px 12px; margin:8px 0 12px;">
+                    <ul style="margin:0; padding-left:18px;">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
             <div class="layout">
                 <div class="grid checkout-details">
@@ -282,7 +303,6 @@
                         @if ($discountAmount > 0)
                             <div class="invoice-row"><span>Discount</span><strong>- {{ $currency }} {{ number_format($discountAmount, 2) }}</strong></div>
                         @endif
-                        <div class="invoice-row"><span>Included tax total</span><strong>{{ $currency }} {{ number_format($totalTaxAmount, 2) }}</strong></div>
                         @foreach ($invoiceTaxLines as $taxLine)
                             <div class="invoice-row"><span>{{ (string) ($taxLine['label'] ?? 'Tax') }}</span><strong>{{ $currency }} {{ number_format((float) ($taxLine['amount'] ?? 0), 2) }}</strong></div>
                         @endforeach

@@ -1780,7 +1780,23 @@ Route::get('/booking/checkout/{reservation}/transfer', function (Request $reques
         $savedTransferOption = $availableCodes->first() ?: 'none';
     }
 
-    $includeTransfer = trim((string) ($notes['transfer_option'] ?? 'none')) !== 'none' && $availableCodes->contains($savedTransferOption);
+    $normalizedTransferOption = strtolower(trim((string) ($notes['transfer_option'] ?? 'none')));
+    $includeTransfer = !in_array($normalizedTransferOption, ['', 'none', 'no_transfer', 'decline', 'declined'], true)
+        && $availableCodes->contains($savedTransferOption);
+
+    $roomIdFromNotes = (int) ($notes['room_id'] ?? 0);
+    $backUrl = '/';
+    if ($roomIdFromNotes > 0) {
+        $backQuery = [
+            'checkin' => trim((string) ($notes['service_start_date'] ?? '')),
+            'checkout' => trim((string) ($notes['service_end_date'] ?? '')),
+            'adults' => max(1, (int) ($notes['adults'] ?? 1)),
+            'children' => max(0, (int) ($notes['children'] ?? 0)),
+        ];
+
+        $backUrl = '/room/' . $roomIdFromNotes;
+        $backUrl .= '?' . http_build_query($backQuery, '', '&', PHP_QUERY_RFC3986);
+    }
 
     return view('booking-transfer-selection', [
         'reservation' => $reservationRow,
@@ -1799,6 +1815,7 @@ Route::get('/booking/checkout/{reservation}/transfer', function (Request $reques
         'transferOptions' => $transferOptions,
         'selectedTransferOption' => old('transfer_option', $savedTransferOption),
         'includeTransfer' => old('include_transfer', $includeTransfer ? '1' : '0') === '1',
+        'backUrl' => $backUrl,
         'currency' => strtoupper(trim((string) ($reservationRow->currency ?? $roomRow->currency ?? $propertyRow->currency ?? 'MVR'))),
     ]);
 });

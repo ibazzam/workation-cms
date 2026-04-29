@@ -389,6 +389,21 @@
                         'end_at' => (string) ($reservation->end_at ?? ''),
                         'status' => (string) ($reservation->status ?? 'pending'),
                         'payment_status' => (string) ($reservation->payment_status ?? 'unpaid'),
+                        'has_open_dispute' => (bool) ($reservation->has_open_dispute ?? false),
+                        'has_refund_case' => (bool) ($reservation->has_refund_case ?? false),
+                        'refund_case_ref' => (string) ($reservation->refund_case_ref ?? ''),
+                        'refund_status' => (string) ($reservation->refund_status ?? ''),
+                        'refund_requested_at' => (string) ($reservation->refund_requested_at ?? ''),
+                        'refund_review_started_at' => (string) ($reservation->refund_review_started_at ?? ''),
+                        'refund_approved_at' => (string) ($reservation->refund_approved_at ?? ''),
+                        'refund_completed_at' => (string) ($reservation->refund_completed_at ?? ''),
+                        'refund_rejected_at' => (string) ($reservation->refund_rejected_at ?? ''),
+                        'refund_sla_due_at' => (string) ($reservation->refund_sla_due_at ?? ''),
+                        'refund_sla_escalated_at' => (string) ($reservation->refund_sla_escalated_at ?? ''),
+                        'payout_status' => (string) ($reservation->payout_status ?? ''),
+                        'payout_expected_at' => (string) ($reservation->payout_expected_at ?? ''),
+                        'payout_processing_at' => (string) ($reservation->payout_processing_at ?? ''),
+                        'payout_paid_at' => (string) ($reservation->payout_paid_at ?? ''),
                         'currency' => (string) ($reservation->currency ?? 'MVR'),
                         'paid_amount' => (float) ($reservation->payment_amount ?? $reservation->invoice_total_amount ?? $reservation->total_amount ?? 0),
                         'subtotal_amount' => (float) ($reservation->subtotal_amount ?? $reservation->total_amount ?? 0),
@@ -470,14 +485,36 @@
                                 ->values();
                         }
                         $accommodationRoomTargetsByProperty = collect();
+                        $accommodationPropertyChips = collect();
                         if ($categoryKey === 'accommodation') {
                             $accommodationRoomTargetsByProperty = $categoryTargets
                                 ->filter(static fn ($target) => (string) ($target['kind'] ?? '') === 'room')
                                 ->groupBy(static fn ($target) => (string) ($target['property_name'] ?? ('Property #' . (string) ($target['property_id'] ?? ''))))
                                 ->sortKeys();
+                            $accommodationPropertyChips = $categoryTargets
+                                ->filter(static fn ($target) => (string) ($target['kind'] ?? '') === 'room')
+                                ->map(static function ($target): array {
+                                    $propertyId = (int) ($target['property_id'] ?? 0);
+                                    $propertyName = trim((string) ($target['property_name'] ?? ('Property #' . $propertyId)));
+                                    return [
+                                        'property_id' => $propertyId,
+                                        'label' => $propertyName !== '' ? $propertyName : ('Property #' . $propertyId),
+                                    ];
+                                })
+                                ->filter(static fn ($item): bool => (int) ($item['property_id'] ?? 0) > 0)
+                                ->unique('property_id')
+                                ->values();
                         }
                         $categorySlots = ($availabilityRowsByCategory[$categoryKey] ?? collect())->sortByDesc('slot_date')->values();
                         $categoryReservations = ($reservationRowsByCategory[$categoryKey] ?? collect())->sortByDesc('start_at')->values();
+                        $availabilityBookingRuns = $categoryReservations
+                            ->filter(static function (array $row): bool {
+                                $status = strtolower(trim((string) ($row['status'] ?? 'pending')));
+                                $paymentStatus = strtolower(trim((string) ($row['payment_status'] ?? 'unpaid')));
+                                return in_array($status, ['confirmed', 'upcoming'], true) && $paymentStatus === 'paid';
+                            })
+                            ->sortBy('start_at')
+                            ->values();
                         $trackedCount = $categorySlots->count();
                         $closedCount = $categorySlots->where('is_closed', true)->count();
                         $openCount = max(0, $trackedCount - $closedCount);
@@ -504,57 +541,29 @@
                             <span class="ops-category-toggle-icon" aria-hidden="true">▾</span>
                         </button>
                         <div id="availability_panel_{{ $categorySlug }}" class="ops-category-body" hidden>
-                        <p class="ops-subtitle">Listings in {{ $labelForCategory($categoryKey) }} (click to edit availability)</p>
+                        @if ($showAvailabilityPanel)
+                        <p class="ops-subtitle">Listings in {{ $labelForCategory($categoryKey) }} (category-level view)</p>
                         @if ($categoryKey === 'accommodation')
-                            @if ($accommodationRoomTargetsByProperty->isEmpty())
-                                <div class="ops-target-quicklist">
-                                    <span class="small">No rooms yet under accommodation properties.</span>
-                                </div>
-                            @else
-                                @foreach ($accommodationRoomTargetsByProperty as $propertyName => $propertyRooms)
-                                    <p class="small" style="margin:8px 0 4px;"><strong>{{ (string) $propertyName }}</strong></p>
-                                    <div class="ops-target-quicklist">
-                                        @foreach ($propertyRooms as $targetOption)
-                                            @php
-                                                $targetKind = (string) ($targetOption['kind'] ?? '');
-                                                $targetId = (string) ($targetOption['id'] ?? '');
-                                                $targetValue = $targetKind !== '' && $targetId !== '' ? ($targetKind . ':' . $targetId) : '';
-                                            @endphp
-                                            @if ($targetValue !== '')
-                                                <button
-                                                    type="button"
-                                                    class="ops-target-quickpick"
-                                                    data-availability-pick-target
-                                                    data-availability-form-key="{{ $categoryKey }}"
-                                                    data-target-value="{{ $targetValue }}"
-                                                >{{ (string) ($targetOption['room_name'] ?? ('Room ' . $targetId)) }}</button>
-                                            @endif
-                                        @endforeach
-                                    </div>
-                                @endforeach
-                            @endif
+                            <div class="ops-target-quicklist" style="flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;flex-direction:row;">
+                                @forelse ($accommodationPropertyChips as $propertyChip)
+                                    <span class="ops-target-quickpick" style="cursor:default;white-space:nowrap;">{{ (string) ($propertyChip['label'] ?? 'Property') }}</span>
+                                @empty
+                                    <span class="small">No accommodation properties found.</span>
+                                @endforelse
+                            </div>
                         @else
-                            <div class="ops-target-quicklist">
+                            <div class="ops-target-quicklist" style="flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;flex-direction:row;">
                                 @forelse ($categoryTargets as $targetOption)
                                     @php
-                                        $targetKind = (string) ($targetOption['kind'] ?? '');
-                                        $targetId = (string) ($targetOption['id'] ?? '');
-                                        $targetValue = $targetKind !== '' && $targetId !== '' ? ($targetKind . ':' . $targetId) : '';
+                                        $targetLabel = trim((string) ($targetOption['property_name'] ?? $targetOption['label'] ?? 'Listing'));
                                     @endphp
-                                    @if ($targetValue !== '')
-                                        <button
-                                            type="button"
-                                            class="ops-target-quickpick"
-                                            data-availability-pick-target
-                                            data-availability-form-key="{{ $categoryKey }}"
-                                            data-target-value="{{ $targetValue }}"
-                                        >{{ (string) ($targetOption['label'] ?? $targetValue) }}</button>
-                                    @endif
+                                    <span class="ops-target-quickpick" style="cursor:default;white-space:nowrap;">{{ $targetLabel !== '' ? $targetLabel : 'Listing' }}</span>
                                 @empty
                                     <span class="small">No listings yet in this category.</span>
                                 @endforelse
                             </div>
                         @endif
+
                         <div class="billing-ledger-grid" style="margin-bottom:10px;">
                             <article class="billing-ledger-card">
                                 <p class="metric-label">Tracked Days</p>
@@ -573,7 +582,7 @@
                                 <p class="metric-value">{{ $inventoryTotal }}</p>
                             </article>
                         </div>
-                        <div class="ops-grid">
+                        <div class="ops-grid" style="grid-template-columns:minmax(420px,1fr) minmax(520px,1.2fr);">
                             <form class="ops-form" method="POST" action="/portal/vendor/availability/save" data-availability-form="{{ $categoryKey }}">
                                 @csrf
                                 <script type="application/json" data-availability-calendar-state>
@@ -768,53 +777,41 @@
                             @endif
 
                             <div class="ops-table-wrap">
-                                <table class="ops-table" aria-label="{{ $labelForCategory($categoryKey) }} availability table">
+                                <table class="ops-table" aria-label="{{ $labelForCategory($categoryKey) }} booking runs table">
                                     <thead>
                                         <tr>
-                                            <th>Date</th>
+                                            <th>Check-in</th>
+                                            <th>Check-out</th>
                                             <th>Target</th>
-                                            <th>Route / Service</th>
-                                            <th>Inventory</th>
-                                            <th>Reserved</th>
-                                            <th>Closed</th>
+                                            <th>Guest</th>
+                                            <th>Guests</th>
+                                            <th>Status</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @forelse ($categorySlots->take(20) as $slotRow)
+                                        @forelse ($availabilityBookingRuns->take(24) as $runRow)
                                             <tr>
-                                                <td>{{ (string) ($slotRow['slot_date'] ?? '-') }}</td>
+                                                <td>{{ (string) ($runRow['start_at'] ?? '-') }}</td>
+                                                <td>{{ (string) ($runRow['end_at'] ?? '-') }}</td>
+                                                <td>{{ (string) ($runRow['target_label'] ?? 'N/A') }}</td>
+                                                <td>{{ (string) ($runRow['customer_name'] ?? 'Guest') }}</td>
                                                 <td>
-                                                    @if ((string) ($slotRow['target_value'] ?? '') !== '')
-                                                        <button
-                                                            type="button"
-                                                            class="ops-target-quickpick"
-                                                            data-availability-pick-target
-                                                            data-availability-form-key="{{ $categoryKey }}"
-                                                            data-target-value="{{ (string) ($slotRow['target_value'] ?? '') }}"
-                                                        >{{ (string) ($slotRow['target_label'] ?? 'N/A') }}</button>
-                                                    @else
-                                                        {{ (string) ($slotRow['target_label'] ?? 'N/A') }}
-                                                    @endif
+                                                    {{ max(1, (int) ($runRow['adult_guests'] ?? 1))
+                                                        + max(0, (int) ($runRow['child_guests'] ?? 0))
+                                                        + max(0, (int) ($runRow['infant_guests'] ?? 0)) }}
                                                 </td>
-                                                <td>
-                                                    {{ (string) ($slotRow['route_name'] ?? '') !== '' ? (string) ($slotRow['route_name'] ?? '') : 'N/A' }}
-                                                    @if ((int) ($slotRow['service_id'] ?? 0) > 0)
-                                                        <br><span class="small">Service ID {{ (int) ($slotRow['service_id'] ?? 0) }}</span>
-                                                    @endif
-                                                </td>
-                                                <td>{{ (int) ($slotRow['inventory'] ?? 0) }}</td>
-                                                <td>{{ (int) ($slotRow['reserved_count'] ?? 0) }}</td>
-                                                <td>{{ (bool) ($slotRow['is_closed'] ?? false) ? 'YES' : 'NO' }}</td>
+                                                <td>{{ strtoupper((string) ($runRow['status'] ?? 'confirmed')) }} / {{ strtoupper((string) ($runRow['payment_status'] ?? 'paid')) }}</td>
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="6" class="ops-empty">No availability slots for {{ strtolower($labelForCategory($categoryKey)) }} yet. Select a target above and block/open dates using the calendar.</td>
+                                                <td colspan="6" class="ops-empty">No confirmed paid booking runs yet for {{ strtolower($labelForCategory($categoryKey)) }}.</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
                                 </table>
                             </div>
                         </div>
+                        @endif
 
                         @php
                             $reservationScopeFiltered = $categoryReservations->filter(static function (array $row) use ($reservationScope): bool {
@@ -822,7 +819,7 @@
                                 $paymentStatus = strtolower(trim((string) ($row['payment_status'] ?? 'unpaid')));
 
                                 return match ($reservationScope) {
-                                    'active' => in_array($status, ['confirmed', 'upcoming'], true) && $paymentStatus === 'paid',
+                                    'active' => in_array($status, ['confirmed', 'upcoming', 'checked_in', 'checked_out'], true) && $paymentStatus === 'paid',
                                     'pending' => in_array($status, ['pending'], true) || in_array($paymentStatus, ['unpaid', 'partially_paid'], true),
                                     'history' => in_array($status, ['cancelled', 'completed', 'expired', 'failed', 'rejected'], true) || in_array($paymentStatus, ['refunded'], true),
                                     default => true,
@@ -842,12 +839,16 @@
                                 <p class="metric-value">{{ $reservationScopeFiltered->where('status', 'confirmed')->count() }}</p>
                             </article>
                             <article class="billing-ledger-card">
-                                <p class="metric-label">Completed</p>
-                                <p class="metric-value">{{ $reservationScopeFiltered->where('status', 'completed')->count() }}</p>
+                                <p class="metric-label">In-House</p>
+                                <p class="metric-value">{{ $reservationScopeFiltered->where('status', 'checked_in')->count() }}</p>
                             </article>
                             <article class="billing-ledger-card">
-                                <p class="metric-label">Cancelled</p>
-                                <p class="metric-value">{{ $reservationScopeFiltered->where('status', 'cancelled')->count() }}</p>
+                                <p class="metric-label">Checked-Out</p>
+                                <p class="metric-value">{{ $reservationScopeFiltered->where('status', 'checked_out')->count() }}</p>
+                            </article>
+                            <article class="billing-ledger-card">
+                                <p class="metric-label">Completed</p>
+                                <p class="metric-value">{{ $reservationScopeFiltered->where('status', 'completed')->count() }}</p>
                             </article>
                             <article class="billing-ledger-card">
                                 <p class="metric-label">Booked Revenue</p>
@@ -864,7 +865,7 @@
                                         <th>Stay</th>
                                         <th>Service</th>
                                         <th>Payment</th>
-                                        <th>Status</th>
+                                        <th>Timeline</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -908,25 +909,55 @@
                                             <td>
                                                 Payment Status: {{ strtoupper((string) ($reservationRow['payment_status'] ?? 'unpaid')) }}<br>
                                                 Paid Amount: {{ (string) ($reservationRow['payment_currency'] ?? $reservationRow['currency'] ?? 'MVR') }} {{ number_format((float) ($reservationRow['paid_amount'] ?? 0), 2) }}<br>
-                                                Payment Ref: {{ trim((string) ($reservationRow['payment_reference'] ?? '')) !== '' ? (string) ($reservationRow['payment_reference'] ?? '') : 'N/A' }}
+                                                Payment Ref: {{ trim((string) ($reservationRow['payment_reference'] ?? '')) !== '' ? (string) ($reservationRow['payment_reference'] ?? '') : 'N/A' }}<br>
+                                                Payout: {{ strtoupper((string) ($reservationRow['payout_status'] ?? 'queued')) }}
+                                                @if ((string) ($reservationRow['payout_expected_at'] ?? '') !== '')
+                                                    <br>Expected: {{ (string) ($reservationRow['payout_expected_at'] ?? '') }}
+                                                @endif
+                                                @if ((bool) ($reservationRow['has_open_dispute'] ?? false) || (bool) ($reservationRow['has_refund_case'] ?? false))
+                                                    <br><span class="small" style="color:#7a4d15;">Timeline Hold: {{ (bool) ($reservationRow['has_open_dispute'] ?? false) ? 'Dispute Open' : 'Refund Case Open' }}</span>
+                                                @endif
+                                                @php
+                                                    $refundStatus = strtolower(trim((string) ($reservationRow['refund_status'] ?? '')));
+                                                    $hasRefundTimeline = $refundStatus !== '';
+                                                    $isRefundEscalated = (string) ($reservationRow['refund_sla_escalated_at'] ?? '') !== '';
+                                                @endphp
+                                                @if ($hasRefundTimeline)
+                                                    <br>Refund Case: {{ trim((string) ($reservationRow['refund_case_ref'] ?? '')) !== '' ? (string) ($reservationRow['refund_case_ref'] ?? '') : 'N/A' }}
+                                                    <br>Refund Status: {{ strtoupper($refundStatus) }}
+                                                    @if ((string) ($reservationRow['refund_sla_due_at'] ?? '') !== '')
+                                                        <br>SLA Due: {{ (string) ($reservationRow['refund_sla_due_at'] ?? '') }}
+                                                    @endif
+                                                    @if ($isRefundEscalated)
+                                                        <br><span class="small" style="color:#a12a2a;">Escalated: Finance follow-up required</span>
+                                                    @endif
+                                                @endif
                                             </td>
                                             <td>
+                                                @php
+                                                    $rowStatus = strtolower(trim((string) ($reservationRow['status'] ?? 'pending')));
+                                                    $timelineOptions = [
+                                                        'pending' => 'Booked (Pending Confirmation)',
+                                                        'confirmed' => 'Confirmed',
+                                                        'checked_in' => 'Guest Checked-In',
+                                                        'checked_out' => 'Guest Checked-Out',
+                                                        'completed' => 'Stay Completed (Ready for Payout)',
+                                                        'cancelled' => 'Cancelled',
+                                                    ];
+                                                    $payoutStatusText = strtoupper((string) ($reservationRow['payout_status'] ?? 'queued'));
+                                                @endphp
                                                 <form class="inline-status-form" method="POST" action="/portal/vendor/reservations/{{ (int) ($reservationRow['id'] ?? 0) }}/status">
                                                     @csrf
                                                     <select class="ops-select" name="status" required>
-                                                        <option value="pending" @selected(($reservationRow['status'] ?? '') === 'pending')>Pending</option>
-                                                        <option value="confirmed" @selected(($reservationRow['status'] ?? '') === 'confirmed')>Confirmed</option>
-                                                        <option value="cancelled" @selected(($reservationRow['status'] ?? '') === 'cancelled')>Cancelled</option>
-                                                        <option value="completed" @selected(($reservationRow['status'] ?? '') === 'completed')>Completed</option>
+                                                        @foreach ($timelineOptions as $timelineValue => $timelineLabel)
+                                                            <option value="{{ $timelineValue }}" @selected($rowStatus === $timelineValue)>{{ $timelineLabel }}</option>
+                                                        @endforeach
                                                     </select>
-                                                    <select class="ops-select" name="payment_status" required>
-                                                        <option value="unpaid" @selected(($reservationRow['payment_status'] ?? '') === 'unpaid')>Unpaid</option>
-                                                        <option value="partially_paid" @selected(($reservationRow['payment_status'] ?? '') === 'partially_paid')>Partially Paid</option>
-                                                        <option value="paid" @selected(($reservationRow['payment_status'] ?? '') === 'paid') @disabled((bool) ($reservationRow['is_online_gateway'] ?? false))>Paid</option>
-                                                        <option value="refunded" @selected(($reservationRow['payment_status'] ?? '') === 'refunded')>Refunded</option>
-                                                    </select>
-                                                    <button class="btn btn-secondary" type="submit">Save Status</button>
+                                                    <button class="btn btn-secondary" type="submit">Save Timeline</button>
                                                 </form>
+                                                <p class="small" style="margin-top:6px;">
+                                                    Current: {{ strtoupper((string) ($reservationRow['status'] ?? 'pending')) }} | Payout: {{ $payoutStatusText }}
+                                                </p>
                                             </td>
                                         </tr>
                                     @empty

@@ -934,6 +934,15 @@
                                                 <div class="booking-card-guest">
                                                     {{ (string) ($booking['category_label'] ?? '') }}
                                                     &middot; Payment: {{ strtoupper((string) ($booking['payment_status'] ?? 'UNPAID')) }}
+                                                    @if (trim((string) ($booking['refund_status'] ?? '')) !== '')
+                                                        <br>Refund: {{ strtoupper((string) ($booking['refund_status'] ?? '')) }}
+                                                        @if (trim((string) ($booking['refund_case_ref'] ?? '')) !== '')
+                                                            ({{ (string) ($booking['refund_case_ref'] ?? '') }})
+                                                        @endif
+                                                        @if ((bool) ($booking['refund_sla_escalated'] ?? false))
+                                                            <span style="color:#a22f2f;font-weight:700;">&middot; Escalated</span>
+                                                        @endif
+                                                    @endif
                                                 </div>
                                             </div>
                                         </div>

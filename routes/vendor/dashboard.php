@@ -434,6 +434,54 @@ Route::get('/vendor', function () {
                 }
             ));
 
+            $latestRefundCaseByReservation = collect();
+            $reservationIds = $vendorReservations
+                ->pluck('id')
+                ->map(static fn ($id): int => (int) $id)
+                ->filter(static fn (int $id): bool => $id > 0)
+                ->values();
+
+            if ($reservationIds->isNotEmpty() && Schema::hasTable('finance_refund_cases')) {
+                $latestRefundCaseByReservation = DB::table('finance_refund_cases')
+                    ->whereIn('reservation_id', $reservationIds->all())
+                    ->orderByDesc('id')
+                    ->get([
+                        'id',
+                        'reservation_id',
+                        'case_ref',
+                        'status',
+                        'created_at',
+                        'review_started_at',
+                        'approved_at',
+                        'completed_at',
+                        'rejected_at',
+                        'sla_due_at',
+                        'sla_escalated_at',
+                    ])
+                    ->unique('reservation_id')
+                    ->keyBy('reservation_id');
+            }
+
+            $vendorReservations = $vendorReservations->map(static function ($reservation) use ($latestRefundCaseByReservation) {
+                $reservationId = (int) ($reservation->id ?? 0);
+                $refundCase = $latestRefundCaseByReservation->get($reservationId);
+                $refundStatus = strtolower(trim((string) ($refundCase->status ?? '')));
+                $hasOpenRefundTimeline = in_array($refundStatus, ['requested', 'under_review', 'approved'], true);
+
+                $reservation->refund_case_ref = (string) ($refundCase->case_ref ?? '');
+                $reservation->refund_status = (string) ($refundCase->status ?? '');
+                $reservation->refund_requested_at = (string) ($refundCase->created_at ?? '');
+                $reservation->refund_review_started_at = (string) ($refundCase->review_started_at ?? '');
+                $reservation->refund_approved_at = (string) ($refundCase->approved_at ?? '');
+                $reservation->refund_completed_at = (string) ($refundCase->completed_at ?? '');
+                $reservation->refund_rejected_at = (string) ($refundCase->rejected_at ?? '');
+                $reservation->refund_sla_due_at = (string) ($refundCase->sla_due_at ?? '');
+                $reservation->refund_sla_escalated_at = (string) ($refundCase->sla_escalated_at ?? '');
+                $reservation->has_refund_case = $hasOpenRefundTimeline || (bool) ($reservation->has_refund_case ?? false);
+
+                return $reservation;
+            })->values();
+
             $payoutStatusRows = $vendorReservations
                 ->filter(static function ($reservation): bool {
                     $status = strtolower(trim((string) ($reservation->payment_status ?? '')));
@@ -459,8 +507,8 @@ Route::get('/vendor', function () {
                         'payout_processing_at' => (string) ($reservation->payout_processing_at ?? null),
                         'payout_expected_at' => (string) ($reservation->payout_expected_at ?? null),
                         'payout_paid_at' => (string) ($reservation->payout_paid_at ?? null),
-                        'has_open_dispute' => in_array(strtolower((string) ($notes['dispute_status'] ?? '')), ['open', 'under_review', 'processing'], true),
-                        'has_refund_case' => in_array(strtolower((string) ($notes['refund_status'] ?? '')), ['requested', 'under_review', 'approved', 'processing'], true),
+                        'has_open_dispute' => (bool) ($reservation->has_open_dispute ?? in_array(strtolower((string) ($notes['dispute_status'] ?? '')), ['open', 'under_review', 'processing'], true)),
+                        'has_refund_case' => (bool) ($reservation->has_refund_case ?? in_array(strtolower((string) ($notes['refund_status'] ?? '')), ['requested', 'under_review', 'approved', 'processing'], true)),
                     ];
                 })
                 ->sortByDesc(static fn ($row) => strtotime((string) ($row->payment_collected_at ?? '')) ?: 0)

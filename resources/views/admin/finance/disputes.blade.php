@@ -107,15 +107,18 @@
         @forelse($cases ?? [] as $case)
         @php
           $isUrgent = false;
+          $isEscalated = false;
           if($case->respond_by && !in_array($case->status, ['won','lost','accepted'])){
             $diff = now()->diffInDays($case->respond_by, false);
             $isUrgent = $diff >= 0 && $diff <= 3;
+            $isEscalated = $diff < 0;
           }
         @endphp
-        <tr style="{{ $isUrgent ? 'background:#fff8e5;' : '' }}">
+        <tr style="{{ $isEscalated ? 'background:#fff0f0;' : ($isUrgent ? 'background:#fff8e5;' : '') }}">
           <td style="font-weight:700;font-size:.78rem;">
             {{ $case->case_ref }}
             @if($isUrgent) <span class="chip chip-err" style="font-size:.68rem;">URGENT</span> @endif
+            @if($isEscalated) <span class="chip chip-err" style="font-size:.68rem;">ESCALATED</span> @endif
           </td>
           <td>{{ $case->reservation_id }}</td>
           <td style="font-size:.78rem;">
@@ -133,7 +136,7 @@
               @if($daysLeft >= 0)
                 <br><span style="font-size:.7rem;">{{ $daysLeft }}d left</span>
               @else
-                <br><span style="font-size:.7rem;color:#6d1111;">overdue</span>
+                <br><span style="font-size:.7rem;color:#6d1111;font-weight:700;">overdue - escalate now</span>
               @endif
             @endif
           </td>

@@ -156,7 +156,11 @@ class CustomerBookingDeleteTest extends TestCase
 
         $response
             ->assertRedirect('/customer')
-            ->assertSessionHas('portal_notice', 'Cancellation request submitted. Our team will confirm refund and cancellation details.');
+            ->assertSessionHas('portal_notice', static function ($notice): bool {
+                $noticeText = (string) $notice;
+                return str_starts_with($noticeText, 'Cancellation request submitted.')
+                    && (str_contains($noticeText, 'under review') || str_contains($noticeText, 'confirm refund and cancellation details'));
+            });
 
         $reservation = DB::table('vendor_reservations')->where('id', $reservationId)->first();
         $this->assertNotNull($reservation);

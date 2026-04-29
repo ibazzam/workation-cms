@@ -331,13 +331,21 @@
                         <div class="fine-print">{{ $cancellationPolicy }}</div>
                     </section>
 
+                    <section class="mini-section" aria-label="Customer protection plan">
+                        <h2 class="mini-title">5. Customer protection plan</h2>
+                        <div class="fine-print">If a paid booking is cancelled from your customer portal, your request is moved to refund review and tracked end-to-end.</div>
+                        <div class="fine-print">Refunds are returned via the original payment channel (card/bank gateway used at payment).</div>
+                        <div class="fine-print">Most approved refunds are completed within 7-10 calendar days, depending on bank/gateway processing.</div>
+                        <div class="fine-print">If there is a dispute, Workation support keeps both customer and vendor updated until closure.</div>
+                    </section>
+
                     <section class="mini-section" aria-label="Rewards">
-                        <h2 class="mini-title">5. Rewards</h2>
+                        <h2 class="mini-title">6. Rewards</h2>
                         <div class="fine-print">Earn {{ max(1, (int) round(($roomSubtotal + $taxAmount) * 0.125)) }} Trip Coins (≈{{ $currency }} {{ number_format((($roomSubtotal + $taxAmount) * 0.005), 2) }}) after your stay.</div>
                     </section>
 
                     <section class="mini-section" aria-label="Fine print">
-                        <h2 class="mini-title">6. Fine print</h2>
+                        <h2 class="mini-title">7. Fine print</h2>
                         <div class="fine-print">This property may require a deposit at check-in. Deposit hold release times vary by payment method.</div>
                         @if ($inclusives->isNotEmpty())
                             <div class="fine-print">Inclusions:</div>

@@ -50,6 +50,7 @@ final class RefundRouter
     public function openCase(array $params): string
     {
         $now = Carbon::now();
+        $refundCaseColumns = DB::getSchemaBuilder()->getColumnListing('finance_refund_cases');
 
         $reservation = DB::table('vendor_reservations')->find($params['reservation_id']);
         if (!$reservation) {
@@ -63,7 +64,7 @@ final class RefundRouter
 
         $caseRef = $this->generateCaseRef($now);
 
-        DB::table('finance_refund_cases')->insert([
+        $insertPayload = [
             'case_ref'                    => $caseRef,
             'reservation_id'              => $params['reservation_id'],
             'vendor_user_id'              => $params['vendor_user_id'],
@@ -86,7 +87,13 @@ final class RefundRouter
             'status'                      => 'requested',
             'created_at'                  => $now,
             'updated_at'                  => $now,
-        ]);
+        ];
+
+        if (in_array('sla_due_at', $refundCaseColumns, true)) {
+            $insertPayload['sla_due_at'] = $now->copy()->addHours(48);
+        }
+
+        DB::table('finance_refund_cases')->insert($insertPayload);
 
         // Flag on the reservation (vendor can see this flag – not the medium)
         DB::table('vendor_reservations')
@@ -112,20 +119,50 @@ final class RefundRouter
     }
 
     /**
+     * Move a refund case into active review.
+     */
+    public function startReview(string $caseRef, int $reviewedByUserId): void
+    {
+        $now = Carbon::now();
+        $refundCaseColumns = DB::getSchemaBuilder()->getColumnListing('finance_refund_cases');
+
+        $updatePayload = [
+            'status'               => 'under_review',
+            'reviewed_by_user_id'  => $reviewedByUserId,
+            'updated_at'           => $now,
+        ];
+        if (in_array('review_started_at', $refundCaseColumns, true)) {
+            $updatePayload['review_started_at'] = $now;
+        }
+
+        DB::table('finance_refund_cases')
+            ->where('case_ref', $caseRef)
+            ->where('status', 'requested')
+            ->update($updatePayload);
+    }
+
+    /**
      * Approve a refund case (moves to 'approved' status).
      */
     public function approveCase(string $caseRef, int $reviewedByUserId): void
     {
         $now = Carbon::now();
+        $refundCaseColumns = DB::getSchemaBuilder()->getColumnListing('finance_refund_cases');
+
+        $updatePayload = [
+            'status'               => 'approved',
+            'reviewed_at'          => $now,
+            'reviewed_by_user_id'  => $reviewedByUserId,
+            'updated_at'           => $now,
+        ];
+        if (in_array('approved_at', $refundCaseColumns, true)) {
+            $updatePayload['approved_at'] = $now;
+        }
+
         DB::table('finance_refund_cases')
             ->where('case_ref', $caseRef)
-            ->where('status', 'requested')
-            ->update([
-                'status'               => 'approved',
-                'reviewed_at'          => $now,
-                'reviewed_by_user_id'  => $reviewedByUserId,
-                'updated_at'           => $now,
-            ]);
+            ->whereIn('status', ['requested', 'under_review'])
+            ->update($updatePayload);
     }
 
     /**
@@ -135,22 +172,103 @@ final class RefundRouter
     public function completeCase(string $caseRef, string $gatewayRefundReference, int $processedByUserId): void
     {
         $now = Carbon::now();
+        $refundCaseColumns = DB::getSchemaBuilder()->getColumnListing('finance_refund_cases');
 
         $case = DB::table('finance_refund_cases')->where('case_ref', $caseRef)->first();
         if (!$case) {
             return;
         }
 
+        $completePayload = [
+            'status'                  => 'completed',
+            'gateway_refund_reference' => $gatewayRefundReference,
+            'processed_at'            => $now,
+            'completed_at'            => $now,
+            'processed_by_user_id'    => $processedByUserId,
+            'updated_at'              => $now,
+        ];
+
         DB::table('finance_refund_cases')
             ->where('case_ref', $caseRef)
-            ->update([
-                'status'                  => 'completed',
-                'gateway_refund_reference' => $gatewayRefundReference,
-                'processed_at'            => $now,
-                'completed_at'            => $now,
-                'processed_by_user_id'    => $processedByUserId,
-                'updated_at'              => $now,
-            ]);
+            ->update($completePayload);
+
+        $reservation = DB::table('vendor_reservations')->where('id', (int) $case->reservation_id)->first();
+        $offsetMode = 'post_payout_receivable';
+        $offsetAmount = (float) ($case->refund_amount ?? 0);
+        if ($reservation) {
+            $reservationPayoutStatus = strtolower(trim((string) ($reservation->payout_status ?? '')));
+            $hasPayoutSettled = (string) ($reservation->payout_paid_at ?? '') !== '' || $reservationPayoutStatus === 'paid';
+
+            if (!$hasPayoutSettled) {
+                $offsetMode = 'pre_payout_deduction';
+                $currentVendorPayout = (float) ($reservation->vendor_payout_amount ?? 0);
+                $deductedVendorPayout = max(0, round($currentVendorPayout - $offsetAmount, 4));
+
+                DB::table('vendor_reservations')
+                    ->where('id', (int) $case->reservation_id)
+                    ->update([
+                        'vendor_payout_amount' => $deductedVendorPayout,
+                        'payout_status' => $deductedVendorPayout > 0 ? ($reservation->payout_status ?? 'queued') : 'cancelled',
+                        'updated_at' => $now,
+                    ]);
+
+                $batchItemId = (int) ($reservation->payout_batch_item_id ?? 0);
+                if ($batchItemId > 0 && DB::getSchemaBuilder()->hasTable('finance_payout_batch_items')) {
+                    $batchItem = DB::table('finance_payout_batch_items')->where('id', $batchItemId)->first();
+                    if ($batchItem) {
+                        $updatedItemNet = max(0, round(((float) ($batchItem->net_payout_amount ?? 0)) - $offsetAmount, 4));
+                        DB::table('finance_payout_batch_items')
+                            ->where('id', $batchItemId)
+                            ->update(['net_payout_amount' => $updatedItemNet, 'updated_at' => $now]);
+
+                        if (DB::getSchemaBuilder()->hasTable('finance_payout_batches')) {
+                            $batchId = (int) ($batchItem->batch_id ?? 0);
+                            if ($batchId > 0) {
+                                $updatedBatchNet = max(0, round(((float) (DB::table('finance_payout_batches')->where('id', $batchId)->value('net_payout_amount') ?? 0)) - $offsetAmount, 4));
+                                DB::table('finance_payout_batches')
+                                    ->where('id', $batchId)
+                                    ->update(['net_payout_amount' => $updatedBatchNet, 'updated_at' => $now]);
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Payout already settled: this refund becomes a receivable hold against next payout cycle.
+                DB::table('vendor_reservations')
+                    ->where('id', (int) $case->reservation_id)
+                    ->update([
+                        'payout_status' => 'on_hold',
+                        'updated_at' => $now,
+                    ]);
+            }
+        }
+
+        $offsetUpdatePayload = ['updated_at' => $now];
+        if (in_array('offset_mode', $refundCaseColumns, true)) {
+            $offsetUpdatePayload['offset_mode'] = $offsetMode;
+        }
+        if (in_array('offset_amount', $refundCaseColumns, true)) {
+            $offsetUpdatePayload['offset_amount'] = $offsetAmount;
+        }
+        if (in_array('offset_applied_at', $refundCaseColumns, true)) {
+            $offsetUpdatePayload['offset_applied_at'] = $now;
+        }
+
+        DB::table('finance_refund_cases')
+            ->where('case_ref', $caseRef)
+            ->update($offsetUpdatePayload);
+
+        $hasOtherOpen = DB::table('finance_refund_cases')
+            ->where('reservation_id', (int) $case->reservation_id)
+            ->whereNotIn('status', ['completed', 'rejected'])
+            ->where('case_ref', '!=', $caseRef)
+            ->exists();
+
+        if (!$hasOtherOpen) {
+            DB::table('vendor_reservations')
+                ->where('id', (int) $case->reservation_id)
+                ->update(['has_refund_case' => false, 'updated_at' => $now]);
+        }
 
         $this->ledger->append([
             'event_type'       => LedgerWriter::EVT_REFUND_COMPLETED,
@@ -173,15 +291,22 @@ final class RefundRouter
     public function rejectCase(string $caseRef, string $resolutionNotes, int $reviewedByUserId): void
     {
         $now = Carbon::now();
+        $refundCaseColumns = DB::getSchemaBuilder()->getColumnListing('finance_refund_cases');
+
+        $updatePayload = [
+            'status'              => 'rejected',
+            'reviewed_at'         => $now,
+            'reviewed_by_user_id' => $reviewedByUserId,
+            'resolution_notes'    => $resolutionNotes,
+            'updated_at'          => $now,
+        ];
+        if (in_array('rejected_at', $refundCaseColumns, true)) {
+            $updatePayload['rejected_at'] = $now;
+        }
+
         DB::table('finance_refund_cases')
             ->where('case_ref', $caseRef)
-            ->update([
-                'status'              => 'rejected',
-                'reviewed_at'         => $now,
-                'reviewed_by_user_id' => $reviewedByUserId,
-                'resolution_notes'    => $resolutionNotes,
-                'updated_at'          => $now,
-            ]);
+            ->update($updatePayload);
 
         // Clear the flag only if no other open refund cases exist
         $case = DB::table('finance_refund_cases')->where('case_ref', $caseRef)->first();

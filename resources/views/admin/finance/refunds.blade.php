@@ -84,12 +84,17 @@
           <th>Amount</th>
           <th>Type</th>
           <th>Status</th>
+          <th>Timeline / SLA</th>
           <th>Created</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         @forelse($cases ?? [] as $case)
+        @php
+          $isTerminal = in_array((string) ($case->status ?? ''), ['completed','rejected'], true);
+          $isEscalated = !$isTerminal && ((string) ($case->sla_escalated_at ?? '') !== '' || ((string) ($case->sla_due_at ?? '') !== '' && now()->greaterThan($case->sla_due_at)));
+        @endphp
         <tr>
           <td style="font-weight:700;font-size:.78rem;">{{ $case->case_ref }}</td>
           <td>{{ $case->reservation_id }}</td>
@@ -102,21 +107,40 @@
           <td style="font-weight:700;font-family:monospace;">{{ number_format($case->refund_amount,2) }} {{ $case->refund_currency ?? '' }}</td>
           <td><span class="chip chip-grey">{{ $case->refund_type }}</span></td>
           <td><span class="chip {{ $statusColors[$case->status] ?? 'chip-grey' }}">{{ str_replace('_',' ',$case->status) }}</span></td>
+          <td style="font-size:.74rem;white-space:nowrap;">
+            Requested: {{ $case->created_at ?? '—' }}<br>
+            Review: {{ $case->review_started_at ?? '—' }}<br>
+            Approved: {{ $case->approved_at ?? '—' }}<br>
+            Completed: {{ $case->completed_at ?? '—' }}<br>
+            Rejected: {{ $case->rejected_at ?? '—' }}
+            @if(($case->sla_due_at ?? null) !== null)
+              <br>SLA Due: {{ $case->sla_due_at }}
+            @endif
+            @if($isEscalated)
+              <br><span class="chip chip-err" style="font-size:.68rem;">ESCALATED</span>
+            @endif
+          </td>
           <td style="font-size:.74rem;white-space:nowrap;">{{ $case->created_at }}</td>
           <td>
             <div style="display:flex;gap:5px;flex-wrap:wrap;">
+              @if($case->status === 'requested')
+              <form method="POST" action="/portal/admin/finance/refunds/{{ $case->case_ref }}/review" style="display:inline;" onsubmit="return confirm('Move refund case {{ $case->case_ref }} to under review?')">
+                @csrf
+                <button type="submit" class="btn-warn" style="padding:4px 8px;font-size:.74rem;">Start Review</button>
+              </form>
+              @endif
               @if($case->status === 'requested' || $case->status === 'under_review')
-              <form method="POST" action="/portal/admin/finance/refunds/approve/{{ $case->case_ref }}" style="display:inline;" onsubmit="return confirm('Approve refund case {{ $case->case_ref }}?')">
+              <form method="POST" action="/portal/admin/finance/refunds/{{ $case->case_ref }}/approve" style="display:inline;" onsubmit="return confirm('Approve refund case {{ $case->case_ref }}?')">
                 @csrf
                 <button type="submit" class="btn-ok" style="padding:4px 8px;font-size:.74rem;">Approve</button>
               </form>
-              <form method="POST" action="/portal/admin/finance/refunds/reject/{{ $case->case_ref }}" style="display:inline;">
+              <form method="POST" action="/portal/admin/finance/refunds/{{ $case->case_ref }}/reject" style="display:inline;">
                 @csrf
                 <input type="hidden" name="resolution_notes" class="reject-notes">
                 <button type="button" class="btn-danger" style="padding:4px 8px;font-size:.74rem;" onclick="promptReject(this)">Reject</button>
               </form>
               @elseif($case->status === 'approved')
-              <form method="POST" action="/portal/admin/finance/refunds/complete/{{ $case->case_ref }}" style="display:inline;">
+              <form method="POST" action="/portal/admin/finance/refunds/{{ $case->case_ref }}/complete" style="display:inline;">
                 @csrf
                 <input type="hidden" name="gateway_refund_reference" class="complete-ref">
                 <button type="button" class="btn-primary" style="padding:4px 8px;font-size:.74rem;background:#155f83;" onclick="promptComplete(this)">Mark Complete</button>
@@ -126,7 +150,7 @@
           </td>
         </tr>
         @empty
-        <tr><td colspan="10" style="color:var(--muted);padding:16px;">No refund cases found.</td></tr>
+        <tr><td colspan="11" style="color:var(--muted);padding:16px;">No refund cases found.</td></tr>
         @endforelse
       </tbody>
     </table>

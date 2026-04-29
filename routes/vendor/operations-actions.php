@@ -419,8 +419,7 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
 
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
     $validated = $request->validate([
-        'status' => ['required', Rule::in(['pending', 'confirmed', 'cancelled', 'completed'])],
-        'payment_status' => ['required', Rule::in(['unpaid', 'partially_paid', 'paid', 'refunded'])],
+        'status' => ['required', Rule::in(['pending', 'confirmed', 'checked_in', 'checked_out', 'completed', 'cancelled'])],
     ]);
 
     $reservationRow = DB::table('vendor_reservations')
@@ -432,9 +431,26 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
     }
 
     $requestedStatus = strtolower(trim((string) $validated['status']));
-    $requestedPaymentStatus = strtolower(trim((string) $validated['payment_status']));
     $priorStatus = strtolower(trim((string) ($reservationRow->status ?? 'pending')));
     $priorPaymentStatus = strtolower(trim((string) ($reservationRow->payment_status ?? 'unpaid')));
+    $hasOpenDispute = (bool) ($reservationRow->has_open_dispute ?? false);
+    $hasRefundCase = (bool) ($reservationRow->has_refund_case ?? false);
+
+    $allowedTransitions = [
+        'pending' => ['pending', 'confirmed', 'cancelled'],
+        'confirmed' => ['confirmed', 'checked_in', 'cancelled'],
+        'checked_in' => ['checked_in', 'checked_out'],
+        'checked_out' => ['checked_out', 'completed'],
+        'completed' => ['completed'],
+        'cancelled' => ['cancelled'],
+    ];
+
+    $allowedNextStatuses = $allowedTransitions[$priorStatus] ?? [$priorStatus];
+    if (!in_array($requestedStatus, $allowedNextStatuses, true)) {
+        return back()->withErrors([
+            'profile' => 'Invalid timeline step. Move booking status in sequence: confirmed -> checked-in -> checked-out -> completed.',
+        ]);
+    }
 
     $paymentGateway = strtolower(trim((string) ($reservationRow->payment_gateway ?? '')));
     $onlineGatewayProviders = ['stripe', 'bml', 'mib'];
@@ -442,46 +458,50 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
         return $paymentGateway !== '' && str_contains($paymentGateway, $provider);
     });
 
-    if ($requestedPaymentStatus === 'paid' && $isOnlineGatewayReservation) {
-        return back()->withErrors([
-            'profile' => 'Online gateway payments are marked paid only after gateway verification. Please wait for payment callback confirmation.',
-        ]);
+    if ($isOnlineGatewayReservation) {
+        // Keep gateway-provider guardrail in place; timeline updates do not alter payment state.
     }
 
-    if ($requestedPaymentStatus === 'paid') {
-        workationApplyReservationPaymentEvent($reservationRow, [
-            'event_id' => 'vendor_manual_' . $reservation . '_' . str_replace('.', '', uniqid('', true)),
-            'intent_id' => (string) ($reservationRow->payment_intent_id ?? ''),
-            'reference' => trim((string) ($reservationRow->payment_reference ?? ('MANUAL-' . $reservation))),
-            'status' => 'paid',
-        ]);
+    $isPaidReservation = $priorPaymentStatus === 'paid';
+    $shouldQueuePayout = $requestedStatus === 'completed' && $isPaidReservation && !$hasOpenDispute && !$hasRefundCase;
+    $payoutStatus = strtolower(trim((string) ($reservationRow->payout_status ?? 'queued')));
+    if ($requestedStatus === 'completed' && (!$isPaidReservation || $hasOpenDispute || $hasRefundCase)) {
+        $payoutStatus = 'on_hold';
+    } elseif ($shouldQueuePayout && in_array($payoutStatus, ['', 'queued', 'on_hold'], true)) {
+        $payoutStatus = 'queued';
     }
 
     DB::table('vendor_reservations')
         ->where('id', $reservation)
         ->where('vendor_user_id', $vendorUserId)
-        ->update([
+        ->update(array_filter([
             'status' => $requestedStatus,
-            'payment_status' => $requestedPaymentStatus,
-            'payment_collected_at' => $requestedPaymentStatus === 'paid'
-                ? (($reservationRow->payment_collected_at ?? null) ?: now())
-                : ($requestedPaymentStatus === 'unpaid' ? null : ($reservationRow->payment_collected_at ?? null)),
-            'payment_verified_at' => $requestedPaymentStatus === 'paid'
-                ? (($reservationRow->payment_verified_at ?? null) ?: now())
-                : ($requestedPaymentStatus === 'unpaid' ? null : ($reservationRow->payment_verified_at ?? null)),
+            'payout_status' => $payoutStatus,
+            'payout_expected_at' => $shouldQueuePayout ? (($reservationRow->payout_expected_at ?? null) ?: now()->addDays(7)) : ($reservationRow->payout_expected_at ?? null),
             'updated_at' => now(),
-        ]);
+        ], static fn ($value) => $value !== null));
 
     $updatedRow = DB::table('vendor_reservations')->where('id', $reservation)->first();
     if ($updatedRow) {
         $bookingRef = '#' . (int) ($updatedRow->id ?? $reservation);
-        $subject = 'Reservation Updated – Booking ' . $bookingRef;
+        $subject = 'Reservation Timeline Updated – Booking ' . $bookingRef;
+
+        $timelineMessage = 'Timeline: ' . strtoupper($priorStatus) . ' -> ' . strtoupper($requestedStatus);
+        $payoutTimeline = 'Payout Timeline: ' . strtoupper((string) ($updatedRow->payout_status ?? 'queued'));
+        if ((bool) ($updatedRow->has_open_dispute ?? false)) {
+            $payoutTimeline .= ' (DISPUTE HOLD)';
+        }
+        if ((bool) ($updatedRow->has_refund_case ?? false)) {
+            $payoutTimeline .= ' (REFUND HOLD)';
+        }
+
         $body = implode("\n", [
-            'Reservation update notification:',
+            'Reservation timeline update notification:',
             '',
             'Booking Reference: ' . $bookingRef,
-            'Status: ' . strtoupper($priorStatus) . ' -> ' . strtoupper($requestedStatus),
-            'Payment: ' . strtoupper($priorPaymentStatus) . ' -> ' . strtoupper($requestedPaymentStatus),
+            $timelineMessage,
+            'Payment: ' . strtoupper($priorPaymentStatus) . ' (read-only in vendor portal)',
+            $payoutTimeline,
             'Updated by: Vendor portal',
             'Updated at: ' . now()->format('Y-m-d H:i:s'),
             '',
@@ -492,7 +512,15 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
         workationNotifyReservationStakeholders($updatedRow, $subject, $body);
     }
 
-    return back()->with('portal_notice', 'Reservation status updated.');
+    if ($shouldQueuePayout) {
+        return back()->with('portal_notice', 'Reservation timeline updated. Stay marked completed and payout queued for release window.');
+    }
+
+    if ($requestedStatus === 'completed' && (!$isPaidReservation || $hasOpenDispute || $hasRefundCase)) {
+        return back()->with('portal_notice', 'Reservation timeline updated. Payout remains on hold until payment and dispute/refund checks are cleared.');
+    }
+
+    return back()->with('portal_notice', 'Reservation timeline updated.');
 });
 
 Route::post('/portal/vendor/inquiries/{inquiry}/status', function (Request $request, int $inquiry) {

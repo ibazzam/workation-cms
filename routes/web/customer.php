@@ -184,6 +184,33 @@ Route::get('/customer', function () {
             })
             ->values();
 
+        $latestRefundCaseByReservation = collect();
+        $reservationIds = $reservationRows
+            ->pluck('id')
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->values();
+        if ($reservationIds->isNotEmpty() && Schema::hasTable('finance_refund_cases')) {
+            $latestRefundCaseByReservation = DB::table('finance_refund_cases')
+                ->whereIn('reservation_id', $reservationIds->all())
+                ->orderByDesc('id')
+                ->get([
+                    'id',
+                    'reservation_id',
+                    'case_ref',
+                    'status',
+                    'created_at',
+                    'review_started_at',
+                    'approved_at',
+                    'completed_at',
+                    'rejected_at',
+                    'sla_due_at',
+                    'sla_escalated_at',
+                ])
+                ->unique('reservation_id')
+                ->keyBy('reservation_id');
+        }
+
         $propertyNamesById = collect();
         $reservationPropertyIds = $reservationRows
             ->pluck('vendor_property_id')
@@ -225,11 +252,17 @@ Route::get('/customer', function () {
             return strtolower((string) ($row->payment_status ?? '')) === 'paid';
         })->count();
 
-        $categorized = $reservationRows->map(function ($row) use ($propertyNamesById, $categoryMeta) {
+        $categorized = $reservationRows->map(function ($row) use ($propertyNamesById, $categoryMeta, $latestRefundCaseByReservation) {
             $notes = json_decode((string) ($row->notes ?? ''), true);
             if (!is_array($notes)) {
                 $notes = [];
             }
+
+            $refundCase = $latestRefundCaseByReservation->get((int) ($row->id ?? 0));
+            $refundStatus = strtolower(trim((string) (($refundCase->status ?? '') ?: ($notes['refund_status'] ?? ''))));
+            $isOpenRefundTimeline = in_array($refundStatus, ['requested', 'under_review', 'approved'], true);
+            $isRefundEscalated = ($refundCase && isset($refundCase->sla_escalated_at) && (string) $refundCase->sla_escalated_at !== '')
+                || (($refundCase && isset($refundCase->sla_due_at) && (string) $refundCase->sla_due_at !== '' && now()->greaterThan($refundCase->sla_due_at)) && in_array($refundStatus, ['requested', 'under_review', 'approved'], true));
 
             $propertyId = (int) ($row->vendor_property_id ?? 0);
             $propertyRow = $propertyNamesById->get($propertyId);
@@ -266,6 +299,16 @@ Route::get('/customer', function () {
                 'end_at' => $row->end_at ? Carbon::parse((string) $row->end_at)->format('Y-m-d') : '-',
                 'status' => strtoupper(trim((string) ($row->status ?? 'pending'))),
                 'payment_status' => strtoupper(trim((string) ($row->payment_status ?? 'unpaid'))),
+                'refund_case_ref' => strtoupper(trim((string) ($refundCase->case_ref ?? ($notes['refund_case_ref'] ?? '')))),
+                'refund_status' => strtoupper($refundStatus),
+                'refund_open_timeline' => $isOpenRefundTimeline,
+                'refund_requested_at' => $refundCase && isset($refundCase->created_at) ? (string) ($refundCase->created_at ?? '') : '',
+                'refund_review_started_at' => $refundCase && isset($refundCase->review_started_at) ? (string) ($refundCase->review_started_at ?? '') : '',
+                'refund_approved_at' => $refundCase && isset($refundCase->approved_at) ? (string) ($refundCase->approved_at ?? '') : '',
+                'refund_completed_at' => $refundCase && isset($refundCase->completed_at) ? (string) ($refundCase->completed_at ?? '') : '',
+                'refund_rejected_at' => $refundCase && isset($refundCase->rejected_at) ? (string) ($refundCase->rejected_at ?? '') : '',
+                'refund_sla_due_at' => $refundCase && isset($refundCase->sla_due_at) ? (string) ($refundCase->sla_due_at ?? '') : '',
+                'refund_sla_escalated' => $isRefundEscalated,
                 'total_amount' => (float) ($row->total_amount ?? 0),
                 'currency' => strtoupper(trim((string) ($row->currency ?? 'MVR'))),
                 'created_at' => $row->created_at ? Carbon::parse((string) $row->created_at)->format('Y-m-d') : '-',

@@ -64,13 +64,34 @@ Route::middleware('web')->group(function (): void {
                 'frc.status',
                 'frc.gateway_refund_reference', // INTERNAL
                 'frc.reviewed_at',
+                'frc.review_started_at',
+                'frc.approved_at',
                 'frc.completed_at',
+                'frc.rejected_at',
                 'frc.resolution_notes',
+                'frc.offset_mode',
+                'frc.offset_amount',
+                'frc.offset_applied_at',
+                'frc.sla_due_at',
+                'frc.sla_escalated_at',
                 'frc.created_at',
                 'vendors.name as vendor_name',
                 'vendors.email as vendor_email',
                 'reviewers.name as reviewed_by_name',
             ]);
+
+            $now = now();
+            $cases->each(static function ($case) use ($now): void {
+                if (in_array((string) ($case->status ?? ''), ['completed', 'rejected'], true)) {
+                    return;
+                }
+                if (($case->sla_due_at ?? null) !== null && ($case->sla_escalated_at ?? null) === null && $now->greaterThan($case->sla_due_at)) {
+                    DB::table('finance_refund_cases')
+                        ->where('id', (int) ($case->id ?? 0))
+                        ->update(['sla_escalated_at' => $now, 'updated_at' => $now]);
+                    $case->sla_escalated_at = $now;
+                }
+            });
         }
 
         return view('admin.finance.refunds', [
@@ -119,6 +140,20 @@ Route::middleware('web')->group(function (): void {
     });
 
     // ── POST /portal/admin/finance/refunds/{caseRef}/approve ─────────────────
+    Route::post('/portal/admin/finance/refunds/{caseRef}/review', function (Request $request, string $caseRef): mixed {
+        $user = $request->session()->get('portal_user');
+        if (!$user || !in_array($user['portal_role'] ?? '', ['ADMIN_SUPER', 'ADMIN_FINANCE', 'ADMIN_CARE'], true)) {
+            return response()->json(['error' => 'Access denied.'], 403);
+        }
+
+        $ledger = new LedgerWriter();
+        $router = new RefundRouter($ledger);
+        $router->startReview($caseRef, (int) ($user['id'] ?? 0));
+
+        return redirect('/portal/admin/finance/refunds')->with('success', "Refund case {$caseRef} moved to under review.");
+    });
+
+    // ── POST /portal/admin/finance/refunds/{caseRef}/approve ─────────────────
     Route::post('/portal/admin/finance/refunds/{caseRef}/approve', function (Request $request, string $caseRef): mixed {
         $user = $request->session()->get('portal_user');
         if (!$user || !in_array($user['portal_role'] ?? '', ['ADMIN_SUPER', 'ADMIN_FINANCE'], true)) {
@@ -147,7 +182,12 @@ Route::middleware('web')->group(function (): void {
         $router = new RefundRouter($ledger);
         $router->completeCase($caseRef, $validated['gateway_refund_reference'], (int) ($user['id'] ?? 0));
 
-        return redirect('/portal/admin/finance/refunds')->with('success', "Refund case {$caseRef} completed.");
+        $offsetMode = (string) (DB::table('finance_refund_cases')->where('case_ref', $caseRef)->value('offset_mode') ?? 'post_payout_receivable');
+        $message = $offsetMode === 'pre_payout_deduction'
+            ? "Refund case {$caseRef} completed with pre-payout deduction applied."
+            : "Refund case {$caseRef} completed with post-payout receivable adjustment applied.";
+
+        return redirect('/portal/admin/finance/refunds')->with('success', $message);
     });
 
     // ── POST /portal/admin/finance/refunds/{caseRef}/reject ──────────────────

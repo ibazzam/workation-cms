@@ -197,6 +197,99 @@ if (!function_exists('workationPaymentSuccessReturnUrl')) {
     }
 }
 
+    if (!function_exists('workationCreateBmlConnectTransaction')) {
+        function workationCreateBmlConnectTransaction(array $context): ?array
+        {
+            $gatewayKey = trim((string) ($context['gateway'] ?? ''));
+            $gatewayConfig = CheckoutPaymentRouter::gatewayConfig($gatewayKey);
+            $apiKey = trim((string) ($gatewayConfig['api_key'] ?? ''));
+            $appId = trim((string) ($gatewayConfig['app_id'] ?? ''));
+            $mode = strtolower(trim((string) ($gatewayConfig['mode'] ?? 'production')));
+
+            if ($apiKey === '' || $appId === '') {
+                return null;
+            }
+
+            $reservationId = (int) ($context['reservation_id'] ?? 0);
+            $intentId = trim((string) ($context['intent_id'] ?? ''));
+            $amount = max(0, (float) ($context['amount'] ?? 0));
+            $currency = strtoupper(trim((string) ($context['currency'] ?? 'MVR')));
+            $redirectUrl = trim((string) ($context['redirect_url'] ?? ''));
+
+            if ($reservationId <= 0 || $intentId === '' || $redirectUrl === '' || $amount <= 0) {
+                return null;
+            }
+
+            // BML Connect amount is in cents/laars (1.00 MVR = 100 laars).
+            $amountInCents = (int) round($amount * 100);
+            if ($amountInCents <= 0) {
+                return null;
+            }
+
+            // Signature: sha1("amount={amount}&currency={currency}&apiKey={apiKey}")
+            $signature = sha1('amount=' . $amountInCents . '&currency=' . $currency . '&apiKey=' . $apiKey);
+
+            $baseUrl = $mode === 'sandbox'
+                ? 'https://api.uat.merchants.bankofmaldives.com.mv/public/'
+                : 'https://api.merchants.bankofmaldives.com.mv/public/';
+
+            $requestBody = [
+                'currency'   => $currency,
+                'amount'     => $amountInCents,
+                'redirectUrl' => $redirectUrl,
+                'localId'    => 'WRK-' . $reservationId . '-' . strtoupper(substr(md5($intentId), 0, 8)),
+                'appId'      => $appId,
+                'apiVersion' => '2.0',
+                'appVersion' => 'workation-bml-connect',
+                'signMethod' => 'sha1',
+                'signature'  => $signature,
+            ];
+
+            try {
+                $response = Http::withHeaders([
+                    'Authorization' => $apiKey,
+                    'Accept'        => 'application/json',
+                ])->asJson()->post($baseUrl . 'transactions', $requestBody);
+
+                if (!$response->successful()) {
+                    Log::warning('BML Connect transaction creation failed', [
+                        'reservation_id' => $reservationId,
+                        'gateway'        => $gatewayKey,
+                        'status'         => $response->status(),
+                        'body'           => $response->body(),
+                    ]);
+                    return null;
+                }
+
+                $data = $response->json();
+                if (!is_array($data) || empty($data['url'])) {
+                    Log::warning('BML Connect transaction response missing URL', [
+                        'reservation_id' => $reservationId,
+                        'gateway'        => $gatewayKey,
+                        'data'           => $data,
+                    ]);
+                    return null;
+                }
+
+                Log::info('BML Connect transaction created', [
+                    'reservation_id' => $reservationId,
+                    'gateway'        => $gatewayKey,
+                    'transaction_id' => $data['id'] ?? null,
+                    'state'          => $data['state'] ?? null,
+                ]);
+
+                return $data;
+            } catch (\Throwable $exception) {
+                Log::warning('BML Connect transaction request exception', [
+                    'reservation_id' => $reservationId,
+                    'gateway'        => $gatewayKey,
+                    'error'          => $exception->getMessage(),
+                ]);
+                return null;
+            }
+        }
+    }
+
 if (!function_exists('workationVerifyStripeWebhookSignature')) {
     function workationVerifyStripeWebhookSignature(string $rawPayload, ?string $signatureHeader, string $secret, int $toleranceSeconds = 300): bool
     {
@@ -336,6 +429,29 @@ Route::post('/booking/reserve', function (Request $request) {
     $bookingEndExclusive = $checkout->copy()->startOfDay();
 
     $vendorUserId = workationResolvePropertyVendorUserId($propertyRow);
+
+    if (Schema::hasTable('vendor_reservations')) {
+        $existingReservationQuery = DB::table('vendor_reservations')
+            ->where('vendor_user_id', $vendorUserId)
+            ->where('vendor_property_id', (int) ($propertyRow->id ?? 0))
+            ->whereDate('start_at', $bookingStart->toDateString())
+            ->whereDate('end_at', $bookingEndExclusive->toDateString())
+            ->where('customer_email', Str::lower(trim((string) ($payload['primary_email'] ?? ''))))
+            ->whereNotIn('status', ['cancelled', 'rejected', 'expired', 'failed'])
+            ->orderByDesc('id');
+
+        if (Schema::hasColumn('vendor_reservations', 'payment_status')) {
+            $existingReservationQuery->where('payment_status', '!=', 'paid');
+        }
+
+        $existingReservation = $existingReservationQuery
+            ->where('notes', 'like', '%"room_id":' . (int) ($roomRow->id ?? 0) . '%')
+            ->first(['id']);
+
+        if ($existingReservation) {
+            return redirect('/booking/checkout/' . (int) $existingReservation->id . '/transfer');
+        }
+    }
 
     $slotAvailability = workationSlotAvailabilityCheck(
         $vendorUserId,
@@ -505,6 +621,8 @@ Route::post('/booking/reserve', function (Request $request) {
                 'room_id' => (int) $roomRow->id,
                 'room_name' => (string) ($roomRow->name ?? 'Room'),
                 'adults' => $adults,
+                'service_start_date' => $checkin->toDateString(),
+                'service_end_date' => $checkout->toDateString(),
                 'children' => $children,
                 'primary_first_name' => $primaryFirstName,
                 'primary_last_name' => $primaryLastName,
@@ -1946,7 +2064,22 @@ Route::post('/booking/checkout/{reservation}/transfer', function (Request $reque
             'updated_at' => now(),
         ]);
 
-    return redirect('/booking/checkout/' . $reservation);
+    $checkoutQuery = [];
+    $checkin = trim((string) ($notes['service_start_date'] ?? ''));
+    $checkout = trim((string) ($notes['service_end_date'] ?? ''));
+    if ($checkin !== '') {
+        $checkoutQuery['checkin'] = $checkin;
+    }
+    if ($checkout !== '') {
+        $checkoutQuery['checkout'] = $checkout;
+    }
+
+    $redirectUrl = '/booking/checkout/' . $reservation;
+    if ($checkoutQuery !== []) {
+        $redirectUrl .= '?' . http_build_query($checkoutQuery, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    return redirect($redirectUrl);
 });
 
 Route::post('/booking/checkout/{reservation}/payment-intent', function (Request $request, int $reservation) {
@@ -2061,6 +2194,29 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         }
     }
 
+        // BML Connect: create a per-transaction URL via the BML Connect API.
+        // The redirectUrl for BML is the browser return point after the customer pays.
+        $bmlTransaction = null;
+        if ($provider === 'bml') {
+            $bmlRedirectUrl = url('/booking/payment/webhooks/' . rawurlencode((string) ($intent['gateway'] ?? 'bml_mvr'))
+                . '?reservation_id=' . $reservation
+                . '&intent_id=' . rawurlencode((string) ($intent['intent_id'] ?? '')));
+            $bmlTransaction = workationCreateBmlConnectTransaction([
+                'gateway'        => (string) ($intent['gateway'] ?? ''),
+                'reservation_id' => $reservation,
+                'intent_id'      => (string) ($intent['intent_id'] ?? ''),
+                'amount'         => (float) ($intent['amount'] ?? 0),
+                'currency'       => (string) ($intent['currency'] ?? ''),
+                'redirect_url'   => $bmlRedirectUrl,
+            ]);
+
+            if (is_array($bmlTransaction)) {
+                $intent['bml_transaction_id'] = (string) ($bmlTransaction['id'] ?? '');
+                $intent['bml_transaction_state'] = (string) ($bmlTransaction['state'] ?? '');
+                $intent['checkout_url'] = (string) ($bmlTransaction['url'] ?? '');
+            }
+        }
+
     $settlement = ReservationSettlementCalculator::calculate(
         (float) ($intent['amount'] ?? 0),
         (string) ($intent['gateway'] ?? ''),
@@ -2107,6 +2263,10 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
     if ($provider === 'stripe' && is_array($stripeSession) && $checkoutUrl !== '') {
         return redirect()->away($checkoutUrl);
     }
+
+        if ($provider === 'bml' && is_array($bmlTransaction) && $checkoutUrl !== '') {
+            return redirect()->away($checkoutUrl);
+        }
 
     if ($checkoutUrl !== '') {
         if (!filter_var($checkoutUrl, FILTER_VALIDATE_URL)) {
@@ -2375,6 +2535,78 @@ Route::match(['get', 'post'], '/booking/payment/webhooks/{gateway}', function (R
     }
 
     $signature = trim((string) $request->header('X-Workation-Signature', ''));
+
+        // BML Connect server-to-server payment notification.
+        // BML sends a JSON POST with transactionId, localId, state, amount, currency.
+        // The localId is the value we set when creating the transaction (WRK-{id}-{hash}).
+        if (in_array($gateway, ['bml_mvr', 'bml_usd'], true)) {
+            $payload = json_decode($raw, true);
+            if (!is_array($payload)) {
+                return response()->json(['ok' => false, 'message' => 'Invalid BML payload'], 422);
+            }
+
+            // Extract reservation ID from localId (format: WRK-{reservationId}-{hash})
+            $localId = trim((string) ($payload['localId'] ?? ''));
+            $reservationId = 0;
+            if (preg_match('/^WRK-(\d+)-/', $localId, $matches)) {
+                $reservationId = (int) $matches[1];
+            }
+
+            // Fallback: look up by BML transaction ID stored in payment_payload_json
+            if ($reservationId <= 0) {
+                $transactionId = trim((string) ($payload['transactionId'] ?? ($payload['id'] ?? '')));
+                if ($transactionId !== '') {
+                    $reservationId = (int) (DB::table('vendor_reservations')
+                        ->where('payment_payload_json', 'like', '%' . $transactionId . '%')
+                        ->value('id') ?? 0);
+                }
+            }
+
+            if ($reservationId <= 0) {
+                Log::warning('BML Connect webhook: cannot resolve reservation from localId', [
+                    'gateway'   => $gateway,
+                    'local_id'  => $localId,
+                    'payload'   => $payload,
+                ]);
+                return response()->json(['ok' => false, 'message' => 'Reservation not found'], 404);
+            }
+
+            $reservationRow = DB::table('vendor_reservations')->where('id', $reservationId)->first();
+            if (!$reservationRow) {
+                return response()->json(['ok' => false, 'message' => 'Reservation not found'], 404);
+            }
+
+            // Map BML state to internal status.
+            // BML Connect states: INITIATED, CONFIRMED, DECLINED, CANCELLED.
+            $bmlState = strtoupper(trim((string) ($payload['state'] ?? '')));
+            $mappedStatus = match ($bmlState) {
+                'CONFIRMED' => 'paid',
+                'DECLINED'  => 'failed',
+                'CANCELLED' => 'cancelled',
+                default     => 'failed',
+            };
+
+            $transactionId = trim((string) ($payload['transactionId'] ?? ($payload['id'] ?? '')));
+
+            $result = workationApplyReservationPaymentEvent($reservationRow, [
+                'event_id' => 'bml_' . ($transactionId !== '' ? $transactionId : Str::lower(Str::random(16))),
+                'intent_id' => (string) ($reservationRow->payment_intent_id ?? ''),
+                'reference' => $transactionId,
+                'status'    => $mappedStatus,
+                'error'     => $mappedStatus !== 'paid' ? ('BML state: ' . $bmlState) : '',
+            ]);
+
+            Log::info('BML Connect webhook processed', [
+                'reservation_id' => $reservationId,
+                'gateway'        => $gateway,
+                'bml_state'      => $bmlState,
+                'mapped_status'  => $mappedStatus,
+                'transaction_id' => $transactionId,
+            ]);
+
+            return response()->json(['ok' => true, 'result' => $result['status'] ?? 'processed']);
+        }
+
     if (!CheckoutPaymentRouter::verifySignature($gateway, $raw, $signature)) {
         return response()->json(['ok' => false, 'message' => 'Invalid signature'], 401);
     }

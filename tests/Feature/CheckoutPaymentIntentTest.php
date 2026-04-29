@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +13,23 @@ use Tests\TestCase;
 class CheckoutPaymentIntentTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // BML gateways now require api_key + app_id to be considered eligible.
+        Config::set('checkout_payments.gateways.bml_mvr.api_key', 'test-bml-mvr-key');
+        Config::set('checkout_payments.gateways.bml_mvr.app_id', 'test-bml-mvr-app');
+        Config::set('checkout_payments.gateways.bml_usd.api_key', 'test-bml-usd-key');
+        Config::set('checkout_payments.gateways.bml_usd.app_id', 'test-bml-usd-app');
+
+        // Prevent real outbound calls during payment-intent tests.
+        Http::fake([
+            'https://api.merchants.bankofmaldives.com.mv/public/transactions' => Http::response(['message' => 'unauthorized'], 401),
+            'https://api.uat.merchants.bankofmaldives.com.mv/public/transactions' => Http::response(['message' => 'unauthorized'], 401),
+        ]);
+    }
 
     public function test_local_customer_can_use_bml_mvr_gateway(): void
     {

@@ -153,6 +153,17 @@ class CheckoutPaymentRouter
                     continue;
                 }
 
+                    // BML Connect gateways require api_key + app_id (transaction URL is obtained
+                    // server-side via the BML Connect API — there is no static checkout_url).
+                    $isBmlProvider = $providerKey === 'bml';
+                    if ($isBmlProvider) {
+                        $bmlApiKey = trim((string) ($gatewayConfig['api_key'] ?? ''));
+                        $bmlAppId = trim((string) ($gatewayConfig['app_id'] ?? ''));
+                        if ($bmlApiKey === '' || $bmlAppId === '') {
+                            continue;
+                        }
+                    }
+
                 $options[] = [
                     'gateway' => (string) $gatewayKey,
                     'gateway_label' => (string) ($gatewayConfig['label'] ?? Str::headline(str_replace('_', ' ', (string) $gatewayKey))),

@@ -102,7 +102,13 @@ return [
             'label' => env('WORKATION_PAYMENT_BML_MVR_LABEL', 'BML MVR Gateway'),
             'provider' => 'bml',
             'currency' => 'MVR',
-            'mode' => env('WORKATION_PAYMENT_BML_MVR_MODE', 'internal'),
+            // Use 'production' or 'sandbox' for BML Connect environment.
+            'mode' => env('WORKATION_PAYMENT_BML_MVR_MODE', 'production'),
+            // api_key and app_id are the BML Connect merchant credentials.
+            'api_key' => env('WORKATION_PAYMENT_BML_MVR_API_KEY', ''),
+            'app_id' => env('WORKATION_PAYMENT_BML_MVR_APP_ID', ''),
+            // checkout_url is unused for BML Connect (transaction URL is returned by API).
+            // Keep for legacy fallback only.
             'checkout_url' => env('WORKATION_PAYMENT_BML_MVR_CHECKOUT_URL', ''),
             'checkout_signing_secret' => env('WORKATION_PAYMENT_BML_MVR_CHECKOUT_SIGNING_SECRET', $bmlSharedCheckoutSigningSecret),
             'allowed_segments' => ['local_maldivian'],
@@ -113,7 +119,13 @@ return [
             'label' => env('WORKATION_PAYMENT_BML_USD_LABEL', 'BML USD Gateway'),
             'provider' => 'bml',
             'currency' => 'USD',
-            'mode' => env('WORKATION_PAYMENT_BML_USD_MODE', 'internal'),
+            // Use 'production' or 'sandbox' for BML Connect environment.
+            'mode' => env('WORKATION_PAYMENT_BML_USD_MODE', 'production'),
+            // api_key and app_id are the BML Connect merchant credentials.
+            'api_key' => env('WORKATION_PAYMENT_BML_USD_API_KEY', ''),
+            'app_id' => env('WORKATION_PAYMENT_BML_USD_APP_ID', ''),
+            // checkout_url is unused for BML Connect (transaction URL is returned by API).
+            // Keep for legacy fallback only.
             'checkout_url' => env('WORKATION_PAYMENT_BML_USD_CHECKOUT_URL', ''),
             'checkout_signing_secret' => env('WORKATION_PAYMENT_BML_USD_CHECKOUT_SIGNING_SECRET', $bmlSharedCheckoutSigningSecret),
             'allowed_segments' => ['foreign_national'],

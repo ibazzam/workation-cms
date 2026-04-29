@@ -2,7 +2,7 @@
 
 Use this checklist on the platform hosting your live app. If production runs on Render, set these in Render. If production runs on Laravel Cloud, set these in Laravel Cloud.
 
-## Required mode and checkout URL keys
+## Required mode and gateway keys
 
 ```dotenv
 # Stripe
@@ -26,14 +26,16 @@ WORKATION_PAYMENT_MIB_USD_CHECKOUT_SIGNING_SECRET=
 WORKATION_PAYMENT_MIB_USD_WEBHOOK_SECRET=
 
 # BML MVR (local)
-WORKATION_PAYMENT_BML_MVR_MODE=external
-WORKATION_PAYMENT_BML_MVR_CHECKOUT_URL=
+WORKATION_PAYMENT_BML_MVR_MODE=production
+WORKATION_PAYMENT_BML_MVR_API_KEY=
+WORKATION_PAYMENT_BML_MVR_APP_ID=
 WORKATION_PAYMENT_BML_MVR_CHECKOUT_SIGNING_SECRET=
 WORKATION_PAYMENT_BML_MVR_WEBHOOK_SECRET=
 
 # BML USD (foreign)
-WORKATION_PAYMENT_BML_USD_MODE=external
-WORKATION_PAYMENT_BML_USD_CHECKOUT_URL=
+WORKATION_PAYMENT_BML_USD_MODE=production
+WORKATION_PAYMENT_BML_USD_API_KEY=
+WORKATION_PAYMENT_BML_USD_APP_ID=
 WORKATION_PAYMENT_BML_USD_CHECKOUT_SIGNING_SECRET=
 WORKATION_PAYMENT_BML_USD_WEBHOOK_SECRET=
 
@@ -55,7 +57,8 @@ WORKATION_PAYMENT_FX_MVR_PER_USD=15.42
 
 1. Set all required keys in the live environment (do not store secrets in repository).
 2. For external gateways, ensure checkout handoff is configured:
-	- MIB/BML: `*_CHECKOUT_URL` must be set.
+	- MIB: `*_CHECKOUT_URL` must be set.
+	- BML Connect: `*_API_KEY` and `*_APP_ID` must be set. Use `*_MODE=production` for live and `*_MODE=sandbox` for UAT.
 	- Stripe: set either `WORKATION_PAYMENT_STRIPE_SECRET_KEY` (native session) or `WORKATION_PAYMENT_STRIPE_CHECKOUT_URL` (custom handoff).
 3. Redeploy/restart so Laravel loads updated environment values.
 4. Clear cached configuration:
@@ -73,7 +76,8 @@ php artisan optimize:clear
 
 - Never paste live API secrets into chat.
 - Use distinct keys for staging vs production.
-- If MIB/BML is external but missing checkout URL, checkout is blocked by design.
+- If MIB is external but missing checkout URL, checkout is blocked by design.
+- If BML Connect is missing API key or App ID, BML checkout options are hidden by design.
 - Stripe can run without a checkout URL when `WORKATION_PAYMENT_STRIPE_SECRET_KEY` is set.
 
 ## Stripe key mapping (important)
@@ -107,9 +111,9 @@ In this project:
 
 If BML provides one credential base for both currencies:
 
-1. Keep gateway endpoints separate:
-	- `WORKATION_PAYMENT_BML_MVR_CHECKOUT_URL` for local MVR flow.
-	- `WORKATION_PAYMENT_BML_USD_CHECKOUT_URL` for foreign USD flow.
+1. Keep gateway credentials separate by flow:
+	- `WORKATION_PAYMENT_BML_MVR_API_KEY` + `WORKATION_PAYMENT_BML_MVR_APP_ID` for local MVR flow.
+	- `WORKATION_PAYMENT_BML_USD_API_KEY` + `WORKATION_PAYMENT_BML_USD_APP_ID` for foreign USD flow.
 
 2. You can use shared secrets for both gateways:
 	- Set `WORKATION_PAYMENT_BML_CHECKOUT_SIGNING_SECRET` once.
@@ -128,9 +132,10 @@ You now have two BML apps in Connect:
 
 Use them like this:
 
-1. Keep separate checkout endpoints in ENV:
-	- WORKATION_PAYMENT_BML_MVR_CHECKOUT_URL = MVR gateway endpoint
-	- WORKATION_PAYMENT_BML_USD_CHECKOUT_URL = USD gateway endpoint
+1. Set app credentials in ENV:
+	- WORKATION_PAYMENT_BML_MVR_API_KEY and WORKATION_PAYMENT_BML_MVR_APP_ID
+	- WORKATION_PAYMENT_BML_USD_API_KEY and WORKATION_PAYMENT_BML_USD_APP_ID
+	- MODE: use `production` for live, `sandbox` for testing
 
 2. Register webhook endpoints in BML Connect:
 	- MVR webhook URL: https://www.workation.mv/booking/payment/webhooks/bml_mvr
@@ -146,6 +151,12 @@ Use them like this:
 	- These are bank credentials for your BML integration layer.
 	- Do not commit these values to repository files.
 	- Store in production environment variables or secret manager only.
+
+## Routing behavior (confirmed)
+
+- Local customers continue to route to MVR gateways.
+- Foreign customers continue to route to USD gateways.
+- This behavior is unchanged by BML Connect migration.
 
 # Facebook Vendor Login Production Sign-Off Worksheet
 

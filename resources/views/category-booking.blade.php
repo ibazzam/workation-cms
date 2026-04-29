@@ -603,6 +603,12 @@
     @endphp
 
     <main class="page">
+        @include('partials.booking-process-highlights', [
+            'bookingProcessCurrentStep' => 1,
+            'bookingProcessBackUrl' => '/catalog/' . str_replace('_', '-', strtolower(trim((string) ($categoryKey ?? 'accommodation')))),
+            'bookingProcessNextText' => 'Next step after this page: choose transfer options and continue to payment selection.',
+        ])
+
         @php
             $breadcrumbCategoryUrl = '/catalog/' . str_replace('_', '-', $categoryKey);
         @endphp
@@ -984,10 +990,6 @@
                         </div>
                     </div>
 
-                    <div class="summary">
-                        {{ $categoryKey === 'excursion' ? 'Your selected activity, date, lead guest, quantities, and additional request are carried directly into checkout. You can revise date and guest counts before final payment.' : 'Service-first checkout logic: core service requirements are captured before payment confirmation to reduce vendor-side revalidation.' }}
-                        Tax: {{ number_format((float) ($pricingConfig['tax_rate'] ?? 16), 2) }}% • Discount: {{ number_format((float) ($pricingConfig['discount_percent'] ?? 0), 2) }}%
-                    </div>
                     <p class="error-text" data-service-date-error style="display:none; margin:10px 0 0;"></p>
 
                     <div class="actions">

@@ -457,11 +457,17 @@ class ReservationPricingPolicy
             overrideTotal: Arr::get($payload, 'transfer_charge_override')
         );
 
-        // Apply 8% GST to transfer charges if transfer is selected
+        // Apply 8% GST to transfer charges if transfer is selected.
+        // For inclusive pricing, extract GST backward from the transfer total.
+        // For exclusive pricing, add GST on top of transfer total.
         $transferGstAmount = 0.0;
         if ($transferConfig['transfer_charge_total'] > 0 && $transferOption !== '') {
             $transferGstRate = 8.0;
-            $transferGstAmount = round($transferConfig['transfer_charge_total'] * ($transferGstRate / 100), 2);
+            if ($pricesIncludeTax) {
+                $transferGstAmount = round($transferConfig['transfer_charge_total'] * ($transferGstRate / (100 + $transferGstRate)), 2);
+            } else {
+                $transferGstAmount = round($transferConfig['transfer_charge_total'] * ($transferGstRate / 100), 2);
+            }
             
             // Add transfer GST to tax lines for display
             $taxLines[] = [
@@ -478,7 +484,7 @@ class ReservationPricingPolicy
         }
 
         $invoiceTotalAmount = $pricesIncludeTax
-            ? round($discountedSubtotal + $transferConfig['transfer_charge_total'] + $transferGstAmount, 2)
+            ? round($discountedSubtotal + $transferConfig['transfer_charge_total'], 2)
             : round($discountedSubtotal + $serviceChargeTotal + $totalTaxAmount + $transferConfig['transfer_charge_total'] + $transferGstAmount, 2);
 
         return [

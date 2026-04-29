@@ -255,7 +255,7 @@
     <main class="page">
         @include('partials.booking-process-highlights', [
             'bookingProcessCurrentStep' => 1,
-            'bookingProcessBackUrl' => url()->previous('/'),
+            'bookingProcessBackUrl' => ((int) ($property->id ?? 0) > 0 ? ('/property/' . (int) ($property->id ?? 0)) : '/catalog/accommodation'),
             'bookingProcessNextText' => 'Next step after this page: choose transfer options and continue to payment selection.',
         ])
 

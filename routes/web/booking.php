@@ -452,6 +452,7 @@ Route::post('/booking/reserve', function (Request $request) {
         'property_transfer_options' => $transferOptions,
         'transfer_charge_override' => $transferChargeOverride,
         'vendor_tax_overrides' => $vendorTaxOverrides,
+        'property_currency' => strtoupper(trim((string) ($roomRow->currency ?? $propertyRow->currency ?? 'MVR'))),
         // Vendor-managed selling prices are inclusive; tax/service/government charges are extracted backward for display.
         'prices_include_tax' => true,
     ]);
@@ -1251,6 +1252,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'property_transfer_options' => $transferOptions,
         'transfer_charge_override' => $transferChargeOverride,
         'vendor_tax_overrides' => $vendorTaxOverrides,
+        'property_currency' => strtoupper(trim((string) ($propertyRow->currency ?? 'MVR'))),
         // Vendor-managed selling prices are inclusive; tax/service/government charges are extracted backward for display.
         'prices_include_tax' => true,
     ]);
@@ -1872,6 +1874,7 @@ Route::post('/booking/checkout/{reservation}/transfer', function (Request $reque
         'transfer_option' => $selectedTransferOption,
         'property_transfer_options' => $transferOptions->all(),
         'vendor_tax_overrides' => is_array($notes['vendor_tax_overrides'] ?? null) ? $notes['vendor_tax_overrides'] : [],
+        'property_currency' => strtoupper(trim((string) ($reservationRow->currency ?? 'MVR'))),
         'prices_include_tax' => true,
     ]);
 
@@ -2072,6 +2075,15 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
     $gatewayMode = strtolower(trim((string) ($intent['gateway_mode'] ?? 'internal')));
     $provider = strtolower(trim((string) ($intent['provider'] ?? '')));
 
+    logger()->info('Checkout redirect evaluation', [
+        'reservation_id' => $reservation,
+        'gateway' => (string) ($intent['gateway'] ?? ''),
+        'provider' => $provider,
+        'gateway_mode' => $gatewayMode,
+        'checkout_url_present' => $checkoutUrl !== '',
+        'checkout_url' => $checkoutUrl,
+    ]);
+
     if ($provider === 'stripe' && is_array($stripeSession) && $checkoutUrl !== '') {
         return redirect()->away($checkoutUrl);
     }
@@ -2097,6 +2109,13 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
     }
 
     if ($gatewayMode === 'external') {
+        logger()->warning('External gateway missing checkout URL', [
+            'reservation_id' => $reservation,
+            'gateway' => (string) ($intent['gateway'] ?? ''),
+            'provider' => $provider,
+            'gateway_mode' => $gatewayMode,
+        ]);
+
         return back()->withErrors([
             'payment' => 'Selected payment gateway is configured as external, but its checkout URL is missing. Please contact support to complete payment setup.',
         ]);

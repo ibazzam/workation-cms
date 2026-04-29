@@ -282,7 +282,7 @@
                         @if ($discountAmount > 0)
                             <div class="invoice-row"><span>Discount</span><strong>- {{ $currency }} {{ number_format($discountAmount, 2) }}</strong></div>
                         @endif
-                        <div class="invoice-row"><span>Taxes & fees (included)</span><strong>{{ $currency }} {{ number_format($totalTaxAmount, 2) }}</strong></div>
+                        <div class="invoice-row"><span>Included tax total</span><strong>{{ $currency }} {{ number_format($totalTaxAmount, 2) }}</strong></div>
                         @foreach ($invoiceTaxLines as $taxLine)
                             <div class="invoice-row"><span>{{ (string) ($taxLine['label'] ?? 'Tax') }}</span><strong>{{ $currency }} {{ number_format((float) ($taxLine['amount'] ?? 0), 2) }}</strong></div>
                         @endforeach
@@ -293,6 +293,9 @@
                             <div class="invoice-row"><span>Service charge (included)</span><strong>{{ $currency }} {{ number_format($serviceChargeTotal, 2) }}</strong></div>
                         @endif
                         <div class="invoice-row"><span>Transfer charges</span><strong id="transferChargeDisplay">{{ $currency }} {{ number_format($effectiveTransferAmount, 2) }}</strong></div>
+                        @if ($effectiveTransferAmount > 0)
+                            <div class="fine-print">Transfer charges include additional GST where applicable.</div>
+                        @endif
                         <div class="total"><span>Total</span><span id="invoiceTotalDisplay">{{ $currency }} {{ $total }}</span></div>
                         @if ($discountAmount > 0)
                             <div class="price-save">You've saved {{ $currency }} {{ $savedAmount }} on this booking.</div>

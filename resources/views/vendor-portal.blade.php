@@ -474,9 +474,6 @@
 
         @if ($showProfilePage)
             @include('vendor-portal.partials.profile')
-        @endif
-
-        @if ($showBillingPage || $showProfilePage)
             @include('vendor-portal.partials.billing-settings')
         @endif
 

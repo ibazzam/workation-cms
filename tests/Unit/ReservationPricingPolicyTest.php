@@ -19,6 +19,7 @@ class ReservationPricingPolicyTest extends TestCase
             'nights' => 1,
             'room_count' => 60,
             'guest_residency' => 'foreign_national',
+            'property_currency' => 'USD',
         ]);
 
         $this->assertSame(17.0, (float) $result['tgst_rate_percent']);
@@ -61,6 +62,7 @@ class ReservationPricingPolicyTest extends TestCase
             'nights' => 1,
             'room_count' => 60,
             'guest_residency' => 'foreign_national',
+            'property_currency' => 'USD',
         ]);
 
         $this->assertSame(24.0, (float) $result['green_tax_total']);

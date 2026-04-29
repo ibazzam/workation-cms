@@ -204,7 +204,7 @@
             <p class="sub">Review your prepared reservation and proceed with payment confirmation.</p>
 
             @if ($errors->any())
-                <div style="border:1px solid #f2b8b5; background:#fff5f5; color:#8e1d1d; border-radius:12px; padding:10px 12px; margin:8px 0 12px;">
+                <div id="checkout-error-box" style="border:1px solid #f2b8b5; background:#fff5f5; color:#8e1d1d; border-radius:12px; padding:10px 12px; margin:8px 0 12px;">
                     <ul style="margin:0; padding-left:18px;">
                         @foreach ($errors->all() as $error)
                             <li>{{ $error }}</li>
@@ -435,5 +435,15 @@
             syncPaymentSelection();
         })();
     </script>
+    @if ($errors->any())
+    <script>
+        (function () {
+            const errBox = document.getElementById('checkout-error-box');
+            if (errBox) {
+                errBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        })();
+    </script>
+    @endif
 </body>
 </html>

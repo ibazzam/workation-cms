@@ -425,6 +425,22 @@
             color: #1a3347;
         }
 
+        .property-type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            width: fit-content;
+            border-radius: 999px;
+            border: 1px solid #c6dded;
+            background: #eef7ff;
+            color: #1f4f6b;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            padding: 4px 10px;
+            text-transform: uppercase;
+        }
+
         .property-summary-stars {
             color: #f3a337;
             letter-spacing: 0.08em;
@@ -2625,6 +2641,30 @@
         }
         $description = trim((string) ($property->description ?? ''));
         $listingCategory = strtoupper(str_replace('_', ' ', (string) ($property->listing_category ?? 'ACCOMMODATION')));
+        $rawPropertyType = trim((string) (
+            $propertyDetails['property_type']
+            ?? $propertyDetails['accommodation_type']
+            ?? $property->property_type
+            ?? $property->type
+            ?? ''
+        ));
+        if ($rawPropertyType === '' && strtolower(trim((string) ($property->listing_category ?? ''))) === 'accommodation') {
+            $rawPropertyType = 'accommodation';
+        }
+        $propertyTypeKey = strtolower(str_replace(['-', ' '], '_', $rawPropertyType));
+        $propertyTypeMap = [
+            'hotel' => 'Hotel',
+            'resort' => 'Resort',
+            'guest_house' => 'Guest House',
+            'guesthouse' => 'Guest House',
+            'service_apartment' => 'Service Apartment',
+            'serviced_apartment' => 'Service Apartment',
+            'apartment' => 'Apartment',
+            'accommodation' => 'Accommodation',
+        ];
+        $propertyTypeLabel = $propertyTypeMap[$propertyTypeKey] ?? ($rawPropertyType !== ''
+            ? ucwords(str_replace('_', ' ', $propertyTypeKey))
+            : '');
         $starCount = $ratingValue > 0 ? max(1, min(5, (int) round($ratingValue))) : 4;
         $starString = str_repeat('★', $starCount) . str_repeat('☆', 5 - $starCount);
         $ratingOutOfTen = $ratingValue > 0 ? min(10, $ratingValue * 2) : 0;
@@ -2922,6 +2962,11 @@
                         <h1>{{ (string) ($property->name ?? 'Property') }}</h1>
                         <span class="hero-stars" aria-label="Property stars">{{ $starString }}</span>
                     </div>
+                        @if ($propertyTypeLabel !== '')
+                            <span class="property-type-badge" style="margin-top:6px;display:inline-flex;">
+                                <i class="fa-solid fa-hotel" aria-hidden="true"></i>{{ $propertyTypeLabel }}
+                            </span>
+                        @endif
                     <p class="sub">{{ $locationLine !== '' ? $locationLine : 'Address details will be updated shortly.' }}</p>
                 </div>
                 <div class="hero-cta-wrap">
@@ -3050,8 +3095,15 @@
                     <div class="property-summary-main">
                         <span class="property-summary-stars" aria-label="Star ranking">{{ $starString }}</span>
                         <h1 class="property-summary-title">{{ (string) ($property->name ?? 'Property') }}</h1>
+                        @if ($propertyTypeLabel !== '')
+                            <span class="property-type-badge"><i class="fa-solid fa-hotel" aria-hidden="true"></i>{{ $propertyTypeLabel }}</span>
+                        @endif
                         <div class="property-summary-address">
                             <span>{{ $locationLine !== '' ? $locationLine : 'Address details will be updated shortly.' }}</span>
+                            @if ($propertyTypeLabel !== '')
+                                <span> · </span>
+                                <span>{{ $propertyTypeLabel }}</span>
+                            @endif
                             <span> · </span>
                             <a href="{{ $mapUrl }}" target="_blank" rel="noopener">Map</a>
                         </div>

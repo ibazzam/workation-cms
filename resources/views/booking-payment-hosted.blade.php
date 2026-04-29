@@ -31,6 +31,9 @@
         if (!is_array($paymentPayload)) {
             $paymentPayload = [];
         }
+        $externalHandoff = (bool) ($externalHandoff ?? false);
+        $externalHandoffUrl = trim((string) ($externalHandoffUrl ?? ''));
+        $externalHandoffProvider = trim((string) ($externalHandoffProvider ?? ($paymentPayload['provider_label'] ?? 'Gateway')));
         $gatewayLabel = trim((string) ($paymentPayload['gateway_label'] ?? 'Card Gateway'));
         $paymentCurrency = strtoupper(trim((string) ($reservation->payment_currency ?? $reservation->currency ?? 'MVR')));
         $paymentAmount = number_format((float) ($reservation->payment_amount ?? $reservation->total_amount ?? 0), 2);
@@ -42,13 +45,19 @@
         @include('partials.booking-process-highlights', [
             'bookingProcessCurrentStep' => 4,
             'bookingProcessBackUrl' => '/booking/checkout/' . (int) ($reservation->id ?? 0),
-            'bookingProcessNextText' => 'Final step on this page: submit the payment confirmation and finish the reservation.',
+            'bookingProcessNextText' => $externalHandoff
+                ? 'You can continue to the external gateway or safely return to checkout.'
+                : 'Final step on this page: submit the payment confirmation and finish the reservation.',
         ])
 
         <section class="panel">
-            <p class="eyebrow">Internal Hosted Payment</p>
-            <h1>Secure Payment Confirmation (Simulator)</h1>
-            <p class="sub">This page appears only when the selected gateway is running in internal mode. Live external gateways bypass this screen and redirect directly to the provider checkout page.</p>
+            <p class="eyebrow">{{ $externalHandoff ? 'External Gateway Handoff' : 'Internal Hosted Payment' }}</p>
+            <h1>{{ $externalHandoff ? ('Continue to ' . $externalHandoffProvider . ' Checkout') : 'Secure Payment Confirmation (Simulator)' }}</h1>
+            <p class="sub">
+                {{ $externalHandoff
+                    ? 'Use Continue to open the bank checkout page. If you need to edit details or change payment method, use Back to Checkout.'
+                    : 'This page appears only when the selected gateway is running in internal mode. Live external gateways bypass this screen and redirect directly to the provider checkout page.' }}
+            </p>
 
             <div class="grid">
                 <div class="cell"><span class="k">Property</span><span class="v">{{ (string) ($property->name ?? 'Property') }}</span></div>
@@ -59,12 +68,16 @@
             </div>
 
             <div class="actions">
-                <form method="post" action="/booking/payment/hosted/{{ (int) ($reservation->id ?? 0) }}/complete">
-                    @csrf
-                    <input type="hidden" name="intent_id" value="{{ $intentId }}">
-                    <input type="hidden" name="payment_reference" value="SIM-{{ (int) ($reservation->id ?? 0) }}">
-                    <button class="btn" type="submit">Complete Payment</button>
-                </form>
+                @if ($externalHandoff && $externalHandoffUrl !== '')
+                    <a class="btn" href="{{ $externalHandoffUrl }}" rel="noopener">Continue to {{ $externalHandoffProvider }}</a>
+                @else
+                    <form method="post" action="/booking/payment/hosted/{{ (int) ($reservation->id ?? 0) }}/complete">
+                        @csrf
+                        <input type="hidden" name="intent_id" value="{{ $intentId }}">
+                        <input type="hidden" name="payment_reference" value="SIM-{{ (int) ($reservation->id ?? 0) }}">
+                        <button class="btn" type="submit">Complete Payment</button>
+                    </form>
+                @endif
                 <a class="btn alt" href="/booking/checkout/{{ (int) ($reservation->id ?? 0) }}">Back to Checkout</a>
             </div>
         </section>

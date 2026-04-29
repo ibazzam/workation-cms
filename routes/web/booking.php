@@ -332,6 +332,20 @@ if (!function_exists('workationVerifyStripeWebhookSignature')) {
     }
 }
 
+if (!function_exists('workationIsBmlConnectConfigured')) {
+    function workationIsBmlConnectConfigured(string $gatewayKey): bool
+    {
+        $gatewayConfig = CheckoutPaymentRouter::gatewayConfig($gatewayKey);
+        $mode = strtolower(trim((string) ($gatewayConfig['mode'] ?? '')));
+        $apiKey = trim((string) ($gatewayConfig['api_key'] ?? ''));
+        $appId = trim((string) ($gatewayConfig['app_id'] ?? ''));
+
+        return in_array($mode, ['production', 'sandbox'], true)
+            && $apiKey !== ''
+            && $appId !== '';
+    }
+}
+
 if (!function_exists('workationResolvePropertyVendorUserId')) {
     function workationResolvePropertyVendorUserId(object $propertyRow): int
     {
@@ -2197,7 +2211,7 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         // BML Connect: create a per-transaction URL via the BML Connect API.
         // The redirectUrl for BML is the browser return point after the customer pays.
         $bmlTransaction = null;
-        if ($provider === 'bml') {
+        if ($provider === 'bml' && workationIsBmlConnectConfigured((string) ($intent['gateway'] ?? ''))) {
             $bmlRedirectUrl = url('/booking/payment/webhooks/' . rawurlencode((string) ($intent['gateway'] ?? 'bml_mvr'))
                 . '?reservation_id=' . $reservation
                 . '&intent_id=' . rawurlencode((string) ($intent['intent_id'] ?? '')));
@@ -2264,10 +2278,6 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         return redirect()->away($checkoutUrl);
     }
 
-        if ($provider === 'bml' && is_array($bmlTransaction) && $checkoutUrl !== '') {
-            return redirect()->away($checkoutUrl);
-        }
-
     if ($checkoutUrl !== '') {
         if (!filter_var($checkoutUrl, FILTER_VALIDATE_URL)) {
             logger()->warning('External gateway checkout URL is invalid', [
@@ -2297,6 +2307,10 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         $payload = workationSignGatewayCheckoutPayload($gateway, $payload);
         $query = http_build_query($payload, '', '&', PHP_QUERY_RFC3986);
         $target = $checkoutUrl . (str_contains($checkoutUrl, '?') ? '&' : '?') . $query;
+
+        if (in_array($provider, ['bml', 'mib'], true)) {
+            return redirect('/booking/payment/hosted/' . $reservation . '?intent=' . urlencode((string) ($intent['intent_id'] ?? '')));
+        }
 
         return redirect()->away($target);
     }
@@ -2352,20 +2366,41 @@ Route::get('/booking/payment/hosted/{reservation}', function (Request $request, 
         $successReturnUrl = workationPaymentSuccessReturnUrl($reservation, $provider);
         $cancelReturnUrl = url('/booking/checkout/' . $reservation);
 
-        $redirectPayload = workationBuildGatewayCheckoutPayload($gateway, [
-            'intent_id' => (string) ($reservationRow->payment_intent_id ?? ''),
-            'reservation_id' => $reservation,
-            'amount' => (float) ($reservationRow->payment_amount ?? 0),
-            'currency' => strtoupper(trim((string) ($reservationRow->payment_currency ?? 'MVR'))),
-            'provider' => (string) ($payload['provider'] ?? ''),
-            'return_url' => $successReturnUrl,
-            'cancel_url' => $cancelReturnUrl,
-            'webhook_url' => url('/booking/payment/webhooks/' . $gateway),
-            'customer_email' => (string) ($reservationRow->customer_email ?? ''),
-        ]);
-        $redirectPayload = workationSignGatewayCheckoutPayload($gateway, $redirectPayload);
-        $query = http_build_query($redirectPayload, '', '&', PHP_QUERY_RFC3986);
-        $target = $checkoutUrl . (str_contains($checkoutUrl, '?') ? '&' : '?') . $query;
+        $isBmlConnectIntent = $provider === 'bml' && trim((string) ($payload['bml_transaction_id'] ?? '')) !== '';
+        if ($isBmlConnectIntent) {
+            $target = $checkoutUrl;
+        } else {
+            $redirectPayload = workationBuildGatewayCheckoutPayload($gateway, [
+                'intent_id' => (string) ($reservationRow->payment_intent_id ?? ''),
+                'reservation_id' => $reservation,
+                'amount' => (float) ($reservationRow->payment_amount ?? 0),
+                'currency' => strtoupper(trim((string) ($reservationRow->payment_currency ?? 'MVR'))),
+                'provider' => (string) ($payload['provider'] ?? ''),
+                'return_url' => $successReturnUrl,
+                'cancel_url' => $cancelReturnUrl,
+                'webhook_url' => url('/booking/payment/webhooks/' . $gateway),
+                'customer_email' => (string) ($reservationRow->customer_email ?? ''),
+            ]);
+            $redirectPayload = workationSignGatewayCheckoutPayload($gateway, $redirectPayload);
+            $query = http_build_query($redirectPayload, '', '&', PHP_QUERY_RFC3986);
+            $target = $checkoutUrl . (str_contains($checkoutUrl, '?') ? '&' : '?') . $query;
+        }
+
+        // Bank hosted gateways do not reliably provide a native cancel/back UX like Stripe's hosted checkout.
+        // Show an interstitial handoff page with explicit Continue + Back buttons.
+        if (in_array($provider, ['bml', 'mib'], true)) {
+            $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById((int) ($reservationRow->vendor_property_id ?? 0));
+            $providerLabel = $provider === 'mib' ? 'MIB' : 'BML';
+
+            return view('booking-payment-hosted', [
+                'reservation' => $reservationRow,
+                'property' => $propertyRow,
+                'intentId' => $intentId,
+                'externalHandoff' => true,
+                'externalHandoffUrl' => $target,
+                'externalHandoffProvider' => $providerLabel,
+            ]);
+        }
 
         return redirect()->away($target);
     }
@@ -2421,20 +2456,25 @@ Route::post('/booking/payment/hosted/{reservation}/complete', function (Request 
         $successReturnUrl = workationPaymentSuccessReturnUrl($reservation, $provider);
         $cancelReturnUrl = url('/booking/checkout/' . $reservation);
 
-        $redirectPayload = workationBuildGatewayCheckoutPayload($gateway, [
-            'intent_id' => (string) ($reservationRow->payment_intent_id ?? ''),
-            'reservation_id' => $reservation,
-            'amount' => (float) ($reservationRow->payment_amount ?? 0),
-            'currency' => strtoupper(trim((string) ($reservationRow->payment_currency ?? 'MVR'))),
-            'provider' => (string) ($payload['provider'] ?? ''),
-            'return_url' => $successReturnUrl,
-            'cancel_url' => $cancelReturnUrl,
-            'webhook_url' => url('/booking/payment/webhooks/' . $gateway),
-            'customer_email' => (string) ($reservationRow->customer_email ?? ''),
-        ]);
-        $redirectPayload = workationSignGatewayCheckoutPayload($gateway, $redirectPayload);
-        $query = http_build_query($redirectPayload, '', '&', PHP_QUERY_RFC3986);
-        $target = $checkoutUrl . (str_contains($checkoutUrl, '?') ? '&' : '?') . $query;
+        $isBmlConnectIntent = $provider === 'bml' && trim((string) ($payload['bml_transaction_id'] ?? '')) !== '';
+        if ($isBmlConnectIntent) {
+            $target = $checkoutUrl;
+        } else {
+            $redirectPayload = workationBuildGatewayCheckoutPayload($gateway, [
+                'intent_id' => (string) ($reservationRow->payment_intent_id ?? ''),
+                'reservation_id' => $reservation,
+                'amount' => (float) ($reservationRow->payment_amount ?? 0),
+                'currency' => strtoupper(trim((string) ($reservationRow->payment_currency ?? 'MVR'))),
+                'provider' => (string) ($payload['provider'] ?? ''),
+                'return_url' => $successReturnUrl,
+                'cancel_url' => $cancelReturnUrl,
+                'webhook_url' => url('/booking/payment/webhooks/' . $gateway),
+                'customer_email' => (string) ($reservationRow->customer_email ?? ''),
+            ]);
+            $redirectPayload = workationSignGatewayCheckoutPayload($gateway, $redirectPayload);
+            $query = http_build_query($redirectPayload, '', '&', PHP_QUERY_RFC3986);
+            $target = $checkoutUrl . (str_contains($checkoutUrl, '?') ? '&' : '?') . $query;
+        }
 
         return redirect()->away($target);
     }

@@ -29,7 +29,13 @@ use Laravel\Socialite\Facades\Socialite;
 use Firebase\JWT\JWT;
 use Firebase\JWT\JWK;
 
-Route::get('/customer', function () {
+Route::get('/customer', function (Request $request) {
+    // ── Authentication gate: customer must be logged in ──────────────────────
+    if (!$request->session()->get('portal_customer_authenticated')) {
+        return redirect('/portal/customer/login')->with('error', 'Please log in to access your bookings.');
+    }
+
+
     $customerProperties = collect();
     $customerRoomsByProperty = collect();
     $propertyMediaByProperty = collect();
@@ -637,3 +643,4 @@ Route::post('/customer/bookings/{reservation}/delete', function (Request $reques
 
     return redirect('/customer')->with('portal_notice', 'Booking removed from your portal list.');
 });
+

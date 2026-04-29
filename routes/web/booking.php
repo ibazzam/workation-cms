@@ -2313,11 +2313,20 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         $query = http_build_query($payload, '', '&', PHP_QUERY_RFC3986);
         $target = $checkoutUrl . (str_contains($checkoutUrl, '?') ? '&' : '?') . $query;
 
-        if (in_array($provider, ['bml', 'mib'], true)) {
-            return redirect('/booking/payment/hosted/' . $reservation . '?intent=' . urlencode((string) ($intent['intent_id'] ?? '')));
-        }
-
         return redirect()->away($target);
+    }
+
+    if (!app()->environment('testing') && in_array($provider, ['bml', 'mib'], true)) {
+        logger()->warning('Bank gateway missing checkout URL; simulator fallback blocked', [
+            'reservation_id' => $reservation,
+            'gateway' => (string) ($intent['gateway'] ?? ''),
+            'provider' => $provider,
+            'gateway_mode' => $gatewayMode,
+        ]);
+
+        return back()->withErrors([
+            'payment' => 'Selected bank gateway is not fully configured (missing checkout URL). Please contact support to complete gateway setup.',
+        ]);
     }
 
     if ($gatewayMode === 'external') {
@@ -2356,6 +2365,7 @@ Route::get('/booking/payment/hosted/{reservation}', function (Request $request, 
         $payload = [];
     }
     $gatewayMode = strtolower(trim((string) ($payload['gateway_mode'] ?? 'internal')));
+    $provider = strtolower(trim((string) ($payload['provider'] ?? '')));
     $checkoutUrl = trim((string) ($payload['checkout_url'] ?? ''));
     if ($checkoutUrl !== '' && !preg_match('/^https?:\/\//i', $checkoutUrl)) {
         $checkoutUrl = 'https://' . ltrim($checkoutUrl, '/');
@@ -2367,7 +2377,6 @@ Route::get('/booking/payment/hosted/{reservation}', function (Request $request, 
         }
 
         $gateway = (string) ($payload['gateway'] ?? $reservationRow->payment_gateway ?? '');
-        $provider = strtolower(trim((string) ($payload['provider'] ?? '')));
         $successReturnUrl = workationPaymentSuccessReturnUrl($reservation, $provider);
         $cancelReturnUrl = url('/booking/checkout/' . $reservation);
 
@@ -2392,6 +2401,11 @@ Route::get('/booking/payment/hosted/{reservation}', function (Request $request, 
         }
 
         return redirect()->away($target);
+    }
+
+    if (!app()->environment('testing') && in_array($provider, ['bml', 'mib'], true)) {
+        return redirect('/booking/checkout/' . $reservation)
+            ->withErrors(['payment' => 'Selected bank gateway is not fully configured (missing checkout URL). Please contact support to complete gateway setup.']);
     }
 
     if ($gatewayMode === 'external') {
@@ -2431,6 +2445,7 @@ Route::post('/booking/payment/hosted/{reservation}/complete', function (Request 
     if (!is_array($payload)) {
         $payload = [];
     }
+    $provider = strtolower(trim((string) ($payload['provider'] ?? '')));
     $checkoutUrl = trim((string) ($payload['checkout_url'] ?? ''));
     if ($checkoutUrl !== '' && !preg_match('/^https?:\/\//i', $checkoutUrl)) {
         $checkoutUrl = 'https://' . ltrim($checkoutUrl, '/');
@@ -2466,6 +2481,11 @@ Route::post('/booking/payment/hosted/{reservation}/complete', function (Request 
         }
 
         return redirect()->away($target);
+    }
+
+    if (!app()->environment('testing') && in_array($provider, ['bml', 'mib'], true)) {
+        return redirect('/booking/checkout/' . $reservation)
+            ->withErrors(['payment' => 'Selected bank gateway is not fully configured (missing checkout URL). Please contact support to complete gateway setup.']);
     }
 
     workationApplyReservationPaymentEvent($reservationRow, [

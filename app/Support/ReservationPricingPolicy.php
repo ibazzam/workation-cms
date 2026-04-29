@@ -444,6 +444,9 @@ class ReservationPricingPolicy
         )), 2);
 
         $transferOption = strtolower(trim((string) Arr::get($payload, 'transfer_option', '')));
+        if (in_array($transferOption, ['none', 'no_transfer', 'decline', 'declined'], true)) {
+            $transferOption = '';
+        }
         $transferConfig = self::resolveTransferCharge(
             transferOption: $transferOption,
             adults: $adults,
@@ -564,6 +567,21 @@ class ReservationPricingPolicy
         array $policy,
         mixed $overrideTotal = null
     ): array {
+        $normalizedTransferOption = strtolower(trim($transferOption));
+        if ($normalizedTransferOption === '' || in_array($normalizedTransferOption, ['none', 'no_transfer', 'decline', 'declined'], true)) {
+            return [
+                'transfer_option' => '',
+                'transfer_option_label' => 'No transfer',
+                'local_adult_rate' => 0.0,
+                'local_child_rate' => 0.0,
+                'foreign_adult_rate' => 0.0,
+                'foreign_child_rate' => 0.0,
+                'applied_adult_rate' => 0.0,
+                'applied_child_rate' => 0.0,
+                'transfer_charge_total' => 0.0,
+            ];
+        }
+
         $defaultLocalAdultRate = max(0, (float) Arr::get($policy, 'transfer_default_local_adult_rate', 0));
         $defaultLocalChildRate = max(0, (float) Arr::get($policy, 'transfer_default_local_child_rate', 0));
         $defaultForeignAdultRate = max(0, (float) Arr::get($policy, 'transfer_default_foreign_adult_rate', 0));
@@ -580,14 +598,15 @@ class ReservationPricingPolicy
         $optionLabel = '';
 
         $transferOptions = is_array($propertyTransferOptions) ? $propertyTransferOptions : [];
-        if ($transferOption !== '' && $transferOptions !== []) {
+        $optionMatched = false;
+        if ($normalizedTransferOption !== '' && $transferOptions !== []) {
             foreach ($transferOptions as $option) {
                 if (!is_array($option)) {
                     continue;
                 }
 
                 $candidateCode = strtolower(trim((string) ($option['code'] ?? '')));
-                if ($candidateCode === '' || $candidateCode !== $transferOption) {
+                if ($candidateCode === '' || $candidateCode !== $normalizedTransferOption) {
                     continue;
                 }
 
@@ -599,8 +618,23 @@ class ReservationPricingPolicy
                 $foreignChildRate = self::pickRate($option, ['foreign_child_charge', 'child_charge_foreign', 'child_charge'], $defaultForeignChildRate);
                 $baseLocal = self::pickRate($option, ['base_charge_local', 'local_base_charge', 'base_charge'], $defaultLocalBase);
                 $baseForeign = self::pickRate($option, ['base_charge_foreign', 'foreign_base_charge', 'base_charge'], $defaultForeignBase);
+                $optionMatched = true;
                 break;
             }
+        }
+
+        if (!$optionMatched && $transferOptions !== []) {
+            return [
+                'transfer_option' => '',
+                'transfer_option_label' => 'No transfer',
+                'local_adult_rate' => 0.0,
+                'local_child_rate' => 0.0,
+                'foreign_adult_rate' => 0.0,
+                'foreign_child_rate' => 0.0,
+                'applied_adult_rate' => 0.0,
+                'applied_child_rate' => 0.0,
+                'transfer_charge_total' => 0.0,
+            ];
         }
 
         $appliedAdultRate = $isForeigner ? $foreignAdultRate : $localAdultRate;
@@ -614,7 +648,7 @@ class ReservationPricingPolicy
         }
 
         return [
-            'transfer_option' => $transferOption,
+            'transfer_option' => $normalizedTransferOption,
             'transfer_option_label' => $optionLabel,
             'local_adult_rate' => round($localAdultRate, 2),
             'local_child_rate' => round($localChildRate, 2),

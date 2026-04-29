@@ -48,7 +48,7 @@ class ReservationPricingPolicy
                     'code' => 'green_tax_under_50',
                     'label' => 'Green Tax',
                     'calculation_mode' => 'per_guest_per_night',
-                    'default_rate' => 12.0,
+                    'default_rate' => 6.0,
                     'applies_to' => 'all',
                     'applies_to_categories' => ['accommodation'],
                     'exclude_infants' => true,
@@ -262,6 +262,9 @@ class ReservationPricingPolicy
 
         $vendorTaxOverridesRaw = Arr::get($payload, 'vendor_tax_overrides', []);
         $vendorTaxOverrides = is_array($vendorTaxOverridesRaw) ? $vendorTaxOverridesRaw : [];
+        
+        // Property currency for Green Tax FX conversion (Green Tax rates are specified in USD)
+        $propertyCurrency = strtoupper(trim((string) Arr::get($payload, 'property_currency', 'MVR')));
 
         $taxLines = [];
         $serviceChargeRatePercent = 0.0;
@@ -313,6 +316,16 @@ class ReservationPricingPolicy
                         $chargeableGuests = max(0, $chargeableGuests - $infants);
                     }
                     $amount = round($appliedRate * $chargeableGuests * $nights, 2);
+                    
+                    // Green Tax rates are specified in USD; convert to property currency if needed
+                    if (str_contains($code, 'green_tax') && $propertyCurrency !== 'USD') {
+                        $fxRates = (array) config('checkout_payments.fx_rates', ['USD' => 15.42, 'MVR' => 1.0]);
+                        $usdRate = (float) ($fxRates['USD'] ?? 15.42);
+                        $propertyRate = (float) ($fxRates[$propertyCurrency] ?? $usdRate);
+                        if ($propertyRate > 0) {
+                            $amount = round($amount * $usdRate / $propertyRate, 2);
+                        }
+                    }
                 } elseif ($mode === 'flat_booking') {
                     $amount = round($appliedRate, 2);
                 }
@@ -441,9 +454,29 @@ class ReservationPricingPolicy
             overrideTotal: Arr::get($payload, 'transfer_charge_override')
         );
 
+        // Apply 8% GST to transfer charges if transfer is selected
+        $transferGstAmount = 0.0;
+        if ($transferConfig['transfer_charge_total'] > 0 && $transferOption !== '') {
+            $transferGstRate = 8.0;
+            $transferGstAmount = round($transferConfig['transfer_charge_total'] * ($transferGstRate / 100), 2);
+            
+            // Add transfer GST to tax lines for display
+            $taxLines[] = [
+                'code' => 'transfer_gst',
+                'label' => 'Transfer GST (8%)',
+                'calculation_mode' => 'percent_subtotal',
+                'rate' => $transferGstRate,
+                'amount' => $transferGstAmount,
+                'is_service_charge' => false,
+            ];
+            
+            // Add transfer GST to total tax amount
+            $totalTaxAmount = round($totalTaxAmount + $transferGstAmount, 2);
+        }
+
         $invoiceTotalAmount = $pricesIncludeTax
-            ? round($discountedSubtotal + $transferConfig['transfer_charge_total'], 2)
-            : round($discountedSubtotal + $serviceChargeTotal + $totalTaxAmount + $transferConfig['transfer_charge_total'], 2);
+            ? round($discountedSubtotal + $transferConfig['transfer_charge_total'] + $transferGstAmount, 2)
+            : round($discountedSubtotal + $serviceChargeTotal + $totalTaxAmount + $transferConfig['transfer_charge_total'] + $transferGstAmount, 2);
 
         return [
             'listing_category' => $listingCategory,
@@ -481,6 +514,7 @@ class ReservationPricingPolicy
             'transfer_applied_adult_rate' => $transferConfig['applied_adult_rate'],
             'transfer_applied_child_rate' => $transferConfig['applied_child_rate'],
             'transfer_charge_total' => $transferConfig['transfer_charge_total'],
+            'transfer_gst_amount' => $transferGstAmount,
             'invoice_total_amount' => $invoiceTotalAmount,
             'policy_snapshot' => $activePolicy,
         ];

@@ -474,9 +474,6 @@
 
         @if ($showProfilePage)
             @include('vendor-portal.partials.profile')
-        @endif
-
-        @if ($showBillingPage || $showProfilePage)
             @include('vendor-portal.partials.billing-settings')
         @endif
 
@@ -543,9 +540,10 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
         (function () {
-            if (window.__vendorPortalPrimaryInitDone === true) {
+            if (window.__vendorPortalSecondaryInitDone === true) {
                 return;
             }
+            window.__vendorPortalSecondaryInitDone = true;
             window.__vendorPortalPrimaryInitDone = true;
 
             const root = document.querySelector(".page");
@@ -3228,10 +3226,6 @@
     </script>
     <script>
         (function () {
-            if (window.__vendorPortalPrimaryInitDone === true) {
-                return;
-            }
-
             function normalizeCategoryKey(value) {
                 return String(value || "")
                     .trim()

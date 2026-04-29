@@ -3226,10 +3226,6 @@
     </script>
     <script>
         (function () {
-            if (window.__vendorPortalPrimaryInitDone === true) {
-                return;
-            }
-
             function normalizeCategoryKey(value) {
                 return String(value || "")
                     .trim()

@@ -25,6 +25,7 @@ Route::get('/vendor', function () {
 
     $isOverviewPage = in_array($activePortalPage, ['overview', 'reports'], true);
     $loadListingsHeavyData = $activePortalPage === 'listings';
+    $loadRoomInventoryData = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability'], true);
     $loadEngagementData = in_array($activePortalPage, ['engagement', 'promotions'], true);
     $loadReservationsData = in_array($activePortalPage, ['reservations', 'operations', 'billing'], true) || $loadEngagementData;
     $loadAvailabilityData = in_array($activePortalPage, ['availability', 'operations'], true);
@@ -500,7 +501,7 @@ Route::get('/vendor', function () {
             ->filter(static fn (int $id): bool => $id > 0)
             ->values();
 
-        if ($loadListingsHeavyData && Schema::hasTable('vendor_property_room_categories')) {
+        if ($loadRoomInventoryData && Schema::hasTable('vendor_property_room_categories')) {
             $roomCategoryQuery = DB::table('vendor_property_room_categories')
                 ->where('vendor_user_id', $vendorUserId)
                 ->orderByDesc('updated_at');

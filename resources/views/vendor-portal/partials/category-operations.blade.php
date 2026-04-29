@@ -93,12 +93,14 @@
                         ]);
                     }
 
+                    // Count properties as listings in summary chips, including accommodation.
+                    $listingCountByCategory[$categoryKey]++;
+
                     // Accommodation availability is managed at room level only.
                     if ($categoryKey === 'accommodation') {
                         continue;
                     }
 
-                    $listingCountByCategory[$categoryKey]++;
                     $availabilityTargetsByCategory[$categoryKey]->push([
                         'kind' => 'property',
                         'id' => $propertyId,

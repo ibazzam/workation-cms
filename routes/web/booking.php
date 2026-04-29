@@ -2308,10 +2308,6 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         $query = http_build_query($payload, '', '&', PHP_QUERY_RFC3986);
         $target = $checkoutUrl . (str_contains($checkoutUrl, '?') ? '&' : '?') . $query;
 
-        if (in_array($provider, ['bml', 'mib'], true)) {
-            return redirect('/booking/payment/hosted/' . $reservation . '?intent=' . urlencode((string) ($intent['intent_id'] ?? '')));
-        }
-
         return redirect()->away($target);
     }
 

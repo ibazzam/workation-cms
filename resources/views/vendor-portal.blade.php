@@ -143,7 +143,6 @@
         $workspaceCategoryTabKeys = collect($listingCategoryViewOrder ?? $vendorAllowedCategoryKeys)
             ->map(static fn ($categoryKey) => vendorPortalCanonicalCategory((string) $categoryKey))
             ->filter(static fn ($categoryKey) => is_string($categoryKey) && $categoryKey !== '')
-            ->filter(static fn ($categoryKey) => $workspaceRelevantCategoryKeys->isEmpty() || $workspaceRelevantCategoryKeys->contains($categoryKey))
             ->values();
         $workspaceCategoryQuery = $forcedListingCategory !== '' ? ('?category=' . urlencode($forcedListingCategory)) : '';
         $workspacePrimaryTabs = [
@@ -481,6 +480,12 @@
                 </div>
                 @if ($workspaceCategoryTabKeys->isNotEmpty())
                     <div class="workspace-category-tabs" role="tablist" aria-label="Vendor category filter">
+                        <a
+                            class="workspace-category-tab {{ $forcedListingCategory === '' ? 'is-active' : '' }}"
+                            href="{{ '/vendor?page=' . $workspacePrimaryPage }}"
+                            role="tab"
+                            aria-selected="{{ $forcedListingCategory === '' ? 'true' : 'false' }}"
+                        >All</a>
                         @foreach ($workspaceCategoryTabKeys as $categoryKey)
                             @php
                                 $categoryLabel = (string) ($listingCategoryLabelMap[$categoryKey] ?? ucwords(str_replace('_', ' ', $categoryKey)));

@@ -15,7 +15,7 @@
     $sidebarCategoryQuery = trim((string) ($forcedListingCategory ?? '')) !== '' ? ('?category=' . urlencode((string) $forcedListingCategory)) : '';
     $sidebarOverviewOpen = in_array($activePortalPage ?? 'overview', ['overview', 'reports'], true);
     $sidebarListingsOpen = ($activePortalPage ?? '') === 'listings';
-    $sidebarOperationsOpen = in_array($activePortalPage ?? '', ['reservations', 'operations', 'availability', 'pricing'], true);
+    $sidebarOperationsOpen = in_array($activePortalPage ?? '', ['reservations', 'operations', 'availability'], true);
     $sidebarGrowthOpen = in_array($activePortalPage ?? '', ['promotions', 'engagement', 'billing'], true);
     $sidebarAccountOpen = in_array($activePortalPage ?? '', ['profile', 'api'], true);
 @endphp
@@ -50,18 +50,6 @@
             </button>
             <div class="nav-group-body {{ $sidebarListingsOpen ? 'is-open' : '' }}" data-vendor-nav-group="listings">
                 <a class="nav-item-link {{ ($activePortalPage ?? '') === 'listings' && ($forcedListingCategory ?? '') === '' ? 'prominent' : '' }}" href="/vendor/listings" data-panel-key="listings">All Listings</a>
-                @foreach ($sidebarCategoryLinks as $categoryKey)
-                    @php
-                        $categoryLabel = (string) ($sidebarVendorCategoryMap[$categoryKey] ?? ucwords(str_replace('_', ' ', $categoryKey)));
-                        $isActiveCategory = ($activePortalPage ?? '') === 'listings' && (($forcedListingCategory ?? '') === $categoryKey);
-                    @endphp
-                    <a
-                        class="nav-sub-link {{ $isActiveCategory ? 'prominent' : '' }}"
-                        href="{{ '/vendor/listings/' . $categoryKey }}"
-                        data-panel-key="listings"
-                        data-vendor-category-target="{{ $categoryKey }}"
-                    >{{ $categoryLabel }}</a>
-                @endforeach
             </div>
         </div>
 
@@ -72,7 +60,6 @@
             </button>
             <div class="nav-group-body {{ $sidebarOperationsOpen ? 'is-open' : '' }}" data-vendor-nav-group="operations">
                 <a class="nav-item-link {{ in_array($activePortalPage ?? '', ['reservations', 'operations'], true) ? 'prominent' : '' }}" href="/vendor/reservations" data-panel-key="reservations">Reservations Queue</a>
-                <a class="nav-item-link {{ ($activePortalPage ?? '') === 'pricing' ? 'prominent' : '' }}" href="/vendor/pricing" data-panel-key="reservations">Pricing Rules</a>
             </div>
         </div>
     @else

@@ -152,6 +152,10 @@ Route::get('/customer', function (Request $request) {
         }
     }
 
+    if ($customerProfile['email'] === '') {
+        $customerProfile['email'] = strtolower(trim((string) session('portal_customer_email', '')));
+    }
+
     $summary = [
         'upcoming_bookings' => 0,
         'completed_bookings' => 0,
@@ -205,6 +209,8 @@ Route::get('/customer', function (Request $request) {
                     'reservation_id',
                     'case_ref',
                     'status',
+                    'reason_notes',
+                    'resolution_notes',
                     'created_at',
                     'review_started_at',
                     'approved_at',
@@ -313,6 +319,8 @@ Route::get('/customer', function (Request $request) {
                 'refund_approved_at' => $refundCase && isset($refundCase->approved_at) ? (string) ($refundCase->approved_at ?? '') : '',
                 'refund_completed_at' => $refundCase && isset($refundCase->completed_at) ? (string) ($refundCase->completed_at ?? '') : '',
                 'refund_rejected_at' => $refundCase && isset($refundCase->rejected_at) ? (string) ($refundCase->rejected_at ?? '') : '',
+                'refund_reason_notes' => trim((string) ($refundCase->reason_notes ?? '')),
+                'refund_resolution_notes' => trim((string) ($refundCase->resolution_notes ?? '')),
                 'refund_sla_due_at' => $refundCase && isset($refundCase->sla_due_at) ? (string) ($refundCase->sla_due_at ?? '') : '',
                 'refund_sla_escalated' => $isRefundEscalated,
                 'total_amount' => (float) ($row->total_amount ?? 0),

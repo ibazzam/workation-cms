@@ -2,9 +2,9 @@
     $operationsViewMode = in_array((string) ($operationsViewMode ?? 'reservations'), ['reservations', 'availability'], true)
         ? (string) $operationsViewMode
         : 'reservations';
-    $reservationScope = strtolower(trim((string) request()->query('scope', 'active')));
+    $reservationScope = strtolower(trim((string) request()->query('scope', 'all')));
     if (!in_array($reservationScope, ['active', 'pending', 'history', 'all'], true)) {
-        $reservationScope = 'active';
+        $reservationScope = 'all';
     }
     $showAvailabilityPanel = $operationsViewMode === 'availability';
     $showReservationsPanel = $operationsViewMode === 'reservations';
@@ -40,7 +40,6 @@
                 @if ($showAvailabilityPanel)
                     <a href="#vendorAvailabilitySection">Availability</a>
                 @endif
-                <a href="{{ '/vendor/pricing' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory)) : '') }}">Pricing Rules</a>
             </div>
             @php
                 $propertyById = $vendorProperties->keyBy(static fn ($property) => (int) ($property->id ?? 0));
@@ -370,6 +369,8 @@
 
                     $reservationRowsByCategory[$reservationCategory]->push([
                         'id' => (int) ($reservation->id ?? 0),
+                        'reservation_code' => 'RSV-' . str_pad((string) ((int) ($reservation->id ?? 0)), 6, '0', STR_PAD_LEFT),
+                        'created_at' => (string) ($reservation->created_at ?? ''),
                         'target_label' => $reservationTargetLabel,
                         'target_value' => $reservationTargetValue,
                         'room_label' => trim((string) ($reservationNotes['room_name'] ?? $reservationTargetLabel)),
@@ -728,7 +729,7 @@
                                     <input type="hidden" name="route_name" value="" data-availability-role="route">
                                 </div>
                                 <button class="btn btn-primary" type="submit">Apply Block / Unblock</button>
-                                <p class="small availability-inline-note">Transfer and tariff changes are managed from <a href="#vendorPricingSection">Pricing Rules</a>.</p>
+                                <p class="small availability-inline-note">Transfer and tariff changes are managed by Workation finance configuration and billing controls.</p>
                             </form>
 
                             @if ($categoryKey === 'transport')
@@ -887,7 +888,7 @@
                                         <tr>
                                             <td>
                                                 {{ (string) ($reservationRow['target_label'] ?? 'Global / Unlinked') }}<br>
-                                                Ref: #{{ (int) ($reservationRow['id'] ?? 0) }}
+                                                Ref: {{ (string) ($reservationRow['reservation_code'] ?? ('RSV-' . str_pad((string) (int) ($reservationRow['id'] ?? 0), 6, '0', STR_PAD_LEFT))) }}
                                             </td>
                                             <td>
                                                 {{ (string) ($reservationRow['customer_name'] ?? '') }}<br>
@@ -910,6 +911,7 @@
                                                 Payment Status: {{ strtoupper((string) ($reservationRow['payment_status'] ?? 'unpaid')) }}<br>
                                                 Paid Amount: {{ (string) ($reservationRow['payment_currency'] ?? $reservationRow['currency'] ?? 'MVR') }} {{ number_format((float) ($reservationRow['paid_amount'] ?? 0), 2) }}<br>
                                                 Payment Ref: {{ trim((string) ($reservationRow['payment_reference'] ?? '')) !== '' ? (string) ($reservationRow['payment_reference'] ?? '') : 'N/A' }}<br>
+                                                Booking Date: {{ trim((string) ($reservationRow['created_at'] ?? '')) !== '' ? substr((string) ($reservationRow['created_at'] ?? ''), 0, 10) : 'N/A' }}<br>
                                                 Payout: {{ strtoupper((string) ($reservationRow['payout_status'] ?? 'queued')) }}
                                                 @if ((string) ($reservationRow['payout_expected_at'] ?? '') !== '')
                                                     <br>Expected: {{ (string) ($reservationRow['payout_expected_at'] ?? '') }}

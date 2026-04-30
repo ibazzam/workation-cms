@@ -612,7 +612,9 @@
         .workspace-category-tabs {
             display: flex;
             gap: 4px;
-            overflow: visible;
+            overflow-x: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #b8c8d8 transparent;
             background: #e4eaf0;
             border-radius: 10px;
             padding: 3px;
@@ -620,10 +622,10 @@
         }
 
         .workspace-category-tab {
-            white-space: normal;
+            white-space: nowrap;
             line-height: 1.2;
             text-align: center;
-            padding: 7px 8px;
+            padding: 7px 10px;
             border: none;
             background: transparent;
             color: #4a6278;
@@ -631,8 +633,7 @@
             font-weight: 700;
             border-radius: 7px;
             text-decoration: none;
-            flex: 1 1 0;
-            min-width: 0;
+            flex: 0 0 auto;
         }
 
         .workspace-category-tab:hover {

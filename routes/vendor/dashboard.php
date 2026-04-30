@@ -516,7 +516,29 @@ Route::get('/vendor', function () {
                 ->keyBy(static fn ($service): int => (int) ($service->id ?? 0))
                 ->map(static fn ($service): string => trim((string) ($service->title ?? $service->name ?? '')));
 
-            $payoutStatusRows = $vendorReservations
+            // Apply category filter to payout rows when a category tab is active.
+            $payoutReservationsSource = $vendorReservations;
+            if ($requestedCategoryScope !== '') {
+                $propertyCategoryById = $vendorProperties
+                    ->keyBy(static fn ($p): int => (int) ($p->id ?? 0))
+                    ->map(static fn ($p): string => vendorPortalCanonicalCategory((string) ($p->listing_category ?? '')));
+                $payoutReservationsSource = $vendorReservations->filter(static function ($reservation) use ($requestedCategoryScope, $propertyCategoryById): bool {
+                    $notes = json_decode((string) ($reservation->notes ?? ''), true);
+                    $notes = is_array($notes) ? $notes : [];
+                    $cat = vendorPortalCanonicalCategory((string) ($notes['category_key'] ?? $notes['listing_category'] ?? ''));
+                    if (is_string($cat) && $cat !== '') {
+                        return $cat === $requestedCategoryScope;
+                    }
+                    $propId = (int) ($reservation->vendor_property_id ?? 0);
+                    if ($propId > 0) {
+                        $propCat = $propertyCategoryById->get($propId, '');
+                        return is_string($propCat) && $propCat === $requestedCategoryScope;
+                    }
+                    return false;
+                })->values();
+            }
+
+            $payoutStatusRows = $payoutReservationsSource
                 ->filter(static function ($reservation): bool {
                     $status = strtolower(trim((string) ($reservation->payment_status ?? '')));
                     $payoutStatus = strtolower(trim((string) ($reservation->payout_status ?? '')));

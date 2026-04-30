@@ -2598,6 +2598,21 @@ Route::match(['get', 'post'], '/booking/payment/webhooks/{gateway}', function (R
                     return redirect(workationPaymentSuccessReturnUrl($reservationId, $gateway))
                         ->with('portal_notice', 'Payment verified successfully and your booking is now confirmed.');
                 }
+
+                if (in_array($bmlState, ['DECLINED', 'CANCELLED'], true)) {
+                    $mappedFailureStatus = $bmlState === 'CANCELLED' ? 'cancelled' : 'failed';
+
+                    workationApplyReservationPaymentEvent($reservationRow, [
+                        'event_id' => 'bml_browser_' . ($bmlTransactionId !== '' ? $bmlTransactionId : Str::lower(Str::random(16))),
+                        'intent_id' => (string) ($reservationRow->payment_intent_id ?? ''),
+                        'reference' => $bmlTransactionId,
+                        'status' => $mappedFailureStatus,
+                        'error' => 'BML state: ' . $bmlState,
+                    ]);
+
+                    return redirect('/booking/checkout/' . $reservationId)
+                        ->withErrors(['payment' => 'BML payment did not complete (' . $bmlState . '). Please retry or use another card.']);
+                }
             }
 
             return redirect(workationPaymentSuccessReturnUrl($reservationId, $gateway))

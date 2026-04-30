@@ -195,6 +195,17 @@ class CheckoutWebhookCallbackTest extends TestCase
         ]);
     }
 
+    public function test_bank_gateway_browser_return_redirects_to_customer_portal(): void
+    {
+        $reservationId = $this->createReservation();
+
+        $response = $this->get('/booking/payment/webhooks/bml?reservation_id=' . $reservationId);
+
+        $response
+            ->assertRedirect(url('/customer?section=bookings&booking=' . $reservationId . '&payment=success'))
+            ->assertSessionHas('portal_notice', 'Payment return received. We are verifying your payment status.');
+    }
+
     private function createReservation(): int
     {
         $vendor = User::factory()->create();

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Finance;
 
+use App\Support\ReservationSettlementCalculator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -13,14 +14,14 @@ use Illuminate\Support\Str;
 /**
  * PayoutBatchBuilder – assembles and progresses payout batches.
  *
- * Batches are STRICTLY separated by source_medium + currency_band.
- * This ensures that MIB (MVR), BML (MVR), and Stripe (USD) payouts are
- * always tracked, submitted, and reconciled independently.
+ * Default mode keeps batches separated by source_medium + currency_band.
+ * Optional combine mode allows same-vendor + same-currency reservations to be
+ * merged into one payout item even when sourced from different gateways.
  *
  * Operational rules:
- *   MIB   → local MVR bank, fast settlement (same/next business day)
- *   BML   → local MVR bank, fast settlement (same/next business day)
- *   Stripe → foreign bank account, USD, delayed settlement (2–7 business days)
+ *   MIB   → local MVR bank, settlement to Workation in 5–7 business days
+ *   BML   → local MVR bank, settlement to Workation in 5–7 business days
+ *   Stripe → foreign bank account, USD, settlement to Workation in 10–12 business days
  *
  * SECURITY / PRIVACY:
  *   The source_medium column and the batch_ref prefix reveal which bank/gateway
@@ -42,13 +43,16 @@ final class PayoutBatchBuilder
      *   - booking status IN ('confirmed', 'completed')
      *   - payout_status IS NULL (not yet queued)
      *   - has vendor_payout_amount > 0
+    *   - provider settlement window has elapsed based on payment_collected_at
      *
-     * Batches are created per source_medium + currency_band combination.
+    * Default batches are created per source_medium + currency_band combination.
+    * When $combineByVendorCurrency is enabled, batches are created per currency
+    * with internal source_medium='mixed' and currency_band based on currency.
      * Returns a summary array of batch refs created.
      *
      * @return array<string, array{batch_ref: string, item_count: int, net_total: float, currency: string}>
      */
-    public function buildBatchesForDate(Carbon $upToDate, int $actorUserId): array
+    public function buildBatchesForDate(Carbon $upToDate, int $actorUserId, bool $combineByVendorCurrency = false): array
     {
         if (!DB::getSchemaBuilder()->hasTable('vendor_reservations')) {
             return [];
@@ -67,33 +71,66 @@ final class PayoutBatchBuilder
                 'vr.vendor_user_id',
                 'vr.payment_gateway',
                 'vr.payment_currency',
+                'vr.payment_collected_at',
+                'vr.payment_verified_at',
+                'vr.payout_expected_at',
                 'vr.payment_amount',
                 'vr.commission_amount',
                 'vr.commission_rate_percent',
                 'vr.gateway_fee_amount',
                 'vr.gateway_fee_rate_percent',
                 'vr.vendor_payout_amount',
+                'vr.created_at',
                 'vendor_users.name as vendor_name',
                 'vendor_users.email as vendor_email',
             ]);
+
+        $cutoff = $upToDate->copy()->endOfDay();
+        $eligible = $eligible
+            ->filter(static function ($row) use ($cutoff): bool {
+                $expectedPayoutAt = !empty($row->payout_expected_at)
+                    ? Carbon::parse((string) $row->payout_expected_at)
+                    : ReservationSettlementCalculator::expectedPayoutAt(
+                        $row->payment_collected_at ?? $row->payment_verified_at ?? $row->created_at ?? null,
+                        (string) ($row->payment_gateway ?? ''),
+                        null
+                    );
+
+                return $expectedPayoutAt !== null && $expectedPayoutAt->lte($cutoff);
+            })
+            ->values();
 
         if ($eligible->isEmpty()) {
             return [];
         }
 
-        // ── Group by medium + currency band + vendor ──────────────────────────
+        // ── Group eligible reservations ────────────────────────────────────────
+        // default: source_medium + currency_band + vendor
+        // combine mode: currency + vendor across gateways (internal medium='mixed')
         $groups = [];
         foreach ($eligible as $row) {
             $ctx = LedgerWriter::resolveSourceContext(
                 (string) ($row->payment_gateway ?? 'stripe'),
                 (string) ($row->payment_currency ?? 'USD'),
             );
-            $key = $ctx['source_medium'] . '|' . $ctx['currency_band'];
+            $currency = strtoupper((string) ($row->payment_currency ?? 'USD'));
+
+            if ($combineByVendorCurrency) {
+                $combinedBand = $currency === 'MVR' ? 'local_mvr' : 'foreign_usd';
+                $key = 'mixed|' . $combinedBand . '|' . $currency;
+                $sourceMedium = 'mixed';
+                $currencyBand = $combinedBand;
+            } else {
+                $key = $ctx['source_medium'] . '|' . $ctx['currency_band'] . '|' . $currency;
+                $sourceMedium = $ctx['source_medium'];
+                $currencyBand = $ctx['currency_band'];
+            }
+
             if (!isset($groups[$key])) {
                 $groups[$key] = [
-                    'source_medium' => $ctx['source_medium'],
-                    'currency_band' => $ctx['currency_band'],
-                    'currency'      => strtoupper((string) ($row->payment_currency ?? 'USD')),
+                    'source_medium' => $sourceMedium,
+                    'currency_band' => $currencyBand,
+                    'currency'      => $currency,
                     'vendors'       => [],
                 ];
             }
@@ -122,7 +159,7 @@ final class PayoutBatchBuilder
 
         DB::transaction(function () use ($groups, $batchDateStr, $actorUserId, &$createdBatches): void {
             foreach ($groups as $groupKey => $group) {
-                [$medium, $band] = explode('|', $groupKey);
+                [$medium, $band] = explode('|', $groupKey, 3);
                 $batchRef = $this->generateBatchRef($medium, $band, $batchDateStr);
 
                 $itemCount       = count($group['vendors']);

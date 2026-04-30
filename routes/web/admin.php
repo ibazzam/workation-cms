@@ -330,23 +330,35 @@ Route::get('/admin', function (Request $request) {
     $requestedPage = strtolower(trim((string) $request->query('page', 'overview')));
     $adminPage = $adminPageAliases[$requestedPage] ?? 'overview';
 
-    $adminAllowedPages = ['overview', 'permissions', 'audit', 'tools', 'moderation'];
-    if ($canModerateFinance) {
-        $adminAllowedPages[] = 'finance';
-    }
-    if ($canManageVendorUsers) {
-        $adminAllowedPages[] = 'media';
-        $adminAllowedPages[] = 'catalog';
-    }
-    if ($canManageContent) {
-        $adminAllowedPages[] = 'content';
-    }
-    if ($canModerateListings) {
-        $adminAllowedPages[] = 'listings';
+    $financeScopedAdminRole = in_array($currentPortalRole, ['ADMIN_FINANCE', 'ADMIN_SUPER'], true);
+    if ($financeScopedAdminRole) {
+        // Finance/accounts-only scope on admin side for ADMIN_FINANCE and ADMIN_SUPER.
+        $adminAllowedPages = ['finance', 'permissions'];
+    } else {
+        $adminAllowedPages = ['overview', 'permissions', 'audit', 'tools', 'moderation'];
+        if ($canModerateFinance) {
+            $adminAllowedPages[] = 'finance';
+        }
+        if ($canManageVendorUsers) {
+            $adminAllowedPages[] = 'media';
+            $adminAllowedPages[] = 'catalog';
+        }
+        if ($canManageContent) {
+            $adminAllowedPages[] = 'content';
+        }
+        if ($canModerateListings) {
+            $adminAllowedPages[] = 'listings';
+        }
     }
 
     if (!in_array($adminPage, $adminAllowedPages, true)) {
-        $adminPage = in_array('overview', $adminAllowedPages, true) ? 'overview' : (string) ($adminAllowedPages[0] ?? 'overview');
+        if (in_array('finance', $adminAllowedPages, true)) {
+            $adminPage = 'finance';
+        } elseif (in_array('overview', $adminAllowedPages, true)) {
+            $adminPage = 'overview';
+        } else {
+            $adminPage = (string) ($adminAllowedPages[0] ?? 'overview');
+        }
     }
 
     $dashboardStats = [

@@ -127,7 +127,7 @@ class BookingCheckoutFlowTest extends TestCase
             ]);
 
         $completeResponse
-            ->assertRedirect('/booking/checkout/' . $reservationId)
+            ->assertRedirect(url('/customer?section=bookings&booking=' . $reservationId . '&payment=success'))
             ->assertSessionHas('portal_notice', 'Payment recorded and reservation confirmed.');
 
         $this->assertDatabaseHas('vendor_reservations', [
@@ -136,6 +136,20 @@ class BookingCheckoutFlowTest extends TestCase
             'status' => 'confirmed',
             'payment_reference' => 'INT-' . $reservationId,
         ]);
+    }
+
+    public function test_paid_checkout_page_redirects_to_customer_portal(): void
+    {
+        $reservationId = $this->createReservation([
+            'payment_status' => 'paid',
+            'status' => 'confirmed',
+        ]);
+
+        $response = $this->get('/booking/checkout/' . $reservationId);
+
+        $response
+            ->assertRedirect(url('/customer?section=bookings&booking=' . $reservationId . '&payment=success'))
+            ->assertSessionHas('portal_notice', 'Payment already completed. Your booking is available in the customer portal.');
     }
 
     private function createReservation(array $overrides = []): int

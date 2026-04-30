@@ -481,12 +481,6 @@
                 </div>
                 @if ($workspaceCategoryTabKeys->isNotEmpty())
                     <div class="workspace-category-tabs" role="tablist" aria-label="Vendor category filter">
-                        <a
-                            class="workspace-category-tab {{ $forcedListingCategory === '' ? 'is-active' : '' }}"
-                            href="{{ '/vendor?page=' . $workspacePrimaryPage }}"
-                            role="tab"
-                            aria-selected="{{ $forcedListingCategory === '' ? 'true' : 'false' }}"
-                        >All Categories</a>
                         @foreach ($workspaceCategoryTabKeys as $categoryKey)
                             @php
                                 $categoryLabel = (string) ($listingCategoryLabelMap[$categoryKey] ?? ucwords(str_replace('_', ' ', $categoryKey)));

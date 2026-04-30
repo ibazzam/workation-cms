@@ -422,7 +422,7 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
 
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
     $validated = $request->validate([
-        'status' => ['required', Rule::in(['pending', 'confirmed', 'checked_in', 'checked_out', 'completed', 'cancelled'])],
+        'status' => ['required', Rule::in(['pending', 'cancel_requested', 'confirmed', 'checked_in', 'checked_out', 'completed', 'cancelled'])],
     ]);
 
     $reservationRow = DB::table('vendor_reservations')
@@ -441,6 +441,7 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
 
     $allowedTransitions = [
         'pending' => ['pending', 'confirmed', 'cancelled'],
+        'cancel_requested' => ['cancel_requested', 'cancelled'],
         'confirmed' => ['confirmed', 'checked_in', 'cancelled'],
         'checked_in' => ['checked_in', 'checked_out'],
         'checked_out' => ['checked_out', 'completed'],

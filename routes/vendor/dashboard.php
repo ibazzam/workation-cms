@@ -19,7 +19,7 @@ Route::get('/vendor', function () {
     $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
 
     $activePortalPage = strtolower(trim((string) request()->query('page', 'overview')));
-    if (!in_array($activePortalPage, ['overview', 'reports', 'profile', 'listings', 'reservations', 'operations', 'availability', 'pricing', 'billing', 'engagement', 'promotions'], true)) {
+    if (!in_array($activePortalPage, ['overview', 'reports', 'profile', 'listings', 'reservations', 'operations', 'availability', 'billing', 'engagement', 'promotions'], true)) {
         $activePortalPage = 'overview';
     }
 
@@ -29,9 +29,9 @@ Route::get('/vendor', function () {
     $loadEngagementData = in_array($activePortalPage, ['engagement', 'promotions'], true);
     $loadReservationsData = in_array($activePortalPage, ['reservations', 'operations', 'availability', 'billing'], true) || $loadEngagementData;
     $loadAvailabilityData = in_array($activePortalPage, ['availability', 'operations'], true);
-    $loadPricingData = $activePortalPage === 'pricing' || $loadEngagementData;
+    $loadPricingData = $loadEngagementData;
     $loadBillingData = $activePortalPage === 'billing';
-    $loadListingsContextData = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'pricing', 'engagement', 'promotions'], true);
+    $loadListingsContextData = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'engagement', 'promotions'], true);
     $vendorPortalCacheTtlSeconds = 900;
     $categoryRouteTokens = array_merge(array_keys(vendorPortalCategoryMap()), ['marine_transport', 'land_transport']);
     $requestedCategoryScope = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', '')));
@@ -421,15 +421,34 @@ Route::get('/vendor', function () {
         if ($loadReservationsData && Schema::hasTable('vendor_reservations')) {
             $reservationLimit = $loadEngagementData
                 ? 300
-                : (($activePortalPage === 'billing' || $activePortalPage === 'reservations' || $activePortalPage === 'operations') ? 200 : 80);
+                : (($activePortalPage === 'billing' || $activePortalPage === 'reservations' || $activePortalPage === 'operations') ? 600 : 120);
             $vendorReservations = collect(Cache::remember(
                 'vendor:portal:reservations:v2:' . $vendorUserId . ':' . $reservationLimit . ':' . $vendorReservationVersion,
                 now()->addSeconds($vendorPortalCacheTtlSeconds),
                 static function () use ($vendorUserId, $reservationLimit) {
-                    return DB::table('vendor_reservations')
-                        ->where('vendor_user_id', $vendorUserId)
+                    $reservationQuery = DB::table('vendor_reservations')
+                        ->where(static function ($ownershipQuery) use ($vendorUserId) {
+                            $ownershipQuery->where('vendor_user_id', $vendorUserId);
+
+                            if (Schema::hasTable('vendor_accommodation_listings')) {
+                                $ownedPropertyIds = DB::table('vendor_accommodation_listings')
+                                    ->where('vendor_user_id', $vendorUserId)
+                                    ->pluck('vendor_property_id')
+                                    ->map(static fn ($id): int => (int) $id)
+                                    ->filter(static fn (int $id): bool => $id > 0)
+                                    ->values()
+                                    ->all();
+
+                                if (!empty($ownedPropertyIds)) {
+                                    $ownershipQuery->orWhereIn('vendor_property_id', $ownedPropertyIds);
+                                }
+                            }
+                        })
                         ->orderByDesc('start_at')
-                        ->limit($reservationLimit)
+                        ->orderByDesc('id')
+                        ->limit($reservationLimit);
+
+                    return $reservationQuery
                         ->get()
                         ->all();
                 }
@@ -538,6 +557,7 @@ Route::get('/vendor', function () {
                         'payment_currency' => strtoupper(trim((string) ($reservation->payment_currency ?? $reservation->currency ?? 'MVR'))),
                         'payment_status' => strtoupper(trim((string) ($reservation->payment_status ?? 'unpaid'))),
                         'vendor_payout_amount' => (float) ($reservation->vendor_payout_amount ?? 0),
+                        'booking_created_at' => (string) ($reservation->created_at ?? null),
                         'payment_collected_at' => (string) ($reservation->payment_collected_at ?? $reservation->payment_verified_at ?? null),
                         'payout_processing_at' => (string) ($reservation->payout_processing_at ?? null),
                         'payout_expected_at' => (string) ($reservation->payout_expected_at ?? null),
@@ -1305,9 +1325,9 @@ Route::get('/vendor/reservations', function () {
     }
 
     $category = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', '')));
-    $scope = strtolower(trim((string) request()->query('scope', 'active')));
+    $scope = strtolower(trim((string) request()->query('scope', 'all')));
     if (!in_array($scope, ['active', 'pending', 'history', 'all'], true)) {
-        $scope = 'active';
+        $scope = 'all';
     }
     $query = '/vendor?page=reservations';
     $query .= '&scope=' . urlencode($scope);
@@ -1373,22 +1393,14 @@ Route::get('/vendor/pricing', function () {
         return redirect('/portal/vendor/login');
     }
 
-    $vendorUserId = (int) session('portal_vendor_user_id', 0);
-    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
-    if (!vendorPortalCanManageListings($vendorUser)) {
-        return redirect('/vendor?page=profile')
-            ->with('portal_active_panel', 'profile')
-            ->withErrors(['profile' => 'Pricing controls are locked until your vendor account is verified and approved by admin.']);
-    }
-
     $category = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', '')));
-    $query = '/vendor?page=pricing';
+    $query = '/vendor?page=billing';
     if ($category !== '') {
         $query .= '&category=' . urlencode($category);
     }
 
     return redirect($query)
-        ->with('portal_active_panel', 'pricing')
+        ->with('portal_active_panel', 'billing')
         ->with('portal_listing_category', $category);
 });
 

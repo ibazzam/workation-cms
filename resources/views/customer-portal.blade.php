@@ -452,6 +452,57 @@
             font-weight: 600;
         }
 
+        .booking-refund-timeline {
+            margin-top: 10px;
+            padding: 12px 14px;
+            border: 1px solid #dbe6ef;
+            border-radius: 10px;
+            background: #f8fbfd;
+        }
+
+        .booking-refund-timeline-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #16354b;
+            margin-bottom: 8px;
+        }
+
+        .booking-refund-timeline-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 6px;
+        }
+
+        .booking-refund-timeline-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 0.78rem;
+            color: #486176;
+        }
+
+        .booking-refund-timeline-item strong {
+            color: #1a3244;
+        }
+
+        .booking-refund-timeline-empty {
+            color: #7a8d9d;
+            font-style: italic;
+        }
+
+        .booking-refund-note {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: #fff4ea;
+            border: 1px solid #f0d0ae;
+            color: #76451f;
+            font-size: 0.78rem;
+            line-height: 1.45;
+        }
+
         .booking-card-actions {
             padding: 10px 16px;
             display: flex;
@@ -944,6 +995,45 @@
                                                         @endif
                                                     @endif
                                                 </div>
+                                                @if (trim((string) ($booking['refund_status'] ?? '')) !== '')
+                                                    @php
+                                                        $refundRequestedAt = trim((string) ($booking['refund_requested_at'] ?? ''));
+                                                        $refundReviewStartedAt = trim((string) ($booking['refund_review_started_at'] ?? ''));
+                                                        $refundApprovedAt = trim((string) ($booking['refund_approved_at'] ?? ''));
+                                                        $refundCompletedAt = trim((string) ($booking['refund_completed_at'] ?? ''));
+                                                        $refundRejectedAt = trim((string) ($booking['refund_rejected_at'] ?? ''));
+                                                        $refundResolutionNotes = trim((string) ($booking['refund_resolution_notes'] ?? ''));
+                                                        $formatRefundTimelineDate = static function (string $value): string {
+                                                            return $value !== '' ? \Carbon\Carbon::parse($value)->format('M j, Y g:i A') : 'Pending';
+                                                        };
+                                                    @endphp
+                                                    <div class="booking-refund-timeline">
+                                                        <div class="booking-refund-timeline-title">Cancellation / Refund Request Timeline</div>
+                                                        <ul class="booking-refund-timeline-list">
+                                                            <li class="booking-refund-timeline-item">
+                                                                <strong>Requested</strong>
+                                                                <span>{{ $formatRefundTimelineDate($refundRequestedAt) }}</span>
+                                                            </li>
+                                                            <li class="booking-refund-timeline-item">
+                                                                <strong>Under Review</strong>
+                                                                <span class="{{ $refundReviewStartedAt === '' ? 'booking-refund-timeline-empty' : '' }}">{{ $formatRefundTimelineDate($refundReviewStartedAt) }}</span>
+                                                            </li>
+                                                            <li class="booking-refund-timeline-item">
+                                                                <strong>Approved</strong>
+                                                                <span class="{{ $refundApprovedAt === '' ? 'booking-refund-timeline-empty' : '' }}">{{ $formatRefundTimelineDate($refundApprovedAt) }}</span>
+                                                            </li>
+                                                            <li class="booking-refund-timeline-item">
+                                                                <strong>{{ $refundRejectedAt !== '' ? 'Rejected' : 'Refund Completed' }}</strong>
+                                                                <span class="{{ $refundRejectedAt === '' && $refundCompletedAt === '' ? 'booking-refund-timeline-empty' : '' }}">{{ $refundRejectedAt !== '' ? $formatRefundTimelineDate($refundRejectedAt) : $formatRefundTimelineDate($refundCompletedAt) }}</span>
+                                                            </li>
+                                                        </ul>
+                                                        @if ($refundRejectedAt !== '' && $refundResolutionNotes !== '')
+                                                            <div class="booking-refund-note">
+                                                                <strong>Why it was rejected:</strong> {{ $refundResolutionNotes }}
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                @endif
                                             </div>
                                         </div>
 
@@ -953,6 +1043,8 @@
                                             <a class="btn-outline" href="/customer/bookings/{{ (int) ($booking['id'] ?? 0) }}/confirmation.pdf">Reservation PDF</a>
                                             @if ($isPaidBooking)
                                                 <a class="btn-outline" href="/customer/bookings/{{ (int) ($booking['id'] ?? 0) }}/invoice.pdf">Invoice PDF</a>
+                                            @else
+                                                <a class="btn-brand" href="/booking/checkout/{{ (int) ($booking['id'] ?? 0) }}">Pay Now</a>
                                             @endif
                                             @if (!$isPaidBooking)
                                                 <form method="POST" action="/customer/bookings/{{ (int) ($booking['id'] ?? 0) }}/delete" onsubmit="return confirm('Remove this booking from your portal list?');">
@@ -963,9 +1055,9 @@
                                                 <button class="btn-outline" type="button" disabled title="Paid bookings cannot be deleted from the portal.">Delete</button>
                                             @endif
                                             @if (!$isCancelledBooking)
-                                                <form method="POST" action="/customer/bookings/{{ (int) ($booking['id'] ?? 0) }}/cancel" onsubmit="return confirm('Do you want to cancel this booking?');">
+                                                <form method="POST" action="/customer/bookings/{{ (int) ($booking['id'] ?? 0) }}/cancel" onsubmit="return confirm('{{ $isPaidBooking ? 'Do you want to request a refund for this paid booking?' : 'Do you want to cancel this booking?' }}');">
                                                     @csrf
-                                                    <button class="btn-outline" type="submit">{{ $isPaidBooking ? 'Request Cancel' : 'Cancel Booking' }}</button>
+                                                    <button class="btn-outline" type="submit">{{ $isPaidBooking ? 'Request Refund' : 'Cancel Booking' }}</button>
                                                 </form>
                                             @endif
                                             <a class="btn-outline" href="/">Similar deals</a>

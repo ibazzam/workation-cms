@@ -81,13 +81,13 @@
         $listingWizardStep = (int) session('listing_wizard_step', 1);
         $listingWizardStep = max(1, min(4, $listingWizardStep));
         $portalPageQuery = strtolower(trim((string) request()->query('page', '')));
-        $activePortalPage = in_array($portalPageQuery, ['overview', 'reports', 'profile', 'listings', 'reservations', 'operations', 'availability', 'pricing', 'billing', 'engagement', 'promotions'], true)
+        $activePortalPage = in_array($portalPageQuery, ['overview', 'reports', 'profile', 'listings', 'reservations', 'operations', 'availability', 'billing', 'engagement', 'promotions'], true)
             ? $portalPageQuery
             : 'overview';
         $panelFromPageQuery = match ($activePortalPage) {
             'profile' => 'profile',
             'listings' => 'listings',
-            'reservations', 'operations', 'availability', 'pricing' => 'reservations',
+            'reservations', 'operations', 'availability' => 'reservations',
             'billing' => 'billing',
             'engagement', 'promotions' => 'engagement',
             'reports', 'overview' => 'overview',
@@ -97,24 +97,53 @@
         $showListingsPage = $activePortalPage === 'listings';
         $showReservationsPage = in_array($activePortalPage, ['reservations', 'operations'], true);
         $showAvailabilityPage = $activePortalPage === 'availability';
-        $showPricingPage = $activePortalPage === 'pricing';
         $showBillingPage = $activePortalPage === 'billing';
         $showEngagementPage = in_array($activePortalPage, ['engagement', 'promotions'], true);
         $showOverviewPage = in_array($activePortalPage, ['overview', 'reports'], true);
         $forcedPanelKey = (string) session('portal_active_panel', $panelFromPageQuery);
         $forcedListingMode = strtolower(trim((string) session('portal_listing_mode', '')));
         $forcedListingCategory = strtolower(trim((string) request()->query('category', session('portal_listing_category', ''))));
-        $showWorkspaceTabs = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'pricing', 'billing'], true);
+        $showWorkspaceTabs = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'billing'], true);
         $workspacePrimaryPage = match (true) {
             $showListingsPage => 'listings',
             $showAvailabilityPage => 'reservations',
-            $showPricingPage => 'pricing',
             $showBillingPage => 'billing',
             default => 'reservations',
         };
+        $workspaceRelevantCategoryKeys = collect();
+        $propertyCategoryById = $vendorProperties
+            ->keyBy(static fn ($property) => (int) ($property->id ?? 0))
+            ->map(static fn ($property) => vendorPortalCanonicalCategory((string) ($property->listing_category ?? '')));
+
+        foreach ($vendorProperties as $property) {
+            $categoryKey = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
+            if (is_string($categoryKey) && $categoryKey !== '') {
+                $workspaceRelevantCategoryKeys->push($categoryKey);
+            }
+        }
+        foreach ($vendorServices as $service) {
+            $categoryKey = vendorPortalCanonicalCategory((string) ($service->listing_category ?? ''));
+            if (is_string($categoryKey) && $categoryKey !== '') {
+                $workspaceRelevantCategoryKeys->push($categoryKey);
+            }
+        }
+        foreach ($vendorReservations as $reservation) {
+            $reservationNotes = json_decode((string) ($reservation->notes ?? ''), true);
+            $reservationNotes = is_array($reservationNotes) ? $reservationNotes : [];
+            $categoryKey = vendorPortalCanonicalCategory((string) ($reservationNotes['category_key'] ?? ''));
+            if ((!is_string($categoryKey) || $categoryKey === '') && (int) ($reservation->vendor_property_id ?? 0) > 0) {
+                $categoryKey = $propertyCategoryById->get((int) ($reservation->vendor_property_id ?? 0));
+            }
+            if (is_string($categoryKey) && $categoryKey !== '') {
+                $workspaceRelevantCategoryKeys->push($categoryKey);
+            }
+        }
+        $workspaceRelevantCategoryKeys = $workspaceRelevantCategoryKeys->unique()->values();
+
         $workspaceCategoryTabKeys = collect($listingCategoryViewOrder ?? $vendorAllowedCategoryKeys)
             ->map(static fn ($categoryKey) => vendorPortalCanonicalCategory((string) $categoryKey))
             ->filter(static fn ($categoryKey) => is_string($categoryKey) && $categoryKey !== '')
+            ->filter(static fn ($categoryKey) => $workspaceRelevantCategoryKeys->isEmpty() || $workspaceRelevantCategoryKeys->contains($categoryKey))
             ->values();
         $workspaceCategoryQuery = $forcedListingCategory !== '' ? ('?category=' . urlencode($forcedListingCategory)) : '';
         $workspacePrimaryTabs = [
@@ -135,12 +164,6 @@
                 'label' => 'Availability',
                 'active' => $showAvailabilityPage,
                 'href' => '/vendor/availability' . $workspaceCategoryQuery,
-            ],
-            [
-                'key' => 'pricing',
-                'label' => 'Pricing Rules',
-                'active' => $showPricingPage,
-                'href' => '/vendor/pricing' . $workspaceCategoryQuery,
             ],
             [
                 'key' => 'billing',
@@ -361,7 +384,6 @@
                 <a class="hero-link" href="/vendor/listings">Manage Listings</a>
                 <a class="hero-link" href="/vendor/reservations">Moderate Reservations</a>
                 <a class="hero-link" href="/vendor/availability">Update Availability</a>
-                <a class="hero-link" href="/vendor/pricing">Adjust Pricing</a>
                 <a class="hero-link" href="/vendor/billing">Collections &amp; Payouts</a>
             </div>
         </section>
@@ -502,10 +524,6 @@
 
         @if ($showAvailabilityPage)
             @include('vendor-portal.partials.category-operations', ['operationsViewMode' => 'availability'])
-        @endif
-
-        @if ($showPricingPage)
-            @include('vendor-portal.partials.pricing')
         @endif
 
         @if ($showBillingPage)

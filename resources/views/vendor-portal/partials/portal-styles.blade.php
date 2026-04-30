@@ -651,29 +651,28 @@
 
         .workspace-category-tabs {
             display: flex;
-            gap: 2px;
-            overflow-x: auto;
+            gap: 4px;
+            overflow: visible;
             background: #e4eaf0;
             border-radius: 10px;
             padding: 3px;
-            scrollbar-width: none;
-        }
-
-        .workspace-category-tabs::-webkit-scrollbar {
-            display: none;
+            flex-wrap: nowrap;
         }
 
         .workspace-category-tab {
-            white-space: nowrap;
-            padding: 7px 13px;
+            white-space: normal;
+            line-height: 1.2;
+            text-align: center;
+            padding: 7px 8px;
             border: none;
             background: transparent;
             color: #4a6278;
-            font-size: 0.8rem;
+            font-size: 0.76rem;
             font-weight: 700;
             border-radius: 7px;
             text-decoration: none;
-            flex-shrink: 0;
+            flex: 1 1 0;
+            min-width: 0;
         }
 
         .workspace-category-tab:hover {

@@ -68,6 +68,7 @@
                     <th>Service / Room</th>
                     <th>Payment</th>
                     <th>Payment Collected</th>
+                    <th>Booking Generated</th>
                     <th>Processing Since</th>
                     <th>Expected Payout</th>
                     <th>Paid Date</th>
@@ -107,6 +108,7 @@
                         Currency: {{ $row->payment_currency ?? $row->payout_currency ?? 'MVR' }}
                     </td>
                     <td style="font-size:.78rem;">{{ !empty($row->payment_collected_at) ? \Illuminate\Support\Carbon::parse((string) $row->payment_collected_at)->format('Y-m-d') : '—' }}</td>
+                    <td style="font-size:.78rem;">{{ !empty($row->booking_created_at) ? \Illuminate\Support\Carbon::parse((string) $row->booking_created_at)->format('Y-m-d') : '—' }}</td>
                     <td style="font-size:.78rem;">{{ !empty($row->payout_processing_at) ? \Illuminate\Support\Carbon::parse((string) $row->payout_processing_at)->format('Y-m-d') : '—' }}</td>
                     <td style="font-size:.78rem;">{{ !empty($row->payout_expected_at) ? \Illuminate\Support\Carbon::parse((string) $row->payout_expected_at)->format('Y-m-d') : '—' }}</td>
                     <td style="font-size:.78rem;">{{ !empty($row->payout_paid_at) ? \Illuminate\Support\Carbon::parse((string) $row->payout_paid_at)->format('Y-m-d') : '—' }}</td>

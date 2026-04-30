@@ -27,7 +27,7 @@ class VendorPortalNavigationTest extends TestCase
             ])
             ->get('/vendor/reservations?category=accommodation');
 
-        $reservationsResponse->assertRedirect('/vendor?page=reservations&scope=active&category=accommodation');
+        $reservationsResponse->assertRedirect('/vendor?page=reservations&scope=all&category=accommodation');
 
         $pricingResponse = $this
             ->withSession([
@@ -37,7 +37,7 @@ class VendorPortalNavigationTest extends TestCase
             ])
             ->get('/vendor/pricing?category=accommodation');
 
-        $pricingResponse->assertRedirect('/vendor?page=pricing&category=accommodation');
+        $pricingResponse->assertRedirect('/vendor?page=billing&category=accommodation');
     }
 
     public function test_vendor_listings_console_links_keep_forced_category_scope(): void

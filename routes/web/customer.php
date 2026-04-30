@@ -627,7 +627,12 @@ Route::post('/customer/bookings/{reservation}/delete', function (Request $reques
     }
 
     $paymentStatus = strtolower(trim((string) ($reservationRow->payment_status ?? 'unpaid')));
-    if ($paymentStatus === 'paid') {
+    $reservationStatus = strtolower(trim((string) ($reservationRow->status ?? 'pending')));
+    $canDeleteFromPortal = $paymentStatus !== 'paid'
+        || in_array($reservationStatus, ['cancelled', 'canceled', 'failed', 'expired', 'rejected'], true)
+        || $paymentStatus === 'refunded';
+
+    if (!$canDeleteFromPortal) {
         return redirect('/customer')->withErrors([
             'customer' => 'Paid bookings cannot be deleted from the portal. Please contact support for cancellation help.',
         ]);
@@ -644,7 +649,9 @@ Route::post('/customer/bookings/{reservation}/delete', function (Request $reques
     DB::table('vendor_reservations')
         ->where('id', $reservation)
         ->update([
-            'status' => 'cancelled',
+            'status' => in_array($reservationStatus, ['cancelled', 'canceled', 'failed', 'expired', 'rejected'], true)
+                ? (string) ($reservationRow->status ?? 'cancelled')
+                : 'cancelled',
             'notes' => json_encode($notes),
             'updated_at' => now(),
         ]);

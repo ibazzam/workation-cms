@@ -17,7 +17,7 @@
     $sidebarListingsOpen = ($activePortalPage ?? '') === 'listings';
     $sidebarOperationsOpen = in_array($activePortalPage ?? '', ['reservations', 'operations', 'availability'], true);
     $sidebarGrowthOpen = in_array($activePortalPage ?? '', ['promotions', 'engagement', 'billing'], true);
-    $sidebarAccountOpen = in_array($activePortalPage ?? '', ['profile', 'api'], true);
+    $sidebarAccountOpen = ($activePortalPage ?? '') === 'profile';
 @endphp
 
 <nav class="portal-nav" aria-label="Vendor navigation">
@@ -86,7 +86,6 @@
         </button>
         <div class="nav-group-body {{ $sidebarAccountOpen ? 'is-open' : '' }}" data-vendor-nav-group="account">
             <a class="nav-item-link {{ ($activePortalPage ?? '') === 'profile' ? 'prominent' : '' }}" href="/vendor/profile" data-panel-key="profile">Partner Profile</a>
-            <a class="nav-item-link" href="#api" data-panel-key="api">API Tools</a>
         </div>
     </div>
 </nav>

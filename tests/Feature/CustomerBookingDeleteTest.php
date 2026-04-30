@@ -115,6 +115,59 @@ class CustomerBookingDeleteTest extends TestCase
         ]);
     }
 
+    public function test_customer_can_delete_closed_cancelled_booking_from_portal_even_if_paid(): void
+    {
+        $vendor = User::factory()->create();
+        $propertyId = (int) DB::table('vendor_accommodation_listings')->insertGetId([
+            'vendor_user_id' => $vendor->id,
+            'vendor_property_id' => 0,
+            'name' => 'Customer Closed Cancelled Delete Property',
+            'location' => 'Male',
+            'status' => 'active',
+            'max_guests' => 2,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('vendor_accommodation_listings')->where('id', $propertyId)->update(['vendor_property_id' => $propertyId]);
+
+        $reservationId = (int) DB::table('vendor_reservations')->insertGetId([
+            'vendor_user_id' => $vendor->id,
+            'vendor_property_id' => $propertyId,
+            'customer_name' => 'Portal Customer',
+            'customer_email' => 'customer@example.com',
+            'start_at' => now()->addDay(),
+            'end_at' => now()->addDays(2),
+            'guests' => 2,
+            'total_amount' => 140,
+            'currency' => 'MVR',
+            'status' => 'cancelled',
+            'payment_status' => 'paid',
+            'notes' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this
+            ->withSession([
+                'portal_customer_authenticated' => true,
+                'portal_customer_email' => 'customer@example.com',
+            ])
+            ->post('/customer/bookings/' . $reservationId . '/delete');
+
+        $response
+            ->assertRedirect('/customer')
+            ->assertSessionHas('portal_notice', 'Booking removed from your portal list.');
+
+        $reservation = DB::table('vendor_reservations')->where('id', $reservationId)->first();
+        $this->assertNotNull($reservation);
+        $this->assertSame('cancelled', strtolower((string) ($reservation->status ?? '')));
+
+        $notes = json_decode((string) ($reservation->notes ?? ''), true);
+        $this->assertIsArray($notes);
+        $this->assertNotSame('', trim((string) ($notes['customer_deleted_at'] ?? '')));
+        $this->assertSame('customer_portal', (string) ($notes['customer_deleted_by'] ?? ''));
+    }
+
     public function test_customer_can_request_cancellation_for_paid_booking(): void
     {
         $vendor = User::factory()->create();

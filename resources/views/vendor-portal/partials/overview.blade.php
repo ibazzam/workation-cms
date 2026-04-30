@@ -24,39 +24,6 @@
             </article>
         </section>
 
-        <div id="vendorSummaryActions" class="summary-actions" data-panel-group="overview">
-            <button id="refreshSummary" type="button" class="summary-refresh">Refresh API Snapshot</button>
-        </div>
-
-        <section id="vendorProgressSnapshot" class="card progress-snapshot" aria-label="Vendor activity progress snapshot" data-panel-group="overview">
-            <div class="ops-header">
-                <p class="ops-title">Vendor Progress Snapshot</p>
-                <span class="ops-chip">Live from your account data</span>
-            </div>
-            <div class="progress-grid">
-                <article class="progress-card">
-                    <p class="progress-label">Pending Reservations</p>
-                    <p class="progress-value">{{ $vendorPendingReservationsCount }}</p>
-                    <p class="progress-meta">Reservations waiting for action or confirmation</p>
-                </article>
-                <article class="progress-card">
-                    <p class="progress-label">Revenue Collected</p>
-                    <p class="progress-value">MVR {{ number_format($grossCollectionsTotal, 2) }}</p>
-                    <p class="progress-meta">Gross collections before Workation commission and gateway fee deductions</p>
-                </article>
-                <article class="progress-card">
-                    <p class="progress-label">Expected Payout</p>
-                    <p class="progress-value">MVR {{ number_format($expectedPayoutTotal, 2) }}</p>
-                    <p class="progress-meta">Pending payout expected from Workation</p>
-                </article>
-                <article class="progress-card">
-                    <p class="progress-label">Completed Stays</p>
-                    <p class="progress-value">{{ $vendorCompletedReservationsCount }}</p>
-                    <p class="progress-meta">Completed reservations contributing to payout confidence</p>
-                </article>
-            </div>
-        </section>
-
         <section id="vendorReportsSection" class="card ops-section" aria-label="Vendor reports and performance" data-panel-group="overview">
             <div class="ops-header">
                 <p class="ops-title">Reports &amp; Performance</p>

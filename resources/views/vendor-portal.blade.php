@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Partners Portal | Workation</title>
+    @include('partials.favicon')
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -332,12 +333,6 @@
         });
         $vendorRefundCaseCount = (int) $vendorRefundCases->count();
         $vendorRefundExposureTotal = (float) $vendorRefundCases->sum(fn ($reservation) => (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0));
-        $hasPricingSetup = (($vendorDashboardSnapshot['has_pricing_rules'] ?? false) === true) || $vendorPricingRules->count() > 0;
-        $hasAvailabilitySetup = (($vendorDashboardSnapshot['has_availability'] ?? false) === true) || $vendorAvailability->count() > 0;
-        $hasBillingSetup = (($vendorDashboardSnapshot['has_billing'] ?? false) === true) || (bool) $vendorBilling;
-        $vendorGoLiveProgress = $vendorListingCount > 0
-            ? min(100, (int) round((($vendorActiveListingCount > 0 ? 35 : 0) + ($hasPricingSetup ? 20 : 0) + ($hasAvailabilitySetup ? 20 : 0) + ($hasBillingSetup ? 25 : 0))))
-            : 0;
     @endphp
     <main class="page" data-api-base="{{ $apiBase }}">
         <section class="hero">
@@ -345,7 +340,7 @@
                 <div class="hero-head">
                     <span class="eyebrow">Vendor Workspace</span>
                     <h1>Partner Operations Center</h1>
-                    <p>A clean single workspace for listings, reservations, availability, pricing, collections, payouts, and customer engagement.</p>
+                    <p>Manage listings, reservations, availability, and payouts from one workspace.</p>
                 </div>
                 <div class="hero-actions">
                     <div class="auth-bar">
@@ -373,46 +368,12 @@
                     <p class="hero-highlight-value">MVR {{ number_format($grossCollectionsTotal, 2) }}</p>
                     <p class="hero-highlight-meta">Revenue tracked across current vendor bookings</p>
                 </article>
-                <article class="hero-highlight">
-                    <p class="hero-highlight-label">Go-Live Progress</p>
-                    <p class="hero-highlight-value">{{ $vendorGoLiveProgress }}%</p>
-                    <p class="hero-highlight-meta">Listings, pricing, availability, and billing readiness</p>
-                </article>
             </div>
             <div class="hero-links" aria-label="Quick actions">
                 <a class="hero-link" href="/vendor/listings">Manage Listings</a>
                 <a class="hero-link" href="/vendor/reservations">Moderate Reservations</a>
                 <a class="hero-link" href="/vendor/availability">Update Availability</a>
                 <a class="hero-link" href="/vendor/billing">Collections &amp; Payouts</a>
-            </div>
-        </section>
-
-        <section class="card vendor-trust-strip" aria-label="Vendor category verification status">
-            <div class="vendor-trust-strip-head">
-                <p class="label">Service Access &amp; Verification</p>
-                <span class="ops-chip">Admin-governed</span>
-            </div>
-            <div class="vendor-trust-strip-grid">
-                <article class="vendor-trust-metric">
-                    <p class="metric-label">Unlocked Categories</p>
-                    <p class="metric-value">{{ $vendorAllowedCategoryLabels->count() }}</p>
-                    <p class="small">Only these categories are visible in Listings, Operations, Availability, and Pricing.</p>
-                </article>
-                <article class="vendor-trust-metric">
-                    <p class="metric-label">Pending Verification</p>
-                    <p class="metric-value">{{ $vendorPendingCategoryLabels->count() }}</p>
-                    <p class="small">Pending categories stay hidden until approved by admin.</p>
-                </article>
-            </div>
-            <div class="vendor-trust-chips" aria-label="Category access tags">
-                @forelse ($vendorAllowedCategoryLabels as $categoryLabel)
-                    <span class="vendor-status-chip is-approved">{{ $categoryLabel }} - Unlocked</span>
-                @empty
-                    <span class="vendor-status-chip is-pending">No category unlocked yet</span>
-                @endforelse
-                @foreach ($vendorPendingCategoryLabels as $categoryLabel)
-                    <span class="vendor-status-chip is-pending">{{ $categoryLabel }} - Pending admin verification</span>
-                @endforeach
             </div>
         </section>
 
@@ -526,46 +487,8 @@
         @endif
 
         @if ($showBillingPage)
-            @include('vendor-portal.partials.billing-collection')
             @include('vendor-portal.partials.payout-status')
         @endif
-
-        @if ($showOverviewPage)
-        <section class="layout" id="vendorAuthApi" data-panel-group="api">
-            <article class="card" id="vendorAuthCard">
-                <p class="label">Auth</p>
-                <input id="tokenInput" class="token-input" type="password" placeholder="Paste vendor JWT bearer token">
-                <div>
-                    <button id="saveToken" class="btn btn-primary" type="button">Save Token</button>
-                    <button id="clearToken" class="btn btn-secondary" type="button">Clear</button>
-                </div>
-                <div id="tokenState" class="state warn">TOKEN NOT SET</div>
-                <div id="tokenMeta" class="token-meta">Token is stored only in this browser tab session.</div>
-            </article>
-
-            <article class="card" id="vendorApiCard">
-                <p class="label">Vendor API Actions</p>
-                <div class="endpoint">
-                    <code>GET /api/v1/auth/me</code>
-                    <button type="button" data-path="/api/v1/auth/me">Run</button>
-                </div>
-                <div class="endpoint">
-                    <code>GET /api/v1/bookings (customer reservations)</code>
-                    <button type="button" data-path="/api/v1/bookings">Run</button>
-                </div>
-                <div class="endpoint">
-                    <code>GET /api/v1/loyalty/me</code>
-                    <button type="button" data-path="/api/v1/loyalty/me">Run</button>
-                </div>
-                <div class="endpoint">
-                    <code>GET /api/v1/payments/vendor/me/settlements/report</code>
-                    <button type="button" data-path="/api/v1/payments/vendor/me/settlements/report">Run</button>
-                </div>
-                <pre id="output">Ready. Save token, then run an endpoint.</pre>
-            </article>
-        </section>
-        @endif
-
 
         @if ($showEngagementPage)
             @include('vendor-portal.partials.engagement')
@@ -756,8 +679,10 @@
             const SESSION_KEY = "workation_vendor_token";
 
             function setState(type, text) {
-                tokenState.className = "state " + type;
-                tokenState.textContent = text;
+                if (tokenState) {
+                    tokenState.className = "state " + type;
+                    tokenState.textContent = text;
+                }
             }
 
             function setMeta(text) {
@@ -878,6 +803,9 @@
             }
 
             function saveToken() {
+                if (!tokenInput) {
+                    return;
+                }
                 const value = (tokenInput.value || "").trim();
                 if (!value) {
                     setState("warn", "TOKEN NOT SET");
@@ -899,6 +827,9 @@
             }
 
             function clearToken() {
+                if (!tokenInput) {
+                    return;
+                }
                 sessionStorage.removeItem(SESSION_KEY);
                 tokenInput.value = "";
                 setState("warn", "TOKEN CLEARED");
@@ -2355,6 +2286,9 @@
             }
 
             async function run(path, triggerButton) {
+                if (!output) {
+                    return;
+                }
                 const token = getToken();
                 if (!token) {
                     setState("warn", "TOKEN REQUIRED");

@@ -441,8 +441,8 @@ Route::get('/', function () {
     $homeTransportDestinationOptions = collect();
 
     {
-        $allProperties = collect(Cache::remember('home:active-listings:v2', now()->addMinutes(3), static function () {
-            return VendorPropertyCompatibilityReader::allActiveListings(300)->values()->all();
+        $allProperties = collect(Cache::remember('home:active-listings:v3', now()->addMinutes(15), static function () {
+            return VendorPropertyCompatibilityReader::allActiveListings(1200)->values()->all();
         }));
 
         $propertyIds = $allProperties
@@ -689,13 +689,16 @@ Route::get('/', function () {
         }
 
         if (Schema::hasTable('vendor_listing_media') && $propertyLookupIds->isNotEmpty()) {
-            $mediaRows = DB::table('vendor_listing_media')
-                ->where('entity_type', 'property')
-                ->whereIn('entity_id', $propertyLookupIds->all())
-                ->orderByDesc('is_primary')
-                ->orderByDesc('created_at')
-                ->limit(1200)
-                ->get();
+            $homeMediaCacheKey = 'home:property-media:v1:' . sha1(implode(',', $propertyLookupIds->all()));
+            $mediaRows = Cache::remember($homeMediaCacheKey, now()->addMinutes(10), static function () use ($propertyLookupIds) {
+                return DB::table('vendor_listing_media')
+                    ->where('entity_type', 'property')
+                    ->whereIn('entity_id', $propertyLookupIds->all())
+                    ->orderByDesc('is_primary')
+                    ->orderByDesc('created_at')
+                    ->limit(1200)
+                    ->get();
+            });
 
             $mediaByEntityId = $mediaRows->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
             $homeListingMediaByProperty = $allProperties
@@ -911,9 +914,8 @@ Route::get('/', function () {
                 ->groupBy(static fn ($property) => $homeCategoryPriceBucket($property))
                 ->map(static fn ($group) => $group->first());
 
-            $homePricingListings = collect(Cache::remember('home:pricing-listings:v1', now()->addMinutes(10), static function () {
-                return VendorPropertyCompatibilityReader::allActiveListings(2000)->values()->all();
-            }));
+            // Reuse the already hydrated active listing set to avoid a second expensive read.
+            $homePricingListings = $allProperties;
 
             $categoryMinPriceRows = $homePricingListings
                 ->map(static function ($property) use ($homeCategoryPriceBucket) {
@@ -1411,20 +1413,24 @@ Route::get('/', function () {
 
     $recentBlogPosts = collect();
     if (Schema::hasTable('blog_posts')) {
-        $recentBlogPosts = BlogPost::query()
-            ->where('is_published', true)
-            ->where(function ($query) {
-                $query->whereNull('published_at')->orWhere('published_at', '<=', now());
-            })
-            ->orderByDesc('is_featured')
-            ->orderByDesc('published_at')
-            ->orderByDesc('created_at')
-            ->limit(3)
-            ->get(array_filter(['id', 'title', 'slug', 'excerpt', \Illuminate\Support\Facades\Schema::hasColumn('blog_posts', 'cover_image_url') ? 'cover_image_url' : null, 'cover_image_path', 'blog_category_slug', 'published_at', 'created_at']));
+        $recentBlogPosts = collect(Cache::remember('home:recent-blog-posts:v1', now()->addMinutes(5), static function () {
+            $posts = BlogPost::query()
+                ->where('is_published', true)
+                ->where(function ($query) {
+                    $query->whereNull('published_at')->orWhere('published_at', '<=', now());
+                })
+                ->orderByDesc('is_featured')
+                ->orderByDesc('published_at')
+                ->orderByDesc('created_at')
+                ->limit(3)
+                ->get(array_filter(['id', 'title', 'slug', 'excerpt', \Illuminate\Support\Facades\Schema::hasColumn('blog_posts', 'cover_image_url') ? 'cover_image_url' : null, 'cover_image_path', 'blog_category_slug', 'published_at', 'created_at']));
 
-        if (function_exists('blogHydratePostsWithMeta')) {
-            $recentBlogPosts = blogHydratePostsWithMeta($recentBlogPosts);
-        }
+            if (function_exists('blogHydratePostsWithMeta')) {
+                $posts = blogHydratePostsWithMeta($posts);
+            }
+
+            return $posts->values()->all();
+        }));
     }
 
     return view('welcome', [

@@ -63,15 +63,15 @@
         <table class="ops-table" aria-label="Payout status table">
             <thead>
                 <tr>
-                    <th>Reservation</th>
-                    <th>Check-in</th>
-                    <th>Check-out</th>
+                    <th>Booking / Reservation</th>
+                    <th>Stay</th>
+                    <th>Service / Room</th>
+                    <th>Payment</th>
                     <th>Payment Collected</th>
                     <th>Processing Since</th>
                     <th>Expected Payout</th>
                     <th>Paid Date</th>
                     <th>Your Payout</th>
-                    <th>Currency</th>
                     <th>Payout Status</th>
                     <th>Flags</th>
                 </tr>
@@ -81,25 +81,42 @@
                 @php
                     $st     = $statusColors[$row->payout_status ?? ''] ?? $defaultStatus;
                     $label  = $st['label'];
+                    $nightsLabel = is_numeric($row->stay_nights ?? null)
+                        ? ((int) $row->stay_nights . ' night' . ((int) $row->stay_nights === 1 ? '' : 's'))
+                        : '—';
                 @endphp
                 <tr>
-                    <td style="font-weight:700;font-size:.82rem;">
-                        {{ $row->reservation_code ?? '#' . $row->id }}
+                    <td style="font-size:.8rem;line-height:1.35;min-width:220px;">
+                        <strong style="font-size:.83rem;">{{ $row->booking_ref ?? ('Booking #' . $row->id) }}</strong><br>
+                        <span>{{ $row->booking_label ?? ($row->reservation_code ?? ('#' . $row->id)) }}</span><br>
+                        <span style="color:#73879a;">{{ $row->reservation_code ?? '#' . $row->id }}</span>
                     </td>
-                    <td style="font-size:.8rem;">{{ $row->check_in ?? '—' }}</td>
-                    <td style="font-size:.8rem;">{{ $row->check_out ?? '—' }}</td>
+                    <td style="font-size:.8rem;line-height:1.35;min-width:170px;">
+                        Check-in: {{ $row->check_in ?? '—' }}<br>
+                        Check-out: {{ $row->check_out ?? '—' }}<br>
+                        <span style="color:#73879a;">{{ $nightsLabel }}</span>
+                    </td>
+                    <td style="font-size:.8rem;line-height:1.35;min-width:170px;">
+                        {{ $row->service_or_room ?? '—' }}
+                        @if(!empty($row->property_name))
+                            <br><span style="color:#73879a;">{{ $row->property_name }}</span>
+                        @endif
+                    </td>
+                    <td style="font-size:.8rem;line-height:1.35;min-width:140px;">
+                        Status: {{ $row->payment_status ?? 'UNPAID' }}<br>
+                        Currency: {{ $row->payment_currency ?? $row->payout_currency ?? 'MVR' }}
+                    </td>
                     <td style="font-size:.78rem;">{{ !empty($row->payment_collected_at) ? \Illuminate\Support\Carbon::parse((string) $row->payment_collected_at)->format('Y-m-d') : '—' }}</td>
                     <td style="font-size:.78rem;">{{ !empty($row->payout_processing_at) ? \Illuminate\Support\Carbon::parse((string) $row->payout_processing_at)->format('Y-m-d') : '—' }}</td>
                     <td style="font-size:.78rem;">{{ !empty($row->payout_expected_at) ? \Illuminate\Support\Carbon::parse((string) $row->payout_expected_at)->format('Y-m-d') : '—' }}</td>
                     <td style="font-size:.78rem;">{{ !empty($row->payout_paid_at) ? \Illuminate\Support\Carbon::parse((string) $row->payout_paid_at)->format('Y-m-d') : '—' }}</td>
                     <td style="font-weight:700;font-family:monospace;">
                         @if($row->vendor_payout_amount)
-                            {{ number_format($row->vendor_payout_amount, 2) }}
+                            {{ ($row->payout_currency ?? 'MVR') . ' ' . number_format($row->vendor_payout_amount, 2) }}
                         @else
                             <span style="color:#5b6778;">—</span>
                         @endif
                     </td>
-                    <td style="font-size:.8rem;">{{ $row->payout_currency ?? '—' }}</td>
                     <td>
                         <span style="
                             display:inline-block;

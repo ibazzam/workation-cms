@@ -3733,7 +3733,9 @@
                                 $nearbyUrl = trim((string) ($nearby['url'] ?? ''));
                                 $nearbyLocationLine = trim((string) ($nearby['location_line'] ?? 'Maldives'));
                                 $nearbyCurrency = strtoupper(trim((string) ($nearby['currency'] ?? 'MVR')));
-                                $nearbyPrice = number_format((float) ($nearby['base_price'] ?? 0), 2);
+                                $nearbyBasePrice = (float) ($nearby['base_price'] ?? 0);
+                                $nearbyHasPrice = $nearbyBasePrice > 0;
+                                $nearbyPrice = number_format($nearbyBasePrice, 2);
                                 $nearbyDistance = isset($nearby['distance_km']) ? (float) $nearby['distance_km'] : null;
                                 $nearbyThumb = trim((string) ($nearby['thumbnail_url'] ?? ''));
                                 $nearbyThumbFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22600%22 height=%22300%22 viewBox=%220 0 600 300%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d9e9f4%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c6ddec%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22600%22 height=%22300%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%233e6078%22 font-family=%22Arial%22 font-size=%2224%22%3ENearby%20Property%3C/text%3E%3C/svg%3E";
@@ -3744,7 +3746,7 @@
                                     <span class="nearby-location">{{ $nearbyLocationLine }}</span>
                                     <h3 class="nearby-name">{{ $nearbyName }}</h3>
                                     <div class="nearby-meta">
-                                        <span class="nearby-price">From {{ $nearbyCurrency }} {{ $nearbyPrice }}</span>
+                                        <span class="nearby-price">{{ $nearbyHasPrice ? ('From ' . $nearbyCurrency . ' ' . $nearbyPrice) : 'Check rates' }}</span>
                                         @if ($nearbyDistance !== null)
                                             <span>{{ number_format($nearbyDistance, 1) }} km away</span>
                                         @endif

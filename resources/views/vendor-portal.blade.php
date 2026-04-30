@@ -107,7 +107,7 @@
         $showWorkspaceTabs = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'billing'], true);
         $workspacePrimaryPage = match (true) {
             $showListingsPage => 'listings',
-            $showAvailabilityPage => 'reservations',
+            $showAvailabilityPage => 'availability',
             $showBillingPage => 'billing',
             default => 'reservations',
         };
@@ -443,7 +443,7 @@
                     <div class="workspace-category-tabs" role="tablist" aria-label="Vendor category filter">
                         <a
                             class="workspace-category-tab {{ $forcedListingCategory === '' ? 'is-active' : '' }}"
-                            href="{{ '/vendor?page=' . $workspacePrimaryPage }}"
+                            href="{{ match ($workspacePrimaryPage) { 'listings' => '/vendor/listings', 'availability' => '/vendor/availability', 'billing' => '/vendor/billing', default => '/vendor/reservations' } }}"
                             role="tab"
                             aria-selected="{{ $forcedListingCategory === '' ? 'true' : 'false' }}"
                         >All</a>
@@ -452,6 +452,7 @@
                                 $categoryLabel = (string) ($listingCategoryLabelMap[$categoryKey] ?? ucwords(str_replace('_', ' ', $categoryKey)));
                                 $categoryHref = match ($workspacePrimaryPage) {
                                     'listings' => '/vendor/listings/' . $categoryKey,
+                                    'availability' => '/vendor/availability?category=' . urlencode($categoryKey),
                                     'billing' => '/vendor/billing?category=' . urlencode($categoryKey),
                                     default => '/vendor/reservations?category=' . urlencode($categoryKey),
                                 };

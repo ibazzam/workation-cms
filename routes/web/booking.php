@@ -341,6 +341,52 @@ if (!function_exists('workationIsBmlConnectConfigured')) {
     }
 }
 
+if (!function_exists('workationFetchBmlConnectTransactionStatus')) {
+    function workationFetchBmlConnectTransactionStatus(string $gatewayKey, string $transactionId): ?array
+    {
+        $gatewayConfig = CheckoutPaymentRouter::gatewayConfig($gatewayKey);
+        $apiKey = trim((string) ($gatewayConfig['api_key'] ?? ''));
+        $mode = strtolower(trim((string) ($gatewayConfig['mode'] ?? 'production')));
+
+        if ($transactionId === '' || $apiKey === '' || !in_array($mode, ['production', 'sandbox'], true)) {
+            return null;
+        }
+
+        $baseUrl = $mode === 'sandbox'
+            ? 'https://api.uat.merchants.bankofmaldives.com.mv/public/'
+            : 'https://api.merchants.bankofmaldives.com.mv/public/';
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => $apiKey,
+                'Accept' => 'application/json',
+            ])->get($baseUrl . 'transactions/' . rawurlencode($transactionId));
+
+            if (!$response->successful()) {
+                return null;
+            }
+
+            $data = $response->json();
+            if (!is_array($data)) {
+                return null;
+            }
+
+            return [
+                'state' => strtoupper(trim((string) ($data['state'] ?? ''))),
+                'transaction_id' => trim((string) ($data['id'] ?? $transactionId)),
+            ];
+        } catch (\Throwable $exception) {
+            Log::warning('BML Connect transaction status lookup failed', [
+                'gateway' => $gatewayKey,
+                'transaction_id' => $transactionId,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+}
+
 if (!function_exists('workationResolvePropertyVendorUserId')) {
     function workationResolvePropertyVendorUserId(object $propertyRow): int
     {
@@ -2518,6 +2564,57 @@ Route::match(['get', 'post'], '/booking/payment/webhooks/{gateway}', function (R
         }
 
         if ($reservationId > 0) {
+            $reservationRow = DB::table('vendor_reservations')->where('id', $reservationId)->first();
+
+            if ($reservationRow
+                && in_array($gateway, ['bml', 'bml_mvr', 'bml_usd'], true)
+                && strtolower(trim((string) ($reservationRow->payment_status ?? 'unpaid'))) !== 'paid') {
+                $bmlState = strtoupper(trim((string) ($request->query('state', $request->query('status', '')))));
+                $bmlTransactionId = trim((string) ($request->query('transactionId', $request->query('transaction_id', ''))));
+
+                if ($bmlTransactionId === '') {
+                    $paymentPayload = json_decode((string) ($reservationRow->payment_payload_json ?? ''), true);
+                    if (is_array($paymentPayload)) {
+                        $bmlTransactionId = trim((string) ($paymentPayload['bml_transaction_id'] ?? ''));
+                    }
+                }
+
+                if ($bmlState === '' && $bmlTransactionId !== '' && in_array($gateway, ['bml_mvr', 'bml_usd'], true)) {
+                    $statusSnapshot = workationFetchBmlConnectTransactionStatus($gateway, $bmlTransactionId);
+                    if (is_array($statusSnapshot)) {
+                        $bmlState = strtoupper(trim((string) ($statusSnapshot['state'] ?? '')));
+                        $bmlTransactionId = trim((string) ($statusSnapshot['transaction_id'] ?? $bmlTransactionId));
+                    }
+                }
+
+                if ($bmlState === 'CONFIRMED') {
+                    workationApplyReservationPaymentEvent($reservationRow, [
+                        'event_id' => 'bml_browser_' . ($bmlTransactionId !== '' ? $bmlTransactionId : Str::lower(Str::random(16))),
+                        'intent_id' => (string) ($reservationRow->payment_intent_id ?? ''),
+                        'reference' => $bmlTransactionId,
+                        'status' => 'paid',
+                    ]);
+
+                    return redirect(workationPaymentSuccessReturnUrl($reservationId, $gateway))
+                        ->with('portal_notice', 'Payment verified successfully and your booking is now confirmed.');
+                }
+
+                if (in_array($bmlState, ['DECLINED', 'CANCELLED'], true)) {
+                    $mappedFailureStatus = $bmlState === 'CANCELLED' ? 'cancelled' : 'failed';
+
+                    workationApplyReservationPaymentEvent($reservationRow, [
+                        'event_id' => 'bml_browser_' . ($bmlTransactionId !== '' ? $bmlTransactionId : Str::lower(Str::random(16))),
+                        'intent_id' => (string) ($reservationRow->payment_intent_id ?? ''),
+                        'reference' => $bmlTransactionId,
+                        'status' => $mappedFailureStatus,
+                        'error' => 'BML state: ' . $bmlState,
+                    ]);
+
+                    return redirect('/booking/checkout/' . $reservationId)
+                        ->withErrors(['payment' => 'BML payment did not complete (' . $bmlState . '). Please retry or use another card.']);
+                }
+            }
+
             return redirect(workationPaymentSuccessReturnUrl($reservationId, $gateway))
                 ->with('portal_notice', 'Payment return received. We are verifying your payment status.');
         }

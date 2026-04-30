@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class CheckoutWebhookCallbackTest extends TestCase
@@ -204,6 +205,69 @@ class CheckoutWebhookCallbackTest extends TestCase
         $response
             ->assertRedirect(url('/customer?section=bookings&booking=' . $reservationId . '&payment=success'))
             ->assertSessionHas('portal_notice', 'Payment return received. We are verifying your payment status.');
+    }
+
+    public function test_bml_browser_return_can_reconcile_confirmed_payment_and_mark_paid(): void
+    {
+        config([
+            'checkout_payments.gateways.bml_mvr.api_key' => 'bml-test-key',
+            'checkout_payments.gateways.bml_mvr.mode' => 'sandbox',
+        ]);
+
+        Http::fake([
+            'https://api.uat.merchants.bankofmaldives.com.mv/public/transactions/*' => Http::response([
+                'id' => 'BMLTXN-GET-001',
+                'state' => 'CONFIRMED',
+            ], 200),
+        ]);
+
+        $reservationId = $this->createReservation();
+        DB::table('vendor_reservations')->where('id', $reservationId)->update([
+            'payment_gateway' => 'bml_mvr',
+            'payment_intent_id' => 'payint_bml_001',
+            'payment_payload_json' => json_encode(['bml_transaction_id' => 'BMLTXN-GET-001']),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->get('/booking/payment/webhooks/bml_mvr?reservation_id=' . $reservationId);
+
+        $response
+            ->assertRedirect(url('/customer?section=bookings&booking=' . $reservationId . '&payment=success'))
+            ->assertSessionHas('portal_notice', 'Payment verified successfully and your booking is now confirmed.');
+
+        $this->assertDatabaseHas('vendor_reservations', [
+            'id' => $reservationId,
+            'status' => 'confirmed',
+            'payment_status' => 'paid',
+            'payment_reference' => 'BMLTXN-GET-001',
+            'payment_webhook_event_id' => 'bml_browser_BMLTXN-GET-001',
+        ]);
+    }
+
+    public function test_bml_browser_return_declined_marks_payment_unpaid_with_error(): void
+    {
+        $reservationId = $this->createReservation();
+        DB::table('vendor_reservations')->where('id', $reservationId)->update([
+            'payment_gateway' => 'bml_mvr',
+            'payment_intent_id' => 'payint_bml_declined_001',
+            'payment_payload_json' => json_encode(['bml_transaction_id' => 'BMLTXN-GET-DECLINED-001']),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->get('/booking/payment/webhooks/bml_mvr?reservation_id=' . $reservationId . '&state=DECLINED&transactionId=BMLTXN-GET-DECLINED-001');
+
+        $response
+            ->assertRedirect('/booking/checkout/' . $reservationId)
+            ->assertSessionHasErrors('payment');
+
+        $this->assertDatabaseHas('vendor_reservations', [
+            'id' => $reservationId,
+            'status' => 'pending',
+            'payment_status' => 'unpaid',
+            'payment_reference' => 'BMLTXN-GET-DECLINED-001',
+            'payment_webhook_event_id' => 'bml_browser_BMLTXN-GET-DECLINED-001',
+            'payment_error' => 'BML state: DECLINED',
+        ]);
     }
 
     private function createReservation(): int

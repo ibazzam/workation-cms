@@ -483,26 +483,60 @@ Route::get('/vendor', function () {
                 return $reservation;
             })->values();
 
+            $propertyNameById = $vendorProperties
+                ->keyBy(static fn ($property): int => (int) ($property->id ?? 0))
+                ->map(static fn ($property): string => trim((string) ($property->name ?? '')));
+            $serviceNameById = $vendorServices
+                ->keyBy(static fn ($service): int => (int) ($service->id ?? 0))
+                ->map(static fn ($service): string => trim((string) ($service->title ?? $service->name ?? '')));
+
             $payoutStatusRows = $vendorReservations
                 ->filter(static function ($reservation): bool {
                     $status = strtolower(trim((string) ($reservation->payment_status ?? '')));
                     $payoutStatus = strtolower(trim((string) ($reservation->payout_status ?? '')));
                     return $status === 'paid' || $payoutStatus !== '';
                 })
-                ->map(static function ($reservation) {
+                ->map(function ($reservation) use ($propertyNameById, $serviceNameById) {
                     $notes = json_decode((string) ($reservation->notes ?? ''), true);
                     $notes = is_array($notes) ? $notes : [];
 
                     $checkIn = (string) ($reservation->start_at ?? '');
                     $checkOut = (string) ($reservation->end_at ?? '');
+                    $propertyId = (int) ($reservation->vendor_property_id ?? 0);
+                    $serviceId = (int) ($reservation->vendor_service_id ?? 0);
+
+                    $roomRef = trim((string) ($notes['room_id'] ?? ''));
+                    $roomName = trim((string) ($notes['room_name'] ?? ''));
+                    $serviceLabel = trim((string) ($notes['service_label'] ?? ''));
+                    $propertyName = trim((string) ($propertyNameById->get($propertyId, '')));
+                    $serviceName = trim((string) ($serviceNameById->get($serviceId, '')));
+
+                    $bookingLabel = $roomName !== '' ? $roomName : ($serviceLabel !== '' ? $serviceLabel : ($serviceName !== '' ? $serviceName : ($propertyName !== '' ? $propertyName : 'Reservation #' . (int) ($reservation->id ?? 0))));
+                    $bookingRef = $roomRef !== '' ? ('Room #' . $roomRef) : ('Booking #' . (int) ($reservation->id ?? 0));
+
+                    $stayNights = null;
+                    if ($checkIn !== '' && $checkOut !== '') {
+                        try {
+                            $stayNights = max(1, \Illuminate\Support\Carbon::parse($checkIn)->diffInDays(\Illuminate\Support\Carbon::parse($checkOut)));
+                        } catch (\Throwable $exception) {
+                            $stayNights = null;
+                        }
+                    }
 
                     return (object) [
                         'id' => (int) ($reservation->id ?? 0),
                         'reservation_code' => 'RSV-' . str_pad((string) ((int) ($reservation->id ?? 0)), 6, '0', STR_PAD_LEFT),
+                        'booking_ref' => $bookingRef,
+                        'booking_label' => $bookingLabel,
+                        'property_name' => $propertyName,
+                        'service_or_room' => $roomName !== '' ? $roomName : ($serviceLabel !== '' ? $serviceLabel : ($serviceName !== '' ? $serviceName : '—')),
                         'check_in' => $checkIn !== '' ? substr($checkIn, 0, 10) : '—',
                         'check_out' => $checkOut !== '' ? substr($checkOut, 0, 10) : '—',
+                        'stay_nights' => $stayNights,
                         'payout_status' => strtolower(trim((string) ($reservation->payout_status ?? 'queued'))),
                         'payout_currency' => strtoupper(trim((string) ($reservation->payout_currency ?? $reservation->currency ?? 'MVR'))),
+                        'payment_currency' => strtoupper(trim((string) ($reservation->payment_currency ?? $reservation->currency ?? 'MVR'))),
+                        'payment_status' => strtoupper(trim((string) ($reservation->payment_status ?? 'unpaid'))),
                         'vendor_payout_amount' => (float) ($reservation->vendor_payout_amount ?? 0),
                         'payment_collected_at' => (string) ($reservation->payment_collected_at ?? $reservation->payment_verified_at ?? null),
                         'payout_processing_at' => (string) ($reservation->payout_processing_at ?? null),

@@ -936,6 +936,7 @@
                                             <td>
                                                 @php
                                                     $rowStatus = strtolower(trim((string) ($reservationRow['status'] ?? 'pending')));
+                                                    $rowPaymentStatus = strtolower(trim((string) ($reservationRow['payment_status'] ?? 'unpaid')));
                                                     $timelineOptions = [
                                                         'pending' => 'Booked (Pending Confirmation)',
                                                         'cancel_requested' => 'Cancel Requested (Customer)',
@@ -946,6 +947,10 @@
                                                         'cancelled' => 'Cancelled',
                                                     ];
                                                     $payoutStatusText = strtoupper((string) ($reservationRow['payout_status'] ?? 'queued'));
+                                                    $canDeleteReservation = in_array($rowStatus, ['cancelled', 'failed', 'expired', 'rejected'], true)
+                                                        && in_array($rowPaymentStatus, ['unpaid', 'failed', 'cancelled', 'refunded'], true)
+                                                        && !((bool) ($reservationRow['has_open_dispute'] ?? false))
+                                                        && !((bool) ($reservationRow['has_refund_case'] ?? false));
                                                 @endphp
                                                 <form class="inline-status-form" method="POST" action="/portal/vendor/reservations/{{ (int) ($reservationRow['id'] ?? 0) }}/status">
                                                     @csrf
@@ -959,6 +964,12 @@
                                                 <p class="small" style="margin-top:6px;">
                                                     Current: {{ strtoupper((string) ($reservationRow['status'] ?? 'pending')) }} | Payout: {{ $payoutStatusText }}
                                                 </p>
+                                                @if ($canDeleteReservation)
+                                                    <form method="POST" action="/portal/vendor/reservations/{{ (int) ($reservationRow['id'] ?? 0) }}/delete" onsubmit="return confirm('Remove this cancelled booking from your vendor portal list?');" style="margin-top:8px;">
+                                                        @csrf
+                                                        <button class="btn btn-danger" type="submit">Delete Booking</button>
+                                                    </form>
+                                                @endif
                                             </td>
                                         </tr>
                                     @empty

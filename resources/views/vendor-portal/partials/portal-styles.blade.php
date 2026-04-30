@@ -37,7 +37,7 @@
             background: linear-gradient(130deg, var(--hero-1) 0%, var(--hero-2) 48%, var(--hero-3) 100%);
             border-radius: 12px;
             color: #fff;
-            padding: 14px 16px;
+            padding: 12px 14px;
             box-shadow: 0 10px 24px rgba(18, 38, 58, 0.18);
         }
 
@@ -48,11 +48,11 @@
             letter-spacing: 0.12em;
             text-transform: uppercase;
             color: #d7f2f5;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
 
         .hero h1 {
-            margin: 0 0 8px;
+            margin: 0 0 4px;
             font-size: clamp(1.2rem, 2vw, 1.65rem);
             line-height: 1.15;
         }
@@ -60,15 +60,15 @@
         .hero p {
             margin: 0;
             color: #dcf4f3;
-            max-width: 980px;
-            font-size: 0.86rem;
+            max-width: 720px;
+            font-size: 0.82rem;
         }
 
         .hero-top {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
-            gap: 14px;
+            gap: 10px;
             flex-wrap: wrap;
         }
 
@@ -80,11 +80,11 @@
         }
 
         .hero-links {
-            margin-top: 14px;
+            margin-top: 10px;
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            padding-top: 10px;
+            padding-top: 8px;
             border-top: 1px solid rgba(211, 235, 244, 0.35);
         }
 
@@ -96,9 +96,9 @@
         }
 
         .hero-highlights {
-            margin-top: 14px;
+            margin-top: 10px;
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 10px;
         }
 
@@ -509,7 +509,6 @@
         }
 
         .report-card {
-            border: 1px solid #d7e0e6;
             border-radius: 12px;
             background: #ffffff;
             padding: 12px;
@@ -526,45 +525,6 @@
             font-size: 0.82rem;
             color: var(--muted);
             line-height: 1.45;
-        }
-
-        .progress-snapshot {
-            margin-top: 12px;
-        }
-
-        .progress-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 10px;
-        }
-
-        .progress-card {
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            background: #ffffff;
-            padding: 12px;
-        }
-
-        .progress-label {
-            margin: 0;
-            font-size: 0.74rem;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
-        }
-
-        .progress-value {
-            margin: 6px 0 0;
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #1f3346;
-        }
-
-        .progress-meta {
-            margin: 6px 0 0;
-            font-size: 0.8rem;
-            color: var(--muted);
         }
 
         [data-panel-group][hidden] {

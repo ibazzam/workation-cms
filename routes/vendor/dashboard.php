@@ -500,6 +500,13 @@ Route::get('/vendor', function () {
                 $reservation->has_refund_case = $hasOpenRefundTimeline || (bool) ($reservation->has_refund_case ?? false);
 
                 return $reservation;
+            })->filter(static function ($reservation): bool {
+                $notes = json_decode((string) ($reservation->notes ?? ''), true);
+                if (!is_array($notes)) {
+                    return true;
+                }
+
+                return trim((string) ($notes['vendor_deleted_at'] ?? '')) === '';
             })->values();
 
             $propertyNameById = $vendorProperties

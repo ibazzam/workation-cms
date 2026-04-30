@@ -533,6 +533,58 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
     return back()->with('portal_notice', 'Reservation timeline updated.');
 });
 
+Route::post('/portal/vendor/reservations/{reservation}/delete', function (int $reservation) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+    if (!Schema::hasTable('vendor_reservations')) {
+        return back()->withErrors(['profile' => 'Vendor reservations table is not ready. Run migrations first.']);
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $reservationRow = DB::table('vendor_reservations')
+        ->where('id', $reservation)
+        ->where('vendor_user_id', $vendorUserId)
+        ->first();
+
+    if (!$reservationRow) {
+        return back()->withErrors(['profile' => 'Reservation not found for this vendor account.']);
+    }
+
+    $status = strtolower(trim((string) ($reservationRow->status ?? 'pending')));
+    $paymentStatus = strtolower(trim((string) ($reservationRow->payment_status ?? 'unpaid')));
+    $hasOpenDispute = (bool) ($reservationRow->has_open_dispute ?? false);
+    $hasRefundCase = (bool) ($reservationRow->has_refund_case ?? false);
+    $canDelete = in_array($status, ['cancelled', 'failed', 'expired', 'rejected'], true)
+        && in_array($paymentStatus, ['unpaid', 'failed', 'cancelled', 'refunded'], true)
+        && !$hasOpenDispute
+        && !$hasRefundCase;
+
+    if (!$canDelete) {
+        return back()->withErrors([
+            'profile' => 'Only fully closed cancelled bookings with no active refund or dispute can be removed from the vendor portal.',
+        ]);
+    }
+
+    $notes = json_decode((string) ($reservationRow->notes ?? ''), true);
+    if (!is_array($notes)) {
+        $notes = [];
+    }
+
+    $notes['vendor_deleted_at'] = now()->toIso8601String();
+    $notes['vendor_deleted_by'] = 'vendor_portal';
+
+    DB::table('vendor_reservations')
+        ->where('id', $reservation)
+        ->where('vendor_user_id', $vendorUserId)
+        ->update([
+            'notes' => json_encode($notes),
+            'updated_at' => now(),
+        ]);
+
+    return back()->with('portal_notice', 'Booking removed from your vendor portal list.');
+});
+
 Route::post('/portal/vendor/inquiries/{inquiry}/status', function (Request $request, int $inquiry) {
     if (!session('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');

@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>My Account | Workation</title>
+    @include('partials.favicon')
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -1038,15 +1039,18 @@
                                         </div>
 
                                         <div class="booking-card-actions">
+                                            @php $bookingPaymentStatus = strtolower((string) ($booking['payment_status'] ?? 'unpaid')); @endphp
+                                            @php $bookingStatus = strtolower((string) ($booking['status'] ?? 'pending')); @endphp
                                             @php $isPaidBooking = strtoupper((string) ($booking['payment_status'] ?? 'UNPAID')) === 'PAID'; @endphp
-                                            @php $isCancelledBooking = in_array(strtolower((string) ($booking['status'] ?? '')), ['cancelled', 'canceled', 'cancel_requested'], true); @endphp
+                                            @php $isCancelledBooking = in_array($bookingStatus, ['cancelled', 'canceled', 'cancel_requested'], true); @endphp
+                                            @php $canDeleteBooking = $bookingPaymentStatus !== 'paid' || in_array($bookingStatus, ['cancelled', 'canceled', 'failed', 'expired', 'rejected'], true) || $bookingPaymentStatus === 'refunded'; @endphp
                                             <a class="btn-outline" href="/customer/bookings/{{ (int) ($booking['id'] ?? 0) }}/confirmation.pdf">Reservation PDF</a>
                                             @if ($isPaidBooking)
                                                 <a class="btn-outline" href="/customer/bookings/{{ (int) ($booking['id'] ?? 0) }}/invoice.pdf">Invoice PDF</a>
                                             @else
                                                 <a class="btn-brand" href="/booking/checkout/{{ (int) ($booking['id'] ?? 0) }}">Pay Now</a>
                                             @endif
-                                            @if (!$isPaidBooking)
+                                            @if ($canDeleteBooking)
                                                 <form method="POST" action="/customer/bookings/{{ (int) ($booking['id'] ?? 0) }}/delete" onsubmit="return confirm('Remove this booking from your portal list?');">
                                                     @csrf
                                                     <button class="btn-outline" type="submit">Delete</button>

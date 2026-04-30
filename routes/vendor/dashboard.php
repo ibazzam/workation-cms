@@ -426,11 +426,29 @@ Route::get('/vendor', function () {
                 'vendor:portal:reservations:v2:' . $vendorUserId . ':' . $reservationLimit . ':' . $vendorReservationVersion,
                 now()->addSeconds($vendorPortalCacheTtlSeconds),
                 static function () use ($vendorUserId, $reservationLimit) {
-                    return DB::table('vendor_reservations')
-                        ->where('vendor_user_id', $vendorUserId)
+                    $reservationQuery = DB::table('vendor_reservations')
+                        ->where(static function ($ownershipQuery) use ($vendorUserId) {
+                            $ownershipQuery->where('vendor_user_id', $vendorUserId);
+
+                            if (Schema::hasTable('vendor_accommodation_listings')) {
+                                $ownedPropertyIds = DB::table('vendor_accommodation_listings')
+                                    ->where('vendor_user_id', $vendorUserId)
+                                    ->pluck('vendor_property_id')
+                                    ->map(static fn ($id): int => (int) $id)
+                                    ->filter(static fn (int $id): bool => $id > 0)
+                                    ->values()
+                                    ->all();
+
+                                if (!empty($ownedPropertyIds)) {
+                                    $ownershipQuery->orWhereIn('vendor_property_id', $ownedPropertyIds);
+                                }
+                            }
+                        })
                         ->orderByDesc('start_at')
                         ->orderByDesc('id')
-                        ->limit($reservationLimit)
+                        ->limit($reservationLimit);
+
+                    return $reservationQuery
                         ->get()
                         ->all();
                 }

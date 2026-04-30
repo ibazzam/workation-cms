@@ -305,10 +305,8 @@
                         continue;
                     }
 
-                    // For accommodation, only room-level reservations are valid in this operations view.
-                    if ($reservationCategory === 'accommodation' && $reservationRoomId <= 0) {
-                        continue;
-                    }
+                    // Accommodation bookings can be room-level or property-level depending on creation flow.
+                    // Keep both visible so cancellation/refund timelines are never hidden from vendors.
 
                     $reservationTargetLabel = 'Global / Unlinked';
                     $reservationTargetValue = '';
@@ -821,8 +819,8 @@
 
                                 return match ($reservationScope) {
                                     'active' => in_array($status, ['confirmed', 'upcoming', 'checked_in', 'checked_out'], true) && $paymentStatus === 'paid',
-                                    'pending' => in_array($status, ['pending'], true) || in_array($paymentStatus, ['unpaid', 'partially_paid'], true),
-                                    'history' => in_array($status, ['cancelled', 'completed', 'expired', 'failed', 'rejected'], true) || in_array($paymentStatus, ['refunded'], true),
+                                    'pending' => in_array($status, ['pending', 'cancel_requested'], true) || in_array($paymentStatus, ['unpaid', 'partially_paid'], true),
+                                    'history' => in_array($status, ['cancel_requested', 'cancelled', 'completed', 'expired', 'failed', 'rejected'], true) || in_array($paymentStatus, ['refunded'], true),
                                     default => true,
                                 };
                             })->values();
@@ -940,6 +938,7 @@
                                                     $rowStatus = strtolower(trim((string) ($reservationRow['status'] ?? 'pending')));
                                                     $timelineOptions = [
                                                         'pending' => 'Booked (Pending Confirmation)',
+                                                        'cancel_requested' => 'Cancel Requested (Customer)',
                                                         'confirmed' => 'Confirmed',
                                                         'checked_in' => 'Guest Checked-In',
                                                         'checked_out' => 'Guest Checked-Out',

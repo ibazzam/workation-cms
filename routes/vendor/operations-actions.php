@@ -2,12 +2,15 @@
 
 use App\Models\User;
 use App\Support\ReservationPricingPolicy;
+use App\Support\ReservationSettlementCalculator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 Route::post('/portal/vendor/availability/save', function (Request $request) {
@@ -477,7 +480,13 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
         ->update(array_filter([
             'status' => $requestedStatus,
             'payout_status' => $payoutStatus,
-            'payout_expected_at' => $shouldQueuePayout ? (($reservationRow->payout_expected_at ?? null) ?: now()->addDays(7)) : ($reservationRow->payout_expected_at ?? null),
+            'payout_expected_at' => $shouldQueuePayout
+                ? (($reservationRow->payout_expected_at ?? null) ?: ReservationSettlementCalculator::expectedPayoutAt(
+                    $reservationRow->payment_collected_at ?? $reservationRow->payment_verified_at ?? now(),
+                    (string) ($reservationRow->payment_gateway ?? ''),
+                    null
+                ))
+                : ($reservationRow->payout_expected_at ?? null),
             'updated_at' => now(),
         ], static fn ($value) => $value !== null));
 
@@ -774,23 +783,96 @@ Route::post('/portal/vendor/billing/update', function (Request $request) {
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
     $validated = $request->validate([
         'business_name' => ['required', 'string', 'max:190'],
+        'responsible_person_name' => ['required', 'string', 'max:190'],
+        'billing_emails' => ['required', 'string', 'max:2000'],
+        'contact_number' => ['required', 'string', 'max:40'],
         'tax_id' => ['nullable', 'string', 'max:120'],
-        'billing_email' => ['required', 'email', 'max:190'],
-        'payout_method' => ['required', Rule::in(['bank_transfer', 'mobile_wallet', 'manual'])],
-        'beneficiary_name' => ['required', 'string', 'max:190'],
-        'payout_reference' => ['nullable', 'string', 'max:190'],
-        'bank_name' => ['nullable', 'string', 'max:190'],
-        'swift_code' => ['nullable', 'string', 'max:20'],
-        'bank_account_number' => ['required', 'string', 'max:60'],
-        'bank_account_last4' => ['nullable', 'string', 'max:8'],
+        'invoice_prefix' => ['nullable', 'string', 'max:30'],
+        'payout_accounts' => ['required', 'array', 'min:1'],
+        'payout_accounts.*.account_label' => ['nullable', 'string', 'max:80'],
+        'payout_accounts.*.payout_method' => ['nullable', Rule::in(['bank_transfer', 'mobile_wallet', 'manual'])],
+        'payout_accounts.*.beneficiary_name' => ['nullable', 'string', 'max:190'],
+        'payout_accounts.*.bank_account_number' => ['nullable', 'string', 'max:60'],
+        'payout_accounts.*.bank_name' => ['nullable', 'string', 'max:190'],
+        'payout_accounts.*.swift_code' => ['nullable', 'string', 'max:20'],
+        'payout_accounts.*.currency' => ['nullable', Rule::in(['MVR', 'USD'])],
+        'primary_payout_account' => ['nullable', 'integer', 'min:0'],
         'billing_street_name' => ['required', 'string', 'max:255'],
         'billing_country' => ['required', 'string', 'max:90'],
         'billing_state' => ['required', 'string', 'max:120'],
         'billing_city' => ['required', 'string', 'max:120'],
         'billing_address' => ['nullable', 'string', 'max:2000'],
-        'currency' => ['required', Rule::in(['MVR', 'USD'])],
-        'invoice_prefix' => ['nullable', 'string', 'max:30'],
     ]);
+
+    $existingBillingRow = DB::table('vendor_billing_details')
+        ->where('vendor_user_id', $vendorUserId)
+        ->first();
+
+    $billingEmails = collect(preg_split('/[\r\n,;]+/', (string) ($validated['billing_emails'] ?? '')))
+        ->map(static fn ($email): string => strtolower(trim((string) $email)))
+        ->filter(static fn (string $email): bool => $email !== '')
+        ->unique()
+        ->values();
+
+    if ($billingEmails->isEmpty()) {
+        return back()->withErrors(['billing_emails' => 'Provide at least one billing email address.'])->withInput();
+    }
+
+    $invalidBillingEmail = $billingEmails->first(static fn (string $email): bool => !filter_var($email, FILTER_VALIDATE_EMAIL));
+    if ($invalidBillingEmail !== null) {
+        return back()->withErrors(['billing_emails' => 'Billing emails must be valid email addresses.'])->withInput();
+    }
+
+    $normalizedAccounts = collect($validated['payout_accounts'] ?? [])
+        ->map(static function ($row): array {
+            $account = is_array($row) ? $row : [];
+
+            return [
+                'account_label' => trim((string) ($account['account_label'] ?? '')),
+                'payout_method' => trim((string) ($account['payout_method'] ?? 'bank_transfer')),
+                'beneficiary_name' => trim((string) ($account['beneficiary_name'] ?? '')),
+                'bank_account_number' => trim((string) ($account['bank_account_number'] ?? '')),
+                'bank_name' => trim((string) ($account['bank_name'] ?? '')),
+                'swift_code' => strtoupper(trim((string) ($account['swift_code'] ?? ''))),
+                'currency' => strtoupper(trim((string) ($account['currency'] ?? 'MVR'))),
+            ];
+        })
+        ->filter(static function (array $account): bool {
+            return collect($account)
+                ->only(['account_label', 'beneficiary_name', 'bank_account_number', 'bank_name', 'swift_code'])
+                ->contains(static fn ($value): bool => trim((string) $value) !== '');
+        })
+        ->values();
+
+    if ($normalizedAccounts->isEmpty()) {
+        return back()->withErrors(['payout_accounts' => 'Add at least one payout account.'])->withInput();
+    }
+
+    foreach ($normalizedAccounts as $index => $account) {
+        $rowValidator = Validator::make($account, [
+            'account_label' => ['nullable', 'string', 'max:80'],
+            'payout_method' => ['required', Rule::in(['bank_transfer', 'mobile_wallet', 'manual'])],
+            'beneficiary_name' => ['required', 'string', 'max:190'],
+            'bank_account_number' => ['required', 'string', 'max:60'],
+            'bank_name' => ['required', 'string', 'max:190'],
+            'swift_code' => ['nullable', 'string', 'max:20'],
+            'currency' => ['required', Rule::in(['MVR', 'USD'])],
+        ]);
+
+        if ($rowValidator->fails()) {
+            $messages = collect($rowValidator->errors()->all())
+                ->map(static fn (string $message): string => 'Payout account ' . ($index + 1) . ': ' . $message)
+                ->all();
+
+            return back()->withErrors(['payout_accounts' => implode(' ', $messages)])->withInput();
+        }
+    }
+
+    $primaryAccountIndex = min(
+        max(0, (int) ($validated['primary_payout_account'] ?? 0)),
+        max(0, $normalizedAccounts->count() - 1)
+    );
+    $primaryAccount = $normalizedAccounts->get($primaryAccountIndex, $normalizedAccounts->first());
 
     $streetName = trim((string) ($validated['billing_street_name'] ?? ''));
     $billingCity = trim((string) ($validated['billing_city'] ?? ''));
@@ -800,31 +882,43 @@ Route::post('/portal/vendor/billing/update', function (Request $request) {
     $composedAddress = trim($streetName . ($locationSuffix !== '' ? ', ' . $locationSuffix : ''));
     $manualAddress = trim((string) ($validated['billing_address'] ?? ''));
     $resolvedBillingAddress = $manualAddress !== '' ? $manualAddress : $composedAddress;
-    $bankAccountNumber = trim((string) ($validated['bank_account_number'] ?? ''));
+    $bankAccountNumber = trim((string) ($primaryAccount['bank_account_number'] ?? ''));
 
     $payload = [
         'business_name' => trim((string) $validated['business_name']),
-        'tax_id' => trim((string) ($validated['tax_id'] ?? '')),
-        'billing_email' => strtolower(trim((string) $validated['billing_email'])),
-        'payout_method' => (string) $validated['payout_method'],
-        'beneficiary_name' => trim((string) ($validated['beneficiary_name'] ?? '')),
-        'payout_reference' => trim((string) ($validated['payout_reference'] ?? '')),
-        'bank_name' => trim((string) ($validated['bank_name'] ?? '')),
+        'tax_id' => trim((string) ($validated['tax_id'] ?? ($existingBillingRow->tax_id ?? ''))),
+        'billing_email' => (string) $billingEmails->first(),
+        'payout_method' => (string) ($primaryAccount['payout_method'] ?? 'bank_transfer'),
+        'beneficiary_name' => trim((string) ($primaryAccount['beneficiary_name'] ?? '')),
+        'payout_reference' => trim((string) ($existingBillingRow->payout_reference ?? '')),
+        'bank_name' => trim((string) ($primaryAccount['bank_name'] ?? '')),
         'bank_account_number' => $bankAccountNumber,
-        'bank_account_last4' => trim((string) ($validated['bank_account_last4'] ?? '')),
+        'bank_account_last4' => '',
         'billing_street_name' => $streetName,
         'billing_country' => $billingCountry,
         'billing_state' => $billingState,
         'billing_city' => $billingCity,
         'billing_address' => $resolvedBillingAddress,
-        'currency' => strtoupper(trim((string) ($validated['currency'] ?? 'MVR'))),
-        'invoice_prefix' => strtoupper(trim((string) ($validated['invoice_prefix'] ?? 'INV'))),
+        'currency' => strtoupper(trim((string) ($primaryAccount['currency'] ?? 'MVR'))),
+        'invoice_prefix' => strtoupper(trim((string) ($validated['invoice_prefix'] ?? ($existingBillingRow->invoice_prefix ?? 'INV')))),
         'updated_at' => now(),
         'created_at' => now(),
     ];
 
     if ($payload['bank_account_last4'] === '' && $bankAccountNumber !== '') {
         $payload['bank_account_last4'] = substr($bankAccountNumber, -4);
+    }
+
+    if (Schema::hasColumn('vendor_billing_details', 'billing_emails_json')) {
+        $payload['billing_emails_json'] = json_encode($billingEmails->all());
+    }
+
+    if (Schema::hasColumn('vendor_billing_details', 'responsible_person_name')) {
+        $payload['responsible_person_name'] = trim((string) ($validated['responsible_person_name'] ?? ''));
+    }
+
+    if (Schema::hasColumn('vendor_billing_details', 'contact_number')) {
+        $payload['contact_number'] = trim((string) ($validated['contact_number'] ?? ''));
     }
 
     foreach (['beneficiary_name', 'bank_account_number', 'billing_street_name', 'billing_country', 'billing_state', 'billing_city'] as $column) {
@@ -838,15 +932,45 @@ Route::post('/portal/vendor/billing/update', function (Request $request) {
     }
 
     if (Schema::hasColumn('vendor_billing_details', 'swift_code')) {
-        $payload['swift_code'] = strtoupper(trim((string) ($validated['swift_code'] ?? '')));
+        $payload['swift_code'] = strtoupper(trim((string) ($primaryAccount['swift_code'] ?? '')));
     }
 
-    DB::table('vendor_billing_details')->updateOrInsert(
-        [
-            'vendor_user_id' => $vendorUserId,
-        ],
-        $payload
-    );
+    DB::transaction(function () use ($vendorUserId, $payload, $normalizedAccounts, $primaryAccountIndex): void {
+        DB::table('vendor_billing_details')->updateOrInsert(
+            [
+                'vendor_user_id' => $vendorUserId,
+            ],
+            $payload
+        );
+
+        if (Schema::hasTable('vendor_payout_accounts')) {
+            DB::table('vendor_payout_accounts')
+                ->where('vendor_user_id', $vendorUserId)
+                ->delete();
+
+            foreach ($normalizedAccounts->values() as $index => $account) {
+                $accountNumber = trim((string) ($account['bank_account_number'] ?? ''));
+
+                DB::table('vendor_payout_accounts')->insert([
+                    'vendor_user_id' => $vendorUserId,
+                    'account_label' => trim((string) ($account['account_label'] ?? '')),
+                    'payout_method' => trim((string) ($account['payout_method'] ?? 'bank_transfer')),
+                    'beneficiary_name' => trim((string) ($account['beneficiary_name'] ?? '')),
+                    'bank_account_number' => $accountNumber,
+                    'bank_account_last4' => $accountNumber !== '' ? substr($accountNumber, -4) : null,
+                    'bank_name' => trim((string) ($account['bank_name'] ?? '')),
+                    'swift_code' => strtoupper(trim((string) ($account['swift_code'] ?? ''))),
+                    'currency' => strtoupper(trim((string) ($account['currency'] ?? 'MVR'))),
+                    'is_primary' => $index === $primaryAccountIndex,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+    });
+
+    Cache::forget('vendor:portal:billing:v2:' . $vendorUserId);
+    Cache::forget('vendor:portal:payout-accounts:v1:' . $vendorUserId);
 
     return back()->with('portal_notice', 'Billing details updated.');
 });

@@ -12,6 +12,7 @@
         $selectedCategoryLabels = collect($selectedVendorCategories ?? [])->map(fn ($key) => (string) ($vendorCategoryMap[$key] ?? $key))->values();
         $approvedCategoryLabels = collect($vendorProfile['approved_categories'] ?? [])->map(fn ($key) => (string) ($vendorCategoryMap[$key] ?? $key))->values();
         $billingRow = $vendorBilling ?? null;
+        $payoutAccounts = collect($vendorPayoutAccounts ?? []);
         $profileSectionQuery = strtolower(trim((string) request()->query('section', 'profile')));
         $allowedProfileSections = ['profile', 'categories', 'banking', 'address', 'password', 'all'];
         $activeProfileSection = in_array($profileSectionQuery, $allowedProfileSections, true) ? $profileSectionQuery : 'profile';

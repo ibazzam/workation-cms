@@ -188,12 +188,7 @@ if (!function_exists('workationCreateStripeCheckoutSession')) {
 if (!function_exists('workationPaymentSuccessReturnUrl')) {
     function workationPaymentSuccessReturnUrl(int $reservationId, ?string $provider = null): string
     {
-        $providerKey = strtolower(trim((string) $provider));
-        if ($providerKey === 'stripe') {
-            return url('/customer?section=bookings&booking=' . max(1, $reservationId) . '&payment=success');
-        }
-
-        return url('/booking/checkout/' . max(1, $reservationId));
+        return url('/customer?section=bookings&booking=' . max(1, $reservationId) . '&payment=success');
     }
 }
 
@@ -1592,6 +1587,10 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
     $reservationRow = null;
     if ($reservation !== null && Schema::hasTable('vendor_reservations')) {
         $reservationRow = DB::table('vendor_reservations')->where('id', $reservation)->first();
+        if ($reservationRow && strtolower(trim((string) ($reservationRow->payment_status ?? 'unpaid'))) === 'paid') {
+            return redirect(workationPaymentSuccessReturnUrl((int) ($reservationRow->id ?? $reservation), null))
+                ->with('portal_notice', 'Payment already completed. Your booking is available in the customer portal.');
+        }
     }
 
     $propertyId = (int) $request->query('property_id', (int) ($reservationRow->vendor_property_id ?? 0));
@@ -2495,7 +2494,8 @@ Route::post('/booking/payment/hosted/{reservation}/complete', function (Request 
         'status' => 'paid',
     ]);
 
-    return redirect('/booking/checkout/' . $reservation)->with('portal_notice', 'Payment recorded and reservation confirmed.');
+    return redirect(workationPaymentSuccessReturnUrl($reservation, $provider))
+        ->with('portal_notice', 'Payment recorded and reservation confirmed.');
 });
 
 Route::match(['get', 'post'], '/booking/payment/webhooks/{gateway}', function (Request $request, string $gateway) {
@@ -2518,7 +2518,7 @@ Route::match(['get', 'post'], '/booking/payment/webhooks/{gateway}', function (R
         }
 
         if ($reservationId > 0) {
-            return redirect(workationPaymentSuccessReturnUrl($reservationId, null))
+            return redirect(workationPaymentSuccessReturnUrl($reservationId, $gateway))
                 ->with('portal_notice', 'Payment return received. We are verifying your payment status.');
         }
 

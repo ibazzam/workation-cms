@@ -30,6 +30,8 @@
         'cancelled'  => ['bg'=>'#f4f4f4','border'=>'#d0d5db','text'=>'#3d4d5a','label'=>'Cancelled'],
     ];
     $defaultStatus = ['bg'=>'#f4f4f4','border'=>'#d0d5db','text'=>'#3d4d5a','label'=>'Pending'];
+    $localGatewayWindow = \App\Support\ReservationSettlementCalculator::payoutSettlementWindow('bml_mvr', 'bml');
+    $stripeGatewayWindow = \App\Support\ReservationSettlementCalculator::payoutSettlementWindow('stripe', 'stripe');
 @endphp
 
 <section class="card ops-section" aria-label="Payout status per reservation" data-panel-group="billing">
@@ -47,7 +49,9 @@
     <div class="policy-box" style="margin:0 0 12px;border:1px solid #d3e2ec;border-radius:12px;background:#f8fcff;padding:10px 12px;">
         <p class="small" style="margin:0 0 6px;"><strong>Payout Window and Hold Conditions</strong></p>
         <ul style="margin:0;padding-left:18px;">
-            <li class="small">Standard payout window is T+7 to T+10 calendar days after payment verification.</li>
+            <li class="small">BML and MIB reservations become payout-ready after {{ $localGatewayWindow['label'] }} from payment collection.</li>
+            <li class="small">Stripe reservations become payout-ready after {{ $stripeGatewayWindow['label'] }} from payment collection.</li>
+            <li class="small">Vendor payouts begin only after Workation has received the payment from the gateway into our bank account.</li>
             <li class="small">Status <strong>On Hold</strong> may apply when a refund case, dispute, or compliance check is active.</li>
             <li class="small">Once cleared, payout status moves from <strong>Queued/Processing</strong> to <strong>Paid</strong>.</li>
         </ul>

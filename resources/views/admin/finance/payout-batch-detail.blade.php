@@ -15,6 +15,16 @@
         'cancelled'  =>'chip-err',
     ];
     $itemStatusColors = ['pending'=>'chip-grey','sent'=>'chip-blue','confirmed'=>'chip-ok','failed'=>'chip-err'];
+    $adminItemStatusColors = [
+      'queued' => 'chip-grey',
+      'processing' => 'chip-warn',
+      'sent' => 'chip-blue',
+      'on_hold' => 'chip-err',
+      'confirmed' => 'chip-ok',
+      'paid' => 'chip-ok',
+      'failed' => 'chip-err',
+      'cancelled' => 'chip-err',
+    ];
 @endphp
 @include('admin.finance._layout', [
     'pageTitle'    => 'Batch ' . ($batch->batch_ref ?? ''),
@@ -120,6 +130,7 @@
           <th>Bank Account</th>
           <th>Status</th>
           <th>Bank Ref</th>
+          <th>Update</th>
         </tr>
       </thead>
       <tbody>
@@ -147,11 +158,108 @@
             {{ $item->bank_account_name ?? '—' }}<br>
             <span style="color:var(--muted);">{{ $item->bank_account_number ?? '' }}</span>
           </td>
-          <td><span class="chip {{ $itemStatusColors[$item->status] ?? 'chip-grey' }}">{{ $item->status }}</span></td>
+          <td><span class="chip {{ $adminItemStatusColors[strtolower((string) $item->status)] ?? 'chip-grey' }}">{{ $item->status }}</span></td>
           <td style="font-size:.76rem;">{{ $item->bank_reference ?? '—' }}</td>
+          <td>
+            <form method="POST" action="/portal/admin/finance/payout-items/{{ $item->id }}/status" style="display:grid;gap:6px;min-width:230px;">
+              @csrf
+              <select name="status" style="border:1px solid #c8d3df;border-radius:6px;padding:5px 7px;font-size:.75rem;">
+                @foreach (['queued','processing','sent','on_hold','confirmed','paid','failed','cancelled'] as $nextStatus)
+                  <option value="{{ $nextStatus }}" @selected(strtolower((string) $item->status) === $nextStatus)>{{ strtoupper($nextStatus) }}</option>
+                @endforeach
+              </select>
+              <input name="bank_reference" value="{{ (string) ($item->bank_reference ?? '') }}" placeholder="Bank reference" style="border:1px solid #c8d3df;border-radius:6px;padding:5px 7px;font-size:.75rem;">
+              <input name="notes" placeholder="Status note" style="border:1px solid #c8d3df;border-radius:6px;padding:5px 7px;font-size:.75rem;">
+              <button type="submit" class="btn-primary" style="padding:5px 9px;font-size:.75rem;">Update</button>
+            </form>
+          </td>
         </tr>
         @empty
-        <tr><td colspan="10" style="color:var(--muted);padding:16px;">No items in this batch.</td></tr>
+        <tr><td colspan="11" style="color:var(--muted);padding:16px;">No items in this batch.</td></tr>
+        @endforelse
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{{-- Reservation-level payout accounting ledger --}}
+<div class="section">
+  <p class="section-title">Reservation Accounting Ledger (Admin)</p>
+  <p style="font-size:.83rem;color:var(--muted);margin:0 0 10px;">
+    Reservation-level payout breakdown for accounting: vendor, category, room/service, collected total, deductions, payout amount,
+    collected date, payout date, and current status.
+  </p>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Reservation</th>
+          <th>Vendor</th>
+          <th>Service Category</th>
+          <th>Service / Room</th>
+          <th>Collected Total</th>
+          <th>Commission</th>
+          <th>Gateway Fee</th>
+          <th>Payout Amount</th>
+          <th>Collected From Customer</th>
+          <th>Collected Date</th>
+          <th>Payout Date</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        @forelse($reservationLedgerRows ?? [] as $row)
+          <tr>
+            <td style="font-weight:700;">#{{ (int) ($row->reservation_id ?? 0) }}<br><span style="font-size:.72rem;color:var(--muted);">{{ (string) ($row->payment_gateway ?? '') }} {{ (string) ($row->payment_currency ?? '') }}</span></td>
+            <td>{{ (string) ($row->vendor_name ?? '—') }}</td>
+            <td>{{ (string) ($row->service_category ?? '—') }}</td>
+            <td>{{ (string) ($row->service_or_room_name ?? '—') }}</td>
+            <td style="font-family:monospace;">{{ number_format((float) ($row->collected_total_amount ?? 0), 2) }}</td>
+            <td style="font-family:monospace;color:#7a4606;">{{ number_format((float) ($row->commission_amount ?? 0), 2) }}</td>
+            <td style="font-family:monospace;color:#7a4606;">{{ number_format((float) ($row->gateway_fee_amount ?? 0), 2) }}</td>
+            <td style="font-family:monospace;color:#0b5c2a;font-weight:700;">{{ number_format((float) ($row->payout_amount ?? 0), 2) }}</td>
+            <td style="font-family:monospace;">{{ number_format((float) ($row->collected_from_customer ?? 0), 2) }}</td>
+            <td>{{ (string) ($row->collected_date ?? '') !== '' ? \Illuminate\Support\Carbon::parse((string) $row->collected_date)->format('Y-m-d H:i') : '—' }}</td>
+            <td>{{ (string) ($row->payout_date ?? '') !== '' ? \Illuminate\Support\Carbon::parse((string) $row->payout_date)->format('Y-m-d H:i') : '—' }}</td>
+            <td><span class="chip {{ $adminItemStatusColors[strtolower((string) ($row->status ?? ''))] ?? 'chip-grey' }}">{{ strtoupper((string) ($row->status ?? 'queued')) }}</span></td>
+          </tr>
+        @empty
+          <tr><td colspan="12" style="color:var(--muted);padding:16px;">No reservation-level rows found for this batch.</td></tr>
+        @endforelse
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{{-- Status audit trail --}}
+<div class="section">
+  <p class="section-title">Payout Item Status Audit Trail</p>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>Item</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Bank Ref</th>
+          <th>Note</th>
+          <th>Updated By</th>
+        </tr>
+      </thead>
+      <tbody>
+        @forelse($itemStatusLogs ?? [] as $log)
+          <tr>
+            <td>{{ !empty($log->created_at) ? \Illuminate\Support\Carbon::parse((string) $log->created_at)->format('Y-m-d H:i') : '—' }}</td>
+            <td>#{{ (int) ($log->item_id ?? 0) }}</td>
+            <td><span class="chip {{ $adminItemStatusColors[strtolower((string) ($log->from_status ?? ''))] ?? 'chip-grey' }}">{{ strtoupper((string) ($log->from_status ?? '—')) }}</span></td>
+            <td><span class="chip {{ $adminItemStatusColors[strtolower((string) ($log->to_status ?? ''))] ?? 'chip-grey' }}">{{ strtoupper((string) ($log->to_status ?? '—')) }}</span></td>
+            <td>{{ (string) ($log->bank_reference ?? '—') !== '' ? (string) ($log->bank_reference ?? '—') : '—' }}</td>
+            <td>{{ (string) ($log->notes ?? '—') !== '' ? (string) ($log->notes ?? '—') : '—' }}</td>
+            <td>{{ (string) ($log->actor_name ?? ('Admin #' . (int) ($log->actor_user_id ?? 0))) }}</td>
+          </tr>
+        @empty
+          <tr><td colspan="7" style="color:var(--muted);padding:16px;">No item status changes logged yet.</td></tr>
         @endforelse
       </tbody>
     </table>

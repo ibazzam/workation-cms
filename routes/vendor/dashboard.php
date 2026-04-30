@@ -54,6 +54,7 @@ Route::get('/vendor', function () {
     $vendorReservations = collect();
     $vendorPricingRules = collect();
     $vendorBilling = null;
+    $vendorPayoutAccounts = collect();
     $vendorRoomCategories = collect();
     $vendorMediaAssets = collect();
     $payoutStatusRows = collect();
@@ -543,6 +544,21 @@ Route::get('/vendor', function () {
             );
         }
 
+        if ($loadBillingData && Schema::hasTable('vendor_payout_accounts')) {
+            $vendorPayoutAccounts = collect(Cache::remember(
+                'vendor:portal:payout-accounts:v1:' . $vendorUserId,
+                now()->addSeconds($vendorPortalCacheTtlSeconds),
+                static function () use ($vendorUserId) {
+                    return DB::table('vendor_payout_accounts')
+                        ->where('vendor_user_id', $vendorUserId)
+                        ->orderByDesc('is_primary')
+                        ->orderByDesc('updated_at')
+                        ->get()
+                        ->all();
+                }
+            ));
+        }
+
         $vendorPropertyIds = $vendorProperties
             ->pluck('id')
             ->map(static fn ($id): int => (int) $id)
@@ -837,6 +853,7 @@ Route::get('/vendor', function () {
         'vendorReservations' => $vendorReservations,
         'vendorPricingRules' => $vendorPricingRules,
         'vendorBilling' => $vendorBilling,
+        'vendorPayoutAccounts' => $vendorPayoutAccounts,
         'vendorRoomCategories' => $vendorRoomCategories,
         'vendorRooms' => $vendorRoomCategories,
         'vendorMediaAssets' => $vendorMediaAssets,

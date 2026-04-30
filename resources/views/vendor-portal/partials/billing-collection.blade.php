@@ -5,14 +5,16 @@
             </div>
 
                 @php
-                    $payoutWindowDaysMin = 7;
-                    $payoutWindowDaysMax = 10;
+                    $localGatewayWindow = \App\Support\ReservationSettlementCalculator::payoutSettlementWindow('bml_mvr', 'bml');
+                    $stripeGatewayWindow = \App\Support\ReservationSettlementCalculator::payoutSettlementWindow('stripe', 'stripe');
                 @endphp
 
                 <div class="policy-box" style="margin:8px 0 12px;border:1px solid #d3e2ec;border-radius:12px;background:#f8fcff;padding:10px 12px;">
                     <p class="small" style="margin:0 0 6px;"><strong>Payout Policy (Vendor)</strong></p>
                     <ul style="margin:0;padding-left:18px;">
-                        <li class="small">Payout window is typically T+{{ $payoutWindowDaysMin }} to T+{{ $payoutWindowDaysMax }} calendar days after verified payment collection.</li>
+                        <li class="small">BML and MIB collections are released for vendor payout after {{ $localGatewayWindow['label'] }} from collected payment.</li>
+                        <li class="small">Stripe collections are released for vendor payout after {{ $stripeGatewayWindow['label'] }} from collected payment.</li>
+                        <li class="small">Workation initiates vendor payouts only after the customer payment has settled into our bank account.</li>
                         <li class="small">Open refund cases or disputes can place payouts on hold until resolution.</li>
                         <li class="small">Your payout shown below is net of total deductions (platform commission + gateway fee policy).</li>
                     </ul>

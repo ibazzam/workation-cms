@@ -58,6 +58,13 @@
   </p>
   <form method="POST" action="/portal/admin/finance/payouts/build" onsubmit="return confirm('Build payout batches for today? This cannot be undone.')">
     @csrf
+    <label style="display:flex;gap:8px;align-items:flex-start;margin:0 0 10px;font-size:.82rem;color:var(--muted);">
+      <input type="checkbox" name="combine_by_vendor_currency" value="1" style="margin-top:2px;">
+      <span>
+        Combine same-vendor payouts by currency across gateways/customers.
+        <strong style="color:#274155;">Internal mode:</strong> source medium will be marked as <strong>MIXED</strong>.
+      </span>
+    </label>
     <button type="submit" class="btn-primary">Build Batches for Today</button>
   </form>
 </div>

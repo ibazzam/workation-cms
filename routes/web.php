@@ -121,6 +121,13 @@ if (!function_exists('workationApplyReservationPaymentEvent')) {
 
         $paymentStatus = $isPaidStatus ? 'paid' : 'unpaid';
         $resolvedReservationStatus = (string) ($reservationRow->status ?? 'pending');
+        $expectedPayoutAt = $isPaidStatus
+            ? ReservationSettlementCalculator::expectedPayoutAt(
+                $reservationRow->payment_collected_at ?? now(),
+                (string) ($reservationRow->payment_gateway ?? ''),
+                null
+            )
+            : null;
         if ($isPaidStatus) {
             $resolvedReservationStatus = 'confirmed';
         } elseif ($isCancelledStatus) {
@@ -138,6 +145,9 @@ if (!function_exists('workationApplyReservationPaymentEvent')) {
                 'payment_collected_at' => $isPaidStatus
                     ? ($reservationRow->payment_collected_at ?? now())
                     : ($reservationRow->payment_collected_at ?? null),
+                'payout_expected_at' => $isPaidStatus
+                    ? (($reservationRow->payout_expected_at ?? null) ?: $expectedPayoutAt)
+                    : ($reservationRow->payout_expected_at ?? null),
                 'payment_webhook_event_id' => $eventId !== '' ? $eventId : (string) ($reservationRow->payment_webhook_event_id ?? ''),
                 'payment_webhook_received_at' => now(),
                 'payment_error' => $isPaidStatus ? null : trim((string) ($event['error'] ?? 'Payment failed verification.')),

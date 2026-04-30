@@ -1258,8 +1258,18 @@
             gap: 10px;
         }
 
+        .availability-ops-grid {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+        }
+
         .availability-ops-grid .ops-form-availability {
             grid-column: 1 / -1;
+        }
+
+        @media (max-width: 1180px) {
+            .availability-ops-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .ops-form {

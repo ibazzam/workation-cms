@@ -3734,7 +3734,6 @@
                                 $nearbyLocationLine = trim((string) ($nearby['location_line'] ?? 'Maldives'));
                                 $nearbyCurrency = strtoupper(trim((string) ($nearby['currency'] ?? 'MVR')));
                                 $nearbyBasePrice = (float) ($nearby['base_price'] ?? 0);
-                                $nearbyHasPrice = $nearbyBasePrice > 0;
                                 $nearbyPrice = number_format($nearbyBasePrice, 2);
                                 $nearbyDistance = isset($nearby['distance_km']) ? (float) $nearby['distance_km'] : null;
                                 $nearbyThumb = trim((string) ($nearby['thumbnail_url'] ?? ''));
@@ -3746,7 +3745,7 @@
                                     <span class="nearby-location">{{ $nearbyLocationLine }}</span>
                                     <h3 class="nearby-name">{{ $nearbyName }}</h3>
                                     <div class="nearby-meta">
-                                        <span class="nearby-price">{{ $nearbyHasPrice ? ('From ' . $nearbyCurrency . ' ' . $nearbyPrice) : 'Check rates' }}</span>
+                                        <span class="nearby-price">From {{ $nearbyCurrency }} {{ $nearbyPrice }}</span>
                                         @if ($nearbyDistance !== null)
                                             <span>{{ number_format($nearbyDistance, 1) }} km away</span>
                                         @endif

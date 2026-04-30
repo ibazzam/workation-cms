@@ -477,6 +477,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
 
             $nearbyPropertyIds = $resolvedNearbyProperties->pluck('id')->filter(static fn ($id) => (int) $id > 0)->map(static fn ($id) => (int) $id)->values();
             $nearbyPropertyThumbById = collect();
+            $nearbyRoomMinPriceByPropertyId = collect();
 
             if ($nearbyPropertyIds->isNotEmpty() && Schema::hasTable('vendor_listing_media')) {
                 $nearbyPropertyThumbById = DB::table('vendor_listing_media')
@@ -497,8 +498,31 @@ Route::get('/property/{property}', function (Request $request, int $property) {
                     });
             }
 
+            if ($nearbyPropertyIds->isNotEmpty() && Schema::hasTable('vendor_room_categories')) {
+                $roomPriceColumn = null;
+                if (Schema::hasColumn('vendor_room_categories', 'base_price_per_night')) {
+                    $roomPriceColumn = 'base_price_per_night';
+                } elseif (Schema::hasColumn('vendor_room_categories', 'base_price')) {
+                    $roomPriceColumn = 'base_price';
+                }
+
+                if ($roomPriceColumn !== null) {
+                    $nearbyRoomMinPriceByPropertyId = DB::table('vendor_room_categories')
+                        ->whereIn('vendor_property_id', $nearbyPropertyIds->all())
+                        ->where($roomPriceColumn, '>', 0)
+                        ->selectRaw('vendor_property_id, MIN(' . $roomPriceColumn . ') as min_price')
+                        ->groupBy('vendor_property_id')
+                        ->get()
+                        ->mapWithKeys(static function ($row) {
+                            return [
+                                (int) ($row->vendor_property_id ?? 0) => (float) ($row->min_price ?? 0),
+                            ];
+                        });
+                }
+            }
+
             return $resolvedNearbyProperties
-                ->map(static function (array $item) use ($nearbyPropertyThumbById): array {
+                ->map(static function (array $item) use ($nearbyPropertyThumbById, $nearbyRoomMinPriceByPropertyId): array {
                     $locationLine = trim(implode(', ', array_filter([
                         trim((string) ($item['island'] ?? '')),
                         trim((string) ($item['city'] ?? '')),
@@ -507,6 +531,9 @@ Route::get('/property/{property}', function (Request $request, int $property) {
 
                     $item['location_line'] = $locationLine !== '' ? ($locationLine . ', Maldives') : 'Maldives';
                     $item['thumbnail_url'] = (string) ($nearbyPropertyThumbById->get((int) ($item['id'] ?? 0)) ?? '');
+                    if ((float) ($item['base_price'] ?? 0) <= 0) {
+                        $item['base_price'] = (float) ($nearbyRoomMinPriceByPropertyId->get((int) ($item['id'] ?? 0), 0));
+                    }
 
                     return $item;
                 })

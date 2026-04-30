@@ -581,7 +581,7 @@
                                 <p class="metric-value">{{ $inventoryTotal }}</p>
                             </article>
                         </div>
-                        <div class="ops-grid" style="grid-template-columns:minmax(420px,1fr) minmax(520px,1.2fr);">
+                        <div class="ops-grid availability-ops-grid">
                             <form class="ops-form" method="POST" action="/portal/vendor/availability/save" data-availability-form="{{ $categoryKey }}">
                                 @csrf
                                 <script type="application/json" data-availability-calendar-state>

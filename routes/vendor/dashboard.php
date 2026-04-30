@@ -519,7 +519,12 @@ Route::get('/vendor', function () {
             // Apply category filter to payout rows when a category tab is active.
             $payoutReservationsSource = $vendorReservations;
             if ($requestedCategoryScope !== '') {
-                $propertyCategoryById = $vendorProperties
+                $propertyCategorySource = $vendorProperties;
+                if ($propertyCategorySource->isEmpty()) {
+                    $propertyCategorySource = \App\Support\VendorPropertyCompatibilityReader::loadVendorListings($vendorUserId, 500, null);
+                }
+
+                $propertyCategoryById = $propertyCategorySource
                     ->keyBy(static fn ($p): int => (int) ($p->id ?? 0))
                     ->map(static fn ($p): string => vendorPortalCanonicalCategory((string) ($p->listing_category ?? '')));
                 $payoutReservationsSource = $vendorReservations->filter(static function ($reservation) use ($requestedCategoryScope, $propertyCategoryById): bool {

@@ -59,12 +59,11 @@
 
     @if(isset($payoutStatusRows) && $payoutStatusRows->isNotEmpty())
 
-    <div class="ops-table-wrap">
-        <table class="ops-table" aria-label="Payout status table">
+    <div class="payout-table-wrap">
+        <table class="payout-table" aria-label="Payout status table">
             <thead>
                 <tr>
                     <th>Booking / Reservation</th>
-                    <th>Stay</th>
                     <th>Service / Room</th>
                     <th>Payment</th>
                     <th>Payment Collected</th>
@@ -82,28 +81,16 @@
                 @php
                     $st     = $statusColors[$row->payout_status ?? ''] ?? $defaultStatus;
                     $label  = $st['label'];
-                    $nightsLabel = is_numeric($row->stay_nights ?? null)
-                        ? ((int) $row->stay_nights . ' night' . ((int) $row->stay_nights === 1 ? '' : 's'))
-                        : '—';
                 @endphp
                 <tr>
-                    <td style="font-size:.8rem;line-height:1.35;min-width:220px;">
+                    <td style="font-size:.8rem;line-height:1.35;">
                         <strong style="font-size:.83rem;">{{ $row->booking_ref ?? ('Booking #' . $row->id) }}</strong><br>
-                        <span>{{ $row->booking_label ?? ($row->reservation_code ?? ('#' . $row->id)) }}</span><br>
                         <span style="color:#73879a;">{{ $row->reservation_code ?? '#' . $row->id }}</span>
                     </td>
-                    <td style="font-size:.8rem;line-height:1.35;min-width:170px;">
-                        Check-in: {{ $row->check_in ?? '—' }}<br>
-                        Check-out: {{ $row->check_out ?? '—' }}<br>
-                        <span style="color:#73879a;">{{ $nightsLabel }}</span>
-                    </td>
-                    <td style="font-size:.8rem;line-height:1.35;min-width:170px;">
+                    <td style="font-size:.8rem;line-height:1.35;">
                         {{ $row->service_or_room ?? '—' }}
-                        @if(!empty($row->property_name))
-                            <br><span style="color:#73879a;">{{ $row->property_name }}</span>
-                        @endif
                     </td>
-                    <td style="font-size:.8rem;line-height:1.35;min-width:140px;">
+                    <td style="font-size:.8rem;line-height:1.35;">
                         Status: {{ $row->payment_status ?? 'UNPAID' }}<br>
                         Currency: {{ $row->payment_currency ?? $row->payout_currency ?? 'MVR' }}
                     </td>

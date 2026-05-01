@@ -709,11 +709,13 @@
             border: 1px solid #d7e0e6;
             border-radius: 10px;
             background: #fff;
-            overflow: hidden;
+            overflow-x: auto;
+            overflow-y: hidden;
         }
 
         .payout-table {
             width: 100%;
+            min-width: 980px;
             border-collapse: collapse;
         }
 

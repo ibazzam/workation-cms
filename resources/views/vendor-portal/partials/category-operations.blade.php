@@ -366,19 +366,52 @@
                     }
 
                     $reservationRowsByCategory[$reservationCategory]->push([
+                        'guests' => max(1, (int) ($reservation->guests ?? ($reservationNotes['guests'] ?? 1))),
                         'id' => (int) ($reservation->id ?? 0),
                         'reservation_code' => 'RSV-' . str_pad((string) ((int) ($reservation->id ?? 0)), 6, '0', STR_PAD_LEFT),
                         'created_at' => (string) ($reservation->created_at ?? ''),
                         'target_label' => $reservationTargetLabel,
                         'target_value' => $reservationTargetValue,
                         'room_label' => trim((string) ($reservationNotes['room_name'] ?? $reservationTargetLabel)),
-                        'meal_plan' => trim((string) ($reservationNotes['meal_plan_label'] ?? $reservationNotes['meal_plan'] ?? 'Not specified')),
+                        'meal_plan' => (function () use ($reservationNotes, $roomPricingBreakdown): string {
+                            $rawMealPlan = trim((string) (
+                                $reservationNotes['meal_plan_label']
+                                ?? $reservationNotes['meal_plan']
+                                ?? ($roomPricingBreakdown['meal_plan_label'] ?? null)
+                                ?? ($roomPricingBreakdown['meal_plan'] ?? null)
+                                ?? ($roomPricingBreakdown['board_basis'] ?? null)
+                                ?? ''
+                            ));
+
+                            if ($rawMealPlan === '') {
+                                return 'RO';
+                            }
+
+                            $normalizedMealPlan = strtolower(str_replace(['-', '_'], ' ', $rawMealPlan));
+                            if (in_array($normalizedMealPlan, ['ro', 'room only', 'roomonly'], true)) {
+                                return 'RO';
+                            }
+                            if (in_array($normalizedMealPlan, ['bb', 'bed and breakfast', 'breakfast'], true)) {
+                                return 'BB';
+                            }
+                            if (in_array($normalizedMealPlan, ['hb', 'half board'], true)) {
+                                return 'HB';
+                            }
+                            if (in_array($normalizedMealPlan, ['fb', 'full board'], true)) {
+                                return 'FB';
+                            }
+                            if (in_array($normalizedMealPlan, ['ai', 'all inclusive'], true)) {
+                                return 'AI';
+                            }
+
+                            return strtoupper($rawMealPlan);
+                        })(),
                         'transfer_method' => trim((string) ($reservationNotes['transfer_option_label'] ?? $reservationNotes['transfer_option'] ?? 'Not selected')),
                         'special_request' => trim((string) ($reservationNotes['service_notes'] ?? $reservationNotes['additional_guest_details'] ?? '')),
                         'customer_name' => (string) ($reservation->customer_name ?? ''),
                         'customer_email' => (string) ($reservation->customer_email ?? ''),
                         'primary_nationality' => trim((string) ($reservationNotes['primary_nationality'] ?? 'Unknown')),
-                        'adult_guests' => max(1, (int) ($reservation->adult_guests ?? ($reservationNotes['adults'] ?? $reservation->guests ?? 1))),
+                        'adult_guests' => max(1, (int) (($reservationNotes['adults'] ?? null) ?? ($reservation->adult_guests ?? $reservation->guests ?? 1))),
                         'child_guests' => max(0, (int) ($reservation->child_guests ?? ($reservationNotes['children'] ?? 0))),
                         'infant_guests' => max(0, (int) ($reservationNotes['infants'] ?? 0)),
                         'payment_gateway' => (string) ($reservation->payment_gateway ?? ''),
@@ -856,7 +889,7 @@
                         </div>
 
                         <div class="ops-table-wrap">
-                            <table class="ops-table" aria-label="{{ $labelForCategory($categoryKey) }} reservations table">
+                            <table class="ops-table is-compact" aria-label="{{ $labelForCategory($categoryKey) }} reservations table">
                                 <thead>
                                     <tr>
                                         <th>Booking / Reservation</th>
@@ -864,9 +897,12 @@
                                         <th>Occupancy</th>
                                         <th>Stay</th>
                                         <th>Service / Room</th>
+                                        <th>Meal Plan</th>
+                                        <th>Transfer Option</th>
                                         <th>Payment Status</th>
+                                        <th>Status</th>
                                         <th>Special Request</th>
-                                        <th>Timeline / Status Update</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -876,7 +912,11 @@
                                             $adults = max(1, (int) ($reservationRow['adult_guests'] ?? 1));
                                             $children = max(0, (int) ($reservationRow['child_guests'] ?? 0));
                                             $infants = max(0, (int) ($reservationRow['infant_guests'] ?? 0));
-                                            $totalGuests = $adults + $children + $infants;
+                                            $bookedGuests = max(1, (int) ($reservationRow['guests'] ?? 1));
+                                            $totalGuests = max($bookedGuests, ($adults + $children + $infants));
+                                            if (($children + $infants) === 0 && $adults < $totalGuests) {
+                                                $adults = $totalGuests;
+                                            }
                                             $nights = 0;
                                             try {
                                                 $startDate = new \DateTimeImmutable((string) ($reservationRow['start_at'] ?? ''));
@@ -885,6 +925,12 @@
                                             } catch (\Exception $ignored) {
                                                 $nights = 0;
                                             }
+                                            $checkInDateLabel = trim((string) ($reservationRow['start_at'] ?? '')) !== ''
+                                                ? substr((string) ($reservationRow['start_at'] ?? ''), 0, 10)
+                                                : '-';
+                                            $checkOutDateLabel = trim((string) ($reservationRow['end_at'] ?? '')) !== ''
+                                                ? substr((string) ($reservationRow['end_at'] ?? ''), 0, 10)
+                                                : '-';
                                         @endphp
                                         <tr>
                                             <td>
@@ -901,17 +947,24 @@
                                                 A{{ $adults }} / C{{ $children }} / I{{ $infants }}
                                             </td>
                                             <td>
-                                                Check-in: {{ (string) ($reservationRow['start_at'] ?? '-') }}<br>
-                                                Check-out: {{ (string) ($reservationRow['end_at'] ?? '-') }}<br>
+                                                Check-in: {{ $checkInDateLabel }}<br>
+                                                Check-out: {{ $checkOutDateLabel }}<br>
                                                 Nights: {{ $nights }}
                                             </td>
                                             <td>
-                                                Room: {{ (string) ($reservationRow['room_label'] ?? $reservationRow['target_label'] ?? 'N/A') }}<br>
-                                                Meal Plan: {{ (string) ($reservationRow['meal_plan'] ?? 'Not specified') }}<br>
-                                                Transfer: {{ (string) ($reservationRow['transfer_method'] ?? 'Not selected') }}
+                                                {{ (string) ($reservationRow['room_label'] ?? $reservationRow['target_label'] ?? 'N/A') }}
+                                            </td>
+                                            <td>
+                                                {{ (string) ($reservationRow['meal_plan'] ?? 'RO') }}
+                                            </td>
+                                            <td>
+                                                {{ (string) ($reservationRow['transfer_method'] ?? 'Not selected') }}
                                             </td>
                                             <td>
                                                 {{ strtoupper((string) ($reservationRow['payment_status'] ?? 'unpaid')) }}
+                                            </td>
+                                            <td>
+                                                {{ strtoupper((string) ($reservationRow['status'] ?? 'pending')) }}
                                             </td>
                                             <td>
                                                 {{ trim((string) ($reservationRow['special_request'] ?? '')) !== '' ? (string) ($reservationRow['special_request'] ?? '') : 'None' }}
@@ -949,14 +1002,8 @@
                                                         maxlength="1000"
                                                         placeholder="Cancellation reason (required for paid booking cancellation request)"
                                                     >{{ old('cancel_reason', '') }}</textarea>
-                                                    <p class="small" style="margin:4px 0 0; color:#5e7b90;">
-                                                        For paid bookings, selecting cancellation requires a reason and is submitted as a cancellation request (not immediate cancellation).
-                                                    </p>
                                                     <button class="btn btn-secondary" type="submit">Save Timeline</button>
                                                 </form>
-                                                <p class="small" style="margin-top:6px;">
-                                                    Current: {{ strtoupper((string) ($reservationRow['status'] ?? 'pending')) }} | Payout: {{ $payoutStatusText }}
-                                                </p>
                                                 @if ($canDeleteReservation)
                                                     <form method="POST" action="/portal/vendor/reservations/{{ (int) ($reservationRow['id'] ?? 0) }}/delete" onsubmit="return confirm('Remove this cancelled booking from your vendor portal list?');" style="margin-top:8px;">
                                                         @csrf
@@ -967,7 +1014,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="8" class="ops-empty">No reservations for {{ strtolower($labelForCategory($categoryKey)) }} in {{ $reservationScope }} scope.</td>
+                                            <td colspan="11" class="ops-empty">No reservations for {{ strtolower($labelForCategory($categoryKey)) }} in {{ $reservationScope }} scope.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>

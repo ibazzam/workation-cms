@@ -72,18 +72,27 @@ Route::get('/property/{property}', function (Request $request, int $property) {
         now()->addMinutes(3),
         static function () use ($propertyRow, $propertyLookupIds) {
             $loadedRooms = collect();
-            $legacyRoomPropertyColumn = null;
+            $legacyRoomPropertyColumns = [];
             if (Schema::hasTable('vendor_property_room_categories')) {
                 if (Schema::hasColumn('vendor_property_room_categories', 'vendor_property_id')) {
-                    $legacyRoomPropertyColumn = 'vendor_property_id';
-                } elseif (Schema::hasColumn('vendor_property_room_categories', 'property_id')) {
-                    $legacyRoomPropertyColumn = 'property_id';
+                    $legacyRoomPropertyColumns[] = 'vendor_property_id';
+                }
+                if (Schema::hasColumn('vendor_property_room_categories', 'property_id')) {
+                    $legacyRoomPropertyColumns[] = 'property_id';
                 }
             }
 
-            if ($legacyRoomPropertyColumn !== null) {
+            if (!empty($legacyRoomPropertyColumns)) {
                 $loadedRooms = DB::table('vendor_property_room_categories')
-                    ->whereIn($legacyRoomPropertyColumn, $propertyLookupIds->all())
+                    ->where(static function ($query) use ($legacyRoomPropertyColumns, $propertyLookupIds) {
+                        foreach ($legacyRoomPropertyColumns as $index => $propertyColumn) {
+                            if ($index === 0) {
+                                $query->whereIn($propertyColumn, $propertyLookupIds->all());
+                            } else {
+                                $query->orWhereIn($propertyColumn, $propertyLookupIds->all());
+                            }
+                        }
+                    })
                     ->orderByDesc('updated_at')
                     ->limit(60)
                     ->get();
@@ -453,19 +462,61 @@ Route::get('/property/{property}', function (Request $request, int $property) {
     $nearbyRadiusKm = max(1.0, min(200.0, $nearbyRadiusKm));
     $nearbyUsesCoordinateRadius = false;
     $nearbyProperties = collect(Cache::remember(
-        'property_profile:nearby:v4:' . (int) $propertyRow->id,
+        'property_profile:nearby:v5:' . (int) $propertyRow->id,
         now()->addMinutes(8),
         static function () use ($propertyRow) {
-            $currentCategory = trim((string) ($propertyRow->listing_category ?? ''));
-            $allCategoryListings = \App\Support\VendorPropertyCompatibilityReader::allActiveListings(160);
+            $mergeMinPriceMaps = static function ($baseMap, $incomingMap) {
+                $resolved = collect($baseMap)
+                    ->mapWithKeys(static fn ($price, $propertyId) => [(int) $propertyId => (float) $price])
+                    ->filter(static fn ($price, $propertyId) => (int) $propertyId > 0 && is_numeric($price) && (float) $price > 0);
 
-            $candidateRows = $allCategoryListings
-                ->filter(static fn ($row) => $currentCategory === '' || ($row->listing_category ?? '') === $currentCategory)
+                foreach (collect($incomingMap) as $propertyId => $price) {
+                    $normalizedPropertyId = (int) $propertyId;
+                    $normalizedPrice = (float) $price;
+                    if ($normalizedPropertyId <= 0 || $normalizedPrice <= 0) {
+                        continue;
+                    }
+
+                    if (!$resolved->has($normalizedPropertyId) || $normalizedPrice < (float) $resolved->get($normalizedPropertyId)) {
+                        $resolved->put($normalizedPropertyId, $normalizedPrice);
+                    }
+                }
+
+                return $resolved;
+            };
+
+            $currentCategory = trim((string) ($propertyRow->listing_category ?? ''));
+            $normalizedCategory = str_replace('-', '_', strtolower($currentCategory));
+            if ($normalizedCategory !== '') {
+                $candidateRows = \App\Support\VendorPropertyCompatibilityReader::categoryApprovedBaseQuery($normalizedCategory)
+                    ->limit(160)
+                    ->get()
+                    ->map(static function ($row) use ($normalizedCategory) {
+                        $dedicatedRowId = (int) ($row->id ?? 0);
+                        $vendorPropertyId = (int) ($row->vendor_property_id ?? 0);
+                        $row->listing_category = $normalizedCategory;
+                        $row->dedicated_row_id = $dedicatedRowId;
+                        $row->id = $vendorPropertyId > 0 ? $vendorPropertyId : $dedicatedRowId;
+
+                        return $row;
+                    })
+                    ->filter(static fn ($row) => (int) ($row->id ?? 0) > 0)
+                    ->values();
+            } else {
+                $candidateRows = \App\Support\VendorPropertyCompatibilityReader::allActiveListings(160)
+                    ->filter(static fn ($row) => (int) ($row->id ?? 0) > 0)
+                    ->values();
+            }
+
+            $candidateRows = $candidateRows
                 ->filter(static fn ($row) => (int) ($row->id ?? 0) !== (int) $propertyRow->id)
                 ->values();
 
             $preparedNearby = $candidateRows->map(static function ($row) {
                 $primaryId = (int) ($row->id ?? 0);
+                if ($primaryId <= 0) {
+                    $primaryId = (int) ($row->vendor_property_id ?? ($row->dedicated_row_id ?? 0));
+                }
                 $lookupIds = collect(workationPropertyLookupIds($row))
                     ->filter(static fn (int $id): bool => $id > 0)
                     ->unique()
@@ -557,20 +608,21 @@ Route::get('/property/{property}', function (Request $request, int $property) {
                                 (int) ($row->vendor_property_id ?? 0) => (float) ($row->min_price ?? 0),
                             ];
                         });
-                    $nearbyMinPriceByPropertyId = $nearbyMinPriceByPropertyId->merge($nearbyVendorRoomPriceMap);
+                    $nearbyMinPriceByPropertyId = $mergeMinPriceMaps($nearbyMinPriceByPropertyId, $nearbyVendorRoomPriceMap);
                 }
             }
 
-            $legacyRoomPropertyColumn = null;
+            $legacyRoomPropertyColumns = [];
             if (Schema::hasTable('vendor_property_room_categories')) {
                 if (Schema::hasColumn('vendor_property_room_categories', 'vendor_property_id')) {
-                    $legacyRoomPropertyColumn = 'vendor_property_id';
-                } elseif (Schema::hasColumn('vendor_property_room_categories', 'property_id')) {
-                    $legacyRoomPropertyColumn = 'property_id';
+                    $legacyRoomPropertyColumns[] = 'vendor_property_id';
+                }
+                if (Schema::hasColumn('vendor_property_room_categories', 'property_id')) {
+                    $legacyRoomPropertyColumns[] = 'property_id';
                 }
             }
 
-            if ($nearbyPropertyIds->isNotEmpty() && $legacyRoomPropertyColumn !== null) {
+            if ($nearbyPropertyIds->isNotEmpty() && !empty($legacyRoomPropertyColumns)) {
                 $legacyPriceColumns = [];
                 foreach (['meal_plan_room_only_price', 'room_only_price', 'price_per_night', 'base_price'] as $candidateColumn) {
                     if (Schema::hasColumn('vendor_property_room_categories', $candidateColumn)) {
@@ -580,32 +632,46 @@ Route::get('/property/{property}', function (Request $request, int $property) {
 
                 if (!empty($legacyPriceColumns)) {
                     $legacyRows = DB::table('vendor_property_room_categories')
-                        ->whereIn($legacyRoomPropertyColumn, $nearbyPropertyIds->all())
-                        ->get(array_merge([$legacyRoomPropertyColumn], $legacyPriceColumns));
+                        ->where(static function ($query) use ($legacyRoomPropertyColumns, $nearbyPropertyIds) {
+                            foreach ($legacyRoomPropertyColumns as $index => $propertyColumn) {
+                                if ($index === 0) {
+                                    $query->whereIn($propertyColumn, $nearbyPropertyIds->all());
+                                } else {
+                                    $query->orWhereIn($propertyColumn, $nearbyPropertyIds->all());
+                                }
+                            }
+                        })
+                        ->get(array_merge($legacyRoomPropertyColumns, $legacyPriceColumns));
 
                     $legacyMinMap = $legacyRows
-                        ->groupBy(static fn ($row) => (int) ($row->{$legacyRoomPropertyColumn} ?? 0))
-                        ->map(static function ($rows) use ($legacyPriceColumns) {
+                        ->flatMap(static function ($row) use ($legacyRoomPropertyColumns, $legacyPriceColumns) {
+                            $prices = collect($legacyPriceColumns)
+                                ->map(static fn ($column) => (float) ($row->{$column} ?? 0))
+                                ->filter(static fn (float $value): bool => $value > 0)
+                                ->values();
+
+                            if ($prices->isEmpty()) {
+                                return [];
+                            }
+
+                            return collect($legacyRoomPropertyColumns)
+                                ->map(static fn ($column) => (int) ($row->{$column} ?? 0))
+                                ->filter(static fn (int $id): bool => $id > 0)
+                                ->flatMap(static fn (int $propertyId) => $prices->map(static fn (float $price) => [
+                                    'property_id' => $propertyId,
+                                    'price' => $price,
+                                ]));
+                        })
+                        ->groupBy(static fn (array $entry) => (int) ($entry['property_id'] ?? 0))
+                        ->map(static function ($rows) {
                             return collect($rows)
-                                ->flatMap(static function ($row) use ($legacyPriceColumns) {
-                                    return collect($legacyPriceColumns)
-                                        ->map(static fn ($column) => (float) ($row->{$column} ?? 0));
-                                })
+                                ->map(static fn (array $entry) => (float) ($entry['price'] ?? 0))
                                 ->filter(static fn (float $value): bool => $value > 0)
                                 ->min();
                         })
                         ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
 
-                    $nearbyMinPriceByPropertyId = $nearbyMinPriceByPropertyId
-                        ->merge($legacyMinMap)
-                        ->groupBy(static fn ($value, $key) => (int) $key)
-                        ->map(static function ($values) {
-                            return collect($values)
-                                ->map(static fn ($value) => (float) $value)
-                                ->filter(static fn (float $value): bool => $value > 0)
-                                ->min();
-                        })
-                        ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+                    $nearbyMinPriceByPropertyId = $mergeMinPriceMaps($nearbyMinPriceByPropertyId, $legacyMinMap);
                 }
             }
 
@@ -661,16 +727,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
                         })
                         ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
 
-                    $nearbyMinPriceByPropertyId = $nearbyMinPriceByPropertyId
-                        ->merge($accommodationRoomMinMap)
-                        ->groupBy(static fn ($value, $key) => (int) $key)
-                        ->map(static function ($values) {
-                            return collect($values)
-                                ->map(static fn ($value) => (float) $value)
-                                ->filter(static fn (float $value): bool => $value > 0)
-                                ->min();
-                        })
-                        ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+                    $nearbyMinPriceByPropertyId = $mergeMinPriceMaps($nearbyMinPriceByPropertyId, $accommodationRoomMinMap);
                 }
             }
 

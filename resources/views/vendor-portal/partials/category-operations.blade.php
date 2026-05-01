@@ -864,10 +864,28 @@
                                         <th>Stay</th>
                                         <th>Service</th>
                                         <th>Payment</th>
+                                        <th>Messages</th>
                                         <th>Timeline</th>
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    @php
+                                        // Bulk-load messages for all visible reservations
+                                        $visibleReservationIds = $reservationScopeFiltered->take(30)->pluck('id')->filter(static fn ($id) => (int) $id > 0)->unique()->values()->all();
+                                        $vendorMessagesByReservation = collect();
+                                        if (!empty($visibleReservationIds) && \Illuminate\Support\Facades\Schema::hasTable('reservation_messages')) {
+                                            $vendorMsgRows = \Illuminate\Support\Facades\DB::table('reservation_messages')
+                                                ->whereIn('reservation_id', $visibleReservationIds)
+                                                ->orderBy('created_at')
+                                                ->get(['id', 'reservation_id', 'sender_role', 'sender_display_name', 'message_text', 'is_flagged', 'vendor_read', 'created_at']);
+                                            $vendorMessagesByReservation = $vendorMsgRows->groupBy(static fn ($m) => (int) ($m->reservation_id ?? 0));
+                                            // Mark unread customer messages as read for vendor
+                                            $unreadForVendor = $vendorMsgRows->where('sender_role', 'customer')->where('vendor_read', false)->pluck('id')->all();
+                                            if (!empty($unreadForVendor)) {
+                                                \Illuminate\Support\Facades\DB::table('reservation_messages')->whereIn('id', $unreadForVendor)->update(['vendor_read' => true]);
+                                            }
+                                        }
+                                    @endphp
                                     @forelse ($reservationScopeFiltered->take(30) as $reservationRow)
                                         @php
                                             $adults = max(1, (int) ($reservationRow['adult_guests'] ?? 1));
@@ -933,6 +951,52 @@
                                                     @endif
                                                 @endif
                                             </td>
+                                            <td class="vendor-msg-cell">
+                                                @php
+                                                    $rsvId = (int) ($reservationRow['id'] ?? 0);
+                                                    $rsvMessages = $vendorMessagesByReservation[$rsvId] ?? collect();
+                                                    $unreadCount = $rsvMessages->where('sender_role', 'customer')->where('vendor_read', false)->count();
+                                                @endphp
+                                                @if ($rsvMessages->isNotEmpty())
+                                                    <details class="vendor-msg-details">
+                                                        <summary class="vendor-msg-summary">
+                                                            {{ $rsvMessages->count() }} message{{ $rsvMessages->count() === 1 ? '' : 's' }}
+                                                            @if ($unreadCount > 0)
+                                                                <span class="vendor-msg-unread-badge">{{ $unreadCount }} new</span>
+                                                            @endif
+                                                        </summary>
+                                                        <div class="vendor-msg-list">
+                                                            @foreach ($rsvMessages as $vMsg)
+                                                                @php
+                                                                    $vMsgRole = (string) ($vMsg->sender_role ?? '');
+                                                                    $vMsgName = e(trim((string) ($vMsg->sender_display_name ?? ($vMsgRole === 'vendor' ? 'You' : 'Guest'))));
+                                                                    $vMsgText = e(trim((string) ($vMsg->message_text ?? '')));
+                                                                    $vMsgDate = trim((string) ($vMsg->created_at ?? ''));
+                                                                    $vMsgDate = $vMsgDate !== '' ? \Carbon\Carbon::parse($vMsgDate)->format('M j, g:i A') : '';
+                                                                    $vMsgFlagged = (bool) ($vMsg->is_flagged ?? false);
+                                                                @endphp
+                                                                <div class="vendor-msg-bubble vendor-msg-bubble--{{ $vMsgRole === 'vendor' ? 'sent' : 'received' }}{{ $vMsgFlagged ? ' vendor-msg-bubble--flagged' : '' }}">
+                                                                    <span class="vendor-msg-meta">{{ $vMsgName }}@if ($vMsgDate !== '') · {{ $vMsgDate }}@endif</span>
+                                                                    <span class="vendor-msg-body">{{ $vMsgText }}</span>
+                                                                    @if ($vMsgFlagged)
+                                                                        <span class="vendor-msg-flag-notice"><i class="fa-solid fa-flag"></i> Flagged</span>
+                                                                    @endif
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    </details>
+                                                @else
+                                                    <span class="vendor-msg-none">No messages</span>
+                                                @endif
+                                                <form method="POST" action="/portal/vendor/reservations/{{ $rsvId }}/messages" class="vendor-msg-reply-form">
+                                                    @csrf
+                                                    <textarea name="message_text" class="vendor-msg-textarea" rows="2" maxlength="2000" placeholder="Reply to guest... (no contact details)"></textarea>
+                                                    <div class="vendor-msg-reply-footer">
+                                                        <span class="vendor-msg-policy-note"><i class="fa-solid fa-lock"></i> No phone/email sharing allowed</span>
+                                                        <button type="submit" class="btn btn-secondary vendor-msg-send-btn">Send</button>
+                                                    </div>
+                                                </form>
+                                            </td>
                                             <td>
                                                 @php
                                                     $rowStatus = strtolower(trim((string) ($reservationRow['status'] ?? 'pending')));
@@ -974,7 +1038,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="ops-empty">No reservations for {{ strtolower($labelForCategory($categoryKey)) }} in {{ $reservationScope }} scope.</td>
+                                            <td colspan="7" class="ops-empty">No reservations for {{ strtolower($labelForCategory($categoryKey)) }} in {{ $reservationScope }} scope.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>

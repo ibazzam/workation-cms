@@ -373,9 +373,7 @@ Route::get('/customer', function (Request $request) {
                 'currency' => strtoupper(trim((string) ($row->currency ?? 'MVR'))),
                 'created_at' => $row->created_at ? Carbon::parse((string) $row->created_at)->format('Y-m-d') : '-',
                 'booking_contact_available' => $allowVendorContact,
-                'vendor_contact_name' => $allowVendorContact ? $vendorContactName : '',
-                'vendor_contact_number' => $allowVendorContact ? $vendorContactNumber : '',
-                'vendor_contact_email' => $allowVendorContact ? $vendorContactEmail : '',
+                'vendor_display_name' => $allowVendorContact ? $vendorContactName : '',
                 'support_email' => $supportEmail,
             ];
         });
@@ -395,6 +393,32 @@ Route::get('/customer', function (Request $request) {
         'awaiting_review'  => $allBookings->filter(fn ($b) => !in_array(strtolower((string) ($b['status'] ?? '')), ['pending', 'cancelled', 'canceled']) && ($b['end_at'] === '-' || \Carbon\Carbon::parse((string) $b['end_at'])->isPast()))->count(),
     ];
 
+    // ── Load in-platform message threads ────────────────────────────────────
+    $reservationMessagesByReservation = collect();
+    if (Schema::hasTable('reservation_messages') && $allBookings->isNotEmpty()) {
+        $reservationIds = $allBookings->pluck('id')->filter(static fn ($id) => (int) $id > 0)->unique()->values()->all();
+        if (!empty($reservationIds)) {
+            $messageRows = DB::table('reservation_messages')
+                ->whereIn('reservation_id', $reservationIds)
+                ->orderBy('created_at')
+                ->get(['id', 'reservation_id', 'sender_role', 'sender_display_name', 'message_text', 'is_flagged', 'created_at']);
+
+            $reservationMessagesByReservation = $messageRows->groupBy(static fn ($m) => (int) ($m->reservation_id ?? 0));
+
+            // Mark customer-sent messages as read for the customer view
+            $unreadVendorMessageIds = $messageRows
+                ->where('sender_role', 'vendor')
+                ->where('customer_read', false)
+                ->pluck('id')
+                ->all();
+            if (!empty($unreadVendorMessageIds)) {
+                DB::table('reservation_messages')
+                    ->whereIn('id', $unreadVendorMessageIds)
+                    ->update(['customer_read' => true]);
+            }
+        }
+    }
+
     return view('customer-portal', [
         'summary' => $summary,
         'customerProfile' => $customerProfile,
@@ -406,6 +430,7 @@ Route::get('/customer', function (Request $request) {
         'customerRoomsByProperty' => $customerRoomsByProperty,
         'propertyMediaByProperty' => $propertyMediaByProperty,
         'roomMediaByRoom' => $roomMediaByRoom,
+        'reservationMessagesByReservation' => $reservationMessagesByReservation,
     ]);
 });
 
@@ -710,3 +735,152 @@ Route::post('/customer/bookings/{reservation}/delete', function (Request $reques
     return redirect('/customer')->with('portal_notice', 'Booking removed from your portal list.');
 });
 
+// ── In-platform booking message: customer sends a message to the vendor ──────
+Route::post('/customer/bookings/{reservation}/messages', function (Request $request, int $reservation) {
+    if (!(bool) session('portal_customer_authenticated', false)) {
+        return redirect('/portal/customer/login')->withErrors(['customer' => 'Sign in to send messages.']);
+    }
+
+    $customerEmail = strtolower(trim((string) session('portal_customer_email', '')));
+    if ($customerEmail === '') {
+        return redirect('/customer')->withErrors(['customer' => 'Your session is missing an email. Please sign in again.']);
+    }
+
+    if (!Schema::hasTable('vendor_reservations') || !Schema::hasTable('reservation_messages')) {
+        return redirect('/customer')->withErrors(['customer' => 'Messaging is not available right now.']);
+    }
+
+    $reservationRow = DB::table('vendor_reservations')
+        ->where('id', $reservation)
+        ->whereRaw('LOWER(customer_email) = ?', [$customerEmail])
+        ->first();
+
+    if (!$reservationRow) {
+        return redirect('/customer')->withErrors(['customer' => 'Booking not found for this account.']);
+    }
+
+    $reservationStatus = strtolower(trim((string) ($reservationRow->status ?? 'pending')));
+    $paymentStatus = strtolower(trim((string) ($reservationRow->payment_status ?? 'unpaid')));
+    $isCancelled = in_array($reservationStatus, ['cancelled', 'canceled', 'cancel_requested'], true);
+    $isEligible = ($paymentStatus === 'paid' || in_array($reservationStatus, ['confirmed', 'completed'], true)) && !$isCancelled;
+
+    if (!$isEligible) {
+        return redirect('/customer')->withErrors(['customer' => 'You can only message vendors for paid or confirmed bookings.']);
+    }
+
+    $messageText = trim((string) ($request->input('message_text', '')));
+    if ($messageText === '' || mb_strlen($messageText) > 2000) {
+        return redirect('/customer#booking-' . $reservation)->withErrors(['customer' => 'Message must be between 1 and 2000 characters.']);
+    }
+
+    $filterResult = workationMessageContentFilter($messageText);
+    if ($filterResult['blocked']) {
+        return redirect('/customer#booking-' . $reservation)->withErrors(['customer' => $filterResult['reason']]);
+    }
+
+    $customerName = trim((string) session('portal_customer_name', $customerEmail));
+
+    DB::table('reservation_messages')->insert([
+        'reservation_id'     => $reservation,
+        'sender_role'        => 'customer',
+        'sender_user_id'     => null,
+        'sender_display_name' => mb_substr($customerName, 0, 120),
+        'message_text'       => $messageText,
+        'is_flagged'         => false,
+        'vendor_read'        => false,
+        'customer_read'      => true,
+        'created_at'         => now(),
+        'updated_at'         => now(),
+    ]);
+
+    // Notify vendor
+    $vendorUserId = (int) ($reservationRow->vendor_user_id ?? 0);
+    if ($vendorUserId > 0 && Schema::hasTable('users')) {
+        $vendorEmail = strtolower(trim((string) (DB::table('users')->where('id', $vendorUserId)->value('email') ?? '')));
+        if ($vendorEmail !== '') {
+            $reservationCode = 'RSV-' . str_pad((string) $reservation, 6, '0', STR_PAD_LEFT);
+            workationSendVendorEmailSafe($vendorEmail, 'New message from guest — ' . $reservationCode, implode("\n", [
+                'You have received a new message from a guest.',
+                '',
+                'Reservation: ' . $reservationCode,
+                'Guest: ' . $customerName,
+                '',
+                'Message:',
+                $messageText,
+                '',
+                'Please log in to your Workation vendor portal to reply.',
+                '',
+                'Note: All communication must stay within the Workation platform.',
+                '',
+                'Workation Team',
+            ]));
+        }
+    }
+
+    return redirect('/customer#booking-' . $reservation)->with('portal_notice', 'Your message has been sent.');
+});
+
+// ── In-platform message: customer reports an off-platform request ────────────
+Route::post('/customer/bookings/{reservation}/messages/{message}/report', function (Request $request, int $reservation, int $message) {
+    if (!(bool) session('portal_customer_authenticated', false)) {
+        return redirect('/portal/customer/login')->withErrors(['customer' => 'Sign in to report messages.']);
+    }
+
+    $customerEmail = strtolower(trim((string) session('portal_customer_email', '')));
+
+    if (!Schema::hasTable('reservation_messages') || !Schema::hasTable('vendor_reservations')) {
+        return redirect('/customer')->withErrors(['customer' => 'Reporting is not available right now.']);
+    }
+
+    // Verify ownership: the reservation must belong to this customer
+    $ownsReservation = DB::table('vendor_reservations')
+        ->where('id', $reservation)
+        ->whereRaw('LOWER(customer_email) = ?', [$customerEmail])
+        ->exists();
+
+    if (!$ownsReservation) {
+        return redirect('/customer')->withErrors(['customer' => 'Booking not found for this account.']);
+    }
+
+    $messageRow = DB::table('reservation_messages')
+        ->where('id', $message)
+        ->where('reservation_id', $reservation)
+        ->first();
+
+    if (!$messageRow) {
+        return redirect('/customer#booking-' . $reservation)->withErrors(['customer' => 'Message not found.']);
+    }
+
+    $reportReason = trim((string) ($request->input('report_reason', 'Off-platform contact or payment request reported by customer.')));
+    $reportReason = mb_substr($reportReason !== '' ? $reportReason : 'Off-platform contact or payment request reported by customer.', 0, 500);
+
+    DB::table('reservation_messages')
+        ->where('id', $message)
+        ->update([
+            'is_flagged'     => true,
+            'flagged_reason' => $reportReason,
+            'flagged_pattern' => 'customer_report',
+            'updated_at'     => now(),
+        ]);
+
+    // Alert admin
+    $reservationCode = 'RSV-' . str_pad((string) $reservation, 6, '0', STR_PAD_LEFT);
+    foreach (workationReservationAdminEmails() as $adminEmail) {
+        if ($adminEmail !== '') {
+            workationSendVendorEmailSafe($adminEmail, '[ACTION REQUIRED] Off-platform request reported — ' . $reservationCode, implode("\n", [
+                'A customer has reported an off-platform contact or payment request.',
+                '',
+                'Reservation: ' . $reservationCode,
+                'Customer Email: ' . $customerEmail,
+                'Message ID: ' . $message,
+                'Report Reason: ' . $reportReason,
+                '',
+                'Please review the flagged message in the admin portal.',
+                '',
+                'Workation Team',
+            ]));
+        }
+    }
+
+    return redirect('/customer#booking-' . $reservation)->with('portal_notice', 'Thank you for reporting. Our team will review this message.');
+});

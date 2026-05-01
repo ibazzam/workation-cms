@@ -1426,6 +1426,137 @@
             min-width: 0;
         }
 
+        /* ── Vendor in-platform messaging ─────────────────────────────── */
+        .vendor-msg-cell {
+            min-width: 200px;
+            max-width: 260px;
+            vertical-align: top;
+        }
+
+        .vendor-msg-details {
+            margin-bottom: 8px;
+        }
+
+        .vendor-msg-summary {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #174b6a;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .vendor-msg-unread-badge {
+            background: #d94f2e;
+            color: #fff;
+            border-radius: 999px;
+            padding: 1px 7px;
+            font-size: 0.67rem;
+            font-weight: 700;
+        }
+
+        .vendor-msg-list {
+            margin-top: 6px;
+            display: grid;
+            gap: 5px;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .vendor-msg-bubble {
+            padding: 6px 8px;
+            border-radius: 7px;
+            font-size: 0.73rem;
+            display: grid;
+            gap: 2px;
+        }
+
+        .vendor-msg-bubble--sent {
+            background: #e4f0fb;
+            border: 1px solid #c2d9ef;
+            margin-left: 16px;
+        }
+
+        .vendor-msg-bubble--received {
+            background: #fff;
+            border: 1px solid #dce9f2;
+            margin-right: 16px;
+        }
+
+        .vendor-msg-bubble--flagged {
+            background: #fff5f5;
+            border-color: #e8b4b4;
+        }
+
+        .vendor-msg-meta {
+            font-size: 0.67rem;
+            color: #7a9ab0;
+        }
+
+        .vendor-msg-body {
+            color: #2b4558;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .vendor-msg-flag-notice {
+            font-size: 0.67rem;
+            color: #b03030;
+            font-weight: 600;
+        }
+
+        .vendor-msg-none {
+            font-size: 0.72rem;
+            color: #9ab2c2;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .vendor-msg-reply-form {
+            display: grid;
+            gap: 4px;
+        }
+
+        .vendor-msg-textarea {
+            width: 100%;
+            border: 1px solid #c5daea;
+            border-radius: 6px;
+            padding: 5px 7px;
+            font-size: 0.73rem;
+            resize: vertical;
+            color: #2b4558;
+            background: #fff;
+            box-sizing: border-box;
+        }
+
+        .vendor-msg-textarea:focus {
+            outline: none;
+            border-color: #3a8ec9;
+        }
+
+        .vendor-msg-reply-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+        }
+
+        .vendor-msg-policy-note {
+            font-size: 0.65rem;
+            color: #9ab2c2;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .vendor-msg-send-btn {
+            font-size: 0.72rem;
+            padding: 4px 10px;
+            white-space: nowrap;
+        }
+        /* ── End vendor messaging ─────────────────────────────────────── */
+
         .listing-management-table th:nth-child(1),
         .listing-management-table td:nth-child(1) {
             width: auto;

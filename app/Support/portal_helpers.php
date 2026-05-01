@@ -819,6 +819,91 @@ if (!function_exists('vendorDeliverOtpCode')) {
     }
 }
 
+if (!function_exists('workationMessageContentFilter')) {
+    /**
+     * Inspect a user-supplied message for forbidden content (phone numbers —
+     * including those spelled out alphabetically — email addresses, off-platform
+     * payment instructions, and contact-redirect phrases).
+     *
+     * Returns an array:
+     *   blocked  => bool   – true if the message must be rejected
+     *   reason   => string – human-readable explanation (empty when not blocked)
+     *   pattern  => string – short tag of the matched rule (for logging)
+     */
+    function workationMessageContentFilter(string $text): array
+    {
+        $lower = mb_strtolower($text, 'UTF-8');
+
+        // ── 1. Raw numeric phone patterns ─────────────────────────────────────
+        // Matches 7-12 consecutive digits, possibly separated by spaces, dashes or dots.
+        if (preg_match('/\b\d[\d\s\-\.]{5,11}\d\b/', $text)) {
+            return ['blocked' => true, 'reason' => 'Sharing phone numbers is not allowed on this platform. Please keep all communication within Workation.', 'pattern' => 'numeric_phone'];
+        }
+
+        // ── 2. International format (+960 777 1234 etc.) ──────────────────────
+        if (preg_match('/\+\d{1,4}[\s\-]?\d{3,}/', $text)) {
+            return ['blocked' => true, 'reason' => 'Sharing phone numbers is not allowed on this platform. Please keep all communication within Workation.', 'pattern' => 'intl_phone'];
+        }
+
+        // ── 3. Alphabetically spelled-out digits ──────────────────────────────
+        // Replace English number words with their digit equivalents, then check
+        // whether any run of ≥ 7 adjacent digits forms (i.e. a phone number).
+        $wordMap = [
+            'zero' => '0', 'one' => '1', 'two' => '2', 'three' => '3',
+            'four' => '4', 'five' => '5', 'six' => '6', 'seven' => '7',
+            'eight' => '8', 'nine' => '9',
+        ];
+        $digitized = preg_replace_callback(
+            '/\b(zero|one|two|three|four|five|six|seven|eight|nine)\b/i',
+            static fn ($m) => $wordMap[strtolower($m[1])],
+            $lower
+        );
+        // Collapse digit tokens that are only separated by whitespace or punctuation
+        $collapsed = preg_replace('/(\d)[\s\-\.\/\\\\,]+(\d)/', '$1$2', $digitized ?? '');
+        $collapsed = preg_replace('/(\d)[\s\-\.\/\\\\,]+(\d)/', '$1$2', $collapsed ?? '');
+        if (preg_match('/\d{7,12}/', $collapsed ?? '')) {
+            return ['blocked' => true, 'reason' => 'Sharing phone numbers (including those spelled out in words) is not allowed on this platform.', 'pattern' => 'spelled_phone'];
+        }
+
+        // ── 4. Email addresses ────────────────────────────────────────────────
+        if (preg_match('/[a-z0-9._%+\-]+\s*@\s*[a-z0-9.\-]+\s*\.\s*[a-z]{2,}/i', $text)) {
+            return ['blocked' => true, 'reason' => 'Sharing email addresses is not allowed on this platform. Please keep all communication within Workation.', 'pattern' => 'email_address'];
+        }
+        foreach (['gmail', 'yahoo mail', 'hotmail', 'outlook.com', 'icloud.com', 'protonmail', 'at the rate', 'dot com', 'dot net', 'dot mv'] as $signal) {
+            if (str_contains($lower, $signal)) {
+                return ['blocked' => true, 'reason' => 'Your message contains references to external contact information which is not allowed.', 'pattern' => 'email_signal'];
+            }
+        }
+
+        // ── 5. Off-platform payment instructions ─────────────────────────────
+        foreach ([
+            'pay me', 'send me money', 'send money', 'bank transfer', 'bank account',
+            'account number', 'bml account', 'mib account', 'iban', 'transfer money',
+            'wire transfer', 'pay outside', 'pay directly', 'pay cash', 'cash payment',
+            'pay in cash', 'personal account', 'my account',
+        ] as $signal) {
+            if (str_contains($lower, $signal)) {
+                return ['blocked' => true, 'reason' => 'Messages requesting off-platform payment are not allowed. All payments must go through Workation.', 'pattern' => 'payment_redirect'];
+            }
+        }
+
+        // ── 6. Contact-redirect phrases ───────────────────────────────────────
+        foreach ([
+            'my number is', 'my mobile', 'my phone', 'call me at', 'call me on',
+            'reach me at', 'contact me at', 'contact me on', 'whatsapp me',
+            'my whatsapp', 'message me on', 'add me on', 'find me on telegram',
+            'my telegram', 'my viber', 'dm me', 'text me at', 'signal me',
+            'my instagram', 'my facebook', 'contact me outside',
+        ] as $signal) {
+            if (str_contains($lower, $signal)) {
+                return ['blocked' => true, 'reason' => 'Requesting communication outside Workation is not allowed. Please use this message thread for all booking inquiries.', 'pattern' => 'contact_redirect'];
+            }
+        }
+
+        return ['blocked' => false, 'reason' => '', 'pattern' => ''];
+    }
+}
+
 if (!function_exists('portalCanonicalHostRedirect')) {
     function portalCanonicalHostRedirect(Request $request): ?\Illuminate\Http\RedirectResponse
     {

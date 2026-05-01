@@ -1555,6 +1555,89 @@
             padding: 4px 10px;
             white-space: nowrap;
         }
+
+        .vendor-message-center {
+            margin-top: 12px;
+            border: 1px solid #d8e6f0;
+            border-radius: 10px;
+            background: #f8fbfe;
+            padding: 12px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .vendor-message-center-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .vendor-message-center-title {
+            font-size: 0.86rem;
+            font-weight: 700;
+            color: #133b55;
+        }
+
+        .vendor-message-center-note {
+            font-size: 0.72rem;
+            color: #5f7d93;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .vendor-message-center-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .vendor-message-thread {
+            border: 1px solid #d6e3ed;
+            border-radius: 8px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .vendor-message-thread-head {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e3edf4;
+            background: #eef5fb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .vendor-message-thread-subject {
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: #184662;
+        }
+
+        .vendor-message-thread-meta {
+            font-size: 0.7rem;
+            color: #648196;
+        }
+
+        .vendor-message-thread-body {
+            padding: 10px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .vendor-msg-open-center {
+            font-size: 0.71rem;
+            color: #1a6285;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .vendor-msg-open-center:hover {
+            text-decoration: underline;
+        }
         /* ── End vendor messaging ─────────────────────────────────────── */
 
         .listing-management-table th:nth-child(1),

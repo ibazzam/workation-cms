@@ -115,7 +115,7 @@ class CustomerBookingDeleteTest extends TestCase
         ]);
     }
 
-    public function test_customer_can_delete_closed_cancelled_booking_from_portal_even_if_paid(): void
+    public function test_customer_cannot_delete_closed_cancelled_booking_from_portal_if_paid(): void
     {
         $vendor = User::factory()->create();
         $propertyId = (int) DB::table('vendor_accommodation_listings')->insertGetId([
@@ -148,6 +148,7 @@ class CustomerBookingDeleteTest extends TestCase
         ]);
 
         $response = $this
+            ->from('/customer')
             ->withSession([
                 'portal_customer_authenticated' => true,
                 'portal_customer_email' => 'customer@example.com',
@@ -156,7 +157,7 @@ class CustomerBookingDeleteTest extends TestCase
 
         $response
             ->assertRedirect('/customer')
-            ->assertSessionHas('portal_notice', 'Booking removed from your portal list.');
+            ->assertSessionHasErrors(['customer']);
 
         $reservation = DB::table('vendor_reservations')->where('id', $reservationId)->first();
         $this->assertNotNull($reservation);
@@ -164,8 +165,7 @@ class CustomerBookingDeleteTest extends TestCase
 
         $notes = json_decode((string) ($reservation->notes ?? ''), true);
         $this->assertIsArray($notes);
-        $this->assertNotSame('', trim((string) ($notes['customer_deleted_at'] ?? '')));
-        $this->assertSame('customer_portal', (string) ($notes['customer_deleted_by'] ?? ''));
+        $this->assertSame('', trim((string) ($notes['customer_deleted_at'] ?? '')));
     }
 
     public function test_customer_can_request_cancellation_for_paid_booking(): void

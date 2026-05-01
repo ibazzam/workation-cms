@@ -321,9 +321,8 @@ Route::get('/customer', function (Request $request) {
 
             $statusLower = strtolower(trim((string) ($row->status ?? 'pending')));
             $paymentStatusLower = strtolower(trim((string) ($row->payment_status ?? 'unpaid')));
-            $isCancelledBooking = in_array($statusLower, ['cancelled', 'canceled', 'cancel_requested'], true);
-            $isFinalizedBooking = $paymentStatusLower === 'paid' || in_array($statusLower, ['confirmed', 'completed'], true);
-            $allowVendorContact = $isFinalizedBooking && !$isCancelledBooking;
+            $allowVendorContact = $paymentStatusLower === 'paid'
+                || in_array($statusLower, ['confirmed', 'completed', 'cancel_requested', 'cancelled', 'canceled'], true);
 
             $vendorContactName = trim((string) (
                 $notes['vendor_contact_name']
@@ -704,13 +703,11 @@ Route::post('/customer/bookings/{reservation}/delete', function (Request $reques
 
     $paymentStatus = strtolower(trim((string) ($reservationRow->payment_status ?? 'unpaid')));
     $reservationStatus = strtolower(trim((string) ($reservationRow->status ?? 'pending')));
-    $canDeleteFromPortal = $paymentStatus !== 'paid'
-        || in_array($reservationStatus, ['cancelled', 'canceled', 'failed', 'expired', 'rejected'], true)
-        || $paymentStatus === 'refunded';
+    $canDeleteFromPortal = $paymentStatus !== 'paid';
 
     if (!$canDeleteFromPortal) {
         return redirect('/customer')->withErrors([
-            'customer' => 'Paid bookings cannot be deleted from the portal. Please contact support for cancellation help.',
+            'customer' => 'Paid bookings cannot be deleted from the portal until refund/dispute flow is complete.',
         ]);
     }
 
@@ -761,11 +758,11 @@ Route::post('/customer/bookings/{reservation}/messages', function (Request $requ
 
     $reservationStatus = strtolower(trim((string) ($reservationRow->status ?? 'pending')));
     $paymentStatus = strtolower(trim((string) ($reservationRow->payment_status ?? 'unpaid')));
-    $isCancelled = in_array($reservationStatus, ['cancelled', 'canceled', 'cancel_requested'], true);
-    $isEligible = ($paymentStatus === 'paid' || in_array($reservationStatus, ['confirmed', 'completed'], true)) && !$isCancelled;
+    $isEligible = $paymentStatus === 'paid'
+        || in_array($reservationStatus, ['confirmed', 'completed', 'cancel_requested', 'cancelled', 'canceled'], true);
 
     if (!$isEligible) {
-        return redirect('/customer')->withErrors(['customer' => 'You can only message vendors for paid or confirmed bookings.']);
+        return redirect('/customer')->withErrors(['customer' => 'You can only message vendors for paid, confirmed, or cancellation-related bookings.']);
     }
 
     $messageText = trim((string) ($request->input('message_text', '')));

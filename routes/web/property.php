@@ -453,7 +453,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
     $nearbyRadiusKm = max(1.0, min(200.0, $nearbyRadiusKm));
     $nearbyUsesCoordinateRadius = false;
     $nearbyProperties = collect(Cache::remember(
-        'property_profile:nearby:v3:' . (int) $propertyRow->id,
+        'property_profile:nearby:v4:' . (int) $propertyRow->id,
         now()->addMinutes(8),
         static function () use ($propertyRow) {
             $currentCategory = trim((string) ($propertyRow->listing_category ?? ''));
@@ -466,9 +466,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
 
             $preparedNearby = $candidateRows->map(static function ($row) {
                 $primaryId = (int) ($row->id ?? 0);
-                $dedicatedRowId = (int) ($row->dedicated_row_id ?? 0);
-                $vendorPropertyId = (int) ($row->vendor_property_id ?? 0);
-                $lookupIds = collect([$primaryId, $dedicatedRowId, $vendorPropertyId])
+                $lookupIds = collect(workationPropertyLookupIds($row))
                     ->filter(static fn (int $id): bool => $id > 0)
                     ->unique()
                     ->values()
@@ -574,7 +572,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
 
             if ($nearbyPropertyIds->isNotEmpty() && $legacyRoomPropertyColumn !== null) {
                 $legacyPriceColumns = [];
-                foreach (['meal_plan_room_only_price', 'base_price'] as $candidateColumn) {
+                foreach (['meal_plan_room_only_price', 'room_only_price', 'price_per_night', 'base_price'] as $candidateColumn) {
                     if (Schema::hasColumn('vendor_property_room_categories', $candidateColumn)) {
                         $legacyPriceColumns[] = $candidateColumn;
                     }
@@ -616,6 +614,12 @@ Route::get('/property/{property}', function (Request $request, int $property) {
                 if (Schema::hasColumn('accommodation_rooms', 'base_price_per_night')) {
                     $roomPriceColumns[] = 'base_price_per_night';
                 }
+                if (Schema::hasColumn('accommodation_rooms', 'room_only_price')) {
+                    $roomPriceColumns[] = 'room_only_price';
+                }
+                if (Schema::hasColumn('accommodation_rooms', 'price_per_night')) {
+                    $roomPriceColumns[] = 'price_per_night';
+                }
                 if (Schema::hasColumn('accommodation_rooms', 'base_price')) {
                     $roomPriceColumns[] = 'base_price';
                 }
@@ -637,8 +641,20 @@ Route::get('/property/{property}', function (Request $request, int $property) {
                             return collect($rows)
                                 ->map(static function ($row) {
                                     $nightly = isset($row->base_price_per_night) ? (float) ($row->base_price_per_night ?? 0) : 0;
+                                    $roomOnly = isset($row->room_only_price) ? (float) ($row->room_only_price ?? 0) : 0;
+                                    $perNight = isset($row->price_per_night) ? (float) ($row->price_per_night ?? 0) : 0;
                                     $legacy = isset($row->base_price) ? (float) ($row->base_price ?? 0) : 0;
-                                    return $nightly > 0 ? $nightly : $legacy;
+                                    if ($nightly > 0) {
+                                        return $nightly;
+                                    }
+                                    if ($roomOnly > 0) {
+                                        return $roomOnly;
+                                    }
+                                    if ($perNight > 0) {
+                                        return $perNight;
+                                    }
+
+                                    return $legacy;
                                 })
                                 ->filter(static fn (float $value): bool => $value > 0)
                                 ->min();

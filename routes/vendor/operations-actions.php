@@ -423,6 +423,7 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
     $validated = $request->validate([
         'status' => ['required', Rule::in(['pending', 'cancel_requested', 'confirmed', 'checked_in', 'checked_out', 'completed', 'cancelled'])],
+        'cancel_reason' => ['nullable', 'string', 'max:1000'],
     ]);
 
     $reservationRow = DB::table('vendor_reservations')
@@ -434,15 +435,30 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
     }
 
     $requestedStatus = strtolower(trim((string) $validated['status']));
+    $originalRequestedStatus = $requestedStatus;
     $priorStatus = strtolower(trim((string) ($reservationRow->status ?? 'pending')));
     $priorPaymentStatus = strtolower(trim((string) ($reservationRow->payment_status ?? 'unpaid')));
     $hasOpenDispute = (bool) ($reservationRow->has_open_dispute ?? false);
     $hasRefundCase = (bool) ($reservationRow->has_refund_case ?? false);
+    $cancelReason = trim((string) ($validated['cancel_reason'] ?? ''));
+
+    $isPaidReservation = $priorPaymentStatus === 'paid';
+    $isPaidCancellationIntent = $isPaidReservation && in_array($originalRequestedStatus, ['cancel_requested', 'cancelled'], true);
+    if ($isPaidCancellationIntent) {
+        if ($cancelReason === '') {
+            return back()->withErrors([
+                'profile' => 'A cancellation reason is required when vendor requests cancellation for a paid booking.',
+            ])->withInput();
+        }
+
+        // Paid bookings must enter a formal cancellation request flow first.
+        $requestedStatus = 'cancel_requested';
+    }
 
     $allowedTransitions = [
-        'pending' => ['pending', 'confirmed', 'cancelled'],
+        'pending' => ['pending', 'confirmed', 'cancel_requested', 'cancelled'],
         'cancel_requested' => ['cancel_requested', 'cancelled'],
-        'confirmed' => ['confirmed', 'checked_in', 'cancelled'],
+        'confirmed' => ['confirmed', 'checked_in', 'cancel_requested', 'cancelled'],
         'checked_in' => ['checked_in', 'checked_out'],
         'checked_out' => ['checked_out', 'completed'],
         'completed' => ['completed'],
@@ -466,7 +482,19 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
         // Keep gateway-provider guardrail in place; timeline updates do not alter payment state.
     }
 
-    $isPaidReservation = $priorPaymentStatus === 'paid';
+    $reservationNotes = json_decode((string) ($reservationRow->notes ?? ''), true);
+    if (!is_array($reservationNotes)) {
+        $reservationNotes = [];
+    }
+
+    if ($isPaidCancellationIntent) {
+        $reservationNotes['vendor_cancel_requested_at'] = now()->toIso8601String();
+        $reservationNotes['vendor_cancel_requested_by'] = 'vendor_portal';
+        $reservationNotes['vendor_cancel_requested_reason'] = mb_substr($cancelReason, 0, 1000);
+        $reservationNotes['vendor_cancel_requested_from_status'] = $priorStatus;
+        $reservationNotes['vendor_cancel_requested_requires_review'] = true;
+    }
+
     $shouldQueuePayout = $requestedStatus === 'completed' && $isPaidReservation && !$hasOpenDispute && !$hasRefundCase;
     $payoutStatus = strtolower(trim((string) ($reservationRow->payout_status ?? 'queued')));
     if ($requestedStatus === 'completed' && (!$isPaidReservation || $hasOpenDispute || $hasRefundCase)) {
@@ -480,6 +508,7 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
         ->where('vendor_user_id', $vendorUserId)
         ->update(array_filter([
             'status' => $requestedStatus,
+            'notes' => json_encode($reservationNotes),
             'payout_status' => $payoutStatus,
             'payout_expected_at' => $shouldQueuePayout
                 ? (($reservationRow->payout_expected_at ?? null) ?: ReservationSettlementCalculator::expectedPayoutAt(
@@ -494,7 +523,9 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
     $updatedRow = DB::table('vendor_reservations')->where('id', $reservation)->first();
     if ($updatedRow) {
         $bookingRef = '#' . (int) ($updatedRow->id ?? $reservation);
-        $subject = 'Reservation Timeline Updated – Booking ' . $bookingRef;
+        $subject = $isPaidCancellationIntent
+            ? ('Vendor Cancellation Request Submitted – Booking ' . $bookingRef)
+            : ('Reservation Timeline Updated – Booking ' . $bookingRef);
 
         $timelineMessage = 'Timeline: ' . strtoupper($priorStatus) . ' -> ' . strtoupper($requestedStatus);
         $payoutTimeline = 'Payout Timeline: ' . strtoupper((string) ($updatedRow->payout_status ?? 'queued'));
@@ -506,11 +537,12 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
         }
 
         $body = implode("\n", [
-            'Reservation timeline update notification:',
+            $isPaidCancellationIntent ? 'A vendor cancellation request was submitted for a paid booking.' : 'Reservation timeline update notification:',
             '',
             'Booking Reference: ' . $bookingRef,
             $timelineMessage,
             'Payment: ' . strtoupper($priorPaymentStatus) . ' (read-only in vendor portal)',
+            $isPaidCancellationIntent ? ('Vendor Cancellation Reason: ' . mb_substr($cancelReason, 0, 1000)) : null,
             $payoutTimeline,
             'Updated by: Vendor portal',
             'Updated at: ' . now()->format('Y-m-d H:i:s'),
@@ -520,6 +552,10 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
             'Workation Team',
         ]);
         workationNotifyReservationStakeholders($updatedRow, $subject, $body);
+    }
+
+    if ($isPaidCancellationIntent) {
+        return back()->with('portal_notice', 'Paid booking cancellation has been declared as a vendor cancellation request with reason and is now under review.');
     }
 
     if ($shouldQueuePayout) {

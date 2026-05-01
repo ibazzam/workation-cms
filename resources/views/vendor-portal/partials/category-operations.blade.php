@@ -957,45 +957,13 @@
                                                     $rsvMessages = $vendorMessagesByReservation[$rsvId] ?? collect();
                                                     $unreadCount = $rsvMessages->where('sender_role', 'customer')->where('vendor_read', false)->count();
                                                 @endphp
-                                                @if ($rsvMessages->isNotEmpty())
-                                                    <details class="vendor-msg-details">
-                                                        <summary class="vendor-msg-summary">
-                                                            {{ $rsvMessages->count() }} message{{ $rsvMessages->count() === 1 ? '' : 's' }}
-                                                            @if ($unreadCount > 0)
-                                                                <span class="vendor-msg-unread-badge">{{ $unreadCount }} new</span>
-                                                            @endif
-                                                        </summary>
-                                                        <div class="vendor-msg-list">
-                                                            @foreach ($rsvMessages as $vMsg)
-                                                                @php
-                                                                    $vMsgRole = (string) ($vMsg->sender_role ?? '');
-                                                                    $vMsgName = e(trim((string) ($vMsg->sender_display_name ?? ($vMsgRole === 'vendor' ? 'You' : 'Guest'))));
-                                                                    $vMsgText = e(trim((string) ($vMsg->message_text ?? '')));
-                                                                    $vMsgDate = trim((string) ($vMsg->created_at ?? ''));
-                                                                    $vMsgDate = $vMsgDate !== '' ? \Carbon\Carbon::parse($vMsgDate)->format('M j, g:i A') : '';
-                                                                    $vMsgFlagged = (bool) ($vMsg->is_flagged ?? false);
-                                                                @endphp
-                                                                <div class="vendor-msg-bubble vendor-msg-bubble--{{ $vMsgRole === 'vendor' ? 'sent' : 'received' }}{{ $vMsgFlagged ? ' vendor-msg-bubble--flagged' : '' }}">
-                                                                    <span class="vendor-msg-meta">{{ $vMsgName }}@if ($vMsgDate !== '') · {{ $vMsgDate }}@endif</span>
-                                                                    <span class="vendor-msg-body">{{ $vMsgText }}</span>
-                                                                    @if ($vMsgFlagged)
-                                                                        <span class="vendor-msg-flag-notice"><i class="fa-solid fa-flag"></i> Flagged</span>
-                                                                    @endif
-                                                                </div>
-                                                            @endforeach
-                                                        </div>
-                                                    </details>
-                                                @else
-                                                    <span class="vendor-msg-none">No messages</span>
-                                                @endif
-                                                <form method="POST" action="/portal/vendor/reservations/{{ $rsvId }}/messages" class="vendor-msg-reply-form">
-                                                    @csrf
-                                                    <textarea name="message_text" class="vendor-msg-textarea" rows="2" maxlength="2000" placeholder="Reply to guest... (no contact details)"></textarea>
-                                                    <div class="vendor-msg-reply-footer">
-                                                        <span class="vendor-msg-policy-note"><i class="fa-solid fa-lock"></i> No phone/email sharing allowed</span>
-                                                        <button type="submit" class="btn btn-secondary vendor-msg-send-btn">Send</button>
-                                                    </div>
-                                                </form>
+                                                <div class="vendor-msg-summary" style="margin-bottom:6px;">
+                                                    {{ $rsvMessages->count() }} message{{ $rsvMessages->count() === 1 ? '' : 's' }}
+                                                    @if ($unreadCount > 0)
+                                                        <span class="vendor-msg-unread-badge">{{ $unreadCount }} new</span>
+                                                    @endif
+                                                </div>
+                                                <a class="vendor-msg-open-center" href="#vendor-msg-thread-{{ $rsvId }}">Open full message channel</a>
                                             </td>
                                             <td>
                                                 @php
@@ -1023,6 +991,16 @@
                                                             <option value="{{ $timelineValue }}" @selected($rowStatus === $timelineValue)>{{ $timelineLabel }}</option>
                                                         @endforeach
                                                     </select>
+                                                    <textarea
+                                                        name="cancel_reason"
+                                                        class="ops-input"
+                                                        rows="2"
+                                                        maxlength="1000"
+                                                        placeholder="Cancellation reason (required for paid booking cancellation request)"
+                                                    >{{ old('cancel_reason', '') }}</textarea>
+                                                    <p class="small" style="margin:4px 0 0; color:#5e7b90;">
+                                                        For paid bookings, selecting cancellation requires a reason and is submitted as a cancellation request (not immediate cancellation).
+                                                    </p>
                                                     <button class="btn btn-secondary" type="submit">Save Timeline</button>
                                                 </form>
                                                 <p class="small" style="margin-top:6px;">
@@ -1044,6 +1022,73 @@
                                 </tbody>
                             </table>
                         </div>
+
+                        @php
+                            $messageCenterRows = $reservationScopeFiltered->take(30)->filter(static fn (array $row): bool => (int) ($row['id'] ?? 0) > 0)->values();
+                        @endphp
+                        @if ($messageCenterRows->isNotEmpty())
+                            <section class="vendor-message-center" aria-label="Reservation message center">
+                                <div class="vendor-message-center-head">
+                                    <div class="vendor-message-center-title">Guest Communication Channel</div>
+                                    <div class="vendor-message-center-note"><i class="fa-solid fa-link"></i> Every thread is linked to reservation reference and service/room subject</div>
+                                </div>
+
+                                <div class="vendor-message-center-list">
+                                    @foreach ($messageCenterRows as $reservationRow)
+                                        @php
+                                            $rsvId = (int) ($reservationRow['id'] ?? 0);
+                                            $rsvMessages = $vendorMessagesByReservation[$rsvId] ?? collect();
+                                            $subjectLabel = trim((string) ($reservationRow['room_label'] ?? $reservationRow['target_label'] ?? 'Booking conversation'));
+                                            $subject = 'RSV-' . str_pad((string) $rsvId, 6, '0', STR_PAD_LEFT) . ' · ' . $subjectLabel;
+                                            $guestName = trim((string) ($reservationRow['customer_name'] ?? 'Guest'));
+                                        @endphp
+                                        <article class="vendor-message-thread" id="vendor-msg-thread-{{ $rsvId }}">
+                                            <header class="vendor-message-thread-head">
+                                                <div>
+                                                    <div class="vendor-message-thread-subject">Subject: {{ $subject }}</div>
+                                                    <div class="vendor-message-thread-meta">Guest: {{ $guestName }} · Booking Ref: {{ (string) ($reservationRow['reservation_code'] ?? ('RSV-' . str_pad((string) $rsvId, 6, '0', STR_PAD_LEFT))) }}</div>
+                                                </div>
+                                                <a class="vendor-msg-open-center" href="/vendor/reservations">Stay on reservations</a>
+                                            </header>
+                                            <div class="vendor-message-thread-body">
+                                                @if ($rsvMessages->isNotEmpty())
+                                                    <div class="vendor-msg-list">
+                                                        @foreach ($rsvMessages as $vMsg)
+                                                            @php
+                                                                $vMsgRole = (string) ($vMsg->sender_role ?? '');
+                                                                $vMsgName = e(trim((string) ($vMsg->sender_display_name ?? ($vMsgRole === 'vendor' ? 'You' : 'Guest'))));
+                                                                $vMsgText = e(trim((string) ($vMsg->message_text ?? '')));
+                                                                $vMsgDate = trim((string) ($vMsg->created_at ?? ''));
+                                                                $vMsgDate = $vMsgDate !== '' ? \Carbon\Carbon::parse($vMsgDate)->format('M j, g:i A') : '';
+                                                                $vMsgFlagged = (bool) ($vMsg->is_flagged ?? false);
+                                                            @endphp
+                                                            <div class="vendor-msg-bubble vendor-msg-bubble--{{ $vMsgRole === 'vendor' ? 'sent' : 'received' }}{{ $vMsgFlagged ? ' vendor-msg-bubble--flagged' : '' }}">
+                                                                <span class="vendor-msg-meta">{{ $vMsgName }}@if ($vMsgDate !== '') · {{ $vMsgDate }}@endif</span>
+                                                                <span class="vendor-msg-body">{{ $vMsgText }}</span>
+                                                                @if ($vMsgFlagged)
+                                                                    <span class="vendor-msg-flag-notice"><i class="fa-solid fa-flag"></i> Flagged</span>
+                                                                @endif
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                @else
+                                                    <span class="vendor-msg-none">No messages yet for this booking.</span>
+                                                @endif
+
+                                                <form method="POST" action="/portal/vendor/reservations/{{ $rsvId }}/messages" class="vendor-msg-reply-form">
+                                                    @csrf
+                                                    <textarea name="message_text" class="vendor-msg-textarea" rows="3" maxlength="2000" placeholder="Message guest about {{ $subject }} (no contact details)" required></textarea>
+                                                    <div class="vendor-msg-reply-footer">
+                                                        <span class="vendor-msg-policy-note"><i class="fa-solid fa-lock"></i> Default subject: {{ $subject }}</span>
+                                                        <button type="submit" class="btn btn-secondary vendor-msg-send-btn">Send</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </article>
+                                    @endforeach
+                                </div>
+                            </section>
+                        @endif
                         @endif
                         </div>
                     </article>

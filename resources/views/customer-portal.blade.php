@@ -636,6 +636,55 @@
             padding: 6px 16px;
         }
 
+        .message-center-list {
+            display: grid;
+            gap: 14px;
+        }
+
+        .message-center-card {
+            border: 1px solid #d4e3ef;
+            border-radius: 12px;
+            background: #f9fcff;
+            overflow: hidden;
+        }
+
+        .message-center-card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 10px 14px;
+            background: #eef5fb;
+            border-bottom: 1px solid #d4e3ef;
+        }
+
+        .message-center-subject {
+            font-size: 0.84rem;
+            font-weight: 700;
+            color: #193a52;
+        }
+
+        .message-center-meta {
+            font-size: 0.76rem;
+            color: #5a748a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .message-center-jump {
+            font-size: 0.72rem;
+            color: #0f5f79;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .message-center-jump:hover {
+            text-decoration: underline;
+        }
+
         .booking-refund-timeline {
             margin-top: 10px;
             padding: 12px 14px;
@@ -1000,6 +1049,7 @@
 
                 <div class="nav-divider"></div>
 
+                <button class="nav-item" type="button" data-section="messages">Messages</button>
                 <button class="nav-item" type="button" data-section="saved">Saved</button>
                 <button class="nav-item" type="button" data-section="my-posts">My posts</button>
                 <button class="nav-item" type="button" data-section="price-alerts">Price alerts</button>
@@ -1233,7 +1283,10 @@
                                                             <textarea name="message_text" class="booking-message-textarea" rows="3" maxlength="2000" placeholder="Type your message here... (Do not share phone numbers, email addresses, or payment details)" required></textarea>
                                                             <div class="booking-message-compose-footer">
                                                                 <span class="booking-message-compose-note"><i class="fa-solid fa-lock"></i> Monitored for your protection. No contact details allowed.</span>
-                                                                <button type="submit" class="btn-brand booking-message-send-btn">Send Message</button>
+                                                                <span style="display:flex; align-items:center; gap:8px;">
+                                                                    <a class="message-center-jump" href="#messages">Open full message center</a>
+                                                                    <button type="submit" class="btn-brand booking-message-send-btn">Send Message</button>
+                                                                </span>
                                                             </div>
                                                         </form>
                                                     </div>
@@ -1285,7 +1338,7 @@
                                             @php $bookingStatus = strtolower((string) ($booking['status'] ?? 'pending')); @endphp
                                             @php $isPaidBooking = strtoupper((string) ($booking['payment_status'] ?? 'UNPAID')) === 'PAID'; @endphp
                                             @php $isCancelledBooking = in_array($bookingStatus, ['cancelled', 'canceled', 'cancel_requested'], true); @endphp
-                                            @php $canDeleteBooking = $bookingPaymentStatus !== 'paid' || in_array($bookingStatus, ['cancelled', 'canceled', 'failed', 'expired', 'rejected'], true) || $bookingPaymentStatus === 'refunded'; @endphp
+                                            @php $canDeleteBooking = $bookingPaymentStatus !== 'paid'; @endphp
                                             <a class="btn-outline" href="/customer/bookings/{{ (int) ($booking['id'] ?? 0) }}/confirmation.pdf">Reservation PDF</a>
                                             @if ($isPaidBooking)
                                                 <a class="btn-outline" href="/customer/bookings/{{ (int) ($booking['id'] ?? 0) }}/invoice.pdf">Invoice PDF</a>
@@ -1298,7 +1351,7 @@
                                                     <button class="btn-outline" type="submit">Delete</button>
                                                 </form>
                                             @else
-                                                <button class="btn-outline" type="button" disabled title="Paid bookings cannot be deleted from the portal.">Delete</button>
+                                                <button class="btn-outline" type="button" disabled title="Paid bookings remain visible until refund/dispute flow is complete.">Delete</button>
                                             @endif
                                             @if (!$isCancelledBooking)
                                                 <form method="POST" action="/customer/bookings/{{ (int) ($booking['id'] ?? 0) }}/cancel" onsubmit="return confirm('{{ $isPaidBooking ? 'Do you want to request a refund for this paid booking?' : 'Do you want to cancel this booking?' }}');">
@@ -1315,6 +1368,95 @@
                         @endif
                     </div>
                 @endforeach
+            </section>
+
+            {{-- ────────── Messages (Dedicated Section) ──────────────────── --}}
+            <section class="portal-section" data-portal-section="messages" id="messages">
+                <div class="section-title-row">
+                    <h1>Messages</h1>
+                    <span class="title-badge"><i class="fa-solid fa-link"></i> Linked to booking reference by default</span>
+                </div>
+                @php
+                    $messagingBookings = $allBookings->filter(static fn ($booking) => (bool) ($booking['booking_contact_available'] ?? false))->values();
+                @endphp
+                @if ($messagingBookings->isEmpty())
+                    <div class="empty-state">
+                        <i class="fa-regular fa-message"></i>
+                        <p>You currently do not have any active booking conversations.</p>
+                    </div>
+                @else
+                    <div class="message-center-list">
+                        @foreach ($messagingBookings as $booking)
+                            @php
+                                $bookingId = (int) ($booking['id'] ?? 0);
+                                $bookingMessages = $reservationMessagesByReservation[$bookingId] ?? collect();
+                                $vendorDisplayName = trim((string) ($booking['vendor_display_name'] ?? 'Vendor'));
+                                $propertyName = trim((string) ($booking['property_name'] ?? 'Property'));
+                                $serviceLabel = trim((string) ($booking['service_label'] ?? ''));
+                                $subject = 'RSV-' . str_pad((string) $bookingId, 6, '0', STR_PAD_LEFT) . ' · ' . ($serviceLabel !== '' ? $serviceLabel : $propertyName);
+                            @endphp
+                            <article class="message-center-card" id="message-booking-{{ $bookingId }}">
+                                <header class="message-center-card-head">
+                                    <div>
+                                        <div class="message-center-subject">Subject: {{ $subject }}</div>
+                                        <div class="message-center-meta">
+                                            <span>Supplier: {{ $vendorDisplayName !== '' ? $vendorDisplayName : 'Vendor' }}</span>
+                                            <span>Booking: #{{ str_pad((string) $bookingId, 6, '0', STR_PAD_LEFT) }}</span>
+                                            <span>{{ $propertyName }}</span>
+                                        </div>
+                                    </div>
+                                    <a class="message-center-jump" href="/booking/checkout/{{ $bookingId }}">Open booking</a>
+                                </header>
+
+                                <div class="booking-message-policy-notice">
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                    <strong>Keep communication and payments inside Workation.</strong>
+                                    Messages are linked to booking {{ str_pad((string) $bookingId, 6, '0', STR_PAD_LEFT) }}.
+                                </div>
+
+                                <div class="booking-message-list">
+                                    @forelse ($bookingMessages as $msg)
+                                        @php
+                                            $msgRole = (string) ($msg->sender_role ?? 'vendor');
+                                            $msgName = e(trim((string) ($msg->sender_display_name ?? ($msgRole === 'customer' ? 'You' : 'Vendor'))));
+                                            $msgText = e(trim((string) ($msg->message_text ?? '')));
+                                            $msgDate = trim((string) ($msg->created_at ?? ''));
+                                            $msgDate = $msgDate !== '' ? \Carbon\Carbon::parse($msgDate)->format('M j, g:i A') : '';
+                                            $msgId   = (int) ($msg->id ?? 0);
+                                            $isFlagged = (bool) ($msg->is_flagged ?? false);
+                                            $isMine  = $msgRole === 'customer';
+                                        @endphp
+                                        <div class="booking-msg booking-msg--{{ $isMine ? 'mine' : 'theirs' }}{{ $isFlagged ? ' booking-msg--flagged' : '' }}">
+                                            <span class="booking-msg-sender">{{ $msgName }}</span>
+                                            <span class="booking-msg-text">{{ $msgText }}</span>
+                                            <span class="booking-msg-time">{{ $msgDate }}</span>
+                                            @if (!$isMine)
+                                                <form method="POST" action="/customer/bookings/{{ $bookingId }}/messages/{{ $msgId }}/report" class="booking-msg-report-form">
+                                                    @csrf
+                                                    <input type="hidden" name="report_reason" value="Customer reported this message as containing off-platform contact or payment request.">
+                                                    <button type="submit" class="booking-msg-report-btn" title="Report this message as off-platform contact attempt" onclick="return confirm('Report this message as an off-platform request?');">
+                                                        <i class="fa-solid fa-flag"></i> Report
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    @empty
+                                        <p class="booking-message-empty">No messages yet. Start the conversation below.</p>
+                                    @endforelse
+                                </div>
+
+                                <form method="POST" action="/customer/bookings/{{ $bookingId }}/messages" class="booking-message-compose">
+                                    @csrf
+                                    <textarea name="message_text" class="booking-message-textarea" rows="4" maxlength="2000" placeholder="Message supplier about {{ $subject }}" required></textarea>
+                                    <div class="booking-message-compose-footer">
+                                        <span class="booking-message-compose-note"><i class="fa-solid fa-link"></i> Default subject: {{ $subject }}</span>
+                                        <button type="submit" class="btn-brand booking-message-send-btn">Send Message</button>
+                                    </div>
+                                </form>
+                            </article>
+                        @endforeach
+                    </div>
+                @endif
             </section>
 
             {{-- ────────── Saved / Favourites ──────────────────── --}}
@@ -1701,6 +1843,7 @@
             // ── Hash-based deep linking ───────────────────────────────
             const hashMap = {
                 '#bookings':           ['bookings',           'all'],
+                '#messages':           ['messages',           ''],
                 '#saved':              ['saved',              ''],
                 '#favourites':         ['saved',              ''],
                 '#my-posts':           ['my-posts',           ''],

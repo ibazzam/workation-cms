@@ -323,7 +323,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             if ($legacyRoomPropertyColumn !== null
             ) {
                 $legacyPriceColumns = [];
-                foreach (['meal_plan_room_only_price', 'base_price'] as $candidateColumn) {
+                foreach (['meal_plan_room_only_price', 'room_only_price', 'price_per_night', 'base_price'] as $candidateColumn) {
                     if (Schema::hasColumn('vendor_property_room_categories', $candidateColumn)) {
                         $legacyPriceColumns[] = $candidateColumn;
                     }
@@ -354,12 +354,20 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             if (Schema::hasTable('accommodation_rooms') && Schema::hasColumn('accommodation_rooms', 'property_id')) {
                 $hasRoomActiveColumn = Schema::hasColumn('accommodation_rooms', 'is_active');
                 $hasNightlyColumn = Schema::hasColumn('accommodation_rooms', 'base_price_per_night');
+                $hasRoomOnlyColumn = Schema::hasColumn('accommodation_rooms', 'room_only_price');
+                $hasPerNightColumn = Schema::hasColumn('accommodation_rooms', 'price_per_night');
                 $hasLegacyRoomPriceColumn = Schema::hasColumn('accommodation_rooms', 'base_price');
 
-                if ($hasNightlyColumn || $hasLegacyRoomPriceColumn) {
+                if ($hasNightlyColumn || $hasRoomOnlyColumn || $hasPerNightColumn || $hasLegacyRoomPriceColumn) {
                     $roomPriceColumns = ['property_id'];
                     if ($hasNightlyColumn) {
                         $roomPriceColumns[] = 'base_price_per_night';
+                    }
+                    if ($hasRoomOnlyColumn) {
+                        $roomPriceColumns[] = 'room_only_price';
+                    }
+                    if ($hasPerNightColumn) {
+                        $roomPriceColumns[] = 'price_per_night';
                     }
                     if ($hasLegacyRoomPriceColumn) {
                         $roomPriceColumns[] = 'base_price';
@@ -381,8 +389,20 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                             return collect($rows)
                                 ->map(static function ($row) {
                                     $nightly = isset($row->base_price_per_night) ? (float) $row->base_price_per_night : 0;
+                                    $roomOnly = isset($row->room_only_price) ? (float) $row->room_only_price : 0;
+                                    $perNight = isset($row->price_per_night) ? (float) $row->price_per_night : 0;
                                     $legacy = isset($row->base_price) ? (float) $row->base_price : 0;
-                                    return $nightly > 0 ? $nightly : $legacy;
+                                    if ($nightly > 0) {
+                                        return $nightly;
+                                    }
+                                    if ($roomOnly > 0) {
+                                        return $roomOnly;
+                                    }
+                                    if ($perNight > 0) {
+                                        return $perNight;
+                                    }
+
+                                    return $legacy;
                                 })
                                 ->filter(static fn (float $value) => $value > 0)
                                 ->min();

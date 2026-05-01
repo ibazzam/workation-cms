@@ -56,10 +56,21 @@ Route::get('/property/{property}', function (Request $request, int $property) {
         }
     }
 
+    $propertyLookupIds = collect(workationPropertyLookupIds($propertyRow))
+        ->map(static fn ($id) => (int) $id)
+        ->filter(static fn (int $id): bool => $id > 0)
+        ->unique()
+        ->values();
+    if ($propertyLookupIds->isEmpty()) {
+        $propertyLookupIds = collect([(int) ($propertyRow->id ?? 0)])
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->values();
+    }
+
     $rooms = collect(Cache::remember(
-        'property_profile:rooms:v1:' . (int) $propertyRow->id,
+        'property_profile:rooms:v2:' . md5($propertyLookupIds->implode(',')),
         now()->addMinutes(3),
-        static function () use ($propertyRow) {
+        static function () use ($propertyRow, $propertyLookupIds) {
             $loadedRooms = collect();
             $legacyRoomPropertyColumn = null;
             if (Schema::hasTable('vendor_property_room_categories')) {
@@ -72,7 +83,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
 
             if ($legacyRoomPropertyColumn !== null) {
                 $loadedRooms = DB::table('vendor_property_room_categories')
-                    ->where($legacyRoomPropertyColumn, (int) $propertyRow->id)
+                    ->whereIn($legacyRoomPropertyColumn, $propertyLookupIds->all())
                     ->orderByDesc('updated_at')
                     ->limit(60)
                     ->get();
@@ -80,7 +91,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
 
             if ($loadedRooms->isEmpty() && Schema::hasTable('accommodation_rooms')) {
                 $accommodationRoomRows = DB::table('accommodation_rooms')
-                    ->where('property_id', (int) $propertyRow->id)
+                    ->whereIn('property_id', $propertyLookupIds->all())
                     ->when(Schema::hasColumn('accommodation_rooms', 'is_active'), static function ($query) {
                         $query->where('is_active', 1);
                     })
@@ -108,6 +119,21 @@ Route::get('/property/{property}', function (Request $request, int $property) {
             return $loadedRooms->values()->all();
         }
     ));
+
+    if ($listingCategory === 'accommodation') {
+        $resolvedRoomMinPrice = $rooms
+            ->map(static function ($room) {
+                $nightly = isset($room->base_price_per_night) ? (float) ($room->base_price_per_night ?? 0) : 0;
+                $legacy = isset($room->base_price) ? (float) ($room->base_price ?? 0) : 0;
+                return $nightly > 0 ? $nightly : $legacy;
+            })
+            ->filter(static fn (float $value): bool => $value > 0)
+            ->min();
+
+        if (is_numeric($resolvedRoomMinPrice) && (float) $resolvedRoomMinPrice > 0) {
+            $propertyRow->base_price = (float) $resolvedRoomMinPrice;
+        }
+    }
 
     $roomIds = $rooms->pluck('id')->map(static fn ($id) => (int) $id)->filter(static fn (int $id) => $id > 0)->values();
     $mediaPayload = Cache::remember(
@@ -427,7 +453,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
     $nearbyRadiusKm = max(1.0, min(200.0, $nearbyRadiusKm));
     $nearbyUsesCoordinateRadius = false;
     $nearbyProperties = collect(Cache::remember(
-        'property_profile:nearby:v2:' . (int) $propertyRow->id,
+        'property_profile:nearby:v3:' . (int) $propertyRow->id,
         now()->addMinutes(8),
         static function () use ($propertyRow) {
             $currentCategory = trim((string) ($propertyRow->listing_category ?? ''));
@@ -548,18 +574,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
 
             if ($nearbyPropertyIds->isNotEmpty() && $legacyRoomPropertyColumn !== null) {
                 $legacyPriceColumns = [];
-                foreach ([
-                    'base_price',
-                    'meal_plan_room_only_price',
-                    'meal_plan_bb_price',
-                    'meal_plan_hb_price',
-                    'meal_plan_fb_price',
-                    'meal_plan_ai_price',
-                    'meal_plan_breakfast_price',
-                    'meal_plan_half_board_price',
-                    'meal_plan_full_board_price',
-                    'meal_plan_all_inclusive_price',
-                ] as $candidateColumn) {
+                foreach (['meal_plan_room_only_price', 'base_price'] as $candidateColumn) {
                     if (Schema::hasColumn('vendor_property_room_categories', $candidateColumn)) {
                         $legacyPriceColumns[] = $candidateColumn;
                     }
@@ -643,58 +658,6 @@ Route::get('/property/{property}', function (Request $request, int $property) {
                 }
             }
 
-            if ($nearbyPropertyIds->isNotEmpty() && Schema::hasTable('accommodation_packages') && Schema::hasColumn('accommodation_packages', 'property_id')) {
-                $packagePriceColumns = [];
-                if (Schema::hasColumn('accommodation_packages', 'price_per_night')) {
-                    $packagePriceColumns[] = 'price_per_night';
-                }
-                if (Schema::hasColumn('accommodation_packages', 'base_price')) {
-                    $packagePriceColumns[] = 'base_price';
-                }
-
-                if (!empty($packagePriceColumns)) {
-                    $packageQuery = DB::table('accommodation_packages as ap')
-                        ->whereIn('ap.property_id', $nearbyPropertyIds->all())
-                        ->when(Schema::hasColumn('accommodation_packages', 'is_active'), static function ($query) {
-                            $query->where(static function ($activeQuery) {
-                                $activeQuery->where('ap.is_active', 1)
-                                    ->orWhereNull('ap.is_active');
-                            });
-                        });
-
-                    $packageSelectColumns = ['ap.property_id'];
-                    foreach ($packagePriceColumns as $column) {
-                        $packageSelectColumns[] = 'ap.' . $column;
-                    }
-
-                    $packageRows = $packageQuery->get($packageSelectColumns);
-                    $packageMinMap = $packageRows
-                        ->groupBy(static fn ($row) => (int) ($row->property_id ?? 0))
-                        ->map(static function ($rows) {
-                            return collect($rows)
-                                ->map(static function ($row) {
-                                    $perNight = isset($row->price_per_night) ? (float) ($row->price_per_night ?? 0) : 0;
-                                    $base = isset($row->base_price) ? (float) ($row->base_price ?? 0) : 0;
-                                    return $perNight > 0 ? $perNight : $base;
-                                })
-                                ->filter(static fn (float $value): bool => $value > 0)
-                                ->min();
-                        })
-                        ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
-
-                    $nearbyMinPriceByPropertyId = $nearbyMinPriceByPropertyId
-                        ->merge($packageMinMap)
-                        ->groupBy(static fn ($value, $key) => (int) $key)
-                        ->map(static function ($values) {
-                            return collect($values)
-                                ->map(static fn ($value) => (float) $value)
-                                ->filter(static fn (float $value): bool => $value > 0)
-                                ->min();
-                        })
-                        ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
-                }
-            }
-
             return $resolvedNearbyProperties
                 ->map(static function (array $item) use ($nearbyPropertyThumbById, $nearbyMinPriceByPropertyId): array {
                     $locationLine = trim(implode(', ', array_filter([
@@ -717,7 +680,6 @@ Route::get('/property/{property}', function (Request $request, int $property) {
 
                     return $item;
                 })
-                ->filter(static fn (array $item): bool => (float) ($item['base_price'] ?? 0) > 0)
                 ->take(6)
                 ->values()
                 ->all();

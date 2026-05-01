@@ -1100,3 +1100,111 @@ Route::post('/portal/vendor/password/update', function (Request $request) {
 
     return back()->with('portal_notice', 'Password updated successfully.');
 });
+
+// ── In-platform booking message: vendor replies to a customer ────────────────
+Route::post('/portal/vendor/reservations/{reservation}/messages', function (Request $request, int $reservation) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+    if (!$vendorUser instanceof \App\Models\User || normalizePortalRoleValue((string) $vendorUser->portal_role) !== 'VENDOR') {
+        return redirect('/portal/vendor/login');
+    }
+
+    if (!Schema::hasTable('vendor_reservations') || !Schema::hasTable('reservation_messages')) {
+        return back()->withErrors(['vendor' => 'Messaging is not available right now.']);
+    }
+
+    // The reservation must belong to this vendor
+    $reservationRow = DB::table('vendor_reservations')
+        ->where('id', $reservation)
+        ->where('vendor_user_id', $vendorUserId)
+        ->first();
+
+    if (!$reservationRow) {
+        return back()->withErrors(['vendor' => 'Reservation not found for your account.']);
+    }
+
+    $messageText = trim((string) ($request->input('message_text', '')));
+    if ($messageText === '' || mb_strlen($messageText) > 2000) {
+        return back()->withErrors(['vendor' => 'Message must be between 1 and 2000 characters.']);
+    }
+
+    $filterResult = workationMessageContentFilter($messageText);
+    if ($filterResult['blocked']) {
+        // Auto-flag the attempt and notify admin before rejecting
+        DB::table('reservation_messages')->insert([
+            'reservation_id'      => $reservation,
+            'sender_role'         => 'vendor',
+            'sender_user_id'      => $vendorUserId,
+            'sender_display_name' => mb_substr(trim((string) ($vendorUser->name ?? $vendorUser->username ?? 'Vendor')), 0, 120),
+            'message_text'        => $messageText,
+            'is_flagged'          => true,
+            'flagged_reason'      => mb_substr($filterResult['reason'], 0, 500),
+            'flagged_pattern'     => mb_substr($filterResult['pattern'], 0, 200),
+            'vendor_read'         => true,
+            'customer_read'       => false,
+            'created_at'          => now(),
+            'updated_at'          => now(),
+        ]);
+
+        $reservationCode = 'RSV-' . str_pad((string) $reservation, 6, '0', STR_PAD_LEFT);
+        foreach (workationReservationAdminEmails() as $adminEmail) {
+            if ($adminEmail !== '') {
+                workationSendVendorEmailSafe($adminEmail, '[ALERT] Vendor sent blocked message — ' . $reservationCode, implode("\n", [
+                    'A vendor attempted to send a message that was blocked by content filters.',
+                    '',
+                    'Reservation: ' . $reservationCode,
+                    'Vendor User ID: ' . $vendorUserId,
+                    'Vendor Email: ' . strtolower(trim((string) ($vendorUser->email ?? ''))),
+                    'Block Reason: ' . $filterResult['reason'],
+                    'Pattern: ' . $filterResult['pattern'],
+                    '',
+                    'Blocked Message (do not act on this content):',
+                    $messageText,
+                    '',
+                    'Workation Team',
+                ]));
+            }
+        }
+
+        return back()->withErrors(['vendor' => $filterResult['reason']]);
+    }
+
+    $vendorDisplayName = mb_substr(trim((string) ($vendorUser->name ?? $vendorUser->username ?? 'Vendor')), 0, 120);
+
+    DB::table('reservation_messages')->insert([
+        'reservation_id'      => $reservation,
+        'sender_role'         => 'vendor',
+        'sender_user_id'      => $vendorUserId,
+        'sender_display_name' => $vendorDisplayName,
+        'message_text'        => $messageText,
+        'is_flagged'          => false,
+        'vendor_read'         => true,
+        'customer_read'       => false,
+        'created_at'          => now(),
+        'updated_at'          => now(),
+    ]);
+
+    // Notify the customer
+    $customerEmail = strtolower(trim((string) ($reservationRow->customer_email ?? '')));
+    if ($customerEmail !== '') {
+        $reservationCode = 'RSV-' . str_pad((string) $reservation, 6, '0', STR_PAD_LEFT);
+        workationSendVendorEmailSafe($customerEmail, 'New message from your vendor — ' . $reservationCode, implode("\n", [
+            'You have received a new message from your vendor regarding reservation ' . $reservationCode . '.',
+            '',
+            'Message:',
+            $messageText,
+            '',
+            'Please log in to your Workation portal to view and reply.',
+            '',
+            'Note: All communication must stay within the Workation platform.',
+            '',
+            'Workation Team',
+        ]));
+    }
+
+    return back()->with('portal_notice', 'Your message has been sent to the guest.');
+});

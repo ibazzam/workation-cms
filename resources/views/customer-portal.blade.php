@@ -453,52 +453,187 @@
             font-weight: 600;
         }
 
-        .booking-contact-panel {
+        .booking-message-thread {
             margin-top: 10px;
+            border: 1px solid #d1e4f0;
+            border-radius: 12px;
+            background: #f6fbff;
+            overflow: hidden;
+        }
+
+        .booking-message-thread-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 9px 12px;
+            background: #e8f3fb;
+            border-bottom: 1px solid #d1e4f0;
+        }
+
+        .booking-message-thread-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #13425e;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .booking-message-policy-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #2e6e40;
+            background: #e4f5eb;
+            border: 1px solid #b6dfc4;
+            border-radius: 999px;
+            padding: 2px 8px;
+            white-space: nowrap;
+        }
+
+        .booking-message-policy-notice {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #fff8ec;
+            border-bottom: 1px solid #ffe4a0;
+            font-size: 0.75rem;
+            color: #5c3d00;
+            line-height: 1.4;
+        }
+
+        .booking-message-policy-notice i {
+            color: #c7800a;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .booking-message-list {
             padding: 10px 12px;
-            border: 1px solid #d8e5ef;
-            border-radius: 10px;
-            background: #f7fbff;
+            display: grid;
+            gap: 8px;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .booking-message-empty {
+            font-size: 0.77rem;
+            color: #8aa2b3;
+            text-align: center;
+            padding: 8px 0;
+        }
+
+        .booking-msg {
+            display: grid;
+            gap: 2px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            max-width: 85%;
+            font-size: 0.77rem;
+        }
+
+        .booking-msg--mine {
+            background: #e0f0fb;
+            border: 1px solid #c2ddf0;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .booking-msg--theirs {
+            background: #fff;
+            border: 1px solid #dce9f2;
+            margin-right: auto;
+        }
+
+        .booking-msg--flagged {
+            border-color: #e8b4b4;
+            background: #fff5f5;
+        }
+
+        .booking-msg-sender {
+            font-weight: 700;
+            color: #174b6a;
+            font-size: 0.72rem;
+        }
+
+        .booking-msg-text {
+            color: #2b4558;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .booking-msg-time {
+            font-size: 0.68rem;
+            color: #8aa2b3;
+        }
+
+        .booking-msg-report-form {
+            margin: 0;
+            padding: 0;
+        }
+
+        .booking-msg-report-btn {
+            background: none;
+            border: none;
+            color: #b03030;
+            font-size: 0.68rem;
+            cursor: pointer;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .booking-msg-report-btn:hover {
+            text-decoration: underline;
+        }
+
+        .booking-message-compose {
+            padding: 10px 12px;
+            border-top: 1px solid #d1e4f0;
             display: grid;
             gap: 8px;
         }
 
-        .booking-contact-title {
-            font-size: 0.78rem;
-            font-weight: 700;
-            color: #17374d;
-            letter-spacing: 0.01em;
+        .booking-message-textarea {
+            width: 100%;
+            border: 1px solid #c5daea;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 0.77rem;
+            resize: vertical;
+            color: #2b4558;
+            background: #fff;
+            box-sizing: border-box;
         }
 
-        .booking-contact-text {
-            font-size: 0.78rem;
-            color: #4a6478;
-            line-height: 1.4;
+        .booking-message-textarea:focus {
+            outline: none;
+            border-color: #3a8ec9;
         }
 
-        .booking-contact-actions {
+        .booking-message-compose-footer {
             display: flex;
+            align-items: center;
+            justify-content: space-between;
             flex-wrap: wrap;
             gap: 8px;
         }
 
-        .booking-contact-chip {
-            display: inline-flex;
+        .booking-message-compose-note {
+            font-size: 0.68rem;
+            color: #8aa2b3;
+            display: flex;
             align-items: center;
-            gap: 6px;
-            border: 1px solid #bfd5e5;
-            border-radius: 999px;
-            padding: 5px 10px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-decoration: none;
-            color: #134d68;
-            background: #edf6fd;
+            gap: 4px;
         }
 
-        .booking-contact-chip:hover {
-            background: #e2f0fa;
-            border-color: #a9c8dc;
+        .booking-message-send-btn {
+            font-size: 0.77rem;
+            padding: 6px 16px;
         }
 
         .booking-refund-timeline {
@@ -1046,43 +1181,61 @@
                                                 </div>
                                                 @php
                                                     $bookingContactAvailable = (bool) ($booking['booking_contact_available'] ?? false);
-                                                    $vendorContactName = trim((string) ($booking['vendor_contact_name'] ?? ''));
-                                                    $vendorContactNumber = trim((string) ($booking['vendor_contact_number'] ?? ''));
-                                                    $vendorContactEmail = trim((string) ($booking['vendor_contact_email'] ?? ''));
+                                                    $vendorDisplayName = trim((string) ($booking['vendor_display_name'] ?? ''));
                                                     $supportEmail = trim((string) ($booking['support_email'] ?? 'support@workation.mv'));
-                                                    $numericContact = preg_replace('/[^\d+]/', '', $vendorContactNumber);
-                                                    $whatsAppDigits = preg_replace('/\D+/', '', $vendorContactNumber);
-                                                    $canCall = $bookingContactAvailable && $numericContact !== '';
-                                                    $canEmail = $bookingContactAvailable && $vendorContactEmail !== '';
-                                                    $canWhatsApp = $bookingContactAvailable && $whatsAppDigits !== '';
+                                                    $bookingId = (int) ($booking['id'] ?? 0);
+                                                    $bookingMessages = $reservationMessagesByReservation[$bookingId] ?? collect();
                                                 @endphp
                                                 @if ($bookingContactAvailable)
-                                                    <div class="booking-contact-panel">
-                                                        <div class="booking-contact-title">Vendor Contact Details</div>
-                                                        <div class="booking-contact-text">
-                                                            @if ($vendorContactName !== '')
-                                                                Contact person: {{ $vendorContactName }}.
-                                                            @else
-                                                                This booking is complete and vendor contact is now unlocked.
-                                                            @endif
-                                                            @if (!$canCall && !$canEmail)
-                                                                Please email <a href="mailto:{{ $supportEmail }}">{{ $supportEmail }}</a> for urgent pickup or location assistance.
-                                                            @endif
+                                                    {{-- ── In-platform message thread ──────────────────────────── --}}
+                                                    <div class="booking-message-thread" id="booking-{{ $bookingId }}">
+                                                        <div class="booking-message-thread-header">
+                                                            <span class="booking-message-thread-title"><i class="fa-regular fa-message"></i> Messages with Vendor{{ $vendorDisplayName !== '' ? ' (' . e($vendorDisplayName) . ')' : '' }}</span>
+                                                            <span class="booking-message-policy-badge">All communication stays on Workation</span>
                                                         </div>
-                                                        <div class="booking-contact-actions">
-                                                            @if ($canCall)
-                                                                <a class="booking-contact-chip" href="tel:{{ $numericContact }}"><i class="fa-solid fa-phone"></i> Call Vendor</a>
-                                                            @endif
-                                                            @if ($canWhatsApp)
-                                                                <a class="booking-contact-chip" href="https://wa.me/{{ $whatsAppDigits }}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>
-                                                            @endif
-                                                            @if ($canEmail)
-                                                                <a class="booking-contact-chip" href="mailto:{{ $vendorContactEmail }}"><i class="fa-regular fa-envelope"></i> Email Vendor</a>
-                                                            @endif
-                                                            @if (!$canCall && !$canEmail)
-                                                                <a class="booking-contact-chip" href="mailto:{{ $supportEmail }}"><i class="fa-solid fa-headset"></i> Contact Support</a>
-                                                            @endif
+                                                        <div class="booking-message-policy-notice">
+                                                            <i class="fa-solid fa-shield-halved"></i>
+                                                            <strong>Never pay or share contact details outside Workation.</strong>
+                                                            If a vendor asks you to pay outside this platform or share personal contact details, use the <em>Report</em> button below.
                                                         </div>
+                                                        <div class="booking-message-list">
+                                                            @forelse ($bookingMessages as $msg)
+                                                                @php
+                                                                    $msgRole = (string) ($msg->sender_role ?? 'vendor');
+                                                                    $msgName = e(trim((string) ($msg->sender_display_name ?? ($msgRole === 'customer' ? 'You' : 'Vendor'))));
+                                                                    $msgText = e(trim((string) ($msg->message_text ?? '')));
+                                                                    $msgDate = trim((string) ($msg->created_at ?? ''));
+                                                                    $msgDate = $msgDate !== '' ? \Carbon\Carbon::parse($msgDate)->format('M j, g:i A') : '';
+                                                                    $msgId   = (int) ($msg->id ?? 0);
+                                                                    $isFlagged = (bool) ($msg->is_flagged ?? false);
+                                                                    $isMine  = $msgRole === 'customer';
+                                                                @endphp
+                                                                <div class="booking-msg booking-msg--{{ $isMine ? 'mine' : 'theirs' }}{{ $isFlagged ? ' booking-msg--flagged' : '' }}">
+                                                                    <span class="booking-msg-sender">{{ $msgName }}</span>
+                                                                    <span class="booking-msg-text">{{ $msgText }}</span>
+                                                                    <span class="booking-msg-time">{{ $msgDate }}</span>
+                                                                    @if (!$isMine)
+                                                                        <form method="POST" action="/customer/bookings/{{ $bookingId }}/messages/{{ $msgId }}/report" class="booking-msg-report-form">
+                                                                            @csrf
+                                                                            <input type="hidden" name="report_reason" value="Customer reported this message as containing off-platform contact or payment request.">
+                                                                            <button type="submit" class="booking-msg-report-btn" title="Report this message as off-platform contact attempt" onclick="return confirm('Report this message as an off-platform request?');">
+                                                                                <i class="fa-solid fa-flag"></i> Report
+                                                                            </button>
+                                                                        </form>
+                                                                    @endif
+                                                                </div>
+                                                            @empty
+                                                                <p class="booking-message-empty">No messages yet. Use the form below to contact your vendor.</p>
+                                                            @endforelse
+                                                        </div>
+                                                        <form method="POST" action="/customer/bookings/{{ $bookingId }}/messages" class="booking-message-compose">
+                                                            @csrf
+                                                            <textarea name="message_text" class="booking-message-textarea" rows="3" maxlength="2000" placeholder="Type your message here... (Do not share phone numbers, email addresses, or payment details)" required></textarea>
+                                                            <div class="booking-message-compose-footer">
+                                                                <span class="booking-message-compose-note"><i class="fa-solid fa-lock"></i> Monitored for your protection. No contact details allowed.</span>
+                                                                <button type="submit" class="btn-brand booking-message-send-btn">Send Message</button>
+                                                            </div>
+                                                        </form>
                                                     </div>
                                                 @endif
                                                 @if (trim((string) ($booking['refund_status'] ?? '')) !== '')

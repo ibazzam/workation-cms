@@ -305,8 +305,9 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             ->unique()
             ->values();
 
-        // For accommodation, override base_price with the cheapest valid room price.
-        // Room pricing may come from legacy vendor_property_room_categories or accommodation_rooms.
+        // For accommodation, card price must come from room-level RO pricing only.
+        // Source order: vendor_property_room_categories.meal_plan_room_only_price (or base_price)
+        // then accommodation_rooms.base_price_per_night (or base_price).
         if ($dbCategoryKey === 'accommodation' && $propertyLookupIds->isNotEmpty()) {
             $combinedRoomPricesByProperty = collect();
 
@@ -322,18 +323,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             if ($legacyRoomPropertyColumn !== null
             ) {
                 $legacyPriceColumns = [];
-                foreach ([
-                    'base_price',
-                    'meal_plan_room_only_price',
-                    'meal_plan_bb_price',
-                    'meal_plan_hb_price',
-                    'meal_plan_fb_price',
-                    'meal_plan_ai_price',
-                    'meal_plan_breakfast_price',
-                    'meal_plan_half_board_price',
-                    'meal_plan_full_board_price',
-                    'meal_plan_all_inclusive_price',
-                ] as $candidateColumn) {
+                foreach (['meal_plan_room_only_price', 'base_price'] as $candidateColumn) {
                     if (Schema::hasColumn('vendor_property_room_categories', $candidateColumn)) {
                         $legacyPriceColumns[] = $candidateColumn;
                     }
@@ -358,80 +348,6 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                     ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
 
                 $combinedRoomPricesByProperty = $combinedRoomPricesByProperty->union($legacyRoomPrices);
-                }
-            }
-
-            if (Schema::hasTable('accommodation_packages')
-                && Schema::hasColumn('accommodation_packages', 'property_id')) {
-                $packagePriceColumns = ['property_id'];
-                if (Schema::hasColumn('accommodation_packages', 'base_price')) {
-                    $packagePriceColumns[] = 'base_price';
-                }
-                if (Schema::hasColumn('accommodation_packages', 'price_per_night')) {
-                    $packagePriceColumns[] = 'price_per_night';
-                }
-
-                if (count($packagePriceColumns) > 1) {
-                    $packageRowsQuery = DB::table('accommodation_packages as ap');
-
-                    if (Schema::hasTable('accommodation_rooms')
-                        && Schema::hasColumn('accommodation_packages', 'room_id')
-                        && Schema::hasColumn('accommodation_rooms', 'id')
-                        && Schema::hasColumn('accommodation_rooms', 'property_id')) {
-                        $packageRowsQuery->leftJoin('accommodation_rooms as ar', 'ar.id', '=', 'ap.room_id')
-                            ->where(static function ($query) use ($propertyLookupIds) {
-                                $query->whereIn('ap.property_id', $propertyLookupIds->all())
-                                    ->orWhereIn('ar.property_id', $propertyLookupIds->all());
-                            });
-                    } else {
-                        $packageRowsQuery->whereIn('ap.property_id', $propertyLookupIds->all());
-                    }
-
-                    $packageRowsQuery->when(Schema::hasColumn('accommodation_packages', 'is_active'), static function ($query) {
-                        $query->where(static function ($activeQuery) {
-                            $activeQuery->where('ap.is_active', 1)
-                                ->orWhereNull('ap.is_active');
-                        });
-                    });
-
-                    $packageSelectColumns = [];
-                    foreach ($packagePriceColumns as $column) {
-                        $packageSelectColumns[] = 'ap.' . $column;
-                    }
-                    $packageSelectColumns[] = 'ar.property_id as room_property_id';
-
-                    $packagePrices = $packageRowsQuery
-                        ->get($packageSelectColumns)
-                        ->groupBy(static function ($row) {
-                            $directPropertyId = (int) ($row->property_id ?? 0);
-                            if ($directPropertyId > 0) {
-                                return $directPropertyId;
-                            }
-
-                            return (int) ($row->room_property_id ?? 0);
-                        })
-                        ->map(static function ($rows) {
-                            return collect($rows)
-                                ->map(static function ($row) {
-                                    $perNight = isset($row->price_per_night) ? (float) ($row->price_per_night ?? 0) : 0;
-                                    $base = isset($row->base_price) ? (float) ($row->base_price ?? 0) : 0;
-                                    return $perNight > 0 ? $perNight : $base;
-                                })
-                                ->filter(static fn (float $value) => $value > 0)
-                                ->min();
-                        })
-                        ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
-
-                    $combinedRoomPricesByProperty = $combinedRoomPricesByProperty
-                        ->merge($packagePrices)
-                        ->groupBy(static fn ($value, $key) => (int) $key)
-                        ->map(static function ($values) {
-                            return collect($values)
-                                ->map(static fn ($value) => (float) $value)
-                                ->filter(static fn (float $value) => $value > 0)
-                                ->min();
-                        })
-                        ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
                 }
             }
 
@@ -486,7 +402,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 }
             }
 
-            // Force accommodation pricing to come only from room/package tables.
+            // Force accommodation pricing to come only from room-level tables.
             // This prevents stale vendor_properties.base_price from showing on cards.
             $catalogProperties = $catalogProperties->map(static function ($prop) use ($combinedRoomPricesByProperty) {
                 $prop->base_price = 0;
@@ -495,13 +411,6 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
 
                 if (is_int($lookupId) && $lookupId > 0) {
                     $prop->base_price = (float) ($combinedRoomPricesByProperty->get($lookupId) ?? 0);
-                }
-
-                if ((float) ($prop->base_price ?? 0) <= 0) {
-                    $derivedPrice = workationDerivedListingBasePrice($prop);
-                    if ($derivedPrice > 0) {
-                        $prop->base_price = $derivedPrice;
-                    }
                 }
 
                 return $prop;

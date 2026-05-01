@@ -14,8 +14,8 @@
         .page { width:min(760px,calc(100% - 24px)); margin:24px auto; }
         .panel { border:1px solid var(--line); border-radius:16px; background:var(--surface); padding:18px; display:grid; gap:14px; }
         .eyebrow { margin:0; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:#557185; font-weight:700; }
-        h1 { margin:0; font-size:1.3rem; }
-        .sub { margin:0; color:#4d6a7e; line-height:1.55; }
+        h1 { margin:0; font-size:1.3rem; color:#173d55; font-family:"Space Grotesk","Trebuchet MS",sans-serif; }
+        .sub { margin:0; color:#4f6d82; line-height:1.55; font-size:0.9rem; }
         .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
         .cell { border:1px solid #dbe7f0; border-radius:12px; background:#fbfdff; padding:12px; display:grid; gap:4px; }
         .k { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:#58708a; font-weight:700; }
@@ -70,13 +70,13 @@
 
             <div class="actions">
                 @if ($externalHandoff && $externalHandoffUrl !== '')
-                    <a class="btn" href="{{ $externalHandoffUrl }}" rel="noopener">Continue to {{ $externalHandoffProvider }}</a>
+                    <a class="btn primary" href="{{ $externalHandoffUrl }}" rel="noopener">Continue to {{ $externalHandoffProvider }}</a>
                 @else
                     <form method="post" action="/booking/payment/hosted/{{ (int) ($reservation->id ?? 0) }}/complete">
                         @csrf
                         <input type="hidden" name="intent_id" value="{{ $intentId }}">
                         <input type="hidden" name="payment_reference" value="SIM-{{ (int) ($reservation->id ?? 0) }}">
-                        <button class="btn" type="submit">Complete Payment</button>
+                            <button class="btn primary" type="submit">Complete Payment</button>
                     </form>
                 @endif
                 <a class="btn alt" href="/booking/checkout/{{ (int) ($reservation->id ?? 0) }}">Back to Checkout</a>

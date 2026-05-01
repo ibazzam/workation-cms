@@ -1693,7 +1693,7 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
 
     $cancellationPolicy = trim((string) $request->query('cancellation_policy', ''));
     if ($cancellationPolicy === '') {
-        $cancellationPolicy = trim((string) ($reservationNotes['cancellation_policy'] ?? 'Standard cancellation terms apply as per property policy.'));
+        $cancellationPolicy = trim((string) ($reservationNotes['cancellation_policy'] ?? 'Cancellation terms are set by the property/service provider and shown in your booking details.'));
     }
 
     $categoryDetailLabels = [

@@ -44,7 +44,7 @@ Route::get('/room/{room}', function (Request $request, int $room) {
     }
 
     $roomPayload = (array) Cache::remember(
-        'room_profile:payload:v1:' . (int) $roomRow->id,
+        'room_profile:payload:v2:' . (int) $roomRow->id,
         now()->addMinutes(3),
         static function () use ($roomRow, $propertyRow) {
             $roomMedia = collect();
@@ -102,7 +102,7 @@ Route::get('/room/{room}', function (Request $request, int $room) {
 
             $bookingPolicies = [
                 'inclusives' => collect($propertyDetails['inclusives'] ?? [])->map(static fn ($v) => trim((string) $v))->filter()->values()->all(),
-                'cancellation_policy' => trim((string) ($propertyDetails['cancellation_policy'] ?? 'Free cancellation up to 72 hours before check-in.')),
+                'cancellation_policy' => trim((string) ($propertyDetails['cancellation_policy'] ?? '')),
                 'check_in_time' => trim((string) ($propertyDetails['check_in_time'] ?? '')),
                 'check_out_time' => trim((string) ($propertyDetails['check_out_time'] ?? '')),
                 'child_policy' => trim((string) ($propertyDetails['child_policy'] ?? '')),

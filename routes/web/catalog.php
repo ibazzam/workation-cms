@@ -291,7 +291,8 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 // Normalize id to vendor_property_id so media lookups and detail-page URLs
                 // work correctly for both old migrated rows and new self-referencing rows.
                 $row->dedicated_row_id = isset($row->id) ? (int) $row->id : 0;
-                $row->id = (int) ($row->vendor_property_id ?? $row->id ?? 0);
+                $vendorPropertyId = (int) ($row->vendor_property_id ?? 0);
+                $row->id = $vendorPropertyId > 0 ? $vendorPropertyId : (int) ($row->id ?? 0);
                 return $row;
             });
         $propertyIds = $catalogProperties
@@ -311,16 +312,17 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         if ($dbCategoryKey === 'accommodation' && $propertyLookupIds->isNotEmpty()) {
             $combinedRoomPricesByProperty = collect();
 
-            $legacyRoomPropertyColumn = null;
+            $legacyRoomPropertyColumns = [];
             if (Schema::hasTable('vendor_property_room_categories')) {
                 if (Schema::hasColumn('vendor_property_room_categories', 'vendor_property_id')) {
-                    $legacyRoomPropertyColumn = 'vendor_property_id';
-                } elseif (Schema::hasColumn('vendor_property_room_categories', 'property_id')) {
-                    $legacyRoomPropertyColumn = 'property_id';
+                    $legacyRoomPropertyColumns[] = 'vendor_property_id';
+                }
+                if (Schema::hasColumn('vendor_property_room_categories', 'property_id')) {
+                    $legacyRoomPropertyColumns[] = 'property_id';
                 }
             }
 
-            if ($legacyRoomPropertyColumn !== null
+            if (!empty($legacyRoomPropertyColumns)
             ) {
                 $legacyPriceColumns = [];
                 foreach (['meal_plan_room_only_price', 'room_only_price', 'price_per_night', 'base_price'] as $candidateColumn) {
@@ -331,18 +333,39 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
 
                 if (!empty($legacyPriceColumns)) {
                 $legacyRoomPrices = DB::table('vendor_property_room_categories')
-                    ->whereIn($legacyRoomPropertyColumn, $propertyLookupIds->all())
-                    ->get(array_merge([$legacyRoomPropertyColumn], $legacyPriceColumns))
-                    ->groupBy(static function ($row) use ($legacyRoomPropertyColumn) {
-                        return (int) ($row->{$legacyRoomPropertyColumn} ?? 0);
+                    ->where(static function ($query) use ($legacyRoomPropertyColumns, $propertyLookupIds) {
+                        foreach ($legacyRoomPropertyColumns as $index => $propertyColumn) {
+                            if ($index === 0) {
+                                $query->whereIn($propertyColumn, $propertyLookupIds->all());
+                            } else {
+                                $query->orWhereIn($propertyColumn, $propertyLookupIds->all());
+                            }
+                        }
                     })
-                    ->map(static function ($rows) use ($legacyPriceColumns) {
-                        return collect($rows)
-                            ->flatMap(static function ($row) use ($legacyPriceColumns) {
-                                return collect($legacyPriceColumns)
-                                    ->map(static fn ($column) => (float) ($row->{$column} ?? 0));
-                            })
+                    ->get(array_merge($legacyRoomPropertyColumns, $legacyPriceColumns))
+                    ->flatMap(static function ($row) use ($legacyRoomPropertyColumns, $legacyPriceColumns) {
+                        $prices = collect($legacyPriceColumns)
+                            ->map(static fn ($column) => (float) ($row->{$column} ?? 0))
                             ->filter(static fn (float $value) => $value > 0)
+                            ->values();
+
+                        if ($prices->isEmpty()) {
+                            return [];
+                        }
+
+                        return collect($legacyRoomPropertyColumns)
+                            ->map(static fn ($column) => (int) ($row->{$column} ?? 0))
+                            ->filter(static fn (int $id): bool => $id > 0)
+                            ->flatMap(static fn (int $propertyId) => $prices->map(static fn (float $price) => [
+                                'property_id' => $propertyId,
+                                'price' => $price,
+                            ]));
+                    })
+                    ->groupBy(static fn (array $entry) => (int) ($entry['property_id'] ?? 0))
+                    ->map(static function ($rows) {
+                        return collect($rows)
+                            ->map(static fn (array $entry) => (float) ($entry['price'] ?? 0))
+                            ->filter(static fn (float $value): bool => $value > 0)
                             ->min();
                     })
                     ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);

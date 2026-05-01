@@ -238,22 +238,20 @@
                     <div class="terms-grid">
                         <article class="terms-item" aria-label="Cancellation policy">
                             <h3>Cancellation Policy</h3>
-                            <div class="fine-print">Free cancellation before 23:59, one day before check-in.</div>
-                            <div class="fine-print">Cancellation fee may apply after cutoff. If you apply a discount, cancellation fee is based on total paid.</div>
-                            <div class="fine-print">All times are in the hotel's local time.</div>
-                            <div class="fine-print">{{ $cancellationPolicy }}</div>
+                            <div class="fine-print">{{ $cancellationPolicy !== '' ? $cancellationPolicy : 'Cancellation terms are set by the property/service provider and shown in your booking details.' }}</div>
                         </article>
 
-                        <article class="terms-item" aria-label="Customer protection and refunds">
-                            <h3>Customer Protection</h3>
-                            <div class="fine-print">If a paid booking is cancelled from your customer portal, your request is moved to refund review and tracked end-to-end.</div>
-                            <div class="fine-print">Refunds are returned via the original payment channel (card/bank gateway used at payment).</div>
-                            <div class="fine-print">Most approved refunds are completed within 7-10 calendar days, depending on bank/gateway processing.</div>
+                        <article class="terms-item" aria-label="Customer protection and disclaimer">
+                            <h3>Customer Protection and Disclaimer</h3>
+                            <div class="fine-print">If a paid booking is cancelled from your customer portal, a refund request is created and its status is tracked in your account.</div>
+                            <div class="fine-print">Approved refunds are sent back to the original payment method used at checkout.</div>
+                            <div class="fine-print">Refund processing is usually completed within 7-10 business days and may vary by bank or card network.</div>
+                            <div class="fine-print">Workation coordinates booking and payment workflows; final service delivery remains the responsibility of the property or operator.</div>
                         </article>
 
                         <article class="terms-item" aria-label="Rewards and fine print">
-                            <h3>Rewards and Fine Print</h3>
-                            <div class="fine-print">Earn {{ max(1, (int) round(($roomSubtotal + $taxAmount) * 0.125)) }} Trip Coins (≈{{ $currency }} {{ number_format((($roomSubtotal + $taxAmount) * 0.005), 2) }}) after your stay.</div>
+                            <h3>Important Notes</h3>
+                            <div class="fine-print">This checkout currently does not apply loyalty points or cashback rewards at payment time.</div>
                             <div class="fine-print">Maldives guest houses and hotels do not require a check-in deposit through this checkout flow.</div>
                             @if ($inclusives->isNotEmpty())
                                 <div class="fine-print" style="margin-top:4px;">Inclusions:</div>

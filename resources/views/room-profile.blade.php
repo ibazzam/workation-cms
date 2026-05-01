@@ -151,7 +151,7 @@
         $pricingConfig = $pricingConfig ?? ['tax_rate' => 16, 'discount_percent' => 0];
         $bookingPolicies = $bookingPolicies ?? [
             'inclusives' => [],
-            'cancellation_policy' => 'Standard cancellation terms apply.',
+            'cancellation_policy' => '',
             'check_in_time' => '',
             'check_out_time' => '',
             'child_policy' => '',
@@ -172,7 +172,10 @@
         $taxRate = (float) ($pricingConfig['tax_rate'] ?? 16);
         $discountPercent = (float) ($pricingConfig['discount_percent'] ?? 0);
         $inclusives = collect($bookingPolicies['inclusives'] ?? [])->map(static fn ($v) => trim((string) $v))->filter()->values();
-        $cancellationPolicy = trim((string) ($bookingPolicies['cancellation_policy'] ?? 'Standard cancellation terms apply.'));
+        $cancellationPolicy = trim((string) ($bookingPolicies['cancellation_policy'] ?? ''));
+        if ($cancellationPolicy === '') {
+            $cancellationPolicy = 'Cancellation terms are set by the property/service provider and confirmed in your booking details.';
+        }
         $roomHeroImage = $roomMedia->isNotEmpty() ? ($mediaUrl($roomMedia->first(), 'banner') ?? $mediaUrl($roomMedia->first(), 'thumb')) : null;
         $roomBedLabel = trim((string) ($room->bed_type ?? '1 bed'));
         $roomSize = (int) ($room->room_size_sqm ?? 0);
@@ -197,9 +200,6 @@
         $stayDateRange = ($parsedCheckin && $parsedCheckout)
             ? ($parsedCheckin->format('D, M j') . ' - ' . $parsedCheckout->format('D, M j'))
             : 'Select check-in and check-out dates';
-        $cancelDeadlineLabel = $parsedCheckin
-            ? $parsedCheckin->copy()->subDay()->format('H:i, M j, Y')
-            : '23:59, one day before check-in';
         $ratingValue = collect(['review_score', 'rating_average', 'average_rating', 'rating'])
             ->map(static fn ($column) => (float) ($property->{$column} ?? 0))
             ->first(static fn ($value) => $value > 0) ?: 9.3;
@@ -329,7 +329,6 @@
 
                     <section class="sum-section" aria-label="Cancellation policy">
                         <h2 class="sum-title"><span class="sum-title-number">5</span> Cancellation Policy</h2>
-                        <p class="sum-policy-text">Free cancellation before {{ $cancelDeadlineLabel }}.</p>
                         @if (isset($bookingPolicies['minimum_nights']) && is_numeric($bookingPolicies['minimum_nights']) && (int) $bookingPolicies['minimum_nights'] > 1)
                             <p class="sum-policy-text">Minimum stay: {{ (int) $bookingPolicies['minimum_nights'] }} nights.</p>
                         @endif
@@ -433,7 +432,7 @@
                         </section>
 
                         <section class="booking-subsection" aria-label="Booking terms">
-                            <p class="booking-subnote">Free Cancellation before {{ $cancelDeadlineLabel }}</p>
+                            <p class="booking-subnote">Cancellation terms are set by the property/service provider and shown in your booking policy.</p>
                             <p class="booking-subnote">We price match • Secure payment</p>
                             <p class="legal-note">By submitting this booking, you acknowledge that you have read and agree to the Terms of Use and Privacy Statement.</p>
                         </section>

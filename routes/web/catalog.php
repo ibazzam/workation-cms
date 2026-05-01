@@ -311,6 +311,25 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         // then accommodation_rooms.base_price_per_night (or base_price).
         if ($dbCategoryKey === 'accommodation' && $propertyLookupIds->isNotEmpty()) {
             $combinedRoomPricesByProperty = collect();
+            $mergeMinPriceMaps = static function ($baseMap, $incomingMap) {
+                $resolved = collect($baseMap)
+                    ->mapWithKeys(static fn ($price, $propertyId) => [(int) $propertyId => (float) $price])
+                    ->filter(static fn ($price, $propertyId) => (int) $propertyId > 0 && is_numeric($price) && (float) $price > 0);
+
+                foreach (collect($incomingMap) as $propertyId => $price) {
+                    $normalizedPropertyId = (int) $propertyId;
+                    $normalizedPrice = (float) $price;
+                    if ($normalizedPropertyId <= 0 || $normalizedPrice <= 0) {
+                        continue;
+                    }
+
+                    if (!$resolved->has($normalizedPropertyId) || $normalizedPrice < (float) $resolved->get($normalizedPropertyId)) {
+                        $resolved->put($normalizedPropertyId, $normalizedPrice);
+                    }
+                }
+
+                return $resolved;
+            };
 
             $legacyRoomPropertyColumns = [];
             if (Schema::hasTable('vendor_property_room_categories')) {
@@ -370,7 +389,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                     })
                     ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
 
-                $combinedRoomPricesByProperty = $combinedRoomPricesByProperty->union($legacyRoomPrices);
+                $combinedRoomPricesByProperty = $mergeMinPriceMaps($combinedRoomPricesByProperty, $legacyRoomPrices);
                 }
             }
 
@@ -432,16 +451,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                         })
                         ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
 
-                    $combinedRoomPricesByProperty = $combinedRoomPricesByProperty
-                        ->merge($canonicalRoomPrices)
-                        ->groupBy(static fn ($value, $key) => (int) $key)
-                        ->map(static function ($values) {
-                            return collect($values)
-                                ->map(static fn ($value) => (float) $value)
-                                ->filter(static fn (float $value) => $value > 0)
-                                ->min();
-                        })
-                        ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+                    $combinedRoomPricesByProperty = $mergeMinPriceMaps($combinedRoomPricesByProperty, $canonicalRoomPrices);
                 }
             }
 

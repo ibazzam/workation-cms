@@ -465,6 +465,26 @@ Route::get('/property/{property}', function (Request $request, int $property) {
         'property_profile:nearby:v5:' . (int) $propertyRow->id,
         now()->addMinutes(8),
         static function () use ($propertyRow) {
+            $mergeMinPriceMaps = static function ($baseMap, $incomingMap) {
+                $resolved = collect($baseMap)
+                    ->mapWithKeys(static fn ($price, $propertyId) => [(int) $propertyId => (float) $price])
+                    ->filter(static fn ($price, $propertyId) => (int) $propertyId > 0 && is_numeric($price) && (float) $price > 0);
+
+                foreach (collect($incomingMap) as $propertyId => $price) {
+                    $normalizedPropertyId = (int) $propertyId;
+                    $normalizedPrice = (float) $price;
+                    if ($normalizedPropertyId <= 0 || $normalizedPrice <= 0) {
+                        continue;
+                    }
+
+                    if (!$resolved->has($normalizedPropertyId) || $normalizedPrice < (float) $resolved->get($normalizedPropertyId)) {
+                        $resolved->put($normalizedPropertyId, $normalizedPrice);
+                    }
+                }
+
+                return $resolved;
+            };
+
             $currentCategory = trim((string) ($propertyRow->listing_category ?? ''));
             $normalizedCategory = str_replace('-', '_', strtolower($currentCategory));
             if ($normalizedCategory !== '') {
@@ -588,7 +608,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
                                 (int) ($row->vendor_property_id ?? 0) => (float) ($row->min_price ?? 0),
                             ];
                         });
-                    $nearbyMinPriceByPropertyId = $nearbyMinPriceByPropertyId->merge($nearbyVendorRoomPriceMap);
+                    $nearbyMinPriceByPropertyId = $mergeMinPriceMaps($nearbyMinPriceByPropertyId, $nearbyVendorRoomPriceMap);
                 }
             }
 
@@ -651,16 +671,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
                         })
                         ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
 
-                    $nearbyMinPriceByPropertyId = $nearbyMinPriceByPropertyId
-                        ->merge($legacyMinMap)
-                        ->groupBy(static fn ($value, $key) => (int) $key)
-                        ->map(static function ($values) {
-                            return collect($values)
-                                ->map(static fn ($value) => (float) $value)
-                                ->filter(static fn (float $value): bool => $value > 0)
-                                ->min();
-                        })
-                        ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+                    $nearbyMinPriceByPropertyId = $mergeMinPriceMaps($nearbyMinPriceByPropertyId, $legacyMinMap);
                 }
             }
 
@@ -716,16 +727,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
                         })
                         ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
 
-                    $nearbyMinPriceByPropertyId = $nearbyMinPriceByPropertyId
-                        ->merge($accommodationRoomMinMap)
-                        ->groupBy(static fn ($value, $key) => (int) $key)
-                        ->map(static function ($values) {
-                            return collect($values)
-                                ->map(static fn ($value) => (float) $value)
-                                ->filter(static fn (float $value): bool => $value > 0)
-                                ->min();
-                        })
-                        ->filter(static fn ($value) => is_numeric($value) && (float) $value > 0);
+                    $nearbyMinPriceByPropertyId = $mergeMinPriceMaps($nearbyMinPriceByPropertyId, $accommodationRoomMinMap);
                 }
             }
 

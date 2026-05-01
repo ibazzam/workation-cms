@@ -98,6 +98,7 @@ Target: complete launch-critical portal work by March 31, 2026.
 - [ ] Add bookings list and booking detail views
 - [ ] Add payment history and downloadable receipt UI
 - [ ] Add customer notifications/messages center
+- [x] Release post-booking vendor contact panel (call, WhatsApp, email) with finalized-booking gating and support fallback (2026-05-01)
 
 ## P2 UI System & Quality
 - [ ] Refactor repeated inline styles into reusable CSS tokens/classes

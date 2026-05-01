@@ -243,6 +243,14 @@ Route::get('/customer', function (Request $request) {
                         'id' => $propertyId,
                         'name' => (string) ($row->name ?? ''),
                         'listing_category' => (string) ($row->listing_category ?? ''),
+                        'listing_details' => (string) ($row->listing_details ?? $row->details ?? ''),
+                        'property_contact_name' => (string) ($row->property_contact_name ?? ''),
+                        'property_contact_number' => (string) ($row->property_contact_number ?? ''),
+                        'property_contact_email' => (string) ($row->property_contact_email ?? ''),
+                        'contact_name' => (string) ($row->contact_name ?? ''),
+                        'contact_number' => (string) ($row->contact_number ?? ''),
+                        'contact_email' => (string) ($row->contact_email ?? ''),
+                        'phone' => (string) ($row->phone ?? ''),
                     ];
                 })
                 ->filter()
@@ -264,7 +272,9 @@ Route::get('/customer', function (Request $request) {
             return strtolower((string) ($row->payment_status ?? '')) === 'paid';
         })->count();
 
-        $categorized = $reservationRows->map(function ($row) use ($propertyNamesById, $categoryMeta, $latestRefundCaseByReservation) {
+        $supportEmail = strtolower(trim((string) env('WORKATION_CUSTOMER_SUPPORT_EMAIL', 'support@workation.mv')));
+
+        $categorized = $reservationRows->map(function ($row) use ($propertyNamesById, $categoryMeta, $latestRefundCaseByReservation, $supportEmail) {
             $notes = json_decode((string) ($row->notes ?? ''), true);
             if (!is_array($notes)) {
                 $notes = [];
@@ -301,6 +311,42 @@ Route::get('/customer', function (Request $request) {
                 $serviceLabel = (string) ($categoryMeta[$categoryKey]['label'] ?? 'Service');
             }
 
+            $propertyDetails = [];
+            if ($propertyRow && isset($propertyRow->listing_details)) {
+                $decodedListingDetails = json_decode((string) ($propertyRow->listing_details ?? ''), true);
+                if (is_array($decodedListingDetails)) {
+                    $propertyDetails = $decodedListingDetails;
+                }
+            }
+
+            $statusLower = strtolower(trim((string) ($row->status ?? 'pending')));
+            $paymentStatusLower = strtolower(trim((string) ($row->payment_status ?? 'unpaid')));
+            $isCancelledBooking = in_array($statusLower, ['cancelled', 'canceled', 'cancel_requested'], true);
+            $isFinalizedBooking = $paymentStatusLower === 'paid' || in_array($statusLower, ['confirmed', 'completed'], true);
+            $allowVendorContact = $isFinalizedBooking && !$isCancelledBooking;
+
+            $vendorContactName = trim((string) (
+                $notes['vendor_contact_name']
+                ?? $propertyDetails['property_contact_name']
+                ?? $propertyDetails['contact_name']
+                ?? ($propertyRow->property_contact_name ?? $propertyRow->contact_name ?? '')
+            ));
+
+            $vendorContactNumber = trim((string) (
+                $notes['vendor_contact_number']
+                ?? $propertyDetails['property_contact_number']
+                ?? $propertyDetails['contact_number']
+                ?? $propertyDetails['phone']
+                ?? ($propertyRow->property_contact_number ?? $propertyRow->contact_number ?? $propertyRow->phone ?? '')
+            ));
+
+            $vendorContactEmail = strtolower(trim((string) (
+                $notes['vendor_contact_email']
+                ?? $propertyDetails['property_contact_email']
+                ?? $propertyDetails['contact_email']
+                ?? ($propertyRow->property_contact_email ?? $propertyRow->contact_email ?? '')
+            )));
+
             return [
                 'id' => (int) ($row->id ?? 0),
                 'category_key' => $categoryKey,
@@ -326,6 +372,11 @@ Route::get('/customer', function (Request $request) {
                 'total_amount' => (float) ($row->total_amount ?? 0),
                 'currency' => strtoupper(trim((string) ($row->currency ?? 'MVR'))),
                 'created_at' => $row->created_at ? Carbon::parse((string) $row->created_at)->format('Y-m-d') : '-',
+                'booking_contact_available' => $allowVendorContact,
+                'vendor_contact_name' => $allowVendorContact ? $vendorContactName : '',
+                'vendor_contact_number' => $allowVendorContact ? $vendorContactNumber : '',
+                'vendor_contact_email' => $allowVendorContact ? $vendorContactEmail : '',
+                'support_email' => $supportEmail,
             ];
         });
 

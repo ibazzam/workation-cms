@@ -453,6 +453,54 @@
             font-weight: 600;
         }
 
+        .booking-contact-panel {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border: 1px solid #d8e5ef;
+            border-radius: 10px;
+            background: #f7fbff;
+            display: grid;
+            gap: 8px;
+        }
+
+        .booking-contact-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #17374d;
+            letter-spacing: 0.01em;
+        }
+
+        .booking-contact-text {
+            font-size: 0.78rem;
+            color: #4a6478;
+            line-height: 1.4;
+        }
+
+        .booking-contact-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .booking-contact-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid #bfd5e5;
+            border-radius: 999px;
+            padding: 5px 10px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-decoration: none;
+            color: #134d68;
+            background: #edf6fd;
+        }
+
+        .booking-contact-chip:hover {
+            background: #e2f0fa;
+            border-color: #a9c8dc;
+        }
+
         .booking-refund-timeline {
             margin-top: 10px;
             padding: 12px 14px;
@@ -996,6 +1044,47 @@
                                                         @endif
                                                     @endif
                                                 </div>
+                                                @php
+                                                    $bookingContactAvailable = (bool) ($booking['booking_contact_available'] ?? false);
+                                                    $vendorContactName = trim((string) ($booking['vendor_contact_name'] ?? ''));
+                                                    $vendorContactNumber = trim((string) ($booking['vendor_contact_number'] ?? ''));
+                                                    $vendorContactEmail = trim((string) ($booking['vendor_contact_email'] ?? ''));
+                                                    $supportEmail = trim((string) ($booking['support_email'] ?? 'support@workation.mv'));
+                                                    $numericContact = preg_replace('/[^\d+]/', '', $vendorContactNumber);
+                                                    $whatsAppDigits = preg_replace('/\D+/', '', $vendorContactNumber);
+                                                    $canCall = $bookingContactAvailable && $numericContact !== '';
+                                                    $canEmail = $bookingContactAvailable && $vendorContactEmail !== '';
+                                                    $canWhatsApp = $bookingContactAvailable && $whatsAppDigits !== '';
+                                                @endphp
+                                                @if ($bookingContactAvailable)
+                                                    <div class="booking-contact-panel">
+                                                        <div class="booking-contact-title">Vendor Contact Details</div>
+                                                        <div class="booking-contact-text">
+                                                            @if ($vendorContactName !== '')
+                                                                Contact person: {{ $vendorContactName }}.
+                                                            @else
+                                                                This booking is complete and vendor contact is now unlocked.
+                                                            @endif
+                                                            @if (!$canCall && !$canEmail)
+                                                                Please email <a href="mailto:{{ $supportEmail }}">{{ $supportEmail }}</a> for urgent pickup or location assistance.
+                                                            @endif
+                                                        </div>
+                                                        <div class="booking-contact-actions">
+                                                            @if ($canCall)
+                                                                <a class="booking-contact-chip" href="tel:{{ $numericContact }}"><i class="fa-solid fa-phone"></i> Call Vendor</a>
+                                                            @endif
+                                                            @if ($canWhatsApp)
+                                                                <a class="booking-contact-chip" href="https://wa.me/{{ $whatsAppDigits }}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>
+                                                            @endif
+                                                            @if ($canEmail)
+                                                                <a class="booking-contact-chip" href="mailto:{{ $vendorContactEmail }}"><i class="fa-regular fa-envelope"></i> Email Vendor</a>
+                                                            @endif
+                                                            @if (!$canCall && !$canEmail)
+                                                                <a class="booking-contact-chip" href="mailto:{{ $supportEmail }}"><i class="fa-solid fa-headset"></i> Contact Support</a>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                @endif
                                                 @if (trim((string) ($booking['refund_status'] ?? '')) !== '')
                                                     @php
                                                         $refundRequestedAt = trim((string) ($booking['refund_requested_at'] ?? ''));

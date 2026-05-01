@@ -82,7 +82,7 @@
         $listingWizardStep = (int) session('listing_wizard_step', 1);
         $listingWizardStep = max(1, min(4, $listingWizardStep));
         $portalPageQuery = strtolower(trim((string) request()->query('page', '')));
-        $activePortalPage = in_array($portalPageQuery, ['overview', 'reports', 'profile', 'listings', 'reservations', 'operations', 'availability', 'billing', 'engagement', 'promotions'], true)
+        $activePortalPage = in_array($portalPageQuery, ['overview', 'reports', 'profile', 'listings', 'reservations', 'operations', 'availability', 'billing', 'messages', 'engagement', 'promotions'], true)
             ? $portalPageQuery
             : 'overview';
         $panelFromPageQuery = match ($activePortalPage) {
@@ -99,16 +99,18 @@
         $showReservationsPage = in_array($activePortalPage, ['reservations', 'operations'], true);
         $showAvailabilityPage = $activePortalPage === 'availability';
         $showBillingPage = $activePortalPage === 'billing';
+        $showMessagesPage = $activePortalPage === 'messages';
         $showEngagementPage = in_array($activePortalPage, ['engagement', 'promotions'], true);
         $showOverviewPage = in_array($activePortalPage, ['overview', 'reports'], true);
         $forcedPanelKey = (string) session('portal_active_panel', $panelFromPageQuery);
         $forcedListingMode = strtolower(trim((string) session('portal_listing_mode', '')));
         $forcedListingCategory = strtolower(trim((string) request()->query('category', session('portal_listing_category', ''))));
-        $showWorkspaceTabs = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'billing'], true);
+        $showWorkspaceTabs = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'billing', 'messages'], true);
         $workspacePrimaryPage = match (true) {
             $showListingsPage => 'listings',
             $showAvailabilityPage => 'availability',
             $showBillingPage => 'billing',
+            $showMessagesPage => 'messages',
             default => 'reservations',
         };
         $workspaceRelevantCategoryKeys = collect();
@@ -170,6 +172,12 @@
                 'label' => 'Billing / Payments',
                 'active' => $showBillingPage,
                 'href' => '/vendor/billing' . $workspaceCategoryQuery,
+            ],
+            [
+                'key' => 'messages',
+                'label' => 'Messages',
+                'active' => $showMessagesPage,
+                'href' => '/vendor/messages' . $workspaceCategoryQuery,
             ],
         ];
         $forcedMediaPanelType = strtolower(trim((string) session('portal_media_panel_type', '')));
@@ -443,7 +451,7 @@
                     <div class="workspace-category-tabs" role="tablist" aria-label="Vendor category filter">
                         <a
                             class="workspace-category-tab {{ $forcedListingCategory === '' ? 'is-active' : '' }}"
-                            href="{{ match ($workspacePrimaryPage) { 'listings' => '/vendor/listings', 'availability' => '/vendor/availability', 'billing' => '/vendor/billing', default => '/vendor/reservations' } }}"
+                            href="{{ match ($workspacePrimaryPage) { 'listings' => '/vendor/listings', 'availability' => '/vendor/availability', 'billing' => '/vendor/billing', 'messages' => '/vendor/messages', default => '/vendor/reservations' } }}"
                             role="tab"
                             aria-selected="{{ $forcedListingCategory === '' ? 'true' : 'false' }}"
                         >All</a>
@@ -454,6 +462,7 @@
                                     'listings' => '/vendor/listings/' . $categoryKey,
                                     'availability' => '/vendor/availability?category=' . urlencode($categoryKey),
                                     'billing' => '/vendor/billing?category=' . urlencode($categoryKey),
+                                    'messages' => '/vendor/messages?category=' . urlencode($categoryKey),
                                     default => '/vendor/reservations?category=' . urlencode($categoryKey),
                                 };
                                 $categoryIsActive = $forcedListingCategory === $categoryKey;
@@ -489,6 +498,10 @@
 
         @if ($showBillingPage)
             @include('vendor-portal.partials.payout-status')
+        @endif
+
+        @if ($showMessagesPage)
+            @include('vendor-portal.partials.messages-center')
         @endif
 
         @if ($showEngagementPage)

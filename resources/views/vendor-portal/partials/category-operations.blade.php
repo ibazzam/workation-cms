@@ -859,35 +859,20 @@
                             <table class="ops-table" aria-label="{{ $labelForCategory($categoryKey) }} reservations table">
                                 <thead>
                                     <tr>
-                                        <th>Booking</th>
-                                        <th>Guest</th>
+                                        <th>Booking / Reservation</th>
+                                        <th>Guest Information</th>
+                                        <th>Occupancy</th>
                                         <th>Stay</th>
-                                        <th>Service</th>
-                                        <th>Payment</th>
-                                        <th>Messages</th>
-                                        <th>Timeline</th>
+                                        <th>Service / Room</th>
+                                        <th>Payment Status</th>
+                                        <th>Special Request</th>
+                                        <th>Timeline / Status Update</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @php
-                                        // Bulk-load messages for all visible reservations
-                                        $visibleReservationIds = $reservationScopeFiltered->take(30)->pluck('id')->filter(static fn ($id) => (int) $id > 0)->unique()->values()->all();
-                                        $vendorMessagesByReservation = collect();
-                                        if (!empty($visibleReservationIds) && \Illuminate\Support\Facades\Schema::hasTable('reservation_messages')) {
-                                            $vendorMsgRows = \Illuminate\Support\Facades\DB::table('reservation_messages')
-                                                ->whereIn('reservation_id', $visibleReservationIds)
-                                                ->orderBy('created_at')
-                                                ->get(['id', 'reservation_id', 'sender_role', 'sender_display_name', 'message_text', 'is_flagged', 'vendor_read', 'created_at']);
-                                            $vendorMessagesByReservation = $vendorMsgRows->groupBy(static fn ($m) => (int) ($m->reservation_id ?? 0));
-                                            // Mark unread customer messages as read for vendor
-                                            $unreadForVendor = $vendorMsgRows->where('sender_role', 'customer')->where('vendor_read', false)->pluck('id')->all();
-                                            if (!empty($unreadForVendor)) {
-                                                \Illuminate\Support\Facades\DB::table('reservation_messages')->whereIn('id', $unreadForVendor)->update(['vendor_read' => true]);
-                                            }
-                                        }
-                                    @endphp
                                     @forelse ($reservationScopeFiltered->take(30) as $reservationRow)
                                         @php
+                                            $rsvId = (int) ($reservationRow['id'] ?? 0);
                                             $adults = max(1, (int) ($reservationRow['adult_guests'] ?? 1));
                                             $children = max(0, (int) ($reservationRow['child_guests'] ?? 0));
                                             $infants = max(0, (int) ($reservationRow['infant_guests'] ?? 0));
@@ -909,8 +894,11 @@
                                             <td>
                                                 {{ (string) ($reservationRow['customer_name'] ?? '') }}<br>
                                                 {{ (string) ($reservationRow['customer_email'] ?? '') }}<br>
-                                                Guests: {{ $totalGuests }} (A{{ $adults }} / C{{ $children }} / I{{ $infants }})<br>
                                                 Nationality: {{ (string) ($reservationRow['primary_nationality'] ?? 'Unknown') }}
+                                            </td>
+                                            <td>
+                                                {{ $totalGuests }} total<br>
+                                                A{{ $adults }} / C{{ $children }} / I{{ $infants }}
                                             </td>
                                             <td>
                                                 Check-in: {{ (string) ($reservationRow['start_at'] ?? '-') }}<br>
@@ -920,50 +908,13 @@
                                             <td>
                                                 Room: {{ (string) ($reservationRow['room_label'] ?? $reservationRow['target_label'] ?? 'N/A') }}<br>
                                                 Meal Plan: {{ (string) ($reservationRow['meal_plan'] ?? 'Not specified') }}<br>
-                                                Transfer: {{ (string) ($reservationRow['transfer_method'] ?? 'Not selected') }}<br>
-                                                Special Request: {{ trim((string) ($reservationRow['special_request'] ?? '')) !== '' ? (string) ($reservationRow['special_request'] ?? '') : 'None' }}
+                                                Transfer: {{ (string) ($reservationRow['transfer_method'] ?? 'Not selected') }}
                                             </td>
                                             <td>
-                                                Payment Status: {{ strtoupper((string) ($reservationRow['payment_status'] ?? 'unpaid')) }}<br>
-                                                Paid Amount: {{ (string) ($reservationRow['payment_currency'] ?? $reservationRow['currency'] ?? 'MVR') }} {{ number_format((float) ($reservationRow['paid_amount'] ?? 0), 2) }}<br>
-                                                Payment Ref: {{ trim((string) ($reservationRow['payment_reference'] ?? '')) !== '' ? (string) ($reservationRow['payment_reference'] ?? '') : 'N/A' }}<br>
-                                                Booking Date: {{ trim((string) ($reservationRow['created_at'] ?? '')) !== '' ? substr((string) ($reservationRow['created_at'] ?? ''), 0, 10) : 'N/A' }}<br>
-                                                Payout: {{ strtoupper((string) ($reservationRow['payout_status'] ?? 'queued')) }}
-                                                @if ((string) ($reservationRow['payout_expected_at'] ?? '') !== '')
-                                                    <br>Expected: {{ (string) ($reservationRow['payout_expected_at'] ?? '') }}
-                                                @endif
-                                                @if ((bool) ($reservationRow['has_open_dispute'] ?? false) || (bool) ($reservationRow['has_refund_case'] ?? false))
-                                                    <br><span class="small" style="color:#7a4d15;">Timeline Hold: {{ (bool) ($reservationRow['has_open_dispute'] ?? false) ? 'Dispute Open' : 'Refund Case Open' }}</span>
-                                                @endif
-                                                @php
-                                                    $refundStatus = strtolower(trim((string) ($reservationRow['refund_status'] ?? '')));
-                                                    $hasRefundTimeline = $refundStatus !== '';
-                                                    $isRefundEscalated = (string) ($reservationRow['refund_sla_escalated_at'] ?? '') !== '';
-                                                @endphp
-                                                @if ($hasRefundTimeline)
-                                                    <br>Refund Case: {{ trim((string) ($reservationRow['refund_case_ref'] ?? '')) !== '' ? (string) ($reservationRow['refund_case_ref'] ?? '') : 'N/A' }}
-                                                    <br>Refund Status: {{ strtoupper($refundStatus) }}
-                                                    @if ((string) ($reservationRow['refund_sla_due_at'] ?? '') !== '')
-                                                        <br>SLA Due: {{ (string) ($reservationRow['refund_sla_due_at'] ?? '') }}
-                                                    @endif
-                                                    @if ($isRefundEscalated)
-                                                        <br><span class="small" style="color:#a12a2a;">Escalated: Finance follow-up required</span>
-                                                    @endif
-                                                @endif
+                                                {{ strtoupper((string) ($reservationRow['payment_status'] ?? 'unpaid')) }}
                                             </td>
-                                            <td class="vendor-msg-cell">
-                                                @php
-                                                    $rsvId = (int) ($reservationRow['id'] ?? 0);
-                                                    $rsvMessages = $vendorMessagesByReservation[$rsvId] ?? collect();
-                                                    $unreadCount = $rsvMessages->where('sender_role', 'customer')->where('vendor_read', false)->count();
-                                                @endphp
-                                                <div class="vendor-msg-summary" style="margin-bottom:6px;">
-                                                    {{ $rsvMessages->count() }} message{{ $rsvMessages->count() === 1 ? '' : 's' }}
-                                                    @if ($unreadCount > 0)
-                                                        <span class="vendor-msg-unread-badge">{{ $unreadCount }} new</span>
-                                                    @endif
-                                                </div>
-                                                <a class="vendor-msg-open-center" href="#vendor-msg-thread-{{ $rsvId }}">Open full message channel</a>
+                                            <td>
+                                                {{ trim((string) ($reservationRow['special_request'] ?? '')) !== '' ? (string) ($reservationRow['special_request'] ?? '') : 'None' }}
                                             </td>
                                             <td>
                                                 @php
@@ -1016,79 +967,13 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="7" class="ops-empty">No reservations for {{ strtolower($labelForCategory($categoryKey)) }} in {{ $reservationScope }} scope.</td>
+                                            <td colspan="8" class="ops-empty">No reservations for {{ strtolower($labelForCategory($categoryKey)) }} in {{ $reservationScope }} scope.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
                             </table>
                         </div>
 
-                        @php
-                            $messageCenterRows = $reservationScopeFiltered->take(30)->filter(static fn (array $row): bool => (int) ($row['id'] ?? 0) > 0)->values();
-                        @endphp
-                        @if ($messageCenterRows->isNotEmpty())
-                            <section class="vendor-message-center" aria-label="Reservation message center">
-                                <div class="vendor-message-center-head">
-                                    <div class="vendor-message-center-title">Guest Communication Channel</div>
-                                    <div class="vendor-message-center-note"><i class="fa-solid fa-link"></i> Every thread is linked to reservation reference and service/room subject</div>
-                                </div>
-
-                                <div class="vendor-message-center-list">
-                                    @foreach ($messageCenterRows as $reservationRow)
-                                        @php
-                                            $rsvId = (int) ($reservationRow['id'] ?? 0);
-                                            $rsvMessages = $vendorMessagesByReservation[$rsvId] ?? collect();
-                                            $subjectLabel = trim((string) ($reservationRow['room_label'] ?? $reservationRow['target_label'] ?? 'Booking conversation'));
-                                            $subject = 'RSV-' . str_pad((string) $rsvId, 6, '0', STR_PAD_LEFT) . ' · ' . $subjectLabel;
-                                            $guestName = trim((string) ($reservationRow['customer_name'] ?? 'Guest'));
-                                        @endphp
-                                        <article class="vendor-message-thread" id="vendor-msg-thread-{{ $rsvId }}">
-                                            <header class="vendor-message-thread-head">
-                                                <div>
-                                                    <div class="vendor-message-thread-subject">Subject: {{ $subject }}</div>
-                                                    <div class="vendor-message-thread-meta">Guest: {{ $guestName }} · Booking Ref: {{ (string) ($reservationRow['reservation_code'] ?? ('RSV-' . str_pad((string) $rsvId, 6, '0', STR_PAD_LEFT))) }}</div>
-                                                </div>
-                                                <a class="vendor-msg-open-center" href="/vendor/reservations">Stay on reservations</a>
-                                            </header>
-                                            <div class="vendor-message-thread-body">
-                                                @if ($rsvMessages->isNotEmpty())
-                                                    <div class="vendor-msg-list">
-                                                        @foreach ($rsvMessages as $vMsg)
-                                                            @php
-                                                                $vMsgRole = (string) ($vMsg->sender_role ?? '');
-                                                                $vMsgName = e(trim((string) ($vMsg->sender_display_name ?? ($vMsgRole === 'vendor' ? 'You' : 'Guest'))));
-                                                                $vMsgText = e(trim((string) ($vMsg->message_text ?? '')));
-                                                                $vMsgDate = trim((string) ($vMsg->created_at ?? ''));
-                                                                $vMsgDate = $vMsgDate !== '' ? \Carbon\Carbon::parse($vMsgDate)->format('M j, g:i A') : '';
-                                                                $vMsgFlagged = (bool) ($vMsg->is_flagged ?? false);
-                                                            @endphp
-                                                            <div class="vendor-msg-bubble vendor-msg-bubble--{{ $vMsgRole === 'vendor' ? 'sent' : 'received' }}{{ $vMsgFlagged ? ' vendor-msg-bubble--flagged' : '' }}">
-                                                                <span class="vendor-msg-meta">{{ $vMsgName }}@if ($vMsgDate !== '') · {{ $vMsgDate }}@endif</span>
-                                                                <span class="vendor-msg-body">{{ $vMsgText }}</span>
-                                                                @if ($vMsgFlagged)
-                                                                    <span class="vendor-msg-flag-notice"><i class="fa-solid fa-flag"></i> Flagged</span>
-                                                                @endif
-                                                            </div>
-                                                        @endforeach
-                                                    </div>
-                                                @else
-                                                    <span class="vendor-msg-none">No messages yet for this booking.</span>
-                                                @endif
-
-                                                <form method="POST" action="/portal/vendor/reservations/{{ $rsvId }}/messages" class="vendor-msg-reply-form">
-                                                    @csrf
-                                                    <textarea name="message_text" class="vendor-msg-textarea" rows="3" maxlength="2000" placeholder="Message guest about {{ $subject }} (no contact details)" required></textarea>
-                                                    <div class="vendor-msg-reply-footer">
-                                                        <span class="vendor-msg-policy-note"><i class="fa-solid fa-lock"></i> Default subject: {{ $subject }}</span>
-                                                        <button type="submit" class="btn btn-secondary vendor-msg-send-btn">Send</button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </article>
-                                    @endforeach
-                                </div>
-                            </section>
-                        @endif
                         @endif
                         </div>
                     </article>

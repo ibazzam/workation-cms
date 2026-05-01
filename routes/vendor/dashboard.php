@@ -1454,6 +1454,28 @@ Route::get('/vendor/billing', function () {
         ->with('portal_listing_category', $category);
 });
 
+Route::get('/vendor/messages', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $category = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', '')));
+    $scope = strtolower(trim((string) request()->query('scope', 'all')));
+    if (!in_array($scope, ['active', 'pending', 'history', 'all'], true)) {
+        $scope = 'all';
+    }
+
+    $query = '/vendor?page=messages';
+    $query .= '&scope=' . urlencode($scope);
+    if ($category !== '') {
+        $query .= '&category=' . urlencode($category);
+    }
+
+    return redirect($query)
+        ->with('portal_active_panel', 'reservations')
+        ->with('portal_listing_category', $category);
+});
+
 Route::get('/vendor/promotions', function () {
     if (!session()->get('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');

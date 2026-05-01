@@ -392,8 +392,10 @@
         .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
         .field { display:grid; gap:5px; }
         .field label { font-size:0.74rem; text-transform:uppercase; letter-spacing:0.07em; color:#3c5f76; font-family:"Space Grotesk","Trebuchet MS",sans-serif; }
-        .field input, .field textarea, .field select { width:100%; border:1px solid #b8d9e2; border-radius:10px; padding:10px 11px; font:inherit; background:#f8fdff; }
-        .field textarea { min-height:88px; resize:vertical; }
+        .field input, .field textarea, .field select { width:100%; border:1px solid #b8d9e2; border-radius:10px; font:inherit; background:#f8fdff; }
+        .field input,
+        .field select { min-height:42px; height:42px; padding:0 11px; line-height:1.2; }
+        .field textarea { min-height:88px; resize:vertical; padding:10px 11px; }
         .field.full { grid-column:1/-1; }
         .field .input-error { border-color:#c54f4f; background:#fff8f8; }
         .field-error-state input,

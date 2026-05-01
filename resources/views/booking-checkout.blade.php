@@ -13,12 +13,10 @@
         body { margin:0; font-family:"Outfit","Trebuchet MS",sans-serif; color:var(--ink); background:var(--bg); }
         .page { width:min(1180px,calc(100% - 24px)); margin:14px auto 28px; }
         .panel { border:1px solid var(--line); border-radius:16px; background:var(--surface); padding:16px; }
-        .title { margin:0; font-size:1.25rem; }
-        .sub { margin:6px 0 0; color:#45667d; }
+        .title { margin:0; font-size:1.25rem; color:#173d55; font-family:"Space Grotesk","Trebuchet MS",sans-serif; }
+        .sub { margin:6px 0 0; color:#4f6d82; font-size:0.9rem; }
         .layout { margin-top:12px; display:grid; grid-template-columns:minmax(0,1.2fr) minmax(300px,0.8fr); gap:12px; align-items:start; }
-        .checkout-details { grid-column: 1; grid-row: 1; }
-        .payment-box { grid-column: 1; grid-row: 2; }
-        .checkout-summary { grid-column: 2; grid-row: 1 / span 2; }
+        .left-stack { display:grid; gap:10px; align-content:start; }
         .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
         .cell { border:1px solid #dbe7f0; border-radius:12px; padding:10px; background:#fbfdff; }
         .label { display:block; font-size:0.74rem; text-transform:uppercase; letter-spacing:0.06em; color:#58708a; }
@@ -45,8 +43,16 @@
         .fine-print { color:#4c6a7f; font-size:0.78rem; line-height:1.45; }
         .compact-line { display:flex; justify-content:space-between; gap:10px; font-size:0.8rem; color:#3b5c73; }
         .compact-line strong { color:#1f465f; }
-        .payment-box { margin-top:12px; border:1px solid #d6e5ee; border-radius:12px; background:#f7fbff; padding:12px; display:grid; gap:10px; }
-        .payment-box h2 { margin:0; font-size:0.94rem; color:#18455c; }
+        .payment-box { border:1px solid #d6e5ee; border-radius:12px; background:#f7fbff; padding:12px; display:grid; gap:10px; }
+        .payment-box h2 { margin:0; font-size:0.94rem; color:#18455c; font-family:"Space Grotesk","Trebuchet MS",sans-serif; }
+        .terms-box { border:1px solid #d6e5ee; border-radius:12px; background:#f7fbff; padding:12px; display:grid; gap:10px; }
+        .terms-box h2 { margin:0; font-size:0.94rem; color:#18455c; font-family:"Space Grotesk","Trebuchet MS",sans-serif; }
+        .terms-grid { display:grid; gap:8px; }
+        .terms-item { border:1px solid #dbe7f0; border-radius:10px; background:#ffffff; padding:10px; display:grid; gap:4px; }
+        .terms-item h3 { margin:0; font-size:0.76rem; text-transform:uppercase; letter-spacing:0.07em; color:#4a677d; font-family:"Space Grotesk","Trebuchet MS",sans-serif; }
+        .agree-row { border:1px solid #cfe0eb; border-radius:10px; background:#edf6f3; padding:10px; display:flex; align-items:flex-start; gap:8px; }
+        .agree-row input[type="checkbox"] { margin-top:2px; accent-color:#0f6179; }
+        .agree-row label { font-size:0.84rem; color:#264e66; font-weight:600; line-height:1.45; }
         .payment-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
         .payment-stat { border:1px solid #dbe7f0; border-radius:10px; background:#ffffff; padding:10px; display:grid; gap:4px; }
         .payment-stat .k { font-size:0.7rem; text-transform:uppercase; letter-spacing:0.07em; color:#5c7689; font-weight:700; }
@@ -54,14 +60,14 @@
         .payment-note { margin:0; color:#4a687e; font-size:0.82rem; line-height:1.45; }
         .payment-warning { margin:0; color:#8a3a12; background:#fff0e8; border:1px solid #f2cab5; border-radius:10px; padding:10px; font-size:0.82rem; line-height:1.45; }
         .payment-option-list { display:grid; gap:8px; margin-top:6px; }
+        .payment-option-list.is-disabled { opacity:0.56; pointer-events:none; }
         .payment-option { border:1px solid #dbe7f0; border-radius:10px; background:#fff; padding:10px; display:grid; grid-template-columns:auto 1fr; gap:8px; align-items:start; }
         .payment-option-title { font-weight:700; color:#173d54; font-size:0.86rem; }
         .payment-option-meta { color:#4a687e; font-size:0.78rem; }
-        .actions { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
+        .actions { margin-top:6px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+        .actions form { margin:0; }
         @media (max-width: 980px) {
             .layout { grid-template-columns:1fr; }
-            .checkout-details,
-            .payment-box,
             .checkout-summary { grid-column: auto; grid-row: auto; }
         }
         @media (max-width: 760px) {
@@ -215,6 +221,7 @@
             @endif
 
             <div class="layout">
+                <div class="left-stack">
                 <div class="grid checkout-details">
                     <div class="cell"><span class="label">Property</span><div class="value">{{ (string) ($property->name ?? 'Property') }}</div></div>
                     <div class="cell"><span class="label">Room / Service</span><div class="value">{{ $roomName !== '' ? $roomName : 'Service' }}</div></div>
@@ -225,6 +232,44 @@
                     <div class="cell"><span class="label">Primary Guest</span><div class="value">{{ trim(((string) ($summary['primary_first_name'] ?? '')) . ' ' . ((string) ($summary['primary_last_name'] ?? ''))) ?: 'Guest Customer' }}</div></div>
                     <div class="cell"><span class="label">Nationality</span><div class="value">{{ (string) ($summary['primary_nationality'] ?? '-') }}</div></div>
                 </div>
+
+                <section class="terms-box" aria-label="Booking terms and policies">
+                    <h2>Booking Terms Before Payment</h2>
+                    <div class="terms-grid">
+                        <article class="terms-item" aria-label="Cancellation policy">
+                            <h3>Cancellation Policy</h3>
+                            <div class="fine-print">Free cancellation before 23:59, one day before check-in.</div>
+                            <div class="fine-print">Cancellation fee may apply after cutoff. If you apply a discount, cancellation fee is based on total paid.</div>
+                            <div class="fine-print">All times are in the hotel's local time.</div>
+                            <div class="fine-print">{{ $cancellationPolicy }}</div>
+                        </article>
+
+                        <article class="terms-item" aria-label="Customer protection and refunds">
+                            <h3>Customer Protection</h3>
+                            <div class="fine-print">If a paid booking is cancelled from your customer portal, your request is moved to refund review and tracked end-to-end.</div>
+                            <div class="fine-print">Refunds are returned via the original payment channel (card/bank gateway used at payment).</div>
+                            <div class="fine-print">Most approved refunds are completed within 7-10 calendar days, depending on bank/gateway processing.</div>
+                        </article>
+
+                        <article class="terms-item" aria-label="Rewards and fine print">
+                            <h3>Rewards and Fine Print</h3>
+                            <div class="fine-print">Earn {{ max(1, (int) round(($roomSubtotal + $taxAmount) * 0.125)) }} Trip Coins (≈{{ $currency }} {{ number_format((($roomSubtotal + $taxAmount) * 0.005), 2) }}) after your stay.</div>
+                            <div class="fine-print">Maldives guest houses and hotels do not require a check-in deposit through this checkout flow.</div>
+                            @if ($inclusives->isNotEmpty())
+                                <div class="fine-print" style="margin-top:4px;">Inclusions:</div>
+                                <ul>
+                                    @foreach ($inclusives->take(6) as $inclusive)
+                                        <li class="fine-print">{{ $inclusive }}</li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                        </article>
+                    </div>
+                    <div class="agree-row">
+                        <input type="checkbox" id="checkoutTermsAgree" name="checkout_terms_agree" value="1">
+                        <label for="checkoutTermsAgree">I have read and agree to the cancellation policy, customer protection terms, and booking fine print before selecting payment methods.</label>
+                    </div>
+                </section>
 
                 <div class="payment-box" aria-label="Payment routing details">
                     <h2>Payment Method</h2>
@@ -238,7 +283,7 @@
                         <span class="v" id="paymentAmountDisplay">{{ $lockedPaymentCurrency }} {{ number_format($lockedPaymentAmount, 2) }}</span>
                     </div>
                     @if ($paymentOptions->isNotEmpty())
-                        <div class="payment-option-list" id="paymentOptionList">
+                        <div class="payment-option-list is-disabled" id="paymentOptionList">
                             @foreach ($paymentOptions as $paymentOption)
                                 @php
                                     $optionGateway = strtolower(trim((string) ($paymentOption['gateway'] ?? '')));
@@ -261,6 +306,7 @@
                                         data-provider-label="{{ $optionProviderLabel }}"
                                         data-amount="{{ number_format($optionAmount, 2, '.', '') }}"
                                         {{ $isChecked ? 'checked' : '' }}
+                                        disabled
                                     >
                                     <span>
                                         <span class="payment-option-title">{{ $optionProviderLabel }} ({{ $optionCurrency }})</span>
@@ -274,6 +320,7 @@
                     @endif
                     <p class="payment-note">{{ $paymentNotice }}</p>
                     <p class="payment-note">Booking total: {{ $lockedSourceCurrency }} {{ number_format($lockedSourceAmount, 2) }}. Converted payable amount updates based on your selected payment route.</p>
+                </div>
                 </div>
 
                 <aside class="mini-panel checkout-summary" aria-label="Reservation compact summary">
@@ -324,50 +371,18 @@
                         <div class="fine-print" style="margin-top:6px;">Vendor prices are treated as all-inclusive. Tax is shown for transparency and is not added again.</div>
                     </section>
 
-                    <section class="mini-section" aria-label="Cancellation policy">
-                        <h2 class="mini-title">4. Cancellation policy</h2>
-                        <div class="fine-print">Free cancellation before 23:59, one day before check-in.</div>
-                        <div class="fine-print">Cancellation fee may apply after cutoff. If you apply a discount, cancellation fee is based on total paid.</div>
-                        <div class="fine-print">All times are in the hotel's local time.</div>
-                        <div class="fine-print">{{ $cancellationPolicy }}</div>
-                    </section>
-
-                    <section class="mini-section" aria-label="Customer protection plan">
-                        <h2 class="mini-title">5. Customer protection plan</h2>
-                        <div class="fine-print">If a paid booking is cancelled from your customer portal, your request is moved to refund review and tracked end-to-end.</div>
-                        <div class="fine-print">Refunds are returned via the original payment channel (card/bank gateway used at payment).</div>
-                        <div class="fine-print">Most approved refunds are completed within 7-10 calendar days, depending on bank/gateway processing.</div>
-                        <div class="fine-print">If there is a dispute, Workation support keeps both customer and vendor updated until closure.</div>
-                    </section>
-
-                    <section class="mini-section" aria-label="Rewards">
-                        <h2 class="mini-title">6. Rewards</h2>
-                        <div class="fine-print">Earn {{ max(1, (int) round(($roomSubtotal + $taxAmount) * 0.125)) }} Trip Coins (≈{{ $currency }} {{ number_format((($roomSubtotal + $taxAmount) * 0.005), 2) }}) after your stay.</div>
-                    </section>
-
-                    <section class="mini-section" aria-label="Fine print">
-                        <h2 class="mini-title">7. Fine print</h2>
-                        <div class="fine-print">This property may require a deposit at check-in. Deposit hold release times vary by payment method.</div>
-                        @if ($inclusives->isNotEmpty())
-                            <div class="fine-print">Inclusions:</div>
-                            <ul>
-                                @foreach ($inclusives->take(6) as $inclusive)
-                                    <li class="fine-print">{{ $inclusive }}</li>
-                                @endforeach
-                            </ul>
-                        @endif
-                    </section>
                 </aside>
             </div>
 
             <div class="actions">
                 @if (!empty($reservation->id))
-                    <form method="post" action="/booking/checkout/{{ (int) $reservation->id }}/payment-intent">
+                    <form method="post" action="/booking/checkout/{{ (int) $reservation->id }}/payment-intent" id="checkoutConfirmForm">
                         @csrf
                         <input type="hidden" name="payment_selection" id="payment_selection_input" value="{{ $selectedPaymentOption }}">
                         <input type="hidden" name="payment_currency" id="payment_currency_input" value="{{ $lockedPaymentCurrency }}">
                         <input type="hidden" name="payment_gateway" id="payment_gateway_input" value="{{ $lockedPaymentGateway }}">
                         <input type="hidden" name="payment_provider" id="payment_provider_input" value="{{ $selectedProvider }}">
+                        <input type="hidden" name="checkout_terms_accepted" id="checkout_terms_accepted_input" value="0">
                         <input type="hidden" name="transfer_option" id="transfer_option_input" value="{{ $selectedTransferCode !== '' ? $selectedTransferCode : 'none' }}">
                         <input type="hidden" name="transfer_option_label" id="transfer_option_label_input" value="{{ $transferOptionDisplayLabel }}">
                         <input type="hidden" name="transfer_charge" id="transfer_charge_input" value="{{ number_format($effectiveTransferAmount, 2, '.', '') }}">
@@ -375,10 +390,10 @@
                         <p class="fine-print" style="width:100%; margin:0 0 6px;">
                             Guest nationality and residency are locked from your booking details and cannot be changed at checkout.
                         </p>
-                        <button class="btn" type="submit" {{ $hasAvailablePaymentOptions ? '' : 'disabled' }}>Confirm & Pay</button>
+                        <button class="btn primary" id="confirmPayButton" type="submit" disabled>Confirm & Pay</button>
                     </form>
                 @else
-                    <button class="btn" type="button" disabled>Confirm & Pay</button>
+                    <button class="btn primary" type="button" disabled>Confirm & Pay</button>
                 @endif
                 <a class="btn alt" href="/booking/checkout/{{ (int) ($reservation->id ?? 0) }}/transfer">Back</a>
             </div>
@@ -397,6 +412,11 @@
             const paymentCurrencyDisplay = document.getElementById('paymentCurrencyDisplay');
             const paymentGatewayDisplay = document.getElementById('paymentGatewayDisplay');
             const paymentAmountDisplay = document.getElementById('paymentAmountDisplay');
+            const checkoutTermsAgree = document.getElementById('checkoutTermsAgree');
+            const paymentOptionList = document.getElementById('paymentOptionList');
+            const confirmPayButton = document.getElementById('confirmPayButton');
+            const checkoutConfirmForm = document.getElementById('checkoutConfirmForm');
+            const checkoutTermsAcceptedInput = document.getElementById('checkout_terms_accepted_input');
 
             if (optionInputs.length === 0) {
                 return;
@@ -437,11 +457,44 @@
                 }
             };
 
+            const syncTermsState = function () {
+                const agreed = !!(checkoutTermsAgree && checkoutTermsAgree.checked);
+                optionInputs.forEach(function (input) {
+                    input.disabled = !agreed;
+                });
+                if (paymentOptionList) {
+                    paymentOptionList.classList.toggle('is-disabled', !agreed);
+                }
+                if (checkoutTermsAcceptedInput) {
+                    checkoutTermsAcceptedInput.value = agreed ? '1' : '0';
+                }
+                if (confirmPayButton) {
+                    confirmPayButton.disabled = !agreed || optionInputs.length === 0;
+                }
+            };
+
             optionInputs.forEach(function (input) {
                 input.addEventListener('change', syncPaymentSelection);
             });
 
+            if (checkoutTermsAgree) {
+                checkoutTermsAgree.addEventListener('change', syncTermsState);
+            }
+
+            if (checkoutConfirmForm) {
+                checkoutConfirmForm.addEventListener('submit', function (event) {
+                    const agreed = !!(checkoutTermsAgree && checkoutTermsAgree.checked);
+                    if (!agreed) {
+                        event.preventDefault();
+                        if (checkoutTermsAgree) {
+                            checkoutTermsAgree.focus();
+                        }
+                    }
+                });
+            }
+
             syncPaymentSelection();
+            syncTermsState();
         })();
     </script>
     @if ($errors->any())

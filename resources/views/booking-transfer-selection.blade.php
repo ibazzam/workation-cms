@@ -13,8 +13,8 @@
         body { margin:0; font-family:"Outfit","Trebuchet MS",sans-serif; color:var(--ink); background:var(--bg); }
         .page { width:min(1180px,calc(100% - 24px)); margin:14px auto 28px; }
         .panel { border:1px solid var(--line); border-radius:16px; background:var(--surface); padding:16px; display:grid; gap:12px; }
-        .title { margin:0; font-size:1.2rem; color:#153f59; }
-        .sub { margin:0; color:#4b6980; font-size:0.88rem; }
+        .title { margin:0; font-size:1.2rem; color:#173d55; font-family:"Space Grotesk","Trebuchet MS",sans-serif; }
+        .sub { margin:0; color:#4f6d82; font-size:0.9rem; }
         .process-chip { width:max-content; border:1px solid #cfe0eb; border-radius:999px; background:#edf6f3; padding:5px 10px; color:#26526c; font-size:0.74rem; font-weight:700; }
         .layout { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(320px,0.8fr); gap:12px; align-items:start; }
         .matrix-wrap { border:1px solid #dbe7f0; border-radius:12px; background:#fbfdff; padding:12px; display:grid; gap:10px; }
@@ -32,7 +32,7 @@
         .form-box { border:1px solid #dbe7f0; border-radius:12px; background:#fbfdff; padding:12px; display:grid; gap:10px; }
         .field { display:grid; gap:6px; }
         .field label { font-size:0.76rem; text-transform:uppercase; letter-spacing:0.06em; color:#3f6177; }
-        .field select { width:100%; border:1px solid #b8d9e2; border-radius:10px; padding:10px 11px; min-height:42px; font:inherit; background:#f8fdff; }
+        .field select { width:100%; border:1px solid #b8d9e2; border-radius:10px; min-height:42px; height:42px; padding:0 11px; font:inherit; background:#f8fdff; }
         .toggle { display:flex; align-items:center; gap:8px; font-size:0.84rem; color:#2a526b; font-weight:600; }
         .helper { margin:0; color:#55748a; font-size:0.78rem; line-height:1.45; }
         .summary { border:1px solid #d6e5ee; border-radius:12px; background:#f7fbff; padding:12px; display:grid; gap:7px; }
@@ -212,7 +212,7 @@
 
                     <div class="actions">
                         <a class="btn alt" href="{{ $backUrl !== '' ? $backUrl : '/' }}">Back</a>
-                        <button class="btn" type="submit">Select &amp; Continue</button>
+                        <button class="btn primary" type="submit">Select &amp; Continue</button>
                     </div>
                 </form>
             </div>

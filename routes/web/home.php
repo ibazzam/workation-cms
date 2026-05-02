@@ -455,9 +455,17 @@ Route::get('/', function () {
             ->filter(static fn (int $id) => $id > 0)
             ->unique()
             ->values();
+        $accommodationLookupIds = $allProperties
+            ->filter(static function ($property): bool {
+                return strtolower(trim((string) ($property->listing_category ?? ''))) === 'accommodation';
+            })
+            ->flatMap(static fn ($property) => workationPropertyLookupIds($property))
+            ->filter(static fn (int $id) => $id > 0)
+            ->unique()
+            ->values();
         // Hydrate property base_price from the lowest valid room price so home/category
         // cards always show a real "From" value.
-        if ($propertyIds->isNotEmpty()) {
+        if ($accommodationLookupIds->isNotEmpty()) {
             $combinedRoomPricesByProperty = collect();
 
             // Accommodation prices must come from room-level RO tables.
@@ -490,7 +498,7 @@ Route::get('/', function () {
 
                 if (!empty($legacyPriceColumns)) {
                     $legacyRoomRows = DB::table('vendor_property_room_categories')
-                        ->whereIn($legacyRoomPropertyColumn, $propertyLookupIds->all())
+                        ->whereIn($legacyRoomPropertyColumn, $accommodationLookupIds->all())
                         ->get(array_merge([$legacyRoomPropertyColumn], $legacyPriceColumns));
 
                     $legacyRoomPrices = $legacyRoomRows
@@ -524,7 +532,7 @@ Route::get('/', function () {
 
                 if (count($roomPriceColumns) > 1) {
                     $roomRows = DB::table('accommodation_rooms')
-                        ->whereIn('property_id', $propertyLookupIds->all())
+                        ->whereIn('property_id', $accommodationLookupIds->all())
                         ->when($hasRoomActiveColumn, static function ($query) {
                             $query->where(static function ($activeQuery) {
                                 $activeQuery->where('is_active', 1)
@@ -569,6 +577,11 @@ Route::get('/', function () {
 
             if ($combinedRoomPricesByProperty->isNotEmpty()) {
                 $allProperties = $allProperties->map(static function ($property) use ($combinedRoomPricesByProperty) {
+                    $category = strtolower(trim((string) ($property->listing_category ?? '')));
+                    if ($category !== 'accommodation') {
+                        return $property;
+                    }
+
                     $lookupId = collect(workationPropertyLookupIds($property))
                         ->first(static fn (int $candidateId) => $combinedRoomPricesByProperty->has($candidateId));
 

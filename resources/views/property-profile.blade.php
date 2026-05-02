@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <style>
         :root {
             --bg: #f3f8f5;
@@ -2058,12 +2059,10 @@
             padding: 6px;
         }
 
-        .location-map iframe {
+        #property-location-map {
             width: 100%;
             height: 100%;
             min-height: 308px;
-            border: 0;
-            display: block;
             border-radius: 10px;
         }
 
@@ -2498,7 +2497,7 @@
                 padding: 5px;
             }
 
-            .location-map iframe {
+            #property-location-map {
                 min-height: 248px;
             }
         }
@@ -3536,12 +3535,12 @@
                 </div>
                 <div>
                     <div class="location-map">
-                        <iframe
-                            loading="lazy"
-                            referrerpolicy="no-referrer-when-downgrade"
-                            src="https://maps.google.com/maps?q={{ urlencode($hasExactCoordinates ? ($mapLat . ',' . $mapLng) : $mapQuery) }}&t=&z=13&ie=UTF8&iwloc=&output=embed"
-                            title="Property location map"
-                        ></iframe>
+                        <div id="property-location-map"
+                            data-lat="{{ $hasExactCoordinates ? $mapLat : '' }}"
+                            data-lng="{{ $hasExactCoordinates ? $mapLng : '' }}"
+                            data-query="{{ !$hasExactCoordinates ? $mapQuery : '' }}"
+                            aria-label="Property location map"
+                        ></div>
                     </div>
                     <p class="location-map-caption">{{ $locationLine !== '' ? $locationLine : 'Map location' }}</p>
                 </div>
@@ -4768,6 +4767,28 @@
                     window.prompt('Copy this link', shareUrl);
                 }
             });
+        })();
+    </script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        (function () {
+            const mapEl = document.getElementById('property-location-map');
+            if (!mapEl || typeof window.L === 'undefined') return;
+            const lat = parseFloat(mapEl.dataset.lat);
+            const lng = parseFloat(mapEl.dataset.lng);
+            const hasCoords = !isNaN(lat) && !isNaN(lng);
+            const defaultLat = hasCoords ? lat : 3.2028;
+            const defaultLng = hasCoords ? lng : 73.2207;
+            const zoom = hasCoords ? 14 : 7;
+            const map = window.L.map(mapEl, { scrollWheelZoom: false, zoomControl: true })
+                .setView([defaultLat, defaultLng], zoom);
+            window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19,
+            }).addTo(map);
+            if (hasCoords) {
+                window.L.marker([defaultLat, defaultLng]).addTo(map);
+            }
         })();
     </script>
 </body>

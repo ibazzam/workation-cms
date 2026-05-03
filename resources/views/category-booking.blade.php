@@ -857,6 +857,14 @@
                                 <label for="serviceNotes">Additional Request (Optional)</label>
                                 <textarea id="serviceNotes" name="service_notes" placeholder="Any dietary, timing, or service request?">{{ old('service_notes', (string) ($prefill['service_notes'] ?? '')) }}</textarea>
                             </div>
+                            @if ($transferOptions->isNotEmpty())
+                                <div class="field full" style="margin-top:4px;">
+                                    <p style="margin:0 0 8px; font-size:0.74rem; font-weight:700; color:#3c5f76; text-transform:uppercase; letter-spacing:0.07em; font-family:'Space Grotesk','Trebuchet MS',sans-serif;">Transfer Departure Details <span style="font-weight:400; text-transform:none; letter-spacing:0;">(optional – complete if transfer is included)</span></p>
+                                </div>
+                                <div class="field"><label for="excursionDepartureArea">Departure Area / Jetty</label><input id="excursionDepartureArea" name="departure_area" type="text" placeholder="e.g. Malé Jetty, Hulhumalé Ferry Terminal" value="{{ old('departure_area', '') }}">@error('departure_area')<p class="error-text">{{ $message }}</p>@enderror</div>
+                                <div class="field"><label for="excursionDepartureTime">Departure Time</label><input id="excursionDepartureTime" name="departure_time" type="time" value="{{ old('departure_time', '') }}">@error('departure_time')<p class="error-text">{{ $message }}</p>@enderror</div>
+                                <div class="field"><label for="excursionReturnSlot">Return Time Slot</label><input id="excursionReturnSlot" name="return_slot" type="time" value="{{ old('return_slot', '') }}">@error('return_slot')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            @endif
                         @else
                             <div class="field"><label for="serviceStartDate">{{ (string) ($dateLabels['start'] ?? 'Service Start Date') }}</label><input id="serviceStartDate" name="service_start_date" type="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? 'datetime-local' : 'date' }}" min="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? ((string) ($todayDate ?? now()->toDateString()) . 'T00:00') : (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
                             <div class="field"><label for="serviceEndDate">{{ (string) ($dateLabels['end'] ?? 'Service End Date') }}</label><input id="serviceEndDate" name="service_end_date" type="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? 'datetime-local' : 'date' }}" min="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? ((string) ($todayDate ?? now()->toDateString()) . 'T00:00') : (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_end_date', (string) ($prefill['service_end_date'] ?? '')) }}" class="{{ $errors->has('service_end_date') ? 'input-error' : '' }}">@error('service_end_date')<p class="error-text">{{ $message }}</p>@enderror</div>
@@ -905,6 +913,12 @@
                                         <input id="{{ $fieldId }}" name="{{ $fieldKey }}" type="number" min="{{ (int) ($field['min'] ?? 0) }}" value="{{ $fieldValue }}" class="{{ $errors->has($fieldKey) ? 'input-error' : '' }}" {{ $fieldRequired ? 'required' : '' }}>
                                         @error($fieldKey)<p class="error-text">{{ $message }}</p>@enderror
                                     </div>
+                                @elseif ($fieldType === 'time')
+                                    <div class="field">
+                                        <label for="{{ $fieldId }}">{{ $fieldLabel }}</label>
+                                        <input id="{{ $fieldId }}" name="{{ $fieldKey }}" type="time" value="{{ $fieldValue }}" class="{{ $errors->has($fieldKey) ? 'input-error' : '' }}" {{ $fieldRequired ? 'required' : '' }}>
+                                        @error($fieldKey)<p class="error-text">{{ $message }}</p>@enderror
+                                    </div>
                                 @else
                                     <div class="field">
                                         <label for="{{ $fieldId }}">{{ $fieldLabel }}</label>
@@ -913,6 +927,20 @@
                                     </div>
                                 @endif
                             @endforeach
+
+                            @if ($categoryKey === 'vehicle_rental')
+                                <div class="field full" style="margin-top:8px;">
+                                    <div style="border:1px solid #cbe0ea; border-radius:10px; background:#f7fbfd; padding:10px 14px;">
+                                        <p style="margin:0 0 6px; font-size:0.78rem; font-weight:700; color:#1b3f58; text-transform:uppercase; letter-spacing:0.06em; font-family:'Space Grotesk','Trebuchet MS',sans-serif;">Rental Terms</p>
+                                        <ul style="margin:0; padding-left:18px; font-size:0.8rem; color:#3c5f76; line-height:1.7;">
+                                            <li>A valid driver's license is required at vehicle pickup. Provide your license number above.</li>
+                                            <li>Fuel policy and return condition will be confirmed at handover by the operator.</li>
+                                            <li>Late return may incur additional charges as per the rental agreement.</li>
+                                            <li>The vehicle must be returned in the same condition as received.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            @endif
 
                             <div class="field full"><label for="additionalGuestDetails">Additional Guest Details (Optional)</label><textarea id="additionalGuestDetails" name="additional_guest_details">{{ old('additional_guest_details', '') }}</textarea></div>
                             <div class="field full">

@@ -794,22 +794,40 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         ],
         'excursion' => [
             // Activity type is implied by selected listing on this page.
+            // Transfer logistics fields (departure details when transfer is included).
+            ['key' => 'departure_area', 'label' => 'Departure Area / Jetty (if transfer included)', 'type' => 'text', 'required' => false],
+            ['key' => 'departure_time', 'label' => 'Departure Time (if transfer included)', 'type' => 'time', 'required' => false],
+            ['key' => 'return_slot', 'label' => 'Return Time Slot (if transfer included)', 'type' => 'time', 'required' => false],
         ],
         'remote_workspace' => [
             ['key' => 'workspace_type', 'label' => 'Workspace Type', 'type' => 'text', 'required' => true],
+            ['key' => 'departure_area', 'label' => 'Departure Area / Jetty (if transfer included)', 'type' => 'text', 'required' => false],
+            ['key' => 'departure_time', 'label' => 'Departure Time (if transfer included)', 'type' => 'time', 'required' => false],
+            ['key' => 'return_slot', 'label' => 'Return Time Slot (if transfer included)', 'type' => 'time', 'required' => false],
         ],
         'conference_room' => [
             ['key' => 'event_type', 'label' => 'Event Type', 'type' => 'select', 'required' => true, 'options' => ['meeting' => 'Meeting', 'training' => 'Training', 'seminar' => 'Seminar', 'conference' => 'Conference', 'workshop' => 'Workshop']],
             ['key' => 'expected_capacity', 'label' => 'Expected Attendees', 'type' => 'number', 'required' => true, 'min' => 1],
+            ['key' => 'departure_area', 'label' => 'Departure Area / Jetty (if transfer included)', 'type' => 'text', 'required' => false],
+            ['key' => 'departure_time', 'label' => 'Departure Time (if transfer included)', 'type' => 'time', 'required' => false],
+            ['key' => 'return_slot', 'label' => 'Return Time Slot (if transfer included)', 'type' => 'time', 'required' => false],
         ],
         'resort_day_visit' => [
             ['key' => 'visit_package', 'label' => 'Visit Package', 'type' => 'text', 'required' => true],
+            ['key' => 'departure_area', 'label' => 'Departure Area / Jetty', 'type' => 'text', 'required' => false],
+            ['key' => 'departure_time', 'label' => 'Departure Time', 'type' => 'time', 'required' => false],
+            ['key' => 'return_slot', 'label' => 'Return Time Slot', 'type' => 'time', 'required' => false],
         ],
-        'restaurant' => [],
+        'restaurant' => [
+            ['key' => 'departure_area', 'label' => 'Departure Area / Jetty (if applicable)', 'type' => 'text', 'required' => false],
+            ['key' => 'departure_time', 'label' => 'Transfer Departure Time (if applicable)', 'type' => 'time', 'required' => false],
+            ['key' => 'return_slot', 'label' => 'Return Time (if applicable)', 'type' => 'time', 'required' => false],
+        ],
         'vehicle_rental' => [
             ['key' => 'vehicle_type', 'label' => 'Vehicle Type', 'type' => 'text', 'required' => true],
             ['key' => 'pickup_location', 'label' => 'Pickup Location', 'type' => 'text', 'required' => true],
             ['key' => 'dropoff_location', 'label' => 'Drop-off Location', 'type' => 'text', 'required' => true],
+            ['key' => 'driver_license_number', 'label' => "Driver's License Number", 'type' => 'text', 'required' => false],
         ],
     ];
 
@@ -1163,25 +1181,42 @@ Route::post('/booking/reserve-category', function (Request $request) {
             'destination_point' => ['required', 'string', 'max:120'],
         ],
         'excursion' => [
-            // No extra category fields needed; selected listing already defines the activity.
+            // Transfer logistics: departure details when transfer is included with the activity.
+            'departure_area' => ['nullable', 'string', 'max:120'],
+            'departure_time' => ['nullable', 'string', 'max:10'],
+            'return_slot' => ['nullable', 'string', 'max:10'],
         ],
         'remote_workspace' => [
             'workspace_type' => ['required', 'string', 'max:120'],
+            'departure_area' => ['nullable', 'string', 'max:120'],
+            'departure_time' => ['nullable', 'string', 'max:10'],
+            'return_slot' => ['nullable', 'string', 'max:10'],
         ],
         'conference_room' => [
             'event_type' => ['required', 'string', 'in:meeting,training,seminar,conference,workshop'],
             'expected_capacity' => ['required', 'integer', 'min:1', 'max:5000'],
             'required_facilities' => ['nullable', 'array'],
             'required_facilities.*' => ['string', 'max:60'],
+            'departure_area' => ['nullable', 'string', 'max:120'],
+            'departure_time' => ['nullable', 'string', 'max:10'],
+            'return_slot' => ['nullable', 'string', 'max:10'],
         ],
         'resort_day_visit' => [
             'visit_package' => ['required', 'string', 'max:120'],
+            'departure_area' => ['nullable', 'string', 'max:120'],
+            'departure_time' => ['nullable', 'string', 'max:10'],
+            'return_slot' => ['nullable', 'string', 'max:10'],
         ],
-        'restaurant' => [],
+        'restaurant' => [
+            'departure_area' => ['nullable', 'string', 'max:120'],
+            'departure_time' => ['nullable', 'string', 'max:10'],
+            'return_slot' => ['nullable', 'string', 'max:10'],
+        ],
         'vehicle_rental' => [
             'vehicle_type' => ['required', 'string', 'max:120'],
             'pickup_location' => ['required', 'string', 'max:120'],
             'dropoff_location' => ['required', 'string', 'max:120'],
+            'driver_license_number' => ['nullable', 'string', 'max:60'],
         ],
     ];
 
@@ -1199,6 +1234,10 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'vehicle_type' => 'vehicle type',
         'pickup_location' => 'pickup location',
         'dropoff_location' => 'drop-off location',
+        'departure_area' => 'departure area',
+        'departure_time' => 'departure time',
+        'return_slot' => 'return time slot',
+        'driver_license_number' => "driver's license number",
     ];
 
     $requestedCategoryKey = strtolower(trim((string) $request->input('category_key', '')));
@@ -1578,8 +1617,13 @@ Route::post('/booking/reserve-category', function (Request $request) {
         ]);
     }
 
+    // Non-accommodation categories handle transfer inline on the booking form and do not need the
+    // separate transfer selection step. Skip /transfer in the redirect for these categories.
+    $noTransferStepCategories = ['marine-transport', 'land-transport', 'excursion', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
+    $skipTransferStep = in_array($categoryKey, $noTransferStepCategories, true);
+
     $checkoutUrl = '/booking/checkout'
-        . ($reservationId ? ('/' . $reservationId . '/transfer') : '')
+        . ($reservationId ? ('/' . $reservationId . ($skipTransferStep ? '' : '/transfer')) : '')
         . '?property_id=' . (int) $propertyRow->id
         . '&category_key=' . urlencode($categoryKey)
         . '&room_id=0'
@@ -1930,6 +1974,15 @@ Route::get('/booking/checkout/{reservation}/transfer', function (Request $reques
     }
 
     $notes = workationReservationPaymentNotes($reservationRow);
+
+    // Non-accommodation categories (services) handle transfer inline on their booking form.
+    // Redirect directly to checkout, bypassing the separate transfer selection step.
+    $reservationCategoryKey = strtolower(trim((string) ($notes['category_key'] ?? '')));
+    $noTransferStepCategories = ['marine-transport', 'land-transport', 'excursion', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
+    if (in_array($reservationCategoryKey, $noTransferStepCategories, true)) {
+        return redirect('/booking/checkout/' . $reservation);
+    }
+
     $propertyId = (int) ($reservationRow->vendor_property_id ?? 0);
     $propertyRow = $propertyId > 0 ? VendorPropertyCompatibilityReader::loadPropertyById($propertyId) : null;
 

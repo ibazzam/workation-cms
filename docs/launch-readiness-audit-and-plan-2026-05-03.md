@@ -69,6 +69,11 @@ Examples from booking/category flow:
 - Customer portal route exists with booking aggregation and category grouping.
 - Customer auth and social routes are present (register/login/oauth/verify/reset patterns).
 
+### E. Excursions data model correction
+- A dedicated excursions category table is present and actively referenced.
+- Canonical table name in migrations and route mapping: vendor_excursion_listings.
+- Confirmed current database naming is aligned: vendor_excursion_listings.
+
 ## Key Gap Detected (Critical for Non-Accommodation Checklist)
 A dedicated transfer selection step is still part of the checkout flow path:
 - /booking/checkout/{reservation}/transfer route exists and is used in redirect flow.

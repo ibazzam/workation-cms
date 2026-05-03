@@ -100,50 +100,58 @@
 
         .breadcrumb span:last-child { color: #264d66; font-weight: 700; }
 
-        .hero {
-            border: 1px solid #cbe0ea;
-            border-radius: 18px;
-            background: linear-gradient(130deg, #0f6179 0%, #1d848c 58%, #2f9891 100%);
-            color: #ecfcff;
-            padding: 14px 16px;
-            box-shadow: 0 20px 36px rgba(15, 88, 113, 0.22);
+        .service-identity {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
         }
 
-        .hero-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-        .hero h1 { margin:0; font-size:clamp(1.18rem,2.4vw,1.9rem); }
-        .hero p { margin:6px 0 0; color:#daf5f9; }
-        .hero-badge {
-            border:1px solid rgba(216, 244, 248, 0.55);
-            background:rgba(4,64,83,0.26);
-            color:#eafcff;
-            border-radius:999px;
-            padding:6px 11px;
-            font-size:0.76rem;
-            font-weight:700;
-            text-transform:uppercase;
-            letter-spacing:0.08em;
+        .service-title-group h1 {
+            margin: 0;
+            font-size: clamp(1.18rem, 2.4vw, 1.9rem);
+            color: #174561;
+        }
+
+        .service-title-group p {
+            margin: 6px 0 0;
+            color: #49697f;
         }
 
         .hero-meta { margin-top:10px; display:flex; flex-wrap:wrap; gap:8px; }
         .hero-chip {
             border:1px solid rgba(216, 244, 248, 0.5);
-            background:rgba(4,64,83,0.25);
-            color:#eafcff;
+            background:#eef8fc;
+            color:#17526f;
             border-radius:999px;
             padding:7px 10px;
             font-size:0.78rem;
             font-weight:700;
         }
 
-        .share-card {
-            margin-top: 10px;
+        .service-review {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             border: 1px solid #cfe1ec;
-            border-radius: 14px;
-            background: #ffffff;
-            padding: 10px 12px;
+            border-radius: 999px;
+            background: #f8fcff;
+            padding: 6px 10px;
+            color: #2d5f7f;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .share-card {
+            margin-top: 8px;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            padding: 0;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-start;
             gap: 10px;
             flex-wrap: wrap;
         }
@@ -654,8 +662,35 @@
 
         $fallbackImage = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2232%22%3EService%20image%3C%2Ftext%3E%3C%2Fsvg%3E';
 
-        $locationLine = trim((string) (($property->atoll ?? '') . ' ' . ($property->island ?? '')));
-        $locationLine = $locationLine !== '' ? trim((string) (($property->atoll ?? '') . ' · ' . ($property->island ?? ''))) : 'Location details will be updated soon.';
+        $locationParts = array_values(array_filter([
+            trim((string) ($property->city ?? '')),
+            trim((string) ($property->atoll ?? '')),
+            trim((string) ($property->location_country ?? 'Maldives')),
+        ], static fn ($item): bool => $item !== ''));
+        $locationLine = $locationParts !== [] ? implode(', ', $locationParts) : 'Maldives';
+
+        $descriptionSummary = \Illuminate\Support\Str::limit(trim((string) (($listingDetails['short_description'] ?? null) ?: ($property->short_description ?? $property->description ?? ''))), 180);
+        $activityTypeLabel = trim((string) (($listingDetails['excursion_type'] ?? null) ?: ($property->excursion_type ?? '')));
+
+        $formatTimeLabel = static function ($rawValue): string {
+            $value = trim((string) $rawValue);
+            if ($value === '') {
+                return '';
+            }
+
+            $timestamp = strtotime($value);
+            if ($timestamp !== false) {
+                return date('H:i', $timestamp);
+            }
+
+            return $value;
+        };
+
+        $startTimeLabel = $formatTimeLabel(($listingDetails['activity_start_time'] ?? null) ?: ($property->activity_start_time ?? $property->start_time ?? $property->departure_time ?? ''));
+        $endTimeLabel = $formatTimeLabel(($listingDetails['activity_end_time'] ?? null) ?: ($property->activity_end_time ?? $property->end_time ?? ''));
+        $reviewScoreRaw = (float) ($property->rating ?? $property->average_rating ?? 0);
+        $reviewScore = $reviewScoreRaw > 0 ? number_format($reviewScoreRaw, 1) : 'N/A';
+        $reviewCount = (int) ($property->reviews_count ?? 0);
 
         $serviceTypeHint = match ($categoryKey) {
             'restaurant' => 'Dining Service',
@@ -724,31 +759,6 @@
             <span aria-hidden="true">›</span>
             <span>{{ (string) ($property->name ?? $categoryLabel . ' Listing') }}</span>
         </nav>
-        <section class="hero">
-            <div class="hero-top">
-                <div>
-                    <h1>{{ (string) ($property->name ?? ($categoryLabel . ' Listing')) }}</h1>
-                    <p>{{ $locationLine }}</p>
-                </div>
-                <span class="hero-badge">{{ $serviceTypeHint }}</span>
-            </div>
-            <div class="hero-meta">
-                <span class="hero-chip"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> {{ $categoryLabel }}</span>
-                <span class="hero-chip"><i class="fa-solid fa-coins" aria-hidden="true"></i> From {{ $currency }} {{ number_format($basePrice, 2) }}</span>
-                <span class="hero-chip"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i> Live booking request flow</span>
-            </div>
-        </section>
-
-        <section class="share-card" aria-label="Share this listing">
-            <span class="share-label">Share this {{ strtolower($categoryLabel) }}</span>
-            <div class="share-links">
-                <a href="https://wa.me/?text={{ $shareEncodedText }}" target="_blank" rel="noopener" title="Share on WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
-                <a href="https://www.facebook.com/sharer/sharer.php?u={{ $shareEncodedUrl }}" target="_blank" rel="noopener" title="Share on Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
-                <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ $shareEncodedUrl }}" target="_blank" rel="noopener" title="Share on LinkedIn"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i></a>
-                <button type="button" data-copy-share-link="{{ $shareUrl }}" title="Copy link"><i class="fa-solid fa-link" aria-hidden="true"></i></button>
-            </div>
-        </section>
-
         <div class="layout">
             <section class="service-content">
                 <section class="block" aria-label="Service gallery">
@@ -774,8 +784,38 @@
                     </div>
                 </section>
 
+                <section class="block" aria-label="Service overview" style="margin-top:12px;">
+                    <div class="service-identity">
+                        <div class="service-title-group">
+                            <h1>{{ (string) ($property->name ?? ($categoryLabel . ' Listing')) }}</h1>
+                            <p>{{ $locationLine }}</p>
+                            @if ($descriptionSummary !== '')
+                                <p>{{ $descriptionSummary }}</p>
+                            @endif
+                        </div>
+                        <span class="hero-chip">{{ $serviceTypeHint }}</span>
+                    </div>
+                    <div class="hero-meta">
+                        <span class="hero-chip"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> {{ $categoryLabel }}</span>
+                        @if ($activityTypeLabel !== '')
+                            <span class="hero-chip"><i class="fa-solid fa-compass" aria-hidden="true"></i> {{ str_replace('_', ' ', $activityTypeLabel) }}</span>
+                        @endif
+                        <span class="hero-chip"><i class="fa-solid fa-coins" aria-hidden="true"></i> From {{ $currency }} {{ number_format($basePrice, 2) }}</span>
+                        <span class="service-review"><i class="fa-solid fa-star" aria-hidden="true"></i> {{ $reviewScore }} ({{ number_format($reviewCount) }})</span>
+                    </div>
+                    <section class="share-card" aria-label="Share this listing">
+                        <span class="share-label">Share this {{ strtolower($categoryLabel) }}</span>
+                        <div class="share-links">
+                            <a href="https://wa.me/?text={{ $shareEncodedText }}" target="_blank" rel="noopener" title="Share on WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+                            <a href="https://www.facebook.com/sharer/sharer.php?u={{ $shareEncodedUrl }}" target="_blank" rel="noopener" title="Share on Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+                            <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ $shareEncodedUrl }}" target="_blank" rel="noopener" title="Share on LinkedIn"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i></a>
+                            <button type="button" data-copy-share-link="{{ $shareUrl }}" title="Copy link"><i class="fa-solid fa-link" aria-hidden="true"></i></button>
+                        </div>
+                    </section>
+                </section>
+
                 <section class="block" aria-label="Service details" style="margin-top:12px;">
-                    <h2 class="block-title">{{ $categoryKey === 'excursion' ? 'Activity Details' : 'Service Snapshot' }}</h2>
+                    <h2 class="block-title">{{ $categoryKey === 'excursion' ? 'Descriptions & Details' : 'Service Snapshot' }}</h2>
                     <div class="service-intel">
                         <article class="intel-card">
                             <strong>{{ $categoryKey === 'excursion' ? 'Activity' : 'Best For' }}</strong>
@@ -805,6 +845,20 @@
                                 @endif
                             </span>
                         </article>
+                        @if ($startTimeLabel !== '' || $endTimeLabel !== '')
+                        <article class="intel-card">
+                            <strong>Time Window</strong>
+                            <span>
+                                @if ($startTimeLabel !== '' && $endTimeLabel !== '')
+                                    {{ $startTimeLabel }} - {{ $endTimeLabel }}
+                                @elseif ($startTimeLabel !== '')
+                                    Starts {{ $startTimeLabel }}
+                                @else
+                                    Ends {{ $endTimeLabel }}
+                                @endif
+                            </span>
+                        </article>
+                        @endif
                     </div>
                 </section>
 
@@ -879,6 +933,12 @@
                             @endforeach
                         </ul>
                     @endif
+                </section>
+
+                <section class="block" aria-label="Similar services" style="margin-top:12px;">
+                    <h2 class="block-title">Similar {{ strtolower($categoryLabel) }} Nearby</h2>
+                    <p class="description" style="margin-top:0;">Explore similar services from the same area and compare availability, inclusions, and pricing before checkout.</p>
+                    <a class="btn" href="/catalog/{{ str_replace('_', '-', $categoryKey) }}">Browse {{ $categoryLabel }} listings</a>
                 </section>
             </section>
 
@@ -1023,16 +1083,28 @@
                             </div>
                         @endif
 
-                        <div class="field full">
-                            <label>Guest Details*</label>
-                            <p class="required-note">Given names and surname must match government-issued documents. For foreigners, use passport details. For locals, use ID card details.</p>
-                        </div>
-                        <div class="field"><label for="primaryFirstName">Given names*</label><input id="primaryFirstName" name="primary_first_name" type="text" value="{{ old('primary_first_name', (string) ($prefill['primary_first_name'] ?? '')) }}" class="{{ $errors->has('primary_first_name') ? 'input-error' : '' }}" required>@error('primary_first_name')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="primaryLastName">Surname*</label><input id="primaryLastName" name="primary_last_name" type="text" value="{{ old('primary_last_name', (string) ($prefill['primary_last_name'] ?? '')) }}" class="{{ $errors->has('primary_last_name') ? 'input-error' : '' }}" required>@error('primary_last_name')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="primaryNationality">Country / Nationality*</label><select id="primaryNationality" name="primary_nationality" class="{{ $errors->has('primary_nationality') ? 'input-error' : '' }}" required><option value="">Select country</option>@foreach ($countryOptions as $country)<option value="{{ $country['name'] }}" data-iso="{{ $country['iso'] }}" data-dial="{{ $country['dial'] }}" {{ strcasecmp($oldNationality, $country['name']) === 0 ? 'selected' : '' }}>{{ $country['name'] }}</option>@endforeach</select>@error('primary_nationality')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="primaryEmail">Email*</label><input id="primaryEmail" name="primary_email" type="email" value="{{ old('primary_email', (string) ($prefill['primary_email'] ?? '')) }}" class="{{ $errors->has('primary_email') ? 'input-error' : '' }}" required>@error('primary_email')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="primaryMobileCountryCode">Phone country code*</label><select id="primaryMobileCountryCode" name="primary_mobile_country_code" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required>@foreach ($countryOptions as $country)<option value="{{ $country['dial'] }}" data-iso="{{ $country['iso'] }}" {{ $oldPhoneCode === $country['dial'] ? 'selected' : '' }}>{{ $country['dial'] }} ({{ $country['name'] }})</option>@endforeach</select></div>
-                        <div class="field"><label for="primaryMobileLocal">Contact number*</label><input id="primaryMobileLocal" name="primary_mobile_local" type="tel" value="{{ $oldPhoneLocal }}" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required inputmode="tel">@error('primary_mobile')<p class="error-text">{{ $message }}</p>@enderror</div>
+                        @if ($categoryKey !== 'excursion')
+                            <div class="field full">
+                                <label>Guest Details*</label>
+                                <p class="required-note">Given names and surname must match government-issued documents. For foreigners, use passport details. For locals, use ID card details.</p>
+                            </div>
+                            <div class="field"><label for="primaryFirstName">Given names*</label><input id="primaryFirstName" name="primary_first_name" type="text" value="{{ old('primary_first_name', (string) ($prefill['primary_first_name'] ?? '')) }}" class="{{ $errors->has('primary_first_name') ? 'input-error' : '' }}" required>@error('primary_first_name')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="primaryLastName">Surname*</label><input id="primaryLastName" name="primary_last_name" type="text" value="{{ old('primary_last_name', (string) ($prefill['primary_last_name'] ?? '')) }}" class="{{ $errors->has('primary_last_name') ? 'input-error' : '' }}" required>@error('primary_last_name')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="primaryNationality">Country / Nationality*</label><select id="primaryNationality" name="primary_nationality" class="{{ $errors->has('primary_nationality') ? 'input-error' : '' }}" required><option value="">Select country</option>@foreach ($countryOptions as $country)<option value="{{ $country['name'] }}" data-iso="{{ $country['iso'] }}" data-dial="{{ $country['dial'] }}" {{ strcasecmp($oldNationality, $country['name']) === 0 ? 'selected' : '' }}>{{ $country['name'] }}</option>@endforeach</select>@error('primary_nationality')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="primaryEmail">Email*</label><input id="primaryEmail" name="primary_email" type="email" value="{{ old('primary_email', (string) ($prefill['primary_email'] ?? '')) }}" class="{{ $errors->has('primary_email') ? 'input-error' : '' }}" required>@error('primary_email')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="primaryMobileCountryCode">Phone country code*</label><select id="primaryMobileCountryCode" name="primary_mobile_country_code" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required>@foreach ($countryOptions as $country)<option value="{{ $country['dial'] }}" data-iso="{{ $country['iso'] }}" {{ $oldPhoneCode === $country['dial'] ? 'selected' : '' }}>{{ $country['dial'] }} ({{ $country['name'] }})</option>@endforeach</select></div>
+                            <div class="field"><label for="primaryMobileLocal">Contact number*</label><input id="primaryMobileLocal" name="primary_mobile_local" type="tel" value="{{ $oldPhoneLocal }}" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required inputmode="tel">@error('primary_mobile')<p class="error-text">{{ $message }}</p>@enderror</div>
+                        @else
+                            <input type="hidden" name="primary_first_name" value="{{ old('primary_first_name', (string) ($prefill['primary_first_name'] ?? '')) }}">
+                            <input type="hidden" name="primary_last_name" value="{{ old('primary_last_name', (string) ($prefill['primary_last_name'] ?? '')) }}">
+                            <input type="hidden" name="primary_nationality" value="{{ old('primary_nationality', (string) ($prefill['primary_nationality'] ?? '')) }}">
+                            <input type="hidden" name="primary_email" value="{{ old('primary_email', (string) ($prefill['primary_email'] ?? '')) }}">
+                            <input type="hidden" name="primary_mobile_country_code" value="{{ $oldPhoneCode }}">
+                            <input type="hidden" name="primary_mobile_local" value="{{ $oldPhoneLocal }}">
+                            <input type="hidden" name="additional_guest_details" value="{{ old('additional_guest_details', '') }}">
+                            <input type="hidden" name="payment_timing" value="{{ old('payment_timing', 'pay_now') }}">
+                            <input type="hidden" name="payment_method" value="{{ old('payment_method', 'card') }}">
+                        @endif
 
                         <div class="field full">
                             <label>Transfer option</label>
@@ -1079,20 +1151,22 @@
                             <input id="transferCharge" name="transfer_charge" type="number" step="0.01" min="0" value="{{ old('transfer_charge', '0') }}" readonly>
                         </div>
 
-                        <div class="field full">
-                            <label>Payment preferences</label>
-                            <div class="payment-choice-list">
-                                <label class="payment-choice"><input type="radio" name="payment_timing" value="pay_now" {{ old('payment_timing', 'pay_now') === 'pay_now' ? 'checked' : '' }}><span><span class="payment-choice-main">Pay now</span><span class="payment-choice-note">Secure payment before confirmation.</span></span></label>
-                                <label class="payment-choice"><input type="radio" name="payment_timing" value="pay_at_property" {{ old('payment_timing') === 'pay_at_property' ? 'checked' : '' }}><span><span class="payment-choice-main">Pay at property</span><span class="payment-choice-note">Shown for eligible local bookings.</span></span></label>
+                        @if ($categoryKey !== 'excursion')
+                            <div class="field full">
+                                <label>Payment preferences</label>
+                                <div class="payment-choice-list">
+                                    <label class="payment-choice"><input type="radio" name="payment_timing" value="pay_now" {{ old('payment_timing', 'pay_now') === 'pay_now' ? 'checked' : '' }}><span><span class="payment-choice-main">Pay now</span><span class="payment-choice-note">Secure payment before confirmation.</span></span></label>
+                                    <label class="payment-choice"><input type="radio" name="payment_timing" value="pay_at_property" {{ old('payment_timing') === 'pay_at_property' ? 'checked' : '' }}><span><span class="payment-choice-main">Pay at property</span><span class="payment-choice-note">Shown for eligible local bookings.</span></span></label>
+                                </div>
+                                <div class="payment-choice-list" id="paymentMethodList" style="margin-top:8px;">
+                                    <label class="payment-choice payment-method-option" data-scope="all"><input type="radio" name="payment_method" value="card" {{ old('payment_method', 'card') === 'card' ? 'checked' : '' }}><span><span class="payment-choice-main">Card</span><span class="payment-choice-note">Credit / debit cards.</span></span></label>
+                                    <label class="payment-choice payment-method-option" data-scope="international"><input type="radio" name="payment_method" value="apple_pay" {{ old('payment_method') === 'apple_pay' ? 'checked' : '' }}><span><span class="payment-choice-main">Apple Pay</span><span class="payment-choice-note">International guests where available.</span></span></label>
+                                    <label class="payment-choice payment-method-option" data-scope="international"><input type="radio" name="payment_method" value="google_pay" {{ old('payment_method') === 'google_pay' ? 'checked' : '' }}><span><span class="payment-choice-main">Google Pay</span><span class="payment-choice-note">International guests where available.</span></span></label>
+                                    <label class="payment-choice payment-method-option" data-scope="local"><input type="radio" name="payment_method" value="bank_transfer_mvr" {{ old('payment_method') === 'bank_transfer_mvr' ? 'checked' : '' }}><span><span class="payment-choice-main">Local Bank Transfer (MVR)</span><span class="payment-choice-note">Recommended for local nationals.</span></span></label>
+                                </div>
+                                <p class="payment-hint" id="paymentHint">Payment methods are auto-filtered by guest nationality.</p>
                             </div>
-                            <div class="payment-choice-list" id="paymentMethodList" style="margin-top:8px;">
-                                <label class="payment-choice payment-method-option" data-scope="all"><input type="radio" name="payment_method" value="card" {{ old('payment_method', 'card') === 'card' ? 'checked' : '' }}><span><span class="payment-choice-main">Card</span><span class="payment-choice-note">Credit / debit cards.</span></span></label>
-                                <label class="payment-choice payment-method-option" data-scope="international"><input type="radio" name="payment_method" value="apple_pay" {{ old('payment_method') === 'apple_pay' ? 'checked' : '' }}><span><span class="payment-choice-main">Apple Pay</span><span class="payment-choice-note">International guests where available.</span></span></label>
-                                <label class="payment-choice payment-method-option" data-scope="international"><input type="radio" name="payment_method" value="google_pay" {{ old('payment_method') === 'google_pay' ? 'checked' : '' }}><span><span class="payment-choice-main">Google Pay</span><span class="payment-choice-note">International guests where available.</span></span></label>
-                                <label class="payment-choice payment-method-option" data-scope="local"><input type="radio" name="payment_method" value="bank_transfer_mvr" {{ old('payment_method') === 'bank_transfer_mvr' ? 'checked' : '' }}><span><span class="payment-choice-main">Local Bank Transfer (MVR)</span><span class="payment-choice-note">Recommended for local nationals.</span></span></label>
-                            </div>
-                            <p class="payment-hint" id="paymentHint">Payment methods are auto-filtered by guest nationality.</p>
-                        </div>
+                        @endif
                     </div>
 
                     <p class="error-text" data-service-date-error style="display:none; margin:10px 0 0;"></p>

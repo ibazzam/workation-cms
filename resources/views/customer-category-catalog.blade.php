@@ -2485,6 +2485,9 @@
                                 ?: (property_exists($property, 'excursion_type') ? $property->excursion_type : '')
                                 ?: (property_exists($property, 'tour_type') ? $property->tour_type : '')
                             ));
+                            $activityTypeLabel = $activityType !== ''
+                                ? ucwords(str_replace('_', ' ', $activityType))
+                                : '';
                             $activityName = trim((string) (
                                 (property_exists($property, 'activity_name') ? $property->activity_name : '')
                                 ?: (property_exists($property, 'listing_name') ? $property->listing_name : '')
@@ -2659,8 +2662,8 @@
                                 <div class="card-body">
                                     <h3>{{ $activityName }}</h3>
                                     <span class="card-city">{{ $excursionLocationLabel }}</span>
-                                    @if ($activityType !== '')
-                                        <span class="card-type-chip">{{ ucwords(str_replace('_', ' ', $activityType)) }}</span>
+                                    @if ($activityTypeLabel !== '')
+                                        <span class="card-type-chip">{{ $activityTypeLabel }}</span>
                                     @endif
                                     @if ($shortDescription !== '')
                                         <p class="card-desc">{{ $shortDescription }}</p>

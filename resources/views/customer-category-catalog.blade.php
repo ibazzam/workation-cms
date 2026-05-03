@@ -1372,9 +1372,43 @@
         }
 
         .page.category-default .catalog-results-list {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
             height: auto;
             overflow: visible;
             border-right: 0;
+            background: transparent;
+        }
+
+        .page.category-default .catalog-grid {
+            display: contents;
+        }
+
+        .page.category-default .card {
+            border: 1px solid #dce7ef;
+            border-radius: 10px;
+            padding: 10px;
+            background: #ffffff;
+            display: block;
+            height: 100%;
+        }
+
+        .page.category-default .card-link {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            height: 100%;
+        }
+
+        .page.category-default .card img {
+            width: 100%;
+            height: 190px;
+            border-radius: 8px;
+        }
+
+        .page.category-default .card-body {
+            gap: 6px;
         }
 
         .page.category-default .catalog-map-panel {
@@ -1464,6 +1498,10 @@
         @media (max-width: 1100px) {
             .page.category-accommodation {
                 width: calc(100% - 18px);
+            }
+
+            .page.category-default .catalog-results-list {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
             .page.category-accommodation .catalog-results-layout {
@@ -1583,6 +1621,14 @@
             .page {
                 width: calc(100% - 18px);
                 margin: 10px auto 22px;
+            }
+
+            .page.category-default .catalog-results-list {
+                grid-template-columns: 1fr;
+            }
+
+            .page.category-default .card img {
+                height: 180px;
             }
 
             .search-primary-grid,
@@ -2333,9 +2379,6 @@
         <div class="page-body-split">
             <div class="page-main-content">
 
-        @if ($categoryKey !== 'accommodation')
-            <h2 class="section-title">Available Portfolio Items</h2>
-        @endif
         @if ($catalogProperties->isEmpty())
             <div class="empty">No listings found for this category and selected filters yet.</div>
         @else

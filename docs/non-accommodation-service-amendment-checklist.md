@@ -6,7 +6,7 @@ Owner: Product + Vendor Portal
 Last Updated: 2026-05-03
 Status Legend: [ ] Not Started, [~] In Progress, [x] Done
 
-## Marine Transport
+## Marine Transport 
 - [ ] Category listing page UX refinement
 - [ ] Individual service page refinement
 - [x] Booking form: origin and destination fields (`origin_point` / `destination_point` required fields)

@@ -1292,19 +1292,35 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
         }
 
         if (in_array($listingCategory, ['excursion', 'water_sports'], true)) {
+            $departurePoint = trim((string) ($validated['departure_point'] ?? $validated['meeting_point'] ?? ''));
+            $rawWaiverRequired = strtolower(trim((string) ($validated['safety_waiver_required'] ?? '')));
+            $waiverRequired = in_array($rawWaiverRequired, ['1', 'yes', 'true', 'on'], true)
+                ? 'yes'
+                : (in_array($rawWaiverRequired, ['0', 'no', 'false', 'off'], true) ? 'no' : '');
+            $rawEquipmentRental = strtolower(trim((string) ($validated['equipment_rental_available'] ?? '')));
+            $equipmentRental = in_array($rawEquipmentRental, ['1', 'yes', 'true', 'on'], true)
+                ? 'yes'
+                : (in_array($rawEquipmentRental, ['0', 'no', 'false', 'off'], true) ? 'no' : '');
+
+            $details['short_description'] = trim((string) ($validated['short_description'] ?? ''));
             $details['excursion_duration_minutes'] = isset($validated['excursion_duration_minutes']) ? (int) $validated['excursion_duration_minutes'] : null;
+            $details['activity_start_time'] = trim((string) ($validated['activity_start_time'] ?? ''));
+            $details['activity_end_time'] = trim((string) ($validated['activity_end_time'] ?? ''));
             $details['excursion_difficulty'] = trim((string) ($validated['excursion_difficulty'] ?? ''));
             $details['excursion_type'] = trim((string) ($validated['excursion_type'] ?? ''));
             $details['excursion_min_pax'] = isset($validated['excursion_min_pax']) && $validated['excursion_min_pax'] !== '' ? (int) $validated['excursion_min_pax'] : null;
             $details['excursion_max_pax'] = isset($validated['excursion_max_pax']) && $validated['excursion_max_pax'] !== '' ? (int) $validated['excursion_max_pax'] : null;
             $details['excursion_min_age'] = isset($validated['excursion_min_age']) && $validated['excursion_min_age'] !== '' ? (int) $validated['excursion_min_age'] : null;
-            $details['meeting_point'] = trim((string) ($validated['meeting_point'] ?? ''));
+            $details['departure_point'] = $departurePoint;
+            $details['departure_time'] = trim((string) ($validated['departure_time'] ?? ''));
+            $details['meeting_point'] = $departurePoint !== '' ? $departurePoint : trim((string) ($validated['meeting_point'] ?? ''));
             $details['inclusions'] = trim((string) ($validated['inclusions'] ?? ''));
             $details['exclusions'] = trim((string) ($validated['exclusions'] ?? ''));
-            $details['safety_waiver_required'] = trim((string) ($validated['safety_waiver_required'] ?? ''));
-            $details['equipment_rental_available'] = trim((string) ($validated['equipment_rental_available'] ?? ''));
+            $details['safety_waiver_required'] = $waiverRequired;
+            $details['equipment_rental_available'] = $equipmentRental;
             $details['equipment_included'] = vendorPortalNormalizedStringList($validated['equipment_included'] ?? []);
             $details['weather_cancellation_policy'] = trim((string) ($validated['weather_cancellation_policy'] ?? ''));
+            $details['cancellation_policy'] = trim((string) ($validated['cancellation_policy'] ?? ''));
         }
 
         if ($listingCategory === 'remote_workspace') {

@@ -2387,17 +2387,33 @@
                             $price = (float) ($property->base_price ?? 0);
                             $cityName = trim((string) ($property->city ?? $property->island ?? $property->atoll ?? ''));
                             $isExcursionCard = $categoryKey === 'excursion';
+                            $cardDetails = [];
+                            $cardDetailsSource = $property->listing_details ?? null;
+                            if (is_array($cardDetailsSource)) {
+                                $cardDetails = $cardDetailsSource;
+                            } elseif (is_object($cardDetailsSource)) {
+                                $cardDetails = (array) $cardDetailsSource;
+                            } elseif (is_string($cardDetailsSource) && trim($cardDetailsSource) !== '') {
+                                $decodedCardDetails = json_decode($cardDetailsSource, true);
+                                if (is_array($decodedCardDetails)) {
+                                    $cardDetails = $decodedCardDetails;
+                                }
+                            }
                             $fromIsland = trim((string) ($property->island ?? ''));
                             $fromCity = trim((string) ($property->city ?? ''));
                             $fromAtoll = trim((string) ($property->atoll ?? ''));
-                            $fromPrimary = $fromIsland !== '' ? $fromIsland : $fromCity;
-                            $originLabel = $fromPrimary !== '' ? $fromPrimary : ($cityName !== '' ? $cityName : 'Maldives');
-                            if ($fromAtoll !== '' && stripos($originLabel, $fromAtoll) === false) {
-                                $originLabel .= ', ' . $fromAtoll;
-                            }
+                            $fromCountry = trim((string) ($property->location_country ?? $property->country ?? ($cardDetails['location_country'] ?? 'Maldives')));
+                            $originParts = array_values(array_filter([
+                                $fromIsland !== '' ? $fromIsland : $fromCity,
+                                $fromAtoll,
+                                $fromCountry,
+                            ], static fn ($item): bool => trim((string) $item) !== ''));
+                            $originLabel = $originParts !== [] ? implode(', ', $originParts) : 'Maldives';
                             $activityType = trim((string) (
                                 (property_exists($property, 'activity_type') ? $property->activity_type : '')
+                                ?: ($cardDetails['activity_type'] ?? '')
                                 ?: (property_exists($property, 'excursion_type') ? $property->excursion_type : '')
+                                ?: ($cardDetails['excursion_type'] ?? '')
                                 ?: (property_exists($property, 'tour_type') ? $property->tour_type : '')
                             ));
                             $activityName = trim((string) (
@@ -2407,10 +2423,11 @@
                             ));
                             $descriptionSource = trim((string) (
                                 (property_exists($property, 'short_description') ? $property->short_description : '')
+                                ?: ($cardDetails['short_description'] ?? '')
                                 ?: (property_exists($property, 'tagline') ? $property->tagline : '')
                                 ?: ($property->description ?? '')
                             ));
-                            $shortDescription = \Illuminate\Support\Str::limit($descriptionSource, 96);
+                            $shortDescription = \Illuminate\Support\Str::limit(strip_tags($descriptionSource), 120);
 
                             $formatTimeLabel = static function ($rawValue): string {
                                 $value = trim((string) $rawValue);
@@ -2432,13 +2449,19 @@
 
                             $startTimeRaw =
                                 (property_exists($property, 'start_time') ? $property->start_time : null)
+                                ?? ($cardDetails['start_time'] ?? null)
                                 ?? (property_exists($property, 'departure_time') ? $property->departure_time : null)
+                                ?? ($cardDetails['departure_time'] ?? null)
                                 ?? (property_exists($property, 'activity_start_time') ? $property->activity_start_time : null)
+                                ?? ($cardDetails['activity_start_time'] ?? null)
                                 ?? (property_exists($property, 'start_at') ? $property->start_at : null);
                             $endTimeRaw =
                                 (property_exists($property, 'end_time') ? $property->end_time : null)
+                                ?? ($cardDetails['end_time'] ?? null)
                                 ?? (property_exists($property, 'return_time') ? $property->return_time : null)
+                                ?? ($cardDetails['return_time'] ?? null)
                                 ?? (property_exists($property, 'activity_end_time') ? $property->activity_end_time : null)
+                                ?? ($cardDetails['activity_end_time'] ?? null)
                                 ?? (property_exists($property, 'end_at') ? $property->end_at : null);
 
                             $startTimeLabel = $formatTimeLabel($startTimeRaw);
@@ -2571,7 +2594,7 @@
                                 @endphp
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                                 <div class="card-body">
-                                    <span class="card-city">{{ $isExcursionCard ? ('From ' . $originLabel) : ($cityName !== '' ? $cityName : 'Maldives') }}</span>
+                                    <span class="card-city">{{ $isExcursionCard ? $originLabel : ($cityName !== '' ? $cityName : 'Maldives') }}</span>
                                     @if ($isExcursionCard && $activityType !== '')
                                         <span class="card-type-chip">{{ str_replace('_', ' ', $activityType) }}</span>
                                     @endif

@@ -1390,6 +1390,10 @@
             border-collapse: collapse;
         }
 
+        .reservation-ops-table {
+            min-width: 1480px;
+        }
+
         .ops-table th,
         .ops-table td {
             text-align: left;

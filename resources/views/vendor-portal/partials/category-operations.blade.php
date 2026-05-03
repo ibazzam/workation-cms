@@ -407,6 +407,9 @@
                             return strtoupper($rawMealPlan);
                         })(),
                         'transfer_method' => trim((string) ($reservationNotes['transfer_option_label'] ?? $reservationNotes['transfer_option'] ?? 'Not selected')),
+                        'departure_area' => trim((string) ($reservationNotes['departure_area'] ?? '')),
+                        'departure_time_booked' => trim((string) ($reservationNotes['departure_time'] ?? '')),
+                        'return_slot' => trim((string) ($reservationNotes['return_slot'] ?? '')),
                         'special_request' => trim((string) ($reservationNotes['service_notes'] ?? $reservationNotes['additional_guest_details'] ?? '')),
                         'customer_name' => (string) ($reservation->customer_name ?? ''),
                         'customer_email' => (string) ($reservation->customer_email ?? ''),
@@ -894,11 +897,18 @@
                                     <tr>
                                         <th>Booking / Reservation</th>
                                         <th>Guest Information</th>
-                                        <th>Occupancy</th>
-                                        <th>Stay</th>
-                                        <th>Service / Room</th>
-                                        <th>Meal Plan</th>
-                                        <th>Transfer Option</th>
+                                        @if ($categoryKey === 'excursion')
+                                            <th>Participants</th>
+                                            <th>Activity Date</th>
+                                            <th>Activity / Listing</th>
+                                            <th>Departure Details</th>
+                                        @else
+                                            <th>Occupancy</th>
+                                            <th>Stay</th>
+                                            <th>Service / Room</th>
+                                            <th>Meal Plan</th>
+                                            <th>Transfer Option</th>
+                                        @endif
                                         <th>Payment Status</th>
                                         <th>Status</th>
                                         <th>Special Request</th>
@@ -942,24 +952,51 @@
                                                 {{ (string) ($reservationRow['customer_email'] ?? '') }}<br>
                                                 Nationality: {{ (string) ($reservationRow['primary_nationality'] ?? 'Unknown') }}
                                             </td>
-                                            <td>
-                                                {{ $totalGuests }} total<br>
-                                                A{{ $adults }} / C{{ $children }} / I{{ $infants }}
-                                            </td>
-                                            <td>
-                                                Check-in: {{ $checkInDateLabel }}<br>
-                                                Check-out: {{ $checkOutDateLabel }}<br>
-                                                Nights: {{ $nights }}
-                                            </td>
-                                            <td>
-                                                {{ (string) ($reservationRow['room_label'] ?? $reservationRow['target_label'] ?? 'N/A') }}
-                                            </td>
-                                            <td>
-                                                {{ (string) ($reservationRow['meal_plan'] ?? 'RO') }}
-                                            </td>
-                                            <td>
-                                                {{ (string) ($reservationRow['transfer_method'] ?? 'Not selected') }}
-                                            </td>
+                                            @if ($categoryKey === 'excursion')
+                                                <td>
+                                                    {{ $totalGuests }} total<br>
+                                                    A{{ $adults }} / C{{ $children }} / I{{ $infants }}
+                                                </td>
+                                                <td>
+                                                    {{ $checkInDateLabel }}
+                                                </td>
+                                                <td>
+                                                    {{ (string) ($reservationRow['room_label'] ?? $reservationRow['target_label'] ?? 'N/A') }}
+                                                </td>
+                                                <td>
+                                                    @if (trim((string) ($reservationRow['departure_area'] ?? '')) !== '')
+                                                        Area: {{ (string) ($reservationRow['departure_area'] ?? '') }}<br>
+                                                    @endif
+                                                    @if (trim((string) ($reservationRow['departure_time_booked'] ?? '')) !== '')
+                                                        Time: {{ (string) ($reservationRow['departure_time_booked'] ?? '') }}<br>
+                                                    @endif
+                                                    @if (trim((string) ($reservationRow['return_slot'] ?? '')) !== '')
+                                                        Return: {{ (string) ($reservationRow['return_slot'] ?? '') }}
+                                                    @endif
+                                                    @if (trim((string) ($reservationRow['departure_area'] ?? '')) === '' && trim((string) ($reservationRow['departure_time_booked'] ?? '')) === '' && trim((string) ($reservationRow['return_slot'] ?? '')) === '')
+                                                        —
+                                                    @endif
+                                                </td>
+                                            @else
+                                                <td>
+                                                    {{ $totalGuests }} total<br>
+                                                    A{{ $adults }} / C{{ $children }} / I{{ $infants }}
+                                                </td>
+                                                <td>
+                                                    Check-in: {{ $checkInDateLabel }}<br>
+                                                    Check-out: {{ $checkOutDateLabel }}<br>
+                                                    Nights: {{ $nights }}
+                                                </td>
+                                                <td>
+                                                    {{ (string) ($reservationRow['room_label'] ?? $reservationRow['target_label'] ?? 'N/A') }}
+                                                </td>
+                                                <td>
+                                                    {{ (string) ($reservationRow['meal_plan'] ?? 'RO') }}
+                                                </td>
+                                                <td>
+                                                    {{ (string) ($reservationRow['transfer_method'] ?? 'Not selected') }}
+                                                </td>
+                                            @endif
                                             <td>
                                                 {{ strtoupper((string) ($reservationRow['payment_status'] ?? 'unpaid')) }}
                                             </td>
@@ -1014,7 +1051,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="11" class="ops-empty">No reservations for {{ strtolower($labelForCategory($categoryKey)) }} in {{ $reservationScope }} scope.</td>
+                                            <td colspan="{{ $categoryKey === 'excursion' ? 10 : 11 }}" class="ops-empty">No reservations for {{ strtolower($labelForCategory($categoryKey)) }} in {{ $reservationScope }} scope.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>

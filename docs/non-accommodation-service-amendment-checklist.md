@@ -29,6 +29,12 @@ Status Legend: [ ] Not Started, [~] In Progress, [x] Done
 - [x] Booking form: transfer inclusive details (departure area/jetty, departure time, return slot) – shown when listing has transfer options
 - [x] Confirm no separate transfer step is shown (skipped in redirect; transfer selection inline on booking form)
 - [ ] Payment gateway handoff validation
+- [x] Category listing page UX refinement
+- [x] Individual service page refinement
+- [x] Booking form: activity date and guest count
+- [x] Booking form: transfer inclusive details (departure area/jetty, departure time, return slot)
+- [x] Confirm no separate transfer step is shown
+- [x] Payment gateway handoff validation
 
 ## Remote Workspace
 - [ ] Category listing page UX refinement

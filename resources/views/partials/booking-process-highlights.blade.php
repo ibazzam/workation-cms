@@ -1,14 +1,18 @@
 @php
-    $bookingProcessCurrentStep = max(1, min(4, (int) ($bookingProcessCurrentStep ?? 1)));
     $bookingProcessTitle = trim((string) ($bookingProcessTitle ?? 'Booking Process Highlights'));
     $bookingProcessBackUrl = trim((string) ($bookingProcessBackUrl ?? url()->previous('/')));
     $bookingProcessNextText = trim((string) ($bookingProcessNextText ?? ''));
-    $bookingProcessSteps = [
+    $bookingProcessSteps = (array) ($bookingProcessSteps ?? [
         1 => '1. Guest Details',
         2 => '2. Transfer Selection',
         3 => '3. Payment Method',
         4 => '4. Final Confirmation',
-    ];
+    ]);
+    if ($bookingProcessSteps === []) {
+        $bookingProcessSteps = [1 => '1. Guest Details'];
+    }
+    $bookingProcessMaxStep = max(1, count($bookingProcessSteps));
+    $bookingProcessCurrentStep = max(1, min($bookingProcessMaxStep, (int) ($bookingProcessCurrentStep ?? 1)));
 @endphp
 
 <style>

@@ -4,13 +4,27 @@
     <input type="hidden" name="listing_category" value="excursion">
 
     <div class="ops-form-grid">
+
+        {{-- ── Basic Information ─────────────────────────────────────────── --}}
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-bottom:2px;">
+            <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Basic Information</p>
+        </div>
         <div class="ops-field ops-field-wide">
-            <label for="property_name">Listing Name</label>
+            <label for="property_name">Activity Name <span style="color:#c0392b;">*</span></label>
             <input id="property_name" name="name" class="ops-input" type="text" maxlength="160" value="{{ old('name', $property->name ?? '') }}" required>
         </div>
         <div class="ops-field ops-field-wide">
-            <label for="property_description">Description</label>
-            <textarea id="property_description" name="description" class="ops-textarea" maxlength="3000" required>{{ old('description', $property->description ?? '') }}</textarea>
+            <label for="property_short_description">Short Tagline <span style="font-weight:400; color:#5b7488;">(shown on listing card — max 160 chars)</span></label>
+            <input id="property_short_description" name="short_description" class="ops-input" type="text" maxlength="160" value="{{ old('short_description', $propertyDetails['short_description'] ?? '') }}" placeholder="One-line summary displayed on the excursion card">
+        </div>
+        <div class="ops-field ops-field-wide">
+            <label for="property_description">Full Description <span style="color:#c0392b;">*</span></label>
+            <textarea id="property_description" name="description" class="ops-textarea" maxlength="3000" rows="5" required>{{ old('description', $property->description ?? '') }}</textarea>
+        </div>
+
+        {{-- ── Activity Details ──────────────────────────────────────────── --}}
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
+            <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Activity Details</p>
         </div>
         <div class="ops-field">
             <label for="property_excursion_type">Excursion Type</label>
@@ -25,17 +39,49 @@
             </select>
         </div>
         <div class="ops-field">
-            <label for="property_excursion_difficulty">Difficulty</label>
+            <label for="property_excursion_difficulty">Difficulty Level</label>
             <select id="property_excursion_difficulty" name="excursion_difficulty" class="ops-select">
                 <option value="">Select</option>
-                @foreach (['easy' => 'Easy', 'moderate' => 'Moderate', 'hard' => 'Challenging', 'extreme' => 'Extreme'] as $diffVal => $diffLabel)
+                @foreach (['easy' => 'Easy — suitable for all ages', 'moderate' => 'Moderate — some fitness required', 'hard' => 'Challenging — active participants', 'extreme' => 'Extreme — experienced only'] as $diffVal => $diffLabel)
                     <option value="{{ $diffVal }}" @selected(old('excursion_difficulty', $propertyDetails['excursion_difficulty'] ?? '') === $diffVal)>{{ $diffLabel }}</option>
                 @endforeach
             </select>
         </div>
         <div class="ops-field">
             <label for="property_excursion_duration_minutes">Duration (minutes)</label>
-            <input id="property_excursion_duration_minutes" name="excursion_duration_minutes" class="ops-input" type="number" min="1" value="{{ old('excursion_duration_minutes', $propertyDetails['excursion_duration_minutes'] ?? '') }}">
+            <input id="property_excursion_duration_minutes" name="excursion_duration_minutes" class="ops-input" type="number" min="15" step="15" value="{{ old('excursion_duration_minutes', $propertyDetails['excursion_duration_minutes'] ?? '') }}" placeholder="e.g. 120">
+        </div>
+        <div class="ops-field">
+            <label for="property_activity_start_time">Activity Start Time</label>
+            <input id="property_activity_start_time" name="activity_start_time" class="ops-input" type="time" value="{{ old('activity_start_time', $propertyDetails['activity_start_time'] ?? '') }}">
+        </div>
+        <div class="ops-field">
+            <label for="property_activity_end_time">Activity End Time</label>
+            <input id="property_activity_end_time" name="activity_end_time" class="ops-input" type="time" value="{{ old('activity_end_time', $propertyDetails['activity_end_time'] ?? '') }}">
+        </div>
+
+        {{-- ── Departure & Assembly Point ────────────────────────────────── --}}
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
+            <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Departure & Assembly Point</p>
+        </div>
+        <div class="ops-field ops-field-wide">
+            <label for="property_departure_point">Reporting / Departure Location</label>
+            <input id="property_departure_point" name="departure_point" class="ops-input" type="text" maxlength="255" value="{{ old('departure_point', $propertyDetails['departure_point'] ?? ($property->departure_point ?? '')) }}" placeholder="e.g. Male' Jetty Gate 3, Hotel lobby pickup">
+            <p class="map-help">Shown on the excursion detail page under "Departure & Assembly Point".</p>
+        </div>
+        <div class="ops-field">
+            <label for="property_departure_time">Standard Departure Time</label>
+            <input id="property_departure_time" name="departure_time" class="ops-input" type="time" value="{{ old('departure_time', $propertyDetails['departure_time'] ?? ($property->departure_time ?? '')) }}">
+            <p class="map-help">Default departure; guests can confirm at checkout.</p>
+        </div>
+        <div class="ops-field">
+            <label for="property_service_radius_km">Service Radius (km)</label>
+            <input id="property_service_radius_km" name="service_radius_km" class="ops-input" type="number" min="0" step="0.1" value="{{ old('service_radius_km', $propertyDetails['service_radius_km'] ?? '') }}">
+        </div>
+
+        {{-- ── Participants & Capacity ───────────────────────────────────── --}}
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
+            <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Participants & Capacity</p>
         </div>
         <div class="ops-field">
             <label for="property_excursion_min_pax">Min Participants</label>
@@ -47,48 +93,55 @@
         </div>
         <div class="ops-field">
             <label for="property_excursion_min_age">Minimum Age</label>
-            <input id="property_excursion_min_age" name="excursion_min_age" class="ops-input" type="number" min="0" max="120" value="{{ old('excursion_min_age', $propertyDetails['excursion_min_age'] ?? '') }}">
+            <input id="property_excursion_min_age" name="excursion_min_age" class="ops-input" type="number" min="0" max="120" value="{{ old('excursion_min_age', $propertyDetails['excursion_min_age'] ?? '') }}" placeholder="0 = no restriction">
         </div>
         <div class="ops-field">
-            <label for="property_max_guests">Max Guests</label>
+            <label for="property_max_guests">Overall Capacity (max guests)</label>
             <input id="property_max_guests" name="max_guests" class="ops-input" type="number" min="1" value="{{ old('max_guests', $propertyDetails['max_guests'] ?? '') }}">
         </div>
-        <div class="ops-field">
-            <label for="property_service_radius_km">Service Radius (km)</label>
-            <input id="property_service_radius_km" name="service_radius_km" class="ops-input" type="number" min="0" step="0.1" value="{{ old('service_radius_km', $propertyDetails['service_radius_km'] ?? '') }}">
+
+        {{-- ── Inclusions & Exclusions ───────────────────────────────────── --}}
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
+            <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Inclusions & Exclusions</p>
         </div>
         <div class="ops-field ops-field-wide">
-            <label for="property_meeting_point">Meeting Point</label>
-            <input id="property_meeting_point" name="meeting_point" class="ops-input" type="text" maxlength="200" value="{{ old('meeting_point', $propertyDetails['meeting_point'] ?? '') }}">
+            <label for="property_inclusions">What's Included</label>
+            <textarea id="property_inclusions" name="inclusions" class="ops-textarea" rows="4" maxlength="2000" placeholder="e.g. Snorkelling gear, guide, refreshments, boat transfer">{{ old('inclusions', $propertyDetails['inclusions'] ?? '') }}</textarea>
         </div>
         <div class="ops-field ops-field-wide">
-            <label for="property_inclusions">Inclusions</label>
-            <textarea id="property_inclusions" name="inclusions" class="ops-textarea" rows="3" maxlength="2000">{{ old('inclusions', $propertyDetails['inclusions'] ?? '') }}</textarea>
+            <label for="property_exclusions">What's Not Included</label>
+            <textarea id="property_exclusions" name="exclusions" class="ops-textarea" rows="3" maxlength="2000" placeholder="e.g. Personal insurance, hotel transfer, gratuity">{{ old('exclusions', $propertyDetails['exclusions'] ?? '') }}</textarea>
         </div>
-        <div class="ops-field ops-field-wide">
-            <label for="property_exclusions">Exclusions</label>
-            <textarea id="property_exclusions" name="exclusions" class="ops-textarea" rows="3" maxlength="2000">{{ old('exclusions', $propertyDetails['exclusions'] ?? '') }}</textarea>
+
+        {{-- ── Safety & Equipment ────────────────────────────────────────── --}}
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
+            <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Safety & Equipment</p>
         </div>
         <div class="ops-field">
             <label for="property_safety_waiver_required">Safety Waiver Required?</label>
             <select id="property_safety_waiver_required" name="safety_waiver_required" class="ops-select">
                 <option value="0" @selected(!old('safety_waiver_required', $propertyDetails['safety_waiver_required'] ?? false))>No</option>
-                <option value="1" @selected((bool) old('safety_waiver_required', $propertyDetails['safety_waiver_required'] ?? false))>Yes</option>
+                <option value="1" @selected((bool) old('safety_waiver_required', $propertyDetails['safety_waiver_required'] ?? false))>Yes — guests must sign before departure</option>
             </select>
         </div>
         <div class="ops-field">
             <label for="property_equipment_rental_available">Equipment Rental?</label>
             <select id="property_equipment_rental_available" name="equipment_rental_available" class="ops-select">
                 <option value="0" @selected(!old('equipment_rental_available', $propertyDetails['equipment_rental_available'] ?? false))>No</option>
-                <option value="1" @selected((bool) old('equipment_rental_available', $propertyDetails['equipment_rental_available'] ?? false))>Yes</option>
+                <option value="1" @selected((bool) old('equipment_rental_available', $propertyDetails['equipment_rental_available'] ?? false))>Yes — gear available on request</option>
             </select>
         </div>
         <div class="ops-field ops-field-wide">
             <label for="property_weather_cancellation_policy">Weather Cancellation Policy</label>
-            <textarea id="property_weather_cancellation_policy" name="weather_cancellation_policy" class="ops-textarea" rows="2" maxlength="1000">{{ old('weather_cancellation_policy', $propertyDetails['weather_cancellation_policy'] ?? '') }}</textarea>
+            <textarea id="property_weather_cancellation_policy" name="weather_cancellation_policy" class="ops-textarea" rows="2" maxlength="1000" placeholder="e.g. Full refund if cancelled due to adverse weather">{{ old('weather_cancellation_policy', $propertyDetails['weather_cancellation_policy'] ?? '') }}</textarea>
+        </div>
+
+        {{-- ── Location ──────────────────────────────────────────────────── --}}
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
+            <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Location</p>
         </div>
         <div class="ops-field">
-            <label for="location_country">Country</label>
+            <label for="location_country">Country <span style="color:#c0392b;">*</span></label>
             <select id="location_country" name="location_country" class="ops-select" data-edit-country data-selected-value="{{ old('location_country', $propertyDetails['location_country'] ?? 'Maldives') }}" required>
                 <option value="Maldives">Maldives</option>
                 <option value="Sri Lanka">Sri Lanka</option>
@@ -97,13 +150,13 @@
             </select>
         </div>
         <div class="ops-field">
-            <label for="location_state">Atoll</label>
+            <label for="location_state">Atoll <span style="color:#c0392b;">*</span></label>
             <select id="location_state" name="location_state" class="ops-select" data-edit-state data-selected-value="{{ old('location_state', $propertyDetails['location_state'] ?? '') }}" required>
                 <option value="">Select atoll</option>
             </select>
         </div>
         <div class="ops-field">
-            <label for="location_city">Island</label>
+            <label for="location_city">Island <span style="color:#c0392b;">*</span></label>
             <select id="location_city" name="location_city" class="ops-select" data-edit-city data-selected-value="{{ old('location_city', $propertyDetails['location_city'] ?? '') }}" required>
                 <option value="">Select island</option>
             </select>
@@ -112,15 +165,20 @@
         <input name="map_longitude" type="hidden" value="{{ old('map_longitude', $propertyDetails['map_longitude'] ?? '') }}">
         <input name="map_place_id" type="hidden" value="{{ old('map_place_id', $propertyDetails['map_place_id'] ?? '') }}">
         <div class="ops-field ops-field-wide">
-            <div class="map-picker"><div data-edit-map-wrap aria-label="Edit meeting point pin"></div></div>
+            <div class="map-picker"><div data-edit-map-wrap aria-label="Edit departure point pin"></div></div>
+        </div>
+
+        {{-- ── Booking Policies ──────────────────────────────────────────── --}}
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
+            <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Booking Policies</p>
         </div>
         <div class="ops-field ops-field-wide">
             <label for="property_cancellation_policy">Cancellation Policy</label>
-            <textarea id="property_cancellation_policy" name="cancellation_policy" class="ops-textarea" rows="3" maxlength="2000">{{ old('cancellation_policy', $propertyDetails['cancellation_policy'] ?? '') }}</textarea>
+            <textarea id="property_cancellation_policy" name="cancellation_policy" class="ops-textarea" rows="3" maxlength="2000" placeholder="e.g. Free cancellation up to 24 hours before departure">{{ old('cancellation_policy', $propertyDetails['cancellation_policy'] ?? '') }}</textarea>
         </div>
     </div>
 
-    <div class="inline-actions" style="margin-top:12px;">
+    <div class="inline-actions" style="margin-top:16px;">
         <button class="btn btn-primary" type="submit">Save Changes</button>
         <a class="btn btn-secondary" href="/vendor/listings/excursion">Cancel</a>
     </div>

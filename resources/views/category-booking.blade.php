@@ -9,17 +9,82 @@
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        :root { --bg:#f3f8f5; --ink:#152738; --muted:#5f7488; --line:#d5e2ec; --surface:#ffffff; --brand:#0f6179; --accent:#f3a337; }
+        :root { --bg:#f3f8f5; --ink:#152738; --muted:#5f7488; --line:#d5e2ec; --surface:#ffffff; --brand:#0f6179; --accent:#f3a337; --property-header-offset:74px; }
         * { box-sizing:border-box; }
         body { margin:0; font-family:"Outfit","Trebuchet MS",sans-serif; color:var(--ink); background:var(--bg); }
-        .page { width:min(1180px,calc(100% - 24px)); margin:14px auto 28px; }
+        body.is-header-hidden { --property-header-offset:0px; }
+        .page { width:min(1180px,calc(100% - 24px)); margin:0 auto 28px; }
+
+        .top-search-shell {
+            position: sticky;
+            top: var(--property-header-offset);
+            z-index: 60;
+            border: 1px solid #d4e5ef;
+            border-radius: 0;
+            background: #ffffff;
+            padding: 10px;
+            box-shadow: none;
+            margin-bottom: 0;
+            width: 100%;
+        }
+
+        .top-search-inner {
+            width: min(1180px, calc(100% - 24px));
+            margin: 0 auto;
+        }
+
+        .top-search-form {
+            display: grid;
+            grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(140px, 1fr)) auto;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .top-search-field {
+            border: 1px solid #c6d7e4;
+            border-radius: 8px;
+            padding: 8px 10px;
+            background: #fbfdff;
+            color: #17344a;
+            display: grid;
+            gap: 2px;
+        }
+
+        .top-search-field label {
+            font-size: 0.68rem;
+            color: #5f7488;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+        }
+
+        .top-search-field input {
+            border: 0;
+            background: transparent;
+            font: inherit;
+            font-size: 0.88rem;
+            color: #17344a;
+            padding: 0;
+            outline: none;
+        }
+
+        .top-search-btn {
+            border: 1px solid #0f6179;
+            background: #0f6179;
+            color: #ffffff;
+            border-radius: 8px;
+            padding: 11px 16px;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
 
         .breadcrumb {
             display: flex;
             align-items: center;
             flex-wrap: wrap;
             gap: 4px 6px;
-            margin-top: 14px;
             margin-bottom: 10px;
             font-size: 0.78rem;
             color: #5f7488;
@@ -35,50 +100,58 @@
 
         .breadcrumb span:last-child { color: #264d66; font-weight: 700; }
 
-        .hero {
-            border: 1px solid #cbe0ea;
-            border-radius: 18px;
-            background: linear-gradient(130deg, #0f6179 0%, #1d848c 58%, #2f9891 100%);
-            color: #ecfcff;
-            padding: 14px 16px;
-            box-shadow: 0 20px 36px rgba(15, 88, 113, 0.22);
+        .service-identity {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
         }
 
-        .hero-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-        .hero h1 { margin:0; font-size:clamp(1.18rem,2.4vw,1.9rem); }
-        .hero p { margin:6px 0 0; color:#daf5f9; }
-        .hero-badge {
-            border:1px solid rgba(216, 244, 248, 0.55);
-            background:rgba(4,64,83,0.26);
-            color:#eafcff;
-            border-radius:999px;
-            padding:6px 11px;
-            font-size:0.76rem;
-            font-weight:700;
-            text-transform:uppercase;
-            letter-spacing:0.08em;
+        .service-title-group h1 {
+            margin: 0;
+            font-size: clamp(1.18rem, 2.4vw, 1.9rem);
+            color: #174561;
+        }
+
+        .service-title-group p {
+            margin: 6px 0 0;
+            color: #49697f;
         }
 
         .hero-meta { margin-top:10px; display:flex; flex-wrap:wrap; gap:8px; }
         .hero-chip {
             border:1px solid rgba(216, 244, 248, 0.5);
-            background:rgba(4,64,83,0.25);
-            color:#eafcff;
+            background:#eef8fc;
+            color:#17526f;
             border-radius:999px;
             padding:7px 10px;
             font-size:0.78rem;
             font-weight:700;
         }
 
-        .share-card {
-            margin-top: 10px;
+        .service-review {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             border: 1px solid #cfe1ec;
-            border-radius: 14px;
-            background: #ffffff;
-            padding: 10px 12px;
+            border-radius: 999px;
+            background: #f8fcff;
+            padding: 6px 10px;
+            color: #2d5f7f;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .share-card {
+            margin-top: 8px;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            padding: 0;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-start;
             gap: 10px;
             flex-wrap: wrap;
         }
@@ -454,6 +527,8 @@
         .actions { margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
 
         @media (max-width: 980px) {
+            .top-search-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .top-search-btn { grid-column: span 2; }
             .layout { grid-template-columns:1fr; }
             .reservation-form,
             .service-content { grid-column: auto; grid-row: auto; }
@@ -463,150 +538,43 @@
         }
 
         @media (max-width: 760px) {
+            .top-search-form { grid-template-columns: 1fr; }
+            .top-search-btn { grid-column: auto; }
             .grid, .service-intel { grid-template-columns:1fr; }
             .gallery-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
         }
-
-        /* ── Excursion-specific sections ──────────────────────── */
-        .excursion-detail-section {
-            margin-top: 12px;
-        }
-
-        .similar-excursions-wrap {
-            margin-top: 20px;
-            padding: 14px 0 0;
-            border-top: 1px solid var(--line);
-        }
-
-        .similar-excursions-title {
-            margin: 0 0 10px;
-            font-size: 0.86rem;
-            font-weight: 800;
-            color: #1a3c54;
-            letter-spacing: -0.01em;
-        }
-
-        .similar-excursions-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 10px;
-        }
-
-        @media (max-width: 900px) {
-            .similar-excursions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        }
-
-        @media (max-width: 520px) {
-            .similar-excursions-grid { grid-template-columns: 1fr; }
-        }
-
-        .sim-card {
-            border: 1px solid #d8e9f2;
-            border-radius: 12px;
-            background: #ffffff;
-            overflow: hidden;
-            text-decoration: none;
-            color: inherit;
-            display: flex;
-            flex-direction: column;
-            transition: box-shadow 0.18s ease;
-        }
-
-        .sim-card:hover { box-shadow: 0 6px 18px rgba(15, 97, 121, 0.14); }
-
-        .sim-card-img {
-            width: 100%;
-            height: 108px;
-            object-fit: cover;
-            display: block;
-            background: #ddf0f9;
-        }
-
-        .sim-card-body {
-            padding: 8px 10px 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            flex: 1;
-        }
-
-        .sim-card-location {
-            font-size: 0.68rem;
-            color: #7a8d9a;
-            line-height: 1;
-        }
-
-        .sim-card-name {
-            margin: 0;
-            font-size: 0.82rem;
-            font-weight: 700;
-            color: #1a2f43;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            line-height: 1.2;
-        }
-
-        .sim-card-price {
-            font-size: 0.78rem;
-            font-weight: 700;
-            color: #0f6179;
-            margin-top: 3px;
-        }
-
-        .sim-card-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            margin-top: 6px;
-            padding: 5px 10px;
-            border-radius: 5px;
-            background: #2fa58a;
-            color: #fff;
-            font-size: 0.68rem;
-            font-weight: 700;
-            text-decoration: none;
-            align-self: flex-start;
-        }
-
-        .reviews-placeholder {
-            padding: 14px 12px;
-            text-align: center;
-            color: #7a9aaf;
-            font-size: 0.82rem;
-            line-height: 1.5;
-        }
-
-        .reviews-placeholder i {
-            display: block;
-            font-size: 1.6rem;
-            color: #b8d0dc;
-            margin-bottom: 6px;
-        }
-        /* ── end excursion sections ────────────────────────────── */
     </style>
     @include('partials.uniform-buttons')
 </head>
 <body>
+    @php
+        $headerCategoryKey = str_replace('_', '-', strtolower(trim((string) ($categoryKey ?? 'accommodation'))));
+        $headerCategoryLinks = [
+            ['key' => 'accommodation', 'icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas', 'url' => '/catalog/accommodation'],
+            ['key' => 'resort-day-visit', 'icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'subtitle' => 'Day-use resort offers', 'url' => '/catalog/resort_day_visit'],
+            ['key' => 'excursion', 'icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'subtitle' => 'Tours and activities', 'url' => '/catalog/excursion'],
+            ['key' => 'water-sports', 'icon' => 'fa-solid fa-person-swimming', 'title' => 'Water Sports', 'subtitle' => 'Diving, snorkelling and sea fun', 'url' => '/catalog/water_sports'],
+            ['key' => 'restaurant', 'icon' => 'fa-solid fa-utensils', 'title' => 'Restaurants', 'subtitle' => 'Dining experiences', 'url' => '/catalog/restaurant'],
+            ['key' => 'marine-transport', 'icon' => 'fa-solid fa-water', 'title' => 'Sea Transport', 'subtitle' => 'Speedboats & water transfers', 'url' => '/catalog/marine-transport'],
+            ['key' => 'land-transport', 'icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers', 'url' => '/catalog/land-transport'],
+            ['key' => 'vehicle-rental', 'icon' => 'fa-solid fa-car', 'title' => 'Vehicle Rentals', 'subtitle' => 'Cars and local rentals', 'url' => '/catalog/vehicle_rental'],
+            ['key' => 'remote-workspace', 'icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces', 'url' => '/catalog/remote_workspace'],
+            ['key' => 'conference-room', 'icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces', 'url' => '/catalog/conference_room'],
+            ['key' => 'blog', 'icon' => 'fa-solid fa-newspaper', 'title' => 'Blog', 'subtitle' => 'Travel stories and picks', 'url' => '/blog'],
+        ];
+    @endphp
+
     @include('partials.customer-uniform-header', [
+        'injectUniformHeaderStyles' => true,
+        'injectUniformHeaderScripts' => true,
+        'headerNeedsSpacer' => false,
         'headerHideOnScroll' => true,
         'headerShowSearch' => true,
-        'headerSearchAction' => '/catalog/' . str_replace('_', '-', strtolower(trim((string) ($categoryKey ?? 'accommodation')))),
+        'headerSearchAction' => '/catalog/' . $headerCategoryKey,
         'headerSearchValue' => '',
-        'headerCategoryLinks' => [
-            ['key' => 'accommodation', 'title' => 'Accommodation', 'url' => '/catalog/accommodation'],
-            ['key' => 'marine-transport', 'title' => 'Marine Transport', 'url' => '/catalog/marine-transport'],
-            ['key' => 'land-transport', 'title' => 'Land Transport', 'url' => '/catalog/land-transport'],
-            ['key' => 'excursion', 'title' => 'Excursion', 'url' => '/catalog/excursion'],
-            ['key' => 'blog', 'title' => 'Blog', 'url' => '/blog'],
-            ['key' => 'remote_workspace', 'title' => 'Remote Workspace', 'url' => '/catalog/remote_workspace'],
-            ['key' => 'conference_room', 'title' => 'Conference Rooms', 'url' => '/catalog/conference_room'],
-            ['key' => 'resort_day_visit', 'title' => 'Resort Day Visit', 'url' => '/catalog/resort_day_visit'],
-            ['key' => 'restaurant', 'title' => 'Restaurant', 'url' => '/catalog/restaurant'],
-            ['key' => 'vehicle_rental', 'title' => 'Vehicle Rental', 'url' => '/catalog/vehicle_rental'],
-        ],
-        'headerActiveCategoryKey' => str_replace('_', '-', strtolower(trim((string) ($categoryKey ?? 'accommodation')))),
+        'headerCategoryLinks' => $headerCategoryLinks,
+        'headerActiveCategoryKey' => $headerCategoryKey,
+        'headerContinueUrl' => (string) request()->fullUrl(),
     ])
 
     @php
@@ -694,8 +662,35 @@
 
         $fallbackImage = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2232%22%3EService%20image%3C%2Ftext%3E%3C%2Fsvg%3E';
 
-        $locationLine = trim((string) (($property->atoll ?? '') . ' ' . ($property->island ?? '')));
-        $locationLine = $locationLine !== '' ? trim((string) (($property->atoll ?? '') . ' · ' . ($property->island ?? ''))) : 'Location details will be updated soon.';
+        $locationParts = array_values(array_filter([
+            trim((string) ($property->city ?? '')),
+            trim((string) ($property->atoll ?? '')),
+            trim((string) ($property->location_country ?? 'Maldives')),
+        ], static fn ($item): bool => $item !== ''));
+        $locationLine = $locationParts !== [] ? implode(', ', $locationParts) : 'Maldives';
+
+        $descriptionSummary = \Illuminate\Support\Str::limit(trim((string) (($listingDetails['short_description'] ?? null) ?: ($property->short_description ?? $property->description ?? ''))), 180);
+        $activityTypeLabel = trim((string) (($listingDetails['excursion_type'] ?? null) ?: ($property->excursion_type ?? '')));
+
+        $formatTimeLabel = static function ($rawValue): string {
+            $value = trim((string) $rawValue);
+            if ($value === '') {
+                return '';
+            }
+
+            $timestamp = strtotime($value);
+            if ($timestamp !== false) {
+                return date('H:i', $timestamp);
+            }
+
+            return $value;
+        };
+
+        $startTimeLabel = $formatTimeLabel(($listingDetails['activity_start_time'] ?? null) ?: ($property->activity_start_time ?? $property->start_time ?? $property->departure_time ?? ''));
+        $endTimeLabel = $formatTimeLabel(($listingDetails['activity_end_time'] ?? null) ?: ($property->activity_end_time ?? $property->end_time ?? ''));
+        $reviewScoreRaw = (float) ($property->rating ?? $property->average_rating ?? 0);
+        $reviewScore = $reviewScoreRaw > 0 ? number_format($reviewScoreRaw, 1) : 'N/A';
+        $reviewCount = (int) ($property->reviews_count ?? 0);
 
         $serviceTypeHint = match ($categoryKey) {
             'restaurant' => 'Dining Service',
@@ -725,12 +720,34 @@
         };
     @endphp
 
+    <section class="top-search-shell" aria-label="Search service options">
+        <div class="top-search-inner">
+            <form method="GET" action="" class="top-search-form" id="categoryTopSearch">
+                <div class="top-search-field">
+                    <label for="topCategoryProperty">Location</label>
+                    <input id="topCategoryProperty" type="text" name="property_name" value="{{ (string) ($property->name ?? '') }}" readonly>
+                </div>
+                <div class="top-search-field">
+                    <label for="topCategoryCheckin">Start</label>
+                    <input id="topCategoryCheckin" type="date" name="checkin" min="{{ now()->toDateString() }}" value="{{ (string) ($prefill['checkin'] ?? '') }}">
+                </div>
+                <div class="top-search-field">
+                    <label for="topCategoryCheckout">End</label>
+                    <input id="topCategoryCheckout" type="date" name="checkout" min="{{ now()->toDateString() }}" value="{{ (string) ($prefill['checkout'] ?? '') }}">
+                </div>
+                <div class="top-search-field">
+                    <label for="topCategoryGuests">Guests</label>
+                    <input id="topCategoryGuests" type="text" value="{{ (int) ($prefill['adults'] ?? 2) }} adults, {{ (int) ($prefill['children'] ?? 0) }} children" readonly>
+                    <input type="hidden" name="adults" value="{{ (int) ($prefill['adults'] ?? 2) }}">
+                    <input type="hidden" name="children" value="{{ (int) ($prefill['children'] ?? 0) }}">
+                    <input type="hidden" name="infants" value="{{ (int) ($prefill['infants'] ?? 0) }}">
+                </div>
+                <button type="submit" class="top-search-btn"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Search</button>
+            </form>
+        </div>
+    </section>
+
     <main class="page">
-        @include('partials.booking-process-highlights', [
-            'bookingProcessCurrentStep' => 1,
-            'bookingProcessBackUrl' => '/catalog/' . str_replace('_', '-', strtolower(trim((string) ($categoryKey ?? 'accommodation')))),
-            'bookingProcessNextText' => 'Next step after this page: choose transfer options and continue to payment selection.',
-        ])
 
         @php
             $breadcrumbCategoryUrl = '/catalog/' . str_replace('_', '-', $categoryKey);
@@ -742,31 +759,6 @@
             <span aria-hidden="true">›</span>
             <span>{{ (string) ($property->name ?? $categoryLabel . ' Listing') }}</span>
         </nav>
-        <section class="hero">
-            <div class="hero-top">
-                <div>
-                    <h1>{{ (string) ($property->name ?? ($categoryLabel . ' Listing')) }}</h1>
-                    <p>{{ $locationLine }}</p>
-                </div>
-                <span class="hero-badge">{{ $serviceTypeHint }}</span>
-            </div>
-            <div class="hero-meta">
-                <span class="hero-chip"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> {{ $categoryLabel }}</span>
-                <span class="hero-chip"><i class="fa-solid fa-coins" aria-hidden="true"></i> {{ $currency }} {{ number_format($basePrice, 2) }}</span>
-                <span class="hero-chip"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i> Live booking request flow</span>
-            </div>
-        </section>
-
-        <section class="share-card" aria-label="Share this listing">
-            <span class="share-label">Share this {{ strtolower($categoryLabel) }}</span>
-            <div class="share-links">
-                <a href="https://wa.me/?text={{ $shareEncodedText }}" target="_blank" rel="noopener" title="Share on WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
-                <a href="https://www.facebook.com/sharer/sharer.php?u={{ $shareEncodedUrl }}" target="_blank" rel="noopener" title="Share on Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
-                <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ $shareEncodedUrl }}" target="_blank" rel="noopener" title="Share on LinkedIn"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i></a>
-                <button type="button" data-copy-share-link="{{ $shareUrl }}" title="Copy link"><i class="fa-solid fa-link" aria-hidden="true"></i></button>
-            </div>
-        </section>
-
         <div class="layout">
             <section class="service-content">
                 <section class="block" aria-label="Service gallery">
@@ -792,8 +784,38 @@
                     </div>
                 </section>
 
+                <section class="block" aria-label="Service overview" style="margin-top:12px;">
+                    <div class="service-identity">
+                        <div class="service-title-group">
+                            <h1>{{ (string) ($property->name ?? ($categoryLabel . ' Listing')) }}</h1>
+                            <p>{{ $locationLine }}</p>
+                            @if ($descriptionSummary !== '')
+                                <p>{{ $descriptionSummary }}</p>
+                            @endif
+                        </div>
+                        <span class="hero-chip">{{ $serviceTypeHint }}</span>
+                    </div>
+                    <div class="hero-meta">
+                        <span class="hero-chip"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> {{ $categoryLabel }}</span>
+                        @if ($activityTypeLabel !== '')
+                            <span class="hero-chip"><i class="fa-solid fa-compass" aria-hidden="true"></i> {{ str_replace('_', ' ', $activityTypeLabel) }}</span>
+                        @endif
+                        <span class="hero-chip"><i class="fa-solid fa-coins" aria-hidden="true"></i> From {{ $currency }} {{ number_format($basePrice, 2) }}</span>
+                        <span class="service-review"><i class="fa-solid fa-star" aria-hidden="true"></i> {{ $reviewScore }} ({{ number_format($reviewCount) }})</span>
+                    </div>
+                    <section class="share-card" aria-label="Share this listing">
+                        <span class="share-label">Share this {{ strtolower($categoryLabel) }}</span>
+                        <div class="share-links">
+                            <a href="https://wa.me/?text={{ $shareEncodedText }}" target="_blank" rel="noopener" title="Share on WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+                            <a href="https://www.facebook.com/sharer/sharer.php?u={{ $shareEncodedUrl }}" target="_blank" rel="noopener" title="Share on Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+                            <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ $shareEncodedUrl }}" target="_blank" rel="noopener" title="Share on LinkedIn"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i></a>
+                            <button type="button" data-copy-share-link="{{ $shareUrl }}" title="Copy link"><i class="fa-solid fa-link" aria-hidden="true"></i></button>
+                        </div>
+                    </section>
+                </section>
+
                 <section class="block" aria-label="Service details" style="margin-top:12px;">
-                    <h2 class="block-title">{{ $categoryKey === 'excursion' ? 'Activity Details' : 'Service Snapshot' }}</h2>
+                    <h2 class="block-title">{{ $categoryKey === 'excursion' ? 'Descriptions & Details' : 'Service Snapshot' }}</h2>
                     <div class="service-intel">
                         <article class="intel-card">
                             <strong>{{ $categoryKey === 'excursion' ? 'Activity' : 'Best For' }}</strong>
@@ -823,207 +845,101 @@
                                 @endif
                             </span>
                         </article>
+                        @if ($startTimeLabel !== '' || $endTimeLabel !== '')
+                        <article class="intel-card">
+                            <strong>Time Window</strong>
+                            <span>
+                                @if ($startTimeLabel !== '' && $endTimeLabel !== '')
+                                    {{ $startTimeLabel }} - {{ $endTimeLabel }}
+                                @elseif ($startTimeLabel !== '')
+                                    Starts {{ $startTimeLabel }}
+                                @else
+                                    Ends {{ $endTimeLabel }}
+                                @endif
+                            </span>
+                        </article>
+                        @endif
                     </div>
                 </section>
 
-                @if ($categoryKey === 'excursion')
+                <section class="block" aria-label="Highlights and amenities" style="margin-top:12px;">
+                    <h2 class="block-title">Highlights</h2>
+                    <ul class="list">
+                        @foreach ($highlights->take(8) as $item)
+                            <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span>{{ (string) $item }}</span></li>
+                        @endforeach
+                    </ul>
+
+                    <h2 class="block-title" style="margin-top:12px;">Services and Amenities</h2>
+                    <ul class="list">
+                        @forelse ($servicesAndAmenities->take(12) as $item)
+                            <li><i class="fa-solid fa-star" aria-hidden="true"></i><span>{{ (string) $item }}</span></li>
+                        @empty
+                            <li><i class="fa-solid fa-info-circle" aria-hidden="true"></i><span>Service amenities will be refined as listing details are updated.</span></li>
+                        @endforelse
+                    </ul>
+                </section>
+
+                <section class="block" aria-label="Service description and policies" style="margin-top:12px;">
+                    <h2 class="block-title">Service Description</h2>
+                    <p class="description">{!! nl2br(e($descriptionText !== '' ? $descriptionText : 'Listing description will be updated soon.')) !!}</p>
+
+                    <h2 class="block-title" style="margin-top:12px;">Policy Snapshot</h2>
                     @php
-                        $excursionStartTime  = trim((string) ($property->start_time  ?? $property->opening_hours  ?? ''));
-                        $excursionEndTime    = trim((string) ($property->end_time    ?? $property->closing_hours   ?? ''));
-                        $excursionDeparture  = trim((string) ($property->departure_location ?? $property->assembly_point ?? $property->meeting_point ?? ''));
-                        $excursionSpecial    = trim((string) ($property->special_instructions ?? $property->operator_notes ?? ''));
+                        $hasVendorPolicy = ($vendorPolicy['opening_hours'] ?? '') !== ''
+                            || ($vendorPolicy['closing_hours'] ?? '') !== ''
+                            || ($vendorPolicy['cancellation_policy'] ?? '') !== ''
+                            || !empty($vendorPolicy['other_rules'] ?? []);
                     @endphp
 
-                    {{-- Description / Details --}}
-                    <section class="block excursion-detail-section" aria-label="Excursion description">
-                        <h2 class="block-title">Description &amp; Details</h2>
-                        <p class="description">{!! nl2br(e($descriptionText !== '' ? $descriptionText : 'Full activity description will be updated soon.')) !!}</p>
-                    </section>
-
-                    {{-- Activity Schedule --}}
-                    <section class="block excursion-detail-section" aria-label="Activity schedule">
-                        <h2 class="block-title">Activity Schedule</h2>
-                        <ul class="list">
-                            @if ($excursionStartTime !== '')
-                                <li><i class="fa-regular fa-clock" aria-hidden="true"></i><span>Start time: {{ $excursionStartTime }}</span></li>
-                            @else
-                                <li><i class="fa-regular fa-clock" aria-hidden="true"></i><span>Start time: Confirmed upon booking</span></li>
-                            @endif
-                            @if ($excursionEndTime !== '')
-                                <li><i class="fa-regular fa-clock" aria-hidden="true"></i><span>End time: {{ $excursionEndTime }}</span></li>
-                            @else
-                                <li><i class="fa-solid fa-flag-checkered" aria-hidden="true"></i><span>End time: Confirmed upon booking</span></li>
-                            @endif
-                            <li><i class="fa-solid fa-calendar-day" aria-hidden="true"></i><span>Select your preferred activity date at booking</span></li>
-                        </ul>
-                    </section>
-
-                    {{-- What's Included --}}
-                    <section class="block excursion-detail-section" aria-label="What is included">
-                        <h2 class="block-title">What's Included</h2>
-                        <ul class="list">
-                            @forelse ($highlights->take(8) as $item)
-                                <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span>{{ (string) $item }}</span></li>
-                            @empty
-                                <li><i class="fa-solid fa-info-circle" aria-hidden="true"></i><span>Inclusions will be listed once operator updates the listing.</span></li>
-                            @endforelse
-                        </ul>
-                        @if ($servicesAndAmenities->isNotEmpty())
-                            <h2 class="block-title" style="margin-top:12px;">What We Provide</h2>
-                            <ul class="list">
-                                @foreach ($servicesAndAmenities->take(10) as $item)
-                                    <li><i class="fa-solid fa-star" aria-hidden="true"></i><span>{{ (string) $item }}</span></li>
-                                @endforeach
-                            </ul>
+                    @if ($hasVendorPolicy)
+                        @if (($vendorPolicy['opening_hours'] ?? '') !== '' || ($vendorPolicy['closing_hours'] ?? '') !== '')
+                            <div class="policy-group">
+                                <p class="policy-group-title"><i class="fa-regular fa-clock" aria-hidden="true"></i> Operating Hours</p>
+                                <ul class="list">
+                                    @if (($vendorPolicy['opening_hours'] ?? '') !== '')
+                                        <li><i class="fa-solid fa-door-open" aria-hidden="true"></i><span>Opens: {{ $vendorPolicy['opening_hours'] }}</span></li>
+                                    @endif
+                                    @if (($vendorPolicy['closing_hours'] ?? '') !== '')
+                                        <li><i class="fa-solid fa-door-closed" aria-hidden="true"></i><span>Closes: {{ $vendorPolicy['closing_hours'] }}</span></li>
+                                    @endif
+                                </ul>
+                            </div>
                         @endif
-                    </section>
 
-                    {{-- Departure / Assembly Point --}}
-                    <section class="block excursion-detail-section" aria-label="Departure and assembly point">
-                        <h2 class="block-title">Departure &amp; Assembly Point</h2>
-                        <ul class="list">
-                            <li>
-                                <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
-                                <span>{{ $excursionDeparture !== '' ? $excursionDeparture : 'Assembly point and reporting location will be shared prior to the activity.' }}</span>
-                            </li>
-                            <li><i class="fa-solid fa-id-card" aria-hidden="true"></i><span>Bring valid ID for check-in at the meeting point.</span></li>
-                            <li><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span>Safety briefing required before departure.</span></li>
-                        </ul>
-                    </section>
-
-                    {{-- Reviews --}}
-                    <section class="block excursion-detail-section" aria-label="Guest reviews">
-                        <h2 class="block-title">Guest Reviews</h2>
-                        <div class="reviews-placeholder">
-                            <i class="fa-regular fa-star" aria-hidden="true"></i>
-                            Reviews from verified guests will appear here once ratings are submitted after each completed activity.
-                        </div>
-                    </section>
-
-                    {{-- Special Instructions --}}
-                    <section class="block excursion-detail-section" aria-label="Special instructions">
-                        <h2 class="block-title">Special Instructions</h2>
-                        <ul class="list">
-                            @if ($excursionSpecial !== '')
-                                <li><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>{{ $excursionSpecial }}</span></li>
-                            @else
-                                <li><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>Any special instructions from the operator will be communicated prior to the activity date.</span></li>
-                            @endif
-                        </ul>
-                    </section>
-
-                    {{-- Terms & Policies --}}
-                    <section class="block excursion-detail-section" aria-label="Terms and policies">
-                        <h2 class="block-title">Terms &amp; Policies</h2>
-                        @php
-                            $hasVendorPolicy = ($vendorPolicy['opening_hours'] ?? '') !== ''
-                                || ($vendorPolicy['closing_hours'] ?? '') !== ''
-                                || ($vendorPolicy['cancellation_policy'] ?? '') !== ''
-                                || !empty($vendorPolicy['other_rules'] ?? []);
-                        @endphp
-                        @if ($hasVendorPolicy)
-                            @if (($vendorPolicy['cancellation_policy'] ?? '') !== '')
-                                <div class="policy-group">
-                                    <p class="policy-group-title"><i class="fa-solid fa-ban" aria-hidden="true"></i> Cancellation Policy</p>
-                                    <ul class="list">
-                                        <li><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ $vendorPolicy['cancellation_policy'] }}</span></li>
-                                    </ul>
-                                </div>
-                            @endif
-                            @if (!empty($vendorPolicy['other_rules'] ?? []))
-                                <div class="policy-group">
-                                    <p class="policy-group-title"><i class="fa-solid fa-scroll" aria-hidden="true"></i> House Rules</p>
-                                    <ul class="list">
-                                        @foreach ($vendorPolicy['other_rules'] as $rule)
-                                            <li><i class="fa-solid fa-shield" aria-hidden="true"></i><span>{{ (string) $rule }}</span></li>
-                                        @endforeach
-                                    </ul>
-                                </div>
-                            @endif
-                        @else
-                            <ul class="list">
-                                @foreach ($policyItems as $policy)
-                                    <li><i class="fa-solid fa-shield" aria-hidden="true"></i><span>{{ $policy }}</span></li>
-                                @endforeach
-                            </ul>
+                        @if (($vendorPolicy['cancellation_policy'] ?? '') !== '')
+                            <div class="policy-group">
+                                <p class="policy-group-title"><i class="fa-solid fa-ban" aria-hidden="true"></i> Cancellation Policy</p>
+                                <ul class="list">
+                                    <li><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ $vendorPolicy['cancellation_policy'] }}</span></li>
+                                </ul>
+                            </div>
                         @endif
-                    </section>
 
-                @else
-                    {{-- Non-excursion: original layout --}}
-                    <section class="block" aria-label="Highlights and amenities" style="margin-top:12px;">
-                        <h2 class="block-title">Highlights</h2>
+                        @if (!empty($vendorPolicy['other_rules'] ?? []))
+                            <div class="policy-group">
+                                <p class="policy-group-title"><i class="fa-solid fa-scroll" aria-hidden="true"></i> House Rules</p>
+                                <ul class="list">
+                                    @foreach ($vendorPolicy['other_rules'] as $rule)
+                                        <li><i class="fa-solid fa-shield" aria-hidden="true"></i><span>{{ (string) $rule }}</span></li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                    @else
                         <ul class="list">
-                            @foreach ($highlights->take(8) as $item)
-                                <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span>{{ (string) $item }}</span></li>
+                            @foreach ($policyItems as $policy)
+                                <li><i class="fa-solid fa-shield" aria-hidden="true"></i><span>{{ $policy }}</span></li>
                             @endforeach
                         </ul>
+                    @endif
+                </section>
 
-                        <h2 class="block-title" style="margin-top:12px;">Services and Amenities</h2>
-                        <ul class="list">
-                            @forelse ($servicesAndAmenities->take(12) as $item)
-                                <li><i class="fa-solid fa-star" aria-hidden="true"></i><span>{{ (string) $item }}</span></li>
-                            @empty
-                                <li><i class="fa-solid fa-info-circle" aria-hidden="true"></i><span>Service amenities will be refined as listing details are updated.</span></li>
-                            @endforelse
-                        </ul>
-                    </section>
-
-                    <section class="block" aria-label="Service description and policies" style="margin-top:12px;">
-                        <h2 class="block-title">Service Description</h2>
-                        <p class="description">{!! nl2br(e($descriptionText !== '' ? $descriptionText : 'Listing description will be updated soon.')) !!}</p>
-
-                        <h2 class="block-title" style="margin-top:12px;">Policy Snapshot</h2>
-                        @php
-                            $hasVendorPolicy = ($vendorPolicy['opening_hours'] ?? '') !== ''
-                                || ($vendorPolicy['closing_hours'] ?? '') !== ''
-                                || ($vendorPolicy['cancellation_policy'] ?? '') !== ''
-                                || !empty($vendorPolicy['other_rules'] ?? []);
-                        @endphp
-
-                        @if ($hasVendorPolicy)
-                            @if (($vendorPolicy['opening_hours'] ?? '') !== '' || ($vendorPolicy['closing_hours'] ?? '') !== '')
-                                <div class="policy-group">
-                                    <p class="policy-group-title"><i class="fa-regular fa-clock" aria-hidden="true"></i> Operating Hours</p>
-                                    <ul class="list">
-                                        @if (($vendorPolicy['opening_hours'] ?? '') !== '')
-                                            <li><i class="fa-solid fa-door-open" aria-hidden="true"></i><span>Opens: {{ $vendorPolicy['opening_hours'] }}</span></li>
-                                        @endif
-                                        @if (($vendorPolicy['closing_hours'] ?? '') !== '')
-                                            <li><i class="fa-solid fa-door-closed" aria-hidden="true"></i><span>Closes: {{ $vendorPolicy['closing_hours'] }}</span></li>
-                                        @endif
-                                    </ul>
-                                </div>
-                            @endif
-
-                            @if (($vendorPolicy['cancellation_policy'] ?? '') !== '')
-                                <div class="policy-group">
-                                    <p class="policy-group-title"><i class="fa-solid fa-ban" aria-hidden="true"></i> Cancellation Policy</p>
-                                    <ul class="list">
-                                        <li><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ $vendorPolicy['cancellation_policy'] }}</span></li>
-                                    </ul>
-                                </div>
-                            @endif
-
-                            @if (!empty($vendorPolicy['other_rules'] ?? []))
-                                <div class="policy-group">
-                                    <p class="policy-group-title"><i class="fa-solid fa-scroll" aria-hidden="true"></i> House Rules</p>
-                                    <ul class="list">
-                                        @foreach ($vendorPolicy['other_rules'] as $rule)
-                                            <li><i class="fa-solid fa-shield" aria-hidden="true"></i><span>{{ (string) $rule }}</span></li>
-                                        @endforeach
-                                    </ul>
-                                </div>
-                            @endif
-                        @else
-                            <ul class="list">
-                                @foreach ($policyItems as $policy)
-                                    <li><i class="fa-solid fa-shield" aria-hidden="true"></i><span>{{ $policy }}</span></li>
-                                @endforeach
-                            </ul>
-                        @endif
-                    </section>
-                @endif
+                <section class="block" aria-label="Similar services" style="margin-top:12px;">
+                    <h2 class="block-title">Similar {{ strtolower($categoryLabel) }} Nearby</h2>
+                    <p class="description" style="margin-top:0;">Explore similar services from the same area and compare availability, inclusions, and pricing before checkout.</p>
+                    <a class="btn" href="/catalog/{{ str_replace('_', '-', $categoryKey) }}">Browse {{ $categoryLabel }} listings</a>
+                </section>
             </section>
 
             <aside class="booking-card reservation-form" aria-label="Category booking form">
@@ -1031,6 +947,11 @@
                 @if ($categoryKey === 'excursion')
                     <p class="booking-subtitle">{{ (string) ($property->name ?? 'Excursion Activity') }}</p>
                 @endif
+                <div class="booking-price">
+                    <span>Starting price</span>
+                    <strong>{{ $currency }} {{ number_format($basePrice, 2) }}</strong>
+                </div>
+
                 <form method="POST" action="/booking/reserve-category" id="categoryServiceBookingForm">
                     @csrf
                     <input type="hidden" name="category_key" value="{{ $categoryKey }}">
@@ -1051,6 +972,10 @@
                     <div class="grid">
                         @if ($categoryKey === 'excursion')
                             <div class="field full"><label for="serviceStartDate">Activity Date</label><input id="serviceStartDate" name="service_start_date" type="date" min="{{ (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field full">
+                                <label>Lead Guest</label>
+                                <p class="booking-subtitle" style="margin:0;">Fill guest details below exactly as government-issued documents.</p>
+                            </div>
                             <div class="field full">
                                 <label>Guests and Unit Price</label>
                                 <div class="booking-lines">
@@ -1094,14 +1019,6 @@
                                 <label for="serviceNotes">Additional Request (Optional)</label>
                                 <textarea id="serviceNotes" name="service_notes" placeholder="Any dietary, timing, or service request?">{{ old('service_notes', (string) ($prefill['service_notes'] ?? '')) }}</textarea>
                             </div>
-                            @if ($transferOptions->isNotEmpty())
-                                <div class="field full" style="margin-top:4px;">
-                                    <p style="margin:0 0 8px; font-size:0.74rem; font-weight:700; color:#3c5f76; text-transform:uppercase; letter-spacing:0.07em; font-family:'Space Grotesk','Trebuchet MS',sans-serif;">Transfer Departure Details <span style="font-weight:400; text-transform:none; letter-spacing:0;">(optional – complete if transfer is included)</span></p>
-                                </div>
-                                <div class="field"><label for="excursionDepartureArea">Departure Area / Jetty</label><input id="excursionDepartureArea" name="departure_area" type="text" placeholder="e.g. Malé Jetty, Hulhumalé Ferry Terminal" value="{{ old('departure_area', '') }}">@error('departure_area')<p class="error-text">{{ $message }}</p>@enderror</div>
-                                <div class="field"><label for="excursionDepartureTime">Departure Time</label><input id="excursionDepartureTime" name="departure_time" type="time" value="{{ old('departure_time', '') }}">@error('departure_time')<p class="error-text">{{ $message }}</p>@enderror</div>
-                                <div class="field"><label for="excursionReturnSlot">Return Time Slot</label><input id="excursionReturnSlot" name="return_slot" type="time" value="{{ old('return_slot', '') }}">@error('return_slot')<p class="error-text">{{ $message }}</p>@enderror</div>
-                            @endif
                         @else
                             <div class="field"><label for="serviceStartDate">{{ (string) ($dateLabels['start'] ?? 'Service Start Date') }}</label><input id="serviceStartDate" name="service_start_date" type="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? 'datetime-local' : 'date' }}" min="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? ((string) ($todayDate ?? now()->toDateString()) . 'T00:00') : (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
                             <div class="field"><label for="serviceEndDate">{{ (string) ($dateLabels['end'] ?? 'Service End Date') }}</label><input id="serviceEndDate" name="service_end_date" type="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? 'datetime-local' : 'date' }}" min="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? ((string) ($todayDate ?? now()->toDateString()) . 'T00:00') : (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_end_date', (string) ($prefill['service_end_date'] ?? '')) }}" class="{{ $errors->has('service_end_date') ? 'input-error' : '' }}">@error('service_end_date')<p class="error-text">{{ $message }}</p>@enderror</div>
@@ -1150,12 +1067,6 @@
                                         <input id="{{ $fieldId }}" name="{{ $fieldKey }}" type="number" min="{{ (int) ($field['min'] ?? 0) }}" value="{{ $fieldValue }}" class="{{ $errors->has($fieldKey) ? 'input-error' : '' }}" {{ $fieldRequired ? 'required' : '' }}>
                                         @error($fieldKey)<p class="error-text">{{ $message }}</p>@enderror
                                     </div>
-                                @elseif ($fieldType === 'time')
-                                    <div class="field">
-                                        <label for="{{ $fieldId }}">{{ $fieldLabel }}</label>
-                                        <input id="{{ $fieldId }}" name="{{ $fieldKey }}" type="time" value="{{ $fieldValue }}" class="{{ $errors->has($fieldKey) ? 'input-error' : '' }}" {{ $fieldRequired ? 'required' : '' }}>
-                                        @error($fieldKey)<p class="error-text">{{ $message }}</p>@enderror
-                                    </div>
                                 @else
                                     <div class="field">
                                         <label for="{{ $fieldId }}">{{ $fieldLabel }}</label>
@@ -1165,20 +1076,6 @@
                                 @endif
                             @endforeach
 
-                            @if ($categoryKey === 'vehicle_rental')
-                                <div class="field full" style="margin-top:8px;">
-                                    <div style="border:1px solid #cbe0ea; border-radius:10px; background:#f7fbfd; padding:10px 14px;">
-                                        <p style="margin:0 0 6px; font-size:0.78rem; font-weight:700; color:#1b3f58; text-transform:uppercase; letter-spacing:0.06em; font-family:'Space Grotesk','Trebuchet MS',sans-serif;">Rental Terms</p>
-                                        <ul style="margin:0; padding-left:18px; font-size:0.8rem; color:#3c5f76; line-height:1.7;">
-                                            <li>A valid driver's license is required at vehicle pickup. Provide your license number above.</li>
-                                            <li>Fuel policy and return condition will be confirmed at handover by the operator.</li>
-                                            <li>Late return may incur additional charges as per the rental agreement.</li>
-                                            <li>The vehicle must be returned in the same condition as received.</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            @endif
-
                             <div class="field full"><label for="additionalGuestDetails">Additional Guest Details (Optional)</label><textarea id="additionalGuestDetails" name="additional_guest_details">{{ old('additional_guest_details', '') }}</textarea></div>
                             <div class="field full">
                                 <label for="serviceNotes">{{ $categoryKey === 'restaurant' ? 'Special Note for Food Order (Optional)' : 'Service Notes (Optional)' }}</label>
@@ -1186,21 +1083,29 @@
                             </div>
                         @endif
 
-                        <div class="field full">
-                            <label>Guest Details*</label>
-                            <p class="required-note">Given names and surname must match government-issued documents. For foreigners, use passport details. For locals, use ID card details.</p>
-                        </div>
-                        <div class="field"><label for="primaryFirstName">Given names*</label><input id="primaryFirstName" name="primary_first_name" type="text" value="{{ old('primary_first_name', (string) ($prefill['primary_first_name'] ?? '')) }}" class="{{ $errors->has('primary_first_name') ? 'input-error' : '' }}" required>@error('primary_first_name')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="primaryLastName">Surname*</label><input id="primaryLastName" name="primary_last_name" type="text" value="{{ old('primary_last_name', (string) ($prefill['primary_last_name'] ?? '')) }}" class="{{ $errors->has('primary_last_name') ? 'input-error' : '' }}" required>@error('primary_last_name')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="primaryNationality">Country / Nationality*</label><select id="primaryNationality" name="primary_nationality" class="{{ $errors->has('primary_nationality') ? 'input-error' : '' }}" required><option value="">Select country</option>@foreach ($countryOptions as $country)<option value="{{ $country['name'] }}" data-iso="{{ $country['iso'] }}" data-dial="{{ $country['dial'] }}" {{ strcasecmp($oldNationality, $country['name']) === 0 ? 'selected' : '' }}>{{ $country['name'] }}</option>@endforeach</select>@error('primary_nationality')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="primaryEmail">Email*</label><input id="primaryEmail" name="primary_email" type="email" value="{{ old('primary_email', (string) ($prefill['primary_email'] ?? '')) }}" class="{{ $errors->has('primary_email') ? 'input-error' : '' }}" required>@error('primary_email')<p class="error-text">{{ $message }}</p>@enderror</div>
-                        <div class="field"><label for="primaryMobileCountryCode">Phone country code*</label><select id="primaryMobileCountryCode" name="primary_mobile_country_code" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required>@foreach ($countryOptions as $country)<option value="{{ $country['dial'] }}" data-iso="{{ $country['iso'] }}" {{ $oldPhoneCode === $country['dial'] ? 'selected' : '' }}>{{ $country['dial'] }} ({{ $country['name'] }})</option>@endforeach</select></div>
-                        <div class="field"><label for="primaryMobileLocal">Contact number*</label><input id="primaryMobileLocal" name="primary_mobile_local" type="tel" value="{{ $oldPhoneLocal }}" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required inputmode="tel">@error('primary_mobile')<p class="error-text">{{ $message }}</p>@enderror</div>
-
-                        @if ($categoryKey === 'excursion')
-                            <input type="hidden" name="transfer_option" value="">
-                            <input type="hidden" name="transfer_charge" value="0">
+                        @if ($categoryKey !== 'excursion')
+                            <div class="field full">
+                                <label>Guest Details*</label>
+                                <p class="required-note">Given names and surname must match government-issued documents. For foreigners, use passport details. For locals, use ID card details.</p>
+                            </div>
+                            <div class="field"><label for="primaryFirstName">Given names*</label><input id="primaryFirstName" name="primary_first_name" type="text" value="{{ old('primary_first_name', (string) ($prefill['primary_first_name'] ?? '')) }}" class="{{ $errors->has('primary_first_name') ? 'input-error' : '' }}" required>@error('primary_first_name')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="primaryLastName">Surname*</label><input id="primaryLastName" name="primary_last_name" type="text" value="{{ old('primary_last_name', (string) ($prefill['primary_last_name'] ?? '')) }}" class="{{ $errors->has('primary_last_name') ? 'input-error' : '' }}" required>@error('primary_last_name')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="primaryNationality">Country / Nationality*</label><select id="primaryNationality" name="primary_nationality" class="{{ $errors->has('primary_nationality') ? 'input-error' : '' }}" required><option value="">Select country</option>@foreach ($countryOptions as $country)<option value="{{ $country['name'] }}" data-iso="{{ $country['iso'] }}" data-dial="{{ $country['dial'] }}" {{ strcasecmp($oldNationality, $country['name']) === 0 ? 'selected' : '' }}>{{ $country['name'] }}</option>@endforeach</select>@error('primary_nationality')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="primaryEmail">Email*</label><input id="primaryEmail" name="primary_email" type="email" value="{{ old('primary_email', (string) ($prefill['primary_email'] ?? '')) }}" class="{{ $errors->has('primary_email') ? 'input-error' : '' }}" required>@error('primary_email')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field"><label for="primaryMobileCountryCode">Phone country code*</label><select id="primaryMobileCountryCode" name="primary_mobile_country_code" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required>@foreach ($countryOptions as $country)<option value="{{ $country['dial'] }}" data-iso="{{ $country['iso'] }}" {{ $oldPhoneCode === $country['dial'] ? 'selected' : '' }}>{{ $country['dial'] }} ({{ $country['name'] }})</option>@endforeach</select></div>
+                            <div class="field"><label for="primaryMobileLocal">Contact number*</label><input id="primaryMobileLocal" name="primary_mobile_local" type="tel" value="{{ $oldPhoneLocal }}" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required inputmode="tel">@error('primary_mobile')<p class="error-text">{{ $message }}</p>@enderror</div>
                         @else
+                            <input type="hidden" name="primary_first_name" value="{{ old('primary_first_name', (string) ($prefill['primary_first_name'] ?? '')) }}">
+                            <input type="hidden" name="primary_last_name" value="{{ old('primary_last_name', (string) ($prefill['primary_last_name'] ?? '')) }}">
+                            <input type="hidden" name="primary_nationality" value="{{ old('primary_nationality', (string) ($prefill['primary_nationality'] ?? '')) }}">
+                            <input type="hidden" name="primary_email" value="{{ old('primary_email', (string) ($prefill['primary_email'] ?? '')) }}">
+                            <input type="hidden" name="primary_mobile_country_code" value="{{ $oldPhoneCode }}">
+                            <input type="hidden" name="primary_mobile_local" value="{{ $oldPhoneLocal }}">
+                            <input type="hidden" name="additional_guest_details" value="{{ old('additional_guest_details', '') }}">
+                            <input type="hidden" name="payment_timing" value="{{ old('payment_timing', 'pay_now') }}">
+                            <input type="hidden" name="payment_method" value="{{ old('payment_method', 'card') }}">
+                        @endif
+
                         <div class="field full">
                             <label>Transfer option</label>
                             @if ($transferOptions->isNotEmpty())
@@ -1245,22 +1150,23 @@
                             <label for="transferCharge">Transfer charge</label>
                             <input id="transferCharge" name="transfer_charge" type="number" step="0.01" min="0" value="{{ old('transfer_charge', '0') }}" readonly>
                         </div>
-                        @endif
 
-                        <div class="field full">
-                            <label>Payment preferences</label>
-                            <div class="payment-choice-list">
-                                <label class="payment-choice"><input type="radio" name="payment_timing" value="pay_now" {{ old('payment_timing', 'pay_now') === 'pay_now' ? 'checked' : '' }}><span><span class="payment-choice-main">Pay now</span><span class="payment-choice-note">Secure payment before confirmation.</span></span></label>
-                                <label class="payment-choice"><input type="radio" name="payment_timing" value="pay_at_property" {{ old('payment_timing') === 'pay_at_property' ? 'checked' : '' }}><span><span class="payment-choice-main">Pay at property</span><span class="payment-choice-note">Shown for eligible local bookings.</span></span></label>
+                        @if ($categoryKey !== 'excursion')
+                            <div class="field full">
+                                <label>Payment preferences</label>
+                                <div class="payment-choice-list">
+                                    <label class="payment-choice"><input type="radio" name="payment_timing" value="pay_now" {{ old('payment_timing', 'pay_now') === 'pay_now' ? 'checked' : '' }}><span><span class="payment-choice-main">Pay now</span><span class="payment-choice-note">Secure payment before confirmation.</span></span></label>
+                                    <label class="payment-choice"><input type="radio" name="payment_timing" value="pay_at_property" {{ old('payment_timing') === 'pay_at_property' ? 'checked' : '' }}><span><span class="payment-choice-main">Pay at property</span><span class="payment-choice-note">Shown for eligible local bookings.</span></span></label>
+                                </div>
+                                <div class="payment-choice-list" id="paymentMethodList" style="margin-top:8px;">
+                                    <label class="payment-choice payment-method-option" data-scope="all"><input type="radio" name="payment_method" value="card" {{ old('payment_method', 'card') === 'card' ? 'checked' : '' }}><span><span class="payment-choice-main">Card</span><span class="payment-choice-note">Credit / debit cards.</span></span></label>
+                                    <label class="payment-choice payment-method-option" data-scope="international"><input type="radio" name="payment_method" value="apple_pay" {{ old('payment_method') === 'apple_pay' ? 'checked' : '' }}><span><span class="payment-choice-main">Apple Pay</span><span class="payment-choice-note">International guests where available.</span></span></label>
+                                    <label class="payment-choice payment-method-option" data-scope="international"><input type="radio" name="payment_method" value="google_pay" {{ old('payment_method') === 'google_pay' ? 'checked' : '' }}><span><span class="payment-choice-main">Google Pay</span><span class="payment-choice-note">International guests where available.</span></span></label>
+                                    <label class="payment-choice payment-method-option" data-scope="local"><input type="radio" name="payment_method" value="bank_transfer_mvr" {{ old('payment_method') === 'bank_transfer_mvr' ? 'checked' : '' }}><span><span class="payment-choice-main">Local Bank Transfer (MVR)</span><span class="payment-choice-note">Recommended for local nationals.</span></span></label>
+                                </div>
+                                <p class="payment-hint" id="paymentHint">Payment methods are auto-filtered by guest nationality.</p>
                             </div>
-                            <div class="payment-choice-list" id="paymentMethodList" style="margin-top:8px;">
-                                <label class="payment-choice payment-method-option" data-scope="all"><input type="radio" name="payment_method" value="card" {{ old('payment_method', 'card') === 'card' ? 'checked' : '' }}><span><span class="payment-choice-main">Card</span><span class="payment-choice-note">Credit / debit cards.</span></span></label>
-                                <label class="payment-choice payment-method-option" data-scope="international"><input type="radio" name="payment_method" value="apple_pay" {{ old('payment_method') === 'apple_pay' ? 'checked' : '' }}><span><span class="payment-choice-main">Apple Pay</span><span class="payment-choice-note">International guests where available.</span></span></label>
-                                <label class="payment-choice payment-method-option" data-scope="international"><input type="radio" name="payment_method" value="google_pay" {{ old('payment_method') === 'google_pay' ? 'checked' : '' }}><span><span class="payment-choice-main">Google Pay</span><span class="payment-choice-note">International guests where available.</span></span></label>
-                                <label class="payment-choice payment-method-option" data-scope="local"><input type="radio" name="payment_method" value="bank_transfer_mvr" {{ old('payment_method') === 'bank_transfer_mvr' ? 'checked' : '' }}><span><span class="payment-choice-main">Local Bank Transfer (MVR)</span><span class="payment-choice-note">Recommended for local nationals.</span></span></label>
-                            </div>
-                            <p class="payment-hint" id="paymentHint">Payment methods are auto-filtered by guest nationality.</p>
-                        </div>
+                        @endif
                     </div>
 
                     <p class="error-text" data-service-date-error style="display:none; margin:10px 0 0;"></p>
@@ -1272,59 +1178,6 @@
                 </form>
             </aside>
         </div>
-
-        @if ($categoryKey === 'excursion')
-        @php
-            $similarListings = collect($similarListings ?? []);
-            $excursionCatalogUrl = '/catalog/excursion';
-        @endphp
-        <section class="similar-excursions-wrap" aria-label="Similar excursions nearby">
-            <h2 class="similar-excursions-title">Similar Excursions Nearby</h2>
-            @if ($similarListings->isEmpty())
-                <div class="similar-excursions-grid">
-                    @for ($si = 0; $si < 4; $si++)
-                        <a class="sim-card" href="{{ $excursionCatalogUrl }}" aria-label="Browse more excursions">
-                            <div style="width:100%;height:108px;background:linear-gradient(135deg,#d4edf8,#b9ddef);display:flex;align-items:center;justify-content:center;">
-                                <i class="fa-solid fa-water" style="font-size:2rem;color:#5fa8c5;" aria-hidden="true"></i>
-                            </div>
-                            <div class="sim-card-body">
-                                <span class="sim-card-location">Maldives</span>
-                                <h3 class="sim-card-name">More Excursions Available</h3>
-                                <span class="sim-card-price">Browse all activities</span>
-                                <span class="sim-card-btn">View <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
-                            </div>
-                        </a>
-                    @endfor
-                </div>
-            @else
-                <div class="similar-excursions-grid">
-                    @foreach ($similarListings->take(4) as $sim)
-                        @php
-                            $simName   = trim((string) ($sim->name ?? 'Excursion'));
-                            $simPrice  = (float) ($sim->base_price ?? 0);
-                            $simCur    = strtoupper(trim((string) ($sim->currency ?? 'MVR')));
-                            $simIsland = trim((string) ($sim->island ?? $sim->city ?? ''));
-                            $simAtoll  = trim((string) ($sim->atoll ?? ''));
-                            $simLoc    = implode(', ', array_filter([$simIsland, $simAtoll, 'Maldives'], fn($v) => $v !== ''));
-                            $simId     = (int) ($sim->id ?? 0);
-                            $simUrl    = $simId > 0 ? '/category-booking/' . $simId . '?category=excursion' : $excursionCatalogUrl;
-                            $simImg    = '/media/vendor/' . $simId . '/thumb';
-                        @endphp
-                        <a class="sim-card" href="{{ $simUrl }}" aria-label="{{ $simName }}">
-                            <img class="sim-card-img" src="{{ $simImg }}" alt="{{ $simName }}" loading="lazy"
-                                onerror="this.onerror=null;this.style.background='linear-gradient(135deg,#d4edf8,#b9ddef)';this.style.display='block';this.src='data:image/svg+xml,%3Csvg xmlns=&quot;http://www.w3.org/2000/svg&quot;/%3E';">
-                            <div class="sim-card-body">
-                                <span class="sim-card-location">{{ $simLoc }}</span>
-                                <h3 class="sim-card-name">{{ $simName }}</h3>
-                                <span class="sim-card-price">{{ $simCur }} {{ $simPrice > 0 ? number_format($simPrice, 2) : 'Price on request' }}</span>
-                                <span class="sim-card-btn">Book Now <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
-                            </div>
-                        </a>
-                    @endforeach
-                </div>
-            @endif
-        </section>
-        @endif
 
         @include('partials.global-site-footer')
     </main>

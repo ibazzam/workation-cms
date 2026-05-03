@@ -362,10 +362,6 @@
             margin-top: 0;
         }
 
-        .page:not(.category-accommodation) .page-body-split {
-            margin-top: 20px;
-        }
-
         .page-main-content {
             flex: 1;
             min-width: 0;
@@ -940,69 +936,6 @@
             font-weight: 700;
         }
 
-        /* ── Excursion card overrides ─────────────────────────── */
-        .page.category-excursion {
-            --listing-thumb-width: 196px;
-            --listing-thumb-height: 132px;
-        }
-
-        .page.category-excursion .card-body {
-            gap: 2px;
-        }
-
-        .page.category-excursion .card h3 {
-            font-size: 0.88rem;
-            -webkit-line-clamp: 2;
-            white-space: normal;
-            margin-bottom: 0;
-        }
-
-        .page.category-excursion .card-city {
-            font-size: 0.7rem;
-            margin-bottom: 0;
-        }
-
-        .page.category-excursion .card-desc {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            margin: 1px 0;
-            font-size: 0.72rem;
-            color: #4f677a;
-            line-height: 1.4;
-        }
-
-        .page.category-excursion .card-time {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            margin: 1px 0;
-        }
-
-        .page.category-excursion .card-time::before {
-            font-family: "Font Awesome 6 Free";
-            font-weight: 900;
-            content: "\f017";
-            font-size: 0.62rem;
-            color: #0f6179;
-        }
-
-        .page.category-excursion .card-review {
-            margin-top: 2px;
-            margin-bottom: 0;
-        }
-
-        .page.category-excursion .card-price {
-            margin-top: 2px;
-            margin-bottom: 0;
-        }
-
-        .page.category-excursion .card-offer {
-            display: none;
-        }
-        /* ── end excursion overrides ──────────────────────────── */
-
         .card-action-btn {
             align-self: flex-start;
             padding: 6px 12px;
@@ -1439,9 +1372,43 @@
         }
 
         .page.category-default .catalog-results-list {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
             height: auto;
             overflow: visible;
             border-right: 0;
+            background: transparent;
+        }
+
+        .page.category-default .catalog-grid {
+            display: contents;
+        }
+
+        .page.category-default .card {
+            border: 1px solid #dce7ef;
+            border-radius: 10px;
+            padding: 10px;
+            background: #ffffff;
+            display: block;
+            height: 100%;
+        }
+
+        .page.category-default .card-link {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            height: 100%;
+        }
+
+        .page.category-default .card img {
+            width: 100%;
+            height: 190px;
+            border-radius: 8px;
+        }
+
+        .page.category-default .card-body {
+            gap: 6px;
         }
 
         .page.category-default .catalog-map-panel {
@@ -1533,6 +1500,10 @@
                 width: calc(100% - 18px);
             }
 
+            .page.category-default .catalog-results-list {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
             .page.category-accommodation .catalog-results-layout {
                 grid-template-columns: 1fr;
                 height: auto;
@@ -1568,11 +1539,6 @@
             :root {
                 --listing-thumb-width: 156px;
                 --listing-thumb-height: 148px;
-            }
-
-            .page.category-excursion {
-                --listing-thumb-width: 144px;
-                --listing-thumb-height: 96px;
             }
 
             .search-box > .grid,
@@ -1651,21 +1617,18 @@
 
 
 
-        @media (max-width: 480px) {
-            .page.category-excursion .card-link {
-                flex-direction: column;
-            }
-
-            .page.category-excursion .card img {
-                width: 100%;
-                height: 180px;
-            }
-        }
-
         @media (max-width: 680px) {
             .page {
                 width: calc(100% - 18px);
                 margin: 10px auto 22px;
+            }
+
+            .page.category-default .catalog-results-list {
+                grid-template-columns: 1fr;
+            }
+
+            .page.category-default .card img {
+                height: 180px;
             }
 
             .search-primary-grid,
@@ -1908,16 +1871,17 @@
         $customerName = trim((string) session('portal_customer_user', 'Customer'));
         $customerContinueUrl = request()->fullUrl();
         $catalogCategoryLinks = collect([
-            ['key' => 'accommodation',    'icon' => 'fa-solid fa-hotel',          'title' => 'Accommodation',   'subtitle' => 'Hotels, resorts, villas'],
-            ['key' => 'marine-transport',  'icon' => 'fa-solid fa-water',          'title' => 'Marine Transport','subtitle' => 'Speedboats & water transfers'],
-            ['key' => 'land-transport',    'icon' => 'fa-solid fa-van-shuttle',    'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers'],
-            ['key' => 'excursion',        'icon' => 'fa-solid fa-compass',       'title' => 'Excursion',       'subtitle' => 'Tours and activities'],
-            ['key' => 'blog',             'icon' => 'fa-solid fa-newspaper',     'title' => 'Blog',            'subtitle' => 'Travel stories and picks', 'url' => '/blog'],
-            ['key' => 'remote_workspace', 'icon' => 'fa-solid fa-laptop',         'title' => 'Remote Workspace','subtitle' => 'Work-friendly spaces'],
-            ['key' => 'conference_room',  'icon' => 'fa-solid fa-object-group',   'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces'],
-            ['key' => 'resort_day_visit', 'icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit','subtitle' => 'Day-use resort offers'],
-            ['key' => 'restaurant',       'icon' => 'fa-solid fa-utensils',       'title' => 'Restaurant',      'subtitle' => 'Dining experiences'],
-            ['key' => 'vehicle_rental',   'icon' => 'fa-solid fa-car',            'title' => 'Vehicle Rental',  'subtitle' => 'Cars and local rentals'],
+            ['key' => 'accommodation', 'icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas', 'url' => '/catalog/accommodation'],
+            ['key' => 'resort-day-visit', 'icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'subtitle' => 'Day-use resort offers', 'url' => '/catalog/resort_day_visit'],
+            ['key' => 'excursion', 'icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'subtitle' => 'Tours and activities', 'url' => '/catalog/excursion'],
+            ['key' => 'water-sports', 'icon' => 'fa-solid fa-person-swimming', 'title' => 'Water Sports', 'subtitle' => 'Diving, snorkelling and sea fun', 'url' => '/catalog/water_sports'],
+            ['key' => 'restaurant', 'icon' => 'fa-solid fa-utensils', 'title' => 'Restaurants', 'subtitle' => 'Dining experiences', 'url' => '/catalog/restaurant'],
+            ['key' => 'marine-transport', 'icon' => 'fa-solid fa-water', 'title' => 'Sea Transport', 'subtitle' => 'Speedboats & water transfers', 'url' => '/catalog/marine-transport'],
+            ['key' => 'land-transport', 'icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers', 'url' => '/catalog/land-transport'],
+            ['key' => 'vehicle-rental', 'icon' => 'fa-solid fa-car', 'title' => 'Vehicle Rentals', 'subtitle' => 'Cars and local rentals', 'url' => '/catalog/vehicle_rental'],
+            ['key' => 'remote-workspace', 'icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces', 'url' => '/catalog/remote_workspace'],
+            ['key' => 'conference-room', 'icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces', 'url' => '/catalog/conference_room'],
+            ['key' => 'blog', 'icon' => 'fa-solid fa-newspaper', 'title' => 'Blog', 'subtitle' => 'Travel stories and picks', 'url' => '/blog'],
         ]);
         $catalogProperties = $catalogProperties ?? collect();
         $catalogPropertyMediaByProperty = $catalogPropertyMediaByProperty ?? collect();
@@ -1976,7 +1940,7 @@
         }
     @endphp
 
-    <main class="page {{ $categoryKey === 'accommodation' ? 'category-accommodation' : ($categoryKey === 'excursion' ? 'category-excursion' : 'category-default') }}" data-api-base="{{ $apiBase }}" data-category-key="{{ $categoryKey }}">
+    <main class="page {{ $categoryKey === 'accommodation' ? 'category-accommodation' : 'category-default' }}" data-api-base="{{ $apiBase }}" data-category-key="{{ $categoryKey }}">
         <section class="journey-hero" aria-label="Category hero and quick navigation">
             @include('partials.customer-uniform-header', [
                 'injectUniformHeaderStyles' => true,
@@ -2415,9 +2379,6 @@
         <div class="page-body-split">
             <div class="page-main-content">
 
-        @if ($categoryKey !== 'accommodation')
-            <h2 class="section-title">Available Portfolio Items</h2>
-        @endif
         @if ($catalogProperties->isEmpty())
             <div class="empty">No listings found for this category and selected filters yet.</div>
         @else
@@ -2469,29 +2430,35 @@
                             $price = (float) ($property->base_price ?? 0);
                             $cityName = trim((string) ($property->city ?? $property->island ?? $property->atoll ?? ''));
                             $isExcursionCard = $categoryKey === 'excursion';
+                            $cardDetails = [];
+                            $cardDetailsSource = $property->listing_details ?? null;
+                            if (is_array($cardDetailsSource)) {
+                                $cardDetails = $cardDetailsSource;
+                            } elseif (is_object($cardDetailsSource)) {
+                                $cardDetails = (array) $cardDetailsSource;
+                            } elseif (is_string($cardDetailsSource) && trim($cardDetailsSource) !== '') {
+                                $decodedCardDetails = json_decode($cardDetailsSource, true);
+                                if (is_array($decodedCardDetails)) {
+                                    $cardDetails = $decodedCardDetails;
+                                }
+                            }
                             $fromIsland = trim((string) ($property->island ?? ''));
                             $fromCity = trim((string) ($property->city ?? ''));
                             $fromAtoll = trim((string) ($property->atoll ?? ''));
-                            $fromPrimary = $fromIsland !== '' ? $fromIsland : $fromCity;
-                            $originLabel = $fromPrimary !== '' ? $fromPrimary : ($cityName !== '' ? $cityName : 'Maldives');
-                            if ($fromAtoll !== '' && stripos($originLabel, $fromAtoll) === false) {
-                                $originLabel .= ', ' . $fromAtoll;
-                            }
-                            // Build "city, atoll, country" label for excursion cards
-                            $excursionLocationParts = array_filter([
-                                $fromPrimary,
+                            $fromCountry = trim((string) ($property->location_country ?? $property->country ?? ($cardDetails['location_country'] ?? 'Maldives')));
+                            $originParts = array_values(array_filter([
+                                $fromIsland !== '' ? $fromIsland : $fromCity,
                                 $fromAtoll,
-                                'Maldives',
-                            ], fn($v) => $v !== '');
-                            $excursionLocationLabel = implode(', ', $excursionLocationParts);
+                                $fromCountry,
+                            ], static fn ($item): bool => trim((string) $item) !== ''));
+                            $originLabel = $originParts !== [] ? implode(', ', $originParts) : 'Maldives';
                             $activityType = trim((string) (
                                 (property_exists($property, 'activity_type') ? $property->activity_type : '')
+                                ?: ($cardDetails['activity_type'] ?? '')
                                 ?: (property_exists($property, 'excursion_type') ? $property->excursion_type : '')
+                                ?: ($cardDetails['excursion_type'] ?? '')
                                 ?: (property_exists($property, 'tour_type') ? $property->tour_type : '')
                             ));
-                            $activityTypeLabel = $activityType !== ''
-                                ? ucwords(str_replace('_', ' ', $activityType))
-                                : '';
                             $activityName = trim((string) (
                                 (property_exists($property, 'activity_name') ? $property->activity_name : '')
                                 ?: (property_exists($property, 'listing_name') ? $property->listing_name : '')
@@ -2499,10 +2466,11 @@
                             ));
                             $descriptionSource = trim((string) (
                                 (property_exists($property, 'short_description') ? $property->short_description : '')
+                                ?: ($cardDetails['short_description'] ?? '')
                                 ?: (property_exists($property, 'tagline') ? $property->tagline : '')
                                 ?: ($property->description ?? '')
                             ));
-                            $shortDescription = \Illuminate\Support\Str::limit($descriptionSource, 90);
+                            $shortDescription = \Illuminate\Support\Str::limit(strip_tags($descriptionSource), 120);
 
                             $formatTimeLabel = static function ($rawValue): string {
                                 $value = trim((string) $rawValue);
@@ -2524,13 +2492,19 @@
 
                             $startTimeRaw =
                                 (property_exists($property, 'start_time') ? $property->start_time : null)
+                                ?? ($cardDetails['start_time'] ?? null)
                                 ?? (property_exists($property, 'departure_time') ? $property->departure_time : null)
+                                ?? ($cardDetails['departure_time'] ?? null)
                                 ?? (property_exists($property, 'activity_start_time') ? $property->activity_start_time : null)
+                                ?? ($cardDetails['activity_start_time'] ?? null)
                                 ?? (property_exists($property, 'start_at') ? $property->start_at : null);
                             $endTimeRaw =
                                 (property_exists($property, 'end_time') ? $property->end_time : null)
+                                ?? ($cardDetails['end_time'] ?? null)
                                 ?? (property_exists($property, 'return_time') ? $property->return_time : null)
+                                ?? ($cardDetails['return_time'] ?? null)
                                 ?? (property_exists($property, 'activity_end_time') ? $property->activity_end_time : null)
+                                ?? ($cardDetails['activity_end_time'] ?? null)
                                 ?? (property_exists($property, 'end_at') ? $property->end_at : null);
 
                             $startTimeLabel = $formatTimeLabel($startTimeRaw);
@@ -2662,44 +2636,12 @@
                                         : ($bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback));
                                 @endphp
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
-                                @if ($isExcursionCard)
                                 <div class="card-body">
-                                    <h3>{{ $activityName }}</h3>
-                                    <span class="card-city">{{ $excursionLocationLabel }}</span>
-                                    @if ($activityTypeLabel !== '')
-                                        <span class="card-type-chip">{{ $activityTypeLabel }}</span>
+                                    <span class="card-city">{{ $isExcursionCard ? $originLabel : ($cityName !== '' ? $cityName : 'Maldives') }}</span>
+                                    @if ($isExcursionCard && $activityType !== '')
+                                        <span class="card-type-chip">{{ str_replace('_', ' ', $activityType) }}</span>
                                     @endif
-                                    @if ($shortDescription !== '')
-                                        <p class="card-desc">{{ $shortDescription }}</p>
-                                    @endif
-                                    @if ($startTimeLabel !== '' || $endTimeLabel !== '')
-                                        <div class="card-time">
-                                            @if ($startTimeLabel !== '' && $endTimeLabel !== '')
-                                                {{ $startTimeLabel }} – {{ $endTimeLabel }}
-                                            @elseif ($startTimeLabel !== '')
-                                                From {{ $startTimeLabel }}
-                                            @else
-                                                Until {{ $endTimeLabel }}
-                                            @endif
-                                        </div>
-                                    @endif
-                                    <div class="card-review">
-                                        <span class="card-rating-badge">{{ $reviewScore }}</span>
-                                        <span>{{ number_format($reviewCount) }} reviews</span>
-                                    </div>
-                                    <div class="card-price">
-                                        @if ($price > 0)
-                                            From {{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}
-                                        @else
-                                            Price on request
-                                        @endif
-                                    </div>
-                                    <span class="card-action-btn">{{ $actionLabel }} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
-                                </div>
-                                @else
-                                <div class="card-body">
-                                    <span class="card-city">{{ $cityName !== '' ? $cityName : 'Maldives' }}</span>
-                                    <h3>{{ (string) ($property->name ?? 'Listing') }}</h3>
+                                    <h3>{{ $isExcursionCard ? $activityName : (string) ($property->name ?? 'Listing') }}</h3>
                                     <div class="card-stars" aria-label="Star ranking">
                                         @if ($starRank > 0)
                                             @for ($i = 0; $i < $starRank; $i++)
@@ -2719,9 +2661,22 @@
                                         @endif
                                     </div>
                                     <div class="card-offer">{{ $offerSummary }}</div>
+                                    @if ($isExcursionCard && $shortDescription !== '')
+                                        <p class="card-desc">{{ $shortDescription }}</p>
+                                    @endif
+                                    @if ($isExcursionCard && ($startTimeLabel !== '' || $endTimeLabel !== ''))
+                                        <div class="card-time">
+                                            @if ($startTimeLabel !== '' && $endTimeLabel !== '')
+                                                {{ $startTimeLabel }} - {{ $endTimeLabel }}
+                                            @elseif ($startTimeLabel !== '')
+                                                Starts {{ $startTimeLabel }}
+                                            @else
+                                                Ends {{ $endTimeLabel }}
+                                            @endif
+                                        </div>
+                                    @endif
                                     <span class="card-action-btn">{{ $actionLabel }} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
                                 </div>
-                                @endif
                             </a>
                             @endif
                         </article>

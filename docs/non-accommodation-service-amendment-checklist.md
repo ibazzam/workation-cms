@@ -14,7 +14,7 @@ Status Legend: [ ] Not Started, [~] In Progress, [x] Done
 - [x] Confirm no transfer step is shown (reserve-category now redirects directly to checkout, skipping /transfer page)
 - [ ] Payment gateway handoff validation
 
-## Land Transport
+## Land Transport 
 - [ ] Category listing page UX refinement
 - [ ] Individual service page refinement
 - [x] Booking form: pickup and drop-off fields (`origin_point` / `destination_point` required fields)

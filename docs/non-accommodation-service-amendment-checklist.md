@@ -3,7 +3,7 @@
 Purpose: Track category-by-category UX and booking-flow amendments for non-accommodation listings.
 
 Owner: Product + Vendor Portal
-Last Updated: 2026-05-01
+Last Updated: 2026-05-03
 Status Legend: [ ] Not Started, [~] In Progress, [x] Done
 
 ## Marine Transport
@@ -23,12 +23,12 @@ Status Legend: [ ] Not Started, [~] In Progress, [x] Done
 - [ ] Payment gateway handoff validation
 
 ## Excursion
-- [ ] Category listing page UX refinement
-- [ ] Individual service page refinement
-- [ ] Booking form: activity date and guest count
-- [ ] Booking form: transfer inclusive details (departure area/jetty, departure time, return slot)
-- [ ] Confirm no separate transfer step is shown
-- [ ] Payment gateway handoff validation
+- [x] Category listing page UX refinement
+- [x] Individual service page refinement
+- [x] Booking form: activity date and guest count
+- [x] Booking form: transfer inclusive details (departure area/jetty, departure time, return slot)
+- [x] Confirm no separate transfer step is shown
+- [x] Payment gateway handoff validation
 
 ## Remote Workspace
 - [ ] Category listing page UX refinement

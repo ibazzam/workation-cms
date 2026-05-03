@@ -9,10 +9,76 @@
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        :root { --bg:#f3f8f5; --ink:#152738; --muted:#5f7488; --line:#d5e2ec; --surface:#ffffff; --brand:#0f6179; --accent:#f3a337; }
+        :root { --bg:#f3f8f5; --ink:#152738; --muted:#5f7488; --line:#d5e2ec; --surface:#ffffff; --brand:#0f6179; --accent:#f3a337; --property-header-offset:74px; }
         * { box-sizing:border-box; }
         body { margin:0; font-family:"Outfit","Trebuchet MS",sans-serif; color:var(--ink); background:var(--bg); }
-        .page { width:min(1180px,calc(100% - 24px)); margin:14px auto 28px; }
+        body.is-header-hidden { --property-header-offset:0px; }
+        .page { width:min(1180px,calc(100% - 24px)); margin:0 auto 28px; }
+
+        .top-search-shell {
+            position: sticky;
+            top: var(--property-header-offset);
+            z-index: 60;
+            border: 1px solid #d4e5ef;
+            border-radius: 0;
+            background: #ffffff;
+            padding: 10px;
+            box-shadow: none;
+            margin-bottom: 0;
+            width: 100%;
+        }
+
+        .top-search-inner {
+            width: min(1180px, calc(100% - 24px));
+            margin: 0 auto;
+        }
+
+        .top-search-form {
+            display: grid;
+            grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(140px, 1fr)) auto;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .top-search-field {
+            border: 1px solid #c6d7e4;
+            border-radius: 8px;
+            padding: 8px 10px;
+            background: #fbfdff;
+            color: #17344a;
+            display: grid;
+            gap: 2px;
+        }
+
+        .top-search-field label {
+            font-size: 0.68rem;
+            color: #5f7488;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+        }
+
+        .top-search-field input {
+            border: 0;
+            background: transparent;
+            font: inherit;
+            font-size: 0.88rem;
+            color: #17344a;
+            padding: 0;
+            outline: none;
+        }
+
+        .top-search-btn {
+            border: 1px solid #0f6179;
+            background: #0f6179;
+            color: #ffffff;
+            border-radius: 8px;
+            padding: 11px 16px;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
 
         .breadcrumb {
             display: flex;
@@ -453,6 +519,8 @@
         .actions { margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
 
         @media (max-width: 980px) {
+            .top-search-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .top-search-btn { grid-column: span 2; }
             .layout { grid-template-columns:1fr; }
             .reservation-form,
             .service-content { grid-column: auto; grid-row: auto; }
@@ -462,6 +530,8 @@
         }
 
         @media (max-width: 760px) {
+            .top-search-form { grid-template-columns: 1fr; }
+            .top-search-btn { grid-column: auto; }
             .grid, .service-intel { grid-template-columns:1fr; }
             .gallery-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
         }
@@ -469,24 +539,34 @@
     @include('partials.uniform-buttons')
 </head>
 <body>
+    @php
+        $headerCategoryKey = str_replace('_', '-', strtolower(trim((string) ($categoryKey ?? 'accommodation'))));
+        $headerCategoryLinks = [
+            ['key' => 'accommodation', 'icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas', 'url' => '/catalog/accommodation'],
+            ['key' => 'resort-day-visit', 'icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'subtitle' => 'Day-use resort offers', 'url' => '/catalog/resort_day_visit'],
+            ['key' => 'excursion', 'icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'subtitle' => 'Tours and activities', 'url' => '/catalog/excursion'],
+            ['key' => 'water-sports', 'icon' => 'fa-solid fa-person-swimming', 'title' => 'Water Sports', 'subtitle' => 'Diving, snorkelling and sea fun', 'url' => '/catalog/water_sports'],
+            ['key' => 'restaurant', 'icon' => 'fa-solid fa-utensils', 'title' => 'Restaurants', 'subtitle' => 'Dining experiences', 'url' => '/catalog/restaurant'],
+            ['key' => 'marine-transport', 'icon' => 'fa-solid fa-water', 'title' => 'Sea Transport', 'subtitle' => 'Speedboats & water transfers', 'url' => '/catalog/marine-transport'],
+            ['key' => 'land-transport', 'icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers', 'url' => '/catalog/land-transport'],
+            ['key' => 'vehicle-rental', 'icon' => 'fa-solid fa-car', 'title' => 'Vehicle Rentals', 'subtitle' => 'Cars and local rentals', 'url' => '/catalog/vehicle_rental'],
+            ['key' => 'remote-workspace', 'icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces', 'url' => '/catalog/remote_workspace'],
+            ['key' => 'conference-room', 'icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces', 'url' => '/catalog/conference_room'],
+            ['key' => 'blog', 'icon' => 'fa-solid fa-newspaper', 'title' => 'Blog', 'subtitle' => 'Travel stories and picks', 'url' => '/blog'],
+        ];
+    @endphp
+
     @include('partials.customer-uniform-header', [
+        'injectUniformHeaderStyles' => true,
+        'injectUniformHeaderScripts' => true,
+        'headerNeedsSpacer' => false,
         'headerHideOnScroll' => true,
         'headerShowSearch' => true,
-        'headerSearchAction' => '/catalog/' . str_replace('_', '-', strtolower(trim((string) ($categoryKey ?? 'accommodation')))),
+        'headerSearchAction' => '/catalog/' . $headerCategoryKey,
         'headerSearchValue' => '',
-        'headerCategoryLinks' => [
-            ['key' => 'accommodation', 'title' => 'Accommodation', 'url' => '/catalog/accommodation'],
-            ['key' => 'marine-transport', 'title' => 'Marine Transport', 'url' => '/catalog/marine-transport'],
-            ['key' => 'land-transport', 'title' => 'Land Transport', 'url' => '/catalog/land-transport'],
-            ['key' => 'excursion', 'title' => 'Excursion', 'url' => '/catalog/excursion'],
-            ['key' => 'blog', 'title' => 'Blog', 'url' => '/blog'],
-            ['key' => 'remote_workspace', 'title' => 'Remote Workspace', 'url' => '/catalog/remote_workspace'],
-            ['key' => 'conference_room', 'title' => 'Conference Rooms', 'url' => '/catalog/conference_room'],
-            ['key' => 'resort_day_visit', 'title' => 'Resort Day Visit', 'url' => '/catalog/resort_day_visit'],
-            ['key' => 'restaurant', 'title' => 'Restaurant', 'url' => '/catalog/restaurant'],
-            ['key' => 'vehicle_rental', 'title' => 'Vehicle Rental', 'url' => '/catalog/vehicle_rental'],
-        ],
-        'headerActiveCategoryKey' => str_replace('_', '-', strtolower(trim((string) ($categoryKey ?? 'accommodation')))),
+        'headerCategoryLinks' => $headerCategoryLinks,
+        'headerActiveCategoryKey' => $headerCategoryKey,
+        'headerContinueUrl' => (string) request()->fullUrl(),
     ])
 
     @php
@@ -605,12 +685,34 @@
         };
     @endphp
 
+    <section class="top-search-shell" aria-label="Search service options">
+        <div class="top-search-inner">
+            <form method="GET" action="" class="top-search-form" id="categoryTopSearch">
+                <div class="top-search-field">
+                    <label for="topCategoryProperty">Location</label>
+                    <input id="topCategoryProperty" type="text" name="property_name" value="{{ (string) ($property->name ?? '') }}" readonly>
+                </div>
+                <div class="top-search-field">
+                    <label for="topCategoryCheckin">Start</label>
+                    <input id="topCategoryCheckin" type="date" name="checkin" min="{{ now()->toDateString() }}" value="{{ (string) ($prefill['checkin'] ?? '') }}">
+                </div>
+                <div class="top-search-field">
+                    <label for="topCategoryCheckout">End</label>
+                    <input id="topCategoryCheckout" type="date" name="checkout" min="{{ now()->toDateString() }}" value="{{ (string) ($prefill['checkout'] ?? '') }}">
+                </div>
+                <div class="top-search-field">
+                    <label for="topCategoryGuests">Guests</label>
+                    <input id="topCategoryGuests" type="text" value="{{ (int) ($prefill['adults'] ?? 2) }} adults, {{ (int) ($prefill['children'] ?? 0) }} children" readonly>
+                    <input type="hidden" name="adults" value="{{ (int) ($prefill['adults'] ?? 2) }}">
+                    <input type="hidden" name="children" value="{{ (int) ($prefill['children'] ?? 0) }}">
+                    <input type="hidden" name="infants" value="{{ (int) ($prefill['infants'] ?? 0) }}">
+                </div>
+                <button type="submit" class="top-search-btn"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Search</button>
+            </form>
+        </div>
+    </section>
+
     <main class="page">
-        @include('partials.booking-process-highlights', [
-            'bookingProcessCurrentStep' => 1,
-            'bookingProcessBackUrl' => '/catalog/' . str_replace('_', '-', strtolower(trim((string) ($categoryKey ?? 'accommodation')))),
-            'bookingProcessNextText' => 'Next step after this page: choose transfer options and continue to payment selection.',
-        ])
 
         @php
             $breadcrumbCategoryUrl = '/catalog/' . str_replace('_', '-', $categoryKey);

@@ -7,6 +7,8 @@
     @include('partials.favicon')
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    @include('partials.uniform-buttons')
     <style>
         :root { --bg:#f3f8f5; --ink:#152738; --muted:#5f7488; --line:#d5e2ec; --surface:#ffffff; --brand:#0f6179; }
         * { box-sizing:border-box; }
@@ -40,7 +42,40 @@
         $paymentAmount = number_format((float) ($reservation->payment_amount ?? $reservation->total_amount ?? 0), 2);
         $sourceCurrency = strtoupper(trim((string) ($paymentPayload['source_currency'] ?? $reservation->currency ?? 'MVR')));
         $sourceAmount = number_format((float) ($paymentPayload['source_amount'] ?? $reservation->total_amount ?? 0), 2);
+
+        $paymentNotes = json_decode((string) ($reservation->notes ?? ''), true);
+        if (!is_array($paymentNotes)) {
+            $paymentNotes = [];
+        }
+        $headerCategorySource = trim((string) ($paymentNotes['category_key'] ?? ($property->listing_category ?? 'accommodation')));
+        $headerCategoryKey = str_replace('_', '-', strtolower($headerCategorySource !== '' ? $headerCategorySource : 'accommodation'));
+        $headerCategoryLinks = [
+            ['key' => 'accommodation', 'icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas', 'url' => '/catalog/accommodation'],
+            ['key' => 'resort-day-visit', 'icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'subtitle' => 'Day-use resort offers', 'url' => '/catalog/resort_day_visit'],
+            ['key' => 'excursion', 'icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'subtitle' => 'Tours and activities', 'url' => '/catalog/excursion'],
+            ['key' => 'water-sports', 'icon' => 'fa-solid fa-person-swimming', 'title' => 'Water Sports', 'subtitle' => 'Diving, snorkelling and sea fun', 'url' => '/catalog/water_sports'],
+            ['key' => 'restaurant', 'icon' => 'fa-solid fa-utensils', 'title' => 'Restaurants', 'subtitle' => 'Dining experiences', 'url' => '/catalog/restaurant'],
+            ['key' => 'marine-transport', 'icon' => 'fa-solid fa-water', 'title' => 'Sea Transport', 'subtitle' => 'Speedboats & water transfers', 'url' => '/catalog/marine-transport'],
+            ['key' => 'land-transport', 'icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers', 'url' => '/catalog/land-transport'],
+            ['key' => 'vehicle-rental', 'icon' => 'fa-solid fa-car', 'title' => 'Vehicle Rentals', 'subtitle' => 'Cars and local rentals', 'url' => '/catalog/vehicle_rental'],
+            ['key' => 'remote-workspace', 'icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces', 'url' => '/catalog/remote_workspace'],
+            ['key' => 'conference-room', 'icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces', 'url' => '/catalog/conference_room'],
+            ['key' => 'blog', 'icon' => 'fa-solid fa-newspaper', 'title' => 'Blog', 'subtitle' => 'Travel stories and picks', 'url' => '/blog'],
+        ];
     @endphp
+
+    @include('partials.customer-uniform-header', [
+        'injectUniformHeaderStyles' => true,
+        'injectUniformHeaderScripts' => true,
+        'headerNeedsSpacer' => false,
+        'headerHideOnScroll' => true,
+        'headerShowSearch' => true,
+        'headerSearchAction' => '/catalog/' . $headerCategoryKey,
+        'headerSearchValue' => '',
+        'headerCategoryLinks' => $headerCategoryLinks,
+        'headerActiveCategoryKey' => $headerCategoryKey,
+        'headerContinueUrl' => (string) request()->fullUrl(),
+    ])
 
     <main class="page">
         @include('partials.booking-process-highlights', [

@@ -18,6 +18,7 @@ Target: complete launch-critical portal work by March 31, 2026.
 - [x] Atoll/Island API endpoints for cascading dropdowns across app (2026-04-10)
 - [x] Vendor profile form with atoll/island business location fields (2026-04-10)
 - [x] Shared Blade component for cascading atoll/island select dropdowns (2026-04-10)
+- [x] Non-accommodation booking form amendments: added departure area/jetty, departure time, return slot fields to excursion/workspace/conference/resort-day/restaurant; added driver's license field + rental terms to vehicle rental; skip separate /transfer step for all service category bookings (2026-05-03)
 
 ## P0 Launch-Critical (Finish First)
 - [ ] Stabilize Facebook login end-to-end in production
@@ -245,9 +246,11 @@ Execution rule: complete each task fully (verify + fix + evidence) before moving
 - [ ] Evidence: journey screenshots + issue list (if any)
 
 ### Task 5 - Non-room Category Booking QA (P0)
-- [ ] Validate each category-booking form and required category-specific fields
-- [ ] Validate category detail capture and reservation note payload completeness
-- [ ] Validate redirect to checkout with correct summary data
+- [x] Category-booking forms built with category-specific required fields per vertical (origin/dest for transport; event_type/capacity for conference; visit_package for resort; vehicle_type/pickup/dropoff/license for rental) (2026-05-03)
+- [x] Transfer inclusive details fields added to forms: departure area/jetty, departure time, return slot for excursion/workspace/conference/resort-day/restaurant (2026-05-03)
+- [x] Category detail capture and reservation note payload verified complete (category_details stored in notes per reservation) (2026-05-03)
+- [x] Non-accommodation bookings now redirect directly to checkout (bypass separate /transfer step) (2026-05-03)
+- [ ] QA pass: validate each category-booking flow end-to-end with a real listing and verify checkout summary data is correct
 - [ ] Acceptance: all category-booking flows reach checkout with correct context
 - [ ] Evidence: flow-by-flow payload and UI checks
 
@@ -305,3 +308,4 @@ Execution rule: complete each task fully (verify + fix + evidence) before moving
 
 ## Immediate Next Step
 - [ ] Start Task 1 now and produce the first route matrix pass with defects list
+- [ ] Run end-to-end QA pass on Task 5 category booking flows to produce evidence and confirm all forms reach checkout correctly

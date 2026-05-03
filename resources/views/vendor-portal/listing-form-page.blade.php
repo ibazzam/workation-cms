@@ -64,6 +64,19 @@
                         @include('vendor-portal.partials.forms.' . $formType . '.' . $category)
                     </div>
                 </section>
+
+                @if ($formType === 'edit' && isset($property))
+                <section class="ops-section" style="margin-top:12px;">
+                    <div class="ops-category-card">
+                        <div class="ops-header">
+                            <h3 class="ops-title">Listing Photos</h3>
+                            <span class="ops-chip">Media</span>
+                        </div>
+                        <p style="margin:0 0 10px; color:#3a5568; font-size:0.88rem;">Upload and manage photos for this listing from the Media Manager in your Listings Console.</p>
+                        <a class="btn btn-secondary" href="/vendor/listings/{{ $category }}#media-{{ $property->id ?? '' }}">Open Media Manager</a>
+                    </div>
+                </section>
+                @endif
             </div>
         </div>
     </main>

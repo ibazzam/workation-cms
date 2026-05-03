@@ -24,7 +24,7 @@
             background: #ffffff;
             padding: 10px;
             box-shadow: none;
-            margin-bottom: 12px;
+            margin-bottom: 0;
             width: 100%;
         }
 
@@ -800,9 +800,7 @@
                         @if ($activityTypeLabel !== '')
                             <span class="hero-chip"><i class="fa-solid fa-compass" aria-hidden="true"></i> {{ str_replace('_', ' ', $activityTypeLabel) }}</span>
                         @endif
-                        @if ($categoryKey !== 'excursion')
-                            <span class="hero-chip"><i class="fa-solid fa-coins" aria-hidden="true"></i> From {{ $currency }} {{ number_format($basePrice, 2) }}</span>
-                        @endif
+                        <span class="hero-chip"><i class="fa-solid fa-coins" aria-hidden="true"></i> From {{ $currency }} {{ number_format($basePrice, 2) }}</span>
                         <span class="service-review"><i class="fa-solid fa-star" aria-hidden="true"></i> {{ $reviewScore }} ({{ number_format($reviewCount) }})</span>
                     </div>
                     <section class="share-card" aria-label="Share this listing">
@@ -816,7 +814,6 @@
                     </section>
                 </section>
 
-                @if ($categoryKey !== 'excursion')
                 <section class="block" aria-label="Service details" style="margin-top:12px;">
                     <h2 class="block-title">{{ $categoryKey === 'excursion' ? 'Descriptions & Details' : 'Service Snapshot' }}</h2>
                     <div class="service-intel">
@@ -864,7 +861,6 @@
                         @endif
                     </div>
                 </section>
-                @endif
 
                 <section class="block" aria-label="Highlights and amenities" style="margin-top:12px;">
                     <h2 class="block-title">Highlights</h2>
@@ -939,6 +935,11 @@
                     @endif
                 </section>
 
+                <section class="block" aria-label="Similar services" style="margin-top:12px;">
+                    <h2 class="block-title">Similar {{ strtolower($categoryLabel) }} Nearby</h2>
+                    <p class="description" style="margin-top:0;">Explore similar services from the same area and compare availability, inclusions, and pricing before checkout.</p>
+                    <a class="btn" href="/catalog/{{ str_replace('_', '-', $categoryKey) }}">Browse {{ $categoryLabel }} listings</a>
+                </section>
             </section>
 
             <aside class="booking-card reservation-form" aria-label="Category booking form">
@@ -946,12 +947,10 @@
                 @if ($categoryKey === 'excursion')
                     <p class="booking-subtitle">{{ (string) ($property->name ?? 'Excursion Activity') }}</p>
                 @endif
-                @if ($categoryKey !== 'excursion')
-                    <div class="booking-price">
-                        <span>Starting price</span>
-                        <strong>{{ $currency }} {{ number_format($basePrice, 2) }}</strong>
-                    </div>
-                @endif
+                <div class="booking-price">
+                    <span>Starting price</span>
+                    <strong>{{ $currency }} {{ number_format($basePrice, 2) }}</strong>
+                </div>
 
                 <form method="POST" action="/booking/reserve-category" id="categoryServiceBookingForm">
                     @csrf
@@ -973,6 +972,10 @@
                     <div class="grid">
                         @if ($categoryKey === 'excursion')
                             <div class="field full"><label for="serviceStartDate">Activity Date</label><input id="serviceStartDate" name="service_start_date" type="date" min="{{ (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            <div class="field full">
+                                <label>Lead Guest</label>
+                                <p class="booking-subtitle" style="margin:0;">Fill guest details below exactly as government-issued documents.</p>
+                            </div>
                             <div class="field full">
                                 <label>Guests and Unit Price</label>
                                 <div class="booking-lines">
@@ -1103,52 +1106,50 @@
                             <input type="hidden" name="payment_method" value="{{ old('payment_method', 'card') }}">
                         @endif
 
-                        @if ($categoryKey !== 'excursion')
-                            <div class="field full">
-                                <label>Transfer option</label>
-                                @if ($transferOptions->isNotEmpty())
-                                    <div class="transfer-list" id="transferOptionsList">
-                                        @foreach ($transferOptions as $index => $option)
-                                            @php
-                                                $transferCode = strtolower(trim((string) ($option['code'] ?? '')));
-                                                $optionSelected = old('transfer_option', (string) ($prefill['transfer_option'] ?? ''));
-                                                $localAdultRate = (float) ($option['local_adult_charge'] ?? $option['adult_charge'] ?? 0);
-                                                $localChildRate = (float) ($option['local_child_charge'] ?? $option['child_charge'] ?? 0);
-                                                $foreignAdultRate = (float) ($option['foreign_adult_charge'] ?? $option['adult_charge'] ?? 0);
-                                                $foreignChildRate = (float) ($option['foreign_child_charge'] ?? $option['child_charge'] ?? 0);
-                                            @endphp
-                                            <label class="transfer-option">
-                                                <input
-                                                    type="radio"
-                                                    name="transfer_option"
-                                                    value="{{ $transferCode }}"
-                                                    data-local-adult="{{ $localAdultRate }}"
-                                                    data-local-child="{{ $localChildRate }}"
-                                                    data-foreign-adult="{{ $foreignAdultRate }}"
-                                                    data-foreign-child="{{ $foreignChildRate }}"
-                                                    data-base-local="{{ (float) ($option['base_charge_local'] ?? 0) }}"
-                                                    data-base-foreign="{{ (float) ($option['base_charge_foreign'] ?? 0) }}"
-                                                    {{ ($optionSelected === '' && $index === 0) || strtolower((string) $optionSelected) === $transferCode ? 'checked' : '' }}
-                                                >
-                                                <span>
-                                                    <span class="transfer-option-title">{{ (string) ($option['label'] ?? Str::headline(str_replace('_', ' ', $transferCode))) }}</span>
-                                                    <span class="transfer-option-rates">Local: Adult {{ $currency }} {{ number_format($localAdultRate, 2) }}, Child {{ $currency }} {{ number_format($localChildRate, 2) }} • Foreigner: Adult {{ $currency }} {{ number_format($foreignAdultRate, 2) }}, Child {{ $currency }} {{ number_format($foreignChildRate, 2) }}</span>
-                                                    <span class="transfer-option-note">Tick to include this transfer mode in billing.</span>
-                                                </span>
-                                            </label>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    <p class="booking-subtitle" style="margin:0;">No transfer options configured for this listing.</p>
-                                    <input type="hidden" name="transfer_option" value="">
-                                @endif
-                            </div>
+                        <div class="field full">
+                            <label>Transfer option</label>
+                            @if ($transferOptions->isNotEmpty())
+                                <div class="transfer-list" id="transferOptionsList">
+                                    @foreach ($transferOptions as $index => $option)
+                                        @php
+                                            $transferCode = strtolower(trim((string) ($option['code'] ?? '')));
+                                            $optionSelected = old('transfer_option', (string) ($prefill['transfer_option'] ?? ''));
+                                            $localAdultRate = (float) ($option['local_adult_charge'] ?? $option['adult_charge'] ?? 0);
+                                            $localChildRate = (float) ($option['local_child_charge'] ?? $option['child_charge'] ?? 0);
+                                            $foreignAdultRate = (float) ($option['foreign_adult_charge'] ?? $option['adult_charge'] ?? 0);
+                                            $foreignChildRate = (float) ($option['foreign_child_charge'] ?? $option['child_charge'] ?? 0);
+                                        @endphp
+                                        <label class="transfer-option">
+                                            <input
+                                                type="radio"
+                                                name="transfer_option"
+                                                value="{{ $transferCode }}"
+                                                data-local-adult="{{ $localAdultRate }}"
+                                                data-local-child="{{ $localChildRate }}"
+                                                data-foreign-adult="{{ $foreignAdultRate }}"
+                                                data-foreign-child="{{ $foreignChildRate }}"
+                                                data-base-local="{{ (float) ($option['base_charge_local'] ?? 0) }}"
+                                                data-base-foreign="{{ (float) ($option['base_charge_foreign'] ?? 0) }}"
+                                                {{ ($optionSelected === '' && $index === 0) || strtolower((string) $optionSelected) === $transferCode ? 'checked' : '' }}
+                                            >
+                                            <span>
+                                                <span class="transfer-option-title">{{ (string) ($option['label'] ?? Str::headline(str_replace('_', ' ', $transferCode))) }}</span>
+                                                <span class="transfer-option-rates">Local: Adult {{ $currency }} {{ number_format($localAdultRate, 2) }}, Child {{ $currency }} {{ number_format($localChildRate, 2) }} • Foreigner: Adult {{ $currency }} {{ number_format($foreignAdultRate, 2) }}, Child {{ $currency }} {{ number_format($foreignChildRate, 2) }}</span>
+                                                <span class="transfer-option-note">Tick to include this transfer mode in billing.</span>
+                                            </span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            @else
+                                <p class="booking-subtitle" style="margin:0;">No transfer options configured for this listing.</p>
+                                <input type="hidden" name="transfer_option" value="">
+                            @endif
+                        </div>
 
-                            <div class="field full">
-                                <label for="transferCharge">Transfer charge</label>
-                                <input id="transferCharge" name="transfer_charge" type="number" step="0.01" min="0" value="{{ old('transfer_charge', '0') }}" readonly>
-                            </div>
-                        @endif
+                        <div class="field full">
+                            <label for="transferCharge">Transfer charge</label>
+                            <input id="transferCharge" name="transfer_charge" type="number" step="0.01" min="0" value="{{ old('transfer_charge', '0') }}" readonly>
+                        </div>
 
                         @if ($categoryKey !== 'excursion')
                             <div class="field full">
@@ -1177,12 +1178,6 @@
                 </form>
             </aside>
         </div>
-
-        <section class="block" aria-label="Similar services" style="margin-top:12px;">
-            <h2 class="block-title">Similar {{ strtolower($categoryLabel) }} Nearby</h2>
-            <p class="description" style="margin-top:0;">Explore similar services from the same area and compare availability, inclusions, and pricing before checkout.</p>
-            <a class="btn" href="/catalog/{{ str_replace('_', '-', $categoryKey) }}">Browse {{ $categoryLabel }} listings</a>
-        </section>
 
         @include('partials.global-site-footer')
     </main>

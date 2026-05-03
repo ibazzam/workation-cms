@@ -362,6 +362,10 @@
             margin-top: 0;
         }
 
+        .page:not(.category-accommodation) .page-body-split {
+            margin-top: 20px;
+        }
+
         .page-main-content {
             flex: 1;
             min-width: 0;

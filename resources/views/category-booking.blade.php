@@ -19,6 +19,7 @@
             align-items: center;
             flex-wrap: wrap;
             gap: 4px 6px;
+            margin-top: 14px;
             margin-bottom: 10px;
             font-size: 0.78rem;
             color: #5f7488;
@@ -465,6 +466,125 @@
             .grid, .service-intel { grid-template-columns:1fr; }
             .gallery-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
         }
+
+        /* ── Excursion-specific sections ──────────────────────── */
+        .excursion-detail-section {
+            margin-top: 12px;
+        }
+
+        .similar-excursions-wrap {
+            margin-top: 20px;
+            padding: 14px 0 0;
+            border-top: 1px solid var(--line);
+        }
+
+        .similar-excursions-title {
+            margin: 0 0 10px;
+            font-size: 0.86rem;
+            font-weight: 800;
+            color: #1a3c54;
+            letter-spacing: -0.01em;
+        }
+
+        .similar-excursions-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        @media (max-width: 900px) {
+            .similar-excursions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @media (max-width: 520px) {
+            .similar-excursions-grid { grid-template-columns: 1fr; }
+        }
+
+        .sim-card {
+            border: 1px solid #d8e9f2;
+            border-radius: 12px;
+            background: #ffffff;
+            overflow: hidden;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            transition: box-shadow 0.18s ease;
+        }
+
+        .sim-card:hover { box-shadow: 0 6px 18px rgba(15, 97, 121, 0.14); }
+
+        .sim-card-img {
+            width: 100%;
+            height: 108px;
+            object-fit: cover;
+            display: block;
+            background: #ddf0f9;
+        }
+
+        .sim-card-body {
+            padding: 8px 10px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex: 1;
+        }
+
+        .sim-card-location {
+            font-size: 0.68rem;
+            color: #7a8d9a;
+            line-height: 1;
+        }
+
+        .sim-card-name {
+            margin: 0;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #1a2f43;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.2;
+        }
+
+        .sim-card-price {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #0f6179;
+            margin-top: 3px;
+        }
+
+        .sim-card-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 6px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            background: #2fa58a;
+            color: #fff;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-decoration: none;
+            align-self: flex-start;
+        }
+
+        .reviews-placeholder {
+            padding: 14px 12px;
+            text-align: center;
+            color: #7a9aaf;
+            font-size: 0.82rem;
+            line-height: 1.5;
+        }
+
+        .reviews-placeholder i {
+            display: block;
+            font-size: 1.6rem;
+            color: #b8d0dc;
+            margin-bottom: 6px;
+        }
+        /* ── end excursion sections ────────────────────────────── */
     </style>
     @include('partials.uniform-buttons')
 </head>
@@ -632,7 +752,7 @@
             </div>
             <div class="hero-meta">
                 <span class="hero-chip"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> {{ $categoryLabel }}</span>
-                <span class="hero-chip"><i class="fa-solid fa-coins" aria-hidden="true"></i> From {{ $currency }} {{ number_format($basePrice, 2) }}</span>
+                <span class="hero-chip"><i class="fa-solid fa-coins" aria-hidden="true"></i> {{ $currency }} {{ number_format($basePrice, 2) }}</span>
                 <span class="hero-chip"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i> Live booking request flow</span>
             </div>
         </section>
@@ -706,78 +826,204 @@
                     </div>
                 </section>
 
-                <section class="block" aria-label="Highlights and amenities" style="margin-top:12px;">
-                    <h2 class="block-title">Highlights</h2>
-                    <ul class="list">
-                        @foreach ($highlights->take(8) as $item)
-                            <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span>{{ (string) $item }}</span></li>
-                        @endforeach
-                    </ul>
-
-                    <h2 class="block-title" style="margin-top:12px;">Services and Amenities</h2>
-                    <ul class="list">
-                        @forelse ($servicesAndAmenities->take(12) as $item)
-                            <li><i class="fa-solid fa-star" aria-hidden="true"></i><span>{{ (string) $item }}</span></li>
-                        @empty
-                            <li><i class="fa-solid fa-info-circle" aria-hidden="true"></i><span>Service amenities will be refined as listing details are updated.</span></li>
-                        @endforelse
-                    </ul>
-                </section>
-
-                <section class="block" aria-label="Service description and policies" style="margin-top:12px;">
-                    <h2 class="block-title">Service Description</h2>
-                    <p class="description">{!! nl2br(e($descriptionText !== '' ? $descriptionText : 'Listing description will be updated soon.')) !!}</p>
-
-                    <h2 class="block-title" style="margin-top:12px;">Policy Snapshot</h2>
+                @if ($categoryKey === 'excursion')
                     @php
-                        $hasVendorPolicy = ($vendorPolicy['opening_hours'] ?? '') !== ''
-                            || ($vendorPolicy['closing_hours'] ?? '') !== ''
-                            || ($vendorPolicy['cancellation_policy'] ?? '') !== ''
-                            || !empty($vendorPolicy['other_rules'] ?? []);
+                        $excursionStartTime  = trim((string) ($property->start_time  ?? $property->opening_hours  ?? ''));
+                        $excursionEndTime    = trim((string) ($property->end_time    ?? $property->closing_hours   ?? ''));
+                        $excursionDeparture  = trim((string) ($property->departure_location ?? $property->assembly_point ?? $property->meeting_point ?? ''));
+                        $excursionSpecial    = trim((string) ($property->special_instructions ?? $property->operator_notes ?? ''));
                     @endphp
 
-                    @if ($hasVendorPolicy)
-                        @if (($vendorPolicy['opening_hours'] ?? '') !== '' || ($vendorPolicy['closing_hours'] ?? '') !== '')
-                            <div class="policy-group">
-                                <p class="policy-group-title"><i class="fa-regular fa-clock" aria-hidden="true"></i> Operating Hours</p>
-                                <ul class="list">
-                                    @if (($vendorPolicy['opening_hours'] ?? '') !== '')
-                                        <li><i class="fa-solid fa-door-open" aria-hidden="true"></i><span>Opens: {{ $vendorPolicy['opening_hours'] }}</span></li>
-                                    @endif
-                                    @if (($vendorPolicy['closing_hours'] ?? '') !== '')
-                                        <li><i class="fa-solid fa-door-closed" aria-hidden="true"></i><span>Closes: {{ $vendorPolicy['closing_hours'] }}</span></li>
-                                    @endif
-                                </ul>
-                            </div>
-                        @endif
+                    {{-- Description / Details --}}
+                    <section class="block excursion-detail-section" aria-label="Excursion description">
+                        <h2 class="block-title">Description &amp; Details</h2>
+                        <p class="description">{!! nl2br(e($descriptionText !== '' ? $descriptionText : 'Full activity description will be updated soon.')) !!}</p>
+                    </section>
 
-                        @if (($vendorPolicy['cancellation_policy'] ?? '') !== '')
-                            <div class="policy-group">
-                                <p class="policy-group-title"><i class="fa-solid fa-ban" aria-hidden="true"></i> Cancellation Policy</p>
-                                <ul class="list">
-                                    <li><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ $vendorPolicy['cancellation_policy'] }}</span></li>
-                                </ul>
-                            </div>
-                        @endif
-
-                        @if (!empty($vendorPolicy['other_rules'] ?? []))
-                            <div class="policy-group">
-                                <p class="policy-group-title"><i class="fa-solid fa-scroll" aria-hidden="true"></i> House Rules</p>
-                                <ul class="list">
-                                    @foreach ($vendorPolicy['other_rules'] as $rule)
-                                        <li><i class="fa-solid fa-shield" aria-hidden="true"></i><span>{{ (string) $rule }}</span></li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        @endif
-                    @else
+                    {{-- Activity Schedule --}}
+                    <section class="block excursion-detail-section" aria-label="Activity schedule">
+                        <h2 class="block-title">Activity Schedule</h2>
                         <ul class="list">
-                            @foreach ($policyItems as $policy)
-                                <li><i class="fa-solid fa-shield" aria-hidden="true"></i><span>{{ $policy }}</span></li>
+                            @if ($excursionStartTime !== '')
+                                <li><i class="fa-regular fa-clock" aria-hidden="true"></i><span>Start time: {{ $excursionStartTime }}</span></li>
+                            @else
+                                <li><i class="fa-regular fa-clock" aria-hidden="true"></i><span>Start time: Confirmed upon booking</span></li>
+                            @endif
+                            @if ($excursionEndTime !== '')
+                                <li><i class="fa-regular fa-clock" aria-hidden="true"></i><span>End time: {{ $excursionEndTime }}</span></li>
+                            @else
+                                <li><i class="fa-solid fa-flag-checkered" aria-hidden="true"></i><span>End time: Confirmed upon booking</span></li>
+                            @endif
+                            <li><i class="fa-solid fa-calendar-day" aria-hidden="true"></i><span>Select your preferred activity date at booking</span></li>
+                        </ul>
+                    </section>
+
+                    {{-- What's Included --}}
+                    <section class="block excursion-detail-section" aria-label="What is included">
+                        <h2 class="block-title">What's Included</h2>
+                        <ul class="list">
+                            @forelse ($highlights->take(8) as $item)
+                                <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span>{{ (string) $item }}</span></li>
+                            @empty
+                                <li><i class="fa-solid fa-info-circle" aria-hidden="true"></i><span>Inclusions will be listed once operator updates the listing.</span></li>
+                            @endforelse
+                        </ul>
+                        @if ($servicesAndAmenities->isNotEmpty())
+                            <h2 class="block-title" style="margin-top:12px;">What We Provide</h2>
+                            <ul class="list">
+                                @foreach ($servicesAndAmenities->take(10) as $item)
+                                    <li><i class="fa-solid fa-star" aria-hidden="true"></i><span>{{ (string) $item }}</span></li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </section>
+
+                    {{-- Departure / Assembly Point --}}
+                    <section class="block excursion-detail-section" aria-label="Departure and assembly point">
+                        <h2 class="block-title">Departure &amp; Assembly Point</h2>
+                        <ul class="list">
+                            <li>
+                                <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                                <span>{{ $excursionDeparture !== '' ? $excursionDeparture : 'Assembly point and reporting location will be shared prior to the activity.' }}</span>
+                            </li>
+                            <li><i class="fa-solid fa-id-card" aria-hidden="true"></i><span>Bring valid ID for check-in at the meeting point.</span></li>
+                            <li><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span>Safety briefing required before departure.</span></li>
+                        </ul>
+                    </section>
+
+                    {{-- Reviews --}}
+                    <section class="block excursion-detail-section" aria-label="Guest reviews">
+                        <h2 class="block-title">Guest Reviews</h2>
+                        <div class="reviews-placeholder">
+                            <i class="fa-regular fa-star" aria-hidden="true"></i>
+                            Reviews from verified guests will appear here once ratings are submitted after each completed activity.
+                        </div>
+                    </section>
+
+                    {{-- Special Instructions --}}
+                    <section class="block excursion-detail-section" aria-label="Special instructions">
+                        <h2 class="block-title">Special Instructions</h2>
+                        <ul class="list">
+                            @if ($excursionSpecial !== '')
+                                <li><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>{{ $excursionSpecial }}</span></li>
+                            @else
+                                <li><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>Any special instructions from the operator will be communicated prior to the activity date.</span></li>
+                            @endif
+                        </ul>
+                    </section>
+
+                    {{-- Terms & Policies --}}
+                    <section class="block excursion-detail-section" aria-label="Terms and policies">
+                        <h2 class="block-title">Terms &amp; Policies</h2>
+                        @php
+                            $hasVendorPolicy = ($vendorPolicy['opening_hours'] ?? '') !== ''
+                                || ($vendorPolicy['closing_hours'] ?? '') !== ''
+                                || ($vendorPolicy['cancellation_policy'] ?? '') !== ''
+                                || !empty($vendorPolicy['other_rules'] ?? []);
+                        @endphp
+                        @if ($hasVendorPolicy)
+                            @if (($vendorPolicy['cancellation_policy'] ?? '') !== '')
+                                <div class="policy-group">
+                                    <p class="policy-group-title"><i class="fa-solid fa-ban" aria-hidden="true"></i> Cancellation Policy</p>
+                                    <ul class="list">
+                                        <li><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ $vendorPolicy['cancellation_policy'] }}</span></li>
+                                    </ul>
+                                </div>
+                            @endif
+                            @if (!empty($vendorPolicy['other_rules'] ?? []))
+                                <div class="policy-group">
+                                    <p class="policy-group-title"><i class="fa-solid fa-scroll" aria-hidden="true"></i> House Rules</p>
+                                    <ul class="list">
+                                        @foreach ($vendorPolicy['other_rules'] as $rule)
+                                            <li><i class="fa-solid fa-shield" aria-hidden="true"></i><span>{{ (string) $rule }}</span></li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+                        @else
+                            <ul class="list">
+                                @foreach ($policyItems as $policy)
+                                    <li><i class="fa-solid fa-shield" aria-hidden="true"></i><span>{{ $policy }}</span></li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </section>
+
+                @else
+                    {{-- Non-excursion: original layout --}}
+                    <section class="block" aria-label="Highlights and amenities" style="margin-top:12px;">
+                        <h2 class="block-title">Highlights</h2>
+                        <ul class="list">
+                            @foreach ($highlights->take(8) as $item)
+                                <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span>{{ (string) $item }}</span></li>
                             @endforeach
                         </ul>
-                    @endif
-                </section>
+
+                        <h2 class="block-title" style="margin-top:12px;">Services and Amenities</h2>
+                        <ul class="list">
+                            @forelse ($servicesAndAmenities->take(12) as $item)
+                                <li><i class="fa-solid fa-star" aria-hidden="true"></i><span>{{ (string) $item }}</span></li>
+                            @empty
+                                <li><i class="fa-solid fa-info-circle" aria-hidden="true"></i><span>Service amenities will be refined as listing details are updated.</span></li>
+                            @endforelse
+                        </ul>
+                    </section>
+
+                    <section class="block" aria-label="Service description and policies" style="margin-top:12px;">
+                        <h2 class="block-title">Service Description</h2>
+                        <p class="description">{!! nl2br(e($descriptionText !== '' ? $descriptionText : 'Listing description will be updated soon.')) !!}</p>
+
+                        <h2 class="block-title" style="margin-top:12px;">Policy Snapshot</h2>
+                        @php
+                            $hasVendorPolicy = ($vendorPolicy['opening_hours'] ?? '') !== ''
+                                || ($vendorPolicy['closing_hours'] ?? '') !== ''
+                                || ($vendorPolicy['cancellation_policy'] ?? '') !== ''
+                                || !empty($vendorPolicy['other_rules'] ?? []);
+                        @endphp
+
+                        @if ($hasVendorPolicy)
+                            @if (($vendorPolicy['opening_hours'] ?? '') !== '' || ($vendorPolicy['closing_hours'] ?? '') !== '')
+                                <div class="policy-group">
+                                    <p class="policy-group-title"><i class="fa-regular fa-clock" aria-hidden="true"></i> Operating Hours</p>
+                                    <ul class="list">
+                                        @if (($vendorPolicy['opening_hours'] ?? '') !== '')
+                                            <li><i class="fa-solid fa-door-open" aria-hidden="true"></i><span>Opens: {{ $vendorPolicy['opening_hours'] }}</span></li>
+                                        @endif
+                                        @if (($vendorPolicy['closing_hours'] ?? '') !== '')
+                                            <li><i class="fa-solid fa-door-closed" aria-hidden="true"></i><span>Closes: {{ $vendorPolicy['closing_hours'] }}</span></li>
+                                        @endif
+                                    </ul>
+                                </div>
+                            @endif
+
+                            @if (($vendorPolicy['cancellation_policy'] ?? '') !== '')
+                                <div class="policy-group">
+                                    <p class="policy-group-title"><i class="fa-solid fa-ban" aria-hidden="true"></i> Cancellation Policy</p>
+                                    <ul class="list">
+                                        <li><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ $vendorPolicy['cancellation_policy'] }}</span></li>
+                                    </ul>
+                                </div>
+                            @endif
+
+                            @if (!empty($vendorPolicy['other_rules'] ?? []))
+                                <div class="policy-group">
+                                    <p class="policy-group-title"><i class="fa-solid fa-scroll" aria-hidden="true"></i> House Rules</p>
+                                    <ul class="list">
+                                        @foreach ($vendorPolicy['other_rules'] as $rule)
+                                            <li><i class="fa-solid fa-shield" aria-hidden="true"></i><span>{{ (string) $rule }}</span></li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+                        @else
+                            <ul class="list">
+                                @foreach ($policyItems as $policy)
+                                    <li><i class="fa-solid fa-shield" aria-hidden="true"></i><span>{{ $policy }}</span></li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </section>
+                @endif
             </section>
 
             <aside class="booking-card reservation-form" aria-label="Category booking form">
@@ -785,11 +1031,6 @@
                 @if ($categoryKey === 'excursion')
                     <p class="booking-subtitle">{{ (string) ($property->name ?? 'Excursion Activity') }}</p>
                 @endif
-                <div class="booking-price">
-                    <span>Starting price</span>
-                    <strong>{{ $currency }} {{ number_format($basePrice, 2) }}</strong>
-                </div>
-
                 <form method="POST" action="/booking/reserve-category" id="categoryServiceBookingForm">
                     @csrf
                     <input type="hidden" name="category_key" value="{{ $categoryKey }}">
@@ -810,10 +1051,6 @@
                     <div class="grid">
                         @if ($categoryKey === 'excursion')
                             <div class="field full"><label for="serviceStartDate">Activity Date</label><input id="serviceStartDate" name="service_start_date" type="date" min="{{ (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
-                            <div class="field full">
-                                <label>Lead Guest</label>
-                                <p class="booking-subtitle" style="margin:0;">Fill guest details below exactly as government-issued documents.</p>
-                            </div>
                             <div class="field full">
                                 <label>Guests and Unit Price</label>
                                 <div class="booking-lines">
@@ -960,6 +1197,10 @@
                         <div class="field"><label for="primaryMobileCountryCode">Phone country code*</label><select id="primaryMobileCountryCode" name="primary_mobile_country_code" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required>@foreach ($countryOptions as $country)<option value="{{ $country['dial'] }}" data-iso="{{ $country['iso'] }}" {{ $oldPhoneCode === $country['dial'] ? 'selected' : '' }}>{{ $country['dial'] }} ({{ $country['name'] }})</option>@endforeach</select></div>
                         <div class="field"><label for="primaryMobileLocal">Contact number*</label><input id="primaryMobileLocal" name="primary_mobile_local" type="tel" value="{{ $oldPhoneLocal }}" class="{{ $errors->has('primary_mobile') ? 'input-error' : '' }}" required inputmode="tel">@error('primary_mobile')<p class="error-text">{{ $message }}</p>@enderror</div>
 
+                        @if ($categoryKey === 'excursion')
+                            <input type="hidden" name="transfer_option" value="">
+                            <input type="hidden" name="transfer_charge" value="0">
+                        @else
                         <div class="field full">
                             <label>Transfer option</label>
                             @if ($transferOptions->isNotEmpty())
@@ -1004,6 +1245,7 @@
                             <label for="transferCharge">Transfer charge</label>
                             <input id="transferCharge" name="transfer_charge" type="number" step="0.01" min="0" value="{{ old('transfer_charge', '0') }}" readonly>
                         </div>
+                        @endif
 
                         <div class="field full">
                             <label>Payment preferences</label>
@@ -1030,6 +1272,59 @@
                 </form>
             </aside>
         </div>
+
+        @if ($categoryKey === 'excursion')
+        @php
+            $similarListings = collect($similarListings ?? []);
+            $excursionCatalogUrl = '/catalog/excursion';
+        @endphp
+        <section class="similar-excursions-wrap" aria-label="Similar excursions nearby">
+            <h2 class="similar-excursions-title">Similar Excursions Nearby</h2>
+            @if ($similarListings->isEmpty())
+                <div class="similar-excursions-grid">
+                    @for ($si = 0; $si < 4; $si++)
+                        <a class="sim-card" href="{{ $excursionCatalogUrl }}" aria-label="Browse more excursions">
+                            <div style="width:100%;height:108px;background:linear-gradient(135deg,#d4edf8,#b9ddef);display:flex;align-items:center;justify-content:center;">
+                                <i class="fa-solid fa-water" style="font-size:2rem;color:#5fa8c5;" aria-hidden="true"></i>
+                            </div>
+                            <div class="sim-card-body">
+                                <span class="sim-card-location">Maldives</span>
+                                <h3 class="sim-card-name">More Excursions Available</h3>
+                                <span class="sim-card-price">Browse all activities</span>
+                                <span class="sim-card-btn">View <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+                            </div>
+                        </a>
+                    @endfor
+                </div>
+            @else
+                <div class="similar-excursions-grid">
+                    @foreach ($similarListings->take(4) as $sim)
+                        @php
+                            $simName   = trim((string) ($sim->name ?? 'Excursion'));
+                            $simPrice  = (float) ($sim->base_price ?? 0);
+                            $simCur    = strtoupper(trim((string) ($sim->currency ?? 'MVR')));
+                            $simIsland = trim((string) ($sim->island ?? $sim->city ?? ''));
+                            $simAtoll  = trim((string) ($sim->atoll ?? ''));
+                            $simLoc    = implode(', ', array_filter([$simIsland, $simAtoll, 'Maldives'], fn($v) => $v !== ''));
+                            $simId     = (int) ($sim->id ?? 0);
+                            $simUrl    = $simId > 0 ? '/category-booking/' . $simId . '?category=excursion' : $excursionCatalogUrl;
+                            $simImg    = '/media/vendor/' . $simId . '/thumb';
+                        @endphp
+                        <a class="sim-card" href="{{ $simUrl }}" aria-label="{{ $simName }}">
+                            <img class="sim-card-img" src="{{ $simImg }}" alt="{{ $simName }}" loading="lazy"
+                                onerror="this.onerror=null;this.style.background='linear-gradient(135deg,#d4edf8,#b9ddef)';this.style.display='block';this.src='data:image/svg+xml,%3Csvg xmlns=&quot;http://www.w3.org/2000/svg&quot;/%3E';">
+                            <div class="sim-card-body">
+                                <span class="sim-card-location">{{ $simLoc }}</span>
+                                <h3 class="sim-card-name">{{ $simName }}</h3>
+                                <span class="sim-card-price">{{ $simCur }} {{ $simPrice > 0 ? number_format($simPrice, 2) : 'Price on request' }}</span>
+                                <span class="sim-card-btn">Book Now <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+                            </div>
+                        </a>
+                    @endforeach
+                </div>
+            @endif
+        </section>
+        @endif
 
         @include('partials.global-site-footer')
     </main>

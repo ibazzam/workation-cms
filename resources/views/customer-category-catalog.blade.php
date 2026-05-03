@@ -936,6 +936,69 @@
             font-weight: 700;
         }
 
+        /* ── Excursion card overrides ─────────────────────────── */
+        .page.category-excursion {
+            --listing-thumb-width: 196px;
+            --listing-thumb-height: 132px;
+        }
+
+        .page.category-excursion .card-body {
+            gap: 2px;
+        }
+
+        .page.category-excursion .card h3 {
+            font-size: 0.88rem;
+            -webkit-line-clamp: 2;
+            white-space: normal;
+            margin-bottom: 0;
+        }
+
+        .page.category-excursion .card-city {
+            font-size: 0.7rem;
+            margin-bottom: 0;
+        }
+
+        .page.category-excursion .card-desc {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin: 1px 0;
+            font-size: 0.72rem;
+            color: #4f677a;
+            line-height: 1.4;
+        }
+
+        .page.category-excursion .card-time {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin: 1px 0;
+        }
+
+        .page.category-excursion .card-time::before {
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            content: "\f017";
+            font-size: 0.62rem;
+            color: #0f6179;
+        }
+
+        .page.category-excursion .card-review {
+            margin-top: 2px;
+            margin-bottom: 0;
+        }
+
+        .page.category-excursion .card-price {
+            margin-top: 2px;
+            margin-bottom: 0;
+        }
+
+        .page.category-excursion .card-offer {
+            display: none;
+        }
+        /* ── end excursion overrides ──────────────────────────── */
+
         .card-action-btn {
             align-self: flex-start;
             padding: 6px 12px;
@@ -1503,6 +1566,11 @@
                 --listing-thumb-height: 148px;
             }
 
+            .page.category-excursion {
+                --listing-thumb-width: 144px;
+                --listing-thumb-height: 96px;
+            }
+
             .search-box > .grid,
             .search-box > .actions {
                 overflow: visible;
@@ -1578,6 +1646,17 @@
         }
 
 
+
+        @media (max-width: 480px) {
+            .page.category-excursion .card-link {
+                flex-direction: column;
+            }
+
+            .page.category-excursion .card img {
+                width: 100%;
+                height: 180px;
+            }
+        }
 
         @media (max-width: 680px) {
             .page {
@@ -1893,7 +1972,7 @@
         }
     @endphp
 
-    <main class="page {{ $categoryKey === 'accommodation' ? 'category-accommodation' : 'category-default' }}" data-api-base="{{ $apiBase }}" data-category-key="{{ $categoryKey }}">
+    <main class="page {{ $categoryKey === 'accommodation' ? 'category-accommodation' : ($categoryKey === 'excursion' ? 'category-excursion' : 'category-default') }}" data-api-base="{{ $apiBase }}" data-category-key="{{ $categoryKey }}">
         <section class="journey-hero" aria-label="Category hero and quick navigation">
             @include('partials.customer-uniform-header', [
                 'injectUniformHeaderStyles' => true,
@@ -2394,6 +2473,13 @@
                             if ($fromAtoll !== '' && stripos($originLabel, $fromAtoll) === false) {
                                 $originLabel .= ', ' . $fromAtoll;
                             }
+                            // Build "city, atoll, country" label for excursion cards
+                            $excursionLocationParts = array_filter([
+                                $fromPrimary,
+                                $fromAtoll,
+                                'Maldives',
+                            ], fn($v) => $v !== '');
+                            $excursionLocationLabel = implode(', ', $excursionLocationParts);
                             $activityType = trim((string) (
                                 (property_exists($property, 'activity_type') ? $property->activity_type : '')
                                 ?: (property_exists($property, 'excursion_type') ? $property->excursion_type : '')
@@ -2409,7 +2495,7 @@
                                 ?: (property_exists($property, 'tagline') ? $property->tagline : '')
                                 ?: ($property->description ?? '')
                             ));
-                            $shortDescription = \Illuminate\Support\Str::limit($descriptionSource, 96);
+                            $shortDescription = \Illuminate\Support\Str::limit($descriptionSource, 90);
 
                             $formatTimeLabel = static function ($rawValue): string {
                                 $value = trim((string) $rawValue);
@@ -2569,12 +2655,44 @@
                                         : ($bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback));
                                 @endphp
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
+                                @if ($isExcursionCard)
                                 <div class="card-body">
-                                    <span class="card-city">{{ $isExcursionCard ? ('From ' . $originLabel) : ($cityName !== '' ? $cityName : 'Maldives') }}</span>
-                                    @if ($isExcursionCard && $activityType !== '')
-                                        <span class="card-type-chip">{{ str_replace('_', ' ', $activityType) }}</span>
+                                    <h3>{{ $activityName }}</h3>
+                                    <span class="card-city">{{ $excursionLocationLabel }}</span>
+                                    @if ($activityType !== '')
+                                        <span class="card-type-chip">{{ ucwords(str_replace('_', ' ', $activityType)) }}</span>
                                     @endif
-                                    <h3>{{ $isExcursionCard ? $activityName : (string) ($property->name ?? 'Listing') }}</h3>
+                                    @if ($shortDescription !== '')
+                                        <p class="card-desc">{{ $shortDescription }}</p>
+                                    @endif
+                                    @if ($startTimeLabel !== '' || $endTimeLabel !== '')
+                                        <div class="card-time">
+                                            @if ($startTimeLabel !== '' && $endTimeLabel !== '')
+                                                {{ $startTimeLabel }} – {{ $endTimeLabel }}
+                                            @elseif ($startTimeLabel !== '')
+                                                From {{ $startTimeLabel }}
+                                            @else
+                                                Until {{ $endTimeLabel }}
+                                            @endif
+                                        </div>
+                                    @endif
+                                    <div class="card-review">
+                                        <span class="card-rating-badge">{{ $reviewScore }}</span>
+                                        <span>{{ number_format($reviewCount) }} reviews</span>
+                                    </div>
+                                    <div class="card-price">
+                                        @if ($price > 0)
+                                            From {{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}
+                                        @else
+                                            Price on request
+                                        @endif
+                                    </div>
+                                    <span class="card-action-btn">{{ $actionLabel }} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+                                </div>
+                                @else
+                                <div class="card-body">
+                                    <span class="card-city">{{ $cityName !== '' ? $cityName : 'Maldives' }}</span>
+                                    <h3>{{ (string) ($property->name ?? 'Listing') }}</h3>
                                     <div class="card-stars" aria-label="Star ranking">
                                         @if ($starRank > 0)
                                             @for ($i = 0; $i < $starRank; $i++)
@@ -2594,22 +2712,9 @@
                                         @endif
                                     </div>
                                     <div class="card-offer">{{ $offerSummary }}</div>
-                                    @if ($isExcursionCard && $shortDescription !== '')
-                                        <p class="card-desc">{{ $shortDescription }}</p>
-                                    @endif
-                                    @if ($isExcursionCard && ($startTimeLabel !== '' || $endTimeLabel !== ''))
-                                        <div class="card-time">
-                                            @if ($startTimeLabel !== '' && $endTimeLabel !== '')
-                                                {{ $startTimeLabel }} - {{ $endTimeLabel }}
-                                            @elseif ($startTimeLabel !== '')
-                                                Starts {{ $startTimeLabel }}
-                                            @else
-                                                Ends {{ $endTimeLabel }}
-                                            @endif
-                                        </div>
-                                    @endif
                                     <span class="card-action-btn">{{ $actionLabel }} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
                                 </div>
+                                @endif
                             </a>
                             @endif
                         </article>

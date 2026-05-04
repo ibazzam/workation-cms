@@ -192,3 +192,49 @@
         <a class="btn btn-secondary" href="/vendor/listings/excursion">Cancel</a>
     </div>
 </form>
+
+<script>
+(() => {
+    const startInput = document.getElementById('property_activity_start_time');
+    const endInput = document.getElementById('property_activity_end_time');
+    const durationInput = document.getElementById('property_excursion_duration_minutes');
+    if (!startInput || !endInput || !durationInput) {
+        return;
+    }
+
+    const parseMinutes = (value) => {
+        const match = /^(\d{2}):(\d{2})$/.exec(String(value || '').trim());
+        if (!match) {
+            return null;
+        }
+        const hours = Number(match[1]);
+        const minutes = Number(match[2]);
+        if (!Number.isFinite(hours) || !Number.isFinite(minutes) || hours > 23 || minutes > 59) {
+            return null;
+        }
+        return (hours * 60) + minutes;
+    };
+
+    const syncDuration = () => {
+        const start = parseMinutes(startInput.value);
+        const end = parseMinutes(endInput.value);
+        if (start === null || end === null) {
+            return;
+        }
+
+        let duration = end - start;
+        if (duration <= 0) {
+            duration += 24 * 60;
+        }
+        if (duration > 0) {
+            durationInput.value = String(duration);
+        }
+    };
+
+    startInput.addEventListener('change', syncDuration);
+    endInput.addEventListener('change', syncDuration);
+    startInput.addEventListener('input', syncDuration);
+    endInput.addEventListener('input', syncDuration);
+    syncDuration();
+})();
+</script>

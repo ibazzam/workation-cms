@@ -1114,6 +1114,33 @@ if (!function_exists('vendorPortalTransportModeProfile')) {
     }
 }
 
+if (!function_exists('vendorPortalDurationMinutesFromTimes')) {
+    function vendorPortalDurationMinutesFromTimes(?string $startTime, ?string $endTime): ?int
+    {
+        $start = trim((string) ($startTime ?? ''));
+        $end = trim((string) ($endTime ?? ''));
+        if ($start === '' || $end === '') {
+            return null;
+        }
+
+        if (!preg_match('/^(2[0-3]|[01][0-9]):([0-5][0-9])$/', $start, $startMatch)
+            || !preg_match('/^(2[0-3]|[01][0-9]):([0-5][0-9])$/', $end, $endMatch)) {
+            return null;
+        }
+
+        $startMinutes = ((int) $startMatch[1] * 60) + (int) $startMatch[2];
+        $endMinutes = ((int) $endMatch[1] * 60) + (int) $endMatch[2];
+        $duration = $endMinutes - $startMinutes;
+
+        // Support overnight activities where end time is after midnight.
+        if ($duration <= 0) {
+            $duration += 24 * 60;
+        }
+
+        return $duration > 0 ? $duration : null;
+    }
+}
+
 if (!function_exists('vendorPortalBuildPropertyDetails')) {
     function vendorPortalBuildPropertyDetails(array $validated, string $listingCategory): array
     {
@@ -1301,11 +1328,14 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $equipmentRental = in_array($rawEquipmentRental, ['1', 'yes', 'true', 'on'], true)
                 ? 'yes'
                 : (in_array($rawEquipmentRental, ['0', 'no', 'false', 'off'], true) ? 'no' : '');
+            $activityStartTime = trim((string) ($validated['activity_start_time'] ?? ''));
+            $activityEndTime = trim((string) ($validated['activity_end_time'] ?? ''));
+            $autoDuration = vendorPortalDurationMinutesFromTimes($activityStartTime, $activityEndTime);
 
             $details['short_description'] = trim((string) ($validated['short_description'] ?? ''));
-            $details['excursion_duration_minutes'] = isset($validated['excursion_duration_minutes']) ? (int) $validated['excursion_duration_minutes'] : null;
-            $details['activity_start_time'] = trim((string) ($validated['activity_start_time'] ?? ''));
-            $details['activity_end_time'] = trim((string) ($validated['activity_end_time'] ?? ''));
+            $details['activity_start_time'] = $activityStartTime;
+            $details['activity_end_time'] = $activityEndTime;
+            $details['excursion_duration_minutes'] = $autoDuration ?? (isset($validated['excursion_duration_minutes']) ? (int) $validated['excursion_duration_minutes'] : null);
             $details['excursion_difficulty'] = trim((string) ($validated['excursion_difficulty'] ?? ''));
             $details['excursion_type'] = trim((string) ($validated['excursion_type'] ?? ''));
             $details['excursion_min_pax'] = isset($validated['excursion_min_pax']) && $validated['excursion_min_pax'] !== '' ? (int) $validated['excursion_min_pax'] : null;
@@ -1321,6 +1351,7 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['equipment_included'] = vendorPortalNormalizedStringList($validated['equipment_included'] ?? []);
             $details['weather_cancellation_policy'] = trim((string) ($validated['weather_cancellation_policy'] ?? ''));
             $details['cancellation_policy'] = trim((string) ($validated['cancellation_policy'] ?? ''));
+            $details['special_instructions'] = trim((string) ($validated['special_instructions'] ?? ''));
         }
 
         if ($listingCategory === 'remote_workspace') {

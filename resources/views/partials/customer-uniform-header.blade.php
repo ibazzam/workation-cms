@@ -42,6 +42,8 @@
         padding: 10px 16px;
         border-bottom: 1px solid #d4e2ec;
         background: #ffffff;
+        background-color: #ffffff !important;
+        opacity: 1;
         box-shadow: 0 6px 18px rgba(13, 43, 67, 0.08);
         transition: transform 0.22s ease, opacity 0.22s ease;
     }

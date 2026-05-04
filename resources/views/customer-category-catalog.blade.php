@@ -1395,34 +1395,45 @@
         }
 
         .page.category-default .card {
-            border: 1px solid #dce7ef;
-            border-radius: 10px;
-            padding: 10px;
-            background: #ffffff;
+            border: 1px solid #d4e5ef;
+            border-radius: 14px;
+            background: #f8fcff;
+            overflow: hidden;
             display: block;
             height: 100%;
+            transition: box-shadow 0.15s ease, border-color 0.15s ease;
+        }
+
+        .page.category-default .card:hover {
+            border-color: #9ecad8;
+            box-shadow: 0 4px 16px rgba(14, 86, 111, 0.12);
         }
 
         .page.category-default .card-link {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 10px;
+            grid-template-rows: 180px auto;
             height: 100%;
         }
 
         .page.category-default .card img {
             width: 100%;
-            height: 190px;
-            border-radius: 8px;
+            height: 180px;
             object-fit: cover;
+            display: block;
+            transition: transform 0.25s ease;
+        }
+
+        .page.category-default .card:hover img {
+            transform: scale(1.03);
         }
 
         .page.category-default .card-body {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            column-gap: 12px;
-            row-gap: 5px;
+            grid-template-columns: minmax(0, 1fr);
+            row-gap: 4px;
             align-items: start;
+            align-content: start;
+            padding: 10px 12px;
         }
 
         .page.category-default .card-city,
@@ -1439,32 +1450,48 @@
         .page.category-default .card-review {
             grid-column: 1;
             margin-bottom: 0;
+            margin-top: 2px;
         }
 
         .page.category-default .card-price {
-            grid-column: 2;
-            justify-self: end;
-            align-self: center;
-            margin: 0;
-            text-align: right;
+            grid-column: 1;
+            justify-self: start;
+            align-self: start;
+            margin-top: 2px;
+            text-align: left;
+            font-size: 0.82rem;
         }
 
         .page.category-default .card h3 {
-            font-size: 0.92rem;
+            font-size: 0.94rem;
             -webkit-line-clamp: 2;
-            margin-bottom: 2px;
+            line-height: 1.32;
+            margin-bottom: 1px;
         }
 
         .page.category-default .card-city {
-            font-size: 0.72rem;
+            font-size: 0.71rem;
             display: flex;
             align-items: center;
             gap: 4px;
+            color: #6f879b;
+        }
+
+        .page.category-default .card-type-chip {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+            color: #0f6179;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            padding: 0;
         }
 
         .page.category-default .card-desc {
             display: -webkit-box;
-            -webkit-line-clamp: 3;
+            -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
             color: #4f677a;
@@ -2595,9 +2622,9 @@
                                     $cardDetails = $decodedCardDetails;
                                 }
                             }
-                            $fromIsland = trim((string) ($property->island ?? ''));
-                            $fromCity = trim((string) ($property->city ?? ''));
-                            $fromAtoll = trim((string) ($property->atoll ?? ''));
+                            $fromIsland = trim((string) ($property->island ?? ($cardDetails['island'] ?? '')));
+                            $fromCity = trim((string) ($property->city ?? ($cardDetails['location_city'] ?? ($cardDetails['city'] ?? ''))));
+                            $fromAtoll = trim((string) ($property->atoll ?? ($cardDetails['location_state'] ?? ($cardDetails['atoll'] ?? ''))));
                             $fromCountry = trim((string) ($property->location_country ?? $property->country ?? ($cardDetails['location_country'] ?? 'Maldives')));
                             $originParts = array_values(array_filter([
                                 $fromIsland !== '' ? $fromIsland : $fromCity,
@@ -2740,10 +2767,10 @@
                                     $resolvedImage = ($thumbUrl && trim($thumbUrl) !== '')
                                         ? (string) $thumbUrl
                                         : ($bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback));
-                                    $accIsland  = trim((string) ($property->island ?? ''));
-                                    $accCity    = trim((string) ($property->city ?? ''));
-                                    $accAtoll   = trim((string) ($property->atoll ?? ''));
-                                    $accCountry = trim((string) ($property->location_country ?? $property->country ?? 'Maldives'));
+                                    $accIsland  = trim((string) ($property->island ?? ($propertyDetails['island'] ?? '')));
+                                    $accCity    = trim((string) ($property->city ?? ($propertyDetails['location_city'] ?? ($propertyDetails['city'] ?? ''))));
+                                    $accAtoll   = trim((string) ($property->atoll ?? ($propertyDetails['location_state'] ?? ($propertyDetails['atoll'] ?? ''))));
+                                    $accCountry = trim((string) ($property->location_country ?? $property->country ?? ($propertyDetails['location_country'] ?? 'Maldives')));
                                     $accLocationParts = array_values(array_filter([
                                         $accIsland !== '' ? $accIsland : $accCity,
                                         $accAtoll,
@@ -2787,14 +2814,15 @@
                                     $resolvedImage = ($thumbUrl && trim($thumbUrl) !== '')
                                         ? (string) $thumbUrl
                                         : ($bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback));
+                                    $cardEyebrow = $isExcursionCard
+                                        ? ($activityType !== '' ? str_replace('_', ' ', $activityType) : 'Excursion')
+                                        : (string) ($categoryMeta['label'] ?? ucfirst(str_replace('_', ' ', (string) $categoryKey)));
                                 @endphp
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                                 <div class="card-body">
+                                    <span class="card-type-chip">{{ $cardEyebrow }}</span>
                                     <h3>{{ $isExcursionCard ? $activityName : (string) ($property->name ?? 'Listing') }}</h3>
                                     <span class="card-city"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> {{ $originLabel }}</span>
-                                    @if ($isExcursionCard && $activityType !== '')
-                                        <span class="card-type-chip">{{ str_replace('_', ' ', $activityType) }}</span>
-                                    @endif
                                     @if ($shortDescription !== '')
                                         <p class="card-desc">{{ $shortDescription }}</p>
                                     @endif
@@ -2828,7 +2856,6 @@
                                             Price on request
                                         @endif
                                     </div>
-                                    <div class="card-offer">{{ $offerSummary }}</div>
                                     <span class="card-action-btn">{{ $actionLabel }} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
                                 </div>
                             </a>

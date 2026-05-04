@@ -1435,11 +1435,18 @@
         }
 
         .page.category-default .card-desc {
-            display: block;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
             color: #4f677a;
             font-size: 0.76rem;
             line-height: 1.45;
             margin: 0;
+        }
+
+        .page.category-default .card-stars {
+            display: none;
         }
 
         .page.category-default .card-time {

@@ -1381,6 +1381,15 @@
             background: transparent;
         }
 
+        .page.category-default .page-body-split {
+            margin-top: 32px;
+        }
+
+        .page.category-default .catalog-section-title {
+            display: block;
+            grid-column: 1 / -1;
+        }
+
         .page.category-default .catalog-grid {
             display: contents;
         }
@@ -1405,10 +1414,56 @@
             width: 100%;
             height: 190px;
             border-radius: 8px;
+            object-fit: cover;
         }
 
         .page.category-default .card-body {
             gap: 6px;
+        }
+
+        .page.category-default .card h3 {
+            font-size: 0.92rem;
+            -webkit-line-clamp: 2;
+            margin-bottom: 2px;
+        }
+
+        .page.category-default .card-city {
+            font-size: 0.72rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .page.category-default .card-desc {
+            display: block;
+            color: #4f677a;
+            font-size: 0.76rem;
+            line-height: 1.45;
+            margin: 0;
+        }
+
+        .page.category-default .card-time {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #eef6fb;
+            color: #1e5672;
+            font-size: 0.71rem;
+            font-weight: 600;
+            border-radius: 5px;
+            padding: 3px 8px;
+            width: fit-content;
+        }
+
+        .page.category-default .card-review {
+            margin-top: 2px;
+        }
+
+        .page.category-default .card-action-btn {
+            margin-top: 6px;
+            padding: 8px 14px;
+            font-size: 0.78rem;
+            align-self: flex-start;
         }
 
         .page.category-default .catalog-map-panel {
@@ -2637,11 +2692,26 @@
                                 @endphp
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                                 <div class="card-body">
-                                    <span class="card-city">{{ $isExcursionCard ? $originLabel : ($cityName !== '' ? $cityName : 'Maldives') }}</span>
+                                    <h3>{{ $isExcursionCard ? $activityName : (string) ($property->name ?? 'Listing') }}</h3>
+                                    <span class="card-city"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> {{ $originLabel }}</span>
                                     @if ($isExcursionCard && $activityType !== '')
                                         <span class="card-type-chip">{{ str_replace('_', ' ', $activityType) }}</span>
                                     @endif
-                                    <h3>{{ $isExcursionCard ? $activityName : (string) ($property->name ?? 'Listing') }}</h3>
+                                    @if ($shortDescription !== '')
+                                        <p class="card-desc">{{ $shortDescription }}</p>
+                                    @endif
+                                    @if ($startTimeLabel !== '' || $endTimeLabel !== '')
+                                        <div class="card-time">
+                                            <i class="fa-solid fa-clock" aria-hidden="true"></i>
+                                            @if ($startTimeLabel !== '' && $endTimeLabel !== '')
+                                                {{ $startTimeLabel }} – {{ $endTimeLabel }}
+                                            @elseif ($startTimeLabel !== '')
+                                                Starts {{ $startTimeLabel }}
+                                            @else
+                                                Ends {{ $endTimeLabel }}
+                                            @endif
+                                        </div>
+                                    @endif
                                     <div class="card-stars" aria-label="Star ranking">
                                         @if ($starRank > 0)
                                             @for ($i = 0; $i < $starRank; $i++)
@@ -2661,20 +2731,6 @@
                                         @endif
                                     </div>
                                     <div class="card-offer">{{ $offerSummary }}</div>
-                                    @if ($isExcursionCard && $shortDescription !== '')
-                                        <p class="card-desc">{{ $shortDescription }}</p>
-                                    @endif
-                                    @if ($isExcursionCard && ($startTimeLabel !== '' || $endTimeLabel !== ''))
-                                        <div class="card-time">
-                                            @if ($startTimeLabel !== '' && $endTimeLabel !== '')
-                                                {{ $startTimeLabel }} - {{ $endTimeLabel }}
-                                            @elseif ($startTimeLabel !== '')
-                                                Starts {{ $startTimeLabel }}
-                                            @else
-                                                Ends {{ $endTimeLabel }}
-                                            @endif
-                                        </div>
-                                    @endif
                                     <span class="card-action-btn">{{ $actionLabel }} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
                                 </div>
                             </a>

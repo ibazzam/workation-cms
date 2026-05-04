@@ -2425,8 +2425,13 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         }
     }
 
-    if ($requestedGateway === '' || $requestedCurrency === '') {
-        return back()->withErrors(['payment' => 'Please accept terms and explicitly select a payment route before continuing.']);
+    // Backward compatibility: if route fields are not posted, allow router defaults
+    // based on reservation context (segment, allowed currencies, and gateway availability).
+    if ($requestedGateway === '') {
+        $requestedGateway = null;
+    }
+    if ($requestedCurrency === '') {
+        $requestedCurrency = null;
     }
 
     try {

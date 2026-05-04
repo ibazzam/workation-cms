@@ -172,6 +172,8 @@
         $mediaUrl = $mediaUrl ?? static fn () => null;
         $prefill = $prefill ?? ['checkin' => '', 'checkout' => '', 'adults' => 2, 'children' => 0];
         $currency = strtoupper(trim((string) ($room->currency ?? $property->currency ?? 'MVR')));
+            // Override currency with the route-resolved display currency (USD for foreign, MVR for local).
+            $currency = isset($displayCurrency) ? strtoupper(trim((string) $displayCurrency)) : strtoupper(trim((string) ($room->currency ?? $property->currency ?? 'MVR')));
         $basePrice = number_format((float) ($room->base_price ?? 0), 2);
         $basePriceRaw = (float) ($room->base_price ?? 0);
         $selectedNightlyRateRaw = (float) ($prefill['selected_nightly_rate'] ?? 0);
@@ -294,6 +296,8 @@
                                 <span class="room-price-local-badge" style="margin-left:.5em;">Local Rate</span>
                             @elseif ($mvrUsdRate > 0)
                                 <span class="room-price-usd-hint" style="margin-left:.5em;">≈ USD {{ number_format($selectedNightlyRateRaw / $mvrUsdRate, 0) }}</span>
+                                @elseif ($mvrUsdRate > 0)
+                                    <span class="room-price-usd-hint" style="margin-left:.5em;">= MVR {{ number_format($selectedNightlyRateRaw * $mvrUsdRate, 0) }}</span>
                             @endif
                         </p>
                         @if ($selectedMealPlan !== '')
@@ -331,6 +335,7 @@
                     <section class="sum-section" aria-label="Price summary">
                         <h2 class="sum-title"><span class="sum-title-number">3</span> Price Summary</h2>
                         <div class="sum-compact-line"><span>Nightly rate</span><strong id="invoiceNightly">{{ $currency }} {{ $selectedNightlyRate }}</strong>@if ($visitorIsLocal)<span class="room-price-local-badge" style="margin-left:.5em;">Local</span>@elseif ($mvrUsdRate > 0)<span class="room-price-usd-hint" style="margin-left:.5em;">≈ USD {{ number_format($selectedNightlyRateRaw / $mvrUsdRate, 0) }}</span>@endif</div>
+                                                <div class="sum-compact-line"><span>Nightly rate</span><strong id="invoiceNightly">{{ $currency }} {{ $selectedNightlyRate }}</strong>@if ($visitorIsLocal)<span class="room-price-local-badge" style="margin-left:.5em;">Local</span>@elseif ($mvrUsdRate > 0)<span class="room-price-usd-hint" style="margin-left:.5em;">= MVR {{ number_format($selectedNightlyRateRaw * $mvrUsdRate, 0) }}</span>@endif</div>
                         <div class="sum-compact-line"><span>Stay (nights)</span><strong id="invoiceNights">{{ $stayNights }}</strong></div>
                         <div class="sum-compact-line"><span>Room subtotal</span><strong id="invoiceRoomSubtotal">{{ $currency }} 0.00</strong></div>
                         <div class="sum-compact-line"><span>Discount</span><strong id="invoiceDiscount">- {{ $currency }} 0.00</strong></div>

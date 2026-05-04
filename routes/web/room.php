@@ -201,6 +201,31 @@ Route::get('/room/{room}', function (Request $request, int $room) {
         $foreignRate = (float) ($roomRow->base_price ?? $propertyRow->base_price ?? 0);
     }
     $resolvedNightlyRate = ($visitorIsLocal && $localRate > 0) ? $localRate : $foreignRate;
+        $mealPlanRateColumns = [
+            'room only'     => ['foreign_usd' => 'meal_plan_room_only_price_usd', 'foreign' => 'meal_plan_room_only_price', 'local' => 'meal_plan_room_only_price_local'],
+            'room_only'     => ['foreign_usd' => 'meal_plan_room_only_price_usd', 'foreign' => 'meal_plan_room_only_price', 'local' => 'meal_plan_room_only_price_local'],
+            'bb'            => ['foreign_usd' => 'meal_plan_bb_price_usd',        'foreign' => 'meal_plan_bb_price',        'local' => 'meal_plan_bb_price_local'],
+            'hb'            => ['foreign_usd' => 'meal_plan_hb_price_usd',        'foreign' => 'meal_plan_hb_price',        'local' => 'meal_plan_hb_price_local'],
+            'fb'            => ['foreign_usd' => 'meal_plan_fb_price_usd',        'foreign' => 'meal_plan_fb_price',        'local' => 'meal_plan_fb_price_local'],
+            'all inclusive' => ['foreign_usd' => 'meal_plan_ai_price_usd',        'foreign' => 'meal_plan_ai_price',        'local' => 'meal_plan_ai_price_local'],
+            'ai'            => ['foreign_usd' => 'meal_plan_ai_price_usd',        'foreign' => 'meal_plan_ai_price',        'local' => 'meal_plan_ai_price_local'],
+        ];
+        $rateCols = $mealPlanRateColumns[$selectedMealPlan] ?? $mealPlanRateColumns['room_only'];
+        $foreignUsdRate = (float) ($roomRow->{$rateCols['foreign_usd']} ?? 0);
+        $foreignMvrRate = (float) ($roomRow->{$rateCols['foreign']} ?? $roomRow->base_price ?? 0);
+        $localRate      = (float) ($roomRow->{$rateCols['local']} ?? 0);
+        if ($foreignUsdRate <= 0 && $foreignMvrRate <= 0) {
+            $foreignMvrRate = (float) ($roomRow->base_price ?? $propertyRow->base_price ?? 0);
+            $foreignUsdRate = $mvrUsdRate > 0 ? round($foreignMvrRate / $mvrUsdRate, 2) : 0.0;
+        }
+        // Foreign visitors see USD; local residents see MVR.
+        if ($visitorIsLocal) {
+            $resolvedNightlyRate = $localRate > 0 ? $localRate : ($mvrUsdRate > 0 ? round($foreignMvrRate, 2) : $foreignMvrRate);
+            $displayCurrency = 'MVR';
+        } else {
+            $resolvedNightlyRate = $foreignUsdRate > 0 ? $foreignUsdRate : ($mvrUsdRate > 0 ? round($foreignMvrRate / $mvrUsdRate, 2) : $foreignMvrRate);
+            $displayCurrency = 'USD';
+        }
 
     // Allow rate_nightly from query param to override (e.g., clicked Reserve from property page).
     $selectedNightlyRate = (float) $request->query('rate_nightly', 0);
@@ -219,6 +244,9 @@ Route::get('/room/{room}', function (Request $request, int $room) {
         'mediaUrl' => $mediaUrl,
         'visitorResidency' => $visitorResidency,
         'mvrUsdRate' => $mvrUsdRate,
+            'visitorResidency' => $visitorResidency,
+            'mvrUsdRate' => $mvrUsdRate,
+            'displayCurrency' => $displayCurrency,
         'prefill' => [
             'checkin' => trim((string) $request->query('checkin', '')),
             'checkout' => trim((string) $request->query('checkout', '')),

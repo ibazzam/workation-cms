@@ -42,23 +42,28 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         'room_features' => ['nullable', 'array'],
         'room_features.*' => ['required', 'string', 'max:80'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
-        'meal_plan_room_only_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_room_only_price_usd' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_room_only_price_local' => ['nullable', 'numeric', 'min:0'],
-        'meal_plan_bb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_bb_price_usd' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_bb_price_local' => ['nullable', 'numeric', 'min:0'],
-        'meal_plan_hb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_hb_price_usd' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_hb_price_local' => ['nullable', 'numeric', 'min:0'],
-        'meal_plan_fb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_fb_price_usd' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_fb_price_local' => ['nullable', 'numeric', 'min:0'],
-        'meal_plan_ai_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_ai_price_usd' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_ai_price_local' => ['nullable', 'numeric', 'min:0'],
-        'extra_person_price' => ['nullable', 'numeric', 'min:0'],
+        'extra_person_price_usd' => ['nullable', 'numeric', 'min:0'],
         'extra_person_price_local' => ['nullable', 'numeric', 'min:0'],
-        'child_price' => ['nullable', 'numeric', 'min:0'],
+        'child_price_usd' => ['nullable', 'numeric', 'min:0'],
         'child_price_local' => ['nullable', 'numeric', 'min:0'],
         'child_policy' => ['nullable', 'string', 'max:3000'],
         'extra_bed_policy' => ['nullable', 'string', 'max:3000'],
     ]);
+
+    // MVR/USD rate — used to auto-compute MVR equivalents from vendor USD inputs.
+    // Booking POST and payment processing always operate in MVR.
+    $mvrUsdRate = (float) env('MVR_USD_RATE', 15.42);
+    $mvrFromUsd = static fn (float $usd): float => $usd > 0 ? round($usd * $mvrUsdRate, 2) : 0.0;
 
     $roomAmenities = vendorPortalNormalizedStringList($validated['room_amenities'] ?? []);
     $roomFeatures = vendorPortalNormalizedStringList($validated['room_features'] ?? []);
@@ -106,9 +111,10 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         return back()->withErrors(['profile' => 'Room categories can only be added under accommodation listings.'])->withInput();
     }
 
-    $resolvedRoomOnlyPrice = (float) ($validated['meal_plan_room_only_price'] ?? 0);
+    $roUsd = (float) ($validated['meal_plan_room_only_price_usd'] ?? 0);
+    $roMvr = $mvrFromUsd($roUsd);
     $legacyBasePrice = (float) ($validated['base_price'] ?? 0);
-    $resolvedBasePrice = $resolvedRoomOnlyPrice > 0 ? $resolvedRoomOnlyPrice : $legacyBasePrice;
+    $resolvedBasePrice = $roMvr > 0 ? $roMvr : $legacyBasePrice;
 
     $insertPayload = [
         'vendor_user_id' => $vendorUserId,
@@ -144,26 +150,55 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
     if (Schema::hasColumn('vendor_property_room_categories', 'child_capacity')) {
         $insertPayload['child_capacity'] = (int) ($validated['child_capacity'] ?? 0);
     }
+    // Foreign segment: vendor entered USD; compute and store MVR equivalent for booking math.
+    $bbUsd   = (float) ($validated['meal_plan_bb_price_usd'] ?? 0);
+    $hbUsd   = (float) ($validated['meal_plan_hb_price_usd'] ?? 0);
+    $fbUsd   = (float) ($validated['meal_plan_fb_price_usd'] ?? 0);
+    $aiUsd   = (float) ($validated['meal_plan_ai_price_usd'] ?? 0);
+    $epUsd   = (float) ($validated['extra_person_price_usd'] ?? 0);
+    $chUsd   = (float) ($validated['child_price_usd'] ?? 0);
+
     if (Schema::hasColumn('vendor_property_room_categories', 'extra_person_price')) {
-        $insertPayload['extra_person_price'] = (float) ($validated['extra_person_price'] ?? 0);
+        $insertPayload['extra_person_price'] = $mvrFromUsd($epUsd);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'extra_person_price_usd')) {
+        $insertPayload['extra_person_price_usd'] = $epUsd;
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'child_price')) {
-        $insertPayload['child_price'] = (float) ($validated['child_price'] ?? 0);
+        $insertPayload['child_price'] = $mvrFromUsd($chUsd);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'child_price_usd')) {
+        $insertPayload['child_price_usd'] = $chUsd;
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_room_only_price')) {
-        $insertPayload['meal_plan_room_only_price'] = $resolvedRoomOnlyPrice > 0 ? $resolvedRoomOnlyPrice : $resolvedBasePrice;
+        $insertPayload['meal_plan_room_only_price'] = $roMvr > 0 ? $roMvr : $resolvedBasePrice;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_room_only_price_usd')) {
+        $insertPayload['meal_plan_room_only_price_usd'] = $roUsd;
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_bb_price')) {
-        $insertPayload['meal_plan_bb_price'] = (float) ($validated['meal_plan_bb_price'] ?? 0);
+        $insertPayload['meal_plan_bb_price'] = $mvrFromUsd($bbUsd);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_bb_price_usd')) {
+        $insertPayload['meal_plan_bb_price_usd'] = $bbUsd;
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_hb_price')) {
-        $insertPayload['meal_plan_hb_price'] = (float) ($validated['meal_plan_hb_price'] ?? 0);
+        $insertPayload['meal_plan_hb_price'] = $mvrFromUsd($hbUsd);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_hb_price_usd')) {
+        $insertPayload['meal_plan_hb_price_usd'] = $hbUsd;
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_fb_price')) {
-        $insertPayload['meal_plan_fb_price'] = (float) ($validated['meal_plan_fb_price'] ?? 0);
+        $insertPayload['meal_plan_fb_price'] = $mvrFromUsd($fbUsd);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_fb_price_usd')) {
+        $insertPayload['meal_plan_fb_price_usd'] = $fbUsd;
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_ai_price')) {
-        $insertPayload['meal_plan_ai_price'] = (float) ($validated['meal_plan_ai_price'] ?? 0);
+        $insertPayload['meal_plan_ai_price'] = $mvrFromUsd($aiUsd);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_ai_price_usd')) {
+        $insertPayload['meal_plan_ai_price_usd'] = $aiUsd;
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_room_only_price_local')) {
         $insertPayload['meal_plan_room_only_price_local'] = (float) ($validated['meal_plan_room_only_price_local'] ?? 0);
@@ -246,23 +281,27 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
         'bathroom_amenities' => ['nullable', 'array'],
         'bathroom_amenities.*' => ['required', 'string', 'max:80'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
-        'meal_plan_room_only_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_room_only_price_usd' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_room_only_price_local' => ['nullable', 'numeric', 'min:0'],
-        'meal_plan_bb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_bb_price_usd' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_bb_price_local' => ['nullable', 'numeric', 'min:0'],
-        'meal_plan_hb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_hb_price_usd' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_hb_price_local' => ['nullable', 'numeric', 'min:0'],
-        'meal_plan_fb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_fb_price_usd' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_fb_price_local' => ['nullable', 'numeric', 'min:0'],
-        'meal_plan_ai_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_ai_price_usd' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_ai_price_local' => ['nullable', 'numeric', 'min:0'],
-        'extra_person_price' => ['nullable', 'numeric', 'min:0'],
+        'extra_person_price_usd' => ['nullable', 'numeric', 'min:0'],
         'extra_person_price_local' => ['nullable', 'numeric', 'min:0'],
-        'child_price' => ['nullable', 'numeric', 'min:0'],
+        'child_price_usd' => ['nullable', 'numeric', 'min:0'],
         'child_price_local' => ['nullable', 'numeric', 'min:0'],
         'child_policy' => ['nullable', 'string', 'max:3000'],
         'extra_bed_policy' => ['nullable', 'string', 'max:3000'],
     ]);
+
+    // MVR/USD rate — used to auto-compute MVR equivalents from vendor USD inputs.
+    $mvrUsdRate = (float) env('MVR_USD_RATE', 15.42);
+    $mvrFromUsd = static fn (float $usd): float => $usd > 0 ? round($usd * $mvrUsdRate, 2) : 0.0;
 
     $roomAmenities = vendorPortalNormalizedStringList($validated['room_amenities'] ?? []);
     $bathroomAmenities = vendorPortalNormalizedStringList($validated['bathroom_amenities'] ?? []);
@@ -303,9 +342,10 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
         }
     }
 
-    $resolvedRoomOnlyPrice = (float) ($validated['meal_plan_room_only_price'] ?? 0);
+    $roUsd = (float) ($validated['meal_plan_room_only_price_usd'] ?? 0);
+    $roMvr = $mvrFromUsd($roUsd);
     $legacyBasePrice = (float) ($validated['base_price'] ?? 0);
-    $resolvedBasePrice = $resolvedRoomOnlyPrice > 0 ? $resolvedRoomOnlyPrice : $legacyBasePrice;
+    $resolvedBasePrice = $roMvr > 0 ? $roMvr : $legacyBasePrice;
 
     $updatePayload = [
         'name' => trim((string) $validated['name']),
@@ -337,26 +377,55 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
     if (Schema::hasColumn('vendor_property_room_categories', 'child_capacity')) {
         $updatePayload['child_capacity'] = (int) ($validated['child_capacity'] ?? 0);
     }
+    // Foreign segment: vendor entered USD; compute and store MVR equivalent for booking math.
+    $bbUsd   = (float) ($validated['meal_plan_bb_price_usd'] ?? 0);
+    $hbUsd   = (float) ($validated['meal_plan_hb_price_usd'] ?? 0);
+    $fbUsd   = (float) ($validated['meal_plan_fb_price_usd'] ?? 0);
+    $aiUsd   = (float) ($validated['meal_plan_ai_price_usd'] ?? 0);
+    $epUsd   = (float) ($validated['extra_person_price_usd'] ?? 0);
+    $chUsd   = (float) ($validated['child_price_usd'] ?? 0);
+
     if (Schema::hasColumn('vendor_property_room_categories', 'extra_person_price')) {
-        $updatePayload['extra_person_price'] = (float) ($validated['extra_person_price'] ?? 0);
+        $updatePayload['extra_person_price'] = $mvrFromUsd($epUsd);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'extra_person_price_usd')) {
+        $updatePayload['extra_person_price_usd'] = $epUsd;
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'child_price')) {
-        $updatePayload['child_price'] = (float) ($validated['child_price'] ?? 0);
+        $updatePayload['child_price'] = $mvrFromUsd($chUsd);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'child_price_usd')) {
+        $updatePayload['child_price_usd'] = $chUsd;
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_room_only_price')) {
-        $updatePayload['meal_plan_room_only_price'] = $resolvedRoomOnlyPrice > 0 ? $resolvedRoomOnlyPrice : $resolvedBasePrice;
+        $updatePayload['meal_plan_room_only_price'] = $roMvr > 0 ? $roMvr : $resolvedBasePrice;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_room_only_price_usd')) {
+        $updatePayload['meal_plan_room_only_price_usd'] = $roUsd;
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_bb_price')) {
-        $updatePayload['meal_plan_bb_price'] = (float) ($validated['meal_plan_bb_price'] ?? 0);
+        $updatePayload['meal_plan_bb_price'] = $mvrFromUsd($bbUsd);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_bb_price_usd')) {
+        $updatePayload['meal_plan_bb_price_usd'] = $bbUsd;
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_hb_price')) {
-        $updatePayload['meal_plan_hb_price'] = (float) ($validated['meal_plan_hb_price'] ?? 0);
+        $updatePayload['meal_plan_hb_price'] = $mvrFromUsd($hbUsd);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_hb_price_usd')) {
+        $updatePayload['meal_plan_hb_price_usd'] = $hbUsd;
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_fb_price')) {
-        $updatePayload['meal_plan_fb_price'] = (float) ($validated['meal_plan_fb_price'] ?? 0);
+        $updatePayload['meal_plan_fb_price'] = $mvrFromUsd($fbUsd);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_fb_price_usd')) {
+        $updatePayload['meal_plan_fb_price_usd'] = $fbUsd;
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_ai_price')) {
-        $updatePayload['meal_plan_ai_price'] = (float) ($validated['meal_plan_ai_price'] ?? 0);
+        $updatePayload['meal_plan_ai_price'] = $mvrFromUsd($aiUsd);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_ai_price_usd')) {
+        $updatePayload['meal_plan_ai_price_usd'] = $aiUsd;
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_room_only_price_local')) {
         $updatePayload['meal_plan_room_only_price_local'] = (float) ($validated['meal_plan_room_only_price_local'] ?? 0);
@@ -1100,7 +1169,9 @@ Route::post('/portal/vendor/services/create', function (Request $request) {
         'listing_category' => ['required', 'string', 'max:80'],
         'category' => ['required', 'string', 'max:120'],
         'description' => ['nullable', 'string', 'max:3000'],
-        'price' => ['required', 'numeric', 'min:0'],
+        'price' => ['nullable', 'numeric', 'min:0'],
+        'price_local' => ['nullable', 'numeric', 'min:0'],
+        'price_usd' => ['nullable', 'numeric', 'min:0'],
         'duration_minutes' => ['nullable', 'integer', 'min:0', 'max:100000'],
         'property_id' => ['nullable', 'integer'],
         'measurement_system' => ['nullable', Rule::in(['metric', 'imperial'])],
@@ -1110,6 +1181,20 @@ Route::post('/portal/vendor/services/create', function (Request $request) {
         'quantity_unit' => ['nullable', Rule::in(['seat', 'room', 'desk', 'vehicle', 'ticket', 'table', 'pass'])],
         'compliance_notes' => ['nullable', 'string', 'max:2000'],
     ]);
+
+    $mvrUsdRate = (float) env('MVR_USD_RATE', 15.42);
+    $mvrFromUsd = static fn (float $usd): float => $usd > 0 ? round($usd * $mvrUsdRate, 2) : 0.0;
+    $localPriceMvr = max(0, (float) ($validated['price_local'] ?? 0));
+    $foreignPriceUsd = max(0, (float) ($validated['price_usd'] ?? 0));
+    $foreignPriceMvr = $mvrFromUsd($foreignPriceUsd);
+    $legacyPriceMvr = max(0, (float) ($validated['price'] ?? 0));
+    $resolvedBasePriceMvr = $foreignPriceMvr > 0
+        ? $foreignPriceMvr
+        : ($localPriceMvr > 0 ? $localPriceMvr : $legacyPriceMvr);
+
+    if ($resolvedBasePriceMvr <= 0) {
+        return back()->withErrors(['price' => 'Enter at least one service price (Foreign USD, Local MVR, or base MVR).'])->withInput();
+    }
 
     $canonicalListingCategory = vendorPortalCanonicalCategory((string) $validated['listing_category']);
     if ($canonicalListingCategory === null) {
@@ -1134,12 +1219,20 @@ Route::post('/portal/vendor/services/create', function (Request $request) {
         'category' => trim((string) $validated['category']),
         'description' => trim((string) ($validated['description'] ?? '')),
         'duration_minutes' => (int) ($validated['duration_minutes'] ?? 0),
-        'price' => (float) $validated['price'],
+        // Primary booking math remains in MVR.
+        'price' => $resolvedBasePriceMvr,
         'currency' => 'MVR',
         'is_active' => true,
         'created_at' => now(),
         'updated_at' => now(),
     ];
+
+    if (Schema::hasColumn('vendor_services', 'price_local')) {
+        $payload['price_local'] = $localPriceMvr;
+    }
+    if (Schema::hasColumn('vendor_services', 'price_usd')) {
+        $payload['price_usd'] = $foreignPriceUsd;
+    }
 
     if (Schema::hasColumn('vendor_services', 'listing_category')) {
         $payload['listing_category'] = $canonicalListingCategory;

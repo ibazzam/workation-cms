@@ -513,20 +513,20 @@
                                                                                                 </select>
                                                                                                 <input class="ops-input" name="extra_person_capacity" type="number" min="0" max="20" value="{{ (int) ($room->extra_person_capacity ?? 0) > 0 ? (int) ($room->extra_person_capacity ?? 0) : '' }}" placeholder="Extra adult capacity">
                                                                                                 <input class="ops-input" name="child_capacity" type="number" min="0" max="20" value="{{ (int) ($room->child_capacity ?? 0) > 0 ? (int) ($room->child_capacity ?? 0) : '' }}" placeholder="Child capacity">
-                                                                                                <input class="ops-input" name="meal_plan_room_only_price" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_room_only_price ?? 0) > 0 ? (float) ($room->meal_plan_room_only_price ?? 0) : '' }}" placeholder="Room only — Foreign (MVR)">
+                                                                                                <input class="ops-input" name="meal_plan_room_only_price_usd" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_room_only_price_usd ?? 0) > 0 ? (float) ($room->meal_plan_room_only_price_usd ?? 0) : '' }}" placeholder="Room only — Foreign (USD)">
                                                                                                 <input class="ops-input" name="meal_plan_room_only_price_local" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_room_only_price_local ?? 0) > 0 ? (float) ($room->meal_plan_room_only_price_local ?? 0) : '' }}" placeholder="Room only — Local (MVR)">
-                                                                                                <input class="ops-input" name="meal_plan_bb_price" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_bb_price ?? 0) > 0 ? (float) ($room->meal_plan_bb_price ?? 0) : '' }}" placeholder="BB — Foreign (MVR)">
+                                                                                                <input class="ops-input" name="meal_plan_bb_price_usd" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_bb_price_usd ?? 0) > 0 ? (float) ($room->meal_plan_bb_price_usd ?? 0) : '' }}" placeholder="BB — Foreign (USD)">
                                                                                                 <input class="ops-input" name="meal_plan_bb_price_local" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_bb_price_local ?? 0) > 0 ? (float) ($room->meal_plan_bb_price_local ?? 0) : '' }}" placeholder="BB — Local (MVR)">
-                                                                                                <input class="ops-input" name="meal_plan_hb_price" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_hb_price ?? 0) > 0 ? (float) ($room->meal_plan_hb_price ?? 0) : '' }}" placeholder="HB — Foreign (MVR)">
+                                                                                                <input class="ops-input" name="meal_plan_hb_price_usd" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_hb_price_usd ?? 0) > 0 ? (float) ($room->meal_plan_hb_price_usd ?? 0) : '' }}" placeholder="HB — Foreign (USD)">
                                                                                                 <input class="ops-input" name="meal_plan_hb_price_local" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_hb_price_local ?? 0) > 0 ? (float) ($room->meal_plan_hb_price_local ?? 0) : '' }}" placeholder="HB — Local (MVR)">
-                                                                                                <input class="ops-input" name="meal_plan_fb_price" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_fb_price ?? 0) > 0 ? (float) ($room->meal_plan_fb_price ?? 0) : '' }}" placeholder="FB — Foreign (MVR)">
+                                                                                                <input class="ops-input" name="meal_plan_fb_price_usd" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_fb_price_usd ?? 0) > 0 ? (float) ($room->meal_plan_fb_price_usd ?? 0) : '' }}" placeholder="FB — Foreign (USD)">
                                                                                                 <input class="ops-input" name="meal_plan_fb_price_local" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_fb_price_local ?? 0) > 0 ? (float) ($room->meal_plan_fb_price_local ?? 0) : '' }}" placeholder="FB — Local (MVR)">
-                                                                                                <input class="ops-input" name="meal_plan_ai_price" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_ai_price ?? 0) > 0 ? (float) ($room->meal_plan_ai_price ?? 0) : '' }}" placeholder="All inclusive — Foreign (MVR)">
+                                                                                                <input class="ops-input" name="meal_plan_ai_price_usd" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_ai_price_usd ?? 0) > 0 ? (float) ($room->meal_plan_ai_price_usd ?? 0) : '' }}" placeholder="All inclusive — Foreign (USD)">
                                                                                                 <input class="ops-input" name="meal_plan_ai_price_local" type="number" min="0" step="0.01" value="{{ (float) ($room->meal_plan_ai_price_local ?? 0) > 0 ? (float) ($room->meal_plan_ai_price_local ?? 0) : '' }}" placeholder="All inclusive — Local (MVR)">
-                                                                                                <input class="ops-input" name="extra_person_price" type="number" min="0" step="0.01" value="{{ (float) ($room->extra_person_price ?? 0) > 0 ? (float) ($room->extra_person_price ?? 0) : '' }}" placeholder="Extra adult — Foreign">
-                                                                                                <input class="ops-input" name="extra_person_price_local" type="number" min="0" step="0.01" value="{{ (float) ($room->extra_person_price_local ?? 0) > 0 ? (float) ($room->extra_person_price_local ?? 0) : '' }}" placeholder="Extra adult — Local">
-                                                                                                <input class="ops-input" name="child_price" type="number" min="0" step="0.01" value="{{ (float) ($room->child_price ?? 0) > 0 ? (float) ($room->child_price ?? 0) : '' }}" placeholder="Child — Foreign">
-                                                                                                <input class="ops-input" name="child_price_local" type="number" min="0" step="0.01" value="{{ (float) ($room->child_price_local ?? 0) > 0 ? (float) ($room->child_price_local ?? 0) : '' }}" placeholder="Child — Local">
+                                                                                                <input class="ops-input" name="extra_person_price_usd" type="number" min="0" step="0.01" value="{{ (float) ($room->extra_person_price_usd ?? 0) > 0 ? (float) ($room->extra_person_price_usd ?? 0) : '' }}" placeholder="Extra adult — Foreign (USD)">
+                                                                                                <input class="ops-input" name="extra_person_price_local" type="number" min="0" step="0.01" value="{{ (float) ($room->extra_person_price_local ?? 0) > 0 ? (float) ($room->extra_person_price_local ?? 0) : '' }}" placeholder="Extra adult — Local (MVR)">
+                                                                                                <input class="ops-input" name="child_price_usd" type="number" min="0" step="0.01" value="{{ (float) ($room->child_price_usd ?? 0) > 0 ? (float) ($room->child_price_usd ?? 0) : '' }}" placeholder="Child — Foreign (USD)">
+                                                                                                <input class="ops-input" name="child_price_local" type="number" min="0" step="0.01" value="{{ (float) ($room->child_price_local ?? 0) > 0 ? (float) ($room->child_price_local ?? 0) : '' }}" placeholder="Child — Local (MVR)">
                                                                                                 @php
                                                                                                     $roomBedTypeCurrent = strtolower(trim((string) ($room->bed_type ?? '')));
                                                                                                     $knownRoomBedTypes = $roomBedTypeOptionsCollection
@@ -713,56 +713,56 @@
                                                                         <input class="ops-input" name="child_capacity" type="number" min="0" max="20" value="{{ $showInlineRoomRow ? old('child_capacity', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
-                                                                        <label>Room Only Price — Foreign (MVR)</label>
-                                                                        <input class="ops-input" name="meal_plan_room_only_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_room_only_price', '') : '' }}">
+                                                                        <label>Room Only Price — Foreign (USD)</label>
+                                                                        <input class="ops-input" name="meal_plan_room_only_price_usd" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_room_only_price_usd', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
                                                                         <label>Room Only Price — Local (MVR)</label>
                                                                         <input class="ops-input" name="meal_plan_room_only_price_local" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_room_only_price_local', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
-                                                                        <label>BB Price — Foreign (MVR)</label>
-                                                                        <input class="ops-input" name="meal_plan_bb_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_bb_price', '') : '' }}">
+                                                                        <label>BB Price — Foreign (USD)</label>
+                                                                        <input class="ops-input" name="meal_plan_bb_price_usd" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_bb_price_usd', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
                                                                         <label>BB Price — Local (MVR)</label>
                                                                         <input class="ops-input" name="meal_plan_bb_price_local" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_bb_price_local', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
-                                                                        <label>HB Price — Foreign (MVR)</label>
-                                                                        <input class="ops-input" name="meal_plan_hb_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_hb_price', '') : '' }}">
+                                                                        <label>HB Price — Foreign (USD)</label>
+                                                                        <input class="ops-input" name="meal_plan_hb_price_usd" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_hb_price_usd', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
                                                                         <label>HB Price — Local (MVR)</label>
                                                                         <input class="ops-input" name="meal_plan_hb_price_local" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_hb_price_local', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
-                                                                        <label>FB Price — Foreign (MVR)</label>
-                                                                        <input class="ops-input" name="meal_plan_fb_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_fb_price', '') : '' }}">
+                                                                        <label>FB Price — Foreign (USD)</label>
+                                                                        <input class="ops-input" name="meal_plan_fb_price_usd" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_fb_price_usd', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
                                                                         <label>FB Price — Local (MVR)</label>
                                                                         <input class="ops-input" name="meal_plan_fb_price_local" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_fb_price_local', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
-                                                                        <label>All Inclusive Price — Foreign (MVR)</label>
-                                                                        <input class="ops-input" name="meal_plan_ai_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_ai_price', '') : '' }}">
+                                                                        <label>All Inclusive Price — Foreign (USD)</label>
+                                                                        <input class="ops-input" name="meal_plan_ai_price_usd" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_ai_price_usd', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
                                                                         <label>All Inclusive Price — Local (MVR)</label>
                                                                         <input class="ops-input" name="meal_plan_ai_price_local" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('meal_plan_ai_price_local', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
-                                                                        <label>Extra Adult Price — Foreign (MVR)</label>
-                                                                        <input class="ops-input" name="extra_person_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('extra_person_price', '') : '' }}">
+                                                                        <label>Extra Adult Price — Foreign (USD)</label>
+                                                                        <input class="ops-input" name="extra_person_price_usd" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('extra_person_price_usd', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
                                                                         <label>Extra Adult Price — Local (MVR)</label>
                                                                         <input class="ops-input" name="extra_person_price_local" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('extra_person_price_local', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
-                                                                        <label>Child Price — Foreign (MVR)</label>
-                                                                        <input class="ops-input" name="child_price" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('child_price', '') : '' }}">
+                                                                        <label>Child Price — Foreign (USD)</label>
+                                                                        <input class="ops-input" name="child_price_usd" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('child_price_usd', '') : '' }}">
                                                                     </div>
                                                                     <div class="ops-field">
                                                                         <label>Child Price — Local (MVR)</label>

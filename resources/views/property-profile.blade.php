@@ -3359,6 +3359,82 @@
                                 'nightly' => $defaultNightlyRate,
                             ]]);
                         }
+                            // Foreign visitors see USD (from _usd columns); locals see MVR (from _local columns).
+                            $roomCurrency = $visitorIsLocal ? 'MVR' : 'USD';
+
+                            // Resolve the rate for the visitor's segment.
+                            // Foreign: use _usd column (exact USD). Local: use _local column (MVR).
+                            // Falls back to $fallback (base_price in MVR) converted as needed.
+                            $resolveVisitorRate = static function (float $foreignUsd, float $localMvr, float $fallback) use ($visitorIsLocal, $mvrUsdRate): float {
+                                if ($visitorIsLocal) {
+                                    return $localMvr > 0 ? $localMvr : ($mvrUsdRate > 0 ? round($fallback / $mvrUsdRate, 2) : $fallback);
+                                }
+                                return $foreignUsd > 0 ? $foreignUsd : ($mvrUsdRate > 0 ? round($fallback / $mvrUsdRate, 2) : 0.0);
+                            };
+
+                            $roomOnlyNightlyRate = $resolveVisitorRate(
+                                (float) ($room->meal_plan_room_only_price_usd ?? 0),
+                                (float) ($room->meal_plan_room_only_price_local ?? 0),
+                                $defaultNightlyRate
+                            );
+
+                            $rateOptions = collect([
+                                [
+                                    'meal_plan' => 'Room Only',
+                                    'title' => 'Room Only',
+                                    'subtitle' => 'Room only (no meals)',
+                                    'nightly' => $roomOnlyNightlyRate,
+                                ],
+                                [
+                                    'meal_plan' => 'BB',
+                                    'title' => 'Bed & Breakfast',
+                                    'subtitle' => 'Bed & Breakfast included',
+                                    'nightly' => $resolveVisitorRate(
+                                        (float) ($room->meal_plan_bb_price_usd ?? 0),
+                                        (float) ($room->meal_plan_bb_price_local ?? 0),
+                                        0.0
+                                    ),
+                                ],
+                                [
+                                    'meal_plan' => 'HB',
+                                    'title' => 'Half Board',
+                                    'subtitle' => 'Half Board included',
+                                    'nightly' => $resolveVisitorRate(
+                                        (float) ($room->meal_plan_hb_price_usd ?? 0),
+                                        (float) ($room->meal_plan_hb_price_local ?? 0),
+                                        0.0
+                                    ),
+                                ],
+                                [
+                                    'meal_plan' => 'FB',
+                                    'title' => 'Full Board',
+                                    'subtitle' => 'Full Board included',
+                                    'nightly' => $resolveVisitorRate(
+                                        (float) ($room->meal_plan_fb_price_usd ?? 0),
+                                        (float) ($room->meal_plan_fb_price_local ?? 0),
+                                        0.0
+                                    ),
+                                ],
+                                [
+                                    'meal_plan' => 'All Inclusive',
+                                    'title' => 'All Inclusive',
+                                    'subtitle' => 'All Inclusive package',
+                                    'nightly' => $resolveVisitorRate(
+                                        (float) ($room->meal_plan_ai_price_usd ?? 0),
+                                        (float) ($room->meal_plan_ai_price_local ?? 0),
+                                        0.0
+                                    ),
+                                ],
+                            ])->filter(static fn ($item) => (float) ($item['nightly'] ?? 0) > 0)->values();
+
+                            if ($rateOptions->isEmpty() && $defaultNightlyRate > 0) {
+                                $rateOptions = collect([[
+                                    'meal_plan' => 'Room Only',
+                                    'title' => 'Room Only',
+                                    'subtitle' => 'Standard room rate',
+                                    'nightly' => $defaultNightlyRate,
+                                ]]);
+                            }
 
                         $rateOptions = $rateOptions->map(static function ($option) {
                             $mealPlan = strtolower(trim((string) ($option['meal_plan'] ?? '')));
@@ -3483,6 +3559,13 @@
                                                     @elseif (($mvrUsdRate ?? 0) > 0)
                                                         <div class="room-price-usd-hint">≈ USD {{ number_format($nightlyRateRaw / $mvrUsdRate, 0) }} / night</div>
                                                     @endif
+                                                                    <div class="room-price-old">{{ $roomCurrency }} {{ $rateOldPrice }}</div>
+                                                                    <div class="room-price-now">{{ $roomCurrency }} {{ $ratePrice }}</div>
+                                                                    @if ($visitorIsLocal)
+                                                                        <div class="room-price-local-badge">Local Rate</div>
+                                                                    @elseif (($mvrUsdRate ?? 0) > 0)
+                                                                        <div class="room-price-usd-hint">= MVR {{ number_format($nightlyRateRaw * $mvrUsdRate, 0) }} / night</div>
+                                                                    @endif
                                                     <div class="room-price-summary" data-rate-summary data-rate-currency="{{ $roomCurrency }}" data-nightly-rate="{{ number_format($nightlyRateRaw, 2, '.', '') }}">
                                                         {{ $roomCurrency }} {{ number_format($rateTotalRaw, 2) }} total 1 room, {{ $prefillStayNights }} night{{ $prefillStayNights !== 1 ? 's' : '' }}
                                                     </div>

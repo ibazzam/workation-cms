@@ -90,6 +90,10 @@
             <label for="property_weather_cancellation_policy">Weather Cancellation Policy</label>
             <textarea id="property_weather_cancellation_policy" name="weather_cancellation_policy" class="ops-textarea" rows="2" maxlength="1000" placeholder="We cancel if wind exceeds 30 knots. Full refund given.">{{ old('weather_cancellation_policy') }}</textarea>
         </div>
+        <div class="ops-field ops-field-wide">
+            <label for="property_special_instructions">Special Instructions</label>
+            <textarea id="property_special_instructions" name="special_instructions" class="ops-textarea" rows="3" maxlength="2000" placeholder="What guests should bring, what to wear, when to arrive, or any safety prep notes.">{{ old('special_instructions') }}</textarea>
+        </div>
 
         {{-- Geo --}}
         <div class="ops-field">

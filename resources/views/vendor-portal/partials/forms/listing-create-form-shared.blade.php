@@ -367,6 +367,10 @@
                                 <label for="property_weather_cancellation_policy">Weather Cancellation Policy</label>
                                 <textarea id="property_weather_cancellation_policy" name="weather_cancellation_policy" class="ops-textarea" rows="3" maxlength="2000" placeholder="Trips may be rescheduled or refunded in case of unsafe sea/weather conditions..." required>{{ old('weather_cancellation_policy') }}</textarea>
                             </div>
+                            <div class="ops-field ops-field-wide" data-category-scope="excursion">
+                                <label for="property_special_instructions">Special Instructions</label>
+                                <textarea id="property_special_instructions" name="special_instructions" class="ops-textarea" rows="3" maxlength="2000" placeholder="What guests should bring, what to wear, check-in instructions, or anything important before arrival.">{{ old('special_instructions') }}</textarea>
+                            </div>
                             <div class="ops-field" data-category-scope="workspace">
                                 <label for="property_workspace_type">Workspace Type</label>
                                 <select id="property_workspace_type" name="workspace_type" class="ops-select" required>

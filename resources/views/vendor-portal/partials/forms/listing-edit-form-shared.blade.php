@@ -272,6 +272,7 @@
                                                                     @endforeach
                                                                 </div>
                                                                 <textarea class="ops-textarea" name="weather_cancellation_policy" rows="3" maxlength="2000" placeholder="Weather Cancellation Policy" data-property-edit-scope="excursion">{{ (string) ($propertyDetails['weather_cancellation_policy'] ?? '') }}</textarea>
+                                                                <textarea class="ops-textarea" name="special_instructions" rows="3" maxlength="2000" placeholder="Special Instructions" data-property-edit-scope="excursion">{{ (string) ($propertyDetails['special_instructions'] ?? '') }}</textarea>
                                                                 {{-- Workspace operating hours --}}
                                                                 <input class="ops-input" name="operating_hours_open" type="time" value="{{ (string) ($propertyDetails['operating_hours_open'] ?? '08:00') }}" data-property-edit-scope="workspace">
                                                                 <input class="ops-input" name="operating_hours_close" type="time" value="{{ (string) ($propertyDetails['operating_hours_close'] ?? '22:00') }}" data-property-edit-scope="workspace">

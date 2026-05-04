@@ -1418,7 +1418,35 @@
         }
 
         .page.category-default .card-body {
-            gap: 6px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            column-gap: 12px;
+            row-gap: 5px;
+            align-items: start;
+        }
+
+        .page.category-default .card-city,
+        .page.category-default .card-type-chip,
+        .page.category-default .card h3,
+        .page.category-default .card-stars,
+        .page.category-default .card-offer,
+        .page.category-default .card-desc,
+        .page.category-default .card-time,
+        .page.category-default .card-action-btn {
+            grid-column: 1 / -1;
+        }
+
+        .page.category-default .card-review {
+            grid-column: 1;
+            margin-bottom: 0;
+        }
+
+        .page.category-default .card-price {
+            grid-column: 2;
+            justify-self: end;
+            align-self: center;
+            margin: 0;
+            text-align: right;
         }
 
         .page.category-default .card h3 {
@@ -1691,6 +1719,17 @@
 
             .page.category-default .card img {
                 height: 180px;
+            }
+
+            .page.category-default .card-body {
+                grid-template-columns: 1fr;
+                column-gap: 0;
+            }
+
+            .page.category-default .card-price {
+                grid-column: 1;
+                justify-self: start;
+                text-align: left;
             }
 
             .search-primary-grid,

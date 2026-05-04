@@ -79,6 +79,42 @@
             <input id="property_service_radius_km" name="service_radius_km" class="ops-input" type="number" min="0" step="0.1" value="{{ old('service_radius_km', $propertyDetails['service_radius_km'] ?? '') }}">
         </div>
 
+        {{-- ── Transfer & Slot Configuration ────────────────────────────── --}}
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
+            <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Transfer & Slot Configuration</p>
+        </div>
+        <div class="ops-field">
+            <label for="property_transfer_included">Transfer Included in Price?</label>
+            <select id="property_transfer_included" name="transfer_included" class="ops-select">
+                <option value="0" @selected(!old('transfer_included', $propertyDetails['transfer_included'] ?? false))>No — guests arrange own transfer</option>
+                <option value="1" @selected((bool) old('transfer_included', $propertyDetails['transfer_included'] ?? false))>Yes — transfer included in activity price</option>
+            </select>
+        </div>
+        <div class="ops-field">
+            <label for="property_departure_time_mode">Departure Time Type</label>
+            <select id="property_departure_time_mode" name="departure_time_mode" class="ops-select">
+                <option value="fixed" @selected(old('departure_time_mode', $propertyDetails['departure_time_mode'] ?? 'fixed') === 'fixed')>Fixed — single departure time</option>
+                <option value="slots" @selected(old('departure_time_mode', $propertyDetails['departure_time_mode'] ?? '') === 'slots')>Slots — customers pick departure time</option>
+            </select>
+        </div>
+        <div class="ops-field ops-field-wide">
+            <label for="property_departure_slots">Departure Time Slots <span style="font-weight:400;">(one per line, 24h format e.g. 08:00)</span></label>
+            <textarea id="property_departure_slots" name="departure_slots" class="ops-textarea" rows="4" placeholder="08:00&#10;09:00&#10;10:00&#10;11:00">{{ old('departure_slots', implode("\n", (array) ($propertyDetails['departure_slots'] ?? []))) }}</textarea>
+            <p class="map-help">Used when type is Slots. Enter one time per line.</p>
+        </div>
+        <div class="ops-field">
+            <label for="property_return_time_mode">Return Time Type</label>
+            <select id="property_return_time_mode" name="return_time_mode" class="ops-select">
+                <option value="fixed" @selected(old('return_time_mode', $propertyDetails['return_time_mode'] ?? 'fixed') === 'fixed')>Fixed — single return time</option>
+                <option value="slots" @selected(old('return_time_mode', $propertyDetails['return_time_mode'] ?? '') === 'slots')>Slots — customers pick return time</option>
+            </select>
+        </div>
+        <div class="ops-field ops-field-wide">
+            <label for="property_return_slots">Return Time Slots <span style="font-weight:400;">(one per line, 24h format e.g. 17:30)</span></label>
+            <textarea id="property_return_slots" name="return_slots" class="ops-textarea" rows="4" placeholder="17:30&#10;18:30&#10;20:30&#10;22:30">{{ old('return_slots', implode("\n", (array) ($propertyDetails['return_slots'] ?? []))) }}</textarea>
+            <p class="map-help">Used when type is Slots. Enter one time per line.</p>
+        </div>
+
         {{-- ── Participants & Capacity ───────────────────────────────────── --}}
         <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
             <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Participants & Capacity</p>
@@ -98,6 +134,29 @@
         <div class="ops-field">
             <label for="property_max_guests">Overall Capacity (max guests)</label>
             <input id="property_max_guests" name="max_guests" class="ops-input" type="number" min="1" value="{{ old('max_guests', $propertyDetails['max_guests'] ?? '') }}">
+        </div>
+
+        {{-- ── Pricing by Residency ──────────────────────────────────────── --}}
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
+            <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Pricing by Residency</p>
+        </div>
+        <div class="ops-field">
+            <label for="property_adult_price_local">Adult Price — Local (MVR)</label>
+            <input id="property_adult_price_local" name="adult_price_local" class="ops-input" type="number" min="0" step="0.01" value="{{ old('adult_price_local', $propertyDetails['adult_price_local'] ?? '') }}" placeholder="e.g. 450.00">
+            <p class="map-help">Price for Maldivian nationals.</p>
+        </div>
+        <div class="ops-field">
+            <label for="property_adult_price_foreign">Adult Price — Foreign (MVR)</label>
+            <input id="property_adult_price_foreign" name="adult_price_foreign" class="ops-input" type="number" min="0" step="0.01" value="{{ old('adult_price_foreign', $propertyDetails['adult_price_foreign'] ?? '') }}" placeholder="e.g. 850.00">
+            <p class="map-help">Price for international guests.</p>
+        </div>
+        <div class="ops-field">
+            <label for="property_child_price_local">Child Price — Local (MVR)</label>
+            <input id="property_child_price_local" name="child_price_local" class="ops-input" type="number" min="0" step="0.01" value="{{ old('child_price_local', $propertyDetails['child_price_local'] ?? '') }}" placeholder="e.g. 225.00">
+        </div>
+        <div class="ops-field">
+            <label for="property_child_price_foreign">Child Price — Foreign (MVR)</label>
+            <input id="property_child_price_foreign" name="child_price_foreign" class="ops-input" type="number" min="0" step="0.01" value="{{ old('child_price_foreign', $propertyDetails['child_price_foreign'] ?? '') }}" placeholder="e.g. 425.00">
         </div>
 
         {{-- ── Inclusions & Exclusions ───────────────────────────────────── --}}

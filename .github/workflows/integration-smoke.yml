@@ -76,7 +76,7 @@ jobs:
           php artisan migrate --force
 
       - name: Run PHPUnit
-        run: vendor/bin/phpunit --testdox --colors=never
+        run: php -d memory_limit=512M vendor/bin/phpunit --testdox --colors=never
 
       - name: Run transport job processing smoke
         run: php artisan transport:process-jobs --limit=5

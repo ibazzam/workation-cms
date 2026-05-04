@@ -652,7 +652,7 @@
         $dateLabels = $dateLabels ?? ['start' => 'Service Start Date', 'end' => 'Service End Date'];
         $pricingConfig = $pricingConfig ?? ['tax_rate' => 16, 'discount_percent' => 0];
         $currency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
-        $basePrice = (float) ($property->base_price ?? 0);
+        $basePrice = (float) ($pricingConfig['display_price'] ?? $property->base_price ?? 0);
         $adultUnitPrice = (float) ($pricingConfig['adult_price'] ?? $basePrice);
         $childUnitPrice = (float) ($pricingConfig['child_price'] ?? max(0, round($adultUnitPrice * 0.5, 2)));
         $infantUnitPrice = (float) ($pricingConfig['infant_price'] ?? 0);
@@ -661,6 +661,31 @@
         $childSelected = max(0, (int) old('children', (int) ($prefill['children'] ?? 0)));
         $infantSelected = max(0, (int) old('infants', (int) ($prefill['infants'] ?? 0)));
         $initialExcursionTotal = ($adultUnitPrice * $adultSelected) + ($childUnitPrice * $childSelected) + ($infantUnitPrice * $infantSelected);
+        $transferIncluded = (bool) ($pricingConfig['transfer_included'] ?? $listingDetails['transfer_included'] ?? false);
+        $departureTimeMode = strtolower(trim((string) ($pricingConfig['departure_time_mode'] ?? $listingDetails['departure_time_mode'] ?? 'fixed')));
+        if (!in_array($departureTimeMode, ['fixed', 'slots'], true)) {
+            $departureTimeMode = 'fixed';
+        }
+        $returnTimeMode = strtolower(trim((string) ($pricingConfig['return_time_mode'] ?? $listingDetails['return_time_mode'] ?? 'fixed')));
+        if (!in_array($returnTimeMode, ['fixed', 'slots'], true)) {
+            $returnTimeMode = 'fixed';
+        }
+        $departureSlotsRaw = $pricingConfig['departure_slots'] ?? $listingDetails['departure_slots'] ?? [];
+        if (!is_array($departureSlotsRaw)) {
+            $departureSlotsRaw = preg_split('/[\r\n,]+/', (string) $departureSlotsRaw) ?: [];
+        }
+        $departureSlots = collect($departureSlotsRaw)->map(static fn ($slot) => trim((string) $slot))->filter(static fn ($slot) => $slot !== '')->values()->all();
+        $returnSlotsRaw = $pricingConfig['return_slots'] ?? $listingDetails['return_slots'] ?? [];
+        if (!is_array($returnSlotsRaw)) {
+            $returnSlotsRaw = preg_split('/[\r\n,]+/', (string) $returnSlotsRaw) ?: [];
+        }
+        $returnSlots = collect($returnSlotsRaw)->map(static fn ($slot) => trim((string) $slot))->filter(static fn ($slot) => $slot !== '')->values()->all();
+        $departureTimeFixed = trim((string) (($listingDetails['departure_time'] ?? null) ?: ($property->departure_time ?? '')));
+        $returnTimeFixed = trim((string) (($pricingConfig['return_time'] ?? null)
+            ?: ($listingDetails['return_time'] ?? null)
+            ?: ($listingDetails['day_visit_end_time'] ?? null)
+            ?: ($listingDetails['activity_end_time'] ?? null)
+            ?: ($property->return_time ?? '')));
 
         $propertyMedia = collect($propertyMedia ?? collect());
         $highlights = collect($highlights ?? []);
@@ -846,6 +871,29 @@
             ?: ($property->activity_end_time ?? $property->end_time ?? '')
         );
 
+        $durationMinutes = is_numeric($listingDetails['excursion_duration_minutes'] ?? null)
+            ? (int) ($listingDetails['excursion_duration_minutes'] ?? 0)
+            : 0;
+        if ($durationMinutes <= 0 && $startTimeLabel !== '' && $endTimeLabel !== '') {
+            $parseClockToMinutes = static function (string $label): ?int {
+                if (!preg_match('/^(2[0-3]|[01]?\d):([0-5]\d)$/', trim($label), $match)) {
+                    return null;
+                }
+
+                return ((int) $match[1] * 60) + (int) $match[2];
+            };
+
+            $startMinutes = $parseClockToMinutes($startTimeLabel);
+            $endMinutes = $parseClockToMinutes($endTimeLabel);
+            if ($startMinutes !== null && $endMinutes !== null) {
+                $computedDuration = $endMinutes - $startMinutes;
+                if ($computedDuration <= 0) {
+                    $computedDuration += 24 * 60;
+                }
+                $durationMinutes = max(0, $computedDuration);
+            }
+        }
+
         $equipmentLabelMap = [
             'snorkel_gear' => 'Snorkel gear',
             'life_jacket' => 'Life jacket',
@@ -903,6 +951,15 @@
                 ? ('Departure time: ' . $departureTimeLabel . ' (report ' . $reportingLeadMinutes . ' min early)')
                 : ('Departure time: ' . $departureTimeLabel);
         }
+        if ($startTimeLabel !== '') {
+            $departureDetails[] = 'Start time: ' . $startTimeLabel;
+        }
+        if ($endTimeLabel !== '') {
+            $departureDetails[] = 'End time: ' . $endTimeLabel;
+        }
+        if ($durationMinutes > 0) {
+            $departureDetails[] = 'Duration: ' . number_format($durationMinutes) . ' minutes';
+        }
 
         $specialInstructionItems = collect($extractStringList(
             $listingDetails['special_instructions']
@@ -942,8 +999,7 @@
         $termsAndPolicies = $termsAndPolicies->unique()->values();
 
         $hasReviewSection = $reviewScoreRaw > 0 || $reviewCount > 0;
-        $hasDetailCards = ($startTimeLabel !== '' || $endTimeLabel !== '')
-            || $inclusionItems->isNotEmpty()
+        $hasDetailCards = $inclusionItems->isNotEmpty()
             || !empty($departureDetails)
             || $hasReviewSection;
         $hasHighlightsSection = $realHighlights->isNotEmpty() || $realServicesAndAmenities->isNotEmpty();
@@ -978,6 +1034,17 @@
     </section>
 
     <main class="page">
+
+        @include('partials.booking-process-highlights', [
+            'bookingProcessCurrentStep' => 1,
+            'bookingProcessBackUrl' => '/catalog/' . str_replace('_', '-', $categoryKey ?? ''),
+            'bookingProcessSteps' => [
+                1 => '1. Guest Details',
+                2 => '2. Payment Method',
+                3 => '3. Final Confirmation',
+            ],
+            'bookingProcessNextText' => 'Next step: review payment options and confirm the locked checkout summary.',
+        ])
 
         @php
             $breadcrumbCategoryUrl = '/catalog/' . str_replace('_', '-', $categoryKey);
@@ -1023,7 +1090,6 @@
                                 <p>{{ $descriptionSummary }}</p>
                             @endif
                         </div>
-                        <span class="hero-chip">{{ $serviceTypeHint }}</span>
                     </div>
                     <div class="hero-meta">
                         <span class="hero-chip"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> {{ $categoryLabel }}</span>
@@ -1049,21 +1115,6 @@
                     <section class="block" aria-label="Service details" style="margin-top:12px;">
                         <h2 class="block-title">{{ $categoryKey === 'excursion' ? 'Descriptions & Details' : 'Service Snapshot' }}</h2>
                         <div class="detail-grid">
-                            @if ($startTimeLabel !== '' || $endTimeLabel !== '')
-                                <article class="detail-card">
-                                    <h3>Time</h3>
-                                    <p>
-                                        @if ($startTimeLabel !== '' && $endTimeLabel !== '')
-                                            {{ $startTimeLabel }} - {{ $endTimeLabel }}
-                                        @elseif ($startTimeLabel !== '')
-                                            Starts at {{ $startTimeLabel }}
-                                        @else
-                                            Ends at {{ $endTimeLabel }}
-                                        @endif
-                                    </p>
-                                </article>
-                            @endif
-
                             @if ($inclusionItems->isNotEmpty())
                                 <article class="detail-card">
                                     <h3>Inclusions / What We Provide</h3>
@@ -1183,6 +1234,45 @@
                     <div class="grid">
                         @if ($categoryKey === 'excursion')
                             <div class="field full"><label for="serviceStartDate">Activity Date</label><input id="serviceStartDate" name="service_start_date" type="date" min="{{ (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            @if ($transferIncluded)
+                                @if ($departureTimeMode === 'slots' && $departureSlots !== [])
+                                    <div class="field full">
+                                        <label for="departureTimeSelect">Departure Time</label>
+                                        <select id="departureTimeSelect" name="departure_time" class="{{ $errors->has('departure_time') ? 'input-error' : '' }}" required>
+                                            <option value="">Select departure time</option>
+                                            @foreach ($departureSlots as $slot)
+                                                <option value="{{ $slot }}" {{ old('departure_time') === $slot ? 'selected' : '' }}>{{ $slot }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('departure_time')<p class="error-text">{{ $message }}</p>@enderror
+                                    </div>
+                                @elseif ($departureTimeFixed !== '')
+                                    <div class="field full">
+                                        <label>Departure Time</label>
+                                        <input type="hidden" name="departure_time" value="{{ old('departure_time', $departureTimeFixed) }}">
+                                        <p class="required-note" style="margin-top:0;">{{ old('departure_time', $departureTimeFixed) }}</p>
+                                    </div>
+                                @endif
+
+                                @if ($returnTimeMode === 'slots' && $returnSlots !== [])
+                                    <div class="field full">
+                                        <label for="returnSlotSelect">Return Time</label>
+                                        <select id="returnSlotSelect" name="return_slot" class="{{ $errors->has('return_slot') ? 'input-error' : '' }}" required>
+                                            <option value="">Select return time</option>
+                                            @foreach ($returnSlots as $slot)
+                                                <option value="{{ $slot }}" {{ old('return_slot') === $slot ? 'selected' : '' }}>{{ $slot }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('return_slot')<p class="error-text">{{ $message }}</p>@enderror
+                                    </div>
+                                @elseif ($returnTimeFixed !== '')
+                                    <div class="field full">
+                                        <label>Return Time</label>
+                                        <input type="hidden" name="return_slot" value="{{ old('return_slot', $returnTimeFixed) }}">
+                                        <p class="required-note" style="margin-top:0;">{{ old('return_slot', $returnTimeFixed) }}</p>
+                                    </div>
+                                @endif
+                            @endif
                             <div class="field full">
                                 <label>Guests and Price</label>
                                 <div class="booking-lines">
@@ -1229,6 +1319,45 @@
                         @else
                             <div class="field"><label for="serviceStartDate">{{ (string) ($dateLabels['start'] ?? 'Service Start Date') }}</label><input id="serviceStartDate" name="service_start_date" type="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? 'datetime-local' : 'date' }}" min="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? ((string) ($todayDate ?? now()->toDateString()) . 'T00:00') : (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
                             <div class="field"><label for="serviceEndDate">{{ (string) ($dateLabels['end'] ?? 'Service End Date') }}</label><input id="serviceEndDate" name="service_end_date" type="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? 'datetime-local' : 'date' }}" min="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? ((string) ($todayDate ?? now()->toDateString()) . 'T00:00') : (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_end_date', (string) ($prefill['service_end_date'] ?? '')) }}" class="{{ $errors->has('service_end_date') ? 'input-error' : '' }}">@error('service_end_date')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            @if ($categoryKey !== 'accommodation' && $transferIncluded)
+                                @if ($departureTimeMode === 'slots' && $departureSlots !== [])
+                                    <div class="field">
+                                        <label for="departureTimeSelect">Departure Time</label>
+                                        <select id="departureTimeSelect" name="departure_time" class="{{ $errors->has('departure_time') ? 'input-error' : '' }}" required>
+                                            <option value="">Select departure time</option>
+                                            @foreach ($departureSlots as $slot)
+                                                <option value="{{ $slot }}" {{ old('departure_time') === $slot ? 'selected' : '' }}>{{ $slot }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('departure_time')<p class="error-text">{{ $message }}</p>@enderror
+                                    </div>
+                                @elseif ($departureTimeFixed !== '')
+                                    <div class="field">
+                                        <label>Departure Time</label>
+                                        <input type="hidden" name="departure_time" value="{{ old('departure_time', $departureTimeFixed) }}">
+                                        <input type="text" value="{{ old('departure_time', $departureTimeFixed) }}" readonly>
+                                    </div>
+                                @endif
+
+                                @if ($returnTimeMode === 'slots' && $returnSlots !== [])
+                                    <div class="field">
+                                        <label for="returnSlotSelect">Return Time</label>
+                                        <select id="returnSlotSelect" name="return_slot" class="{{ $errors->has('return_slot') ? 'input-error' : '' }}" required>
+                                            <option value="">Select return time</option>
+                                            @foreach ($returnSlots as $slot)
+                                                <option value="{{ $slot }}" {{ old('return_slot') === $slot ? 'selected' : '' }}>{{ $slot }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('return_slot')<p class="error-text">{{ $message }}</p>@enderror
+                                    </div>
+                                @elseif ($returnTimeFixed !== '')
+                                    <div class="field">
+                                        <label>Return Time</label>
+                                        <input type="hidden" name="return_slot" value="{{ old('return_slot', $returnTimeFixed) }}">
+                                        <input type="text" value="{{ old('return_slot', $returnTimeFixed) }}" readonly>
+                                    </div>
+                                @endif
+                            @endif
                             <div class="field"><label for="adults">Adults / Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ old('adults', (int) ($prefill['adults'] ?? 2)) }}" class="{{ $errors->has('adults') ? 'input-error' : '' }}" required>@error('adults')<p class="error-text">{{ $message }}</p>@enderror</div>
                             <div class="field"><label for="children">Children</label><input id="children" name="children" type="number" min="0" value="{{ old('children', (int) ($prefill['children'] ?? 0)) }}" class="{{ $errors->has('children') ? 'input-error' : '' }}">@error('children')<p class="error-text">{{ $message }}</p>@enderror</div>
 
@@ -1241,6 +1370,9 @@
                                     $fieldId = 'categoryField_' . $fieldKey;
                                     $fieldValue = old($fieldKey, $prefill[$fieldKey] ?? '');
                                 @endphp
+                                @if ($transferIncluded && in_array($fieldKey, ['departure_time', 'return_slot'], true))
+                                    @continue
+                                @endif
                                 @if ($fieldType === 'checkbox')
                                     <div class="field full" style="margin-top:8px;">
                                         <label style="margin-bottom:8px; display:block; font-size:0.74rem; text-transform:uppercase; letter-spacing:0.07em; color:#3c5f76; font-family:'Space Grotesk','Trebuchet MS',sans-serif;">{{ $fieldLabel }}</label>

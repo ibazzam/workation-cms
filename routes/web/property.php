@@ -27,6 +27,30 @@ use Laravel\Socialite\Facades\Socialite;
 use Firebase\JWT\JWT;
 use Firebase\JWT\JWK;
 
+if (!function_exists('workationDetectVisitorResidency')) {
+    /**
+     * Detect visitor residency from geo IP headers.
+     * Returns 'local_resident' for Maldivian visitors (country code MV),
+     * 'foreign_national' for all other visitors.
+     * Priority: Cloudflare CF-IPCountry → X-Country-Code → fallback foreign.
+     */
+    function workationDetectVisitorResidency(Request $request): string
+    {
+        $countryCode = strtoupper(trim((string) (
+            $request->header('CF-IPCountry')
+            ?? $request->header('X-Country-Code')
+            ?? $request->header('X-GeoIP-Country')
+            ?? ''
+        )));
+
+        if ($countryCode === 'MV') {
+            return 'local_resident';
+        }
+
+        return 'foreign_national';
+    }
+}
+
 Route::get('/property/{property}', function (Request $request, int $property) {
     $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById($property);
 
@@ -871,5 +895,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
         'nearbyUsesCoordinateRadius' => $nearbyUsesCoordinateRadius,
         'todayDate' => $todayDate,
         'unavailableDates' => $unavailableDates,
+        'visitorResidency' => workationDetectVisitorResidency($request),
+        'mvrUsdRate' => (float) env('MVR_USD_RATE', 15.42),
     ]);
 });

@@ -2611,7 +2611,7 @@
                             $cityName = trim((string) ($property->city ?? $property->island ?? $property->atoll ?? ''));
                             $isExcursionCard = $categoryKey === 'excursion';
                             $cardDetails = [];
-                            $cardDetailsSource = $property->listing_details ?? null;
+                            $cardDetailsSource = $property->listing_details ?? ($property->details ?? null);
                             if (is_array($cardDetailsSource)) {
                                 $cardDetails = $cardDetailsSource;
                             } elseif (is_object($cardDetailsSource)) {

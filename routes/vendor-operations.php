@@ -1352,6 +1352,26 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['weather_cancellation_policy'] = trim((string) ($validated['weather_cancellation_policy'] ?? ''));
             $details['cancellation_policy'] = trim((string) ($validated['cancellation_policy'] ?? ''));
             $details['special_instructions'] = trim((string) ($validated['special_instructions'] ?? ''));
+            // Transfer & slot configuration
+            $rawTransferIncluded = strtolower(trim((string) ($validated['transfer_included'] ?? '0')));
+            $details['transfer_included'] = in_array($rawTransferIncluded, ['1', 'yes', 'true', 'on'], true);
+            $departureTimeMode = trim((string) ($validated['departure_time_mode'] ?? 'fixed'));
+            $details['departure_time_mode'] = in_array($departureTimeMode, ['fixed', 'slots'], true) ? $departureTimeMode : 'fixed';
+            $departureSlotRaw = trim((string) ($validated['departure_slots'] ?? ''));
+            $details['departure_slots'] = $departureSlotRaw !== ''
+                ? array_values(array_filter(array_map('trim', preg_split('/[\r\n,]+/', $departureSlotRaw) ?: []), static fn ($t) => $t !== ''))
+                : [];
+            $returnTimeMode = trim((string) ($validated['return_time_mode'] ?? 'fixed'));
+            $details['return_time_mode'] = in_array($returnTimeMode, ['fixed', 'slots'], true) ? $returnTimeMode : 'fixed';
+            $returnSlotRaw = trim((string) ($validated['return_slots'] ?? ''));
+            $details['return_slots'] = $returnSlotRaw !== ''
+                ? array_values(array_filter(array_map('trim', preg_split('/[\r\n,]+/', $returnSlotRaw) ?: []), static fn ($t) => $t !== ''))
+                : [];
+            // Pricing by residency
+            $details['adult_price_local'] = isset($validated['adult_price_local']) && $validated['adult_price_local'] !== '' ? max(0, (float) $validated['adult_price_local']) : null;
+            $details['adult_price_foreign'] = isset($validated['adult_price_foreign']) && $validated['adult_price_foreign'] !== '' ? max(0, (float) $validated['adult_price_foreign']) : null;
+            $details['child_price_local'] = isset($validated['child_price_local']) && $validated['child_price_local'] !== '' ? max(0, (float) $validated['child_price_local']) : null;
+            $details['child_price_foreign'] = isset($validated['child_price_foreign']) && $validated['child_price_foreign'] !== '' ? max(0, (float) $validated['child_price_foreign']) : null;
         }
 
         if ($listingCategory === 'remote_workspace') {
@@ -1402,6 +1422,32 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['day_visit_start_time'] = trim((string) ($validated['day_visit_start_time'] ?? ''));
             $details['day_visit_end_time'] = trim((string) ($validated['day_visit_end_time'] ?? ''));
             $details['included_access'] = trim((string) ($validated['included_access'] ?? ''));
+
+            // Transfer & slot configuration
+            $rawTransferIncludedRdv = strtolower(trim((string) ($validated['transfer_included'] ?? '0')));
+            $details['transfer_included'] = in_array($rawTransferIncludedRdv, ['1', 'yes', 'true', 'on'], true);
+            $details['departure_time'] = trim((string) ($validated['departure_time'] ?? ''));
+            $departureTimeModeRdv = trim((string) ($validated['departure_time_mode'] ?? 'fixed'));
+            $details['departure_time_mode'] = in_array($departureTimeModeRdv, ['fixed', 'slots'], true) ? $departureTimeModeRdv : 'fixed';
+            $departureSlotRawRdv = trim((string) ($validated['departure_slots'] ?? ''));
+            $details['departure_slots'] = $departureSlotRawRdv !== ''
+                ? array_values(array_filter(array_map('trim', preg_split('/[\r\n,]+/', $departureSlotRawRdv) ?: []), static fn ($t) => $t !== ''))
+                : [];
+            $details['return_time'] = trim((string) ($validated['return_time'] ?? ''));
+            $returnTimeModeRdv = trim((string) ($validated['return_time_mode'] ?? 'fixed'));
+            $details['return_time_mode'] = in_array($returnTimeModeRdv, ['fixed', 'slots'], true) ? $returnTimeModeRdv : 'fixed';
+            $returnSlotRawRdv = trim((string) ($validated['return_slots'] ?? ''));
+            $details['return_slots'] = $returnSlotRawRdv !== ''
+                ? array_values(array_filter(array_map('trim', preg_split('/[\r\n,]+/', $returnSlotRawRdv) ?: []), static fn ($t) => $t !== ''))
+                : [];
+
+            // Pricing by residency
+            $details['price_per_adult'] = isset($validated['price_per_adult']) && $validated['price_per_adult'] !== '' ? max(0, (float) $validated['price_per_adult']) : null;
+            $details['price_per_child'] = isset($validated['price_per_child']) && $validated['price_per_child'] !== '' ? max(0, (float) $validated['price_per_child']) : null;
+            $details['adult_price_local'] = isset($validated['adult_price_local']) && $validated['adult_price_local'] !== '' ? max(0, (float) $validated['adult_price_local']) : null;
+            $details['adult_price_foreign'] = isset($validated['adult_price_foreign']) && $validated['adult_price_foreign'] !== '' ? max(0, (float) $validated['adult_price_foreign']) : null;
+            $details['child_price_local'] = isset($validated['child_price_local']) && $validated['child_price_local'] !== '' ? max(0, (float) $validated['child_price_local']) : null;
+            $details['child_price_foreign'] = isset($validated['child_price_foreign']) && $validated['child_price_foreign'] !== '' ? max(0, (float) $validated['child_price_foreign']) : null;
         }
 
         if ($listingCategory === 'restaurant') {
@@ -1414,6 +1460,78 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['vehicle_type'] = trim((string) ($validated['vehicle_type'] ?? ''));
             $details['transmission_type'] = trim((string) ($validated['transmission_type'] ?? ''));
             $details['fuel_type'] = trim((string) ($validated['fuel_type'] ?? ''));
+        }
+
+        if ($listingCategory !== 'accommodation') {
+            if (array_key_exists('transfer_included', $validated)) {
+                $rawTransferIncluded = strtolower(trim((string) ($validated['transfer_included'] ?? '0')));
+                $details['transfer_included'] = in_array($rawTransferIncluded, ['1', 'yes', 'true', 'on'], true);
+            }
+
+            if (array_key_exists('departure_time_mode', $validated)) {
+                $departureTimeMode = trim((string) ($validated['departure_time_mode'] ?? 'fixed'));
+                $details['departure_time_mode'] = in_array($departureTimeMode, ['fixed', 'slots'], true) ? $departureTimeMode : 'fixed';
+            }
+
+            if (array_key_exists('departure_time', $validated)) {
+                $details['departure_time'] = trim((string) ($validated['departure_time'] ?? ''));
+            }
+
+            if (array_key_exists('departure_slots', $validated)) {
+                $departureSlotRaw = trim((string) ($validated['departure_slots'] ?? ''));
+                $details['departure_slots'] = $departureSlotRaw !== ''
+                    ? array_values(array_filter(array_map('trim', preg_split('/[\r\n,]+/', $departureSlotRaw) ?: []), static fn ($t) => $t !== ''))
+                    : [];
+            }
+
+            if (array_key_exists('return_time_mode', $validated)) {
+                $returnTimeMode = trim((string) ($validated['return_time_mode'] ?? 'fixed'));
+                $details['return_time_mode'] = in_array($returnTimeMode, ['fixed', 'slots'], true) ? $returnTimeMode : 'fixed';
+            }
+
+            if (array_key_exists('return_time', $validated)) {
+                $details['return_time'] = trim((string) ($validated['return_time'] ?? ''));
+            }
+
+            if (array_key_exists('return_slots', $validated)) {
+                $returnSlotRaw = trim((string) ($validated['return_slots'] ?? ''));
+                $details['return_slots'] = $returnSlotRaw !== ''
+                    ? array_values(array_filter(array_map('trim', preg_split('/[\r\n,]+/', $returnSlotRaw) ?: []), static fn ($t) => $t !== ''))
+                    : [];
+            }
+
+            // Normalized pricing structure for all non-accommodation categories.
+            $pricingBySegment = [];
+
+            $localAdult = isset($details['adult_price_local']) ? max(0, (float) $details['adult_price_local']) : null;
+            $localChild = isset($details['child_price_local']) ? max(0, (float) $details['child_price_local']) : null;
+            $foreignAdult = isset($details['adult_price_foreign'])
+                ? max(0, (float) $details['adult_price_foreign'])
+                : (isset($details['adult_price']) ? max(0, (float) $details['adult_price']) : (isset($details['price_per_adult']) ? max(0, (float) $details['price_per_adult']) : null));
+            $foreignChild = isset($details['child_price_foreign'])
+                ? max(0, (float) $details['child_price_foreign'])
+                : (isset($details['child_price']) ? max(0, (float) $details['child_price']) : (isset($details['price_per_child']) ? max(0, (float) $details['price_per_child']) : null));
+            $localFlat = isset($details['price_local']) ? max(0, (float) $details['price_local']) : null;
+            $foreignFlat = isset($details['price_foreign']) ? max(0, (float) $details['price_foreign']) : null;
+
+            if ($localAdult !== null || $localChild !== null || $localFlat !== null) {
+                $pricingBySegment['local'] = array_filter([
+                    'adult' => $localAdult,
+                    'child' => $localChild,
+                    'flat' => $localFlat,
+                ], static fn ($value) => $value !== null);
+            }
+            if ($foreignAdult !== null || $foreignChild !== null || $foreignFlat !== null) {
+                $pricingBySegment['foreign'] = array_filter([
+                    'adult' => $foreignAdult,
+                    'child' => $foreignChild,
+                    'flat' => $foreignFlat,
+                ], static fn ($value) => $value !== null);
+            }
+
+            if ($pricingBySegment !== []) {
+                $details['pricing_by_segment'] = $pricingBySegment;
+            }
         }
 
         return array_filter($details, static fn (mixed $value): bool => !($value === null || $value === ''));

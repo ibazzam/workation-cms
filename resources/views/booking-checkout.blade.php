@@ -139,7 +139,11 @@
         $guestResidency = strtolower(trim((string) ($summary['guest_residency'] ?? '')));
         $isForeigner = $guestResidency === 'foreign_national';
         $taxLines = collect($summary['tax_lines'] ?? [])->filter(static fn ($line) => is_array($line))->values();
-        $serviceChargeTotal = max(0, (float) ($summary['service_charge_total'] ?? 0));
+        $nonAccommodationNoTransferCategories = ['marine-transport', 'land-transport', 'excursion', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
+        $isNoTransferCategory = in_array($categoryKey, $nonAccommodationNoTransferCategories, true);
+        $serviceChargeTotal = $categoryKey === 'accommodation'
+            ? max(0, (float) ($summary['service_charge_total'] ?? 0))
+            : 0.0;
         $totalTaxAmount = max(0, (float) ($summary['total_tax_amount'] ?? $taxAmount));
         $limitedTimeOffer = 0.0;
         $firstBookingDeal = 0.0;
@@ -172,7 +176,23 @@
                 'amount' => max(0, $amount),
                 'code' => $code,
             ];
-        })->filter(static fn (array $line): bool => $line['amount'] > 0)->values();
+        })->filter(static function (array $line) use ($categoryKey): bool {
+            if ($line['amount'] <= 0) {
+                return false;
+            }
+
+            if ($categoryKey === 'accommodation') {
+                return true;
+            }
+
+            $code = strtolower(trim((string) ($line['code'] ?? '')));
+            $label = strtolower(trim((string) ($line['label'] ?? '')));
+            if ($code === 'service_charge' || str_contains($code, 'service_charge') || str_contains($label, 'service charge')) {
+                return false;
+            }
+
+            return true;
+        })->values();
         if ($selectedTransferCode === '') {
             $transferGstLineAmount = (float) $invoiceTaxLines
                 ->filter(static fn (array $line): bool => ($line['code'] ?? '') === 'transfer_gst' || str_starts_with(strtolower((string) ($line['label'] ?? '')), 'transfer gst'))
@@ -192,6 +212,8 @@
         $lockedPaymentCurrency = strtoupper(trim((string) ($summary['quote_payment_currency'] ?? ($paymentPolicy['currency'] ?? $currency))));
         $lockedPaymentGateway = trim((string) ($summary['quote_gateway'] ?? ($paymentPolicy['gateway'] ?? '')));
         $lockedPaymentProvider = strtolower(trim((string) ($summary['quote_provider'] ?? ($paymentPolicy['provider'] ?? ''))));
+        $explicitGatewaySelection = trim((string) ($summary['quote_gateway'] ?? ''));
+        $explicitCurrencySelection = strtoupper(trim((string) ($summary['quote_payment_currency'] ?? '')));
         $paymentGatewayLabel = trim((string) ($summary['quote_gateway_label'] ?? ($paymentPolicy['gateway_label'] ?? 'Card Gateway')));
         $paymentProviderLabel = trim((string) ($summary['quote_provider_label'] ?? ($paymentPolicy['provider_label'] ?? $paymentGatewayLabel)));
         $paymentNotice = trim((string) ($paymentPolicy['customer_notice'] ?? 'Payment routing is enforced based on customer segment.'));
@@ -206,23 +228,34 @@
         foreach ($paymentOptions as $paymentOption) {
             $optionGateway = strtolower(trim((string) ($paymentOption['gateway'] ?? '')));
             $optionCurrency = strtoupper(trim((string) ($paymentOption['currency'] ?? '')));
-            if ($optionGateway === strtolower($lockedPaymentGateway) && $optionCurrency === $lockedPaymentCurrency) {
+            if ($explicitGatewaySelection !== '' && $optionGateway === strtolower($explicitGatewaySelection) && $optionCurrency === $explicitCurrencySelection) {
                 $selectedPaymentOption = $optionGateway . '|' . $optionCurrency;
                 break;
             }
         }
-        if ($selectedPaymentOption === '' && $paymentOptions->isNotEmpty()) {
-            $firstGateway = strtolower(trim((string) ($paymentOptions[0]['gateway'] ?? '')));
-            $firstCurrency = strtoupper(trim((string) ($paymentOptions[0]['currency'] ?? '')));
-            $selectedPaymentOption = $firstGateway . '|' . $firstCurrency;
-        }
-        $bookingProcessBackUrl = '/booking/checkout/' . (int) ($reservation->id ?? 0) . '/transfer';
+        $bookingProcessBackUrl = $isNoTransferCategory
+            ? (trim((string) ($backUrl ?? '')) !== '' ? (string) $backUrl : '/')
+            : '/booking/checkout/' . (int) ($reservation->id ?? 0) . '/transfer';
+        $bookingProcessCurrentStep = $isNoTransferCategory ? 2 : 3;
+        $bookingProcessSteps = $isNoTransferCategory
+            ? [
+                1 => '1. Guest Details',
+                2 => '2. Payment Method',
+                3 => '3. Final Confirmation',
+            ]
+            : [
+                1 => '1. Guest Details',
+                2 => '2. Transfer Selection',
+                3 => '3. Payment Method',
+                4 => '4. Final Confirmation',
+            ];
     @endphp
 
     <main class="page">
         @include('partials.booking-process-highlights', [
-            'bookingProcessCurrentStep' => 3,
+            'bookingProcessCurrentStep' => $bookingProcessCurrentStep,
             'bookingProcessBackUrl' => $bookingProcessBackUrl,
+            'bookingProcessSteps' => $bookingProcessSteps,
             'bookingProcessNextText' => 'Next step after this page: complete payment and receive reservation confirmation.',
         ])
 
@@ -413,7 +446,7 @@
                 @else
                     <button class="btn primary" type="button" disabled>Confirm & Pay</button>
                 @endif
-                <a class="btn alt" href="/booking/checkout/{{ (int) ($reservation->id ?? 0) }}/transfer">Back</a>
+                <a class="btn alt" href="{{ $bookingProcessBackUrl }}">Back</a>
             </div>
         </section>
 
@@ -441,8 +474,20 @@
             }
 
             const syncPaymentSelection = function () {
-                const selected = optionInputs.find(function (input) { return input.checked; }) || optionInputs[0];
+                const selected = optionInputs.find(function (input) { return input.checked; }) || null;
                 if (!selected) {
+                    if (paymentSelectionInput) {
+                        paymentSelectionInput.value = '';
+                    }
+                    if (paymentGatewayInput) {
+                        paymentGatewayInput.value = '';
+                    }
+                    if (paymentProviderInput) {
+                        paymentProviderInput.value = '';
+                    }
+                    if (paymentCurrencyInput) {
+                        paymentCurrencyInput.value = '';
+                    }
                     return;
                 }
 
@@ -477,6 +522,7 @@
 
             const syncTermsState = function () {
                 const agreed = !!(checkoutTermsAgree && checkoutTermsAgree.checked);
+                const hasSelection = optionInputs.some(function (input) { return input.checked; });
                 optionInputs.forEach(function (input) {
                     input.disabled = !agreed;
                 });
@@ -487,7 +533,7 @@
                     checkoutTermsAcceptedInput.value = agreed ? '1' : '0';
                 }
                 if (confirmPayButton) {
-                    confirmPayButton.disabled = !agreed || optionInputs.length === 0;
+                    confirmPayButton.disabled = !agreed || optionInputs.length === 0 || !hasSelection;
                 }
             };
 
@@ -502,7 +548,8 @@
             if (checkoutConfirmForm) {
                 checkoutConfirmForm.addEventListener('submit', function (event) {
                     const agreed = !!(checkoutTermsAgree && checkoutTermsAgree.checked);
-                    if (!agreed) {
+                    const hasSelection = optionInputs.some(function (input) { return input.checked; });
+                    if (!agreed || !hasSelection) {
                         event.preventDefault();
                         if (checkoutTermsAgree) {
                             checkoutTermsAgree.focus();

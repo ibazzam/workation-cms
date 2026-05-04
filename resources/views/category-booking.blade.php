@@ -13,7 +13,7 @@
         * { box-sizing:border-box; }
         body { margin:0; font-family:"Outfit","Trebuchet MS",sans-serif; color:var(--ink); background:var(--bg); }
         body.is-header-hidden { --property-header-offset:0px; }
-        .page { width:min(1180px,calc(100% - 24px)); margin:0 auto 28px; }
+        .page { width:min(1180px,calc(100% - 24px)); margin:14px auto 28px; }
 
         .top-search-shell {
             position: sticky;
@@ -359,6 +359,67 @@
             font-family:"Space Grotesk","Trebuchet MS",sans-serif;
         }
 
+        .detail-grid {
+            display:grid;
+            grid-template-columns:repeat(2,minmax(0,1fr));
+            gap:10px;
+        }
+
+        .detail-card {
+            border:1px solid #dbe7f0;
+            border-radius:12px;
+            background:#fbfdff;
+            padding:12px;
+            display:grid;
+            gap:8px;
+            align-content:start;
+        }
+
+        .detail-card h3 {
+            margin:0;
+            font-size:0.88rem;
+            color:#183f5b;
+        }
+
+        .detail-card p {
+            margin:0;
+            font-size:0.82rem;
+            color:#48687d;
+            line-height:1.5;
+        }
+
+        .detail-card ul {
+            margin:0;
+            padding-left:18px;
+            color:#34566d;
+            display:grid;
+            gap:6px;
+            font-size:0.82rem;
+        }
+
+        .detail-card li {
+            line-height:1.45;
+        }
+
+        .review-stat {
+            display:flex;
+            align-items:baseline;
+            gap:10px;
+            flex-wrap:wrap;
+        }
+
+        .review-stat strong {
+            font-size:1.5rem;
+            color:#174561;
+            line-height:1;
+        }
+
+        .review-stat span {
+            font-size:0.82rem;
+            color:#4b6a80;
+            font-weight:600;
+        }
+
         .description {
             font-size:0.85rem;
             color:#34566d;
@@ -541,6 +602,7 @@
             .top-search-form { grid-template-columns: 1fr; }
             .top-search-btn { grid-column: auto; }
             .grid, .service-intel { grid-template-columns:1fr; }
+            .detail-grid { grid-template-columns:1fr; }
             .gallery-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
         }
     </style>
@@ -581,6 +643,10 @@
         $categoryKey = $categoryKey ?? 'accommodation';
         $categoryLabel = $categoryLabel ?? 'Category';
         $property = $property ?? null;
+        $listingDetails = json_decode((string) ($property->listing_details ?? ''), true);
+        if (!is_array($listingDetails)) {
+            $listingDetails = [];
+        }
         $prefill = $prefill ?? [];
         $categoryFields = collect($categoryFields ?? []);
         $dateLabels = $dateLabels ?? ['start' => 'Service Start Date', 'end' => 'Service End Date'];
@@ -718,6 +784,168 @@
             'conference_room' => ['Room capacity must match your group size.', 'Event date and time locked at confirmation.', 'Setup and teardown times are included.'],
             default => ['Service terms are shared in checkout.', 'Requests are confirmed based on availability.', 'Support team can assist for custom notes.'],
         };
+
+        $extractStringList = static function ($value): array {
+            if (is_array($value)) {
+                return collect($value)
+                    ->map(static fn ($item) => trim((string) $item))
+                    ->filter(static fn ($item) => $item !== '')
+                    ->values()
+                    ->all();
+            }
+
+            if (!is_string($value)) {
+                return [];
+            }
+
+            return collect(preg_split('/[\r\n,]+/', $value) ?: [])
+                ->map(static fn ($item) => trim((string) $item))
+                ->filter(static fn ($item) => $item !== '')
+                ->values()
+                ->all();
+        };
+
+        $realHighlights = collect($extractStringList(
+            $listingDetails['highlights']
+            ?? $listingDetails['key_highlights']
+            ?? $listingDetails['features']
+            ?? null
+        ));
+        $realServicesAndAmenities = collect($extractStringList(
+            $listingDetails['amenities']
+            ?? $listingDetails['facilities']
+            ?? $listingDetails['services']
+            ?? $listingDetails['service_features']
+            ?? null
+        ));
+        $realDescriptionText = trim((string) (
+            $listingDetails['description']
+            ?? $listingDetails['overview']
+            ?? $property->description
+            ?? ''
+        ));
+
+        $startTimeLabel = $formatTimeLabel(
+            ($listingDetails['activity_start_time'] ?? null)
+            ?: ($listingDetails['start_time'] ?? null)
+            ?: ($listingDetails['schedule_start_time'] ?? null)
+            ?: ($listingDetails['day_visit_start_time'] ?? null)
+            ?: ($listingDetails['restaurant_open_time'] ?? null)
+            ?: ($listingDetails['operating_hours_open'] ?? null)
+            ?: ($property->activity_start_time ?? $property->start_time ?? $property->departure_time ?? '')
+        );
+        $endTimeLabel = $formatTimeLabel(
+            ($listingDetails['activity_end_time'] ?? null)
+            ?: ($listingDetails['end_time'] ?? null)
+            ?: ($listingDetails['schedule_end_time'] ?? null)
+            ?: ($listingDetails['day_visit_end_time'] ?? null)
+            ?: ($listingDetails['restaurant_close_time'] ?? null)
+            ?: ($listingDetails['operating_hours_close'] ?? null)
+            ?: ($property->activity_end_time ?? $property->end_time ?? '')
+        );
+
+        $equipmentLabelMap = [
+            'snorkel_gear' => 'Snorkel gear',
+            'life_jacket' => 'Life jacket',
+            'fins' => 'Fins',
+            'wetsuit' => 'Wetsuit',
+            'helmet' => 'Helmet',
+            'gopro_mount' => 'GoPro mount',
+        ];
+        $equipmentIncluded = collect((array) ($listingDetails['equipment_included'] ?? []))
+            ->map(static function ($item) use ($equipmentLabelMap) {
+                $key = strtolower(trim((string) $item));
+                return $equipmentLabelMap[$key] ?? Str::headline(str_replace('_', ' ', $key));
+            })
+            ->filter(static fn ($item) => trim((string) $item) !== '')
+            ->values();
+        $inclusionItems = collect($extractStringList($listingDetails['inclusions'] ?? null))
+            ->merge($equipmentIncluded)
+            ->unique()
+            ->values();
+
+        $departureDetails = [];
+        $meetingPoint = trim((string) ($listingDetails['meeting_point'] ?? ''));
+        if ($meetingPoint !== '') {
+            $departureDetails[] = 'Meeting point: ' . $meetingPoint;
+        }
+        $departurePoint = trim((string) ($listingDetails['departure_point'] ?? ''));
+        if ($departurePoint !== '') {
+            $departureDetails[] = 'Reporting point: ' . $departurePoint;
+        }
+        $departureArea = trim((string) ($listingDetails['departure_area_port_jetty'] ?? ''));
+        if ($departureArea !== '') {
+            $departureDetails[] = 'Departure area: ' . $departureArea;
+        }
+        $departureHub = implode(', ', array_filter([
+            trim((string) ($listingDetails['transport_departure_city'] ?? '')),
+            trim((string) ($listingDetails['transport_departure_state'] ?? '')),
+        ], static fn ($item) => $item !== ''));
+        if ($departureHub !== '') {
+            $departureDetails[] = 'Departure location: ' . $departureHub;
+        }
+        $pickupLocation = trim((string) ($listingDetails['pickup_location'] ?? ''));
+        if ($pickupLocation !== '') {
+            $departureDetails[] = 'Pickup location: ' . $pickupLocation;
+        }
+        $dropoffLocation = trim((string) ($listingDetails['dropoff_location'] ?? ''));
+        if ($dropoffLocation !== '') {
+            $departureDetails[] = 'Drop-off location: ' . $dropoffLocation;
+        }
+        $reportingLeadMinutes = is_numeric($listingDetails['reporting_lead_minutes'] ?? null)
+            ? (int) ($listingDetails['reporting_lead_minutes'] ?? 0)
+            : null;
+        $departureTimeLabel = $formatTimeLabel(($listingDetails['departure_time'] ?? null) ?: ($property->departure_time ?? ''));
+        if ($departureTimeLabel !== '') {
+            $departureDetails[] = $reportingLeadMinutes !== null && $reportingLeadMinutes > 0
+                ? ('Departure time: ' . $departureTimeLabel . ' (report ' . $reportingLeadMinutes . ' min early)')
+                : ('Departure time: ' . $departureTimeLabel);
+        }
+
+        $specialInstructionItems = collect($extractStringList(
+            $listingDetails['special_instructions']
+            ?? $listingDetails['special_instruction']
+            ?? $listingDetails['important_notes']
+            ?? $listingDetails['preparation_notes']
+            ?? null
+        ));
+        $boardingInstructions = trim((string) ($listingDetails['boarding_instructions'] ?? ''));
+        if ($boardingInstructions !== '') {
+            $specialInstructionItems->prepend($boardingInstructions);
+        }
+        $dressCode = trim((string) ($listingDetails['dress_code'] ?? ''));
+        if ($dressCode !== '') {
+            $specialInstructionItems->push('Dress code: ' . Str::headline(str_replace('_', ' ', $dressCode)));
+        }
+        $licenseClassRequired = trim((string) ($listingDetails['license_class_required'] ?? ''));
+        if ($licenseClassRequired !== '') {
+            $specialInstructionItems->push('License required: ' . $licenseClassRequired);
+        }
+        $specialInstructionItems = $specialInstructionItems->filter(static fn ($item) => trim((string) $item) !== '')->unique()->values();
+
+        $termsAndPolicies = collect();
+        if (trim((string) ($vendorPolicy['cancellation_policy'] ?? '')) !== '') {
+            $termsAndPolicies->push((string) $vendorPolicy['cancellation_policy']);
+        }
+        $weatherPolicy = trim((string) ($listingDetails['weather_cancellation_policy'] ?? ''));
+        if ($weatherPolicy !== '') {
+            $termsAndPolicies->push($weatherPolicy);
+        }
+        foreach ((array) ($vendorPolicy['other_rules'] ?? []) as $rule) {
+            $ruleText = trim((string) $rule);
+            if ($ruleText !== '') {
+                $termsAndPolicies->push($ruleText);
+            }
+        }
+        $termsAndPolicies = $termsAndPolicies->unique()->values();
+
+        $hasReviewSection = $reviewScoreRaw > 0 || $reviewCount > 0;
+        $hasDetailCards = ($startTimeLabel !== '' || $endTimeLabel !== '')
+            || $inclusionItems->isNotEmpty()
+            || !empty($departureDetails)
+            || $hasReviewSection;
+        $hasHighlightsSection = $realHighlights->isNotEmpty() || $realServicesAndAmenities->isNotEmpty();
+        $hasDescriptionSection = $realDescriptionText !== '' || $specialInstructionItems->isNotEmpty() || $termsAndPolicies->isNotEmpty();
     @endphp
 
     <section class="top-search-shell" aria-label="Search service options">
@@ -800,8 +1028,9 @@
                         @if ($activityTypeLabel !== '')
                             <span class="hero-chip"><i class="fa-solid fa-compass" aria-hidden="true"></i> {{ str_replace('_', ' ', $activityTypeLabel) }}</span>
                         @endif
-                        <span class="hero-chip"><i class="fa-solid fa-coins" aria-hidden="true"></i> From {{ $currency }} {{ number_format($basePrice, 2) }}</span>
-                        <span class="service-review"><i class="fa-solid fa-star" aria-hidden="true"></i> {{ $reviewScore }} ({{ number_format($reviewCount) }})</span>
+                        @if ($hasReviewSection)
+                            <span class="service-review"><i class="fa-solid fa-star" aria-hidden="true"></i> {{ $reviewScore }} ({{ number_format($reviewCount) }})</span>
+                        @endif
                     </div>
                     <section class="share-card" aria-label="Share this listing">
                         <span class="share-label">Share this {{ strtolower($categoryLabel) }}</span>
@@ -814,132 +1043,110 @@
                     </section>
                 </section>
 
-                <section class="block" aria-label="Service details" style="margin-top:12px;">
-                    <h2 class="block-title">{{ $categoryKey === 'excursion' ? 'Descriptions & Details' : 'Service Snapshot' }}</h2>
-                    <div class="service-intel">
-                        <article class="intel-card">
-                            <strong>{{ $categoryKey === 'excursion' ? 'Activity' : 'Best For' }}</strong>
-                            <span>
-                                @if ($categoryKey === 'restaurant')
-                                    Family dining, couples, and group reservations.
-                                @elseif ($categoryKey === 'marine-transport')
-                                    Island-to-island water transfers and dhoni journeys.
-                                @elseif ($categoryKey === 'land-transport')
-                                    Local ground moves, airport runs, and sightseeing.
-                                @elseif ($categoryKey === 'excursion')
-                                    {{ (string) ($property->name ?? 'Guided local activity and experience') }}
-                                @elseif ($categoryKey === 'conference_room')
-                                    Meetings, training sessions, seminars, and corporate events.
-                                @else
-                                    Travelers looking for reliable {{ strtolower($categoryLabel) }} services.
-                                @endif
-                            </span>
-                        </article>
-                        <article class="intel-card">
-                            <strong>{{ $categoryKey === 'excursion' ? 'Booking Inputs' : 'Booking Readiness' }}</strong>
-                            <span>
-                                @if ($categoryKey === 'excursion')
-                                    Select activity date, adult/children/infant counts, and add any special request. Full activity details are carried to checkout summary.
-                                @else
-                                    Core service requirements are captured before checkout so vendor confirmation is accurate.
-                                @endif
-                            </span>
-                        </article>
-                        @if ($startTimeLabel !== '' || $endTimeLabel !== '')
-                        <article class="intel-card">
-                            <strong>Time Window</strong>
-                            <span>
-                                @if ($startTimeLabel !== '' && $endTimeLabel !== '')
-                                    {{ $startTimeLabel }} - {{ $endTimeLabel }}
-                                @elseif ($startTimeLabel !== '')
-                                    Starts {{ $startTimeLabel }}
-                                @else
-                                    Ends {{ $endTimeLabel }}
-                                @endif
-                            </span>
-                        </article>
-                        @endif
-                    </div>
-                </section>
+                @if ($hasDetailCards)
+                    <section class="block" aria-label="Service details" style="margin-top:12px;">
+                        <h2 class="block-title">{{ $categoryKey === 'excursion' ? 'Descriptions & Details' : 'Service Snapshot' }}</h2>
+                        <div class="detail-grid">
+                            @if ($startTimeLabel !== '' || $endTimeLabel !== '')
+                                <article class="detail-card">
+                                    <h3>Time</h3>
+                                    <p>
+                                        @if ($startTimeLabel !== '' && $endTimeLabel !== '')
+                                            {{ $startTimeLabel }} - {{ $endTimeLabel }}
+                                        @elseif ($startTimeLabel !== '')
+                                            Starts at {{ $startTimeLabel }}
+                                        @else
+                                            Ends at {{ $endTimeLabel }}
+                                        @endif
+                                    </p>
+                                </article>
+                            @endif
 
-                <section class="block" aria-label="Highlights and amenities" style="margin-top:12px;">
-                    <h2 class="block-title">Highlights</h2>
-                    <ul class="list">
-                        @foreach ($highlights->take(8) as $item)
-                            <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span>{{ (string) $item }}</span></li>
-                        @endforeach
-                    </ul>
+                            @if ($inclusionItems->isNotEmpty())
+                                <article class="detail-card">
+                                    <h3>Inclusions / What We Provide</h3>
+                                    <ul>
+                                        @foreach ($inclusionItems as $item)
+                                            <li>{{ $item }}</li>
+                                        @endforeach
+                                    </ul>
+                                </article>
+                            @endif
 
-                    <h2 class="block-title" style="margin-top:12px;">Services and Amenities</h2>
-                    <ul class="list">
-                        @forelse ($servicesAndAmenities->take(12) as $item)
-                            <li><i class="fa-solid fa-star" aria-hidden="true"></i><span>{{ (string) $item }}</span></li>
-                        @empty
-                            <li><i class="fa-solid fa-info-circle" aria-hidden="true"></i><span>Service amenities will be refined as listing details are updated.</span></li>
-                        @endforelse
-                    </ul>
-                </section>
+                            @if (!empty($departureDetails))
+                                <article class="detail-card">
+                                    <h3>Departure / Reporting Point</h3>
+                                    <ul>
+                                        @foreach ($departureDetails as $item)
+                                            <li>{{ $item }}</li>
+                                        @endforeach
+                                    </ul>
+                                </article>
+                            @endif
 
-                <section class="block" aria-label="Service description and policies" style="margin-top:12px;">
-                    <h2 class="block-title">Service Description</h2>
-                    <p class="description">{!! nl2br(e($descriptionText !== '' ? $descriptionText : 'Listing description will be updated soon.')) !!}</p>
+                            @if ($hasReviewSection)
+                                <article class="detail-card">
+                                    <h3>Reviews</h3>
+                                    <div class="review-stat">
+                                        <strong>{{ $reviewScore }}</strong>
+                                        <span>{{ number_format($reviewCount) }} review{{ $reviewCount === 1 ? '' : 's' }}</span>
+                                    </div>
+                                    <p>Guest feedback is shown from confirmed ratings attached to this listing.</p>
+                                </article>
+                            @endif
+                        </div>
+                    </section>
+                @endif
 
-                    <h2 class="block-title" style="margin-top:12px;">Policy Snapshot</h2>
-                    @php
-                        $hasVendorPolicy = ($vendorPolicy['opening_hours'] ?? '') !== ''
-                            || ($vendorPolicy['closing_hours'] ?? '') !== ''
-                            || ($vendorPolicy['cancellation_policy'] ?? '') !== ''
-                            || !empty($vendorPolicy['other_rules'] ?? []);
-                    @endphp
-
-                    @if ($hasVendorPolicy)
-                        @if (($vendorPolicy['opening_hours'] ?? '') !== '' || ($vendorPolicy['closing_hours'] ?? '') !== '')
-                            <div class="policy-group">
-                                <p class="policy-group-title"><i class="fa-regular fa-clock" aria-hidden="true"></i> Operating Hours</p>
-                                <ul class="list">
-                                    @if (($vendorPolicy['opening_hours'] ?? '') !== '')
-                                        <li><i class="fa-solid fa-door-open" aria-hidden="true"></i><span>Opens: {{ $vendorPolicy['opening_hours'] }}</span></li>
-                                    @endif
-                                    @if (($vendorPolicy['closing_hours'] ?? '') !== '')
-                                        <li><i class="fa-solid fa-door-closed" aria-hidden="true"></i><span>Closes: {{ $vendorPolicy['closing_hours'] }}</span></li>
-                                    @endif
-                                </ul>
-                            </div>
+                @if ($hasHighlightsSection)
+                    <section class="block" aria-label="Highlights and amenities" style="margin-top:12px;">
+                        @if ($realHighlights->isNotEmpty())
+                            <h2 class="block-title">Highlights</h2>
+                            <ul class="list">
+                                @foreach ($realHighlights->take(8) as $item)
+                                    <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span>{{ (string) $item }}</span></li>
+                                @endforeach
+                            </ul>
                         @endif
 
-                        @if (($vendorPolicy['cancellation_policy'] ?? '') !== '')
-                            <div class="policy-group">
-                                <p class="policy-group-title"><i class="fa-solid fa-ban" aria-hidden="true"></i> Cancellation Policy</p>
-                                <ul class="list">
-                                    <li><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ $vendorPolicy['cancellation_policy'] }}</span></li>
-                                </ul>
-                            </div>
+                        @if ($realServicesAndAmenities->isNotEmpty())
+                            <h2 class="block-title" style="margin-top:{{ $realHighlights->isNotEmpty() ? '12px' : '0' }};">Services and Amenities</h2>
+                            <ul class="list">
+                                @foreach ($realServicesAndAmenities->take(12) as $item)
+                                    <li><i class="fa-solid fa-star" aria-hidden="true"></i><span>{{ (string) $item }}</span></li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </section>
+                @endif
+
+                @if ($hasDescriptionSection)
+                    <section class="block" aria-label="Service description and policies" style="margin-top:12px;">
+                        @if ($realDescriptionText !== '')
+                            <h2 class="block-title">Service Description</h2>
+                            <p class="description">{!! nl2br(e($realDescriptionText)) !!}</p>
                         @endif
 
-                        @if (!empty($vendorPolicy['other_rules'] ?? []))
-                            <div class="policy-group">
-                                <p class="policy-group-title"><i class="fa-solid fa-scroll" aria-hidden="true"></i> House Rules</p>
-                                <ul class="list">
-                                    @foreach ($vendorPolicy['other_rules'] as $rule)
-                                        <li><i class="fa-solid fa-shield" aria-hidden="true"></i><span>{{ (string) $rule }}</span></li>
-                                    @endforeach
-                                </ul>
-                            </div>
+                        @if ($specialInstructionItems->isNotEmpty())
+                            <h2 class="block-title" style="margin-top:{{ $realDescriptionText !== '' ? '12px' : '0' }};">Special Instructions</h2>
+                            <ul class="list">
+                                @foreach ($specialInstructionItems as $item)
+                                    <li><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>{{ $item }}</span></li>
+                                @endforeach
+                            </ul>
                         @endif
-                    @else
-                        <ul class="list">
-                            @foreach ($policyItems as $policy)
-                                <li><i class="fa-solid fa-shield" aria-hidden="true"></i><span>{{ $policy }}</span></li>
-                            @endforeach
-                        </ul>
-                    @endif
-                </section>
 
-                <section class="block" aria-label="Similar services" style="margin-top:12px;">
-                    <h2 class="block-title">Similar {{ strtolower($categoryLabel) }} Nearby</h2>
-                    <p class="description" style="margin-top:0;">Explore similar services from the same area and compare availability, inclusions, and pricing before checkout.</p>
-                    <a class="btn" href="/catalog/{{ str_replace('_', '-', $categoryKey) }}">Browse {{ $categoryLabel }} listings</a>
-                </section>
+                        @if ($termsAndPolicies->isNotEmpty())
+                            <h2 class="block-title" style="margin-top:{{ $realDescriptionText !== '' || $specialInstructionItems->isNotEmpty() ? '12px' : '0' }};">Terms / Policies</h2>
+                            <ul class="list">
+                                @foreach ($termsAndPolicies as $policy)
+                                    <li><i class="fa-solid fa-shield" aria-hidden="true"></i><span>{{ $policy }}</span></li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </section>
+                @endif
+
             </section>
 
             <aside class="booking-card reservation-form" aria-label="Category booking form">
@@ -947,10 +1154,12 @@
                 @if ($categoryKey === 'excursion')
                     <p class="booking-subtitle">{{ (string) ($property->name ?? 'Excursion Activity') }}</p>
                 @endif
-                <div class="booking-price">
-                    <span>Starting price</span>
-                    <strong>{{ $currency }} {{ number_format($basePrice, 2) }}</strong>
-                </div>
+                @if ($categoryKey !== 'excursion')
+                    <div class="booking-price">
+                        <span>Service price</span>
+                        <strong>{{ $currency }} {{ number_format($basePrice, 2) }}</strong>
+                    </div>
+                @endif
 
                 <form method="POST" action="/booking/reserve-category" id="categoryServiceBookingForm">
                     @csrf
@@ -973,11 +1182,7 @@
                         @if ($categoryKey === 'excursion')
                             <div class="field full"><label for="serviceStartDate">Activity Date</label><input id="serviceStartDate" name="service_start_date" type="date" min="{{ (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
                             <div class="field full">
-                                <label>Lead Guest</label>
-                                <p class="booking-subtitle" style="margin:0;">Fill guest details below exactly as government-issued documents.</p>
-                            </div>
-                            <div class="field full">
-                                <label>Guests and Unit Price</label>
+                                <label>Guests and Price</label>
                                 <div class="booking-lines">
                                     <div class="booking-line">
                                         <span class="booking-line-label">Adult</span>
@@ -1106,50 +1311,8 @@
                             <input type="hidden" name="payment_method" value="{{ old('payment_method', 'card') }}">
                         @endif
 
-                        <div class="field full">
-                            <label>Transfer option</label>
-                            @if ($transferOptions->isNotEmpty())
-                                <div class="transfer-list" id="transferOptionsList">
-                                    @foreach ($transferOptions as $index => $option)
-                                        @php
-                                            $transferCode = strtolower(trim((string) ($option['code'] ?? '')));
-                                            $optionSelected = old('transfer_option', (string) ($prefill['transfer_option'] ?? ''));
-                                            $localAdultRate = (float) ($option['local_adult_charge'] ?? $option['adult_charge'] ?? 0);
-                                            $localChildRate = (float) ($option['local_child_charge'] ?? $option['child_charge'] ?? 0);
-                                            $foreignAdultRate = (float) ($option['foreign_adult_charge'] ?? $option['adult_charge'] ?? 0);
-                                            $foreignChildRate = (float) ($option['foreign_child_charge'] ?? $option['child_charge'] ?? 0);
-                                        @endphp
-                                        <label class="transfer-option">
-                                            <input
-                                                type="radio"
-                                                name="transfer_option"
-                                                value="{{ $transferCode }}"
-                                                data-local-adult="{{ $localAdultRate }}"
-                                                data-local-child="{{ $localChildRate }}"
-                                                data-foreign-adult="{{ $foreignAdultRate }}"
-                                                data-foreign-child="{{ $foreignChildRate }}"
-                                                data-base-local="{{ (float) ($option['base_charge_local'] ?? 0) }}"
-                                                data-base-foreign="{{ (float) ($option['base_charge_foreign'] ?? 0) }}"
-                                                {{ ($optionSelected === '' && $index === 0) || strtolower((string) $optionSelected) === $transferCode ? 'checked' : '' }}
-                                            >
-                                            <span>
-                                                <span class="transfer-option-title">{{ (string) ($option['label'] ?? Str::headline(str_replace('_', ' ', $transferCode))) }}</span>
-                                                <span class="transfer-option-rates">Local: Adult {{ $currency }} {{ number_format($localAdultRate, 2) }}, Child {{ $currency }} {{ number_format($localChildRate, 2) }} • Foreigner: Adult {{ $currency }} {{ number_format($foreignAdultRate, 2) }}, Child {{ $currency }} {{ number_format($foreignChildRate, 2) }}</span>
-                                                <span class="transfer-option-note">Tick to include this transfer mode in billing.</span>
-                                            </span>
-                                        </label>
-                                    @endforeach
-                                </div>
-                            @else
-                                <p class="booking-subtitle" style="margin:0;">No transfer options configured for this listing.</p>
-                                <input type="hidden" name="transfer_option" value="">
-                            @endif
-                        </div>
-
-                        <div class="field full">
-                            <label for="transferCharge">Transfer charge</label>
-                            <input id="transferCharge" name="transfer_charge" type="number" step="0.01" min="0" value="{{ old('transfer_charge', '0') }}" readonly>
-                        </div>
+                        <input type="hidden" name="transfer_option" value="{{ old('transfer_option', '') }}">
+                        <input type="hidden" id="transferCharge" name="transfer_charge" value="{{ old('transfer_charge', '0') }}">
 
                         @if ($categoryKey !== 'excursion')
                             <div class="field full">
@@ -1178,6 +1341,12 @@
                 </form>
             </aside>
         </div>
+
+        <section class="block" aria-label="Similar services" style="margin-top:12px;">
+            <h2 class="block-title">Similar {{ strtolower($categoryLabel) }} Nearby</h2>
+            <p class="description" style="margin-top:0;">Explore similar services from the same area and compare availability and inclusions before checkout.</p>
+            <a class="btn" href="/catalog/{{ str_replace('_', '-', $categoryKey) }}">Browse {{ $categoryLabel }} listings</a>
+        </section>
 
         @include('partials.global-site-footer')
     </main>

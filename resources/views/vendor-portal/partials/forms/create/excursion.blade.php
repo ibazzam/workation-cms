@@ -139,6 +139,10 @@
             <label for="property_weather_cancellation_policy">Weather Cancellation Policy</label>
             <textarea id="property_weather_cancellation_policy" name="weather_cancellation_policy" class="ops-textarea" rows="2" maxlength="1000" placeholder="e.g. Full refund if cancelled due to adverse weather conditions">{{ old('weather_cancellation_policy') }}</textarea>
         </div>
+        <div class="ops-field ops-field-wide">
+            <label for="property_special_instructions">Special Instructions</label>
+            <textarea id="property_special_instructions" name="special_instructions" class="ops-textarea" rows="3" maxlength="2000" placeholder="What guests should bring, when to arrive, dress code, or any important pre-trip notes.">{{ old('special_instructions') }}</textarea>
+        </div>
 
         {{-- ── Location ──────────────────────────────────────────────────── --}}
         <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">

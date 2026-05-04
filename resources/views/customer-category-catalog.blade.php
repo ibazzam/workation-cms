@@ -1418,7 +1418,87 @@
         }
 
         .page.category-default .card-body {
-            gap: 6px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            column-gap: 12px;
+            row-gap: 5px;
+            align-items: start;
+        }
+
+        .page.category-default .card-city,
+        .page.category-default .card-type-chip,
+        .page.category-default .card h3,
+        .page.category-default .card-stars,
+        .page.category-default .card-offer,
+        .page.category-default .card-desc,
+        .page.category-default .card-time,
+        .page.category-default .card-action-btn {
+            grid-column: 1 / -1;
+        }
+
+        .page.category-default .card-review {
+            grid-column: 1;
+            margin-bottom: 0;
+        }
+
+        .page.category-default .card-price {
+            grid-column: 2;
+            justify-self: end;
+            align-self: center;
+            margin: 0;
+            text-align: right;
+        }
+
+        .page.category-default .card h3 {
+            font-size: 0.92rem;
+            -webkit-line-clamp: 2;
+            margin-bottom: 2px;
+        }
+
+        .page.category-default .card-city {
+            font-size: 0.72rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .page.category-default .card-desc {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            color: #4f677a;
+            font-size: 0.76rem;
+            line-height: 1.45;
+            margin: 0;
+        }
+
+        .page.category-default .card-stars {
+            display: none;
+        }
+
+        .page.category-default .card-time {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #eef6fb;
+            color: #1e5672;
+            font-size: 0.71rem;
+            font-weight: 600;
+            border-radius: 5px;
+            padding: 3px 8px;
+            width: fit-content;
+        }
+
+        .page.category-default .card-review {
+            margin-top: 2px;
+        }
+
+        .page.category-default .card-action-btn {
+            margin-top: 6px;
+            padding: 8px 14px;
+            font-size: 0.78rem;
+            align-self: flex-start;
         }
 
         .page.category-default .card h3 {
@@ -1691,6 +1771,17 @@
 
             .page.category-default .card img {
                 height: 180px;
+            }
+
+            .page.category-default .card-body {
+                grid-template-columns: 1fr;
+                column-gap: 0;
+            }
+
+            .page.category-default .card-price {
+                grid-column: 1;
+                justify-self: start;
+                text-align: left;
             }
 
             .search-primary-grid,

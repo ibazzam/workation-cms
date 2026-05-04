@@ -180,6 +180,9 @@
         }
         $selectedMealPlan = trim((string) ($prefill['selected_meal_plan'] ?? ''));
         $selectedNightlyRate = number_format($selectedNightlyRateRaw, 2);
+        $guestResidency = trim((string) ($prefill['guest_residency'] ?? $visitorResidency ?? 'foreign_national'));
+        $visitorIsLocal = $guestResidency === 'local_resident';
+        $mvrUsdRate = (float) ($mvrUsdRate ?? env('MVR_USD_RATE', 15.42));
         $taxRate = (float) ($pricingConfig['tax_rate'] ?? 16);
         $discountPercent = (float) ($pricingConfig['discount_percent'] ?? 0);
         $inclusives = collect($bookingPolicies['inclusives'] ?? [])->map(static fn ($v) => trim((string) $v))->filter()->values();
@@ -286,7 +289,13 @@
                         <p class="sum-prop-name">{{ (string) ($property->name ?? 'Property') }}</p>
                         <p class="sum-room-name">{{ (string) ($room->name ?? 'Room') }}</p>
                         <p class="sum-room-meta">{{ $roomBedLabel }}{{ $roomSize > 0 ? ' · ' . $roomSize . '㎡' : '' }}{{ $roomNonSmoking ? ' · Non-smoking' : '' }}</p>
-                        <p class="sum-room-meta">Rate: <strong style="color:#1b3f58">{{ $currency }} {{ $selectedNightlyRate }}</strong> / night</p>
+                        <p class="sum-room-meta">Rate: <strong style="color:#1b3f58">{{ $currency }} {{ $selectedNightlyRate }}</strong> / night
+                            @if ($visitorIsLocal)
+                                <span class="room-price-local-badge" style="margin-left:.5em;">Local Rate</span>
+                            @elseif ($mvrUsdRate > 0)
+                                <span class="room-price-usd-hint" style="margin-left:.5em;">≈ USD {{ number_format($selectedNightlyRateRaw / $mvrUsdRate, 0) }}</span>
+                            @endif
+                        </p>
                         @if ($selectedMealPlan !== '')
                             <p class="sum-room-meta">Meal plan: <strong style="color:#1b3f58">{{ $selectedMealPlan }}</strong></p>
                         @endif
@@ -321,7 +330,7 @@
 
                     <section class="sum-section" aria-label="Price summary">
                         <h2 class="sum-title"><span class="sum-title-number">3</span> Price Summary</h2>
-                        <div class="sum-compact-line"><span>Nightly rate</span><strong id="invoiceNightly">{{ $currency }} {{ $selectedNightlyRate }}</strong></div>
+                        <div class="sum-compact-line"><span>Nightly rate</span><strong id="invoiceNightly">{{ $currency }} {{ $selectedNightlyRate }}</strong>@if ($visitorIsLocal)<span class="room-price-local-badge" style="margin-left:.5em;">Local</span>@elseif ($mvrUsdRate > 0)<span class="room-price-usd-hint" style="margin-left:.5em;">≈ USD {{ number_format($selectedNightlyRateRaw / $mvrUsdRate, 0) }}</span>@endif</div>
                         <div class="sum-compact-line"><span>Stay (nights)</span><strong id="invoiceNights">{{ $stayNights }}</strong></div>
                         <div class="sum-compact-line"><span>Room subtotal</span><strong id="invoiceRoomSubtotal">{{ $currency }} 0.00</strong></div>
                         <div class="sum-compact-line"><span>Discount</span><strong id="invoiceDiscount">- {{ $currency }} 0.00</strong></div>
@@ -369,6 +378,8 @@
                     @csrf
                     <input type="hidden" name="property_id" value="{{ (int) ($property->id ?? 0) }}">
                     <input type="hidden" name="room_id" value="{{ (int) ($room->id ?? 0) }}">
+                    <input type="hidden" name="guest_residency" id="guestResidency" value="{{ old('guest_residency', $guestResidency) }}">
+                    <input type="hidden" name="meal_plan" id="mealPlanHidden" value="{{ old('meal_plan', $selectedMealPlan) }}">
                     <input type="hidden" name="checkin" id="checkin" value="{{ old('checkin', (string) ($prefill['checkin'] ?? '')) }}">
                     <input type="hidden" name="checkout" id="checkout" value="{{ old('checkout', (string) ($prefill['checkout'] ?? '')) }}">
                     <input type="hidden" name="transfer_charge" id="transferCharge" value="0">

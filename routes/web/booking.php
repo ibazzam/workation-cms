@@ -192,6 +192,65 @@ if (!function_exists('workationPaymentSuccessReturnUrl')) {
     }
 }
 
+if (!function_exists('workationNormalizedSegmentPricingMatrix')) {
+    function workationNormalizedSegmentPricingMatrix(array $listingDetails, float $basePrice = 0.0): array
+    {
+        $matrix = is_array($listingDetails['pricing_by_segment'] ?? null) ? $listingDetails['pricing_by_segment'] : [];
+        $localMatrix = is_array($matrix['local'] ?? null) ? $matrix['local'] : [];
+        $foreignMatrix = is_array($matrix['foreign'] ?? null) ? $matrix['foreign'] : [];
+
+        $foreignAdult = (float) ($foreignMatrix['adult'] ?? $listingDetails['adult_price_foreign'] ?? $listingDetails['adult_price'] ?? $listingDetails['price_per_adult'] ?? $basePrice);
+        $foreignChild = (float) ($foreignMatrix['child'] ?? $listingDetails['child_price_foreign'] ?? $listingDetails['child_price'] ?? $listingDetails['price_per_child'] ?? round($foreignAdult * 0.5, 2));
+        $localAdult = (float) ($localMatrix['adult'] ?? $listingDetails['adult_price_local'] ?? 0);
+        $localChild = (float) ($localMatrix['child'] ?? $listingDetails['child_price_local'] ?? 0);
+
+        $foreignFlat = (float) ($foreignMatrix['flat'] ?? $listingDetails['price_foreign'] ?? 0);
+        $localFlat = (float) ($localMatrix['flat'] ?? $listingDetails['price_local'] ?? 0);
+
+        return [
+            'local' => [
+                'adult' => max(0, $localAdult),
+                'child' => max(0, $localChild),
+                'flat' => max(0, $localFlat),
+            ],
+            'foreign' => [
+                'adult' => max(0, $foreignAdult),
+                'child' => max(0, $foreignChild),
+                'flat' => max(0, $foreignFlat),
+            ],
+            'infant' => max(0, (float) ($listingDetails['infant_price'] ?? $listingDetails['price_per_infant'] ?? 0)),
+        ];
+    }
+}
+
+if (!function_exists('workationResolveEffectiveSegmentPricing')) {
+    function workationResolveEffectiveSegmentPricing(array $listingDetails, float $basePrice, string $guestResidency): array
+    {
+        $normalizedResidency = strtolower(trim($guestResidency));
+        if (!in_array($normalizedResidency, ['local_resident', 'foreign_national'], true)) {
+            $normalizedResidency = 'foreign_national';
+        }
+
+        $matrix = workationNormalizedSegmentPricingMatrix($listingDetails, $basePrice);
+        $local = $matrix['local'];
+        $foreign = $matrix['foreign'];
+
+        $isLocal = $normalizedResidency === 'local_resident';
+        $effectiveAdult = $isLocal && $local['adult'] > 0 ? $local['adult'] : $foreign['adult'];
+        $effectiveChild = $isLocal && $local['child'] > 0 ? $local['child'] : $foreign['child'];
+        $effectiveFlat = $isLocal && $local['flat'] > 0 ? $local['flat'] : $foreign['flat'];
+
+        return [
+            'guest_residency' => $normalizedResidency,
+            'adult' => max(0, (float) $effectiveAdult),
+            'child' => max(0, (float) $effectiveChild),
+            'infant' => max(0, (float) ($matrix['infant'] ?? 0)),
+            'flat' => max(0, (float) $effectiveFlat),
+            'matrix' => $matrix,
+        ];
+    }
+}
+
     if (!function_exists('workationCreateBmlConnectTransaction')) {
         function workationCreateBmlConnectTransaction(array $context): ?array
         {
@@ -439,6 +498,7 @@ Route::post('/booking/reserve', function (Request $request) {
         'additional_guest_details' => ['nullable', 'string', 'max:4000'],
         'transfer_option' => ['nullable', 'string', 'max:80'],
         'transfer_charge' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan' => ['nullable', 'string', 'max:40'],
         'room_subtotal' => ['nullable', 'numeric', 'min:0'],
         'discount_amount' => ['nullable', 'numeric', 'min:0'],
         'tax_amount' => ['nullable', 'numeric', 'min:0'],
@@ -547,8 +607,6 @@ Route::post('/booking/reserve', function (Request $request) {
     $adults = (int) $payload['adults'];
     $children = (int) ($payload['children'] ?? 0);
     $guestCount = $adults + $children;
-    $nightlyRate = (float) ($roomRow->base_price ?? $propertyRow->base_price ?? 0);
-    $roomSubtotal = $nightlyRate * $nights;
 
     $propertyDetails = json_decode((string) ($propertyRow->listing_details ?? ''), true);
     if (!is_array($propertyDetails)) {
@@ -598,6 +656,26 @@ Route::post('/booking/reserve', function (Request $request) {
             ? 'foreign_national'
             : 'local_resident';
     }
+
+    // Resolve effective nightly rate by meal plan and guest residency.
+    $selectedMealPlan = strtolower(trim((string) ($payload['meal_plan'] ?? '')));
+    $mealPlanRatePairs = [
+        'room_only' => ['meal_plan_room_only_price', 'meal_plan_room_only_price_local'],
+        'bb'        => ['meal_plan_bb_price',        'meal_plan_bb_price_local'],
+        'hb'        => ['meal_plan_hb_price',        'meal_plan_hb_price_local'],
+        'fb'        => ['meal_plan_fb_price',        'meal_plan_fb_price_local'],
+        'ai'        => ['meal_plan_ai_price',        'meal_plan_ai_price_local'],
+    ];
+    [$foreignCol, $localCol] = $mealPlanRatePairs[$selectedMealPlan] ?? $mealPlanRatePairs['room_only'];
+    $foreignNightlyRate = (float) ($roomRow->{$foreignCol} ?? $roomRow->base_price ?? $propertyRow->base_price ?? 0);
+    if ($foreignNightlyRate <= 0) {
+        $foreignNightlyRate = (float) ($roomRow->base_price ?? $propertyRow->base_price ?? 0);
+    }
+    $localNightlyRate = (float) ($roomRow->{$localCol} ?? 0);
+    $nightlyRate = ($guestResidency === 'local_resident' && $localNightlyRate > 0)
+        ? $localNightlyRate
+        : $foreignNightlyRate;
+    $roomSubtotal = $nightlyRate * $nights;
 
     $vendorTaxOverrides = [];
     if (isset($propertyDetails['vendor_tax_overrides']) && is_array($propertyDetails['vendor_tax_overrides'])) {
@@ -1012,10 +1090,28 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
     $taxRate = (float) ($listingDetails['tax_rate'] ?? 16);
     $discountPercent = (float) ($listingDetails['promotion_discount_percent'] ?? 0);
 
+    $previewGuestResidency = strtolower(trim((string) $request->query('guest_residency', '')));
+    if (!in_array($previewGuestResidency, ['local_resident', 'foreign_national'], true)) {
+        $previewGuestNationality = trim((string) $request->query('primary_nationality', ''));
+        if ($previewGuestNationality !== '') {
+            $previewGuestResidency = ReservationPricingPolicy::isForeigner($previewGuestNationality, null)
+                ? 'foreign_national'
+                : 'local_resident';
+        }
+    }
+    if (!in_array($previewGuestResidency, ['local_resident', 'foreign_national'], true)) {
+        $previewGuestResidency = 'foreign_national';
+    }
+
     $excursionBasePrice = (float) ($propertyRow->base_price ?? 0);
-    $excursionAdultPrice = (float) ($listingDetails['adult_price'] ?? $listingDetails['price_per_adult'] ?? $excursionBasePrice);
-    $excursionChildPrice = (float) ($listingDetails['child_price'] ?? $listingDetails['price_per_child'] ?? round($excursionAdultPrice * 0.5, 2));
-    $excursionInfantPrice = (float) ($listingDetails['infant_price'] ?? $listingDetails['price_per_infant'] ?? 0);
+    $effectivePricing = workationResolveEffectiveSegmentPricing($listingDetails, $excursionBasePrice, $previewGuestResidency);
+    $excursionAdultPrice = (float) ($effectivePricing['adult'] ?? $excursionBasePrice);
+    $excursionChildPrice = (float) ($effectivePricing['child'] ?? max(0, round($excursionAdultPrice * 0.5, 2)));
+    $excursionInfantPrice = (float) ($effectivePricing['infant'] ?? 0);
+    $effectiveServiceDisplayPrice = (float) ($effectivePricing['flat'] ?? 0);
+    if ($effectiveServiceDisplayPrice <= 0) {
+        $effectiveServiceDisplayPrice = $excursionBasePrice;
+    }
 
     $sessionGuestName = trim((string) session('portal_customer_user', ''));
     $nameParts = preg_split('/\s+/', $sessionGuestName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
@@ -1124,6 +1220,14 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             'adult_price' => $excursionAdultPrice,
             'child_price' => $excursionChildPrice,
             'infant_price' => $excursionInfantPrice,
+            'display_price' => $effectiveServiceDisplayPrice,
+            'guest_residency' => $previewGuestResidency,
+            'transfer_included' => (bool) ($listingDetails['transfer_included'] ?? false),
+            'departure_time_mode' => (string) ($listingDetails['departure_time_mode'] ?? 'fixed'),
+            'departure_slots' => (array) ($listingDetails['departure_slots'] ?? []),
+            'return_time_mode' => (string) ($listingDetails['return_time_mode'] ?? 'fixed'),
+            'return_slots' => (array) ($listingDetails['return_slots'] ?? []),
+            'return_time' => (string) ($listingDetails['return_time'] ?? ''),
         ],
         'prefill' => [
             'service_start_date' => trim((string) $request->query('service_start_date', '')),
@@ -1134,7 +1238,7 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             'primary_first_name' => $prefillFirstName,
             'primary_last_name' => $prefillLastName,
             'primary_nationality' => '',
-            'guest_residency' => trim((string) $request->query('guest_residency', 'foreign_national')),
+            'guest_residency' => $previewGuestResidency,
             'transfer_option' => trim((string) $request->query('transfer_option', '')),
             'primary_email' => trim((string) session('portal_customer_email', '')),
             'primary_mobile' => '',
@@ -1263,6 +1367,8 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'primary_mobile' => $isExcursionCategory ? ['nullable', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s\-()]{5,39}$/'] : ['required', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s\-()]{5,39}$/'],
         'transfer_option' => ['nullable', 'string', 'max:80'],
         'transfer_charge' => ['nullable', 'numeric', 'min:0'],
+        'departure_time' => ['nullable', 'string', 'max:10'],
+        'return_slot' => ['nullable', 'string', 'max:10'],
         'payment_timing' => ['nullable', 'string', 'max:40'],
         'payment_method' => ['nullable', 'string', 'max:60'],
         'additional_guest_details' => ['nullable', 'string', 'max:4000'],
@@ -1434,6 +1540,24 @@ Route::post('/booking/reserve-category', function (Request $request) {
             : 'local_resident';
     }
 
+    $effectiveSegmentPricing = ['adult' => 0.0, 'child' => 0.0, 'infant' => 0.0, 'flat' => 0.0];
+    if ($categoryKey !== 'accommodation') {
+        $effectiveSegmentPricing = workationResolveEffectiveSegmentPricing($listingDetails, $basePrice, $guestResidency);
+
+        $effectiveAdultPrice = (float) ($effectiveSegmentPricing['adult'] ?? 0);
+        $effectiveChildPrice = (float) ($effectiveSegmentPricing['child'] ?? 0);
+        $effectiveInfantPrice = (float) ($effectiveSegmentPricing['infant'] ?? 0);
+        $effectiveFlatPrice = (float) ($effectiveSegmentPricing['flat'] ?? 0);
+
+        if ($effectiveAdultPrice > 0 || $effectiveChildPrice > 0 || $effectiveInfantPrice > 0) {
+            $serviceSubtotal = ($effectiveAdultPrice * $adults)
+                + ($effectiveChildPrice * $children)
+                + ($effectiveInfantPrice * $infants);
+        } elseif ($effectiveFlatPrice > 0) {
+            $serviceSubtotal = $effectiveFlatPrice * $units;
+        }
+    }
+
     $vendorTaxOverrides = [];
     if (isset($listingDetails['vendor_tax_overrides']) && is_array($listingDetails['vendor_tax_overrides'])) {
         $vendorTaxOverrides = $listingDetails['vendor_tax_overrides'];
@@ -1523,8 +1647,6 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'amount' => $totalAmount,
     ]);
 
-    provisionCustomerAccountFromBooking($customerEmail, $customerName);
-
     $categoryDetails = [];
     foreach (array_keys($categoryFieldRules[$categoryKey] ?? []) as $fieldKey) {
         $value = $payload[$fieldKey] ?? null;
@@ -1533,6 +1655,17 @@ Route::post('/booking/reserve-category', function (Request $request) {
         }
         if ($value !== null && $value !== '') {
             $categoryDetails[$fieldKey] = $value;
+        }
+    }
+
+    if ($categoryKey !== 'accommodation') {
+        $departureTime = trim((string) ($payload['departure_time'] ?? ''));
+        $returnSlot = trim((string) ($payload['return_slot'] ?? ''));
+        if ($departureTime !== '') {
+            $categoryDetails['departure_time'] = $departureTime;
+        }
+        if ($returnSlot !== '') {
+            $categoryDetails['return_slot'] = $returnSlot;
         }
     }
 
@@ -1565,6 +1698,13 @@ Route::post('/booking/reserve-category', function (Request $request) {
                 'primary_last_name' => $primaryLastName,
                 'primary_nationality' => $primaryNationality,
                 'guest_residency' => $guestResidency,
+                'effective_unit_pricing' => [
+                    'adult' => (float) ($effectiveSegmentPricing['adult'] ?? 0),
+                    'child' => (float) ($effectiveSegmentPricing['child'] ?? 0),
+                    'infant' => (float) ($effectiveSegmentPricing['infant'] ?? 0),
+                    'flat' => (float) ($effectiveSegmentPricing['flat'] ?? 0),
+                ],
+                'pricing_by_segment' => $effectiveSegmentPricing['matrix'] ?? [],
                 'primary_email' => $primaryEmail,
                 'primary_mobile' => $primaryMobile,
                 'additional_guest_details' => $additionalGuestDetails,
@@ -1732,6 +1872,18 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
     }
 
     $categoryKey = strtolower(trim((string) $request->query('category_key', (string) ($reservationNotes['category_key'] ?? ''))));
+    $requiresCustomerAuth = $categoryKey !== '' && $categoryKey !== 'accommodation';
+    if ($requiresCustomerAuth && !(bool) $request->session()->get('portal_customer_authenticated', false)) {
+        $continueUrl = '/booking/checkout' . ($reservation !== null ? ('/' . $reservation) : '');
+        $query = trim((string) parse_url((string) $request->fullUrl(), PHP_URL_QUERY));
+        if ($query !== '') {
+            $continueUrl .= '?' . $query;
+        }
+
+        return redirect('/portal/customer/login?continue=' . urlencode($continueUrl))
+            ->with('status', 'Please sign in or create a customer account to continue checkout and payment.');
+    }
+
     $dateLabels = ['start' => 'Check-in', 'end' => 'Check-out'];
     if ($categoryKey !== '' && array_key_exists($categoryKey, $categoryLabelMap)) {
         $dateLabels = $categoryLabelMap[$categoryKey];
@@ -1819,7 +1971,7 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
             ? trim((string) ($reservationNotes['guest_residency'] ?? ''))
             : trim((string) $request->query('guest_residency', '')),
         'requested_gateway' => $reservationRow
-            ? trim((string) ($reservationNotes['quote_provider'] ?? $reservationNotes['quote_gateway'] ?? ''))
+            ? trim((string) ($reservationRow->payment_gateway ?? ''))
             : trim((string) $request->query('payment_gateway', '')),
         'reservation_currency' => strtoupper(trim((string) ($reservationRow->currency ?? $roomRow->currency ?? $propertyRow->currency ?? 'MVR'))),
         'amount' => (float) ($reservationNotes['invoice_total_amount'] ?? $request->query('total', (float) ($reservationRow->total_amount ?? 0))),
@@ -1828,7 +1980,7 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
         $paymentPolicy = CheckoutPaymentRouter::buildPaymentPolicy(
             $paymentContext,
             $reservationRow
-                ? trim((string) ($reservationNotes['quote_payment_currency'] ?? ''))
+                ? trim((string) ($reservationRow->payment_currency ?? ''))
                 : trim((string) $request->query('payment_currency', ''))
         );
     } catch (\InvalidArgumentException $exception) {
@@ -2206,6 +2358,14 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         abort(404);
     }
 
+    $notes = workationReservationPaymentNotes($reservationRow);
+    $reservationCategoryKey = strtolower(trim((string) ($notes['category_key'] ?? '')));
+    $requiresCustomerAuth = $reservationCategoryKey !== '' && $reservationCategoryKey !== 'accommodation';
+    if ($requiresCustomerAuth && !(bool) $request->session()->get('portal_customer_authenticated', false)) {
+        return redirect('/portal/customer/login?continue=' . urlencode('/booking/checkout/' . $reservation))
+            ->with('status', 'Please sign in or create a customer account to continue checkout and payment.');
+    }
+
     $validated = $request->validate([
         'payment_currency' => ['nullable', 'string', 'min:3', 'max:8'],
         'payment_gateway' => ['nullable', 'string', 'min:2', 'max:64'],
@@ -2225,7 +2385,6 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         return back()->withErrors(['payment' => 'This reservation is already paid.']);
     }
 
-    $notes = workationReservationPaymentNotes($reservationRow);
     $primaryNationality = trim((string) ($notes['primary_nationality'] ?? ''));
     $guestResidency = strtolower(trim((string) ($notes['guest_residency'] ?? '')));
     if (!in_array($guestResidency, ['local_resident', 'foreign_national'], true)) {
@@ -2266,11 +2425,8 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         }
     }
 
-    if ($requestedGateway === '') {
-        $requestedGateway = trim((string) ($notes['quote_provider'] ?? $notes['quote_gateway'] ?? ''));
-    }
-    if ($requestedCurrency === '') {
-        $requestedCurrency = trim((string) ($notes['quote_payment_currency'] ?? ''));
+    if ($requestedGateway === '' || $requestedCurrency === '') {
+        return back()->withErrors(['payment' => 'Please accept terms and explicitly select a payment route before continuing.']);
     }
 
     try {

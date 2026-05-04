@@ -212,6 +212,8 @@
         $lockedPaymentCurrency = strtoupper(trim((string) ($summary['quote_payment_currency'] ?? ($paymentPolicy['currency'] ?? $currency))));
         $lockedPaymentGateway = trim((string) ($summary['quote_gateway'] ?? ($paymentPolicy['gateway'] ?? '')));
         $lockedPaymentProvider = strtolower(trim((string) ($summary['quote_provider'] ?? ($paymentPolicy['provider'] ?? ''))));
+        $explicitGatewaySelection = trim((string) ($summary['quote_gateway'] ?? ''));
+        $explicitCurrencySelection = strtoupper(trim((string) ($summary['quote_payment_currency'] ?? '')));
         $paymentGatewayLabel = trim((string) ($summary['quote_gateway_label'] ?? ($paymentPolicy['gateway_label'] ?? 'Card Gateway')));
         $paymentProviderLabel = trim((string) ($summary['quote_provider_label'] ?? ($paymentPolicy['provider_label'] ?? $paymentGatewayLabel)));
         $paymentNotice = trim((string) ($paymentPolicy['customer_notice'] ?? 'Payment routing is enforced based on customer segment.'));
@@ -226,15 +228,10 @@
         foreach ($paymentOptions as $paymentOption) {
             $optionGateway = strtolower(trim((string) ($paymentOption['gateway'] ?? '')));
             $optionCurrency = strtoupper(trim((string) ($paymentOption['currency'] ?? '')));
-            if ($optionGateway === strtolower($lockedPaymentGateway) && $optionCurrency === $lockedPaymentCurrency) {
+            if ($explicitGatewaySelection !== '' && $optionGateway === strtolower($explicitGatewaySelection) && $optionCurrency === $explicitCurrencySelection) {
                 $selectedPaymentOption = $optionGateway . '|' . $optionCurrency;
                 break;
             }
-        }
-        if ($selectedPaymentOption === '' && $paymentOptions->isNotEmpty()) {
-            $firstGateway = strtolower(trim((string) ($paymentOptions[0]['gateway'] ?? '')));
-            $firstCurrency = strtoupper(trim((string) ($paymentOptions[0]['currency'] ?? '')));
-            $selectedPaymentOption = $firstGateway . '|' . $firstCurrency;
         }
         $bookingProcessBackUrl = $isNoTransferCategory
             ? (trim((string) ($backUrl ?? '')) !== '' ? (string) $backUrl : '/')
@@ -477,8 +474,20 @@
             }
 
             const syncPaymentSelection = function () {
-                const selected = optionInputs.find(function (input) { return input.checked; }) || optionInputs[0];
+                const selected = optionInputs.find(function (input) { return input.checked; }) || null;
                 if (!selected) {
+                    if (paymentSelectionInput) {
+                        paymentSelectionInput.value = '';
+                    }
+                    if (paymentGatewayInput) {
+                        paymentGatewayInput.value = '';
+                    }
+                    if (paymentProviderInput) {
+                        paymentProviderInput.value = '';
+                    }
+                    if (paymentCurrencyInput) {
+                        paymentCurrencyInput.value = '';
+                    }
                     return;
                 }
 
@@ -513,6 +522,7 @@
 
             const syncTermsState = function () {
                 const agreed = !!(checkoutTermsAgree && checkoutTermsAgree.checked);
+                const hasSelection = optionInputs.some(function (input) { return input.checked; });
                 optionInputs.forEach(function (input) {
                     input.disabled = !agreed;
                 });
@@ -523,7 +533,7 @@
                     checkoutTermsAcceptedInput.value = agreed ? '1' : '0';
                 }
                 if (confirmPayButton) {
-                    confirmPayButton.disabled = !agreed || optionInputs.length === 0;
+                    confirmPayButton.disabled = !agreed || optionInputs.length === 0 || !hasSelection;
                 }
             };
 
@@ -538,7 +548,8 @@
             if (checkoutConfirmForm) {
                 checkoutConfirmForm.addEventListener('submit', function (event) {
                     const agreed = !!(checkoutTermsAgree && checkoutTermsAgree.checked);
-                    if (!agreed) {
+                    const hasSelection = optionInputs.some(function (input) { return input.checked; });
+                    if (!agreed || !hasSelection) {
                         event.preventDefault();
                         if (checkoutTermsAgree) {
                             checkoutTermsAgree.focus();

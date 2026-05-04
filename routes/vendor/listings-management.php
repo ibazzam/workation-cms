@@ -43,12 +43,19 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         'room_features.*' => ['required', 'string', 'max:80'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_room_only_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_room_only_price_local' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_bb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_bb_price_local' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_hb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_hb_price_local' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_fb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_fb_price_local' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_ai_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_ai_price_local' => ['nullable', 'numeric', 'min:0'],
         'extra_person_price' => ['nullable', 'numeric', 'min:0'],
+        'extra_person_price_local' => ['nullable', 'numeric', 'min:0'],
         'child_price' => ['nullable', 'numeric', 'min:0'],
+        'child_price_local' => ['nullable', 'numeric', 'min:0'],
         'child_policy' => ['nullable', 'string', 'max:3000'],
         'extra_bed_policy' => ['nullable', 'string', 'max:3000'],
     ]);
@@ -158,6 +165,27 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_ai_price')) {
         $insertPayload['meal_plan_ai_price'] = (float) ($validated['meal_plan_ai_price'] ?? 0);
     }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_room_only_price_local')) {
+        $insertPayload['meal_plan_room_only_price_local'] = (float) ($validated['meal_plan_room_only_price_local'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_bb_price_local')) {
+        $insertPayload['meal_plan_bb_price_local'] = (float) ($validated['meal_plan_bb_price_local'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_hb_price_local')) {
+        $insertPayload['meal_plan_hb_price_local'] = (float) ($validated['meal_plan_hb_price_local'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_fb_price_local')) {
+        $insertPayload['meal_plan_fb_price_local'] = (float) ($validated['meal_plan_fb_price_local'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_ai_price_local')) {
+        $insertPayload['meal_plan_ai_price_local'] = (float) ($validated['meal_plan_ai_price_local'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'extra_person_price_local')) {
+        $insertPayload['extra_person_price_local'] = (float) ($validated['extra_person_price_local'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'child_price_local')) {
+        $insertPayload['child_price_local'] = (float) ($validated['child_price_local'] ?? 0);
+    }
     if (Schema::hasColumn('vendor_property_room_categories', 'bathroom_type')) {
         $insertPayload['bathroom_type'] = $submittedBathroomType === '' ? null : $submittedBathroomType;
     }
@@ -219,12 +247,19 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
         'bathroom_amenities.*' => ['required', 'string', 'max:80'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_room_only_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_room_only_price_local' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_bb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_bb_price_local' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_hb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_hb_price_local' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_fb_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_fb_price_local' => ['nullable', 'numeric', 'min:0'],
         'meal_plan_ai_price' => ['nullable', 'numeric', 'min:0'],
+        'meal_plan_ai_price_local' => ['nullable', 'numeric', 'min:0'],
         'extra_person_price' => ['nullable', 'numeric', 'min:0'],
+        'extra_person_price_local' => ['nullable', 'numeric', 'min:0'],
         'child_price' => ['nullable', 'numeric', 'min:0'],
+        'child_price_local' => ['nullable', 'numeric', 'min:0'],
         'child_policy' => ['nullable', 'string', 'max:3000'],
         'extra_bed_policy' => ['nullable', 'string', 'max:3000'],
     ]);
@@ -322,6 +357,27 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_ai_price')) {
         $updatePayload['meal_plan_ai_price'] = (float) ($validated['meal_plan_ai_price'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_room_only_price_local')) {
+        $updatePayload['meal_plan_room_only_price_local'] = (float) ($validated['meal_plan_room_only_price_local'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_bb_price_local')) {
+        $updatePayload['meal_plan_bb_price_local'] = (float) ($validated['meal_plan_bb_price_local'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_hb_price_local')) {
+        $updatePayload['meal_plan_hb_price_local'] = (float) ($validated['meal_plan_hb_price_local'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_fb_price_local')) {
+        $updatePayload['meal_plan_fb_price_local'] = (float) ($validated['meal_plan_fb_price_local'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'meal_plan_ai_price_local')) {
+        $updatePayload['meal_plan_ai_price_local'] = (float) ($validated['meal_plan_ai_price_local'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'extra_person_price_local')) {
+        $updatePayload['extra_person_price_local'] = (float) ($validated['extra_person_price_local'] ?? 0);
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'child_price_local')) {
+        $updatePayload['child_price_local'] = (float) ($validated['child_price_local'] ?? 0);
     }
     if (Schema::hasColumn('vendor_property_room_categories', 'bathroom_type')) {
         $updatePayload['bathroom_type'] = $submittedBathroomType === '' ? null : $submittedBathroomType;
@@ -479,6 +535,18 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'day_visit_start_time' => ['nullable', 'date_format:H:i'],
         'day_visit_end_time' => ['nullable', 'date_format:H:i'],
         'included_access' => ['nullable', 'string', 'max:2000'],
+        'price_per_adult' => ['nullable', 'numeric', 'min:0'],
+        'price_per_child' => ['nullable', 'numeric', 'min:0'],
+        'transfer_included' => ['nullable', Rule::in(['0', '1', 'yes', 'no', 'true', 'false'])],
+        'departure_time_mode' => ['nullable', Rule::in(['fixed', 'slots'])],
+        'departure_slots' => ['nullable', 'string', 'max:2000'],
+        'return_time_mode' => ['nullable', Rule::in(['fixed', 'slots'])],
+        'return_time' => ['nullable', 'date_format:H:i'],
+        'return_slots' => ['nullable', 'string', 'max:2000'],
+        'adult_price_local' => ['nullable', 'numeric', 'min:0'],
+        'adult_price_foreign' => ['nullable', 'numeric', 'min:0'],
+        'child_price_local' => ['nullable', 'numeric', 'min:0'],
+        'child_price_foreign' => ['nullable', 'numeric', 'min:0'],
         'cuisine_type' => ['nullable', 'string', 'max:120'],
         'meal_service' => ['nullable', 'string', 'max:80'],
         'vehicle_type' => ['nullable', 'string', 'max:80'],
@@ -733,6 +801,18 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'day_visit_start_time' => ['nullable', 'date_format:H:i'],
         'day_visit_end_time' => ['nullable', 'date_format:H:i'],
         'included_access' => ['nullable', 'string', 'max:2000'],
+        'price_per_adult' => ['nullable', 'numeric', 'min:0'],
+        'price_per_child' => ['nullable', 'numeric', 'min:0'],
+        'transfer_included' => ['nullable', Rule::in(['0', '1', 'yes', 'no', 'true', 'false'])],
+        'departure_time_mode' => ['nullable', Rule::in(['fixed', 'slots'])],
+        'departure_slots' => ['nullable', 'string', 'max:2000'],
+        'return_time_mode' => ['nullable', Rule::in(['fixed', 'slots'])],
+        'return_time' => ['nullable', 'date_format:H:i'],
+        'return_slots' => ['nullable', 'string', 'max:2000'],
+        'adult_price_local' => ['nullable', 'numeric', 'min:0'],
+        'adult_price_foreign' => ['nullable', 'numeric', 'min:0'],
+        'child_price_local' => ['nullable', 'numeric', 'min:0'],
+        'child_price_foreign' => ['nullable', 'numeric', 'min:0'],
         'cuisine_type' => ['nullable', 'string', 'max:120'],
         'meal_service' => ['nullable', 'string', 'max:80'],
         'vehicle_type' => ['nullable', 'string', 'max:80'],

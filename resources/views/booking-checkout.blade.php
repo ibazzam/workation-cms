@@ -108,7 +108,7 @@
            'injectUniformHeaderScripts' => true,
            'headerNeedsSpacer' => false,
            'headerHideOnScroll' => true,
-           'headerShowSearch' => true,
+           'headerShowSearch' => false,
            'headerSearchAction' => '/catalog/' . $headerCategoryKey,
            'headerSearchValue' => '',
            'headerCategoryLinks' => $headerCategoryLinks,

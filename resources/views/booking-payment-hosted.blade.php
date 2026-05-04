@@ -77,9 +77,20 @@
         'headerContinueUrl' => (string) request()->fullUrl(),
     ])
 
+    @php
+        $hostedNoTransferCategories = ['marine-transport', 'land-transport', 'excursion', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
+        $hostedIsNoTransfer = in_array($headerCategoryKey, $hostedNoTransferCategories, true)
+            || in_array(str_replace('-', '_', $headerCategoryKey), $hostedNoTransferCategories, true);
+        $hostedProcessStep = $hostedIsNoTransfer ? 3 : 4;
+        $hostedProcessSteps = $hostedIsNoTransfer
+            ? [1 => '1. Guest Details', 2 => '2. Payment Method', 3 => '3. Final Confirmation']
+            : [1 => '1. Guest Details', 2 => '2. Transfer Selection', 3 => '3. Payment Method', 4 => '4. Final Confirmation'];
+    @endphp
+
     <main class="page">
         @include('partials.booking-process-highlights', [
-            'bookingProcessCurrentStep' => 4,
+            'bookingProcessCurrentStep' => $hostedProcessStep,
+            'bookingProcessSteps' => $hostedProcessSteps,
             'bookingProcessBackUrl' => '/booking/checkout/' . (int) ($reservation->id ?? 0),
             'bookingProcessNextText' => $externalHandoff
                 ? 'You can continue to the external gateway or safely return to checkout.'

@@ -139,7 +139,11 @@
         $guestResidency = strtolower(trim((string) ($summary['guest_residency'] ?? '')));
         $isForeigner = $guestResidency === 'foreign_national';
         $taxLines = collect($summary['tax_lines'] ?? [])->filter(static fn ($line) => is_array($line))->values();
-        $serviceChargeTotal = max(0, (float) ($summary['service_charge_total'] ?? 0));
+        $nonAccommodationNoTransferCategories = ['marine-transport', 'land-transport', 'excursion', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
+        $isNoTransferCategory = in_array($categoryKey, $nonAccommodationNoTransferCategories, true);
+        $serviceChargeTotal = $categoryKey === 'accommodation'
+            ? max(0, (float) ($summary['service_charge_total'] ?? 0))
+            : 0.0;
         $totalTaxAmount = max(0, (float) ($summary['total_tax_amount'] ?? $taxAmount));
         $limitedTimeOffer = 0.0;
         $firstBookingDeal = 0.0;
@@ -172,7 +176,23 @@
                 'amount' => max(0, $amount),
                 'code' => $code,
             ];
-        })->filter(static fn (array $line): bool => $line['amount'] > 0)->values();
+        })->filter(static function (array $line) use ($categoryKey): bool {
+            if ($line['amount'] <= 0) {
+                return false;
+            }
+
+            if ($categoryKey === 'accommodation') {
+                return true;
+            }
+
+            $code = strtolower(trim((string) ($line['code'] ?? '')));
+            $label = strtolower(trim((string) ($line['label'] ?? '')));
+            if ($code === 'service_charge' || str_contains($code, 'service_charge') || str_contains($label, 'service charge')) {
+                return false;
+            }
+
+            return true;
+        })->values();
         if ($selectedTransferCode === '') {
             $transferGstLineAmount = (float) $invoiceTaxLines
                 ->filter(static fn (array $line): bool => ($line['code'] ?? '') === 'transfer_gst' || str_starts_with(strtolower((string) ($line['label'] ?? '')), 'transfer gst'))
@@ -216,13 +236,29 @@
             $firstCurrency = strtoupper(trim((string) ($paymentOptions[0]['currency'] ?? '')));
             $selectedPaymentOption = $firstGateway . '|' . $firstCurrency;
         }
-        $bookingProcessBackUrl = '/booking/checkout/' . (int) ($reservation->id ?? 0) . '/transfer';
+        $bookingProcessBackUrl = $isNoTransferCategory
+            ? (trim((string) ($backUrl ?? '')) !== '' ? (string) $backUrl : '/')
+            : '/booking/checkout/' . (int) ($reservation->id ?? 0) . '/transfer';
+        $bookingProcessCurrentStep = $isNoTransferCategory ? 2 : 3;
+        $bookingProcessSteps = $isNoTransferCategory
+            ? [
+                1 => '1. Guest Details',
+                2 => '2. Payment Method',
+                3 => '3. Final Confirmation',
+            ]
+            : [
+                1 => '1. Guest Details',
+                2 => '2. Transfer Selection',
+                3 => '3. Payment Method',
+                4 => '4. Final Confirmation',
+            ];
     @endphp
 
     <main class="page">
         @include('partials.booking-process-highlights', [
-            'bookingProcessCurrentStep' => 3,
+            'bookingProcessCurrentStep' => $bookingProcessCurrentStep,
             'bookingProcessBackUrl' => $bookingProcessBackUrl,
+            'bookingProcessSteps' => $bookingProcessSteps,
             'bookingProcessNextText' => 'Next step after this page: complete payment and receive reservation confirmation.',
         ])
 
@@ -413,7 +449,7 @@
                 @else
                     <button class="btn primary" type="button" disabled>Confirm & Pay</button>
                 @endif
-                <a class="btn alt" href="/booking/checkout/{{ (int) ($reservation->id ?? 0) }}/transfer">Back</a>
+                <a class="btn alt" href="{{ $bookingProcessBackUrl }}">Back</a>
             </div>
         </section>
 

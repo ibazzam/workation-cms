@@ -846,6 +846,29 @@
             ?: ($property->activity_end_time ?? $property->end_time ?? '')
         );
 
+        $durationMinutes = is_numeric($listingDetails['excursion_duration_minutes'] ?? null)
+            ? (int) ($listingDetails['excursion_duration_minutes'] ?? 0)
+            : 0;
+        if ($durationMinutes <= 0 && $startTimeLabel !== '' && $endTimeLabel !== '') {
+            $parseClockToMinutes = static function (string $label): ?int {
+                if (!preg_match('/^(2[0-3]|[01]?\d):([0-5]\d)$/', trim($label), $match)) {
+                    return null;
+                }
+
+                return ((int) $match[1] * 60) + (int) $match[2];
+            };
+
+            $startMinutes = $parseClockToMinutes($startTimeLabel);
+            $endMinutes = $parseClockToMinutes($endTimeLabel);
+            if ($startMinutes !== null && $endMinutes !== null) {
+                $computedDuration = $endMinutes - $startMinutes;
+                if ($computedDuration <= 0) {
+                    $computedDuration += 24 * 60;
+                }
+                $durationMinutes = max(0, $computedDuration);
+            }
+        }
+
         $equipmentLabelMap = [
             'snorkel_gear' => 'Snorkel gear',
             'life_jacket' => 'Life jacket',
@@ -903,6 +926,15 @@
                 ? ('Departure time: ' . $departureTimeLabel . ' (report ' . $reportingLeadMinutes . ' min early)')
                 : ('Departure time: ' . $departureTimeLabel);
         }
+        if ($startTimeLabel !== '') {
+            $departureDetails[] = 'Start time: ' . $startTimeLabel;
+        }
+        if ($endTimeLabel !== '') {
+            $departureDetails[] = 'End time: ' . $endTimeLabel;
+        }
+        if ($durationMinutes > 0) {
+            $departureDetails[] = 'Duration: ' . number_format($durationMinutes) . ' minutes';
+        }
 
         $specialInstructionItems = collect($extractStringList(
             $listingDetails['special_instructions']
@@ -942,8 +974,7 @@
         $termsAndPolicies = $termsAndPolicies->unique()->values();
 
         $hasReviewSection = $reviewScoreRaw > 0 || $reviewCount > 0;
-        $hasDetailCards = ($startTimeLabel !== '' || $endTimeLabel !== '')
-            || $inclusionItems->isNotEmpty()
+        $hasDetailCards = $inclusionItems->isNotEmpty()
             || !empty($departureDetails)
             || $hasReviewSection;
         $hasHighlightsSection = $realHighlights->isNotEmpty() || $realServicesAndAmenities->isNotEmpty();
@@ -978,6 +1009,17 @@
     </section>
 
     <main class="page">
+
+        @include('partials.booking-process-highlights', [
+            'bookingProcessCurrentStep' => 1,
+            'bookingProcessBackUrl' => '/catalog/' . str_replace('_', '-', $categoryKey ?? ''),
+            'bookingProcessSteps' => [
+                1 => '1. Guest Details',
+                2 => '2. Payment Method',
+                3 => '3. Final Confirmation',
+            ],
+            'bookingProcessNextText' => 'Next step: review payment options and confirm the locked checkout summary.',
+        ])
 
         @php
             $breadcrumbCategoryUrl = '/catalog/' . str_replace('_', '-', $categoryKey);
@@ -1023,7 +1065,6 @@
                                 <p>{{ $descriptionSummary }}</p>
                             @endif
                         </div>
-                        <span class="hero-chip">{{ $serviceTypeHint }}</span>
                     </div>
                     <div class="hero-meta">
                         <span class="hero-chip"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> {{ $categoryLabel }}</span>
@@ -1049,21 +1090,6 @@
                     <section class="block" aria-label="Service details" style="margin-top:12px;">
                         <h2 class="block-title">{{ $categoryKey === 'excursion' ? 'Descriptions & Details' : 'Service Snapshot' }}</h2>
                         <div class="detail-grid">
-                            @if ($startTimeLabel !== '' || $endTimeLabel !== '')
-                                <article class="detail-card">
-                                    <h3>Time</h3>
-                                    <p>
-                                        @if ($startTimeLabel !== '' && $endTimeLabel !== '')
-                                            {{ $startTimeLabel }} - {{ $endTimeLabel }}
-                                        @elseif ($startTimeLabel !== '')
-                                            Starts at {{ $startTimeLabel }}
-                                        @else
-                                            Ends at {{ $endTimeLabel }}
-                                        @endif
-                                    </p>
-                                </article>
-                            @endif
-
                             @if ($inclusionItems->isNotEmpty())
                                 <article class="detail-card">
                                     <h3>Inclusions / What We Provide</h3>

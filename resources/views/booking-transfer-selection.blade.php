@@ -95,11 +95,17 @@
         @include('partials.booking-process-highlights', [
             'bookingProcessCurrentStep' => 2,
             'bookingProcessBackUrl' => $backUrl,
+            'bookingProcessSteps' => [
+                1 => '1. Guest Details',
+                2 => '2. Transfer Selection',
+                3 => '3. Payment Method',
+                4 => '4. Final Confirmation',
+            ],
             'bookingProcessNextText' => 'Next step after this page: review payment options and confirm the locked checkout summary.',
         ])
 
         <section class="panel" aria-label="Transfer selection">
-            <span class="process-chip">Checkout Process: Step 2 of 3</span>
+            <span class="process-chip">Checkout Process: Step 2 of 4</span>
             <h1 class="title">Select Transfer Option</h1>
             <p class="sub">Guest details and nationality are already captured. Choose transfer here, then continue to payment selection.</p>
 

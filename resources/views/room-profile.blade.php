@@ -267,6 +267,12 @@
         @include('partials.booking-process-highlights', [
             'bookingProcessCurrentStep' => 1,
             'bookingProcessBackUrl' => ((int) ($property->id ?? 0) > 0 ? ('/property/' . (int) ($property->id ?? 0)) : '/catalog/accommodation'),
+            'bookingProcessSteps' => [
+                1 => '1. Guest Details',
+                2 => '2. Transfer Selection',
+                3 => '3. Payment Method',
+                4 => '4. Final Confirmation',
+            ],
             'bookingProcessNextText' => 'Next step after this page: choose transfer options and continue to payment selection.',
         ])
 

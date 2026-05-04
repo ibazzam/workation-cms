@@ -283,6 +283,11 @@ class ReservationPricingPolicy
                     continue;
                 }
 
+                // Service charge is only applied to accommodation bookings.
+                if ((bool) ($component['is_service_charge'] ?? false) && $listingCategory !== 'accommodation') {
+                    continue;
+                }
+
                 if (!self::componentAppliesToResidency((string) ($component['applies_to'] ?? 'all'), $guestResidency)) {
                     continue;
                 }

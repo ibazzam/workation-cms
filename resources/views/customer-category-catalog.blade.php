@@ -2100,7 +2100,7 @@
                 'injectUniformHeaderScripts' => true,
                 'headerNeedsSpacer' => false,
                 'headerHideOnScroll' => true,
-                'headerShowSearch' => true,
+                'headerShowSearch' => false,
                 'headerSearchAction' => '/catalog/' . (string) $categoryKey,
                 'headerSearchValue' => (string) ($filters['q'] ?? ''),
                 'headerCategoryLinks' => $catalogCategoryLinks
@@ -2740,16 +2740,16 @@
                                     $resolvedImage = ($thumbUrl && trim($thumbUrl) !== '')
                                         ? (string) $thumbUrl
                                         : ($bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback));
-                                    $accommodationLocationLabel = trim((string) ($property->island ?? ''));
-                                    if ($accommodationLocationLabel === '') {
-                                        $accommodationLocationLabel = trim((string) ($property->city ?? ''));
-                                    }
-                                    if ($accommodationLocationLabel === '') {
-                                        $accommodationLocationLabel = trim((string) ($property->atoll ?? ''));
-                                    }
-                                    $accommodationLocationLabel = $accommodationLocationLabel !== ''
-                                        ? ($accommodationLocationLabel . ', Maldives')
-                                        : 'Maldives';
+                                    $accIsland  = trim((string) ($property->island ?? ''));
+                                    $accCity    = trim((string) ($property->city ?? ''));
+                                    $accAtoll   = trim((string) ($property->atoll ?? ''));
+                                    $accCountry = trim((string) ($property->location_country ?? $property->country ?? 'Maldives'));
+                                    $accLocationParts = array_values(array_filter([
+                                        $accIsland !== '' ? $accIsland : $accCity,
+                                        $accAtoll,
+                                        $accCountry,
+                                    ], static fn ($item): bool => trim((string) $item) !== ''));
+                                    $accommodationLocationLabel = $accLocationParts !== [] ? implode(', ', $accLocationParts) : 'Maldives';
                                 @endphp
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                                 <div class="card-body card-body-accommodation">

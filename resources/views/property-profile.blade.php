@@ -48,21 +48,22 @@
             position: sticky;
             top: var(--property-header-offset);
             z-index: 60;
-            border: 1px solid var(--brand-line);
+            border: 1px solid #d4e5ef;
             border-radius: 0;
-            background: var(--surface);
+            background: #ffffff;
             padding: 10px;
             box-shadow: none;
             margin-bottom: 0;
-            left: 0;
-            right: 0;
             width: 100%;
-            margin-left: auto;
-            margin-right: auto;
         }
 
         body.is-header-hidden .top-search-shell {
             top: var(--property-header-offset);
+        }
+
+        .top-search-inner {
+            width: min(1180px, calc(100% - 24px));
+            margin: 0 auto;
         }
 
         .top-search-form {
@@ -319,7 +320,11 @@
         }
 
         #property-gallery-section {
-            padding-top: 0;
+            padding: 12px;
+            background: #ffffff;
+            border: 1px solid #d4e5ef !important;
+            border-radius: 14px;
+            margin-top: 0;
         }
 
         #property-gallery-section > h2 {
@@ -2554,7 +2559,7 @@
         'injectUniformHeaderScripts' => true,
         'headerNeedsSpacer' => false,
         'headerHideOnScroll' => true,
-        'headerShowSearch' => true,
+        'headerShowSearch' => false,
         'headerSearchAction' => '/catalog/' . $headerCategoryKey,
         'headerSearchValue' => '',
         'headerCategoryLinks' => $headerCategoryLinks,
@@ -2930,16 +2935,8 @@
         };
     @endphp
 
-    <main class="page">
-        <nav class="breadcrumb" aria-label="Breadcrumb">
-            <a href="/">Home</a>
-            <span aria-hidden="true">›</span>
-            <a href="/catalog/accommodation">Accommodation</a>
-            <span aria-hidden="true">›</span>
-            <span>{{ (string) ($property->name ?? 'Property') }}</span>
-        </nav>
-
-        <section class="top-search-shell" aria-label="Search property stay options">
+    <section class="top-search-shell" aria-label="Search property stay options">
+        <div class="top-search-inner">
             <form method="GET" action="" class="top-search-form" id="propertyTopSearch">
                 <div class="top-search-field">
                     <label for="topProperty">Location</label>
@@ -2962,7 +2959,17 @@
                 </div>
                 <button type="submit" class="top-search-btn"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Search</button>
             </form>
-        </section>
+        </div>
+    </section>
+
+    <main class="page">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="/">Home</a>
+            <span aria-hidden="true">›</span>
+            <a href="/catalog/accommodation">Accommodation</a>
+            <span aria-hidden="true">›</span>
+            <span>{{ (string) ($property->name ?? 'Property') }}</span>
+        </nav>
 
         <section class="hero" aria-label="Property summary">
             <div class="hero-top">

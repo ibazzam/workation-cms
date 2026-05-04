@@ -2704,7 +2704,7 @@
                                         <div class="card-time">
                                             <i class="fa-solid fa-clock" aria-hidden="true"></i>
                                             @if ($startTimeLabel !== '' && $endTimeLabel !== '')
-                                                {{ $startTimeLabel }} – {{ $endTimeLabel }}
+                                                {{ $startTimeLabel }} - {{ $endTimeLabel }}
                                             @elseif ($startTimeLabel !== '')
                                                 Starts {{ $startTimeLabel }}
                                             @else

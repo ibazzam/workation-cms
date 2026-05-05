@@ -56,6 +56,7 @@ Route::get('/vendor', function () {
     $vendorBilling = null;
     $vendorPayoutAccounts = collect();
     $vendorRoomCategories = collect();
+    $vendorRentalItems = collect();
     $vendorMediaAssets = collect();
     $payoutStatusRows = collect();
     $vendorReservationSummaryByProperty = collect();
@@ -665,6 +666,18 @@ Route::get('/vendor', function () {
             $vendorRoomCategories = $roomCategoryQuery->limit(200)->get();
         }
 
+        if ($loadRoomInventoryData && Schema::hasTable('vendor_water_sports_rental_items')) {
+            $rentalItemQuery = DB::table('vendor_water_sports_rental_items')
+                ->where('vendor_user_id', $vendorUserId)
+                ->orderByDesc('updated_at');
+
+            if ($vendorPropertyIds->isNotEmpty()) {
+                $rentalItemQuery->whereIn('vendor_property_id', $vendorPropertyIds->all());
+            }
+
+            $vendorRentalItems = $rentalItemQuery->limit(400)->get();
+        }
+
         if ($loadListingsHeavyData && Schema::hasTable('vendor_listing_media')) {
             $roomIds = $vendorRoomCategories
                 ->pluck('id')
@@ -944,6 +957,7 @@ Route::get('/vendor', function () {
         'vendorPayoutAccounts' => $vendorPayoutAccounts,
         'vendorRoomCategories' => $vendorRoomCategories,
         'vendorRooms' => $vendorRoomCategories,
+        'vendorRentalItems' => $vendorRentalItems,
         'vendorMediaAssets' => $vendorMediaAssets,
         'payoutStatusRows' => $payoutStatusRows,
         'vendorReservationSummaryByProperty' => $vendorReservationSummaryByProperty,

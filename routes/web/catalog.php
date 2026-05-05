@@ -88,6 +88,12 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     $sort = strtolower(trim((string) $request->query('sort', 'recommended')));
     $originPointFilter = trim((string) $request->query('origin_point', ''));
     $destinationPointFilter = trim((string) $request->query('destination_point', ''));
+    $visitorResidency = function_exists('workationDetectVisitorResidency')
+        ? workationDetectVisitorResidency($request)
+        : (strtoupper(trim((string) ($request->header('CF-IPCountry') ?? $request->header('X-Country-Code') ?? $request->header('X-GeoIP-Country') ?? ''))) === 'MV'
+            ? 'local_resident'
+            : 'foreign_national');
+    $mvrUsdRate = max(0.0, (float) env('MVR_USD_RATE', 15.42));
 
     // For island-specific categories (restaurant, vehicle_rental), fall back to
     // current_island or pickup_island when the generic island filter is not set.
@@ -642,6 +648,8 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         'atollOptions' => $atollOptions,
         'islandOptions' => $islandOptions,
         'transportDestinationOptions' => $transportDestinationOptions,
+        'visitorResidency' => $visitorResidency,
+        'mvrUsdRate' => $mvrUsdRate,
         'filters' => [
             'q' => $queryText,
             'atoll' => $atollFilter,

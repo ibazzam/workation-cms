@@ -202,6 +202,9 @@
         $roomsByPropertyId = $vendorRooms->groupBy(static function ($room) {
             return (int) ($room->vendor_property_id ?? 0);
         });
+        $rentalItemsByPropertyId = ($vendorRentalItems ?? collect())->groupBy(static function ($item) {
+            return (int) ($item->vendor_property_id ?? 0);
+        });
         $propertyMediaByEntityId = $propertyMediaAssets->groupBy(static function ($media) {
             return (int) ($media->entity_id ?? 0);
         });
@@ -2841,6 +2844,67 @@
                         return;
                     }
                     closeEditForm('[data-room-edit-form="' + editId + '"]');
+                });
+            });
+
+            // Water sports rental item form toggles
+            const rentalItemQuickOpenButtons = Array.from(document.querySelectorAll('[data-open-rental-item-form]'));
+            const inlineRentalItemRows = Array.from(document.querySelectorAll('[data-inline-rental-item-row]'));
+            const inlineRentalItemCloseButtons = Array.from(document.querySelectorAll('[data-close-inline-rental-item-row]'));
+            const rentalItemEditButtons = Array.from(document.querySelectorAll('[data-open-rental-item-edit]'));
+            const rentalItemEditCancelButtons = Array.from(document.querySelectorAll('[data-close-rental-item-edit]'));
+
+            rentalItemQuickOpenButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const propertyId = String(button.getAttribute('data-property-id') || '').trim();
+                    const targetRow = document.querySelector('[data-inline-rental-item-row="' + propertyId + '"]');
+                    if (!targetRow) {
+                        return;
+                    }
+                    inlineRentalItemRows.forEach((row) => {
+                        if (row !== targetRow) {
+                            row.hidden = true;
+                        }
+                    });
+                    targetRow.hidden = false;
+                    const firstInput = targetRow.querySelector('input[name="name"]');
+                    if (firstInput) {
+                        firstInput.focus();
+                    }
+                    targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                });
+            });
+
+            inlineRentalItemCloseButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const propertyId = String(button.getAttribute('data-close-inline-rental-item-row') || '').trim();
+                    if (!propertyId) {
+                        return;
+                    }
+                    const targetRow = document.querySelector('[data-inline-rental-item-row="' + propertyId + '"]');
+                    if (targetRow) {
+                        targetRow.hidden = true;
+                    }
+                });
+            });
+
+            rentalItemEditButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const editId = String(button.getAttribute('data-rental-item-edit-id') || '').trim();
+                    if (!editId) {
+                        return;
+                    }
+                    openEditForm('[data-rental-item-edit-form="' + editId + '"]');
+                });
+            });
+
+            rentalItemEditCancelButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const editId = String(button.getAttribute('data-rental-item-edit-id') || '').trim();
+                    if (!editId) {
+                        return;
+                    }
+                    closeEditForm('[data-rental-item-edit-form="' + editId + '"]');
                 });
             });
 

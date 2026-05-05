@@ -62,7 +62,7 @@ class CatalogCategoryPricingTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $response = $this->get('/catalog/excursion');
+        $response = $this->get('/catalog/excursion', ['CF-IPCountry' => 'MV']);
 
         $response
             ->assertOk()
@@ -95,7 +95,7 @@ class CatalogCategoryPricingTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $response = $this->get('/catalog/accommodation');
+        $response = $this->get('/catalog/accommodation', ['CF-IPCountry' => 'MV']);
 
         $response
             ->assertOk()

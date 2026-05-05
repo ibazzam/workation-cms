@@ -28,7 +28,7 @@ class HomepageCategoryPricingTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $response = $this->get('/');
+        $response = $this->get('/', ['CF-IPCountry' => 'MV']);
 
         $response
             ->assertOk()

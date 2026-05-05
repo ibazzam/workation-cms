@@ -27,7 +27,7 @@ use Laravel\Socialite\Facades\Socialite;
 use Firebase\JWT\JWT;
 use Firebase\JWT\JWK;
 
-Route::get('/', function () {
+Route::get('/', function (Request $request) {
     $apiBase = workationApiBase();
     $homeHeroBackgroundUrl = portalHeroStoredValueForSlot('home');
     $hasManagedHomeHeroImage = $homeHeroBackgroundUrl !== '';
@@ -66,6 +66,34 @@ Route::get('/', function () {
     ];
 
     $homeTrendingChips = collect(['Top Islands', 'Top Cities', 'Top Atolls', 'Newly Rising']);
+    $visitorResidency = function_exists('workationDetectVisitorResidency')
+        ? workationDetectVisitorResidency($request)
+        : (strtoupper(trim((string) ($request->header('CF-IPCountry') ?? $request->header('X-Country-Code') ?? $request->header('X-GeoIP-Country') ?? ''))) === 'MV'
+            ? 'local_resident'
+            : 'foreign_national');
+    $visitorIsLocal = $visitorResidency === 'local_resident';
+    $mvrUsdRate = max(0.0, (float) env('MVR_USD_RATE', 15.42));
+    $displayPriceForVisitor = static function (float $amount, string $sourceCurrency) use ($visitorIsLocal, $mvrUsdRate): array {
+        $normalizedAmount = max(0.0, $amount);
+        $normalizedCurrency = strtoupper(trim($sourceCurrency));
+        if ($normalizedCurrency === '') {
+            $normalizedCurrency = 'MVR';
+        }
+
+        if ($visitorIsLocal) {
+            if ($normalizedCurrency === 'USD' && $mvrUsdRate > 0) {
+                return ['currency' => 'MVR', 'amount' => round($normalizedAmount * $mvrUsdRate, 2)];
+            }
+
+            return ['currency' => 'MVR', 'amount' => $normalizedCurrency === 'MVR' ? round($normalizedAmount, 2) : round($normalizedAmount, 2)];
+        }
+
+        if ($normalizedCurrency === 'MVR' && $mvrUsdRate > 0) {
+            return ['currency' => 'USD', 'amount' => round($normalizedAmount / $mvrUsdRate, 2)];
+        }
+
+        return ['currency' => 'USD', 'amount' => $normalizedCurrency === 'USD' ? round($normalizedAmount, 2) : round($normalizedAmount, 2)];
+    };
 
     $homeCuratedDestinationImages = [
         'maafushi' => '/images/home/destinations/maafushi-island.svg',
@@ -1016,7 +1044,7 @@ Route::get('/', function () {
                 return $card;
             });
 
-            $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categorySamples, $categoryMinPriceRows, $globalMinPriceRow, $resolvePropertyImage, $resolvePropertyFallbackImage, $propertyLocationLabel) {
+            $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categorySamples, $categoryMinPriceRows, $globalMinPriceRow, $resolvePropertyImage, $resolvePropertyFallbackImage, $propertyLocationLabel, $displayPriceForVisitor) {
                 $categoryHint = match ($card['title']) {
                     'Stay Options' => 'accommodation',
                     'Marine Transport' => 'marine_transport',
@@ -1055,8 +1083,8 @@ Route::get('/', function () {
                 }
 
                 if (is_array($priceSource) && (float) ($priceSource['price'] ?? 0) > 0) {
-                    $currency = strtoupper(trim((string) ($priceSource['currency'] ?? 'MVR')));
-                    $card['price_label'] = $currency . ' ' . number_format((float) ($priceSource['price'] ?? 0), 2);
+                    $displayPrice = $displayPriceForVisitor((float) ($priceSource['price'] ?? 0), (string) ($priceSource['currency'] ?? 'MVR'));
+                    $card['price_label'] = (string) ($displayPrice['currency'] ?? 'MVR') . ' ' . number_format((float) ($displayPrice['amount'] ?? 0), 2);
                 }
 
                 return $card;
@@ -1153,7 +1181,7 @@ Route::get('/', function () {
                 return ((int) ($b['count'] ?? 0)) <=> ((int) ($a['count'] ?? 0));
             });
             $homeTrendingCards = collect(array_slice(array_values($locationScores), 0, 4))
-                ->map(function (array $row) use ($resolvePropertyImage, $resolvePropertyFallbackImage) {
+                ->map(function (array $row) use ($resolvePropertyImage, $resolvePropertyFallbackImage, $displayPriceForVisitor) {
                     $sample = $row['sample_property'] ?? null;
                     $sampleId = (int) ($sample->id ?? 0);
                     $sampleCategory = strtolower(trim((string) ($sample->listing_category ?? 'accommodation')));
@@ -1173,7 +1201,8 @@ Route::get('/', function () {
                     ];
 
                     if ($samplePrice > 0) {
-                        $payload['price_label'] = $sampleCurrency . ' ' . number_format($samplePrice, 2);
+                        $displayPrice = $displayPriceForVisitor($samplePrice, $sampleCurrency);
+                        $payload['price_label'] = (string) ($displayPrice['currency'] ?? 'MVR') . ' ' . number_format((float) ($displayPrice['amount'] ?? 0), 2);
                     }
 
                     return $payload;
@@ -1198,10 +1227,11 @@ Route::get('/', function () {
 
             $weekendCandidates = $accommodationDeals;
 
-            $homeWeekendDealCards = $weekendCandidates->take(4)->map(function ($property) use ($resolvePropertyImage, $resolvePropertyFallbackImage) {
+            $homeWeekendDealCards = $weekendCandidates->take(4)->map(function ($property) use ($resolvePropertyImage, $resolvePropertyFallbackImage, $displayPriceForVisitor) {
                 $name = trim((string) ($property->name ?? 'Weekend Offer'));
                 $currency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
-                $price = number_format((float) ($property->base_price ?? 0), 2);
+                $displayPrice = $displayPriceForVisitor((float) ($property->base_price ?? 0), $currency);
+                $price = number_format((float) ($displayPrice['amount'] ?? 0), 2);
                 $propertyId = (int) ($property->id ?? 0);
                 $place = trim((string) ($property->island ?? ''));
                 if ($place === '') {
@@ -1211,7 +1241,7 @@ Route::get('/', function () {
                 return [
                     'title' => $name,
                     'subtitle' => $place,
-                    'price_label' => $currency . ' ' . $price,
+                    'price_label' => (string) ($displayPrice['currency'] ?? 'MVR') . ' ' . $price,
                     'url' => '/property/' . $propertyId,
                     'image_url' => $resolvePropertyImage($propertyId),
                     'fallback_image_url' => $resolvePropertyFallbackImage($propertyId),
@@ -1220,8 +1250,9 @@ Route::get('/', function () {
             })->values();
 
             $lowestPrice = (float) ($priceSorted->first()->base_price ?? 0);
+            $lowestDisplayPrice = $displayPriceForVisitor($lowestPrice, 'MVR');
             $homePromoBanner = [
-                'message' => '🎉 Offers & Promotions: Trending deals now live across stays and services from MVR ' . number_format($lowestPrice, 2) . '.',
+                'message' => '🎉 Offers & Promotions: Trending deals now live across stays and services from ' . (string) ($lowestDisplayPrice['currency'] ?? 'MVR') . ' ' . number_format((float) ($lowestDisplayPrice['amount'] ?? 0), 2) . '.',
                 'url' => '/catalog/accommodation?sort=price_low_high',
                 'cta' => 'Explore Deals',
             ];
@@ -1266,7 +1297,8 @@ Route::get('/', function () {
                     ];
 
                     if ($propertyPrice > 0) {
-                        $cardPayload['price_label'] = $propertyCurrency . ' ' . number_format($propertyPrice, 2);
+                        $displayPrice = $displayPriceForVisitor($propertyPrice, $propertyCurrency);
+                        $cardPayload['price_label'] = (string) ($displayPrice['currency'] ?? 'MVR') . ' ' . number_format((float) ($displayPrice['amount'] ?? 0), 2);
                     }
 
                     $lovedDestinationCards[] = $cardPayload;

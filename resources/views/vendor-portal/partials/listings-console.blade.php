@@ -236,6 +236,7 @@
                                                 @php
                                                     $propertyId = (int) ($property->id ?? 0);
                                                     $propertyRooms = $roomsByPropertyId->get($propertyId, collect());
+                                                    $propertyRentalItems = ($rentalItemsByPropertyId ?? collect())->get($propertyId, collect());
                                                     $propertyDetails = [];
                                                     if (isset($property->listing_details) && is_string($property->listing_details) && trim((string) $property->listing_details) !== '') {
                                                         $decodedPropertyDetails = json_decode((string) $property->listing_details, true);
@@ -323,6 +324,8 @@
                                                             <span class="ops-chip listing-status-chip {{ $moderationChipClass }}" title="Moderation status">{{ $moderationLabel }}</span>
                                                             @if ($categoryKey === 'accommodation')
                                                                 <span class="ops-chip">Rooms: {{ $propertyRooms->count() }}</span>
+                                                            @elseif ($categoryKey === 'water_sports')
+                                                                <span class="ops-chip">Equipment: {{ $propertyRentalItems->count() }}</span>
                                                             @endif
                                                         </div>
                                                         @if ($listingModerationStatus === 'rejected' && !empty($property->listing_admin_notes))
@@ -337,6 +340,9 @@
                                                                     <button class="btn btn-secondary" type="button" data-toggle-property-media="{{ $propertyId }}">Manage Media</button>
                                                                     @if ($categoryKey === 'accommodation')
                                                                         <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ $propertyId }}">Add Room</button>
+                                                                    @endif
+                                                                    @if ($categoryKey === 'water_sports')
+                                                                        <button class="btn btn-secondary" type="button" data-open-rental-item-form data-property-id="{{ $propertyId }}">Add Equipment</button>
                                                                     @endif
                                                                     @if ($listingModerationStatus === 'pending_review')
                                                                         <span class="ops-chip is-pending">Under Review</span>
@@ -691,6 +697,136 @@
                                                         </td>
                                                     </tr>
                                                 @endif
+                                                @if ($categoryKey === 'water_sports')
+                                                    <tr class="water-sports-equipment-stretch-row">
+                                                        <td colspan="2">
+                                                            <div class="accommodation-room-stretch">
+                                                                <p class="property-subsection-head">Rental Equipment Under This Shop ({{ $propertyRentalItems->count() }})</p>
+                                                                @if ($propertyRentalItems->isEmpty())
+                                                                    <p class="ops-empty">No rental equipment for this listing yet. Add equipment items to start taking water sports bookings.</p>
+                                                                @else
+                                                                    <div class="ops-table-wrap">
+                                                                        <table class="ops-table is-compact room-management-table" aria-label="Equipment for property {{ $propertyId }}">
+                                                                            <thead>
+                                                                                <tr>
+                                                                                    <th>Equipment</th>
+                                                                                    <th>Summary</th>
+                                                                                    <th>Actions</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                @foreach ($propertyRentalItems as $rentalItem)
+                                                                                    @php
+                                                                                        $rentalItemId = (int) ($rentalItem->id ?? 0);
+                                                                                        $rentalItemType = strtolower(trim((string) ($rentalItem->equipment_type ?? 'other')));
+                                                                                        $rentalItemTypeBadge = ucfirst(str_replace('_', ' ', $rentalItemType));
+                                                                                    @endphp
+                                                                                    <tr>
+                                                                                        <td>
+                                                                                            <div class="listing-summary-line">
+                                                                                                <strong>{{ $rentalItem->name }}</strong>
+                                                                                                <span class="ops-chip">ID {{ $rentalItemId }}</span>
+                                                                                                <span class="ops-chip">{{ $rentalItemTypeBadge }}</span>
+                                                                                            </div>
+                                                                                        </td>
+                                                                                        <td>
+                                                                                            <span class="room-summary-line">Qty: {{ (int) ($rentalItem->quantity_available ?? 1) }} | Local: MVR {{ number_format((float) ($rentalItem->price_per_hour_local ?? 0), 2) }}/hr | Foreign: USD {{ number_format((float) ($rentalItem->price_per_hour_usd ?? 0), 2) }}/hr | Min: {{ (int) ($rentalItem->min_duration_minutes ?? 30) }}min | Max: {{ (int) ($rentalItem->max_duration_hours ?? 8) }}hrs</span>
+                                                                                        </td>
+                                                                                        <td>
+                                                                                            <div class="inline-actions listing-actions-inline listing-actions-compact">
+                                                                                                <div class="listing-actions-row">
+                                                                                                    <button class="btn btn-secondary" type="button" data-open-rental-item-edit data-rental-item-edit-id="{{ $rentalItemId }}">Edit</button>
+                                                                                                    <form method="POST" action="/portal/vendor/water-sports-equipment/{{ $rentalItemId }}/delete" onsubmit="return confirm('Remove this rental item?');">
+                                                                                                        @csrf
+                                                                                                        <button class="btn btn-danger" type="submit">Remove</button>
+                                                                                                    </form>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/water-sports-equipment/{{ $rentalItemId }}/update" data-rental-item-edit-form="{{ $rentalItemId }}" hidden>
+                                                                                                @csrf
+                                                                                                <input class="ops-input" name="name" type="text" maxlength="160" value="{{ (string) ($rentalItem->name ?? '') }}" required>
+                                                                                                <select class="ops-select" name="equipment_type">
+                                                                                                    @php
+                                                                                                        $editEquipmentType = strtolower(trim((string) ($rentalItem->equipment_type ?? 'other')));
+                                                                                                        $equipmentTypeOptions = [
+                                                                                                            'jetski' => 'Jet Ski',
+                                                                                                            'snorkeling_gear' => 'Snorkeling Gear',
+                                                                                                            'canoe' => 'Canoe',
+                                                                                                            'surfboard' => 'Surf Board',
+                                                                                                            'paddleboard' => 'Paddle Board',
+                                                                                                            'banana_boat' => 'Banana Boat',
+                                                                                                            'parasailing' => 'Parasailing',
+                                                                                                            'windsurf' => 'Wind Surf',
+                                                                                                            'other' => 'Other',
+                                                                                                        ];
+                                                                                                    @endphp
+                                                                                                    @foreach ($equipmentTypeOptions as $etValue => $etLabel)
+                                                                                                        <option value="{{ $etValue }}" @selected($editEquipmentType === $etValue)>{{ $etLabel }}</option>
+                                                                                                    @endforeach
+                                                                                                </select>
+                                                                                                <select class="ops-select" name="equipment_category">
+                                                                                                    @php
+                                                                                                        $editEquipmentCategory = strtolower(trim((string) ($rentalItem->equipment_category ?? 'non_motorized')));
+                                                                                                        $equipmentCategoryOptions = [
+                                                                                                            'motorized' => 'Motorized',
+                                                                                                            'non_motorized' => 'Non-Motorized',
+                                                                                                            'adrenaline' => 'Adrenaline',
+                                                                                                            'guided' => 'Guided Activity',
+                                                                                                            'snorkeling_diving' => 'Snorkeling/Diving',
+                                                                                                            'other' => 'Other',
+                                                                                                        ];
+                                                                                                    @endphp
+                                                                                                    @foreach ($equipmentCategoryOptions as $ecValue => $ecLabel)
+                                                                                                        <option value="{{ $ecValue }}" @selected($editEquipmentCategory === $ecValue)>{{ $ecLabel }}</option>
+                                                                                                    @endforeach
+                                                                                                </select>
+                                                                                                <textarea class="ops-textarea" name="description" rows="3" maxlength="3000" placeholder="Description">{{ trim((string) ($rentalItem->description ?? '')) }}</textarea>
+                                                                                                <div class="listing-transfer-table">
+                                                                                                    <div class="listing-transfer-head" aria-hidden="true">
+                                                                                                        <span>Rate</span>
+                                                                                                        <span>Price per Hour</span>
+                                                                                                    </div>
+                                                                                                    <div class="listing-transfer-row">
+                                                                                                        <div class="listing-transfer-option"><label><span>Adult Local (MVR/hr)</span></label></div>
+                                                                                                        <label class="listing-transfer-rate"><span>Local (MVR)</span><input class="ops-input" name="price_per_hour_local" type="number" min="0" step="0.01" value="{{ (float) ($rentalItem->price_per_hour_local ?? 0) > 0 ? (float) ($rentalItem->price_per_hour_local ?? 0) : '' }}" placeholder="MVR 0.00"></label>
+                                                                                                    </div>
+                                                                                                    <div class="listing-transfer-row">
+                                                                                                        <div class="listing-transfer-option"><label><span>Adult Foreign (USD/hr)</span></label></div>
+                                                                                                        <label class="listing-transfer-rate"><span>Foreign (USD)</span><input class="ops-input" name="price_per_hour_usd" type="number" min="0" step="0.01" value="{{ (float) ($rentalItem->price_per_hour_usd ?? 0) > 0 ? (float) ($rentalItem->price_per_hour_usd ?? 0) : '' }}" placeholder="USD 0.00"></label>
+                                                                                                    </div>
+                                                                                                    <div class="listing-transfer-row">
+                                                                                                        <div class="listing-transfer-option"><label><span>Child Local (MVR/hr)</span></label></div>
+                                                                                                        <label class="listing-transfer-rate"><span>Local (MVR)</span><input class="ops-input" name="price_per_hour_child_local" type="number" min="0" step="0.01" value="{{ (float) ($rentalItem->price_per_hour_child_local ?? 0) > 0 ? (float) ($rentalItem->price_per_hour_child_local ?? 0) : '' }}" placeholder="MVR 0.00"></label>
+                                                                                                    </div>
+                                                                                                    <div class="listing-transfer-row">
+                                                                                                        <div class="listing-transfer-option"><label><span>Child Foreign (USD/hr)</span></label></div>
+                                                                                                        <label class="listing-transfer-rate"><span>Foreign (USD)</span><input class="ops-input" name="price_per_hour_child_usd" type="number" min="0" step="0.01" value="{{ (float) ($rentalItem->price_per_hour_child_usd ?? 0) > 0 ? (float) ($rentalItem->price_per_hour_child_usd ?? 0) : '' }}" placeholder="USD 0.00"></label>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                                <input class="ops-input" name="min_age_years" type="number" min="0" max="120" value="{{ (int) ($rentalItem->min_age_years ?? 0) }}" placeholder="Minimum age (0 = no restriction)">
+                                                                                                <input class="ops-input" name="min_duration_minutes" type="number" min="5" max="1440" value="{{ (int) ($rentalItem->min_duration_minutes ?? 30) }}" placeholder="Min duration (minutes)">
+                                                                                                <input class="ops-input" name="max_duration_hours" type="number" min="1" max="24" value="{{ (int) ($rentalItem->max_duration_hours ?? 8) }}" placeholder="Max duration (hours)">
+                                                                                                <input class="ops-input" name="quantity_available" type="number" min="1" max="10000" value="{{ (int) ($rentalItem->quantity_available ?? 1) }}" placeholder="Quantity available">
+                                                                                                <select class="ops-select" name="status">
+                                                                                                    <option value="active" @selected(strtolower((string) ($rentalItem->status ?? 'active')) === 'active')>Active</option>
+                                                                                                    <option value="inactive" @selected(strtolower((string) ($rentalItem->status ?? 'active')) === 'inactive')>Inactive</option>
+                                                                                                </select>
+                                                                                                <div class="inline-actions">
+                                                                                                    <button class="btn btn-secondary js-row-update" type="submit">Update Equipment</button>
+                                                                                                    <button class="btn btn-secondary" type="button" data-close-rental-item-edit data-rental-item-edit-id="{{ $rentalItemId }}">Cancel</button>
+                                                                                                </div>
+                                                                                            </form>
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                @endforeach
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                @endif
                                                 @if ($categoryKey === 'accommodation')
                                                     @php
                                                         $showInlineRoomRow = $showCreateRoomForm && (string) old('vendor_property_id') === (string) $propertyId;
@@ -883,6 +1019,110 @@
                                                                 <div class="inline-actions" style="margin-top:10px;">
                                                                     <button class="btn btn-primary" type="submit">Save Room</button>
                                                                     <button class="btn btn-secondary" type="button" data-close-inline-room-row="{{ $propertyId }}">Cancel</button>
+                                                                </div>
+                                                            </form>
+                                                        </td>
+                                                    </tr>
+                                                @endif
+                                                @if ($categoryKey === 'water_sports')
+                                                    @php
+                                                        $showInlineRentalItemRow = isset($showCreateRentalItemForm) && $showCreateRentalItemForm && (string) old('vendor_property_id') === (string) $propertyId;
+                                                    @endphp
+                                                    <tr data-inline-rental-item-row="{{ $propertyId }}" @if (!$showInlineRentalItemRow) hidden @endif>
+                                                        <td colspan="2">
+                                                            <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/water-sports-equipment/create" data-inline-rental-item-form="{{ $propertyId }}">
+                                                                @csrf
+                                                                <input type="hidden" name="vendor_property_id" value="{{ $propertyId }}">
+                                                                <div class="ops-form-grid">
+                                                                    <div class="ops-field">
+                                                                        <label>Water Sports Shop</label>
+                                                                        <input class="ops-input" type="text" value="{{ $property->name }} (ID {{ $propertyId }})" readonly>
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Equipment Name</label>
+                                                                        <input class="ops-input" name="name" type="text" maxlength="160" value="{{ $showInlineRentalItemRow ? old('name') : '' }}" required placeholder="e.g. Jet Ski (2-seater)">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Equipment Type</label>
+                                                                        <select class="ops-select" name="equipment_type">
+                                                                            @php
+                                                                                $newEquipmentTypeOptions = [
+                                                                                    'jetski' => 'Jet Ski',
+                                                                                    'snorkeling_gear' => 'Snorkeling Gear',
+                                                                                    'canoe' => 'Canoe',
+                                                                                    'surfboard' => 'Surf Board',
+                                                                                    'paddleboard' => 'Paddle Board',
+                                                                                    'banana_boat' => 'Banana Boat',
+                                                                                    'parasailing' => 'Parasailing',
+                                                                                    'windsurf' => 'Wind Surf',
+                                                                                    'other' => 'Other',
+                                                                                ];
+                                                                                $oldEquipmentType = $showInlineRentalItemRow ? old('equipment_type', 'other') : 'other';
+                                                                            @endphp
+                                                                            @foreach ($newEquipmentTypeOptions as $etValue => $etLabel)
+                                                                                <option value="{{ $etValue }}" @selected($oldEquipmentType === $etValue)>{{ $etLabel }}</option>
+                                                                            @endforeach
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Equipment Category</label>
+                                                                        <select class="ops-select" name="equipment_category">
+                                                                            @php
+                                                                                $newEquipmentCategoryOptions = [
+                                                                                    'motorized' => 'Motorized',
+                                                                                    'non_motorized' => 'Non-Motorized',
+                                                                                    'adrenaline' => 'Adrenaline',
+                                                                                    'guided' => 'Guided Activity',
+                                                                                    'snorkeling_diving' => 'Snorkeling/Diving',
+                                                                                    'other' => 'Other',
+                                                                                ];
+                                                                                $oldEquipmentCategory = $showInlineRentalItemRow ? old('equipment_category', 'non_motorized') : 'non_motorized';
+                                                                            @endphp
+                                                                            @foreach ($newEquipmentCategoryOptions as $ecValue => $ecLabel)
+                                                                                <option value="{{ $ecValue }}" @selected($oldEquipmentCategory === $ecValue)>{{ $ecLabel }}</option>
+                                                                            @endforeach
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="ops-field ops-field-wide">
+                                                                        <label>Description</label>
+                                                                        <textarea class="ops-textarea" name="description" rows="3" maxlength="3000" placeholder="Brief description of this equipment...">{{ $showInlineRentalItemRow ? old('description', '') : '' }}</textarea>
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Price per Hour — Local (MVR)</label>
+                                                                        <input class="ops-input" name="price_per_hour_local" type="number" min="0" step="0.01" value="{{ $showInlineRentalItemRow ? old('price_per_hour_local', '') : '' }}" placeholder="MVR 0.00">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Price per Hour — Foreign (USD)</label>
+                                                                        <input class="ops-input" name="price_per_hour_usd" type="number" min="0" step="0.01" value="{{ $showInlineRentalItemRow ? old('price_per_hour_usd', '') : '' }}" placeholder="USD 0.00">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Child Price per Hour — Local (MVR)</label>
+                                                                        <input class="ops-input" name="price_per_hour_child_local" type="number" min="0" step="0.01" value="{{ $showInlineRentalItemRow ? old('price_per_hour_child_local', '') : '' }}" placeholder="MVR 0.00 (optional)">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Child Price per Hour — Foreign (USD)</label>
+                                                                        <input class="ops-input" name="price_per_hour_child_usd" type="number" min="0" step="0.01" value="{{ $showInlineRentalItemRow ? old('price_per_hour_child_usd', '') : '' }}" placeholder="USD 0.00 (optional)">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Minimum Age (years)</label>
+                                                                        <input class="ops-input" name="min_age_years" type="number" min="0" max="120" value="{{ $showInlineRentalItemRow ? old('min_age_years', 0) : 0 }}" placeholder="0 = no age restriction">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Minimum Duration (minutes)</label>
+                                                                        <input class="ops-input" name="min_duration_minutes" type="number" min="5" max="1440" value="{{ $showInlineRentalItemRow ? old('min_duration_minutes', 30) : 30 }}" placeholder="e.g. 30">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Maximum Duration (hours)</label>
+                                                                        <input class="ops-input" name="max_duration_hours" type="number" min="1" max="24" value="{{ $showInlineRentalItemRow ? old('max_duration_hours', 8) : 8 }}" placeholder="e.g. 8">
+                                                                    </div>
+                                                                    <div class="ops-field">
+                                                                        <label>Quantity Available</label>
+                                                                        <input class="ops-input" name="quantity_available" type="number" min="1" max="10000" value="{{ $showInlineRentalItemRow ? old('quantity_available', 1) : 1 }}" placeholder="1">
+                                                                    </div>
+                                                                </div>
+                                                                <div class="inline-actions" style="margin-top:10px;">
+                                                                    <button class="btn btn-primary" type="submit">Save Equipment</button>
+                                                                    <button class="btn btn-secondary" type="button" data-close-inline-rental-item-row="{{ $propertyId }}">Cancel</button>
                                                                 </div>
                                                             </form>
                                                         </td>

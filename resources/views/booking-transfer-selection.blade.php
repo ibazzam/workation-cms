@@ -61,11 +61,11 @@
         $selectedOption = strtolower(trim((string) ($selectedTransferOption ?? 'none')));
         $includeTransfer = (bool) ($includeTransfer ?? false);
         $hasTransferOptions = $transferOptions->isNotEmpty();
-        $isServiceBooking = $headerCategoryKey !== 'accommodation';
+          $headerCategorySource = trim((string) ($summary['category_key'] ?? 'accommodation'));
+          $headerCategoryKey = str_replace('_', '-', strtolower($headerCategorySource !== '' ? $headerCategorySource : 'accommodation'));
+          $isServiceBooking = $headerCategoryKey !== 'accommodation';
 
-           $headerCategorySource = trim((string) ($summary['category_key'] ?? 'accommodation'));
-           $headerCategoryKey = str_replace('_', '-', strtolower($headerCategorySource !== '' ? $headerCategorySource : 'accommodation'));
-           $headerCategoryLinks = [
+              $headerCategoryLinks = [
               ['key' => 'accommodation', 'icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas', 'url' => '/catalog/accommodation'],
               ['key' => 'resort-day-visit', 'icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'subtitle' => 'Day-use resort offers', 'url' => '/catalog/resort_day_visit'],
               ['key' => 'excursion', 'icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'subtitle' => 'Tours and activities', 'url' => '/catalog/excursion'],

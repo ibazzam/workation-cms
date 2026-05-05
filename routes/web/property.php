@@ -153,6 +153,24 @@ Route::get('/property/{property}', function (Request $request, int $property) {
         }
     ));
 
+    // Load rental equipment items for water_sports listings
+    $rentalItems = collect();
+    if ($listingCategory === 'water_sports' && Schema::hasTable('vendor_water_sports_rental_items')) {
+        $rentalItems = collect(Cache::remember(
+            'property_profile:rental_items:v1:' . md5($propertyLookupIds->implode(',')),
+            now()->addMinutes(3),
+            static function () use ($propertyLookupIds) {
+                return DB::table('vendor_water_sports_rental_items')
+                    ->whereIn('vendor_property_id', $propertyLookupIds->all())
+                    ->where('status', 'active')
+                    ->orderBy('equipment_category')
+                    ->orderBy('name')
+                    ->get()
+                    ->all();
+            }
+        ));
+    }
+
     if ($listingCategory === 'accommodation') {
         $resolvedRoomMinPrice = $rooms
             ->map(static function ($room) {
@@ -877,6 +895,7 @@ Route::get('/property/{property}', function (Request $request, int $property) {
         'propertyMedia' => $propertyMedia,
         'roomMediaByRoom' => $roomMediaByRoom,
         'rooms' => $rooms,
+        'rentalItems' => $rentalItems,
         'propertyFacilities' => $propertyFacilities,
         'locationLine' => $locationLine,
         'ratingValue' => $reviewColumn ? (float) ($propertyRow->{$reviewColumn} ?? 0) : 0,

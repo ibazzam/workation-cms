@@ -43,6 +43,11 @@ Route::get('/portal/{portal}/login', function (Request $request, string $portal)
 
     $config = portalConfig($portal);
     if (session()->get($config['session_key'], false)) {
+        if ($portal === 'customer') {
+            $postAuthRedirect = consumeCustomerPostAuthRedirect($request, '/');
+            return redirect($postAuthRedirect);
+        }
+
         return $portal === 'customer'
             ? redirect('/')
             : redirect(portalRoutePath($portal));
@@ -787,7 +792,8 @@ Route::get('/portal/customer/register', function (Request $request) {
     rememberCustomerPostAuthRedirect($request);
 
     if (session()->get('portal_customer_authenticated', false)) {
-        return redirect('/');
+        $postAuthRedirect = consumeCustomerPostAuthRedirect($request, '/');
+        return redirect($postAuthRedirect);
     }
 
     $socialProviders = collect(supportedCustomerSocialProviders())

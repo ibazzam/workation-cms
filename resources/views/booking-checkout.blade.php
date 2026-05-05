@@ -47,6 +47,19 @@
         .payment-box h2 { margin:0; font-size:0.94rem; color:#18455c; font-family:"Space Grotesk","Trebuchet MS",sans-serif; }
         .terms-box { border:1px solid #d6e5ee; border-radius:12px; background:#f7fbff; padding:12px; display:grid; gap:10px; }
         .terms-box h2 { margin:0; font-size:0.94rem; color:#18455c; font-family:"Space Grotesk","Trebuchet MS",sans-serif; }
+        .guest-details-box { border:1px solid #d6e5ee; border-radius:12px; background:#f7fbff; padding:12px; display:grid; gap:10px; }
+        .guest-details-box h2 { margin:0; font-size:0.94rem; color:#18455c; font-family:"Space Grotesk","Trebuchet MS",sans-serif; }
+        .guest-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+        .guest-form-field { display:grid; gap:5px; }
+        .guest-form-field label { font-size:0.76rem; text-transform:uppercase; letter-spacing:0.06em; color:#58708a; font-weight:700; }
+        .guest-form-field input,
+        .guest-form-field textarea,
+        .guest-form-field select { width:100%; border:1px solid #cfe0eb; border-radius:9px; padding:9px 10px; background:#fff; font:inherit; color:#1a3f56; }
+        .guest-form-field textarea { min-height:82px; resize:vertical; }
+        .guest-form-grid .full { grid-column:1 / -1; }
+        .guest-form-note { margin:0; color:#4a687e; font-size:0.82rem; line-height:1.45; }
+        .auth-gate-box { margin:0; color:#8a3a12; background:#fff0e8; border:1px solid #f2cab5; border-radius:10px; padding:10px; font-size:0.82rem; line-height:1.45; }
+        .auth-gate-box a { color:#0f6179; font-weight:700; }
         .terms-grid { display:grid; gap:8px; }
         .terms-item { border:1px solid #dbe7f0; border-radius:10px; background:#ffffff; padding:10px; display:grid; gap:4px; }
         .terms-item h3 { margin:0; font-size:0.76rem; text-transform:uppercase; letter-spacing:0.07em; color:#4a677d; font-family:"Space Grotesk","Trebuchet MS",sans-serif; }
@@ -72,7 +85,8 @@
         }
         @media (max-width: 760px) {
             .grid,
-            .payment-grid { grid-template-columns:1fr; }
+            .payment-grid,
+            .guest-form-grid { grid-template-columns:1fr; }
         }
     </style>
     @include('partials.uniform-buttons')
@@ -129,6 +143,10 @@
         $infants = max(0, (int) ($summary['infants'] ?? 0));
         $guests = $adults + $children + $infants;
         $categoryKey = strtolower(trim((string) ($summary['category_key'] ?? '')));
+        $requiresCustomerAuth = (bool) ($requiresCustomerAuth ?? false);
+        $customerAuthenticated = (bool) ($customerAuthenticated ?? false);
+        $customerLoginContinueUrl = trim((string) ($customerLoginContinueUrl ?? request()->fullUrl()));
+        $customerLoginUrl = '/portal/customer/login?continue=' . urlencode($customerLoginContinueUrl !== '' ? $customerLoginContinueUrl : request()->fullUrl());
         $isExcursionBooking = $categoryKey === 'excursion';
         $roomSubtotal = (float) ($summary['room_subtotal'] ?? 0);
         $discountAmount = max(0, (float) ($summary['discount_amount'] ?? 0));
@@ -237,6 +255,9 @@
             ? (trim((string) ($backUrl ?? '')) !== '' ? (string) $backUrl : '/')
             : '/booking/checkout/' . (int) ($reservation->id ?? 0) . '/transfer';
         $bookingProcessCurrentStep = $isNoTransferCategory ? 2 : 3;
+        if ($requiresCustomerAuth && !$customerAuthenticated) {
+            $bookingProcessCurrentStep = 1;
+        }
         $bookingProcessSteps = $isNoTransferCategory
             ? [
                 1 => '1. Guest Details',
@@ -255,8 +276,11 @@
         @include('partials.booking-process-highlights', [
             'bookingProcessCurrentStep' => $bookingProcessCurrentStep,
             'bookingProcessBackUrl' => $bookingProcessBackUrl,
+            'bookingProcessBackLabel' => $requiresCustomerAuth ? 'Back to service browsing' : 'Back to property',
             'bookingProcessSteps' => $bookingProcessSteps,
-            'bookingProcessNextText' => 'Next step after this page: complete payment and receive reservation confirmation.',
+            'bookingProcessNextText' => ($requiresCustomerAuth && !$customerAuthenticated)
+                ? 'Next step after guest details: sign in to unlock payment method selection.'
+                : 'Next step after this page: complete payment and receive reservation confirmation.',
         ])
 
         <section class="panel" aria-label="Checkout summary">
@@ -285,6 +309,56 @@
                     <div class="cell"><span class="label">Primary Guest</span><div class="value">{{ trim(((string) ($summary['primary_first_name'] ?? '')) . ' ' . ((string) ($summary['primary_last_name'] ?? ''))) ?: 'Guest Customer' }}</div></div>
                     <div class="cell"><span class="label">Nationality</span><div class="value">{{ (string) ($summary['primary_nationality'] ?? '-') }}</div></div>
                 </div>
+
+                @if ($requiresCustomerAuth && !empty($reservation->id))
+                    <section class="guest-details-box" aria-label="Guest details form">
+                        <h2>Guest Details</h2>
+                        <p class="guest-form-note">Provide guest identity details now. Payment method selection is unlocked after customer sign-in.</p>
+                        <form method="post" action="/booking/checkout/{{ (int) $reservation->id }}/guest-details" id="serviceGuestDetailsForm">
+                            @csrf
+                            <div class="guest-form-grid">
+                                <div class="guest-form-field">
+                                    <label for="checkoutPrimaryFirstName">Given names*</label>
+                                    <input id="checkoutPrimaryFirstName" name="primary_first_name" type="text" value="{{ old('primary_first_name', (string) ($summary['primary_first_name'] ?? '')) }}" required>
+                                </div>
+                                <div class="guest-form-field">
+                                    <label for="checkoutPrimaryLastName">Surname*</label>
+                                    <input id="checkoutPrimaryLastName" name="primary_last_name" type="text" value="{{ old('primary_last_name', (string) ($summary['primary_last_name'] ?? '')) }}" required>
+                                </div>
+                                <div class="guest-form-field">
+                                    <label for="checkoutPrimaryNationality">Country / Nationality*</label>
+                                    <input id="checkoutPrimaryNationality" name="primary_nationality" type="text" value="{{ old('primary_nationality', (string) ($summary['primary_nationality'] ?? '')) }}" required>
+                                </div>
+                                <div class="guest-form-field">
+                                    <label for="checkoutGuestResidency">Residency type*</label>
+                                    <select id="checkoutGuestResidency" name="guest_residency" required>
+                                        <option value="foreign_national" {{ strtolower((string) old('guest_residency', (string) ($summary['guest_residency'] ?? 'foreign_national'))) === 'foreign_national' ? 'selected' : '' }}>Foreign national</option>
+                                        <option value="local_resident" {{ strtolower((string) old('guest_residency', (string) ($summary['guest_residency'] ?? 'foreign_national'))) === 'local_resident' ? 'selected' : '' }}>Local resident</option>
+                                    </select>
+                                </div>
+                                <div class="guest-form-field">
+                                    <label for="checkoutPrimaryEmail">Email*</label>
+                                    <input id="checkoutPrimaryEmail" name="primary_email" type="email" value="{{ old('primary_email', (string) ($summary['primary_email'] ?? '')) }}" required>
+                                </div>
+                                <div class="guest-form-field">
+                                    <label for="checkoutPrimaryMobile">Contact number*</label>
+                                    <input id="checkoutPrimaryMobile" name="primary_mobile" type="tel" value="{{ old('primary_mobile', (string) ($summary['primary_mobile'] ?? '')) }}" required>
+                                </div>
+                                <div class="guest-form-field full">
+                                    <label for="checkoutAdditionalGuestDetails">Additional guest details</label>
+                                    <textarea id="checkoutAdditionalGuestDetails" name="additional_guest_details">{{ old('additional_guest_details', (string) ($summary['additional_guest_details'] ?? '')) }}</textarea>
+                                </div>
+                                <div class="guest-form-field full">
+                                    <label for="checkoutServiceNotes">Service notes</label>
+                                    <textarea id="checkoutServiceNotes" name="service_notes">{{ old('service_notes', (string) ($summary['service_notes'] ?? '')) }}</textarea>
+                                </div>
+                            </div>
+                            <div class="actions" style="margin-top:10px;">
+                                <button class="btn" type="submit">Save Guest Details</button>
+                            </div>
+                        </form>
+                    </section>
+                @endif
 
                 <section class="terms-box" aria-label="Booking terms and policies">
                     <h2>Booking Terms Before Payment</h2>
@@ -324,6 +398,12 @@
 
                 <div class="payment-box" aria-label="Payment routing details">
                     <h2>Payment Method</h2>
+                    @if ($requiresCustomerAuth && !$customerAuthenticated)
+                        <p class="auth-gate-box">
+                            Sign in is required before choosing a payment method for service bookings.
+                            <a href="{{ $customerLoginUrl }}">Sign in and continue</a>.
+                        </p>
+                    @endif
                     <div class="payment-grid">
                         <div class="payment-stat"><span class="k">Customer Segment</span><span class="v">{{ $isForeigner ? 'Foreign National' : 'Local Maldivian' }}</span></div>
                         <div class="payment-stat"><span class="k">Payment Currency</span><span class="v" id="paymentCurrencyDisplay">{{ $lockedPaymentCurrency }}</span></div>
@@ -426,7 +506,9 @@
             </div>
 
             <div class="actions">
-                @if (!empty($reservation->id))
+                @if ($requiresCustomerAuth && !$customerAuthenticated)
+                    <a class="btn primary" href="{{ $customerLoginUrl }}">Sign In To Select Payment</a>
+                @elseif (!empty($reservation->id))
                     <form method="post" action="/booking/checkout/{{ (int) $reservation->id }}/payment-intent" id="checkoutConfirmForm">
                         @csrf
                         <input type="hidden" name="payment_selection" id="payment_selection_input" value="{{ $selectedPaymentOption }}">

@@ -1,6 +1,7 @@
 @php
     $bookingProcessTitle = trim((string) ($bookingProcessTitle ?? 'Booking Process Highlights'));
     $bookingProcessBackUrl = trim((string) ($bookingProcessBackUrl ?? url()->previous('/')));
+    $bookingProcessBackLabel = trim((string) ($bookingProcessBackLabel ?? 'Back to property'));
     $bookingProcessNextText = trim((string) ($bookingProcessNextText ?? ''));
     $bookingProcessSteps = (array) ($bookingProcessSteps ?? [
         1 => '1. Guest Details',
@@ -78,7 +79,7 @@
 </style>
 
 <header class="booking-page-header" aria-label="Booking process highlights">
-    <a class="bph-back" href="{{ $bookingProcessBackUrl !== '' ? $bookingProcessBackUrl : '/' }}">&larr; Back to property</a>
+    <a class="bph-back" href="{{ $bookingProcessBackUrl !== '' ? $bookingProcessBackUrl : '/' }}">&larr; {{ $bookingProcessBackLabel !== '' ? $bookingProcessBackLabel : 'Back' }}</a>
     <p class="bph-process-title">{{ $bookingProcessTitle }}</p>
     <div class="bph-steps" aria-label="Booking progress">
         @foreach ($bookingProcessSteps as $stepNumber => $stepLabel)

@@ -851,6 +851,7 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         'marine-transport' => ['label' => 'Marine Transport', 'start_label' => 'Travel Date', 'end_label' => 'Return Date'],
         'land-transport' => ['label' => 'Land Transport', 'start_label' => 'Travel Date', 'end_label' => 'Return Date'],
         'excursion' => ['label' => 'Excursion', 'start_label' => 'Excursion Date', 'end_label' => 'Return Date'],
+        'water_sports' => ['label' => 'Water Sports', 'start_label' => 'Activity Date', 'end_label' => 'Return Date'],
         'remote_workspace' => ['label' => 'Remote Workspace', 'start_label' => 'Start Date', 'end_label' => 'End Date'],
         'conference_room' => ['label' => 'Conference & Meeting Spaces', 'start_label' => 'Event Date', 'end_label' => 'Event End Date'],
         'resort_day_visit' => ['label' => 'Resort Day Visit', 'start_label' => 'Visit Date', 'end_label' => 'Return Date'],
@@ -873,6 +874,11 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         'excursion' => [
             // Activity type is implied by selected listing on this page.
             // Transfer logistics fields (departure details when transfer is included).
+            ['key' => 'departure_area', 'label' => 'Departure Area / Jetty (if transfer included)', 'type' => 'text', 'required' => false],
+            ['key' => 'departure_time', 'label' => 'Departure Time (if transfer included)', 'type' => 'time', 'required' => false],
+            ['key' => 'return_slot', 'label' => 'Return Time Slot (if transfer included)', 'type' => 'time', 'required' => false],
+        ],
+        'water_sports' => [
             ['key' => 'departure_area', 'label' => 'Departure Area / Jetty (if transfer included)', 'type' => 'text', 'required' => false],
             ['key' => 'departure_time', 'label' => 'Departure Time (if transfer included)', 'type' => 'time', 'required' => false],
             ['key' => 'return_slot', 'label' => 'Return Time Slot (if transfer included)', 'type' => 'time', 'required' => false],
@@ -1112,6 +1118,9 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
     if ($effectiveServiceDisplayPrice <= 0) {
         $effectiveServiceDisplayPrice = $excursionBasePrice;
     }
+    $pricingMatrix = $effectivePricing['matrix'] ?? [];
+    $localFlatPrice = (float) (($pricingMatrix['local']['flat'] ?? null) ?: ($listingDetails['price_local'] ?? 0));
+    $foreignFlatPrice = (float) (($pricingMatrix['foreign']['flat'] ?? null) ?: ($listingDetails['price_usd'] ?? $listingDetails['price_foreign'] ?? 0));
 
     $sessionGuestName = trim((string) session('portal_customer_user', ''));
     $nameParts = preg_split('/\s+/', $sessionGuestName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
@@ -1221,6 +1230,8 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             'child_price' => $excursionChildPrice,
             'infant_price' => $excursionInfantPrice,
             'display_price' => $effectiveServiceDisplayPrice,
+            'price_local_flat' => $localFlatPrice,
+            'price_foreign_flat' => $foreignFlatPrice,
             'guest_residency' => $previewGuestResidency,
             'transfer_included' => (bool) ($listingDetails['transfer_included'] ?? false),
             'departure_time_mode' => (string) ($listingDetails['departure_time_mode'] ?? 'fixed'),
@@ -1266,6 +1277,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'marine-transport' => ['label' => 'Marine Transport', 'start_label' => 'Travel Date', 'end_label' => 'Return Date'],
         'land-transport' => ['label' => 'Land Transport', 'start_label' => 'Travel Date', 'end_label' => 'Return Date'],
         'excursion' => ['label' => 'Excursion', 'start_label' => 'Excursion Date', 'end_label' => 'Return Date'],
+        'water_sports' => ['label' => 'Water Sports', 'start_label' => 'Activity Date', 'end_label' => 'Return Date'],
         'remote_workspace' => ['label' => 'Remote Workspace', 'start_label' => 'Start Date', 'end_label' => 'End Date'],
         'resort_day_visit' => ['label' => 'Resort Day Visit', 'start_label' => 'Visit Date', 'end_label' => 'Return Date'],
         'restaurant' => ['label' => 'Restaurant', 'start_label' => 'Reservation Date & Time', 'end_label' => 'Expected Departure Date & Time'],
@@ -1286,6 +1298,11 @@ Route::post('/booking/reserve-category', function (Request $request) {
         ],
         'excursion' => [
             // Transfer logistics: departure details when transfer is included with the activity.
+            'departure_area' => ['nullable', 'string', 'max:120'],
+            'departure_time' => ['nullable', 'string', 'max:10'],
+            'return_slot' => ['nullable', 'string', 'max:10'],
+        ],
+        'water_sports' => [
             'departure_area' => ['nullable', 'string', 'max:120'],
             'departure_time' => ['nullable', 'string', 'max:10'],
             'return_slot' => ['nullable', 'string', 'max:10'],
@@ -1761,7 +1778,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
 
     // Non-accommodation categories handle transfer inline on the booking form and do not need the
     // separate transfer selection step. Skip /transfer in the redirect for these categories.
-    $noTransferStepCategories = ['marine-transport', 'land-transport', 'excursion', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
+    $noTransferStepCategories = ['marine-transport', 'land-transport', 'excursion', 'water_sports', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
     $skipTransferStep = in_array($categoryKey, $noTransferStepCategories, true);
 
     $checkoutUrl = '/booking/checkout'
@@ -2132,7 +2149,7 @@ Route::get('/booking/checkout/{reservation}/transfer', function (Request $reques
     // Non-accommodation categories (services) handle transfer inline on their booking form.
     // Redirect directly to checkout, bypassing the separate transfer selection step.
     $reservationCategoryKey = strtolower(trim((string) ($notes['category_key'] ?? '')));
-    $noTransferStepCategories = ['marine-transport', 'land-transport', 'excursion', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
+    $noTransferStepCategories = ['marine-transport', 'land-transport', 'excursion', 'water_sports', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
     if (in_array($reservationCategoryKey, $noTransferStepCategories, true)) {
         return redirect('/booking/checkout/' . $reservation);
     }

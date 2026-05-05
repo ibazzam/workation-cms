@@ -1500,6 +1500,19 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
                     : [];
             }
 
+            if (array_key_exists('price_local', $validated)) {
+                $details['price_local'] = isset($validated['price_local']) && $validated['price_local'] !== ''
+                    ? max(0, (float) $validated['price_local'])
+                    : null;
+            }
+
+            if (array_key_exists('price_usd', $validated)) {
+                $details['price_usd'] = isset($validated['price_usd']) && $validated['price_usd'] !== ''
+                    ? max(0, (float) $validated['price_usd'])
+                    : null;
+                $details['price_foreign'] = $details['price_usd'];
+            }
+
             // Normalized pricing structure for all non-accommodation categories.
             $pricingBySegment = [];
 
@@ -2167,4 +2180,3 @@ require __DIR__ . '/vendor/dashboard.php';
 require __DIR__ . '/vendor/profile-media.php';
 require __DIR__ . '/vendor/listings-management.php';
 require __DIR__ . '/vendor/operations-actions.php';
-

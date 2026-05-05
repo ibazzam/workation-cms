@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -21,6 +22,10 @@ return new class extends Migration
                 $table->decimal('price_usd', 12, 2)->nullable()->after('price_local');
             }
         });
+
+        DB::table('vendor_services')
+            ->whereNull('price_local')
+            ->update(['price_local' => DB::raw('price')]);
     }
 
     public function down(): void

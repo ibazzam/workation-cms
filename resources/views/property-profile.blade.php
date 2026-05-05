@@ -2062,6 +2062,9 @@
             min-height: 320px;
             box-shadow: 0 10px 26px rgba(22, 58, 84, 0.12);
             padding: 6px;
+            isolation: isolate;
+            position: relative;
+            z-index: 0;
         }
 
         #property-location-map {
@@ -3140,9 +3143,9 @@
                         <span class="v">{{ $startingPriceCurrency }} {{ $startingPrice }}</span>
                         <span class="sub">per night · taxes may apply</span>
                         <span class="property-summary-price-total" data-starting-total data-starting-currency="{{ $startingPriceCurrency }}" data-starting-nightly="{{ number_format($startingPriceValue, 2, '.', '') }}">
-                            {{ $startingPriceCurrency }} {{ $startingTotalPrice }} total 1 room, {{ $prefillStayNights }} night{{ $prefillStayNights !== 1 ? 's' : '' }}
+                            {{ $startingPriceCurrency }} {{ $startingTotalPrice }}
                         </span>
-                        <span class="property-summary-price-note">including taxes and fees estimate</span>
+                        <span class="property-summary-price-note">incl. taxes &amp; fees</span>
                         <span class="property-summary-price-soldout{{ $hasBookableRate ? ' is-hidden' : '' }}" data-starting-soldout>Sold out for selected dates</span>
                         <a class="cta" href="{{ $selectRoomsTarget }}">View rooms</a>
                     </aside>
@@ -3567,7 +3570,7 @@
                                                                         <div class="room-price-usd-hint">= MVR {{ number_format($nightlyRateRaw * $mvrUsdRate, 0) }} / night</div>
                                                                     @endif
                                                     <div class="room-price-summary" data-rate-summary data-rate-currency="{{ $roomCurrency }}" data-nightly-rate="{{ number_format($nightlyRateRaw, 2, '.', '') }}">
-                                                        {{ $roomCurrency }} {{ number_format($rateTotalRaw, 2) }} total 1 room, {{ $prefillStayNights }} night{{ $prefillStayNights !== 1 ? 's' : '' }}
+                                                        {{ $roomCurrency }} {{ number_format($rateTotalRaw, 2) }}
                                                     </div>
                                                     <div class="room-price-summary-note">incl. taxes &amp; fees</div>
                                                     @if ($isRoomSoldOut)

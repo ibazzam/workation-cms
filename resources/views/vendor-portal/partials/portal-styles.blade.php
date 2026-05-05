@@ -932,6 +932,11 @@
             letter-spacing: 0.05em;
         }
 
+        .listing-price-band .listing-transfer-head,
+        .listing-price-band .listing-transfer-row {
+            grid-template-columns: minmax(200px, 2fr) repeat(2, minmax(120px, 1fr));
+        }
+
         .listing-form-note {
             margin: 0;
             color: #587285;

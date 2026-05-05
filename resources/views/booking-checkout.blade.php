@@ -237,6 +237,12 @@
         $lockedPaymentAmount = (float) ($summary['quote_payment_amount'] ?? ($summary['total'] ?? 0));
         $lockedSourceCurrency = strtoupper(trim((string) ($summary['quote_source_currency'] ?? $currency)));
         $lockedSourceAmount = (float) ($summary['quote_source_amount'] ?? ($summary['total'] ?? 0));
+        $guestDetailsComplete = trim((string) ($summary['primary_first_name'] ?? '')) !== ''
+            && trim((string) ($summary['primary_last_name'] ?? '')) !== ''
+            && trim((string) ($summary['primary_email'] ?? '')) !== ''
+            && trim((string) ($summary['primary_mobile'] ?? '')) !== ''
+            && trim((string) ($summary['primary_nationality'] ?? '')) !== ''
+            && strcasecmp(trim((string) ($summary['primary_nationality'] ?? '')), 'Not specified') !== 0;
         $selectedProvider = $lockedPaymentProvider;
         $hasAvailablePaymentOptions = $paymentOptions->isNotEmpty();
         $customerPaymentStatus = strtolower(trim((string) ($reservation->payment_status ?? 'unpaid')));
@@ -260,10 +266,14 @@
         ];
         $selectedNationality = trim((string) old('primary_nationality', (string) ($summary['primary_nationality'] ?? '')));
         $selectedResidency = strcasecmp($selectedNationality, 'Maldives') === 0 ? 'local_resident' : 'foreign_national';
-        $bookingProcessBackUrl = $isNoTransferCategory
-            ? (trim((string) ($backUrl ?? '')) !== '' ? (string) $backUrl : '/')
-            : '/booking/checkout/' . (int) ($reservation->id ?? 0) . '/transfer';
-        $bookingProcessCurrentStep = $isNoTransferCategory ? 2 : 3;
+        $bookingProcessBackUrl = $guestDetailsComplete
+            ? ($isNoTransferCategory
+                ? (trim((string) ($backUrl ?? '')) !== '' ? (string) $backUrl : '/')
+                : '/booking/checkout/' . (int) ($reservation->id ?? 0) . '/transfer')
+            : (trim((string) ($backUrl ?? '')) !== '' ? (string) $backUrl : '/');
+        $bookingProcessCurrentStep = $guestDetailsComplete
+            ? ($isNoTransferCategory ? 2 : 3)
+            : 1;
         $bookingProcessSteps = $isNoTransferCategory
             ? [
                 1 => '1. Guest Details',
@@ -316,10 +326,10 @@
                     <div class="cell"><span class="label">Nationality</span><div class="value">{{ (string) ($summary['primary_nationality'] ?? '-') }}</div></div>
                 </div>
 
-                @if ($requiresCustomerAuth && !empty($reservation->id))
+                @if (!empty($reservation->id) && $customerPaymentStatus !== 'paid')
                     <section class="guest-details-box" aria-label="Guest details form">
                         <h2>Guest Details</h2>
-                        <p class="guest-form-note">Provide guest identity details now. Payment method selection is unlocked after customer sign-in.</p>
+                        <p class="guest-form-note">Provide guest identity details now. Booking totals and payment currency are recalculated from the selected nationality.</p>
                         <form method="post" action="/booking/checkout/{{ (int) $reservation->id }}/guest-details" id="serviceGuestDetailsForm">
                             @csrf
                             <div class="guest-form-grid">
@@ -526,7 +536,7 @@
                         <input type="hidden" name="transfer_charge" id="transfer_charge_input" value="{{ number_format($effectiveTransferAmount, 2, '.', '') }}">
                         <input type="hidden" name="invoice_total_amount" id="invoice_total_amount_input" value="{{ number_format($effectiveInvoiceTotal, 2, '.', '') }}">
                         <p class="fine-print" style="width:100%; margin:0 0 6px;">
-                            Guest nationality and residency are locked from your booking details and cannot be changed at checkout.
+                            Payment routing is based on the saved guest nationality. Update Guest Details above if this needs correction.
                         </p>
                         <button class="btn primary" id="confirmPayButton" type="submit" disabled>Confirm & Pay</button>
                     </form>

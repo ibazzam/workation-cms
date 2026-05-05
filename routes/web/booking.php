@@ -816,7 +816,7 @@ Route::post('/booking/reserve', function (Request $request) {
     }
 
     $checkoutUrl = '/booking/checkout'
-        . ($reservationId ? ('/' . $reservationId . '/transfer') : '')
+        . ($reservationId ? ('/' . $reservationId) : '')
         . '?property_id=' . (int) $propertyRow->id
         . '&room_id=' . (int) $roomRow->id
         . '&checkin=' . urlencode((string) $payload['checkin'])
@@ -1208,6 +1208,21 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
     $unavailableDates['blocked'] = array_values(array_keys($unavailableDates['blocked']));
     $unavailableDates['reserved'] = array_values(array_keys($unavailableDates['reserved']));
 
+    $rentalItems = collect();
+    if ($dbCategoryKey === 'water_sports' && Schema::hasTable('vendor_water_sports_rental_items')) {
+        $rentalItems = collect(Cache::remember(
+            'category_booking:rental_items:v1:' . md5((string) ($propertyRow->id ?? 0)),
+            now()->addMinutes(3),
+            static function () use ($propertyRow) {
+                return DB::table('vendor_water_sports_rental_items')
+                    ->where('vendor_property_id', (int) ($propertyRow->id ?? 0))
+                    ->where('status', 'active')
+                    ->orderBy('equipment_category')->orderBy('name')
+                    ->get()->all();
+            }
+        ));
+    }
+
     return view('category-booking', [
         'categoryKey' => $categoryKey,
         'categoryLabel' => (string) ($categoryMap[$categoryKey]['label'] ?? 'Category'),
@@ -1268,6 +1283,7 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         'todayDate' => $todayDate,
         'unavailableDates' => $unavailableDates,
         'transferOptions' => $transferOptions,
+        'rentalItems' => $rentalItems,
     ]);
 });
 
@@ -2141,6 +2157,23 @@ Route::get('/booking/checkout/{reservation}/transfer', function (Request $reques
 
     $notes = workationReservationPaymentNotes($reservationRow);
 
+    $primaryFirstName = trim((string) ($notes['primary_first_name'] ?? ''));
+    $primaryLastName = trim((string) ($notes['primary_last_name'] ?? ''));
+    $primaryNationality = trim((string) ($notes['primary_nationality'] ?? ''));
+    $primaryEmail = trim((string) ($notes['primary_email'] ?? ''));
+    $primaryMobile = trim((string) ($notes['primary_mobile'] ?? ''));
+    $guestDetailsComplete = $primaryFirstName !== ''
+        && $primaryLastName !== ''
+        && $primaryEmail !== ''
+        && $primaryMobile !== ''
+        && $primaryNationality !== ''
+        && strcasecmp($primaryNationality, 'Not specified') !== 0;
+
+    if (!$guestDetailsComplete) {
+        return redirect('/booking/checkout/' . $reservation)
+            ->withErrors(['guest_details' => 'Please complete guest details first. Transfer selection depends on the selected guest nationality.']);
+    }
+
     $reservationCategoryKey = strtolower(trim((string) ($notes['category_key'] ?? '')));
 
     $propertyId = (int) ($reservationRow->vendor_property_id ?? 0);
@@ -2377,6 +2410,7 @@ Route::post('/booking/checkout/{reservation}/guest-details', function (Request $
         'primary_first_name' => ['required', 'string', 'max:80'],
         'primary_last_name' => ['required', 'string', 'max:80'],
         'primary_nationality' => ['required', 'string', 'max:80'],
+        'guest_residency' => ['nullable', Rule::in(['local_resident', 'foreign_national'])],
         'primary_email' => ['required', 'email', 'max:120'],
         'primary_mobile' => ['required', 'string', 'max:32'],
         'additional_guest_details' => ['nullable', 'string', 'max:2000'],
@@ -2385,14 +2419,14 @@ Route::post('/booking/checkout/{reservation}/guest-details', function (Request $
 
     $notes = workationReservationPaymentNotes($reservationRow);
     $categoryKey = strtolower(trim((string) ($notes['category_key'] ?? '')));
-    if ($categoryKey === 'accommodation') {
-        return redirect('/booking/checkout/' . $reservation);
-    }
 
     $primaryNationality = trim((string) ($validated['primary_nationality'] ?? ''));
-    $guestResidency = strcasecmp($primaryNationality, 'Maldives') === 0
-        ? 'local_resident'
-        : 'foreign_national';
+    $guestResidency = strtolower(trim((string) ($validated['guest_residency'] ?? '')));
+    if (!in_array($guestResidency, ['local_resident', 'foreign_national'], true)) {
+        $guestResidency = ReservationPricingPolicy::isForeigner($primaryNationality, null)
+            ? 'foreign_national'
+            : 'local_resident';
+    }
 
     $transferOptions = collect($notes['property_transfer_options'] ?? [])->filter(static fn ($option) => is_array($option))->values();
     $selectedTransferOption = strtolower(trim((string) ($notes['transfer_option'] ?? 'none')));
@@ -2470,6 +2504,12 @@ Route::post('/booking/checkout/{reservation}/guest-details', function (Request $
             'updated_at' => now(),
         ]);
 
+    $hasTransferStep = $transferOptions->isNotEmpty();
+    if ($hasTransferStep) {
+        return redirect('/booking/checkout/' . $reservation . '/transfer')
+            ->with('status', 'Guest details saved. Continue with transfer selection.');
+    }
+
     return redirect('/booking/checkout/' . $reservation)->with('status', 'Guest details saved. Continue to payment when ready.');
 });
 
@@ -2484,6 +2524,7 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
     }
 
     $notes = workationReservationPaymentNotes($reservationRow);
+
     $reservationCategoryKey = strtolower(trim((string) ($notes['category_key'] ?? '')));
     $requiresCustomerAuth = $reservationCategoryKey !== '' && $reservationCategoryKey !== 'accommodation';
     if ($requiresCustomerAuth && !(bool) $request->session()->get('portal_customer_authenticated', false)) {
@@ -2496,11 +2537,26 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         'payment_gateway' => ['nullable', 'string', 'min:2', 'max:64'],
         'payment_provider' => ['nullable', 'string', 'min:2', 'max:64'],
         'payment_selection' => ['nullable', 'string', 'max:120'],
+        'primary_nationality' => ['nullable', 'string', 'max:120'],
+        'guest_residency' => ['nullable', Rule::in(['local_resident', 'foreign_national'])],
         'transfer_option' => ['nullable', 'string', 'max:80'],
         'transfer_option_label' => ['nullable', 'string', 'max:160'],
         'transfer_charge' => ['nullable', 'numeric', 'min:0'],
         'invoice_total_amount' => ['nullable', 'numeric', 'min:0'],
     ]);
+
+    $primaryFirstName = trim((string) ($notes['primary_first_name'] ?? ''));
+    $primaryLastName = trim((string) ($notes['primary_last_name'] ?? ''));
+    $primaryNationality = trim((string) ($notes['primary_nationality'] ?? $validated['primary_nationality'] ?? ''));
+    $primaryEmail = trim((string) ($notes['primary_email'] ?? $reservationRow->customer_email ?? ''));
+    $customerName = trim((string) ($reservationRow->customer_name ?? ''));
+    $hasIdentity = ($primaryFirstName !== '' && $primaryLastName !== '') || $customerName !== '';
+    $hasContact = $primaryEmail !== '';
+    $hasNationality = $primaryNationality !== '' && strcasecmp($primaryNationality, 'Not specified') !== 0;
+    if (!($hasIdentity && $hasContact && $hasNationality)) {
+        return redirect('/booking/checkout/' . $reservation)
+            ->withErrors(['payment' => 'Please complete guest details first. Payment currency and rates are determined from the submitted nationality.']);
+    }
 
     if (in_array(strtolower(trim((string) ($reservationRow->status ?? 'pending'))), ['cancelled', 'canceled'], true)) {
         return back()->withErrors(['payment' => 'Cancelled reservations cannot be paid.']);
@@ -2510,8 +2566,8 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         return back()->withErrors(['payment' => 'This reservation is already paid.']);
     }
 
-    $primaryNationality = trim((string) ($notes['primary_nationality'] ?? ''));
-    $guestResidency = strtolower(trim((string) ($notes['guest_residency'] ?? '')));
+    $primaryNationality = trim((string) ($notes['primary_nationality'] ?? $validated['primary_nationality'] ?? ''));
+    $guestResidency = strtolower(trim((string) ($notes['guest_residency'] ?? $validated['guest_residency'] ?? '')));
     if (!in_array($guestResidency, ['local_resident', 'foreign_national'], true)) {
         $guestResidency = ReservationPricingPolicy::isForeigner($primaryNationality, null)
             ? 'foreign_national'

@@ -1331,6 +1331,59 @@
                     </section>
                 @endif
 
+                @if ($categoryKey === 'water_sports' && !empty($rentalItems) && count($rentalItems) > 0)
+                    <section class="block" aria-label="Equipment rental items" style="margin-top:12px;">
+                        <h2 class="block-title">Available Equipment</h2>
+                        <div class="equipment-rental-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 12px;">
+                            @foreach ($rentalItems as $item)
+                                @php
+                                    $itemId = (int) ($item->id ?? 0);
+                                    $itemName = (string) ($item->name ?? 'Equipment');
+                                    $itemDescription = (string) ($item->description ?? '');
+                                    $itemCategory = (string) ($item->equipment_category ?? '');
+                                    $itemPriceLocal = (float) ($item->price_per_hour_local ?? 0);
+                                    $itemPriceForeign = (float) ($item->price_per_hour_usd ?? 0);
+                                    $itemQuantity = (int) ($item->quantity_available ?? 0);
+                                    $itemMinAge = (int) ($item->min_age_years ?? 0);
+                                    $itemMinDuration = (int) ($item->min_duration_minutes ?? 0);
+                                @endphp
+                                <article class="equipment-card" data-item-id="{{ $itemId }}" style="border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: var(--surface); display: flex; flex-direction: column; gap: 10px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: start; gap: 8px;">
+                                        <h3 style="margin: 0; font-size: 1rem; color: var(--ink);">{{ $itemName }}</h3>
+                                        @if ($itemCategory !== '')
+                                            <span style="background: #e8f4f8; color: #0f6179; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; white-space: nowrap;">{{ str_replace('_', ' ', $itemCategory) }}</span>
+                                        @endif
+                                    </div>
+                                    @if ($itemDescription !== '')
+                                        <p style="margin: 0; font-size: 0.88rem; color: var(--muted); line-height: 1.4;">{{ $itemDescription }}</p>
+                                    @endif
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem; color: var(--muted);">
+                                        @if ($itemMinAge > 0)
+                                            <div><i class="fa-solid fa-birthday-cake" aria-hidden="true"></i> Min age: {{ $itemMinAge }}y</div>
+                                        @endif
+                                        @if ($itemMinDuration > 0)
+                                            <div><i class="fa-solid fa-hourglass-end" aria-hidden="true"></i> Min: {{ floor($itemMinDuration / 60) }}h {{ $itemMinDuration % 60 }}m</div>
+                                        @endif
+                                        <div><i class="fa-solid fa-box" aria-hidden="true"></i> Available: {{ $itemQuantity }}</div>
+                                    </div>
+                                    <div style="border-top: 1px solid var(--line); padding-top: 8px; margin-top: 4px;">
+                                        <p style="margin: 0; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px;">Price per hour</p>
+                                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                                            @if ($itemPriceLocal > 0)
+                                                <strong style="color: var(--ink);">MVR {{ number_format($itemPriceLocal, 2) }}</strong>
+                                            @endif
+                                            @if ($itemPriceForeign > 0)
+                                                <span style="color: var(--muted); font-size: 0.85rem;">≈ USD {{ number_format($itemPriceForeign, 2) }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <p style="margin: 0; font-size: 0.78rem; color: var(--muted); font-style: italic; margin-top: 4px;">Details will be confirmed after booking.</p>
+                                </article>
+                            @endforeach
+                        </div>
+                    </section>
+                @endif
+
             </section>
 
             <aside class="booking-card reservation-form" aria-label="Category booking form">
@@ -1517,6 +1570,9 @@
                             <div class="booking-total field full" aria-live="polite">
                                 <span>Price Total</span>
                                 <strong id="excursionTotalDisplay">{{ $currency }} {{ number_format($initialExcursionTotal, 2) }}</strong>
+                                @if ($categoryKey === 'water_sports')
+                                    <p style="font-size: 0.78rem; color: #5f7488; margin-top: 8px; margin-bottom: 0; font-style: italic;"><i class="fa-solid fa-info-circle" aria-hidden="true"></i> Final pricing will be calculated from your guest nationality during checkout.</p>
+                                @endif
                             </div>
                             <div class="field full">
                                 <label for="serviceNotes">{{ $categoryKey === 'restaurant' ? 'Special Note for Food Order (Optional)' : 'Additional Request (Optional)' }}</label>

@@ -3997,87 +3997,18 @@
         </section>
 
         @if ($transferChoices->isNotEmpty())
-            <section id="transfer-policy-section" class="section transfer-policy-section" aria-label="Transfer policy and rates">
-                <h2>Transfer Policy &amp; Rates</h2>
+            <section id="transfer-policy-section" class="section transfer-policy-section" aria-label="Transfer options">
+                <h2>Transfer Options</h2>
                 <div class="transfer-policy-grid">
-                    <p class="transfer-policy-intro">Available transfer modes for this property are visible here before room selection. Guests still choose their transfer during the booking flow after selecting a room, and the applicable fare is calculated according to whether the guest is a local resident or a foreign national.</p>
                     <article class="transfer-rate-card">
                         <div class="transfer-rate-head">
                             <div>
-                                <h3 class="transfer-rate-title">Transfer Fare Matrix</h3>
-                                <p class="transfer-rate-note">Mode of transport and per-passenger fares by residency type.</p>
+                                <h3 class="transfer-rate-title">Airport &amp; Island Transfers</h3>
+                                <p class="transfer-rate-note">Various transfer modes are available. Pricing depends on your guest status (local resident or foreign national).</p>
                             </div>
-                            <span class="transfer-pill"><i class="fa-solid fa-route" aria-hidden="true"></i> Available at checkout</span>
+                            <span class="transfer-pill"><i class="fa-solid fa-route" aria-hidden="true"></i> Choose during checkout</span>
                         </div>
-                        <div class="transfer-rate-grid">
-                            <div class="transfer-rate-box">
-                                <h3>Local Resident</h3>
-                                <table class="transfer-rate-table-compact" aria-label="Local resident transfer fares">
-                                    <thead>
-                                        <tr>
-                                            <th>Mode of transport</th>
-                                            <th>Adult fare</th>
-                                            <th>Child fare</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($transferChoices as $transferChoice)
-                                            @php
-                                                $modeKey = (string) ($transferChoice['key'] ?? '');
-                                                $modeIcon = $resolveTransferModeIcon($modeKey);
-                                            @endphp
-                                            <tr>
-                                                <td>
-                                                    <span class="transfer-mode">
-                                                        <i class="icon {{ $modeIcon }}" aria-hidden="true"></i>
-                                                        <span>{{ (string) ($transferChoice['label'] ?? 'Transfer') }}</span>
-                                                    </span>
-                                                </td>
-                                                <td><span class="transfer-rate-amount">{{ $currency }} {{ number_format((float) ($transferChoice['local_adult_rate'] ?? 0), 2) }}</span></td>
-                                                <td><span class="transfer-rate-amount">{{ $currency }} {{ number_format((float) ($transferChoice['local_child_rate'] ?? 0), 2) }}</span></td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                                @if ($transferBaseLocal > 0)
-                                    <p class="transfer-base-note">Base local charge: <strong>{{ $currency }} {{ number_format($transferBaseLocal, 2) }}</strong></p>
-                                @endif
-                            </div>
-                            <div class="transfer-rate-box">
-                                <h3>Foreigner</h3>
-                                <table class="transfer-rate-table-compact" aria-label="Foreigner transfer fares">
-                                    <thead>
-                                        <tr>
-                                            <th>Mode of transport</th>
-                                            <th>Adult fare</th>
-                                            <th>Child fare</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($transferChoices as $transferChoice)
-                                            @php
-                                                $modeKey = (string) ($transferChoice['key'] ?? '');
-                                                $modeIcon = $resolveTransferModeIcon($modeKey);
-                                            @endphp
-                                            <tr>
-                                                <td>
-                                                    <span class="transfer-mode">
-                                                        <i class="icon {{ $modeIcon }}" aria-hidden="true"></i>
-                                                        <span>{{ (string) ($transferChoice['label'] ?? 'Transfer') }}</span>
-                                                    </span>
-                                                </td>
-                                                <td><span class="transfer-rate-amount">{{ $currency }} {{ number_format((float) ($transferChoice['foreign_adult_rate'] ?? 0), 2) }}</span></td>
-                                                <td><span class="transfer-rate-amount">{{ $currency }} {{ number_format((float) ($transferChoice['foreign_child_rate'] ?? 0), 2) }}</span></td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                                @if ($transferBaseForeign > 0)
-                                    <p class="transfer-base-note">Base foreigner charge: <strong>{{ $currency }} {{ number_format($transferBaseForeign, 2) }}</strong></p>
-                                @endif
-                            </div>
-                        </div>
-                        <p class="transfer-policy-summary">Transfer selection remains part of the existing booking flow, so this section is informational and does not change the current checkout behavior.</p>
+                        <p class="transfer-policy-intro" style="margin-top: 12px; margin-bottom: 0;">Transfer options and applicable rates will be shown during the booking checkout process after you provide your guest details. Fares are automatically calculated based on whether you are a local resident or a foreign national.</p>
                     </article>
                 </div>
             </section>

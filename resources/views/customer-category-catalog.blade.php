@@ -2110,6 +2110,9 @@
         $catalogPropertyMediaByProperty = $catalogPropertyMediaByProperty ?? collect();
         $atollOptions = $atollOptions ?? collect();
         $islandOptions = $islandOptions ?? collect();
+        $visitorResidency = trim((string) ($visitorResidency ?? 'foreign_national'));
+        $visitorIsLocal = $visitorResidency === 'local_resident';
+        $mvrUsdRate = max(0.0, (float) ($mvrUsdRate ?? env('MVR_USD_RATE', 15.42)));
         $popularityScore = static function ($property): float {
             $bookings = (float) ($property->booking_count ?? $property->bookings_count ?? 0);
             $reviews = (float) ($property->reviews_count ?? 0);
@@ -2782,6 +2785,52 @@
                                     $priceUsd = $excForeignAdult;
                                 }
                             }
+                            $convertByResidency = static function (float $amount, string $sourceCurrency) use ($visitorIsLocal, $mvrUsdRate): array {
+                                $value = max(0.0, $amount);
+                                $currencyCode = strtoupper(trim($sourceCurrency));
+                                if ($currencyCode === '') {
+                                    $currencyCode = 'MVR';
+                                }
+
+                                if ($visitorIsLocal) {
+                                    if ($currencyCode === 'USD' && $mvrUsdRate > 0) {
+                                        return ['currency' => 'MVR', 'amount' => round($value * $mvrUsdRate, 2)];
+                                    }
+                                    return ['currency' => 'MVR', 'amount' => round($value, 2)];
+                                }
+
+                                if ($currencyCode === 'MVR' && $mvrUsdRate > 0) {
+                                    return ['currency' => 'USD', 'amount' => round($value / $mvrUsdRate, 2)];
+                                }
+
+                                return ['currency' => 'USD', 'amount' => round($value, 2)];
+                            };
+                            $baseDisplay = $convertByResidency($price, (string) ($property->currency ?? 'MVR'));
+                            $primaryDisplayCurrency = (string) ($baseDisplay['currency'] ?? ($visitorIsLocal ? 'MVR' : 'USD'));
+                            $primaryDisplayPrice = (float) ($baseDisplay['amount'] ?? 0);
+                            $secondaryDisplay = null;
+                            if ($categoryKey !== 'accommodation') {
+                                if ($visitorIsLocal) {
+                                    if ($priceLocal > 0) {
+                                        $primaryDisplayCurrency = 'MVR';
+                                        $primaryDisplayPrice = $priceLocal;
+                                    }
+                                    if ($priceUsd !== null && $priceUsd > 0) {
+                                        $secondaryDisplay = ['currency' => 'USD', 'amount' => $priceUsd];
+                                    }
+                                } else {
+                                    if ($priceUsd !== null && $priceUsd > 0) {
+                                        $primaryDisplayCurrency = 'USD';
+                                        $primaryDisplayPrice = $priceUsd;
+                                    } elseif ($priceLocal > 0 && $mvrUsdRate > 0) {
+                                        $primaryDisplayCurrency = 'USD';
+                                        $primaryDisplayPrice = round($priceLocal / $mvrUsdRate, 2);
+                                    }
+                                    if ($priceLocal > 0) {
+                                        $secondaryDisplay = ['currency' => 'MVR', 'amount' => $priceLocal];
+                                    }
+                                }
+                            }
                         @endphp
                         @php
                             $propertyDetails = [];
@@ -2819,8 +2868,8 @@
                             data-city="{{ e((string) ($property->city ?? '')) }}"
                             data-island="{{ e((string) ($property->island ?? '')) }}"
                             data-atoll="{{ e((string) ($property->atoll ?? '')) }}"
-                            data-price="{{ number_format($price, 2, '.', '') }}"
-                            data-currency="{{ e(strtoupper((string) ($property->currency ?? 'MVR'))) }}"
+                            data-price="{{ number_format($primaryDisplayPrice, 2, '.', '') }}"
+                            data-currency="{{ e($primaryDisplayCurrency) }}"
                             data-lat="{{ $lat !== null ? $lat : '' }}"
                             data-lng="{{ $lng !== null ? $lng : '' }}"
                         >
@@ -2860,8 +2909,8 @@
                                     </div>
                                     <div class="card-side">
                                         <div class="card-price">
-                                            @if ($price > 0)
-                                                From {{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}
+                                            @if ($primaryDisplayPrice > 0)
+                                                From {{ $primaryDisplayCurrency }} {{ number_format($primaryDisplayPrice, 2) }}
                                             @else
                                                 Price on request
                                             @endif
@@ -2916,13 +2965,11 @@
                                             <span>{{ number_format($reviewCount) }} reviews</span>
                                         </div>
                                         <div class="card-price">
-                                            @if ($priceLocal > 0)
-                                                <span class="price-local">From MVR {{ number_format($priceLocal, 2) }}</span>
-                                                @if ($priceUsd !== null)
-                                                    <span class="price-foreign">≈ USD {{ number_format($priceUsd, 2) }}</span>
+                                            @if ($primaryDisplayPrice > 0)
+                                                <span class="price-local">From {{ $primaryDisplayCurrency }} {{ number_format($primaryDisplayPrice, 2) }}</span>
+                                                @if (is_array($secondaryDisplay) && (float) ($secondaryDisplay['amount'] ?? 0) > 0)
+                                                    <span class="price-foreign">≈ {{ (string) ($secondaryDisplay['currency'] ?? 'MVR') }} {{ number_format((float) ($secondaryDisplay['amount'] ?? 0), 2) }}</span>
                                                 @endif
-                                            @elseif ($price > 0)
-                                                From {{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}
                                             @else
                                                 Price on request
                                             @endif

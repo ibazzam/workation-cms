@@ -2644,6 +2644,8 @@
         }
         $mediaUrl = $mediaUrl ?? static fn () => null;
         $currency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
+        $visitorIsLocal = ($visitorResidency ?? 'foreign_national') === 'local_resident';
+        $mvrUsdRate = max(0.0, (float) ($mvrUsdRate ?? env('MVR_USD_RATE', 15.42)));
         $basePriceNumeric = (float) ($property->base_price ?? 0);
         if ($basePriceNumeric <= 0 && function_exists('workationDerivedListingBasePrice')) {
             $basePriceNumeric = (float) workationDerivedListingBasePrice($property);
@@ -2718,14 +2720,29 @@
             ?? $rooms->sortBy(static fn ($room) => (float) ($room->base_price_per_night ?? ($room->base_price ?? INF)))->first();
 
         $cheapestRoomId = $cheapestRoom ? (int) ($cheapestRoom->id ?? 0) : 0;
-        $cheapestRoomPrice = $cheapestPricedRoom ? number_format((float) ($cheapestPricedRoom->base_price_per_night ?? ($cheapestPricedRoom->base_price ?? 0)), 2) : null;
-        $startingPriceValue = $cheapestPricedRoom
-            ? (float) ($cheapestPricedRoom->base_price_per_night ?? ($cheapestPricedRoom->base_price ?? 0))
-            : 0;
-        $startingPriceCurrency = strtoupper(trim((string) ($cheapestPricedRoom->currency ?? $property->currency ?? 'MVR')));
-        if ($startingPriceCurrency === '') {
-            $startingPriceCurrency = 'MVR';
-        }
+        $visitorRoomRate = static function ($room) use ($visitorIsLocal, $mvrUsdRate): array {
+            if (!$room) {
+                return ['currency' => $visitorIsLocal ? 'MVR' : 'USD', 'amount' => 0.0];
+            }
+
+            $fallbackMvr = (float) ($room->base_price_per_night ?? ($room->base_price ?? 0));
+            $localMvr = (float) ($room->meal_plan_room_only_price_local ?? 0);
+            $foreignUsd = (float) ($room->meal_plan_room_only_price_usd ?? 0);
+
+            if ($visitorIsLocal) {
+                $amount = $localMvr > 0 ? $localMvr : max(0.0, $fallbackMvr);
+                return ['currency' => 'MVR', 'amount' => $amount];
+            }
+
+            $amount = $foreignUsd > 0
+                ? $foreignUsd
+                : ($mvrUsdRate > 0 ? max(0.0, $fallbackMvr) / $mvrUsdRate : max(0.0, $fallbackMvr));
+            return ['currency' => 'USD', 'amount' => $amount];
+        };
+        $startingRate = $visitorRoomRate($cheapestPricedRoom);
+        $startingPriceValue = max(0.0, (float) ($startingRate['amount'] ?? 0));
+        $startingPriceCurrency = strtoupper(trim((string) ($startingRate['currency'] ?? ($visitorIsLocal ? 'MVR' : 'USD'))));
+        $cheapestRoomPrice = $startingPriceValue > 0 ? number_format($startingPriceValue, 2) : null;
         $startingPrice = number_format($startingPriceValue, 2);
         $startingTotalPrice = number_format($startingPriceValue * $prefillStayNights, 2);
         $displayFromCurrency = $startingPriceValue > 0 ? $startingPriceCurrency : $currency;

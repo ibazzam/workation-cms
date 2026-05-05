@@ -60,6 +60,8 @@
         $backUrl = trim((string) ($backUrl ?? '/'));
         $selectedOption = strtolower(trim((string) ($selectedTransferOption ?? 'none')));
         $includeTransfer = (bool) ($includeTransfer ?? false);
+        $hasTransferOptions = $transferOptions->isNotEmpty();
+        $isServiceBooking = $headerCategoryKey !== 'accommodation';
 
            $headerCategorySource = trim((string) ($summary['category_key'] ?? 'accommodation'));
            $headerCategoryKey = str_replace('_', '-', strtolower($headerCategorySource !== '' ? $headerCategorySource : 'accommodation'));
@@ -109,6 +111,11 @@
             <span class="process-chip">Checkout Process: Step 2 of 4</span>
             <h1 class="title">Select Transfer Option</h1>
             <p class="sub">Guest details and nationality are already captured. Choose transfer here, then continue to payment selection.</p>
+            @if ($isServiceBooking && !$hasTransferOptions)
+                <div class="error-box" style="border-color:#cfe0eb;background:#edf6f3;color:#25536d;">
+                    Guest details and nationality are already captured. Transfer is included for this service. Continue to payment selection.
+                </div>
+            @endif
 
             @if ($errors->any())
                 <div class="error-box" role="alert" aria-live="polite">
@@ -195,52 +202,66 @@
 
                 <form class="form-box" method="post" action="/booking/checkout/{{ (int) ($reservation->id ?? 0) }}/transfer" id="transferSelectionForm">
                     @csrf
-                    <label class="toggle">
-                        <input type="checkbox" name="include_transfer" id="includeTransferInput" value="1" {{ $includeTransfer ? 'checked' : '' }}>
-                        Include transfer in this booking
-                    </label>
+                    @if ($hasTransferOptions)
+                        <label class="toggle">
+                            <input type="checkbox" name="include_transfer" id="includeTransferInput" value="1" {{ $includeTransfer ? 'checked' : '' }}>
+                            Include transfer in this booking
+                        </label>
 
-                    <div class="field">
-                        <label for="transferOptionInput">Select Transfer Mode</label>
-                        <select name="transfer_option" id="transferOptionInput" {{ $includeTransfer ? '' : 'disabled' }}>
-                            @foreach ($transferOptions as $option)
-                                @php
-                                    $code = strtolower(trim((string) ($option['code'] ?? '')));
-                                    $label = trim((string) ($option['label'] ?? 'Transfer'));
-                                    $base = (float) ($option['base_charge'] ?? 0);
-                                    $localAdult = (float) ($option['local_adult_charge'] ?? $option['adult_charge'] ?? 0);
-                                    $localChild = (float) ($option['local_child_charge'] ?? $option['child_charge'] ?? 0);
-                                    $foreignAdult = (float) ($option['foreign_adult_charge'] ?? $option['adult_charge'] ?? 0);
-                                    $foreignChild = (float) ($option['foreign_child_charge'] ?? $option['child_charge'] ?? 0);
-                                @endphp
-                                <option
-                                    value="{{ $code }}"
-                                    data-base-charge="{{ number_format($base, 2, '.', '') }}"
-                                    data-local-adult-rate="{{ number_format($localAdult, 2, '.', '') }}"
-                                    data-local-child-rate="{{ number_format($localChild, 2, '.', '') }}"
-                                    data-foreign-adult-rate="{{ number_format($foreignAdult, 2, '.', '') }}"
-                                    data-foreign-child-rate="{{ number_format($foreignChild, 2, '.', '') }}"
-                                    {{ $selectedOption === $code ? 'selected' : '' }}
-                                >
-                                    {{ $label }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+                        <div class="field">
+                            <label for="transferOptionInput">Select Transfer Mode</label>
+                            <select name="transfer_option" id="transferOptionInput" {{ $includeTransfer ? '' : 'disabled' }}>
+                                @foreach ($transferOptions as $option)
+                                    @php
+                                        $code = strtolower(trim((string) ($option['code'] ?? '')));
+                                        $label = trim((string) ($option['label'] ?? 'Transfer'));
+                                        $base = (float) ($option['base_charge'] ?? 0);
+                                        $localAdult = (float) ($option['local_adult_charge'] ?? $option['adult_charge'] ?? 0);
+                                        $localChild = (float) ($option['local_child_charge'] ?? $option['child_charge'] ?? 0);
+                                        $foreignAdult = (float) ($option['foreign_adult_charge'] ?? $option['adult_charge'] ?? 0);
+                                        $foreignChild = (float) ($option['foreign_child_charge'] ?? $option['child_charge'] ?? 0);
+                                    @endphp
+                                    <option
+                                        value="{{ $code }}"
+                                        data-base-charge="{{ number_format($base, 2, '.', '') }}"
+                                        data-local-adult-rate="{{ number_format($localAdult, 2, '.', '') }}"
+                                        data-local-child-rate="{{ number_format($localChild, 2, '.', '') }}"
+                                        data-foreign-adult-rate="{{ number_format($foreignAdult, 2, '.', '') }}"
+                                        data-foreign-child-rate="{{ number_format($foreignChild, 2, '.', '') }}"
+                                        {{ $selectedOption === $code ? 'selected' : '' }}
+                                    >
+                                        {{ $label }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
 
-                    <div class="summary" aria-label="Transfer summary">
-                        <div class="summary-line"><span>Guests</span><strong>{{ $adults }} Adults, {{ $children }} Children</strong></div>
-                        <div class="summary-line"><span>Base booking amount</span><strong id="baseAmountLabel">{{ $currency }} {{ number_format($baseTotal, 2) }}</strong></div>
-                        <div class="summary-line"><span>Transfer charge</span><strong id="transferChargeLabel">{{ $currency }} 0.00</strong></div>
-                        <div class="summary-total"><span>Estimated total</span><span id="estimatedTotalLabel">{{ $currency }} {{ number_format($reservationTotal, 2) }}</span></div>
-                    </div>
+                        <div class="summary" aria-label="Transfer summary">
+                            <div class="summary-line"><span>Guests</span><strong>{{ $adults }} Adults, {{ $children }} Children</strong></div>
+                            <div class="summary-line"><span>Base booking amount</span><strong id="baseAmountLabel">{{ $currency }} {{ number_format($baseTotal, 2) }}</strong></div>
+                            <div class="summary-line"><span>Transfer charge</span><strong id="transferChargeLabel">{{ $currency }} 0.00</strong></div>
+                            <div class="summary-total"><span>Estimated total</span><span id="estimatedTotalLabel">{{ $currency }} {{ number_format($reservationTotal, 2) }}</span></div>
+                        </div>
 
-                    <p class="helper">Next step will show payment options (MIB/BML/Stripe) based on your saved nationality and residency.</p>
+                        <p class="helper">Next step will show payment options (MIB/BML/Stripe) based on your saved nationality and residency.</p>
 
-                    <div class="actions">
-                        <a class="btn alt" href="{{ $backUrl !== '' ? $backUrl : '/' }}">Back</a>
-                        <button class="btn primary" type="submit">Select &amp; Continue</button>
-                    </div>
+                        <div class="actions">
+                            <a class="btn alt" href="{{ $backUrl !== '' ? $backUrl : '/' }}">Back</a>
+                            <button class="btn primary" type="submit">Select &amp; Continue</button>
+                        </div>
+                    @else
+                        <input type="hidden" name="include_transfer" value="0">
+                        <input type="hidden" name="transfer_option" value="none">
+                        <div class="summary" aria-label="Transfer summary">
+                            <div class="summary-line"><span>Transfer status</span><strong>Included / Not required</strong></div>
+                            <div class="summary-line"><span>Base booking amount</span><strong>{{ $currency }} {{ number_format($baseTotal, 2) }}</strong></div>
+                            <div class="summary-total"><span>Estimated total</span><span>{{ $currency }} {{ number_format($reservationTotal, 2) }}</span></div>
+                        </div>
+                        <div class="actions">
+                            <a class="btn alt" href="{{ $backUrl !== '' ? $backUrl : '/' }}">Back</a>
+                            <button class="btn primary" type="submit">Select &amp; Continue</button>
+                        </div>
+                    @endif
                 </form>
             </div>
         </section>

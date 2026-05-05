@@ -1282,6 +1282,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'resort_day_visit' => ['label' => 'Resort Day Visit', 'start_label' => 'Visit Date', 'end_label' => 'Return Date'],
         'restaurant' => ['label' => 'Restaurant', 'start_label' => 'Reservation Date & Time', 'end_label' => 'Expected Departure Date & Time'],
         'vehicle_rental' => ['label' => 'Vehicle Rental', 'start_label' => 'Pickup Date', 'end_label' => 'Return Date'],
+        'conference_room' => ['label' => 'Conference & Meeting Spaces', 'start_label' => 'Event Date', 'end_label' => 'Event End Date'],
     ];
 
     $categoryFieldRules = [
@@ -1323,7 +1324,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
             'return_slot' => ['nullable', 'string', 'max:10'],
         ],
         'resort_day_visit' => [
-            'visit_package' => ['required', 'string', 'max:120'],
+            'visit_package' => ['nullable', 'string', 'max:120'],
             'departure_area' => ['nullable', 'string', 'max:120'],
             'departure_time' => ['nullable', 'string', 'max:10'],
             'return_slot' => ['nullable', 'string', 'max:10'],
@@ -1366,7 +1367,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
     $startDateLabel = (string) ($requestedCategoryMeta['start_label'] ?? 'Service start date');
     $endDateLabel = (string) ($requestedCategoryMeta['end_label'] ?? 'Service end date');
 
-    $isExcursionCategory = $requestedCategoryKey === 'excursion';
+    $isActivityCategory = $requestedCategoryKey !== 'accommodation';
 
     $baseRules = [
         'category_key' => ['required', 'string', 'in:' . implode(',', array_keys($categoryMap))],
@@ -1376,12 +1377,12 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'adults' => ['required', 'integer', 'min:1', 'max:20'],
         'children' => ['nullable', 'integer', 'min:0', 'max:20'],
         'infants' => ['nullable', 'integer', 'min:0', 'max:20'],
-        'primary_first_name' => $isExcursionCategory ? ['nullable', 'string', 'max:80'] : ['required', 'string', 'max:80'],
-        'primary_last_name' => $isExcursionCategory ? ['nullable', 'string', 'max:80'] : ['required', 'string', 'max:80'],
-        'primary_nationality' => $isExcursionCategory ? ['nullable', 'string', 'max:120'] : ['required', 'string', 'max:120'],
+        'primary_first_name' => $isActivityCategory ? ['nullable', 'string', 'max:80'] : ['required', 'string', 'max:80'],
+        'primary_last_name' => $isActivityCategory ? ['nullable', 'string', 'max:80'] : ['required', 'string', 'max:80'],
+        'primary_nationality' => $isActivityCategory ? ['nullable', 'string', 'max:120'] : ['required', 'string', 'max:120'],
         'guest_residency' => ['nullable', Rule::in(['local_resident', 'foreign_national'])],
-        'primary_email' => $isExcursionCategory ? ['nullable', 'email', 'max:190'] : ['required', 'email', 'max:190'],
-        'primary_mobile' => $isExcursionCategory ? ['nullable', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s\-()]{5,39}$/'] : ['required', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s\-()]{5,39}$/'],
+        'primary_email' => $isActivityCategory ? ['nullable', 'email', 'max:190'] : ['required', 'email', 'max:190'],
+        'primary_mobile' => $isActivityCategory ? ['nullable', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s\-()]{5,39}$/'] : ['required', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s\-()]{5,39}$/'],
         'transfer_option' => ['nullable', 'string', 'max:80'],
         'transfer_charge' => ['nullable', 'numeric', 'min:0'],
         'departure_time' => ['nullable', 'string', 'max:10'],
@@ -1629,7 +1630,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
     $primaryEmailRaw = trim((string) ($payload['primary_email'] ?? ''));
     $mobileRaw = trim((string) ($payload['primary_mobile'] ?? ''));
 
-    if ($categoryKey === 'excursion') {
+    if ($isActivityCategory) {
         if ($primaryFirstNameRaw === '') {
             $primaryFirstNameRaw = $sessionFirstName;
         }
@@ -1776,13 +1777,8 @@ Route::post('/booking/reserve-category', function (Request $request) {
         ]);
     }
 
-    // Non-accommodation categories handle transfer inline on the booking form and do not need the
-    // separate transfer selection step. Skip /transfer in the redirect for these categories.
-    $noTransferStepCategories = ['marine-transport', 'land-transport', 'excursion', 'water_sports', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
-    $skipTransferStep = in_array($categoryKey, $noTransferStepCategories, true);
-
     $checkoutUrl = '/booking/checkout'
-        . ($reservationId ? ('/' . $reservationId . ($skipTransferStep ? '' : '/transfer')) : '')
+        . ($reservationId ? ('/' . $reservationId . '/transfer') : '')
         . '?property_id=' . (int) $propertyRow->id
         . '&category_key=' . urlencode($categoryKey)
         . '&room_id=0'
@@ -2145,13 +2141,7 @@ Route::get('/booking/checkout/{reservation}/transfer', function (Request $reques
 
     $notes = workationReservationPaymentNotes($reservationRow);
 
-    // Non-accommodation categories (services) handle transfer inline on their booking form.
-    // Redirect directly to checkout, bypassing the separate transfer selection step.
     $reservationCategoryKey = strtolower(trim((string) ($notes['category_key'] ?? '')));
-    $noTransferStepCategories = ['marine-transport', 'land-transport', 'excursion', 'water_sports', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
-    if (in_array($reservationCategoryKey, $noTransferStepCategories, true)) {
-        return redirect('/booking/checkout/' . $reservation);
-    }
 
     $propertyId = (int) ($reservationRow->vendor_property_id ?? 0);
     $propertyRow = $propertyId > 0 ? VendorPropertyCompatibilityReader::loadPropertyById($propertyId) : null;
@@ -2203,6 +2193,7 @@ Route::get('/booking/checkout/{reservation}/transfer', function (Request $reques
         'property' => $propertyRow,
         'room' => $roomRow,
         'summary' => [
+            'category_key' => $reservationCategoryKey,
             'checkin' => trim((string) ($notes['service_start_date'] ?? '')),
             'checkout' => trim((string) ($notes['service_end_date'] ?? '')),
             'adults' => max(1, (int) ($notes['adults'] ?? 1)),
@@ -2388,7 +2379,6 @@ Route::post('/booking/checkout/{reservation}/guest-details', function (Request $
         'primary_nationality' => ['required', 'string', 'max:80'],
         'primary_email' => ['required', 'email', 'max:120'],
         'primary_mobile' => ['required', 'string', 'max:32'],
-        'guest_residency' => ['nullable', 'in:local_resident,foreign_national'],
         'additional_guest_details' => ['nullable', 'string', 'max:2000'],
         'service_notes' => ['nullable', 'string', 'max:2000'],
     ]);
@@ -2400,12 +2390,9 @@ Route::post('/booking/checkout/{reservation}/guest-details', function (Request $
     }
 
     $primaryNationality = trim((string) ($validated['primary_nationality'] ?? ''));
-    $guestResidency = strtolower(trim((string) ($validated['guest_residency'] ?? '')));
-    if (!in_array($guestResidency, ['local_resident', 'foreign_national'], true)) {
-        $guestResidency = ReservationPricingPolicy::isForeigner($primaryNationality, null)
-            ? 'foreign_national'
-            : 'local_resident';
-    }
+    $guestResidency = strcasecmp($primaryNationality, 'Maldives') === 0
+        ? 'local_resident'
+        : 'foreign_national';
 
     $transferOptions = collect($notes['property_transfer_options'] ?? [])->filter(static fn ($option) => is_array($option))->values();
     $selectedTransferOption = strtolower(trim((string) ($notes['transfer_option'] ?? 'none')));

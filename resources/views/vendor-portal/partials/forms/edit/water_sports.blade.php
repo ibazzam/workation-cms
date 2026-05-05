@@ -122,6 +122,16 @@
             <label for="property_cancellation_policy">Cancellation Policy</label>
             <textarea id="property_cancellation_policy" name="cancellation_policy" class="ops-textarea" rows="3" maxlength="2000">{{ old('cancellation_policy', $propertyDetails['cancellation_policy'] ?? '') }}</textarea>
         </div>
+
+        {{-- ── Schedule / Itinerary ──────────────────────────────────────── --}}
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
+            <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Schedule / Itinerary</p>
+        </div>
+        <div class="ops-field ops-field-wide">
+            <label for="property_activity_schedule">Activity Schedule <span style="font-weight:400;">(optional)</span></label>
+            <p class="ops-field-hint">Enter each schedule item on a new line, e.g. &ldquo;09:00 Safety briefing&rdquo;, &ldquo;09:30 Session begins&rdquo;. Guests will see this as a programme overview.</p>
+            <textarea id="property_activity_schedule" name="activity_schedule" class="ops-textarea" rows="6" maxlength="5000" placeholder="09:00 Safety briefing&#10;09:30 Session begins&#10;11:30 Wrap-up">{{ old('activity_schedule', $propertyDetails['activity_schedule'] ?? '') }}</textarea>
+        </div>
     </div>
 
     <section class="listing-form-section listing-price-band" aria-label="Service pricing">

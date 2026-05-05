@@ -1352,6 +1352,7 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['weather_cancellation_policy'] = trim((string) ($validated['weather_cancellation_policy'] ?? ''));
             $details['cancellation_policy'] = trim((string) ($validated['cancellation_policy'] ?? ''));
             $details['special_instructions'] = trim((string) ($validated['special_instructions'] ?? ''));
+            $details['activity_schedule'] = trim((string) ($validated['activity_schedule'] ?? ''));
             // Transfer & slot configuration
             $rawTransferIncluded = strtolower(trim((string) ($validated['transfer_included'] ?? '0')));
             $details['transfer_included'] = in_array($rawTransferIncluded, ['1', 'yes', 'true', 'on'], true);
@@ -1422,6 +1423,7 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['day_visit_start_time'] = trim((string) ($validated['day_visit_start_time'] ?? ''));
             $details['day_visit_end_time'] = trim((string) ($validated['day_visit_end_time'] ?? ''));
             $details['included_access'] = trim((string) ($validated['included_access'] ?? ''));
+            $details['activity_schedule'] = trim((string) ($validated['activity_schedule'] ?? ''));
 
             // Transfer & slot configuration
             $rawTransferIncludedRdv = strtolower(trim((string) ($validated['transfer_included'] ?? '0')));

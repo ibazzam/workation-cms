@@ -493,6 +493,171 @@ Route::post('/portal/vendor/rooms/{room}/delete', function (int $room) {
     return vendorPortalListingsBackResponse('Room category removed.', 3);
 });
 
+Route::post('/portal/vendor/water-sports-equipment/create', function (Request $request) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    if (!Schema::hasTable('vendor_water_sports_rental_items')) {
+        return back()->withErrors(['profile' => 'Water sports rental items table is not ready. Run migrations first.']);
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+
+    $validated = $request->validate([
+        'vendor_property_id' => ['required', 'integer', 'min:1'],
+        'name' => ['required', 'string', 'max:160'],
+        'equipment_type' => ['nullable', 'string', 'max:80'],
+        'equipment_category' => ['nullable', 'string', 'max:40'],
+        'description' => ['nullable', 'string', 'max:3000'],
+        'price_per_hour_local' => ['nullable', 'numeric', 'min:0'],
+        'price_per_hour_usd' => ['nullable', 'numeric', 'min:0'],
+        'price_per_hour_child_local' => ['nullable', 'numeric', 'min:0'],
+        'price_per_hour_child_usd' => ['nullable', 'numeric', 'min:0'],
+        'min_age_years' => ['nullable', 'integer', 'min:0', 'max:120'],
+        'min_duration_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
+        'max_duration_hours' => ['nullable', 'integer', 'min:1', 'max:24'],
+        'quantity_available' => ['nullable', 'integer', 'min:1', 'max:10000'],
+    ]);
+
+    $vendorPropertyId = (int) ($validated['vendor_property_id'] ?? 0);
+    $propertyRecord = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById($vendorPropertyId, $vendorUserId);
+
+    if (!$propertyRecord) {
+        return back()->withErrors(['profile' => 'Select a valid property owned by your vendor account.'])->withInput();
+    }
+
+    $propertyCategory = vendorPortalCanonicalCategory((string) ($propertyRecord->listing_category ?? ''));
+    if ($propertyCategory !== 'water_sports') {
+        return back()->withErrors(['profile' => 'Rental equipment items can only be added under water sports listings.'])->withInput();
+    }
+
+    $allowedEquipmentTypes = ['jetski', 'snorkeling_gear', 'canoe', 'surfboard', 'paddleboard', 'banana_boat', 'parasailing', 'windsurf', 'other'];
+    $allowedCategories = ['motorized', 'non_motorized', 'adrenaline', 'guided', 'snorkeling_diving', 'other'];
+    
+    $equipmentType = trim((string) ($validated['equipment_type'] ?? 'other'));
+    if (!in_array($equipmentType, $allowedEquipmentTypes, true)) {
+        $equipmentType = 'other';
+    }
+    
+    $equipmentCategory = trim((string) ($validated['equipment_category'] ?? 'non_motorized'));
+    if (!in_array($equipmentCategory, $allowedCategories, true)) {
+        $equipmentCategory = 'non_motorized';
+    }
+
+    DB::table('vendor_water_sports_rental_items')->insert([
+        'vendor_user_id' => $vendorUserId,
+        'vendor_property_id' => $vendorPropertyId,
+        'name' => trim((string) $validated['name']),
+        'equipment_type' => $equipmentType,
+        'equipment_category' => $equipmentCategory,
+        'description' => trim((string) ($validated['description'] ?? '')),
+        'price_per_hour_local' => max(0, (float) ($validated['price_per_hour_local'] ?? 0)),
+        'price_per_hour_usd' => max(0, (float) ($validated['price_per_hour_usd'] ?? 0)),
+        'price_per_hour_child_local' => max(0, (float) ($validated['price_per_hour_child_local'] ?? 0)),
+        'price_per_hour_child_usd' => max(0, (float) ($validated['price_per_hour_child_usd'] ?? 0)),
+        'min_age_years' => max(0, (int) ($validated['min_age_years'] ?? 0)),
+        'min_duration_minutes' => max(5, (int) ($validated['min_duration_minutes'] ?? 30)),
+        'max_duration_hours' => max(1, (int) ($validated['max_duration_hours'] ?? 8)),
+        'quantity_available' => max(1, (int) ($validated['quantity_available'] ?? 1)),
+        'status' => 'active',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    return vendorPortalListingsBackResponse('Rental equipment item added.', 3);
+});
+
+Route::post('/portal/vendor/water-sports-equipment/{item}/update', function (Request $request, int $item) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    if (!Schema::hasTable('vendor_water_sports_rental_items')) {
+        return back()->withErrors(['profile' => 'Water sports rental items table is not ready. Run migrations first.']);
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $itemRecord = DB::table('vendor_water_sports_rental_items')
+        ->where('id', $item)
+        ->where('vendor_user_id', $vendorUserId)
+        ->first();
+
+    if (!$itemRecord) {
+        return back()->withErrors(['profile' => 'Rental item not found for this vendor account.']);
+    }
+
+    $validated = $request->validate([
+        'name' => ['required', 'string', 'max:160'],
+        'equipment_type' => ['nullable', 'string', 'max:80'],
+        'equipment_category' => ['nullable', 'string', 'max:40'],
+        'description' => ['nullable', 'string', 'max:3000'],
+        'price_per_hour_local' => ['nullable', 'numeric', 'min:0'],
+        'price_per_hour_usd' => ['nullable', 'numeric', 'min:0'],
+        'price_per_hour_child_local' => ['nullable', 'numeric', 'min:0'],
+        'price_per_hour_child_usd' => ['nullable', 'numeric', 'min:0'],
+        'min_age_years' => ['nullable', 'integer', 'min:0', 'max:120'],
+        'min_duration_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
+        'max_duration_hours' => ['nullable', 'integer', 'min:1', 'max:24'],
+        'quantity_available' => ['nullable', 'integer', 'min:1', 'max:10000'],
+        'status' => ['nullable', Rule::in(['active', 'inactive'])],
+    ]);
+
+    $allowedEquipmentTypes = ['jetski', 'snorkeling_gear', 'canoe', 'surfboard', 'paddleboard', 'banana_boat', 'parasailing', 'windsurf', 'other'];
+    $allowedCategories = ['motorized', 'non_motorized', 'adrenaline', 'guided', 'snorkeling_diving', 'other'];
+    
+    $equipmentType = trim((string) ($validated['equipment_type'] ?? 'other'));
+    if (!in_array($equipmentType, $allowedEquipmentTypes, true)) {
+        $equipmentType = 'other';
+    }
+    
+    $equipmentCategory = trim((string) ($validated['equipment_category'] ?? 'non_motorized'));
+    if (!in_array($equipmentCategory, $allowedCategories, true)) {
+        $equipmentCategory = 'non_motorized';
+    }
+
+    DB::table('vendor_water_sports_rental_items')
+        ->where('id', $item)
+        ->where('vendor_user_id', $vendorUserId)
+        ->update([
+            'name' => trim((string) $validated['name']),
+            'equipment_type' => $equipmentType,
+            'equipment_category' => $equipmentCategory,
+            'description' => trim((string) ($validated['description'] ?? '')),
+            'price_per_hour_local' => max(0, (float) ($validated['price_per_hour_local'] ?? 0)),
+            'price_per_hour_usd' => max(0, (float) ($validated['price_per_hour_usd'] ?? 0)),
+            'price_per_hour_child_local' => max(0, (float) ($validated['price_per_hour_child_local'] ?? 0)),
+            'price_per_hour_child_usd' => max(0, (float) ($validated['price_per_hour_child_usd'] ?? 0)),
+            'min_age_years' => max(0, (int) ($validated['min_age_years'] ?? 0)),
+            'min_duration_minutes' => max(5, (int) ($validated['min_duration_minutes'] ?? 30)),
+            'max_duration_hours' => max(1, (int) ($validated['max_duration_hours'] ?? 8)),
+            'quantity_available' => max(1, (int) ($validated['quantity_available'] ?? 1)),
+            'status' => in_array((string) ($validated['status'] ?? 'active'), ['active', 'inactive'], true) ? $validated['status'] : 'active',
+            'updated_at' => now(),
+        ]);
+
+    return vendorPortalListingsBackResponse('Rental equipment item updated.', 3);
+});
+
+Route::post('/portal/vendor/water-sports-equipment/{item}/delete', function (int $item) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    if (!Schema::hasTable('vendor_water_sports_rental_items')) {
+        return back()->withErrors(['profile' => 'Water sports rental items table is not ready. Run migrations first.']);
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+
+    DB::table('vendor_water_sports_rental_items')
+        ->where('id', $item)
+        ->where('vendor_user_id', $vendorUserId)
+        ->delete();
+
+    return vendorPortalListingsBackResponse('Rental equipment item removed.', 3);
+});
+
 Route::post('/portal/vendor/properties/create', function (Request $request) {
     if (!session('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');

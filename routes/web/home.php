@@ -1044,7 +1044,7 @@ Route::get('/', function (Request $request) {
                 return $card;
             });
 
-            $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categorySamples, $categoryMinPriceRows, $globalMinPriceRow, $resolvePropertyImage, $resolvePropertyFallbackImage, $propertyLocationLabel) {
+            $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categorySamples, $categoryMinPriceRows, $globalMinPriceRow, $resolvePropertyImage, $resolvePropertyFallbackImage, $propertyLocationLabel, $displayPriceForVisitor) {
                 $categoryHint = match ($card['title']) {
                     'Stay Options' => 'accommodation',
                     'Marine Transport' => 'marine_transport',

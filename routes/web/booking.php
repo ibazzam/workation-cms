@@ -3119,3 +3119,203 @@ Route::match(['get', 'post'], '/booking/payment/webhooks/{gateway}', function (R
 
     return response()->json(['ok' => true, 'result' => $result['status'] ?? 'processed']);
 });
+
+// ── Water sports multi-item cart booking ───────────────────────────────────
+Route::post('/booking/water-sports-cart', function (Request $request) {
+    $payload = $request->validate([
+        'property_id'        => ['required', 'integer', 'min:1'],
+        'visitor_residency'  => ['nullable', Rule::in(['local_resident', 'foreign_national'])],
+        'service_date'       => ['required', 'date', 'after_or_equal:today'],
+        'primary_first_name' => ['required', 'string', 'max:80'],
+        'primary_last_name'  => ['required', 'string', 'max:80'],
+        'primary_email'      => ['required', 'email', 'max:190'],
+        'primary_mobile'     => ['required', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s\-()]{5,39}$/'],
+        'service_notes'      => ['nullable', 'string', 'max:500'],
+        'cart_items'         => ['required', 'string'],
+    ], [
+        'primary_mobile.regex' => 'Please enter a valid mobile number.',
+    ]);
+
+    // Decode and validate cart items JSON
+    $cartRaw = json_decode((string) $payload['cart_items'], true);
+    if (!is_array($cartRaw) || empty($cartRaw)) {
+        return back()->withErrors(['booking' => 'Your cart is empty. Please add at least one equipment item.']);
+    }
+
+    $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById((int) $payload['property_id']);
+    if (!$propertyRow) {
+        abort(404);
+    }
+
+    $listingStatus = strtolower(trim((string) ($propertyRow->status ?? 'inactive')));
+    if ($listingStatus !== 'active') {
+        abort(404);
+    }
+
+    $listingCategory = strtolower(trim((string) ($propertyRow->listing_category ?? '')));
+    if ($listingCategory !== 'water_sports') {
+        abort(404);
+    }
+
+    if (isset($propertyRow->listing_moderation_status)) {
+        $moderationStatus = strtolower(trim((string) ($propertyRow->listing_moderation_status ?? 'draft')));
+        if ($moderationStatus !== 'approved') {
+            return back()->withErrors(['booking' => 'This listing is not yet available for bookings.']);
+        }
+    }
+
+    // Validate + price each cart item against live DB records
+    if (!Schema::hasTable('vendor_water_sports_rental_items')) {
+        return back()->withErrors(['booking' => 'Equipment booking is not yet available for this property.']);
+    }
+
+    $visitorResidency = strtolower(trim((string) ($payload['visitor_residency'] ?? 'foreign_national')));
+    $visitorIsLocal   = $visitorResidency === 'local_resident';
+    $mvrUsdRate       = (float) env('MVR_USD_RATE', 15.42);
+    $currency         = $visitorIsLocal ? 'MVR' : 'USD';
+
+    $vendorUserId     = (int) ($propertyRow->vendor_user_id ?? $propertyRow->user_id ?? 0);
+    $primaryFirstName = trim((string) $payload['primary_first_name']);
+    $primaryLastName  = trim((string) $payload['primary_last_name']);
+    $primaryEmail     = trim((string) $payload['primary_email']);
+    $primaryMobile    = trim((string) $payload['primary_mobile']);
+    $serviceNotes     = trim((string) ($payload['service_notes'] ?? ''));
+    $serviceDate      = \Carbon\Carbon::parse((string) $payload['service_date'])->startOfDay();
+    $customerName     = trim($primaryFirstName . ' ' . $primaryLastName);
+
+    // Collect unique item IDs from cart
+    $requestedItemIds = collect($cartRaw)
+        ->map(static fn ($entry) => (int) ($entry['itemId'] ?? 0))
+        ->filter(static fn (int $id) => $id > 0)
+        ->unique()
+        ->values()
+        ->all();
+
+    $dbItems = DB::table('vendor_water_sports_rental_items')
+        ->whereIn('id', $requestedItemIds)
+        ->where('vendor_property_id', (int) $propertyRow->id)
+        ->where('status', 'active')
+        ->get()
+        ->keyBy('id');
+
+    $lineItems  = [];
+    $grandTotal = 0.0;
+    $errors     = [];
+
+    foreach ($cartRaw as $idx => $entry) {
+        $itemId      = (int) ($entry['itemId'] ?? 0);
+        $qty         = max(1, (int) ($entry['qty'] ?? 1));
+        $durationMins= max(1, (int) ($entry['durationMins'] ?? 30));
+        $guestType   = in_array((string) ($entry['guestType'] ?? 'adult'), ['adult', 'child']) ? (string) $entry['guestType'] : 'adult';
+
+        $dbItem = $dbItems->get($itemId);
+        if (!$dbItem) {
+            $errors[] = 'Item #' . ($idx + 1) . ' is no longer available.';
+            continue;
+        }
+
+        $qtyAvail = (int) ($dbItem->quantity_available ?? 1);
+        if ($qty > $qtyAvail) {
+            $errors[] = 'Only ' . $qtyAvail . ' unit(s) of "' . $dbItem->name . '" available.';
+            $qty = $qtyAvail;
+        }
+
+        if ($visitorIsLocal) {
+            $unitPrice = $guestType === 'child'
+                ? (float) ($dbItem->price_per_hour_child_local ?? 0)
+                : (float) ($dbItem->price_per_hour_local ?? 0);
+        } else {
+            $unitPrice = $guestType === 'child'
+                ? (float) ($dbItem->price_per_hour_child_usd ?? 0)
+                : (float) ($dbItem->price_per_hour_usd ?? 0);
+        }
+
+        $lineTotal   = $unitPrice * $qty * ($durationMins / 60);
+        $grandTotal += $lineTotal;
+
+        $lineItems[] = [
+            'item_id'       => $itemId,
+            'item_name'     => (string) ($dbItem->name ?? ''),
+            'equipment_type'=> (string) ($dbItem->equipment_type ?? 'other'),
+            'category'      => (string) ($dbItem->equipment_category ?? 'other'),
+            'guest_type'    => $guestType,
+            'qty'           => $qty,
+            'duration_mins' => $durationMins,
+            'unit_price'    => $unitPrice,
+            'line_total'    => $lineTotal,
+            'currency'      => $currency,
+        ];
+    }
+
+    if (!empty($errors)) {
+        return back()->withErrors(['booking' => implode(' ', $errors)]);
+    }
+
+    if (empty($lineItems)) {
+        return back()->withErrors(['booking' => 'No valid items in cart.']);
+    }
+
+    $reservationId = 0;
+
+    if (Schema::hasTable('vendor_reservations')) {
+        $reservationId = (int) DB::table('vendor_reservations')->insertGetId([
+            'vendor_user_id'      => $vendorUserId,
+            'vendor_property_id'  => (int) $propertyRow->id,
+            'vendor_service_id'   => null,
+            'customer_name'       => $customerName !== '' ? $customerName : 'Guest Customer',
+            'customer_email'      => $primaryEmail !== '' ? $primaryEmail : 'guest@workation.local',
+            'start_at'            => $serviceDate,
+            'end_at'              => $serviceDate,
+            'guests'              => max(1, array_sum(array_column($lineItems, 'qty'))),
+            'total_amount'        => $grandTotal,
+            'currency'            => $currency,
+            'status'              => 'pending',
+            'payment_status'      => 'unpaid',
+            'notes'               => json_encode([
+                'category_key'        => 'water_sports',
+                'category_label'      => 'Water Sports',
+                'service_start_date'  => $serviceDate->toDateString(),
+                'service_end_date'    => $serviceDate->toDateString(),
+                'primary_first_name'  => $primaryFirstName,
+                'primary_last_name'   => $primaryLastName,
+                'primary_email'       => $primaryEmail,
+                'primary_mobile'      => $primaryMobile,
+                'guest_residency'     => $visitorResidency,
+                'service_notes'       => $serviceNotes,
+                'booking_type'        => 'water_sports_multi_item',
+                'line_items'          => $lineItems,
+                'subtotal_amount'     => $grandTotal,
+                'total_tax_amount'    => 0,
+                'invoice_total_amount'=> $grandTotal,
+                'currency'            => $currency,
+                'mvr_usd_rate'        => $mvrUsdRate,
+            ]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        if (Schema::hasColumn('vendor_reservations', 'listing_category')) {
+            DB::table('vendor_reservations')
+                ->where('id', $reservationId)
+                ->update(['listing_category' => 'water_sports']);
+        }
+    }
+
+    $checkoutUrl = '/booking/checkout'
+        . ($reservationId ? ('/' . $reservationId) : '')
+        . '?property_id=' . (int) $propertyRow->id
+        . '&category_key=water_sports'
+        . '&checkin=' . urlencode($serviceDate->toDateString())
+        . '&checkout=' . urlencode($serviceDate->toDateString())
+        . '&adults=' . max(1, array_sum(array_column($lineItems, 'qty')))
+        . '&children=0'
+        . '&primary_first_name=' . urlencode($primaryFirstName)
+        . '&primary_last_name=' . urlencode($primaryLastName)
+        . '&primary_email=' . urlencode($primaryEmail)
+        . '&primary_mobile=' . urlencode($primaryMobile)
+        . '&guest_residency=' . urlencode($visitorResidency)
+        . '&service_notes=' . urlencode($serviceNotes)
+        . '&total=' . urlencode((string) $grandTotal);
+
+    return redirect($checkoutUrl);
+});

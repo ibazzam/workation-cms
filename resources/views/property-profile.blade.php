@@ -1840,6 +1840,76 @@
 
         .rooms-section { margin-top: 12px; }
 
+        /* ── Water sports equipment section ── */
+        .equipment-section { margin-top: 0; }
+        .equipment-head { margin-bottom: 16px; }
+        .equipment-head h2 { margin: 0 0 4px; font-size: 1.08rem; color: #0e465c; }
+        .equipment-head p { margin: 0; color: #5a7a8a; font-size: 0.88rem; }
+        .equipment-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+        .equipment-card { border: 1px solid #dbe7f0; border-radius: 13px; background: #fbfdff; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+        .equipment-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+        .equipment-card-title { font-size: 0.98rem; font-weight: 600; color: #0e3d52; margin: 0; }
+        .equipment-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+        .equipment-badge { font-size: 0.68rem; font-weight: 600; padding: 3px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em; }
+        .equipment-badge-motorized { background: #fde8e8; color: #9b2020; }
+        .equipment-badge-non-motorized { background: #e2f4ea; color: #1a6635; }
+        .equipment-badge-adrenaline { background: #fef0e0; color: #884700; }
+        .equipment-badge-snorkeling-diving { background: #e0f0fe; color: #1044a8; }
+        .equipment-badge-guided { background: #e8f4f4; color: #135c5c; }
+        .equipment-badge-other { background: #f0f0f0; color: #555; }
+        .equipment-age-note { font-size: 0.78rem; color: #8a6020; background: #fef7e8; border-radius: 6px; padding: 4px 8px; }
+        .equipment-pricing { border: 1px solid #e4eef5; border-radius: 9px; overflow: hidden; }
+        .equipment-pricing-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; font-size: 0.83rem; border-bottom: 1px solid #f0f6fa; }
+        .equipment-pricing-row:last-child { border-bottom: none; }
+        .equipment-pricing-label { color: #4a7080; }
+        .equipment-pricing-value { font-weight: 600; color: #0e3d52; }
+        .equipment-controls { display: flex; flex-direction: column; gap: 8px; }
+        .equipment-control-row { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; color: #3a5a6a; }
+        .equipment-control-row label { min-width: 84px; }
+        .equipment-control-row select,
+        .equipment-control-row input[type="number"] { border: 1px solid #c8dde8; border-radius: 7px; padding: 5px 8px; font-size: 0.84rem; background: #fff; color: #0e3d52; flex: 1; }
+        .equipment-add-btn { margin-top: 4px; background: #0e7490; color: #fff; border: none; border-radius: 9px; padding: 9px 0; font-size: 0.88rem; font-weight: 600; cursor: pointer; width: 100%; transition: background 0.15s; }
+        .equipment-add-btn:hover { background: #0c5f75; }
+        .equipment-add-btn.is-added { background: #1a7a3a; }
+
+        /* ── Equipment cart panel ── */
+        .equipment-cart { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 2px solid #0e7490; box-shadow: 0 -4px 24px rgba(0,0,0,0.12); z-index: 800; padding: 12px 16px 16px; transform: translateY(100%); transition: transform 0.28s ease; }
+        .equipment-cart.is-open { transform: translateY(0); }
+        .equipment-cart-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .equipment-cart-head h3 { margin: 0; font-size: 0.96rem; color: #0e3d52; }
+        .equipment-cart-close { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #4a7080; padding: 2px 6px; border-radius: 5px; }
+        .equipment-cart-items { max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+        .equipment-cart-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #f4f9fc; border-radius: 8px; font-size: 0.83rem; }
+        .equipment-cart-item-name { flex: 1; color: #0e3d52; font-weight: 500; }
+        .equipment-cart-item-detail { color: #4a7080; }
+        .equipment-cart-item-price { font-weight: 600; color: #0e3d52; min-width: 80px; text-align: right; }
+        .equipment-cart-item-remove { background: none; border: none; cursor: pointer; color: #b04040; font-size: 0.88rem; padding: 2px 5px; border-radius: 4px; }
+        .equipment-cart-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .equipment-cart-total { font-size: 0.96rem; font-weight: 700; color: #0e3d52; }
+        .equipment-cart-proceed { background: #0e7490; color: #fff; border: none; border-radius: 9px; padding: 10px 22px; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+        .equipment-cart-proceed:hover { background: #0c5f75; }
+        .equipment-cart-form { display: none; }
+
+        /* ── Equipment booking modal ── */
+        .equipment-booking-modal { display: none; position: fixed; inset: 0; z-index: 1200; background: rgba(10,30,40,0.55); align-items: center; justify-content: center; }
+        .equipment-booking-modal.is-open { display: flex; }
+        .equipment-booking-box { background: #fff; border-radius: 16px; padding: 24px; max-width: 520px; width: calc(100% - 32px); max-height: 92vh; overflow-y: auto; }
+        .equipment-booking-box h2 { margin: 0 0 16px; font-size: 1.04rem; color: #0e3d52; }
+        .equipment-booking-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+        .equipment-booking-field label { font-size: 0.83rem; color: #3a5a6a; font-weight: 600; }
+        .equipment-booking-field input,
+        .equipment-booking-field select { border: 1px solid #c8dde8; border-radius: 8px; padding: 7px 10px; font-size: 0.88rem; background: #fff; color: #0e3d52; }
+        .equipment-booking-actions { display: flex; gap: 10px; margin-top: 16px; }
+        .equipment-booking-submit { flex: 1; background: #0e7490; color: #fff; border: none; border-radius: 9px; padding: 11px; font-size: 0.92rem; font-weight: 700; cursor: pointer; }
+        .equipment-booking-cancel { background: #f0f4f7; color: #3a5a6a; border: none; border-radius: 9px; padding: 11px 18px; font-size: 0.88rem; cursor: pointer; }
+        .equipment-booking-summary { background: #f4f9fc; border-radius: 10px; padding: 12px; margin-bottom: 14px; font-size: 0.85rem; color: #0e3d52; }
+        .equipment-booking-summary-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #e8f0f5; }
+        .equipment-booking-summary-row:last-child { border-bottom: none; font-weight: 700; font-size: 0.9rem; }
+        @media (max-width: 600px) {
+            .equipment-grid { grid-template-columns: 1fr; }
+            .equipment-cart { padding: 10px 12px 14px; }
+        }
+
         .nearby-properties-section {
             margin-top: 12px;
         }
@@ -3269,10 +3339,241 @@
         </div>
 
         <section id="rooms-section" class="section rooms-section" aria-label="Available rooms">
-            <div class="rooms-head">
-                <h2>Available Rooms</h2>
-                <p class="rooms-sub">Choose a room type to view full profile and proceed with booking options.</p>
+            @if (strtolower(trim((string) ($property->listing_category ?? ''))) === 'water_sports')
+            {{-- ── Water sports equipment rental section ── --}}
+            @php
+                $wsVisitorIsLocal = ($visitorResidency ?? 'foreign_national') === 'local_resident';
+                $wsMvrUsdRate = (float) $mvrUsdRate;
+                $equipmentCategoryBadge = static function (string $cat): string {
+                    return match($cat) {
+                        'motorized'         => 'motorized',
+                        'non_motorized'     => 'non-motorized',
+                        'adrenaline'        => 'adrenaline',
+                        'snorkeling_diving' => 'snorkeling-diving',
+                        'guided'            => 'guided',
+                        default             => 'other',
+                    };
+                };
+                $equipmentCategoryLabel = static function (string $cat): string {
+                    return match($cat) {
+                        'motorized'         => 'Motorized',
+                        'non_motorized'     => 'Non-motorized',
+                        'adrenaline'        => 'Adrenaline',
+                        'snorkeling_diving' => 'Snorkeling & Diving',
+                        'guided'            => 'Guided',
+                        default             => 'Other',
+                    };
+                };
+                $equipmentTypeLabel = static function (string $type): string {
+                    return match($type) {
+                        'jetski'         => 'Jet Ski',
+                        'snorkeling_gear'=> 'Snorkeling Gear',
+                        'canoe'          => 'Canoe',
+                        'surfboard'      => 'Surfboard',
+                        'paddleboard'    => 'Paddleboard',
+                        'banana_boat'    => 'Banana Boat',
+                        'parasailing'    => 'Parasailing',
+                        'windsurf'       => 'Windsurf',
+                        default          => ucfirst(str_replace('_', ' ', $type)),
+                    };
+                };
+            @endphp
+            <div class="equipment-head">
+                <h2>Available Equipment</h2>
+                <p>Choose equipment, set quantity and duration, then add to your cart. Book multiple items in one session.</p>
             </div>
+            <div class="equipment-grid" id="equipment-grid">
+                @forelse ($rentalItems as $item)
+                    @php
+                        $itemId   = (int) $item->id;
+                        $itemName = trim((string) ($item->name ?? ''));
+                        $itemType = trim((string) ($item->equipment_type ?? 'other'));
+                        $itemCat  = trim((string) ($item->equipment_category ?? 'other'));
+                        $itemDesc = trim((string) ($item->description ?? ''));
+                        $priceAdultLocal   = (float) ($item->price_per_hour_local ?? 0);
+                        $priceAdultUsd     = (float) ($item->price_per_hour_usd ?? 0);
+                        $priceChildLocal   = (float) ($item->price_per_hour_child_local ?? 0);
+                        $priceChildUsd     = (float) ($item->price_per_hour_child_usd ?? 0);
+                        $minAge            = (int) ($item->min_age_years ?? 0);
+                        $minDuration       = max(30, (int) ($item->min_duration_minutes ?? 30));
+                        $maxDurationHrs    = max(1, (int) ($item->max_duration_hours ?? 8));
+                        $maxDurationMins   = $maxDurationHrs * 60;
+                        $qtyAvail          = max(1, (int) ($item->quantity_available ?? 1));
+                        $badgeSlug         = $equipmentCategoryBadge($itemCat);
+                        $catLabel          = $equipmentCategoryLabel($itemCat);
+                        $typeLabel         = $equipmentTypeLabel($itemType);
+                        // Effective price for display (visitor-aware)
+                        $effectivePrice    = $wsVisitorIsLocal ? $priceAdultLocal : $priceAdultUsd;
+                        $effectiveCurrency = $wsVisitorIsLocal ? 'MVR' : 'USD';
+                        $effectiveChildPrice = $wsVisitorIsLocal ? $priceChildLocal : $priceChildUsd;
+                        // Build duration options (30-min steps)
+                        $durationOptions = [];
+                        for ($d = $minDuration; $d <= $maxDurationMins; $d += 30) {
+                            $hrs = intdiv($d, 60);
+                            $mins = $d % 60;
+                            $label = '';
+                            if ($hrs > 0) $label .= $hrs . 'h';
+                            if ($mins > 0) $label .= ($label !== '' ? ' ' : '') . $mins . 'min';
+                            $durationOptions[$d] = $label;
+                        }
+                        if (empty($durationOptions)) $durationOptions[$minDuration] = $minDuration . 'min';
+                    @endphp
+                    <div class="equipment-card"
+                         data-item-id="{{ $itemId }}"
+                         data-item-name="{{ e($itemName) }}"
+                         data-item-type="{{ e($typeLabel) }}"
+                         data-price-adult-local="{{ $priceAdultLocal }}"
+                         data-price-adult-usd="{{ $priceAdultUsd }}"
+                         data-price-child-local="{{ $priceChildLocal }}"
+                         data-price-child-usd="{{ $priceChildUsd }}"
+                         data-min-duration="{{ $minDuration }}"
+                         data-max-duration="{{ $maxDurationMins }}"
+                         data-qty-avail="{{ $qtyAvail }}"
+                         data-min-age="{{ $minAge }}">
+                        <div class="equipment-card-head">
+                            <h3 class="equipment-card-title">{{ $itemName }}</h3>
+                            <div class="equipment-badges">
+                                <span class="equipment-badge equipment-badge-{{ $badgeSlug }}">{{ $catLabel }}</span>
+                            </div>
+                        </div>
+                        @if ($itemDesc !== '')
+                            <p style="margin:0;font-size:0.8rem;color:#5a7a8a;">{{ Str::limit($itemDesc, 90) }}</p>
+                        @endif
+                        @if ($minAge > 0)
+                            <div class="equipment-age-note"><i class="fa-solid fa-child" aria-hidden="true"></i> Min age: {{ $minAge }} years</div>
+                        @endif
+                        <div class="equipment-pricing">
+                            @if ($wsVisitorIsLocal)
+                                @if ($priceAdultLocal > 0)
+                                    <div class="equipment-pricing-row">
+                                        <span class="equipment-pricing-label">Adult / hour</span>
+                                        <span class="equipment-pricing-value">MVR {{ number_format($priceAdultLocal, 2) }}</span>
+                                    </div>
+                                @endif
+                                @if ($priceChildLocal > 0)
+                                    <div class="equipment-pricing-row">
+                                        <span class="equipment-pricing-label">Child / hour</span>
+                                        <span class="equipment-pricing-value">MVR {{ number_format($priceChildLocal, 2) }}</span>
+                                    </div>
+                                @endif
+                            @else
+                                @if ($priceAdultUsd > 0)
+                                    <div class="equipment-pricing-row">
+                                        <span class="equipment-pricing-label">Adult / hour</span>
+                                        <span class="equipment-pricing-value">USD {{ number_format($priceAdultUsd, 2) }}</span>
+                                    </div>
+                                @endif
+                                @if ($priceChildUsd > 0)
+                                    <div class="equipment-pricing-row">
+                                        <span class="equipment-pricing-label">Child / hour</span>
+                                        <span class="equipment-pricing-value">USD {{ number_format($priceChildUsd, 2) }}</span>
+                                    </div>
+                                @endif
+                            @endif
+                            @if ($effectivePrice <= 0)
+                                <div class="equipment-pricing-row">
+                                    <span class="equipment-pricing-label">Price</span>
+                                    <span class="equipment-pricing-value">Contact operator</span>
+                                </div>
+                            @endif
+                        </div>
+                        <div class="equipment-controls">
+                            <div class="equipment-control-row">
+                                <label for="eq-guest-type-{{ $itemId }}">Guest type</label>
+                                <select id="eq-guest-type-{{ $itemId }}" data-role="guest-type">
+                                    <option value="adult">Adult</option>
+                                    @if ($effectiveChildPrice > 0)
+                                        <option value="child">Child</option>
+                                    @endif
+                                </select>
+                            </div>
+                            <div class="equipment-control-row">
+                                <label for="eq-qty-{{ $itemId }}">Units</label>
+                                <input type="number" id="eq-qty-{{ $itemId }}" data-role="qty"
+                                       min="1" max="{{ $qtyAvail }}" value="1">
+                            </div>
+                            <div class="equipment-control-row">
+                                <label for="eq-dur-{{ $itemId }}">Duration</label>
+                                <select id="eq-dur-{{ $itemId }}" data-role="duration">
+                                    @foreach ($durationOptions as $mins => $label)
+                                        <option value="{{ $mins }}">{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <button class="equipment-add-btn" data-role="add-to-cart" type="button">
+                            <i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Add to Cart
+                        </button>
+                    </div>
+                @empty
+                    <div style="grid-column:1/-1;padding:18px;color:#5a7a8a;text-align:center;background:#f4f9fc;border-radius:11px;">
+                        Equipment inventory for this property will be published soon.
+                    </div>
+                @endforelse
+            </div>
+
+            {{-- Equipment cart panel --}}
+            <div class="equipment-cart" id="equipment-cart" aria-label="Equipment cart" role="complementary">
+                <div class="equipment-cart-head">
+                    <h3><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i> Your Cart <span id="equipment-cart-count" style="font-weight:400;font-size:0.82rem;color:#4a7080;"></span></h3>
+                    <button class="equipment-cart-close" id="equipment-cart-close" type="button" aria-label="Close cart">&#x2715;</button>
+                </div>
+                <div class="equipment-cart-items" id="equipment-cart-items"></div>
+                <div class="equipment-cart-footer">
+                    <span class="equipment-cart-total" id="equipment-cart-total"></span>
+                    <button class="equipment-cart-proceed" id="equipment-cart-proceed" type="button">
+                        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i> Book Now
+                    </button>
+                </div>
+            </div>
+
+            {{-- Equipment booking modal --}}
+            <div class="equipment-booking-modal" id="equipment-booking-modal" role="dialog" aria-modal="true" aria-label="Complete your booking">
+                <div class="equipment-booking-box">
+                    <h2><i class="fa-solid fa-wave-square" aria-hidden="true"></i> Complete Booking</h2>
+                    <div class="equipment-booking-summary" id="equipment-booking-summary"></div>
+                    <form method="POST" action="/booking/water-sports-cart" id="equipment-booking-form">
+                        @csrf
+                        <input type="hidden" name="property_id" value="{{ (int) $property->id }}">
+                        <input type="hidden" name="visitor_residency" value="{{ e($visitorResidency ?? 'foreign_national') }}">
+                        <input type="hidden" name="cart_items" id="equipment-booking-cart-items" value="">
+                        <div class="equipment-booking-field">
+                            <label for="eq-book-date">Activity Date <span style="color:#c0392b">*</span></label>
+                            <input type="date" name="service_date" id="eq-book-date" required
+                                   min="{{ \Carbon\Carbon::today()->toDateString() }}">
+                        </div>
+                        <div class="equipment-booking-field">
+                            <label for="eq-book-first-name">First Name <span style="color:#c0392b">*</span></label>
+                            <input type="text" name="primary_first_name" id="eq-book-first-name" maxlength="80" required autocomplete="given-name">
+                        </div>
+                        <div class="equipment-booking-field">
+                            <label for="eq-book-last-name">Last Name <span style="color:#c0392b">*</span></label>
+                            <input type="text" name="primary_last_name" id="eq-book-last-name" maxlength="80" required autocomplete="family-name">
+                        </div>
+                        <div class="equipment-booking-field">
+                            <label for="eq-book-email">Email <span style="color:#c0392b">*</span></label>
+                            <input type="email" name="primary_email" id="eq-book-email" maxlength="190" required autocomplete="email">
+                        </div>
+                        <div class="equipment-booking-field">
+                            <label for="eq-book-mobile">Mobile <span style="color:#c0392b">*</span></label>
+                            <input type="tel" name="primary_mobile" id="eq-book-mobile" maxlength="40" required autocomplete="tel">
+                        </div>
+                        <div class="equipment-booking-field">
+                            <label for="eq-book-notes">Special Requests (optional)</label>
+                            <input type="text" name="service_notes" id="eq-book-notes" maxlength="500">
+                        </div>
+                        <div class="equipment-booking-actions">
+                            <button type="button" class="equipment-booking-cancel" id="equipment-booking-cancel">Cancel</button>
+                            <button type="submit" class="equipment-booking-submit">
+                                <i class="fa-solid fa-check" aria-hidden="true"></i> Confirm Booking
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            @else
+            {{-- Standard rooms section for non-water-sports --}}
             <div class="rooms-grid">
                 @forelse ($rooms as $room)
                     @php
@@ -3618,6 +3919,7 @@
                     <article class="room-card"><div class="room-body"><h3>No rooms yet</h3><span class="muted">Room inventory for this property will be published soon.</span></div></article>
                 @endforelse
             </div>
+            @endif {{-- end water_sports / accommodation branch --}}
         </section>
 
         <section id="guest-reviews-section" class="section guest-reviews-section" aria-label="Guest reviews">
@@ -4938,5 +5240,162 @@
             }
         })();
     </script>
-</body>
-</html>
+    <script>
+    (function () {
+        'use strict';
+        const grid = document.getElementById('equipment-grid');
+        if (!grid) return;
+
+        const visitorIsLocal = {{ ($wsVisitorIsLocal ?? false) ? 'true' : 'false' }};
+        const mvrUsdRate = {{ (float) $mvrUsdRate }};
+        const currency = visitorIsLocal ? 'MVR' : 'USD';
+
+        /** Cart: array of { itemId, name, type, guestType, qty, durationMins, unitPrice, lineTotal } */
+        let cart = [];
+
+        function getUnitPrice(card, guestType) {
+            if (visitorIsLocal) {
+                return guestType === 'child'
+                    ? parseFloat(card.dataset.priceChildLocal || 0)
+                    : parseFloat(card.dataset.priceAdultLocal || 0);
+            }
+            return guestType === 'child'
+                ? parseFloat(card.dataset.priceChildUsd || 0)
+                : parseFloat(card.dataset.priceAdultUsd || 0);
+        }
+
+        function calcLineTotal(unitPrice, qty, durationMins) {
+            return unitPrice * qty * (durationMins / 60);
+        }
+
+        function fmt(amount) {
+            return currency + ' ' + amount.toFixed(2);
+        }
+
+        function renderCart() {
+            const cartEl = document.getElementById('equipment-cart');
+            const itemsEl = document.getElementById('equipment-cart-items');
+            const totalEl = document.getElementById('equipment-cart-total');
+            const countEl = document.getElementById('equipment-cart-count');
+            if (!cartEl || !itemsEl || !totalEl) return;
+
+            if (cart.length === 0) {
+                cartEl.classList.remove('is-open');
+                return;
+            }
+
+            cartEl.classList.add('is-open');
+            countEl.textContent = '(' + cart.length + ' item' + (cart.length > 1 ? 's' : '') + ')';
+
+            itemsEl.innerHTML = cart.map((entry, idx) => {
+                const hrs = Math.floor(entry.durationMins / 60);
+                const mins = entry.durationMins % 60;
+                const durLabel = (hrs > 0 ? hrs + 'h ' : '') + (mins > 0 ? mins + 'min' : '');
+                return '<div class="equipment-cart-item">'
+                    + '<span class="equipment-cart-item-name">' + entry.name + '</span>'
+                    + '<span class="equipment-cart-item-detail">' + entry.qty + ' × ' + durLabel + ' · ' + entry.guestType + '</span>'
+                    + '<span class="equipment-cart-item-price">' + fmt(entry.lineTotal) + '</span>'
+                    + '<button class="equipment-cart-item-remove" type="button" data-idx="' + idx + '" aria-label="Remove">&#x2715;</button>'
+                    + '</div>';
+            }).join('');
+
+            const grandTotal = cart.reduce((s, e) => s + e.lineTotal, 0);
+            totalEl.textContent = 'Total: ' + fmt(grandTotal);
+        }
+
+        function renderBookingSummary() {
+            const el = document.getElementById('equipment-booking-summary');
+            if (!el) return;
+            let html = '';
+            cart.forEach(entry => {
+                const hrs = Math.floor(entry.durationMins / 60);
+                const mins = entry.durationMins % 60;
+                const durLabel = (hrs > 0 ? hrs + 'h ' : '') + (mins > 0 ? mins + 'min' : '');
+                html += '<div class="equipment-booking-summary-row">'
+                    + '<span>' + entry.name + ' × ' + entry.qty + ' (' + durLabel + ', ' + entry.guestType + ')</span>'
+                    + '<span>' + fmt(entry.lineTotal) + '</span>'
+                    + '</div>';
+            });
+            const grandTotal = cart.reduce((s, e) => s + e.lineTotal, 0);
+            html += '<div class="equipment-booking-summary-row"><span>Grand Total</span><span>' + fmt(grandTotal) + '</span></div>';
+            el.innerHTML = html;
+        }
+
+        // Add to cart
+        grid.addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-role="add-to-cart"]');
+            if (!btn) return;
+            const card = btn.closest('.equipment-card');
+            if (!card) return;
+
+            const itemId = parseInt(card.dataset.itemId, 10);
+            const qty = Math.max(1, parseInt(card.querySelector('[data-role="qty"]').value, 10) || 1);
+            const durationMins = parseInt(card.querySelector('[data-role="duration"]').value, 10) || parseInt(card.dataset.minDuration, 10);
+            const guestType = card.querySelector('[data-role="guest-type"]').value || 'adult';
+            const unitPrice = getUnitPrice(card, guestType);
+            const lineTotal = calcLineTotal(unitPrice, qty, durationMins);
+
+            // Remove existing entry for same item + guestType and merge
+            const existing = cart.findIndex(c => c.itemId === itemId && c.guestType === guestType && c.durationMins === durationMins);
+            if (existing >= 0) {
+                const merged = cart[existing].qty + qty;
+                const maxQty = parseInt(card.dataset.qtyAvail, 10) || 10;
+                cart[existing].qty = Math.min(merged, maxQty);
+                cart[existing].lineTotal = calcLineTotal(unitPrice, cart[existing].qty, durationMins);
+            } else {
+                cart.push({
+                    itemId,
+                    name: card.dataset.itemName,
+                    type: card.dataset.itemType,
+                    guestType,
+                    qty,
+                    durationMins,
+                    unitPrice,
+                    lineTotal,
+                });
+            }
+
+            btn.classList.add('is-added');
+            btn.textContent = '✓ Added';
+            setTimeout(() => { btn.classList.remove('is-added'); btn.innerHTML = '<i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Add to Cart'; }, 1800);
+
+            renderCart();
+        });
+
+        // Remove from cart
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('.equipment-cart-item-remove');
+            if (!btn) return;
+            const idx = parseInt(btn.dataset.idx, 10);
+            cart.splice(idx, 1);
+            renderCart();
+        });
+
+        // Close cart
+        const closeBtn = document.getElementById('equipment-cart-close');
+        if (closeBtn) closeBtn.addEventListener('click', () => {
+            document.getElementById('equipment-cart').classList.remove('is-open');
+        });
+
+        // Proceed to book
+        const proceedBtn = document.getElementById('equipment-cart-proceed');
+        if (proceedBtn) proceedBtn.addEventListener('click', () => {
+            if (cart.length === 0) return;
+            renderBookingSummary();
+            document.getElementById('equipment-booking-cart-items').value = JSON.stringify(cart);
+            document.getElementById('equipment-booking-modal').classList.add('is-open');
+        });
+
+        // Cancel booking modal
+        const cancelBtn = document.getElementById('equipment-booking-cancel');
+        if (cancelBtn) cancelBtn.addEventListener('click', () => {
+            document.getElementById('equipment-booking-modal').classList.remove('is-open');
+        });
+
+        // Close modal on backdrop click
+        const modal = document.getElementById('equipment-booking-modal');
+        if (modal) modal.addEventListener('click', function (e) {
+            if (e.target === modal) modal.classList.remove('is-open');
+        });
+    })();
+    </script>

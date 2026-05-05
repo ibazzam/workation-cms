@@ -92,6 +92,7 @@
             'bookingProcessCurrentStep' => $hostedProcessStep,
             'bookingProcessSteps' => $hostedProcessSteps,
             'bookingProcessBackUrl' => '/booking/checkout/' . (int) ($reservation->id ?? 0),
+            'bookingProcessBackLabel' => $hostedIsNoTransfer ? 'Back to service browsing' : 'Back to property',
             'bookingProcessNextText' => $externalHandoff
                 ? 'You can continue to the external gateway or safely return to checkout.'
                 : 'Final step on this page: submit the payment confirmation and finish the reservation.',

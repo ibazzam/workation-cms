@@ -1037,17 +1037,6 @@
 
     <main class="page">
 
-        @include('partials.booking-process-highlights', [
-            'bookingProcessCurrentStep' => 1,
-            'bookingProcessBackUrl' => '/catalog/' . str_replace('_', '-', $categoryKey ?? ''),
-            'bookingProcessSteps' => [
-                1 => '1. Guest Details',
-                2 => '2. Payment Method',
-                3 => '3. Final Confirmation',
-            ],
-            'bookingProcessNextText' => 'Next step: review payment options and confirm the locked checkout summary.',
-        ])
-
         @php
             $breadcrumbCategoryUrl = '/catalog/' . str_replace('_', '-', $categoryKey);
         @endphp
@@ -1464,20 +1453,8 @@
                         <input type="hidden" id="transferCharge" name="transfer_charge" value="{{ old('transfer_charge', '0') }}">
 
                         @if ($categoryKey !== 'excursion')
-                            <div class="field full">
-                                <label>Payment preferences</label>
-                                <div class="payment-choice-list">
-                                    <label class="payment-choice"><input type="radio" name="payment_timing" value="pay_now" {{ old('payment_timing', 'pay_now') === 'pay_now' ? 'checked' : '' }}><span><span class="payment-choice-main">Pay now</span><span class="payment-choice-note">Secure payment before confirmation.</span></span></label>
-                                    <label class="payment-choice"><input type="radio" name="payment_timing" value="pay_at_property" {{ old('payment_timing') === 'pay_at_property' ? 'checked' : '' }}><span><span class="payment-choice-main">Pay at property</span><span class="payment-choice-note">Shown for eligible local bookings.</span></span></label>
-                                </div>
-                                <div class="payment-choice-list" id="paymentMethodList" style="margin-top:8px;">
-                                    <label class="payment-choice payment-method-option" data-scope="all"><input type="radio" name="payment_method" value="card" {{ old('payment_method', 'card') === 'card' ? 'checked' : '' }}><span><span class="payment-choice-main">Card</span><span class="payment-choice-note">Credit / debit cards.</span></span></label>
-                                    <label class="payment-choice payment-method-option" data-scope="international"><input type="radio" name="payment_method" value="apple_pay" {{ old('payment_method') === 'apple_pay' ? 'checked' : '' }}><span><span class="payment-choice-main">Apple Pay</span><span class="payment-choice-note">International guests where available.</span></span></label>
-                                    <label class="payment-choice payment-method-option" data-scope="international"><input type="radio" name="payment_method" value="google_pay" {{ old('payment_method') === 'google_pay' ? 'checked' : '' }}><span><span class="payment-choice-main">Google Pay</span><span class="payment-choice-note">International guests where available.</span></span></label>
-                                    <label class="payment-choice payment-method-option" data-scope="local"><input type="radio" name="payment_method" value="bank_transfer_mvr" {{ old('payment_method') === 'bank_transfer_mvr' ? 'checked' : '' }}><span><span class="payment-choice-main">Local Bank Transfer (MVR)</span><span class="payment-choice-note">Recommended for local nationals.</span></span></label>
-                                </div>
-                                <p class="payment-hint" id="paymentHint">Payment methods are auto-filtered by guest nationality.</p>
-                            </div>
+                            <input type="hidden" name="payment_timing" value="{{ old('payment_timing', 'pay_now') }}">
+                            <input type="hidden" name="payment_method" value="{{ old('payment_method', 'card') }}">
                         @endif
                     </div>
 

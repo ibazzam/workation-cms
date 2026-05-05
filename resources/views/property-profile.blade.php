@@ -3562,13 +3562,6 @@
                                                     @elseif (($mvrUsdRate ?? 0) > 0)
                                                         <div class="room-price-usd-hint">≈ USD {{ number_format($nightlyRateRaw / $mvrUsdRate, 0) }} / night</div>
                                                     @endif
-                                                                    <div class="room-price-old">{{ $roomCurrency }} {{ $rateOldPrice }}</div>
-                                                                    <div class="room-price-now">{{ $roomCurrency }} {{ $ratePrice }}</div>
-                                                                    @if ($visitorIsLocal)
-                                                                        <div class="room-price-local-badge">Local Rate</div>
-                                                                    @elseif (($mvrUsdRate ?? 0) > 0)
-                                                                        <div class="room-price-usd-hint">= MVR {{ number_format($nightlyRateRaw * $mvrUsdRate, 0) }} / night</div>
-                                                                    @endif
                                                     <div class="room-price-summary" data-rate-summary data-rate-currency="{{ $roomCurrency }}" data-nightly-rate="{{ number_format($nightlyRateRaw, 2, '.', '') }}">
                                                         {{ $roomCurrency }} {{ number_format($rateTotalRaw, 2) }}
                                                     </div>
@@ -4750,14 +4743,14 @@
                         const currencyCode = String(startingTotal.dataset.startingCurrency || 'MVR').trim() || 'MVR';
                         const nightlyRate = Number(startingTotal.dataset.startingNightly || 0);
                         const total = nightlyRate * nights;
-                        startingTotal.textContent = `${currencyCode} ${total.toFixed(2)} total 1 room, ${pluralize(nights, 'night')}`;
+                        startingTotal.textContent = `${currencyCode} ${total.toFixed(2)} total`;
                     }
 
                     rateSummaries.forEach((summary) => {
                         const currencyCode = String(summary.dataset.rateCurrency || 'MVR').trim() || 'MVR';
                         const nightlyRate = Number(summary.dataset.nightlyRate || 0);
                         const total = nightlyRate * nights;
-                        summary.textContent = `${currencyCode} ${total.toFixed(2)} total 1 room, ${pluralize(nights, 'night')}`;
+                        summary.textContent = `${currencyCode} ${total.toFixed(2)} total`;
                     });
 
                     reserveButtons.forEach((button) => {

@@ -145,6 +145,16 @@
             <label for="property_cancellation_policy">Cancellation Policy</label>
             <textarea id="property_cancellation_policy" name="cancellation_policy" class="ops-textarea" rows="3" maxlength="2000">{{ old('cancellation_policy') }}</textarea>
         </div>
+
+        {{-- ── Schedule / Itinerary ──────────────────────────────────────── --}}
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
+            <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Schedule / Itinerary</p>
+        </div>
+        <div class="ops-field ops-field-wide">
+            <label for="property_activity_schedule">Day Programme <span style="font-weight:400;">(optional)</span></label>
+            <p class="ops-field-hint">Enter each programme item on a new line. Guests will see this as their day overview.</p>
+            <textarea id="property_activity_schedule" name="activity_schedule" class="ops-textarea" rows="6" maxlength="5000" placeholder="09:00 Arrival & check-in&#10;10:00 Beach access&#10;12:30 Lunch&#10;15:00 Water activities&#10;17:00 Departure">{{ old('activity_schedule') }}</textarea>
+        </div>
     </div>
 
     <section class="listing-form-section listing-price-band" aria-label="Service pricing">

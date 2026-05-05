@@ -401,6 +401,70 @@
             line-height:1.45;
         }
 
+        .detail-bullet-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            gap: 7px;
+        }
+
+        .detail-bullet-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            color: #365a70;
+            font-size: 0.82rem;
+            line-height: 1.45;
+        }
+
+        .detail-bullet-list li i {
+            color: #2d6480;
+            margin-top: 2px;
+            font-size: 0.8rem;
+        }
+
+        .detail-info-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            gap: 8px;
+        }
+
+        .detail-info-item {
+            display: grid;
+            grid-template-columns: 18px minmax(0, 1fr);
+            gap: 8px;
+            align-items: flex-start;
+            color: #365a70;
+            font-size: 0.82rem;
+        }
+
+        .detail-info-item i {
+            color: #2d6480;
+            margin-top: 2px;
+            font-size: 0.82rem;
+        }
+
+        .detail-info-label {
+            display: inline-block;
+            font-weight: 700;
+            color: #5e788c;
+            margin-right: 5px;
+            opacity: 0.95;
+        }
+
+        .detail-info-time-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .detail-info-time-row span {
+            display: block;
+        }
+
         .review-stat {
             display:flex;
             align-items:baseline;
@@ -643,6 +707,7 @@
 
     @php
         $categoryKey = $categoryKey ?? 'accommodation';
+        $isActivityCategory = $categoryKey !== 'accommodation';
         $categoryLabel = $categoryLabel ?? 'Category';
         $property = $property ?? null;
         $listingDetails = json_decode((string) ($property->listing_details ?? ''), true);
@@ -912,56 +977,47 @@
             ->filter(static fn ($item) => trim((string) $item) !== '')
             ->values();
         $inclusionItems = collect($extractStringList($listingDetails['inclusions'] ?? null))
-            ->merge($equipmentIncluded)
+            ->unique()
+            ->values();
+        $providedItems = $equipmentIncluded
+            ->merge(collect($extractStringList($listingDetails['what_we_provide'] ?? null)))
             ->unique()
             ->values();
 
+        $activityScheduleItems = collect($extractStringList(
+            $listingDetails['activity_schedule']
+            ?? $listingDetails['program_schedule']
+            ?? $listingDetails['itinerary']
+            ?? $listingDetails['daily_program']
+            ?? null
+        ))->values();
+        $activityCategoryKeys = ['excursion', 'water_sports', 'resort_day_visit'];
+
         $departureDetails = [];
         $meetingPoint = trim((string) ($listingDetails['meeting_point'] ?? ''));
-        if ($meetingPoint !== '') {
-            $departureDetails[] = 'Meeting point: ' . $meetingPoint;
-        }
         $departurePoint = trim((string) ($listingDetails['departure_point'] ?? ''));
-        if ($departurePoint !== '') {
-            $departureDetails[] = 'Reporting point: ' . $departurePoint;
-        }
         $departureArea = trim((string) ($listingDetails['departure_area_port_jetty'] ?? ''));
-        if ($departureArea !== '') {
-            $departureDetails[] = 'Departure area: ' . $departureArea;
-        }
         $departureHub = implode(', ', array_filter([
             trim((string) ($listingDetails['transport_departure_city'] ?? '')),
             trim((string) ($listingDetails['transport_departure_state'] ?? '')),
         ], static fn ($item) => $item !== ''));
-        if ($departureHub !== '') {
-            $departureDetails[] = 'Departure location: ' . $departureHub;
-        }
         $pickupLocation = trim((string) ($listingDetails['pickup_location'] ?? ''));
-        if ($pickupLocation !== '') {
-            $departureDetails[] = 'Pickup location: ' . $pickupLocation;
-        }
         $dropoffLocation = trim((string) ($listingDetails['dropoff_location'] ?? ''));
-        if ($dropoffLocation !== '') {
-            $departureDetails[] = 'Drop-off location: ' . $dropoffLocation;
-        }
         $reportingLeadMinutes = is_numeric($listingDetails['reporting_lead_minutes'] ?? null)
             ? (int) ($listingDetails['reporting_lead_minutes'] ?? 0)
             : null;
         $departureTimeLabel = $formatTimeLabel(($listingDetails['departure_time'] ?? null) ?: ($property->departure_time ?? ''));
-        if ($departureTimeLabel !== '') {
-            $departureDetails[] = $reportingLeadMinutes !== null && $reportingLeadMinutes > 0
-                ? ('Departure time: ' . $departureTimeLabel . ' (report ' . $reportingLeadMinutes . ' min early)')
-                : ('Departure time: ' . $departureTimeLabel);
-        }
-        if ($startTimeLabel !== '') {
-            $departureDetails[] = 'Start time: ' . $startTimeLabel;
-        }
-        if ($endTimeLabel !== '') {
-            $departureDetails[] = 'End time: ' . $endTimeLabel;
-        }
-        if ($durationMinutes > 0) {
-            $departureDetails[] = 'Duration: ' . number_format($durationMinutes) . ' minutes';
-        }
+        $reportTimeText = $reportingLeadMinutes !== null && $reportingLeadMinutes > 0
+            ? ('Report ' . $reportingLeadMinutes . ' minutes before departure')
+            : '';
+        $assemblyPoint = trim(implode(' | ', array_values(array_filter([
+            $meetingPoint !== '' ? ('Meeting point: ' . $meetingPoint) : '',
+            $departurePoint !== '' ? ('Reporting point: ' . $departurePoint) : '',
+            $departureArea !== '' ? ('Departure area: ' . $departureArea) : '',
+            $departureHub !== '' ? ('Departure location: ' . $departureHub) : '',
+            $pickupLocation !== '' ? ('Pickup location: ' . $pickupLocation) : '',
+            $dropoffLocation !== '' ? ('Drop-off location: ' . $dropoffLocation) : '',
+        ], static fn ($item) => trim((string) $item) !== ''))));
 
         $specialInstructionItems = collect($extractStringList(
             $listingDetails['special_instructions']
@@ -984,6 +1040,53 @@
         }
         $specialInstructionItems = $specialInstructionItems->filter(static fn ($item) => trim((string) $item) !== '')->unique()->values();
 
+        if ($durationMinutes > 0) {
+            $departureDetails[] = [
+                'icon' => 'fa-regular fa-hourglass-half',
+                'label' => 'Duration',
+                'value' => number_format($durationMinutes) . ' minutes',
+            ];
+        }
+        if ($startTimeLabel !== '' || $endTimeLabel !== '') {
+            $departureDetails[] = [
+                'icon' => 'fa-regular fa-clock',
+                'label' => 'Time Starts / Time Ends',
+                'value' => [
+                    'start' => $startTimeLabel,
+                    'end' => $endTimeLabel,
+                ],
+                'is_time_pair' => true,
+            ];
+        }
+        if ($departureTimeLabel !== '') {
+            $departureDetails[] = [
+                'icon' => 'fa-solid fa-plane-departure',
+                'label' => 'Departure Time',
+                'value' => $departureTimeLabel,
+            ];
+        }
+        if ($reportTimeText !== '') {
+            $departureDetails[] = [
+                'icon' => 'fa-regular fa-bell',
+                'label' => 'Report Time',
+                'value' => $reportTimeText,
+            ];
+        }
+        if ($assemblyPoint !== '') {
+            $departureDetails[] = [
+                'icon' => 'fa-solid fa-location-dot',
+                'label' => 'Assembly / Reporting Point',
+                'value' => $assemblyPoint,
+            ];
+        }
+        if ($specialInstructionItems->isNotEmpty()) {
+            $departureDetails[] = [
+                'icon' => 'fa-solid fa-circle-info',
+                'label' => 'Special Instructions',
+                'value' => $specialInstructionItems->take(2)->implode(' | '),
+            ];
+        }
+
         $termsAndPolicies = collect();
         if (trim((string) ($vendorPolicy['cancellation_policy'] ?? '')) !== '') {
             $termsAndPolicies->push((string) $vendorPolicy['cancellation_policy']);
@@ -1002,6 +1105,8 @@
 
         $hasReviewSection = $reviewScoreRaw > 0 || $reviewCount > 0;
         $hasDetailCards = $inclusionItems->isNotEmpty()
+            || $providedItems->isNotEmpty()
+            || $activityScheduleItems->isNotEmpty()
             || !empty($departureDetails)
             || $hasReviewSection;
         $hasHighlightsSection = $realHighlights->isNotEmpty() || $realServicesAndAmenities->isNotEmpty();
@@ -1108,10 +1213,32 @@
                         <div class="detail-grid">
                             @if ($inclusionItems->isNotEmpty())
                                 <article class="detail-card">
-                                    <h3>Inclusions / What We Provide</h3>
-                                    <ul>
+                                    <h3>What is Included:</h3>
+                                    <ul class="detail-bullet-list">
                                         @foreach ($inclusionItems as $item)
-                                            <li>{{ $item }}</li>
+                                            <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span>{{ $item }}</span></li>
+                                        @endforeach
+                                    </ul>
+                                </article>
+                            @endif
+
+                            @if ($providedItems->isNotEmpty())
+                                <article class="detail-card">
+                                    <h3>What We Provide:</h3>
+                                    <ul class="detail-bullet-list">
+                                        @foreach ($providedItems as $item)
+                                            <li><i class="fa-solid fa-toolbox" aria-hidden="true"></i><span>{{ $item }}</span></li>
+                                        @endforeach
+                                    </ul>
+                                </article>
+                            @endif
+
+                            @if ($activityScheduleItems->isNotEmpty())
+                                <article class="detail-card">
+                                    <h3>Schedule / Program Details</h3>
+                                    <ul class="detail-bullet-list">
+                                        @foreach ($activityScheduleItems as $item)
+                                            <li><i class="fa-regular fa-clock" aria-hidden="true"></i><span>{{ $item }}</span></li>
                                         @endforeach
                                     </ul>
                                 </article>
@@ -1120,9 +1247,22 @@
                             @if (!empty($departureDetails))
                                 <article class="detail-card">
                                     <h3>Departure / Reporting Point</h3>
-                                    <ul>
+                                    <ul class="detail-info-list">
                                         @foreach ($departureDetails as $item)
-                                            <li>{{ $item }}</li>
+                                            <li class="detail-info-item">
+                                                <i class="{{ (string) ($item['icon'] ?? 'fa-solid fa-circle-info') }}" aria-hidden="true"></i>
+                                                <div>
+                                                    <span class="detail-info-label">{{ (string) ($item['label'] ?? '') }}:</span>
+                                                    @if (!empty($item['is_time_pair']))
+                                                        <div class="detail-info-time-row">
+                                                            <span><span class="detail-info-label">Starts</span> {{ (string) (($item['value']['start'] ?? '') !== '' ? $item['value']['start'] : '-') }}</span>
+                                                            <span><span class="detail-info-label">Ends</span> {{ (string) (($item['value']['end'] ?? '') !== '' ? $item['value']['end'] : '-') }}</span>
+                                                        </div>
+                                                    @else
+                                                        <span>{{ (string) ($item['value'] ?? '') }}</span>
+                                                    @endif
+                                                </div>
+                                            </li>
                                         @endforeach
                                     </ul>
                                 </article>
@@ -1194,11 +1334,11 @@
             </section>
 
             <aside class="booking-card reservation-form" aria-label="Category booking form">
-                <h2 class="block-title">{{ $categoryKey === 'excursion' ? 'Book Now' : 'Booking Request' }}</h2>
-                @if ($categoryKey === 'excursion')
-                    <p class="booking-subtitle">{{ (string) ($property->name ?? 'Excursion Activity') }}</p>
+                <h2 class="block-title">{{ $isActivityCategory ? 'Book Now' : 'Booking Request' }}</h2>
+                @if ($isActivityCategory)
+                    <p class="booking-subtitle">{{ (string) ($property->name ?? '') }}</p>
                 @endif
-                @if ($categoryKey !== 'excursion')
+                @if (!$isActivityCategory)
                     @php
                         $bkPriceLocal = (float) ($pricingConfig['price_local_flat'] ?? 0);
                         $bkPriceForeign = (float) ($pricingConfig['price_foreign_flat'] ?? 0);
@@ -1236,8 +1376,70 @@
                     @endif
 
                     <div class="grid">
-                        @if ($categoryKey === 'excursion')
-                            <div class="field full"><label for="serviceStartDate">Activity Date</label><input id="serviceStartDate" name="service_start_date" type="date" min="{{ (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
+                        @if ($isActivityCategory)
+                            @php
+                                $isMultiDayCategory = in_array($categoryKey, ['vehicle_rental', 'remote_workspace', 'marine-transport', 'land-transport', 'conference_room'], true);
+                                $useDatetime = in_array($categoryKey, ['restaurant', 'conference_room'], true);
+                                $dateInputType = $useDatetime ? 'datetime-local' : 'date';
+                                $dateMinAttr = $useDatetime ? ((string) ($todayDate ?? now()->toDateString()) . 'T00:00') : (string) ($todayDate ?? now()->toDateString());
+                            @endphp
+                            <div class="field {{ $isMultiDayCategory ? '' : 'full' }}"><label for="serviceStartDate">{{ (string) ($dateLabels['start'] ?? 'Activity Date') }}</label><input id="serviceStartDate" name="service_start_date" type="{{ $dateInputType }}" min="{{ $dateMinAttr }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            @if ($isMultiDayCategory)
+                                <div class="field"><label for="serviceEndDate">{{ (string) ($dateLabels['end'] ?? 'End Date') }}</label><input id="serviceEndDate" name="service_end_date" type="{{ $dateInputType }}" min="{{ $dateMinAttr }}" value="{{ old('service_end_date', (string) ($prefill['service_end_date'] ?? '')) }}" class="{{ $errors->has('service_end_date') ? 'input-error' : '' }}">@error('service_end_date')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            @endif
+                            @foreach ($categoryFields as $field)
+                                @php
+                                    $fieldKey = (string) ($field['key'] ?? '');
+                                    $fieldType = (string) ($field['type'] ?? 'text');
+                                    $fieldLabel = (string) ($field['label'] ?? Str::headline(str_replace('_', ' ', $fieldKey)));
+                                    $fieldRequired = (bool) ($field['required'] ?? false);
+                                    $fieldId = 'categoryField_' . $fieldKey;
+                                    $fieldValue = old($fieldKey, $prefill[$fieldKey] ?? '');
+                                @endphp
+                                @if (in_array($fieldKey, ['departure_time', 'return_slot', 'departure_area'], true))
+                                    @continue
+                                @endif
+                                @if ($fieldType === 'checkbox')
+                                    <div class="field full" style="margin-top:8px;">
+                                        <label style="margin-bottom:8px; display:block; font-size:0.74rem; text-transform:uppercase; letter-spacing:0.07em; color:#3c5f76; font-family:'Space Grotesk','Trebuchet MS',sans-serif;">{{ $fieldLabel }}</label>
+                                        <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px;">
+                                            @foreach ((array) ($field['options'] ?? []) as $optValue => $optLabel)
+                                                @php
+                                                    $selectedFacilities = old($fieldKey, $prefill[$fieldKey] ?? []);
+                                                    $isSelected = in_array((string) $optValue, (array) $selectedFacilities);
+                                                @endphp
+                                                <label style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:0.83rem; color:#34566d;">
+                                                    <input type="checkbox" name="{{ $fieldKey }}[]" value="{{ (string) $optValue }}" {{ $isSelected ? 'checked' : '' }} style="cursor:pointer; width:16px; height:16px; accent-color:#0f6179;">
+                                                    <span>{{ (string) $optLabel }}</span>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @elseif ($fieldType === 'select')
+                                    <div class="field">
+                                        <label for="{{ $fieldId }}">{{ $fieldLabel }}</label>
+                                        <select id="{{ $fieldId }}" name="{{ $fieldKey }}" class="{{ $errors->has($fieldKey) ? 'input-error' : '' }}" {{ $fieldRequired ? 'required' : '' }}>
+                                            <option value="">Select {{ $fieldLabel }}</option>
+                                            @foreach ((array) ($field['options'] ?? []) as $optValue => $optLabel)
+                                                <option value="{{ (string) $optValue }}" {{ (string) $fieldValue === (string) $optValue ? 'selected' : '' }}>{{ (string) $optLabel }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error($fieldKey)<p class="error-text">{{ $message }}</p>@enderror
+                                    </div>
+                                @elseif ($fieldType === 'number')
+                                    <div class="field">
+                                        <label for="{{ $fieldId }}">{{ $fieldLabel }}</label>
+                                        <input id="{{ $fieldId }}" name="{{ $fieldKey }}" type="number" min="{{ (int) ($field['min'] ?? 0) }}" value="{{ $fieldValue }}" class="{{ $errors->has($fieldKey) ? 'input-error' : '' }}" {{ $fieldRequired ? 'required' : '' }}>
+                                        @error($fieldKey)<p class="error-text">{{ $message }}</p>@enderror
+                                    </div>
+                                @else
+                                    <div class="field">
+                                        <label for="{{ $fieldId }}">{{ $fieldLabel }}</label>
+                                        <input id="{{ $fieldId }}" name="{{ $fieldKey }}" type="text" value="{{ $fieldValue }}" class="{{ $errors->has($fieldKey) ? 'input-error' : '' }}" {{ $fieldRequired ? 'required' : '' }}>
+                                        @error($fieldKey)<p class="error-text">{{ $message }}</p>@enderror
+                                    </div>
+                                @endif
+                            @endforeach
                             @if ($transferIncluded)
                                 @if ($departureTimeMode === 'slots' && $departureSlots !== [])
                                     <div class="field full">
@@ -1317,8 +1519,8 @@
                                 <strong id="excursionTotalDisplay">{{ $currency }} {{ number_format($initialExcursionTotal, 2) }}</strong>
                             </div>
                             <div class="field full">
-                                <label for="serviceNotes">Additional Request (Optional)</label>
-                                <textarea id="serviceNotes" name="service_notes" placeholder="Any dietary, timing, or service request?">{{ old('service_notes', (string) ($prefill['service_notes'] ?? '')) }}</textarea>
+                                <label for="serviceNotes">{{ $categoryKey === 'restaurant' ? 'Special Note for Food Order (Optional)' : 'Additional Request (Optional)' }}</label>
+                                <textarea id="serviceNotes" name="service_notes" placeholder="{{ $categoryKey === 'restaurant' ? 'Tell us what you want to order or any dietary preferences.' : 'Any dietary, timing, or service request?' }}">{{ old('service_notes', (string) ($prefill['service_notes'] ?? '')) }}</textarea>
                             </div>
                         @else
                             <div class="field"><label for="serviceStartDate">{{ (string) ($dateLabels['start'] ?? 'Service Start Date') }}</label><input id="serviceStartDate" name="service_start_date" type="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? 'datetime-local' : 'date' }}" min="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? ((string) ($todayDate ?? now()->toDateString()) . 'T00:00') : (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
@@ -1426,7 +1628,7 @@
                             </div>
                         @endif
 
-                        @if ($categoryKey !== 'excursion')
+                        @if (!$isActivityCategory)
                             <div class="field full">
                                 <label>Guest Details*</label>
                                 <p class="required-note">Given names and surname must match government-issued documents. For foreigners, use passport details. For locals, use ID card details.</p>
@@ -1452,7 +1654,7 @@
                         <input type="hidden" name="transfer_option" value="{{ old('transfer_option', '') }}">
                         <input type="hidden" id="transferCharge" name="transfer_charge" value="{{ old('transfer_charge', '0') }}">
 
-                        @if ($categoryKey !== 'excursion')
+                        @if (!$isActivityCategory)
                             <input type="hidden" name="payment_timing" value="{{ old('payment_timing', 'pay_now') }}">
                             <input type="hidden" name="payment_method" value="{{ old('payment_method', 'card') }}">
                         @endif
@@ -1461,7 +1663,7 @@
                     <p class="error-text" data-service-date-error style="display:none; margin:10px 0 0;"></p>
 
                     <div class="actions">
-                        <button class="btn primary" type="submit">{{ $categoryKey === 'excursion' ? 'Book Now' : 'Proceed to Checkout' }}</button>
+                        <button class="btn primary" type="submit">{{ $isActivityCategory ? 'Book Now' : 'Proceed to Checkout' }}</button>
                         <a class="btn" href="/catalog/{{ $categoryKey }}">Back to {{ $categoryLabel }} Catalog</a>
                     </div>
                 </form>

@@ -262,6 +262,16 @@
             <label for="property_cancellation_policy">Cancellation Policy</label>
             <textarea id="property_cancellation_policy" name="cancellation_policy" class="ops-textarea" rows="3" maxlength="2000" placeholder="e.g. Free cancellation up to 24 hours before departure">{{ old('cancellation_policy') }}</textarea>
         </div>
+
+        {{-- ── Schedule / Itinerary ──────────────────────────────────────── --}}
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
+            <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Schedule / Itinerary</p>
+        </div>
+        <div class="ops-field ops-field-wide">
+            <label for="property_activity_schedule">Activity Schedule <span style="font-weight:400;">(optional)</span></label>
+            <p class="ops-field-hint">Enter each schedule item on a new line, e.g. &ldquo;08:00 Breakfast&rdquo;, &ldquo;09:00 Snorkelling&rdquo;. Guests will see this as a programme overview.</p>
+            <textarea id="property_activity_schedule" name="activity_schedule" class="ops-textarea" rows="6" maxlength="5000" placeholder="08:00 Meet at jetty&#10;09:00 Snorkelling&#10;12:00 Lunch on board&#10;14:00 Return">{{ old('activity_schedule') }}</textarea>
+        </div>
     </div>
 
     <div class="inline-actions" style="margin-top:16px;">

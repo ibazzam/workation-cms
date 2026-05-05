@@ -157,8 +157,7 @@
         $guestResidency = strtolower(trim((string) ($summary['guest_residency'] ?? '')));
         $isForeigner = $guestResidency === 'foreign_national';
         $taxLines = collect($summary['tax_lines'] ?? [])->filter(static fn ($line) => is_array($line))->values();
-        $nonAccommodationNoTransferCategories = ['marine-transport', 'land-transport', 'excursion', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'];
-        $isNoTransferCategory = in_array($categoryKey, $nonAccommodationNoTransferCategories, true);
+        $isNoTransferCategory = false;
         $serviceChargeTotal = $categoryKey === 'accommodation'
             ? max(0, (float) ($summary['service_charge_total'] ?? 0))
             : 0.0;
@@ -251,13 +250,20 @@
                 break;
             }
         }
+        $checkoutCountryOptions = [
+            'Maldives', 'India', 'Sri Lanka', 'Bangladesh', 'Pakistan', 'Nepal',
+            'United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Kuwait', 'Bahrain', 'Oman',
+            'Singapore', 'Malaysia', 'Thailand', 'Indonesia', 'China', 'Japan', 'South Korea',
+            'Australia', 'New Zealand', 'United Kingdom', 'Germany', 'France', 'Italy',
+            'Spain', 'Switzerland', 'Netherlands', 'Sweden', 'Norway', 'Denmark',
+            'United States', 'Canada', 'South Africa', 'Brazil', 'Turkey', 'Russia',
+        ];
+        $selectedNationality = trim((string) old('primary_nationality', (string) ($summary['primary_nationality'] ?? '')));
+        $selectedResidency = strcasecmp($selectedNationality, 'Maldives') === 0 ? 'local_resident' : 'foreign_national';
         $bookingProcessBackUrl = $isNoTransferCategory
             ? (trim((string) ($backUrl ?? '')) !== '' ? (string) $backUrl : '/')
             : '/booking/checkout/' . (int) ($reservation->id ?? 0) . '/transfer';
         $bookingProcessCurrentStep = $isNoTransferCategory ? 2 : 3;
-        if ($requiresCustomerAuth && !$customerAuthenticated) {
-            $bookingProcessCurrentStep = 1;
-        }
         $bookingProcessSteps = $isNoTransferCategory
             ? [
                 1 => '1. Guest Details',
@@ -327,14 +333,13 @@
                                 </div>
                                 <div class="guest-form-field">
                                     <label for="checkoutPrimaryNationality">Country / Nationality*</label>
-                                    <input id="checkoutPrimaryNationality" name="primary_nationality" type="text" value="{{ old('primary_nationality', (string) ($summary['primary_nationality'] ?? '')) }}" required>
-                                </div>
-                                <div class="guest-form-field">
-                                    <label for="checkoutGuestResidency">Residency type*</label>
-                                    <select id="checkoutGuestResidency" name="guest_residency" required>
-                                        <option value="foreign_national" {{ strtolower((string) old('guest_residency', (string) ($summary['guest_residency'] ?? 'foreign_national'))) === 'foreign_national' ? 'selected' : '' }}>Foreign national</option>
-                                        <option value="local_resident" {{ strtolower((string) old('guest_residency', (string) ($summary['guest_residency'] ?? 'foreign_national'))) === 'local_resident' ? 'selected' : '' }}>Local resident</option>
+                                    <select id="checkoutPrimaryNationality" name="primary_nationality" required>
+                                        <option value="">Select country</option>
+                                        @foreach ($checkoutCountryOptions as $countryName)
+                                            <option value="{{ $countryName }}" {{ strcasecmp($selectedNationality, $countryName) === 0 ? 'selected' : '' }}>{{ $countryName }}</option>
+                                        @endforeach
                                     </select>
+                                    <input type="hidden" id="checkoutGuestResidencyHidden" name="guest_residency" value="{{ $selectedResidency }}">
                                 </div>
                                 <div class="guest-form-field">
                                     <label for="checkoutPrimaryEmail">Email*</label>
@@ -538,6 +543,8 @@
     <script>
         (function () {
             const optionInputs = Array.from(document.querySelectorAll('input[name="payment_selection_ui"]'));
+            const checkoutPrimaryNationality = document.getElementById('checkoutPrimaryNationality');
+            const checkoutGuestResidencyHidden = document.getElementById('checkoutGuestResidencyHidden');
             const paymentSelectionInput = document.getElementById('payment_selection_input');
             const paymentCurrencyInput = document.getElementById('payment_currency_input');
             const paymentGatewayInput = document.getElementById('payment_gateway_input');
@@ -552,7 +559,26 @@
             const checkoutTermsAcceptedInput = document.getElementById('checkout_terms_accepted_input');
 
             if (optionInputs.length === 0) {
+                if (checkoutPrimaryNationality && checkoutGuestResidencyHidden) {
+                    const syncGuestResidency = function () {
+                        const nationality = String(checkoutPrimaryNationality.value || '').trim().toLowerCase();
+                        checkoutGuestResidencyHidden.value = nationality === 'maldives' ? 'local_resident' : 'foreign_national';
+                    };
+
+                    checkoutPrimaryNationality.addEventListener('change', syncGuestResidency);
+                    syncGuestResidency();
+                }
                 return;
+            }
+
+            if (checkoutPrimaryNationality && checkoutGuestResidencyHidden) {
+                const syncGuestResidency = function () {
+                    const nationality = String(checkoutPrimaryNationality.value || '').trim().toLowerCase();
+                    checkoutGuestResidencyHidden.value = nationality === 'maldives' ? 'local_resident' : 'foreign_national';
+                };
+
+                checkoutPrimaryNationality.addEventListener('change', syncGuestResidency);
+                syncGuestResidency();
             }
 
             const syncPaymentSelection = function () {

@@ -449,6 +449,8 @@
 
         .booking-price strong { font-size:0.98rem; color:#1a4360; }
         .booking-price span { font-size:0.76rem; color:#587188; }
+        .booking-price .price-local { display:block; font-size:0.98rem; font-weight:700; color:#1a4360; }
+        .booking-price .price-foreign { display:block; font-size:0.78rem; font-weight:600; color:#0f6179; margin-top:1px; }
 
         .booking-subtitle {
             margin: -2px 0 10px;
@@ -1208,9 +1210,22 @@
                     <p class="booking-subtitle">{{ (string) ($property->name ?? 'Excursion Activity') }}</p>
                 @endif
                 @if ($categoryKey !== 'excursion')
+                    @php
+                        $bkPriceLocal = (float) ($pricingConfig['price_local_flat'] ?? 0);
+                        $bkPriceForeign = (float) ($pricingConfig['price_foreign_flat'] ?? 0);
+                    @endphp
                     <div class="booking-price">
                         <span>Service price</span>
-                        <strong>{{ $currency }} {{ number_format($basePrice, 2) }}</strong>
+                        @if ($bkPriceLocal > 0 || $bkPriceForeign > 0)
+                            @if ($bkPriceLocal > 0)
+                                <strong class="price-local">MVR {{ number_format($bkPriceLocal, 2) }}</strong>
+                            @endif
+                            @if ($bkPriceForeign > 0)
+                                <span class="price-foreign">≈ USD {{ number_format($bkPriceForeign, 2) }}</span>
+                            @endif
+                        @else
+                            <strong>{{ $currency }} {{ number_format($basePrice, 2) }}</strong>
+                        @endif
                     </div>
                 @endif
 

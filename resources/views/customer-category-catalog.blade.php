@@ -826,10 +826,35 @@
         .card-body {
             padding: 0;
             display: flex;
-            flex-direction: column;
-            gap: 3px;
+            flex-direction: row;
+            gap: 8px;
             flex: 1;
             min-width: 0;
+            justify-content: space-between;
+        }
+
+        .card-main-col {
+            flex: 1 1 0;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .card-meta-right {
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+            text-align: right;
+        }
+
+        .card-meta-right .card-review {
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 2px;
+            margin-bottom: 0;
         }
 
         .card-city {
@@ -895,6 +920,19 @@
             font-weight: 700;
             margin-bottom: 2px;
             line-height: 1;
+        }
+
+        .card-price .price-local {
+            display: block;
+            color: #1a2f43;
+        }
+
+        .card-price .price-foreign {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #0f6179;
+            margin-top: 2px;
         }
 
         .card-offer {
@@ -1428,37 +1466,37 @@
         }
 
         .page.category-default .card-body {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr);
+            display: flex;
+            flex-direction: column;
             row-gap: 4px;
-            align-items: start;
-            align-content: start;
+            align-items: stretch;
             padding: 10px 12px;
         }
 
-        .page.category-default .card-city,
-        .page.category-default .card-type-chip,
-        .page.category-default .card h3,
-        .page.category-default .card-stars,
-        .page.category-default .card-offer,
-        .page.category-default .card-desc,
-        .page.category-default .card-time,
-        .page.category-default .card-action-btn {
-            grid-column: 1 / -1;
+        .page.category-default .card-main-col,
+        .page.category-default .card-meta-right {
+            width: 100%;
         }
 
-        .page.category-default .card-review {
-            grid-column: 1;
-            margin-bottom: 0;
-            margin-top: 2px;
+        .page.category-default .card-meta-right {
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            text-align: left;
+            margin-top: 4px;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .page.category-default .card-meta-right .card-review {
+            flex-direction: row;
+            align-items: center;
+            gap: 6px;
         }
 
         .page.category-default .card-price {
-            grid-column: 1;
-            justify-self: start;
-            align-self: start;
-            margin-top: 2px;
-            text-align: left;
+            margin-top: 0;
+            text-align: right;
             font-size: 0.82rem;
         }
 
@@ -1801,13 +1839,18 @@
             }
 
             .page.category-default .card-body {
-                grid-template-columns: 1fr;
-                column-gap: 0;
+                flex-direction: column;
+            }
+
+            .page.category-default .card-meta-right {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                text-align: left;
+                flex-wrap: wrap;
             }
 
             .page.category-default .card-price {
-                grid-column: 1;
-                justify-self: start;
                 text-align: left;
             }
 
@@ -2719,6 +2762,26 @@
                                     ? ucwords(str_replace(['_', '-'], ' ', $mealPlan))
                                     : ($includesBreakfast ? 'Breakfast included' : 'Without breakfast'));
                             $actionLabel = $categoryKey === 'accommodation' ? 'View Deal' : 'Book Now';
+                            // Dual-currency pricing for non-accommodation service cards
+                            $priceLocal = $categoryKey !== 'accommodation'
+                                ? max(0.0, (float) ($cardDetails['price_local'] ?? $price))
+                                : $price;
+                            $priceUsdRaw = $categoryKey !== 'accommodation'
+                                ? ($cardDetails['price_usd'] ?? $cardDetails['price_foreign'] ?? null)
+                                : null;
+                            $priceUsd = ($priceUsdRaw !== null && is_numeric($priceUsdRaw) && (float) $priceUsdRaw > 0)
+                                ? (float) $priceUsdRaw
+                                : null;
+                            if ($categoryKey === 'excursion' || $categoryKey === 'water_sports') {
+                                $excLocalAdult = (float) ($cardDetails['adult_price_local'] ?? 0);
+                                $excForeignAdult = (float) ($cardDetails['adult_price_foreign'] ?? 0);
+                                if ($priceLocal <= 0 && $excLocalAdult > 0) {
+                                    $priceLocal = $excLocalAdult;
+                                }
+                                if ($priceUsd === null && $excForeignAdult > 0) {
+                                    $priceUsd = $excForeignAdult;
+                                }
+                            }
                         @endphp
                         @php
                             $propertyDetails = [];
@@ -2820,43 +2883,52 @@
                                 @endphp
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                                 <div class="card-body">
-                                    <span class="card-type-chip">{{ $cardEyebrow }}</span>
-                                    <h3>{{ $isExcursionCard ? $activityName : (string) ($property->name ?? 'Listing') }}</h3>
-                                    <span class="card-city"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> {{ $originLabel }}</span>
-                                    @if ($shortDescription !== '')
-                                        <p class="card-desc">{{ $shortDescription }}</p>
-                                    @endif
-                                    @if ($startTimeLabel !== '' || $endTimeLabel !== '')
-                                        <div class="card-time">
-                                            <i class="fa-solid fa-clock" aria-hidden="true"></i>
-                                            @if ($startTimeLabel !== '' && $endTimeLabel !== '')
-                                                {{ $startTimeLabel }} - {{ $endTimeLabel }}
-                                            @elseif ($startTimeLabel !== '')
-                                                Starts {{ $startTimeLabel }}
-                                            @else
-                                                Ends {{ $endTimeLabel }}
+                                    <div class="card-main-col">
+                                        <span class="card-type-chip">{{ $cardEyebrow }}</span>
+                                        <h3>{{ $isExcursionCard ? $activityName : (string) ($property->name ?? 'Listing') }}</h3>
+                                        <span class="card-city"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> {{ $originLabel }}</span>
+                                        @if ($shortDescription !== '')
+                                            <p class="card-desc">{{ $shortDescription }}</p>
+                                        @endif
+                                        @if ($startTimeLabel !== '' || $endTimeLabel !== '')
+                                            <div class="card-time">
+                                                <i class="fa-solid fa-clock" aria-hidden="true"></i>
+                                                @if ($startTimeLabel !== '' && $endTimeLabel !== '')
+                                                    {{ $startTimeLabel }} - {{ $endTimeLabel }}
+                                                @elseif ($startTimeLabel !== '')
+                                                    Starts {{ $startTimeLabel }}
+                                                @else
+                                                    Ends {{ $endTimeLabel }}
+                                                @endif
+                                            </div>
+                                        @endif
+                                        <div class="card-stars" aria-label="Star ranking">
+                                            @if ($starRank > 0)
+                                                @for ($i = 0; $i < $starRank; $i++)
+                                                    <i class="fa-solid fa-star" aria-hidden="true"></i>
+                                                @endfor
                                             @endif
                                         </div>
-                                    @endif
-                                    <div class="card-stars" aria-label="Star ranking">
-                                        @if ($starRank > 0)
-                                            @for ($i = 0; $i < $starRank; $i++)
-                                                <i class="fa-solid fa-star" aria-hidden="true"></i>
-                                            @endfor
-                                        @endif
                                     </div>
-                                    <div class="card-review">
-                                        <span class="card-rating-badge">{{ $reviewScore }}</span>
-                                        <span>{{ number_format($reviewCount) }} reviews</span>
+                                    <div class="card-meta-right">
+                                        <div class="card-review">
+                                            <span class="card-rating-badge">{{ $reviewScore }}</span>
+                                            <span>{{ number_format($reviewCount) }} reviews</span>
+                                        </div>
+                                        <div class="card-price">
+                                            @if ($priceLocal > 0)
+                                                <span class="price-local">From MVR {{ number_format($priceLocal, 2) }}</span>
+                                                @if ($priceUsd !== null)
+                                                    <span class="price-foreign">≈ USD {{ number_format($priceUsd, 2) }}</span>
+                                                @endif
+                                            @elseif ($price > 0)
+                                                From {{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}
+                                            @else
+                                                Price on request
+                                            @endif
+                                        </div>
+                                        <span class="card-action-btn">{{ $actionLabel }} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
                                     </div>
-                                    <div class="card-price">
-                                        @if ($price > 0)
-                                            From {{ strtoupper((string) ($property->currency ?? 'MVR')) }} {{ number_format($price, 2) }}
-                                        @else
-                                            Price on request
-                                        @endif
-                                    </div>
-                                    <span class="card-action-btn">{{ $actionLabel }} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
                                 </div>
                             </a>
                             @endif

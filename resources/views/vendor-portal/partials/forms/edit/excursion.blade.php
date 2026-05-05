@@ -136,27 +136,45 @@
             <input id="property_max_guests" name="max_guests" class="ops-input" type="number" min="1" value="{{ old('max_guests', $propertyDetails['max_guests'] ?? '') }}">
         </div>
 
-        {{-- ── Pricing by Residency ──────────────────────────────────────── --}}
-        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
-            <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Pricing by Residency</p>
-        </div>
-        <div class="ops-field">
-            <label for="property_adult_price_local">Adult Price — Local (MVR)</label>
-            <input id="property_adult_price_local" name="adult_price_local" class="ops-input" type="number" min="0" step="0.01" value="{{ old('adult_price_local', $propertyDetails['adult_price_local'] ?? '') }}" placeholder="e.g. 450.00">
-            <p class="map-help">Price for Maldivian nationals.</p>
-        </div>
-        <div class="ops-field">
-            <label for="property_adult_price_foreign">Adult Price — Foreign (MVR)</label>
-            <input id="property_adult_price_foreign" name="adult_price_foreign" class="ops-input" type="number" min="0" step="0.01" value="{{ old('adult_price_foreign', $propertyDetails['adult_price_foreign'] ?? '') }}" placeholder="e.g. 850.00">
-            <p class="map-help">Price for international guests.</p>
-        </div>
-        <div class="ops-field">
-            <label for="property_child_price_local">Child Price — Local (MVR)</label>
-            <input id="property_child_price_local" name="child_price_local" class="ops-input" type="number" min="0" step="0.01" value="{{ old('child_price_local', $propertyDetails['child_price_local'] ?? '') }}" placeholder="e.g. 225.00">
-        </div>
-        <div class="ops-field">
-            <label for="property_child_price_foreign">Child Price — Foreign (MVR)</label>
-            <input id="property_child_price_foreign" name="child_price_foreign" class="ops-input" type="number" min="0" step="0.01" value="{{ old('child_price_foreign', $propertyDetails['child_price_foreign'] ?? '') }}" placeholder="e.g. 425.00">
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1;">
+            <section class="listing-form-section" aria-label="Pricing by residency">
+                <div class="listing-form-section-head">
+                    <h4>Pricing by Residency</h4>
+                    <p>Set adult and child fares for local and foreign guests.</p>
+                </div>
+                <p class="listing-form-note">Use this matrix when pricing differs by residency segment.</p>
+                <div class="listing-transfer-table">
+                    <div class="listing-transfer-head" aria-hidden="true">
+                        <span>Rate Type</span>
+                        <span>Local Adult</span>
+                        <span>Local Child</span>
+                        <span>Foreigner Adult</span>
+                        <span>Foreigner Child</span>
+                    </div>
+                    <div class="listing-transfer-row">
+                        <div class="listing-transfer-option">
+                            <label><span>Activity Fare</span></label>
+                            <small>Per person rate for this excursion.</small>
+                        </div>
+                        <label class="listing-transfer-rate">
+                            <span>Local Adult</span>
+                            <input id="property_adult_price_local" name="adult_price_local" class="ops-input" type="number" min="0" step="0.01" value="{{ old('adult_price_local', $propertyDetails['adult_price_local'] ?? '') }}" placeholder="MVR 0.00">
+                        </label>
+                        <label class="listing-transfer-rate">
+                            <span>Local Child</span>
+                            <input id="property_child_price_local" name="child_price_local" class="ops-input" type="number" min="0" step="0.01" value="{{ old('child_price_local', $propertyDetails['child_price_local'] ?? '') }}" placeholder="MVR 0.00">
+                        </label>
+                        <label class="listing-transfer-rate">
+                            <span>Foreigner Adult</span>
+                            <input id="property_adult_price_foreign" name="adult_price_foreign" class="ops-input" type="number" min="0" step="0.01" value="{{ old('adult_price_foreign', $propertyDetails['adult_price_foreign'] ?? '') }}" placeholder="MVR 0.00">
+                        </label>
+                        <label class="listing-transfer-rate">
+                            <span>Foreigner Child</span>
+                            <input id="property_child_price_foreign" name="child_price_foreign" class="ops-input" type="number" min="0" step="0.01" value="{{ old('child_price_foreign', $propertyDetails['child_price_foreign'] ?? '') }}" placeholder="MVR 0.00">
+                        </label>
+                    </div>
+                </div>
+            </section>
         </div>
 
         {{-- ── Inclusions & Exclusions ───────────────────────────────────── --}}

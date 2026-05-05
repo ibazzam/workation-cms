@@ -527,6 +527,8 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'description' => ['nullable', 'string', 'max:3000'],
         'short_description' => ['nullable', 'string', 'max:160'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
+        'price_local' => ['nullable', 'numeric', 'min:0'],
+        'price_usd' => ['nullable', 'numeric', 'min:0'],
         'max_guests' => ['nullable', 'integer', 'min:0', 'max:10000'],
         'measurement_system' => ['nullable', Rule::in(['metric', 'imperial'])],
         'area_value' => ['nullable', 'numeric', 'min:5', 'max:100000'],
@@ -735,13 +737,13 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
 
     $resolvedBasePrice = $canonicalListingCategory === 'accommodation'
         ? 0
-        : (float) ($validated['base_price'] ?? 0);
+        : (float) ($validated['price_local'] ?? ($validated['base_price'] ?? 0));
 
     if ($canonicalListingCategory === 'transport') {
         $normalizedMaxGuests = max(0, (int) ($categoryCapacity ?? ($validated['max_guests'] ?? 0)));
     }
 
-    DB::transaction(function () use ($canonicalListingCategory, $vendorUserId, $validated, $resolvedLocation, $normalizedMaxGuests, $propertyDetails): void {
+    DB::transaction(function () use ($canonicalListingCategory, $vendorUserId, $validated, $resolvedLocation, $normalizedMaxGuests, $propertyDetails, $resolvedBasePrice): void {
         vendorPortalCreateCategoryListingRecord(
             $canonicalListingCategory,
             $vendorUserId,
@@ -751,7 +753,7 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
             $normalizedMaxGuests,
             $propertyDetails,
             'draft',
-            $canonicalListingCategory === 'accommodation' ? 0 : (float) ($validated['base_price'] ?? 0),
+            $resolvedBasePrice,
             'MVR'
         );
     });
@@ -794,6 +796,8 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'description' => ['nullable', 'string', 'max:3000'],
         'short_description' => ['nullable', 'string', 'max:160'],
         'base_price' => ['nullable', 'numeric', 'min:0'],
+        'price_local' => ['nullable', 'numeric', 'min:0'],
+        'price_usd' => ['nullable', 'numeric', 'min:0'],
         'max_guests' => ['nullable', 'integer', 'min:0', 'max:10000'],
         'measurement_system' => ['nullable', Rule::in(['metric', 'imperial'])],
         'area_value' => ['nullable', 'numeric', 'min:5', 'max:100000'],
@@ -998,7 +1002,7 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
 
     $resolvedBasePrice = $canonicalListingCategory === 'accommodation'
         ? 0
-        : (float) ($validated['base_price'] ?? ($propertyRecord->base_price ?? 0));
+        : (float) ($validated['price_local'] ?? ($validated['base_price'] ?? ($propertyRecord->base_price ?? 0)));
 
     $locationCountry = trim((string) ($validated['location_country'] ?? ''));
     $locationState = trim((string) ($validated['location_state'] ?? ''));

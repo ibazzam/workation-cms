@@ -118,6 +118,35 @@
         </div>
     </div>
 
+    <section class="listing-form-section listing-price-band" aria-label="Service pricing">
+        <div class="listing-form-section-head">
+            <h4>Service Pricing</h4>
+            <p>Enter the customer-facing rate bands for local and foreign guests.</p>
+        </div>
+        <p class="listing-form-note">Local rates use MVR. Foreign rates use USD. Leave foreign blank to keep local pricing as the default.</p>
+        <div class="listing-transfer-table">
+            <div class="listing-transfer-head" aria-hidden="true">
+                <span>Rate</span>
+                <span>Local (MVR)</span>
+                <span>Foreign (USD)</span>
+            </div>
+            <div class="listing-transfer-row">
+                <div class="listing-transfer-option">
+                    <label><span>Base Rate</span></label>
+                    <small>Per desk, room, or booking block, based on this listing.</small>
+                </div>
+                <label class="listing-transfer-rate">
+                    <span>Local (MVR)</span>
+                    <input name="price_local" class="ops-input" type="number" min="0" step="0.01" value="{{ old('price_local', $propertyDetails['price_local'] ?? ($property->base_price ?? '')) }}" placeholder="MVR 0.00">
+                </label>
+                <label class="listing-transfer-rate">
+                    <span>Foreign (USD)</span>
+                    <input name="price_usd" class="ops-input" type="number" min="0" step="0.01" value="{{ old('price_usd', $propertyDetails['price_usd'] ?? ($propertyDetails['price_foreign'] ?? '')) }}" placeholder="USD 0.00">
+                </label>
+            </div>
+        </div>
+    </section>
+
     <div class="inline-actions" style="margin-top:12px;">
         <button class="btn btn-primary" type="submit">Save Changes</button>
         <a class="btn btn-secondary" href="/vendor/listings/remote_workspace">Cancel</a>

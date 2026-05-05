@@ -2,7 +2,6 @@
 <form class="ops-form" method="POST" action="/portal/vendor/properties/create">
     @csrf
     <input type="hidden" name="listing_category" value="marine_transport">
-    <input type="hidden" name="base_price" value="0">
 
     <div class="ops-form-grid">
         <div class="ops-field ops-field-wide">
@@ -167,6 +166,35 @@
             <textarea id="property_cancellation_policy" name="cancellation_policy" class="ops-textarea" rows="3" maxlength="2000">{{ old('cancellation_policy') }}</textarea>
         </div>
     </div>
+
+    <section class="listing-form-section listing-price-band" aria-label="Service pricing">
+        <div class="listing-form-section-head">
+            <h4>Service Pricing</h4>
+            <p>Enter the customer-facing rate bands for local and foreign guests.</p>
+        </div>
+        <p class="listing-form-note">Local rates use MVR. Foreign rates use USD. Leave foreign blank to match local pricing logic in your offers.</p>
+        <div class="listing-transfer-table">
+            <div class="listing-transfer-head" aria-hidden="true">
+                <span>Rate</span>
+                <span>Local (MVR)</span>
+                <span>Foreign (USD)</span>
+            </div>
+            <div class="listing-transfer-row">
+                <div class="listing-transfer-option">
+                    <label><span>Base Rate</span></label>
+                    <small>Per seat, transfer, or charter, based on this listing.</small>
+                </div>
+                <label class="listing-transfer-rate">
+                    <span>Local (MVR)</span>
+                    <input name="price_local" class="ops-input" type="number" min="0" step="0.01" value="{{ old('price_local') }}" placeholder="MVR 0.00">
+                </label>
+                <label class="listing-transfer-rate">
+                    <span>Foreign (USD)</span>
+                    <input name="price_usd" class="ops-input" type="number" min="0" step="0.01" value="{{ old('price_usd') }}" placeholder="USD 0.00">
+                </label>
+            </div>
+        </div>
+    </section>
 
     <div class="inline-actions" style="margin-top:12px;">
         <button class="btn btn-primary" type="submit">Save Listing</button>

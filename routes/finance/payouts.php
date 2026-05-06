@@ -813,6 +813,54 @@ Route::middleware('web')->group(function (): void {
                 ]);
         }
 
+        $batchMaturitySnapshot = static function (int $batchId): array {
+            if (!Schema::hasTable('finance_payout_batch_items') || !Schema::hasTable('vendor_reservations')) {
+                return ['ready' => false, 'maturity_at' => null, 'blocked_count' => 0, 'sample_reasons' => ['Payout tables are not available.']];
+            }
+            $itemIds = DB::table('finance_payout_batch_items')->where('batch_id', $batchId)->pluck('id');
+            if ($itemIds->isEmpty()) {
+                return ['ready' => false, 'maturity_at' => null, 'blocked_count' => 0, 'sample_reasons' => ['Batch has no payout items.']];
+            }
+            $rows = DB::table('vendor_reservations')->whereIn('payout_batch_item_id', $itemIds)->get(['id', 'payment_status', 'payment_gateway', 'payment_collected_at', 'payment_verified_at', 'payout_expected_at', 'created_at']);
+            if ($rows->isEmpty()) {
+                return ['ready' => false, 'maturity_at' => null, 'blocked_count' => 0, 'sample_reasons' => ['No linked reservations found.']];
+            }
+            $now = Carbon::now();
+            $blockedCount = 0;
+            $sampleReasons = [];
+            $latestExpected = null;
+            foreach ($rows as $row) {
+                $paymentStatus = strtolower(trim((string) ($row->payment_status ?? '')));
+                if ($paymentStatus !== 'paid') {
+                    $blockedCount++;
+                    if (count($sampleReasons) < 3) {
+                        $sampleReasons[] = 'Reservation #' . (int) ($row->id ?? 0) . ' is not paid';
+                    }
+                    continue;
+                }
+                $expectedAt = !empty($row->payout_expected_at)
+                    ? Carbon::parse((string) $row->payout_expected_at)
+                    : ReservationSettlementCalculator::expectedPayoutAt($row->payment_collected_at ?? $row->payment_verified_at ?? $row->created_at ?? null, (string) ($row->payment_gateway ?? ''), null);
+                if (!$expectedAt) {
+                    $blockedCount++;
+                    if (count($sampleReasons) < 3) {
+                        $sampleReasons[] = 'Reservation #' . (int) ($row->id ?? 0) . ' has no settlement date';
+                    }
+                    continue;
+                }
+                if (!$latestExpected || $expectedAt->gt($latestExpected)) {
+                    $latestExpected = $expectedAt->copy();
+                }
+                if ($expectedAt->gt($now)) {
+                    $blockedCount++;
+                    if (count($sampleReasons) < 3) {
+                        $sampleReasons[] = 'Reservation #' . (int) ($row->id ?? 0) . ' matures on ' . $expectedAt->toDateString();
+                    }
+                }
+            }
+            return ['ready' => $blockedCount === 0, 'maturity_at' => $latestExpected, 'blocked_count' => $blockedCount, 'sample_reasons' => $sampleReasons];
+        };
+
         $maturity = $batchMaturitySnapshot((int) $batchRow->id);
         $firstApprovedBy = (int) ($batchRow->first_approved_by_user_id ?? 0);
         $secondApprovedBy = (int) ($batchRow->second_approved_by_user_id ?? 0);

@@ -97,7 +97,7 @@
         @include('partials.booking-process-highlights', [
             'bookingProcessCurrentStep' => 2,
             'bookingProcessBackUrl' => $backUrl,
-            'bookingProcessBackLabel' => $headerCategoryKey === 'accommodation' ? 'Back to property' : 'Back to service browsing',
+            'bookingProcessBackLabel' => 'Back to guest details',
             'bookingProcessSteps' => [
                 1 => '1. Guest Details',
                 2 => '2. Transfer Selection',

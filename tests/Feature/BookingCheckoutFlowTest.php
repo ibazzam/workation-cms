@@ -96,12 +96,77 @@ class BookingCheckoutFlowTest extends TestCase
         $this->assertEquals(135.0, (float) ($notes['transfer_charge_total'] ?? 0));
     }
 
+    public function test_service_guest_details_redirects_to_transfer_step_even_without_transfer_options(): void
+    {
+        $reservationId = $this->createReservation([
+            'currency' => 'MVR',
+            'notes' => [
+                'category_key' => 'excursion',
+                'property_transfer_options' => [],
+                'quote_payment_currency' => 'USD',
+                'quote_payment_amount' => 77.35,
+                'quote_source_currency' => 'MVR',
+                'quote_source_amount' => 1200,
+            ],
+        ]);
+
+        $response = $this
+            ->withoutMiddleware(VerifyCsrfToken::class)
+            ->post('/booking/checkout/' . $reservationId . '/guest-details', [
+                'primary_first_name' => 'Guest',
+                'primary_last_name' => 'Customer',
+                'primary_nationality' => 'Germany',
+                'guest_residency' => 'foreign_national',
+                'primary_email' => 'guest@example.com',
+                'primary_mobile' => '+49123456',
+            ]);
+
+        $response->assertRedirect('/booking/checkout/' . $reservationId . '/transfer');
+
+        $transferPage = $this->get('/booking/checkout/' . $reservationId . '/transfer');
+        $transferPage->assertOk();
+        $transferPage->assertSee('/booking/checkout/' . $reservationId, false);
+        $transferPage->assertSee('USD', false);
+    }
+
+    public function test_service_checkout_summary_uses_locked_payment_currency(): void
+    {
+        $reservationId = $this->createReservation([
+            'notes' => [
+                'category_key' => 'excursion',
+                'primary_first_name' => 'Guest',
+                'primary_last_name' => 'Customer',
+                'primary_email' => 'guest@example.com',
+                'primary_mobile' => '+49123456',
+                'primary_nationality' => 'Germany',
+                'guest_residency' => 'foreign_national',
+                'room_subtotal' => 1000,
+                'subtotal_amount' => 1000,
+                'discount_amount' => 0,
+                'discounted_subtotal' => 1000,
+                'invoice_total_amount' => 1200,
+                'quote_payment_currency' => 'USD',
+                'quote_payment_amount' => 77.35,
+                'quote_source_currency' => 'MVR',
+                'quote_source_amount' => 1200,
+            ],
+        ]);
+
+        $response = $this->get('/booking/checkout/' . $reservationId);
+
+        $response->assertOk();
+        $response->assertSee('Payment Currency', false);
+        $response->assertSee('USD', false);
+        $response->assertDontSee('MVR 1,200.00', false);
+    }
+
     public function test_checkout_to_hosted_payment_completion_confirms_reservation(): void
     {
         $reservationId = $this->createReservation();
 
         $intentResponse = $this
             ->withoutMiddleware(VerifyCsrfToken::class)
+            ->withSession(['portal_customer_authenticated' => true])
             ->post('/booking/checkout/' . $reservationId . '/payment-intent', [
                 'payment_currency' => 'MVR',
                 'payment_provider' => 'mib',

@@ -257,7 +257,7 @@ class CheckoutWebhookCallbackTest extends TestCase
         $response = $this->get('/booking/payment/webhooks/bml_mvr?reservation_id=' . $reservationId . '&state=DECLINED&transactionId=BMLTXN-GET-DECLINED-001');
 
         $response
-            ->assertRedirect('/booking/checkout/' . $reservationId)
+            ->assertRedirect('/customer?section=bookings&booking=' . $reservationId . '&booking_status=awaiting_payment&payment=failed')
             ->assertSessionHasErrors('payment');
 
         $this->assertDatabaseHas('vendor_reservations', [

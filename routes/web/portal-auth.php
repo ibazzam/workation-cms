@@ -281,6 +281,7 @@ Route::post('/portal/vendor/email-otp/verify', function (Request $request) {
             'portal_vendor_user' => $portalUser->name,
             'portal_vendor_user_id' => $portalUser->id,
             'portal_vendor_role' => $portalUser->portal_role,
+            'portal_vendor_oauth_provider' => $channel,
         ]);
 
         Auth::login($portalUser);
@@ -448,7 +449,12 @@ Route::get('/portal/vendor/oauth/{provider}/redirect', function (Request $reques
         return redirect()->away($targetUrl);
     }
 
-    return Socialite::driver($provider)->stateless()->redirect();
+    $driver = Socialite::driver($provider);
+    if ($provider === 'google') {
+        $driver = $driver->with(['prompt' => 'login']);
+    }
+
+    return $driver->stateless()->redirect();
 });
 
 Route::get('/portal/vendor/oauth/{provider}/callback', function (Request $request, string $provider) {
@@ -844,8 +850,14 @@ Route::get('/portal/customer/oauth/{provider}/redirect', function (Request $requ
         return redirect()->away($targetUrl);
     }
 
-    return Socialite::driver($provider)
-        ->redirectUrl(customerSocialRedirectUrl($provider))
+    $driver = Socialite::driver($provider)
+        ->redirectUrl(customerSocialRedirectUrl($provider));
+
+    if ($provider === 'google') {
+        $driver = $driver->with(['prompt' => 'login']);
+    }
+
+    return $driver
         ->stateless()
         ->redirect();
 });
@@ -1030,6 +1042,7 @@ Route::get('/portal/customer/oauth/{provider}/callback', function (Request $requ
             'portal_customer_user_id' => (string) ($customerUser->id ?? ''),
             'portal_customer_role' => 'CUSTOMER',
             'portal_customer_email' => strtolower(trim((string) ($customerUser->email ?? ''))),
+            'portal_customer_oauth_provider' => $provider,
         ]);
 
         Auth::guard('customer')->login($customerUser);
@@ -1773,6 +1786,13 @@ Route::post('/portal/{portal}/login', function (Request $request, string $portal
         if ($portal === 'customer' && $portalUser) {
             session([
                 'portal_customer_email' => strtolower(trim((string) ($portalUser->email ?? ''))),
+                'portal_customer_oauth_provider' => '',
+            ]);
+        }
+
+        if ($portal === 'vendor') {
+            session([
+                'portal_vendor_oauth_provider' => '',
             ]);
         }
 
@@ -1812,24 +1832,32 @@ $handlePortalLogout = function (Request $request, string $portal) {
     }
 
     $config = portalConfig($portal);
+    $oauthProviderKey = 'portal_' . $portal . '_oauth_provider';
+    $oauthProvider = strtolower(trim((string) $request->session()->get($oauthProviderKey, '')));
+
+    $nextUrl = match ($portal) {
+        'vendor' => '/portal/vendor/register?mode=email',
+        'customer' => '/',
+        default => '/portal/' . $portal . '/login',
+    };
+
     if ($portal === 'customer') {
         Auth::guard('customer')->logout();
     } else {
         Auth::guard('backend')->logout();
     }
-    session()->forget([$config['session_key'], 'portal_' . $portal . '_user', 'portal_' . $portal . '_user_id', 'portal_' . $portal . '_role']);
+    session()->forget([$config['session_key'], 'portal_' . $portal . '_user', 'portal_' . $portal . '_user_id', 'portal_' . $portal . '_role', $oauthProviderKey]);
     $request->session()->invalidate();
     $request->session()->regenerateToken();
 
-    if ($portal === 'vendor') {
-        return redirect('/portal/vendor/register?mode=email');
+    if (in_array($portal, ['vendor', 'customer'], true) && $oauthProvider === 'google') {
+        $continueUrl = url($nextUrl);
+        $googleLogoutUrl = 'https://accounts.google.com/Logout?continue=' . urlencode($continueUrl);
+
+        return redirect()->away($googleLogoutUrl);
     }
 
-    if ($portal === 'customer') {
-        return redirect('/');
-    }
-
-    return redirect('/portal/' . $portal . '/login');
+    return redirect($nextUrl);
 };
 
 Route::match(['GET', 'POST'], '/portal/admin/logout', function (Request $request) use ($handlePortalLogout) {

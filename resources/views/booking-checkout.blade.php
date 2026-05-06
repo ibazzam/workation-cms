@@ -237,6 +237,26 @@
         $lockedPaymentAmount = (float) ($summary['quote_payment_amount'] ?? ($summary['total'] ?? 0));
         $lockedSourceCurrency = strtoupper(trim((string) ($summary['quote_source_currency'] ?? $currency)));
         $lockedSourceAmount = (float) ($summary['quote_source_amount'] ?? ($summary['total'] ?? 0));
+        $displayCurrency = $categoryKey === 'accommodation' ? $currency : $lockedPaymentCurrency;
+        $displayFxRate = $categoryKey !== 'accommodation' && $lockedSourceAmount > 0
+            ? ($lockedPaymentAmount > 0 ? ($lockedPaymentAmount / $lockedSourceAmount) : 1.0)
+            : 1.0;
+        $convertDisplayAmount = static fn (float $amount): float => max(0, $amount * $displayFxRate);
+        $displayRoomSubtotal = $categoryKey === 'accommodation' ? $roomSubtotal : $convertDisplayAmount($roomSubtotal);
+        $displayDiscountAmount = $categoryKey === 'accommodation' ? $discountAmount : $convertDisplayAmount($discountAmount);
+        $displayServiceChargeTotal = $categoryKey === 'accommodation' ? $serviceChargeTotal : $convertDisplayAmount($serviceChargeTotal);
+        $displayTransferAmount = $categoryKey === 'accommodation' ? $effectiveTransferAmount : $convertDisplayAmount($effectiveTransferAmount);
+        $displayInvoiceTotal = $categoryKey === 'accommodation' ? $effectiveInvoiceTotal : $lockedPaymentAmount;
+        $displaySavedAmount = number_format($displayDiscountAmount, 2);
+        $displayTaxLines = $invoiceTaxLines->map(static function (array $line) use ($categoryKey, $displayFxRate): array {
+            if ($categoryKey === 'accommodation') {
+                return $line;
+            }
+
+            $line['amount'] = max(0, (float) ($line['amount'] ?? 0) * $displayFxRate);
+
+            return $line;
+        });
         $guestDetailsComplete = trim((string) ($summary['primary_first_name'] ?? '')) !== ''
             && trim((string) ($summary['primary_last_name'] ?? '')) !== ''
             && trim((string) ($summary['primary_email'] ?? '')) !== ''
@@ -292,7 +312,7 @@
         @include('partials.booking-process-highlights', [
             'bookingProcessCurrentStep' => $bookingProcessCurrentStep,
             'bookingProcessBackUrl' => $bookingProcessBackUrl,
-            'bookingProcessBackLabel' => $requiresCustomerAuth ? 'Back to service browsing' : 'Back to property',
+            'bookingProcessBackLabel' => $guestDetailsComplete ? 'Back to transfer selection' : 'Back to booking view',
             'bookingProcessSteps' => $bookingProcessSteps,
             'bookingProcessNextText' => ($requiresCustomerAuth && !$customerAuthenticated)
                 ? 'Next step after guest details: sign in to unlock payment method selection.'
@@ -326,7 +346,7 @@
                     <div class="cell"><span class="label">Nationality</span><div class="value">{{ (string) ($summary['primary_nationality'] ?? '-') }}</div></div>
                 </div>
 
-                @if (!empty($reservation->id) && $customerPaymentStatus !== 'paid')
+                @if (!empty($reservation->id) && $customerPaymentStatus !== 'paid' && !$guestDetailsComplete)
                     <section class="guest-details-box" aria-label="Guest details form">
                         <h2>Guest Details</h2>
                         <p class="guest-form-note">Provide guest identity details now. Booking totals and payment currency are recalculated from the selected nationality.</p>
@@ -469,7 +489,9 @@
                         <p class="payment-warning">No live payment gateway route is currently available for this booking segment/currency. Please contact support to complete gateway setup.</p>
                     @endif
                     <p class="payment-note">{{ $paymentNotice }}</p>
-                    <p class="payment-note">Booking total: {{ $lockedSourceCurrency }} {{ number_format($lockedSourceAmount, 2) }}. Converted payable amount updates based on your selected payment route.</p>
+                    @if ($categoryKey === 'accommodation' || $lockedSourceCurrency === $lockedPaymentCurrency)
+                        <p class="payment-note">Booking total: {{ $lockedSourceCurrency }} {{ number_format($lockedSourceAmount, 2) }}. Converted payable amount updates based on your selected payment route.</p>
+                    @endif
                 </div>
                 @endif
                 </div>
@@ -498,26 +520,26 @@
 
                     <section class="mini-section" aria-label="Price details">
                         <h2 class="mini-title">3. Price details</h2>
-                        <div class="invoice-row"><span>1 room x 1 night</span><strong>{{ $currency }} {{ number_format($roomSubtotal, 2) }}</strong></div>
+                        <div class="invoice-row"><span>1 room x 1 night</span><strong>{{ $displayCurrency }} {{ number_format($displayRoomSubtotal, 2) }}</strong></div>
                         @if ($discountAmount > 0)
-                            <div class="invoice-row"><span>Discount</span><strong>- {{ $currency }} {{ number_format($discountAmount, 2) }}</strong></div>
+                            <div class="invoice-row"><span>Discount</span><strong>- {{ $displayCurrency }} {{ number_format($displayDiscountAmount, 2) }}</strong></div>
                         @endif
-                        @foreach ($invoiceTaxLines as $taxLine)
-                            <div class="invoice-row"><span>{{ (string) ($taxLine['label'] ?? 'Tax') }}</span><strong>{{ $currency }} {{ number_format((float) ($taxLine['amount'] ?? 0), 2) }}</strong></div>
+                        @foreach ($displayTaxLines as $taxLine)
+                            <div class="invoice-row"><span>{{ (string) ($taxLine['label'] ?? 'Tax') }}</span><strong>{{ $displayCurrency }} {{ number_format((float) ($taxLine['amount'] ?? 0), 2) }}</strong></div>
                         @endforeach
                         @php
-                            $serviceChargeAlreadyRendered = collect($invoiceTaxLines)->contains(fn ($line) => stripos((string) ($line['label'] ?? ''), 'service') !== false);
+                            $serviceChargeAlreadyRendered = collect($displayTaxLines)->contains(fn ($line) => stripos((string) ($line['label'] ?? ''), 'service') !== false);
                         @endphp
                         @if ($serviceChargeTotal > 0 && !$serviceChargeAlreadyRendered)
-                            <div class="invoice-row"><span>Service charge (included)</span><strong>{{ $currency }} {{ number_format($serviceChargeTotal, 2) }}</strong></div>
+                            <div class="invoice-row"><span>Service charge (included)</span><strong>{{ $displayCurrency }} {{ number_format($displayServiceChargeTotal, 2) }}</strong></div>
                         @endif
-                        <div class="invoice-row"><span>Transfer charges</span><strong id="transferChargeDisplay">{{ $currency }} {{ number_format($effectiveTransferAmount, 2) }}</strong></div>
+                        <div class="invoice-row"><span>Transfer charges</span><strong id="transferChargeDisplay">{{ $displayCurrency }} {{ number_format($displayTransferAmount, 2) }}</strong></div>
                         @if ($effectiveTransferAmount > 0)
                             <div class="fine-print">Transfer charges include additional GST where applicable.</div>
                         @endif
-                        <div class="total"><span>Total</span><span id="invoiceTotalDisplay">{{ $currency }} {{ $total }}</span></div>
+                        <div class="total"><span>Total</span><span id="invoiceTotalDisplay">{{ $displayCurrency }} {{ number_format($displayInvoiceTotal, 2) }}</span></div>
                         @if ($discountAmount > 0)
-                            <div class="price-save">You've saved {{ $currency }} {{ $savedAmount }} on this booking.</div>
+                            <div class="price-save">You've saved {{ $displayCurrency }} {{ $displaySavedAmount }} on this booking.</div>
                         @endif
                         <div class="fine-print" style="margin-top:6px;">Vendor prices are treated as all-inclusive. Tax is shown for transparency and is not added again.</div>
                     </section>

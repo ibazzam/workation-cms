@@ -1873,7 +1873,32 @@
                 }
             }
 
+            // ── Query-based deep linking from checkout redirects ───
+            function applyQueryState() {
+                const params = new URLSearchParams(window.location.search);
+                const querySection = (params.get('section') || '').trim().toLowerCase();
+                const queryBookingStatus = (params.get('booking_status') || '').trim().toLowerCase();
+                const queryBookingCategory = (params.get('booking_category') || '').trim().toLowerCase();
+
+                if (querySection === 'bookings') {
+                    activateSection('bookings');
+
+                    const statusTab = ['all', 'awaiting_payment', 'upcoming', 'awaiting_review'].includes(queryBookingStatus)
+                        ? queryBookingStatus
+                        : 'all';
+                    const categoryKey = queryBookingCategory !== '' ? queryBookingCategory : 'all';
+
+                    bookingTabs.forEach(function (tab) {
+                        tab.classList.toggle('is-active', (tab.getAttribute('data-booking-tab') || 'all') === statusTab);
+                    });
+
+                    filterBookings(statusTab, categoryKey);
+                    setActiveNav('bookings', categoryKey);
+                }
+            }
+
             window.addEventListener('hashchange', applyHash);
+            applyQueryState();
             applyHash();
         })();
     </script>

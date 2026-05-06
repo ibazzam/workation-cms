@@ -192,6 +192,13 @@ if (!function_exists('workationPaymentSuccessReturnUrl')) {
     }
 }
 
+if (!function_exists('workationPaymentFailureReturnUrl')) {
+    function workationPaymentFailureReturnUrl(int $reservationId, ?string $provider = null): string
+    {
+        return url('/customer?section=bookings&booking=' . max(1, $reservationId) . '&booking_status=awaiting_payment&payment=failed');
+    }
+}
+
 if (!function_exists('workationNormalizedSegmentPricingMatrix')) {
     function workationNormalizedSegmentPricingMatrix(array $listingDetails, float $basePrice = 0.0): array
     {
@@ -816,7 +823,7 @@ Route::post('/booking/reserve', function (Request $request) {
     }
 
     $checkoutUrl = '/booking/checkout'
-        . ($reservationId ? ('/' . $reservationId) : '')
+        . ($reservationId ? ('/' . $reservationId . '/transfer') : '')
         . '?property_id=' . (int) $propertyRow->id
         . '&room_id=' . (int) $roomRow->id
         . '&checkin=' . urlencode((string) $payload['checkin'])
@@ -1907,7 +1914,7 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
     }
 
     $categoryKey = strtolower(trim((string) $request->query('category_key', (string) ($reservationNotes['category_key'] ?? ''))));
-    $requiresCustomerAuth = $categoryKey !== '' && $categoryKey !== 'accommodation';
+    $requiresCustomerAuth = true;
     $customerAuthenticated = (bool) $request->session()->get('portal_customer_authenticated', false);
     $continueUrl = '/booking/checkout' . ($reservation !== null ? ('/' . $reservation) : '');
     $query = trim((string) parse_url((string) $request->fullUrl(), PHP_URL_QUERY));
@@ -1957,9 +1964,26 @@ Route::get('/booking/checkout/{reservation?}', function (Request $request, ?int 
 
     $backUrl = '/customer';
     if ($roomRow) {
+        $backQuery = [
+            'checkin' => trim((string) ($reservationNotes['service_start_date'] ?? '')),
+            'checkout' => trim((string) ($reservationNotes['service_end_date'] ?? '')),
+            'adults' => max(1, (int) ($reservationNotes['adults'] ?? 1)),
+            'children' => max(0, (int) ($reservationNotes['children'] ?? 0)),
+        ];
+
         $backUrl = '/room/' . (int) ($roomRow->id ?? 0);
+        $backUrl .= '?' . http_build_query($backQuery, '', '&', PHP_QUERY_RFC3986);
     } elseif ($propertyRow && !empty($reservationNotes['category_key'])) {
+        $backQuery = [
+            'checkin' => trim((string) ($reservationNotes['service_start_date'] ?? '')),
+            'checkout' => trim((string) ($reservationNotes['service_end_date'] ?? '')),
+            'adults' => max(1, (int) ($reservationNotes['adults'] ?? 1)),
+            'children' => max(0, (int) ($reservationNotes['children'] ?? 0)),
+            'infants' => max(0, (int) ($reservationNotes['infants'] ?? 0)),
+        ];
+
         $backUrl = '/category-booking/' . urlencode((string) $reservationNotes['category_key']) . '/' . (int) ($propertyRow->id ?? 0);
+        $backUrl .= '?' . http_build_query($backQuery, '', '&', PHP_QUERY_RFC3986);
     }
 
     $checkoutMediaUrl = null;
@@ -2213,19 +2237,7 @@ Route::get('/booking/checkout/{reservation}/transfer', function (Request $reques
     $includeTransfer = !in_array($normalizedTransferOption, ['', 'none', 'no_transfer', 'decline', 'declined'], true)
         && $availableCodes->contains($savedTransferOption);
 
-    $roomIdFromNotes = (int) ($notes['room_id'] ?? 0);
-    $backUrl = '/';
-    if ($roomIdFromNotes > 0) {
-        $backQuery = [
-            'checkin' => trim((string) ($notes['service_start_date'] ?? '')),
-            'checkout' => trim((string) ($notes['service_end_date'] ?? '')),
-            'adults' => max(1, (int) ($notes['adults'] ?? 1)),
-            'children' => max(0, (int) ($notes['children'] ?? 0)),
-        ];
-
-        $backUrl = '/room/' . $roomIdFromNotes;
-        $backUrl .= '?' . http_build_query($backQuery, '', '&', PHP_QUERY_RFC3986);
-    }
+    $backUrl = '/booking/checkout/' . $reservation;
 
     return view('booking-transfer-selection', [
         'reservation' => $reservationRow,
@@ -2246,7 +2258,7 @@ Route::get('/booking/checkout/{reservation}/transfer', function (Request $reques
         'selectedTransferOption' => old('transfer_option', $savedTransferOption),
         'includeTransfer' => old('include_transfer', $includeTransfer ? '1' : '0') === '1',
         'backUrl' => $backUrl,
-        'currency' => strtoupper(trim((string) ($reservationRow->currency ?? $roomRow->currency ?? $propertyRow->currency ?? 'MVR'))),
+        'currency' => strtoupper(trim((string) ($notes['quote_payment_currency'] ?? $reservationRow->currency ?? $roomRow->currency ?? $propertyRow->currency ?? 'MVR'))),
     ]);
 });
 
@@ -2510,13 +2522,8 @@ Route::post('/booking/checkout/{reservation}/guest-details', function (Request $
             'updated_at' => now(),
         ]);
 
-    $hasTransferStep = $transferOptions->isNotEmpty();
-    if ($hasTransferStep) {
-        return redirect('/booking/checkout/' . $reservation . '/transfer')
-            ->with('status', 'Guest details saved. Continue with transfer selection.');
-    }
-
-    return redirect('/booking/checkout/' . $reservation)->with('status', 'Guest details saved. Continue to payment when ready.');
+    return redirect('/booking/checkout/' . $reservation . '/transfer')
+        ->with('status', 'Guest details saved. Continue with transfer selection.');
 });
 
 Route::post('/booking/checkout/{reservation}/payment-intent', function (Request $request, int $reservation) {
@@ -2532,7 +2539,7 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
     $notes = workationReservationPaymentNotes($reservationRow);
 
     $reservationCategoryKey = strtolower(trim((string) ($notes['category_key'] ?? '')));
-    $requiresCustomerAuth = $reservationCategoryKey !== '' && $reservationCategoryKey !== 'accommodation';
+    $requiresCustomerAuth = true;
     if ($requiresCustomerAuth && !(bool) $request->session()->get('portal_customer_authenticated', false)) {
         return redirect('/portal/customer/login?continue=' . urlencode('/booking/checkout/' . $reservation))
             ->with('status', 'Please sign in or create a customer account to continue checkout and payment.');
@@ -2550,19 +2557,6 @@ Route::post('/booking/checkout/{reservation}/payment-intent', function (Request 
         'transfer_charge' => ['nullable', 'numeric', 'min:0'],
         'invoice_total_amount' => ['nullable', 'numeric', 'min:0'],
     ]);
-
-    $primaryFirstName = trim((string) ($notes['primary_first_name'] ?? ''));
-    $primaryLastName = trim((string) ($notes['primary_last_name'] ?? ''));
-    $primaryNationality = trim((string) ($notes['primary_nationality'] ?? $validated['primary_nationality'] ?? ''));
-    $primaryEmail = trim((string) ($notes['primary_email'] ?? $reservationRow->customer_email ?? ''));
-    $customerName = trim((string) ($reservationRow->customer_name ?? ''));
-    $hasIdentity = ($primaryFirstName !== '' && $primaryLastName !== '') || $customerName !== '';
-    $hasContact = $primaryEmail !== '';
-    $hasNationality = $primaryNationality !== '' && strcasecmp($primaryNationality, 'Not specified') !== 0;
-    if (!($hasIdentity && $hasContact && $hasNationality)) {
-        return redirect('/booking/checkout/' . $reservation)
-            ->withErrors(['payment' => 'Please complete guest details first. Payment currency and rates are determined from the submitted nationality.']);
-    }
 
     if (in_array(strtolower(trim((string) ($reservationRow->status ?? 'pending'))), ['cancelled', 'canceled'], true)) {
         return back()->withErrors(['payment' => 'Cancelled reservations cannot be paid.']);
@@ -3013,7 +3007,7 @@ Route::match(['get', 'post'], '/booking/payment/webhooks/{gateway}', function (R
                         'error' => 'BML state: ' . $bmlState,
                     ]);
 
-                    return redirect('/booking/checkout/' . $reservationId)
+                    return redirect(workationPaymentFailureReturnUrl($reservationId, $gateway))
                         ->withErrors(['payment' => 'BML payment did not complete (' . $bmlState . '). Please retry or use another card.']);
                 }
             }

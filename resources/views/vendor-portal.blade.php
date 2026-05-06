@@ -118,6 +118,15 @@
             ->keyBy(static fn ($property) => (int) ($property->id ?? 0))
             ->map(static fn ($property) => vendorPortalCanonicalCategory((string) ($property->listing_category ?? '')));
 
+        $listingCorrectionItems = $vendorProperties
+            ->filter(static function ($property): bool {
+                $moderationStatus = strtolower(trim((string) ($property->listing_moderation_status ?? '')));
+                $status = strtolower(trim((string) ($property->status ?? '')));
+                return $moderationStatus === 'rejected' || $status === 'rejected';
+            })
+            ->take(5)
+            ->values();
+
         foreach ($vendorProperties as $property) {
             $categoryKey = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
             if (is_string($categoryKey) && $categoryKey !== '') {
@@ -428,6 +437,25 @@
 
         @if (session('portal_notice'))
             <div class="notice" role="status" aria-live="polite">{{ session('portal_notice') }}</div>
+        @endif
+
+        @if ($listingCorrectionItems->isNotEmpty())
+            <div class="notice" role="status" aria-live="polite" style="background:#fff5f4;border:1px solid #efc2bd;color:#7d1f1a;">
+                <strong>Action required:</strong> {{ $listingCorrectionItems->count() }} listing(s) were rejected with correction notes.
+                <div style="margin-top:6px; font-size:0.86rem; line-height:1.45;">
+                    @foreach ($listingCorrectionItems as $correctionItem)
+                        @php
+                            $correctionNotes = trim((string) ($correctionItem->listing_admin_notes ?? ''));
+                        @endphp
+                        <div>
+                            • {{ (string) ($correctionItem->name ?? ('Listing #' . (int) ($correctionItem->id ?? 0))) }}: {{ $correctionNotes !== '' ? $correctionNotes : 'Please review listing details and update any required documents or fields before resubmitting.' }}
+                        </div>
+                    @endforeach
+                </div>
+                <div style="margin-top:8px;">
+                    <a href="/vendor/listings" style="font-weight:700; color:#7d1f1a; text-decoration:underline;">Open listings to correct and resubmit</a>
+                </div>
+            </div>
         @endif
 
         @if ($errors->has('profile'))

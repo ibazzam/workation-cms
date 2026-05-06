@@ -1869,6 +1869,12 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
         'vendor_approved_service_categories' => ['nullable', 'array'],
         'vendor_approved_service_categories.*' => ['required', 'string', 'max:80'],
         'vendor_contact_verified' => ['nullable', 'in:1,0'],
+        'crosscheck_business_profile' => ['nullable', 'in:1,0'],
+        'crosscheck_service_profile' => ['nullable', 'in:1,0'],
+        'crosscheck_id_proof' => ['nullable', 'in:1,0'],
+        'sole_proprietor_name_override' => ['nullable', 'in:1,0'],
+        'vendor_rejection_reason' => ['nullable', 'string', 'max:2000'],
+        'vendor_missing_documents' => ['nullable', 'string', 'max:2000'],
     ]);
 
     $isSelf = (int) session('portal_admin_user_id') === (int) $user->id;
@@ -1912,6 +1918,22 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
     $user->portal_enabled = $nextEnabled;
     $user->portal_vendor_id = ($nextRole === 'VENDOR' && $vendorId !== '') ? $vendorId : null;
 
+    $reviewedByUserId = (int) session('portal_admin_user_id', 0) ?: null;
+    $reviewerRole = currentPortalAdminRole();
+    $crosscheckBusinessProfile = (string) ($validated['crosscheck_business_profile'] ?? '0') === '1';
+    $crosscheckServiceProfile = (string) ($validated['crosscheck_service_profile'] ?? '0') === '1';
+    $crosscheckIdProof = (string) ($validated['crosscheck_id_proof'] ?? '0') === '1';
+    $soleProprietorNameOverride = (string) ($validated['sole_proprietor_name_override'] ?? '0') === '1';
+    $resolvedRejectionReason = trim((string) ($validated['vendor_rejection_reason'] ?? ''));
+    $missingDocumentsInput = trim((string) ($validated['vendor_missing_documents'] ?? ''));
+    $resolvedMissingDocuments = collect(preg_split('/[\r\n,]+/', $missingDocumentsInput) ?: [])
+        ->map(static fn ($item) => trim((string) $item))
+        ->filter(static fn ($item) => $item !== '')
+        ->unique()
+        ->values()
+        ->all();
+    $reviewLoggedStatus = null;
+
     if ($nextRole === 'VENDOR') {
         $requestedApprovedCategories = collect($validated['vendor_approved_service_categories'] ?? [])
             ->map(static fn ($item) => strtolower(trim((string) $item)))
@@ -1929,11 +1951,55 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
             ])->withInput();
         }
 
+        if ($verificationStatus === 'rejected' && $resolvedRejectionReason === '') {
+            return back()->withErrors([
+                'vendor_rejection_reason' => 'Rejection reason is required when verification status is rejected.',
+            ])->withInput();
+        }
+
+        if ($verificationStatus !== 'rejected') {
+            $resolvedRejectionReason = '';
+            $resolvedMissingDocuments = [];
+        }
+
+        $verificationNotes = trim((string) ($validated['vendor_verification_notes'] ?? ''));
+        if ($verificationStatus === 'rejected') {
+            $rejectionContext = [];
+            if ($verificationNotes !== '') {
+                $rejectionContext[] = $verificationNotes;
+            }
+            if ($resolvedRejectionReason !== '') {
+                $rejectionContext[] = 'Rejection reason: ' . $resolvedRejectionReason;
+            }
+            if ($resolvedMissingDocuments !== []) {
+                $rejectionContext[] = 'Missing documents: ' . implode(', ', $resolvedMissingDocuments);
+            }
+            $verificationNotes = implode("\n", $rejectionContext);
+        }
+
+        $reviewLoggedStatus = $verificationStatus;
+
         if (Schema::hasColumn('users', 'vendor_verification_status')) {
             $user->vendor_verification_status = $verificationStatus;
         }
         if (Schema::hasColumn('users', 'vendor_verification_notes')) {
-            $user->vendor_verification_notes = trim((string) ($validated['vendor_verification_notes'] ?? ''));
+            $user->vendor_verification_notes = $verificationNotes;
+        }
+        if (Schema::hasColumn('users', 'vendor_verification_rejection_reason')) {
+            $user->vendor_verification_rejection_reason = $verificationStatus === 'rejected'
+                ? $resolvedRejectionReason
+                : null;
+        }
+        if (Schema::hasColumn('users', 'vendor_verification_missing_documents')) {
+            $user->vendor_verification_missing_documents = $verificationStatus === 'rejected' && $resolvedMissingDocuments !== []
+                ? json_encode($resolvedMissingDocuments)
+                : null;
+        }
+        if (Schema::hasColumn('users', 'vendor_verification_last_reviewed_at')) {
+            $user->vendor_verification_last_reviewed_at = now();
+        }
+        if (Schema::hasColumn('users', 'vendor_verification_last_reviewed_by_user_id')) {
+            $user->vendor_verification_last_reviewed_by_user_id = $reviewedByUserId;
         }
         if (Schema::hasColumn('users', 'vendor_approved_service_categories')) {
             $user->vendor_approved_service_categories = json_encode($approvedCategories);
@@ -1966,6 +2032,66 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
 
     $user->save();
 
+    $notificationSentAt = null;
+    if ($nextRole === 'VENDOR') {
+        $vendorEmail = strtolower(trim((string) ($user->email ?? '')));
+        if ($vendorEmail !== '' && filter_var($vendorEmail, FILTER_VALIDATE_EMAIL)) {
+            $statusLabel = strtoupper(str_replace('_', ' ', (string) ($user->vendor_verification_status ?? 'pending')));
+            $mailLines = [
+                'Your business/service verification review has been updated.',
+                '',
+                'Status: ' . $statusLabel,
+            ];
+
+            if ((string) ($user->vendor_verification_status ?? '') === 'rejected') {
+                if ($resolvedRejectionReason !== '') {
+                    $mailLines[] = 'Reason: ' . $resolvedRejectionReason;
+                }
+                if ($resolvedMissingDocuments !== []) {
+                    $mailLines[] = 'Missing documents: ' . implode(', ', $resolvedMissingDocuments);
+                }
+            }
+
+            if ($soleProprietorNameOverride) {
+                $mailLines[] = 'Reviewer note: Sole proprietor name rule override has been applied.';
+            }
+
+            try {
+                Mail::raw(implode("\n", $mailLines), static function ($message) use ($vendorEmail) {
+                    $message->to($vendorEmail)
+                        ->subject('Vendor verification update');
+                });
+                $notificationSentAt = now();
+            } catch (\Throwable $exception) {
+                Log::warning('Unable to send vendor verification update email.', [
+                    'user_id' => (int) $user->id,
+                    'email' => $vendorEmail,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        if ($reviewLoggedStatus !== null && Schema::hasTable('portal_vendor_verification_reviews')) {
+            DB::table('portal_vendor_verification_reviews')->insert([
+                'vendor_user_id' => (int) $user->id,
+                'reviewed_by_user_id' => $reviewedByUserId,
+                'reviewer_role' => $reviewerRole !== '' ? $reviewerRole : null,
+                'from_status' => strtolower(trim((string) ($before['vendor_verification_status'] ?? 'pending'))),
+                'to_status' => $reviewLoggedStatus,
+                'crosscheck_business_profile' => $crosscheckBusinessProfile,
+                'crosscheck_service_profile' => $crosscheckServiceProfile,
+                'crosscheck_id_proof' => $crosscheckIdProof,
+                'sole_proprietor_name_override' => $soleProprietorNameOverride,
+                'missing_documents' => $resolvedMissingDocuments !== [] ? json_encode($resolvedMissingDocuments) : null,
+                'rejection_reason' => $resolvedRejectionReason !== '' ? $resolvedRejectionReason : null,
+                'review_notes' => trim((string) ($validated['vendor_verification_notes'] ?? '')),
+                'vendor_notified_at' => $notificationSentAt,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+    }
+
     portalAdminAuditLog('user.updated', [
         'target_user_id' => (int) $user->id,
         'target_identifier' => (string) ($user->username ?: $user->email),
@@ -1977,6 +2103,8 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
             'portal_vendor_id' => $user->portal_vendor_id,
             'vendor_verification_status' => Schema::hasColumn('users', 'vendor_verification_status') ? (string) ($user->vendor_verification_status ?? 'pending') : null,
             'vendor_approved_service_categories' => Schema::hasColumn('users', 'vendor_approved_service_categories') ? (string) ($user->vendor_approved_service_categories ?? '[]') : null,
+            'vendor_verification_rejection_reason' => Schema::hasColumn('users', 'vendor_verification_rejection_reason') ? (string) ($user->vendor_verification_rejection_reason ?? '') : null,
+            'vendor_verification_missing_documents' => Schema::hasColumn('users', 'vendor_verification_missing_documents') ? (string) ($user->vendor_verification_missing_documents ?? '') : null,
         ],
     ]);
 
@@ -2478,7 +2606,51 @@ Route::post('/portal/admin/listings/{listing}/approve', function (Request $reque
         'vendor_id' => (int) ($listingRow->vendor_user_id ?? 0),
     ]);
 
+    $vendorUserId = (int) ($listingRow->vendor_user_id ?? 0);
+    if ($vendorUserId > 0) {
+        $vendorUser = User::query()->find($vendorUserId);
+        $vendorEmail = strtolower(trim((string) ($vendorUser?->email ?? '')));
+        if ($vendorEmail !== '' && filter_var($vendorEmail, FILTER_VALIDATE_EMAIL)) {
+            $approvalNotes = trim((string) ($adminNotes ?? ''));
+            $body = [
+                'Your service listing has been approved.',
+                '',
+                'Listing: ' . (string) ($listingRow->listing_name ?? ('Listing #' . $listing)),
+            ];
+
+            if ($approvalNotes !== '') {
+                $body[] = 'Reviewer notes: ' . $approvalNotes;
+            }
+
+            try {
+                Mail::raw(implode("\n", $body), static function ($message) use ($vendorEmail) {
+                    $message->to($vendorEmail)
+                        ->subject('Service listing approved');
+                });
+            } catch (\Throwable $exception) {
+                Log::warning('Unable to send listing approval notification.', [
+                    'listing_id' => $listing,
+                    'vendor_user_id' => $vendorUserId,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+    }
+
     return back()->with('portal_notice', 'Listing approved and is now open for bookings.');
+});
+
+Route::get('/portal/admin/listings/{listing}/preview', function (Request $request, int $listing) {
+    if (!canModerateListings()) {
+        abort(403);
+    }
+
+    $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing);
+    if (!$listingRow) {
+        return back()->withErrors(['listing' => 'Listing not found.']);
+    }
+
+    return redirect('/property/' . (int) $listing . '?preview=admin');
 });
 
 Route::post('/portal/admin/listings/{listing}/reject', function (Request $request, int $listing) {
@@ -2488,6 +2660,7 @@ Route::post('/portal/admin/listings/{listing}/reject', function (Request $reques
 
     $validated = $request->validate([
         'admin_notes' => ['required', 'string', 'max:2000'],
+        'missing_documents' => ['nullable', 'string', 'max:1000'],
     ]);
 
     $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing);
@@ -2503,10 +2676,16 @@ Route::post('/portal/admin/listings/{listing}/reject', function (Request $reques
     $adminUserId = (int) session('portal_admin_user_id');
     $categoryHint = vendorPortalCanonicalCategory((string) ($listingRow->listing_category ?? ''));
 
+    $rejectionNotes = trim((string) $validated['admin_notes']);
+    $missingDocuments = trim((string) ($validated['missing_documents'] ?? ''));
+    if ($missingDocuments !== '') {
+        $rejectionNotes .= "\nMissing documents: " . $missingDocuments;
+    }
+
     \App\Support\VendorPropertyCompatibilityReader::updateModerationStatus(
         $listing,
         'rejected',
-        trim((string) $validated['admin_notes']),
+        $rejectionNotes,
         $adminUserId,
         $categoryHint
     );
@@ -2517,6 +2696,37 @@ Route::post('/portal/admin/listings/{listing}/reject', function (Request $reques
         'listing_id' => $listing,
         'vendor_id' => (int) ($listingRow->vendor_user_id ?? 0),
     ]);
+
+    $vendorUserId = (int) ($listingRow->vendor_user_id ?? 0);
+    if ($vendorUserId > 0) {
+        $vendorUser = User::query()->find($vendorUserId);
+        $vendorEmail = strtolower(trim((string) ($vendorUser?->email ?? '')));
+        if ($vendorEmail !== '' && filter_var($vendorEmail, FILTER_VALIDATE_EMAIL)) {
+            $body = [
+                'Your service listing has been rejected after review.',
+                '',
+                'Listing: ' . (string) ($listingRow->listing_name ?? ('Listing #' . $listing)),
+                'Reason: ' . trim((string) $validated['admin_notes']),
+            ];
+
+            if ($missingDocuments !== '') {
+                $body[] = 'Missing documents: ' . $missingDocuments;
+            }
+
+            try {
+                Mail::raw(implode("\n", $body), static function ($message) use ($vendorEmail) {
+                    $message->to($vendorEmail)
+                        ->subject('Service listing review update');
+                });
+            } catch (\Throwable $exception) {
+                Log::warning('Unable to send listing rejection notification.', [
+                    'listing_id' => $listing,
+                    'vendor_user_id' => $vendorUserId,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+    }
 
     return back()->with('portal_notice', 'Listing rejected. The vendor will be notified to make corrections.');
 });

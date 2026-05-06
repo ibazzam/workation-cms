@@ -77,6 +77,20 @@
                             <p style="margin:0;font-weight:700;">{{ (string) ($account->account_label ?? '') !== '' ? (string) $account->account_label : 'Payout Account #' . $loop->iteration }}</p>
                             <p class="small" style="margin:4px 0 0;">{{ (string) ($account->beneficiary_name ?? 'Beneficiary pending') }} · {{ (string) ($account->bank_name ?? 'Bank pending') }}</p>
                             <p class="small" style="margin:4px 0 0;">{{ (string) ($account->currency ?? 'MVR') }} · {{ (string) ($account->swift_code ?? '') !== '' ? 'SWIFT ' . (string) $account->swift_code : 'SWIFT not set' }}</p>
+                            @php
+                                $verificationStatus = strtolower(trim((string) ($account->verification_status ?? 'needs_review')));
+                                $verificationLabel = match ($verificationStatus) {
+                                    'verified' => 'Verified',
+                                    'approved' => 'Approved by Finance',
+                                    'rejected' => 'Rejected by Finance',
+                                    'pending', 'pending_review' => 'Pending Review',
+                                    default => 'Needs Review',
+                                };
+                            @endphp
+                            <p class="small" style="margin:4px 0 0;">Verification: <strong>{{ $verificationLabel }}</strong></p>
+                            @if (!empty($account->verification_notes))
+                                <p class="small" style="margin:4px 0 0;">{{ (string) $account->verification_notes }}</p>
+                            @endif
                         </div>
                         <div style="text-align:right;">
                             @if ((bool) ($account->is_primary ?? false))

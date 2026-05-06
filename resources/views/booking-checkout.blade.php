@@ -372,9 +372,13 @@
                                 <button class="btn" type="submit">Save Guest Details</button>
                             </div>
                         </form>
+                        @if (!$guestDetailsComplete)
+                            <p class="fine-print" style="margin:8px 0 0;">Complete and save guest details first. Transfer selection and payment method are shown in the next step.</p>
+                        @endif
                     </section>
                 @endif
 
+                @if ($guestDetailsComplete)
                 <section class="terms-box" aria-label="Booking terms and policies">
                     <h2>Booking Terms Before Payment</h2>
                     <div class="terms-grid">
@@ -467,6 +471,7 @@
                     <p class="payment-note">{{ $paymentNotice }}</p>
                     <p class="payment-note">Booking total: {{ $lockedSourceCurrency }} {{ number_format($lockedSourceAmount, 2) }}. Converted payable amount updates based on your selected payment route.</p>
                 </div>
+                @endif
                 </div>
 
                 <aside class="mini-panel checkout-summary" aria-label="Reservation compact summary">
@@ -521,27 +526,29 @@
             </div>
 
             <div class="actions">
-                @if ($requiresCustomerAuth && !$customerAuthenticated)
-                    <a class="btn primary" href="{{ $customerLoginUrl }}">Sign In To Select Payment</a>
-                @elseif (!empty($reservation->id))
-                    <form method="post" action="/booking/checkout/{{ (int) $reservation->id }}/payment-intent" id="checkoutConfirmForm">
-                        @csrf
-                        <input type="hidden" name="payment_selection" id="payment_selection_input" value="{{ $selectedPaymentOption }}">
-                        <input type="hidden" name="payment_currency" id="payment_currency_input" value="{{ $lockedPaymentCurrency }}">
-                        <input type="hidden" name="payment_gateway" id="payment_gateway_input" value="{{ $lockedPaymentGateway }}">
-                        <input type="hidden" name="payment_provider" id="payment_provider_input" value="{{ $selectedProvider }}">
-                        <input type="hidden" name="checkout_terms_accepted" id="checkout_terms_accepted_input" value="0">
-                        <input type="hidden" name="transfer_option" id="transfer_option_input" value="{{ $selectedTransferCode !== '' ? $selectedTransferCode : 'none' }}">
-                        <input type="hidden" name="transfer_option_label" id="transfer_option_label_input" value="{{ $transferOptionDisplayLabel }}">
-                        <input type="hidden" name="transfer_charge" id="transfer_charge_input" value="{{ number_format($effectiveTransferAmount, 2, '.', '') }}">
-                        <input type="hidden" name="invoice_total_amount" id="invoice_total_amount_input" value="{{ number_format($effectiveInvoiceTotal, 2, '.', '') }}">
-                        <p class="fine-print" style="width:100%; margin:0 0 6px;">
-                            Payment routing is based on the saved guest nationality. Update Guest Details above if this needs correction.
-                        </p>
-                        <button class="btn primary" id="confirmPayButton" type="submit" disabled>Confirm & Pay</button>
-                    </form>
-                @else
-                    <button class="btn primary" type="button" disabled>Confirm & Pay</button>
+                @if ($guestDetailsComplete)
+                    @if ($requiresCustomerAuth && !$customerAuthenticated)
+                        <a class="btn primary" href="{{ $customerLoginUrl }}">Sign In To Select Payment</a>
+                    @elseif (!empty($reservation->id))
+                        <form method="post" action="/booking/checkout/{{ (int) $reservation->id }}/payment-intent" id="checkoutConfirmForm">
+                            @csrf
+                            <input type="hidden" name="payment_selection" id="payment_selection_input" value="{{ $selectedPaymentOption }}">
+                            <input type="hidden" name="payment_currency" id="payment_currency_input" value="{{ $lockedPaymentCurrency }}">
+                            <input type="hidden" name="payment_gateway" id="payment_gateway_input" value="{{ $lockedPaymentGateway }}">
+                            <input type="hidden" name="payment_provider" id="payment_provider_input" value="{{ $selectedProvider }}">
+                            <input type="hidden" name="checkout_terms_accepted" id="checkout_terms_accepted_input" value="0">
+                            <input type="hidden" name="transfer_option" id="transfer_option_input" value="{{ $selectedTransferCode !== '' ? $selectedTransferCode : 'none' }}">
+                            <input type="hidden" name="transfer_option_label" id="transfer_option_label_input" value="{{ $transferOptionDisplayLabel }}">
+                            <input type="hidden" name="transfer_charge" id="transfer_charge_input" value="{{ number_format($effectiveTransferAmount, 2, '.', '') }}">
+                            <input type="hidden" name="invoice_total_amount" id="invoice_total_amount_input" value="{{ number_format($effectiveInvoiceTotal, 2, '.', '') }}">
+                            <p class="fine-print" style="width:100%; margin:0 0 6px;">
+                                Payment routing is based on the saved guest nationality. Update Guest Details above if this needs correction.
+                            </p>
+                            <button class="btn primary" id="confirmPayButton" type="submit" disabled>Confirm & Pay</button>
+                        </form>
+                    @else
+                        <button class="btn primary" type="button" disabled>Confirm & Pay</button>
+                    @endif
                 @endif
                 <a class="btn alt" href="{{ $bookingProcessBackUrl }}">Back</a>
             </div>

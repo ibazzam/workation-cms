@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class AdminFinancePayoutStatusAuditTest extends TestCase
@@ -197,6 +198,99 @@ class AdminFinancePayoutStatusAuditTest extends TestCase
         $response->assertSee('Accommodation');
         $response->assertSee('Sunset Suite');
         $response->assertSee('#' . $reservationId);
+    }
+
+    public function test_admin_finance_can_manually_approve_vendor_payout_account_with_cross_checks(): void
+    {
+        $vendor = User::factory()->create();
+
+        $userUpdates = [];
+        if (Schema::hasColumn('users', 'vendor_verification_status')) {
+            $userUpdates['vendor_verification_status'] = 'under_review';
+        }
+        if (Schema::hasColumn('users', 'vendor_business_registration_number')) {
+            $userUpdates['vendor_business_registration_number'] = 'BRN-7788';
+        }
+        if (Schema::hasColumn('users', 'vendor_business_license_number')) {
+            $userUpdates['vendor_business_license_number'] = 'LIC-1122';
+        }
+        if (Schema::hasColumn('users', 'vendor_verification_documents')) {
+            $userUpdates['vendor_verification_documents'] = json_encode([
+                ['name' => 'business-license.pdf', 'path' => 'vendor/compliance-documents/1/business-license.pdf'],
+            ]);
+        }
+        if ($userUpdates !== []) {
+            DB::table('users')->where('id', (int) $vendor->id)->update($userUpdates);
+        }
+
+        DB::table('vendor_billing_details')->insert([
+            'vendor_user_id' => (int) $vendor->id,
+            'business_name' => 'Island Solo Ventures',
+            'responsible_person_name' => 'Ahmed Shareef',
+            'billing_email' => 'finance@islandsolo.test',
+            'contact_number' => '+9607771122',
+            'currency' => 'USD',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $accountId = (int) DB::table('vendor_payout_accounts')->insertGetId([
+            'vendor_user_id' => (int) $vendor->id,
+            'account_label' => 'USD Sole Prop Account',
+            'payout_method' => 'bank_transfer',
+            'beneficiary_name' => 'Ahmed Shareef',
+            'bank_account_number' => 'USD1234567890',
+            'bank_account_last4' => '7890',
+            'bank_name' => 'MIB',
+            'swift_code' => 'MIBAADMV',
+            'currency' => 'USD',
+            'is_primary' => true,
+            'is_active' => true,
+            'verification_status' => 'pending_review',
+            'verification_notes' => 'Awaiting finance review.',
+            'verified_at' => null,
+            'verified_by_user_id' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this
+            ->withoutMiddleware(VerifyCsrfToken::class)
+            ->withSession([
+                'portal_user' => [
+                    'id' => 901,
+                    'portal_role' => 'ADMIN_FINANCE',
+                ],
+            ])
+            ->post('/portal/admin/finance/payout-accounts/' . $accountId . '/verify', [
+                'verification_status' => 'approved',
+                'crosscheck_business_profile' => '1',
+                'crosscheck_service_profile' => '1',
+                'crosscheck_id_proof' => '1',
+                'sole_proprietor_personal_name_allowed' => '1',
+                'review_notes' => 'Verified documents and accepted sole proprietor personal account name.',
+            ]);
+
+        $response->assertStatus(302);
+
+        $updatedAccount = DB::table('vendor_payout_accounts')->where('id', $accountId)->first();
+        $this->assertNotNull($updatedAccount);
+        $this->assertSame('approved', (string) $updatedAccount->verification_status);
+        $this->assertSame(901, (int) ($updatedAccount->verified_by_user_id ?? 0));
+        $this->assertNotNull($updatedAccount->verified_at);
+        $this->assertStringContainsString('sole_prop_personal_name=allowed', (string) ($updatedAccount->verification_notes ?? ''));
+
+        $this->assertDatabaseHas('finance_payout_account_verification_logs', [
+            'payout_account_id' => $accountId,
+            'vendor_user_id' => (int) $vendor->id,
+            'from_status' => 'pending_review',
+            'to_status' => 'approved',
+            'crosscheck_business_profile' => true,
+            'crosscheck_service_profile' => true,
+            'crosscheck_id_proof' => true,
+            'sole_proprietor_personal_name_allowed' => true,
+            'actor_user_id' => 901,
+        ]);
     }
 
     private function createVendorUserId(): int

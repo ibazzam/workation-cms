@@ -14,6 +14,7 @@
 
 use App\Finance\LedgerWriter;
 use App\Finance\PayoutBatchBuilder;
+use App\Support\ReservationSettlementCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +23,101 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 Route::middleware('web')->group(function (): void {
+
+    $batchMaturitySnapshot = static function (int $batchId): array {
+        if (!Schema::hasTable('finance_payout_batch_items') || !Schema::hasTable('vendor_reservations')) {
+            return [
+                'ready' => false,
+                'maturity_at' => null,
+                'blocked_count' => 0,
+                'sample_reasons' => ['Payout tables are not available.'],
+            ];
+        }
+
+        $itemIds = DB::table('finance_payout_batch_items')
+            ->where('batch_id', $batchId)
+            ->pluck('id');
+
+        if ($itemIds->isEmpty()) {
+            return [
+                'ready' => false,
+                'maturity_at' => null,
+                'blocked_count' => 0,
+                'sample_reasons' => ['Batch has no payout items.'],
+            ];
+        }
+
+        $rows = DB::table('vendor_reservations')
+            ->whereIn('payout_batch_item_id', $itemIds)
+            ->get([
+                'id',
+                'payment_status',
+                'payment_gateway',
+                'payment_collected_at',
+                'payment_verified_at',
+                'payout_expected_at',
+                'created_at',
+            ]);
+
+        if ($rows->isEmpty()) {
+            return [
+                'ready' => false,
+                'maturity_at' => null,
+                'blocked_count' => 0,
+                'sample_reasons' => ['No linked reservations found.'],
+            ];
+        }
+
+        $now = Carbon::now();
+        $blockedCount = 0;
+        $sampleReasons = [];
+        $latestExpected = null;
+
+        foreach ($rows as $row) {
+            $paymentStatus = strtolower(trim((string) ($row->payment_status ?? '')));
+            if ($paymentStatus !== 'paid') {
+                $blockedCount++;
+                if (count($sampleReasons) < 3) {
+                    $sampleReasons[] = 'Reservation #' . (int) ($row->id ?? 0) . ' is not paid';
+                }
+                continue;
+            }
+
+            $expectedAt = !empty($row->payout_expected_at)
+                ? Carbon::parse((string) $row->payout_expected_at)
+                : ReservationSettlementCalculator::expectedPayoutAt(
+                    $row->payment_collected_at ?? $row->payment_verified_at ?? $row->created_at ?? null,
+                    (string) ($row->payment_gateway ?? ''),
+                    null
+                );
+
+            if (!$expectedAt) {
+                $blockedCount++;
+                if (count($sampleReasons) < 3) {
+                    $sampleReasons[] = 'Reservation #' . (int) ($row->id ?? 0) . ' has no settlement date';
+                }
+                continue;
+            }
+
+            if (!$latestExpected || $expectedAt->gt($latestExpected)) {
+                $latestExpected = $expectedAt->copy();
+            }
+
+            if ($expectedAt->gt($now)) {
+                $blockedCount++;
+                if (count($sampleReasons) < 3) {
+                    $sampleReasons[] = 'Reservation #' . (int) ($row->id ?? 0) . ' matures on ' . $expectedAt->toDateString();
+                }
+            }
+        }
+
+        return [
+            'ready' => $blockedCount === 0,
+            'maturity_at' => $latestExpected,
+            'blocked_count' => $blockedCount,
+            'sample_reasons' => $sampleReasons,
+        ];
+    };
 
     // ── GET /portal/admin/finance/payouts ─────────────────────────────────────
     Route::get('/portal/admin/finance/payouts', function (Request $request): mixed {
@@ -54,7 +150,34 @@ Route::middleware('web')->group(function (): void {
             }
 
             $batches = $q->get();
+
+            $batches = $batches->map(static function ($batch) use ($batchMaturitySnapshot) {
+                $snapshot = $batchMaturitySnapshot((int) ($batch->id ?? 0));
+
+                $batch->maturity_at = $snapshot['maturity_at'];
+                $batch->maturity_ready = (bool) ($snapshot['ready'] ?? false);
+                $batch->maturity_blocked_count = (int) ($snapshot['blocked_count'] ?? 0);
+                $batch->maturity_sample_reasons = (array) ($snapshot['sample_reasons'] ?? []);
+
+                $firstApprovedBy = (int) ($batch->first_approved_by_user_id ?? 0);
+                $secondApprovedBy = (int) ($batch->second_approved_by_user_id ?? 0);
+                $hasReference = trim((string) ($batch->settlement_reference_id ?? '')) !== '';
+                $hasProof = trim((string) ($batch->settlement_reference_proof ?? '')) !== '';
+
+                $batch->is_ready_to_send = $hasReference
+                    && $hasProof
+                    && $firstApprovedBy > 0
+                    && $secondApprovedBy > 0
+                    && $firstApprovedBy !== $secondApprovedBy
+                    && $batch->maturity_ready;
+
+                return $batch;
+            });
         }
+
+        $readyToSendCount = collect($batches ?? [])
+            ->filter(static fn ($batch): bool => strtolower((string) ($batch->status ?? '')) === 'queued' && (bool) ($batch->is_ready_to_send ?? false))
+            ->count();
 
         if (Schema::hasTable('vendor_reservations')) {
             $eligibleCount = DB::table('vendor_reservations')
@@ -75,12 +198,134 @@ Route::middleware('web')->group(function (): void {
                 ->get();
         }
 
+        $payoutAccountQueue = collect();
+        if (Schema::hasTable('vendor_payout_accounts')) {
+            $queueStatuses = ['pending_review', 'needs_review', 'rejected'];
+            $userHasVendorVerificationStatus = Schema::hasColumn('users', 'vendor_verification_status');
+            $userHasBusinessRegistration = Schema::hasColumn('users', 'vendor_business_registration_number');
+            $userHasBusinessLicense = Schema::hasColumn('users', 'vendor_business_license_number');
+            $userHasVerificationDocuments = Schema::hasColumn('users', 'vendor_verification_documents');
+            $billingHasContactNumber = Schema::hasColumn('vendor_billing_details', 'contact_number');
+
+            $queueSelects = [
+                'vpa.id',
+                'vpa.vendor_user_id',
+                'vpa.account_label',
+                'vpa.beneficiary_name',
+                'vpa.bank_name',
+                'vpa.bank_account_last4',
+                'vpa.swift_code',
+                'vpa.currency',
+                'vpa.verification_status',
+                'vpa.verification_notes',
+                'vpa.created_at',
+                'vpa.updated_at',
+                'vendors.name as vendor_name',
+                'vendors.email as vendor_email',
+                DB::raw($userHasVendorVerificationStatus ? 'vendors.vendor_verification_status' : "'' as vendor_verification_status"),
+                DB::raw($userHasBusinessRegistration ? 'vendors.vendor_business_registration_number' : "'' as vendor_business_registration_number"),
+                DB::raw($userHasBusinessLicense ? 'vendors.vendor_business_license_number' : "'' as vendor_business_license_number"),
+                DB::raw($userHasVerificationDocuments ? 'vendors.vendor_verification_documents' : "'' as vendor_verification_documents"),
+                'vbd.business_name',
+                'vbd.responsible_person_name',
+                DB::raw($billingHasContactNumber ? 'vbd.contact_number' : "'' as contact_number"),
+            ];
+
+            $payoutAccountQueue = DB::table('vendor_payout_accounts as vpa')
+                ->join('users as vendors', 'vendors.id', '=', 'vpa.vendor_user_id')
+                ->leftJoin('vendor_billing_details as vbd', 'vbd.vendor_user_id', '=', 'vpa.vendor_user_id')
+                ->whereIn('vpa.verification_status', $queueStatuses)
+                ->where('vpa.is_active', true)
+                ->orderByRaw("CASE vpa.verification_status WHEN 'needs_review' THEN 0 WHEN 'pending_review' THEN 1 ELSE 2 END")
+                ->orderByDesc('vpa.updated_at')
+                ->limit(200)
+                ->get($queueSelects);
+        }
+
         return view('admin.finance.payouts', [
             'batches'        => $batches,
             'eligibleCount'  => $eligibleCount,
             'pendingSummary' => $pendingSummary,
+            'payoutAccountQueue' => $payoutAccountQueue,
+            'readyToSendCount' => $readyToSendCount,
             'filters'        => ['status' => $request->query('status', ''), 'medium' => $request->query('medium', ''), 'band' => $request->query('band', '')],
         ]);
+    });
+
+    // ── POST /portal/admin/finance/payout-accounts/{account}/verify ───────────
+    // Manual payout account review by finance admin with business/service/ID checks.
+    Route::post('/portal/admin/finance/payout-accounts/{account}/verify', function (Request $request, string $account): mixed {
+        $user = $request->session()->get('portal_user');
+        if (!$user || !in_array($user['portal_role'] ?? '', ['ADMIN_SUPER', 'ADMIN_FINANCE'], true)) {
+            return response()->json(['error' => 'Access denied.'], 403);
+        }
+
+        if (!Schema::hasTable('vendor_payout_accounts')) {
+            return back()->with('error', 'Vendor payout accounts table is not available.');
+        }
+
+        $validated = $request->validate([
+            'verification_status' => ['required', 'in:approved,rejected,pending_review'],
+            'crosscheck_business_profile' => ['nullable', 'boolean'],
+            'crosscheck_service_profile' => ['nullable', 'boolean'],
+            'crosscheck_id_proof' => ['nullable', 'boolean'],
+            'sole_proprietor_personal_name_allowed' => ['nullable', 'boolean'],
+            'review_notes' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $accountRow = DB::table('vendor_payout_accounts')
+            ->where('id', is_numeric($account) ? (int) $account : 0)
+            ->first();
+
+        if (!$accountRow) {
+            return back()->with('error', 'Payout account not found.');
+        }
+
+        $status = strtolower(trim((string) ($validated['verification_status'] ?? 'pending_review')));
+        $crossBusiness = (bool) $request->boolean('crosscheck_business_profile');
+        $crossService = (bool) $request->boolean('crosscheck_service_profile');
+        $crossIdProof = (bool) $request->boolean('crosscheck_id_proof');
+        $soleProprietorOverride = (bool) $request->boolean('sole_proprietor_personal_name_allowed');
+        $notes = trim((string) ($validated['review_notes'] ?? ''));
+
+        $reviewSummary = [
+            'business_profile=' . ($crossBusiness ? 'yes' : 'no'),
+            'service_profile=' . ($crossService ? 'yes' : 'no'),
+            'id_proof=' . ($crossIdProof ? 'yes' : 'no'),
+            'sole_prop_personal_name=' . ($soleProprietorOverride ? 'allowed' : 'not_allowed'),
+        ];
+        $mergedNotes = implode(' | ', $reviewSummary) . ' | note=' . $notes;
+
+        $now = now();
+        DB::table('vendor_payout_accounts')
+            ->where('id', (int) $accountRow->id)
+            ->update([
+                'verification_status' => $status,
+                'verification_notes' => $mergedNotes,
+                'verified_at' => $status === 'approved' ? $now : null,
+                'verified_by_user_id' => $status === 'approved' ? (int) ($user['id'] ?? 0) : null,
+                'updated_at' => $now,
+            ]);
+
+        if (Schema::hasTable('finance_payout_account_verification_logs')) {
+            DB::table('finance_payout_account_verification_logs')->insert([
+                'payout_account_id' => (int) $accountRow->id,
+                'vendor_user_id' => (int) ($accountRow->vendor_user_id ?? 0),
+                'from_status' => strtolower(trim((string) ($accountRow->verification_status ?? 'pending_review'))),
+                'to_status' => $status,
+                'crosscheck_business_profile' => $crossBusiness,
+                'crosscheck_service_profile' => $crossService,
+                'crosscheck_id_proof' => $crossIdProof,
+                'sole_proprietor_personal_name_allowed' => $soleProprietorOverride,
+                'notes' => $notes,
+                'actor_user_id' => (int) ($user['id'] ?? 0),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
+        $statusLabel = strtoupper(str_replace('_', ' ', $status));
+        return back()->with('success', 'Payout account review saved: ' . $statusLabel . '.');
     });
 
     // ── POST /portal/admin/finance/payouts/build ──────────────────────────────
@@ -104,6 +349,108 @@ Route::middleware('web')->group(function (): void {
 
         return redirect('/portal/admin/finance/payouts')
             ->with('success', 'Payout batches built (' . $modeLabel . '): ' . count($created));
+    });
+
+    // ── POST /portal/admin/finance/payouts/{batch}/approve-primary ───────────
+    // First finance reviewer submits settlement reference proof and first approval.
+    Route::post('/portal/admin/finance/payouts/{batch}/approve-primary', function (Request $request, string $batch): mixed {
+        $user = $request->session()->get('portal_user');
+        if (!$user || !in_array($user['portal_role'] ?? '', ['ADMIN_SUPER', 'ADMIN_FINANCE'], true)) {
+            return response()->json(['error' => 'Access denied.'], 403);
+        }
+
+        $validated = $request->validate([
+            'settlement_reference_id' => ['required', 'string', 'max:160'],
+            'settlement_reference_proof' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $batchRow = DB::table('finance_payout_batches')
+            ->where('batch_ref', $batch)
+            ->orWhere('id', is_numeric($batch) ? (int) $batch : 0)
+            ->first();
+
+        if (!$batchRow) {
+            return redirect('/portal/admin/finance/payouts')->with('error', 'Batch not found.');
+        }
+        if (strtolower((string) ($batchRow->status ?? '')) !== 'queued') {
+            return redirect('/portal/admin/finance/payouts/' . (int) $batchRow->id)
+                ->with('error', 'Only queued batches can be approved for release.');
+        }
+
+        $actorId = (int) ($user['id'] ?? 0);
+        $now = Carbon::now();
+
+        $updatePayload = [
+            'settlement_reference_id' => trim((string) $validated['settlement_reference_id']),
+            'settlement_reference_proof' => trim((string) $validated['settlement_reference_proof']),
+            'first_approved_by_user_id' => $actorId,
+            'first_approved_at' => $now,
+            'updated_at' => $now,
+        ];
+
+        if (empty($batchRow->settlement_verified_at)) {
+            $updatePayload['settlement_verified_at'] = $now;
+            $updatePayload['settlement_verified_by_user_id'] = $actorId;
+        }
+
+        DB::table('finance_payout_batches')
+            ->where('id', (int) $batchRow->id)
+            ->update($updatePayload);
+
+        return redirect('/portal/admin/finance/payouts/' . (int) $batchRow->id)
+            ->with('success', 'Primary approval saved with bank settlement proof. Awaiting second approver.');
+    });
+
+    // ── POST /portal/admin/finance/payouts/{batch}/approve-secondary ─────────
+    // Second finance reviewer approval (must be a different user).
+    Route::post('/portal/admin/finance/payouts/{batch}/approve-secondary', function (Request $request, string $batch): mixed {
+        $user = $request->session()->get('portal_user');
+        if (!$user || !in_array($user['portal_role'] ?? '', ['ADMIN_SUPER', 'ADMIN_FINANCE'], true)) {
+            return response()->json(['error' => 'Access denied.'], 403);
+        }
+
+        $batchRow = DB::table('finance_payout_batches')
+            ->where('batch_ref', $batch)
+            ->orWhere('id', is_numeric($batch) ? (int) $batch : 0)
+            ->first();
+
+        if (!$batchRow) {
+            return redirect('/portal/admin/finance/payouts')->with('error', 'Batch not found.');
+        }
+        if (strtolower((string) ($batchRow->status ?? '')) !== 'queued') {
+            return redirect('/portal/admin/finance/payouts/' . (int) $batchRow->id)
+                ->with('error', 'Only queued batches can receive secondary approval.');
+        }
+
+        $firstApprovedBy = (int) ($batchRow->first_approved_by_user_id ?? 0);
+        if ($firstApprovedBy <= 0) {
+            return redirect('/portal/admin/finance/payouts/' . (int) $batchRow->id)
+                ->with('error', 'Primary approval is required before secondary approval.');
+        }
+
+        $actorId = (int) ($user['id'] ?? 0);
+        if ($actorId === $firstApprovedBy) {
+            return redirect('/portal/admin/finance/payouts/' . (int) $batchRow->id)
+                ->with('error', '4-eyes policy: secondary approver must be different from primary approver.');
+        }
+
+        $hasReference = trim((string) ($batchRow->settlement_reference_id ?? '')) !== '';
+        $hasProof = trim((string) ($batchRow->settlement_reference_proof ?? '')) !== '';
+        if (!$hasReference || !$hasProof) {
+            return redirect('/portal/admin/finance/payouts/' . (int) $batchRow->id)
+                ->with('error', 'Settlement reference proof is required before secondary approval.');
+        }
+
+        DB::table('finance_payout_batches')
+            ->where('id', (int) $batchRow->id)
+            ->update([
+                'second_approved_by_user_id' => $actorId,
+                'second_approved_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ]);
+
+        return redirect('/portal/admin/finance/payouts/' . (int) $batchRow->id)
+            ->with('success', 'Secondary approval captured. Batch is now eligible for send when maturity is reached.');
     });
 
     // ── POST /portal/admin/finance/payouts/{batch}/send ───────────────────────
@@ -131,6 +478,15 @@ Route::middleware('web')->group(function (): void {
             return redirect('/portal/admin/finance/payouts')->with('error', "Batch is already {$batchRow->status}.");
         }
 
+        $hasReference = trim((string) ($batchRow->settlement_reference_id ?? '')) !== '';
+        $hasProof = trim((string) ($batchRow->settlement_reference_proof ?? '')) !== '';
+        $firstApprovedBy = (int) ($batchRow->first_approved_by_user_id ?? 0);
+        $secondApprovedBy = (int) ($batchRow->second_approved_by_user_id ?? 0);
+        if (!$hasReference || !$hasProof || $firstApprovedBy <= 0 || $secondApprovedBy <= 0 || $firstApprovedBy === $secondApprovedBy) {
+            return redirect('/portal/admin/finance/payouts/' . (int) $batchRow->id)
+                ->with('error', 'Send blocked: settlement reference proof and 4-eyes approvals are required first.');
+        }
+
         $ledger  = new LedgerWriter();
         $builder = new PayoutBatchBuilder($ledger);
         $actorId = (int) ($user['id'] ?? 0);
@@ -138,7 +494,12 @@ Route::middleware('web')->group(function (): void {
         if (!empty($validated['expected_payout_date'])) {
             $expectedPayoutAt = Carbon::parse((string) $validated['expected_payout_date'])->endOfDay();
         }
-        $builder->markBatchSent((int) $batchRow->id, $validated['bank_reference'], $actorId, $expectedPayoutAt);
+        try {
+            $builder->markBatchSent((int) $batchRow->id, $validated['bank_reference'], $actorId, $expectedPayoutAt);
+        } catch (\RuntimeException $e) {
+            return redirect('/portal/admin/finance/payouts/' . $batchRow->id)
+                ->with('error', $e->getMessage());
+        }
 
         return redirect('/portal/admin/finance/payouts/' . $batchRow->id)
             ->with('success', 'Batch marked as sent for processing.');
@@ -303,12 +664,15 @@ Route::middleware('web')->group(function (): void {
             ->get([
                 'pbi.id',
                 'pbi.vendor_user_id',
+                'pbi.payout_account_id',
                 'pbi.reservation_ids',
                 'pbi.gross_amount',
                 'pbi.commission_amount',
                 'pbi.gateway_fee_amount',
                 'pbi.net_payout_amount',
                 'pbi.currency',
+                'pbi.payout_account_currency',
+                'pbi.payout_account_verification_status',
                 'pbi.bank_account_name',
                 'pbi.bank_account_number',
                 'pbi.bank_name',
@@ -449,11 +813,26 @@ Route::middleware('web')->group(function (): void {
                 ]);
         }
 
+        $maturity = $batchMaturitySnapshot((int) $batchRow->id);
+        $firstApprovedBy = (int) ($batchRow->first_approved_by_user_id ?? 0);
+        $secondApprovedBy = (int) ($batchRow->second_approved_by_user_id ?? 0);
+        $hasReference = trim((string) ($batchRow->settlement_reference_id ?? '')) !== '';
+        $hasProof = trim((string) ($batchRow->settlement_reference_proof ?? '')) !== '';
+        $isReadyToSend = $hasReference
+            && $hasProof
+            && $firstApprovedBy > 0
+            && $secondApprovedBy > 0
+            && $firstApprovedBy !== $secondApprovedBy
+            && (bool) ($maturity['ready'] ?? false);
+
         return view('admin.finance.payout-batch-detail', [
             'batch' => $batchRow,
             'items' => $items,
             'reservationLedgerRows' => $reservationLedgerRows,
             'itemStatusLogs' => $itemStatusLogs,
+            'maturitySnapshot' => $maturity,
+            'isReadyToSend' => $isReadyToSend,
+            'currentFinanceUserId' => (int) ($user['id'] ?? 0),
         ]);
     });
 });

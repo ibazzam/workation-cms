@@ -95,6 +95,26 @@ class PayoutBatchBuilderSettlementWindowTest extends TestCase
     {
         $vendor ??= User::factory()->create();
 
+        DB::table('vendor_payout_accounts')->insert([
+            'vendor_user_id' => $vendor->id,
+            'account_label' => strtoupper($currency) . ' Settlement',
+            'payout_method' => 'bank_transfer',
+            'beneficiary_name' => 'Settlement Vendor',
+            'bank_account_number' => $currency === 'USD' ? 'USD99887766' : 'MVR11223344',
+            'bank_account_last4' => $currency === 'USD' ? '7766' : '3344',
+            'bank_name' => $currency === 'USD' ? 'MIB' : 'Bank of Maldives',
+            'swift_code' => $currency === 'USD' ? 'MIBAADMV' : null,
+            'currency' => strtoupper($currency),
+            'is_primary' => true,
+            'is_active' => true,
+            'verification_status' => 'verified',
+            'verification_notes' => 'Test fixture account.',
+            'verified_at' => now(),
+            'verified_by_user_id' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         $propertyId = (int) DB::table('vendor_accommodation_listings')->insertGetId([
             'vendor_user_id' => $vendor->id,
             'name' => 'Settlement Window Test Property',

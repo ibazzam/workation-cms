@@ -30,6 +30,13 @@
 </div>
 @endif
 
+@if(($readyToSendCount ?? 0) > 0)
+<div class="alert-banner ok">
+  <strong>{{ $readyToSendCount }} batch{{ ($readyToSendCount ?? 0) === 1 ? '' : 'es' }}</strong> are ready to send.
+  Settlement maturity and 4-eyes approvals are complete.
+</div>
+@endif
+
 {{-- Pending summary (INTERNAL) --}}
 @if(isset($pendingSummary) && $pendingSummary->isNotEmpty())
 <div class="section">
@@ -45,6 +52,89 @@
       <p style="margin:4px 0 0;font-size:.76rem;color:var(--muted);">{{ $row->batch_count }} batches · {{ $row->currency }} · {{ $row->status }}</p>
     </div>
     @endforeach
+  </div>
+</div>
+@endif
+
+{{-- Payout account verification queue --}}
+@if(isset($payoutAccountQueue) && $payoutAccountQueue->isNotEmpty())
+<div class="section">
+  <p class="section-title">Payout Account Verification Queue</p>
+  <p style="font-size:.84rem;color:var(--muted);margin:0 0 10px;">
+    Finance Admin review queue for payout account approvals. Cross-check vendor business profile, service verification, and ID proof before approving settlement accounts.
+    Sole-proprietor vendors can be approved with a personal-name beneficiary account when documented below.
+  </p>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Vendor</th>
+          <th>Business &amp; Compliance</th>
+          <th>Account</th>
+          <th>Current Status</th>
+          <th>Review Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach($payoutAccountQueue as $account)
+        <tr>
+          <td>
+            <strong style="font-size:.82rem;">{{ (string) ($account->vendor_name ?? 'Vendor') }}</strong><br>
+            <span style="font-size:.73rem;color:var(--muted);">{{ (string) ($account->vendor_email ?? '') }}</span><br>
+            <span style="font-size:.72rem;color:var(--muted);">Vendor ID: {{ (int) ($account->vendor_user_id ?? 0) }}</span>
+          </td>
+          <td style="font-size:.76rem;line-height:1.4;">
+            <div>Business: <strong>{{ (string) ($account->business_name ?? 'N/A') }}</strong></div>
+            <div>Responsible: {{ (string) ($account->responsible_person_name ?? 'N/A') }}</div>
+            <div>Vendor Verification: {{ strtoupper((string) ($account->vendor_verification_status ?? 'pending')) }}</div>
+            <div>BRN: {{ (string) ($account->vendor_business_registration_number ?? 'N/A') }}</div>
+            <div>License: {{ (string) ($account->vendor_business_license_number ?? 'N/A') }}</div>
+            <div>Documents: {{ trim((string) ($account->vendor_verification_documents ?? '')) !== '' ? 'Uploaded' : 'Not uploaded' }}</div>
+          </td>
+          <td style="font-size:.76rem;line-height:1.4;">
+            <div>Label: <strong>{{ (string) ($account->account_label ?? ('Account #' . (int) ($account->id ?? 0))) }}</strong></div>
+            <div>Beneficiary: {{ (string) ($account->beneficiary_name ?? 'N/A') }}</div>
+            <div>Bank: {{ (string) ($account->bank_name ?? 'N/A') }}</div>
+            <div>Account: {{ !empty($account->bank_account_last4) ? '****' . (string) $account->bank_account_last4 : 'Hidden' }}</div>
+            <div>Currency: {{ (string) ($account->currency ?? 'MVR') }}</div>
+            <div>SWIFT: {{ (string) ($account->swift_code ?? 'N/A') }}</div>
+          </td>
+          <td style="font-size:.76rem;line-height:1.4;">
+            <span class="chip {{ in_array(strtolower((string) ($account->verification_status ?? '')), ['approved', 'verified'], true) ? 'chip-ok' : (strtolower((string) ($account->verification_status ?? '')) === 'rejected' ? 'chip-err' : 'chip-warn') }}">
+              {{ strtoupper(str_replace('_', ' ', (string) ($account->verification_status ?? 'pending_review'))) }}
+            </span>
+            @if (!empty($account->verification_notes))
+              <div style="margin-top:6px;color:var(--muted);">{{ (string) $account->verification_notes }}</div>
+            @endif
+          </td>
+          <td>
+            <form method="POST" action="/portal/admin/finance/payout-accounts/{{ (int) ($account->id ?? 0) }}/verify" style="display:grid;gap:6px;min-width:250px;">
+              @csrf
+              <select name="verification_status" style="border:1px solid #c8d3df;border-radius:6px;padding:5px 7px;font-size:.75rem;">
+                <option value="pending_review">PENDING REVIEW</option>
+                <option value="approved">APPROVE</option>
+                <option value="rejected">REJECT</option>
+              </select>
+              <label style="font-size:.72rem;color:var(--muted);display:flex;gap:6px;align-items:center;">
+                <input type="checkbox" name="crosscheck_business_profile" value="1"> Cross-check business profile
+              </label>
+              <label style="font-size:.72rem;color:var(--muted);display:flex;gap:6px;align-items:center;">
+                <input type="checkbox" name="crosscheck_service_profile" value="1"> Cross-check service verification
+              </label>
+              <label style="font-size:.72rem;color:var(--muted);display:flex;gap:6px;align-items:center;">
+                <input type="checkbox" name="crosscheck_id_proof" value="1"> Cross-check ID proof
+              </label>
+              <label style="font-size:.72rem;color:var(--muted);display:flex;gap:6px;align-items:center;">
+                <input type="checkbox" name="sole_proprietor_personal_name_allowed" value="1"> Sole proprietor: personal-name beneficiary allowed
+              </label>
+              <textarea name="review_notes" rows="3" placeholder="Review notes (required)" style="border:1px solid #c8d3df;border-radius:6px;padding:6px 8px;font-size:.75rem;" required></textarea>
+              <button type="submit" class="btn-primary" style="padding:5px 9px;font-size:.75rem;">Save Review</button>
+            </form>
+          </td>
+        </tr>
+        @endforeach
+      </tbody>
+    </table>
   </div>
 </div>
 @endif
@@ -108,6 +198,7 @@
           <th>Vendors</th>
           <th>Net Payout</th>
           <th>Status</th>
+          <th>Maturity / Gate</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -122,15 +213,42 @@
           <td>{{ $batch->item_count }}</td>
           <td style="font-weight:700;font-family:monospace;">{{ number_format($batch->net_payout_amount, 2) }}</td>
           <td><span class="chip {{ $statusColors[$batch->status] ?? 'chip-grey' }}">{{ $batch->status }}</span></td>
+          <td style="font-size:.74rem;line-height:1.35;">
+            @php
+              $maturityAt = $batch->maturity_at ?? null;
+              $blockedCount = (int) ($batch->maturity_blocked_count ?? 0);
+              $readyToSend = (bool) ($batch->is_ready_to_send ?? false);
+              $sampleReasons = (array) ($batch->maturity_sample_reasons ?? []);
+            @endphp
+            @if($readyToSend)
+              <span class="chip chip-ok">READY TO SEND</span>
+            @else
+              <span class="chip chip-warn">NOT READY</span>
+            @endif
+            <div style="margin-top:4px;color:var(--muted);">
+              @if($maturityAt)
+                Maturity: {{ \Illuminate\Support\Carbon::parse((string) $maturityAt)->toDateString() }}
+              @else
+                Maturity: pending
+              @endif
+            </div>
+            @if($blockedCount > 0)
+              <div style="margin-top:2px;color:#7a4606;" title="{{ implode(' | ', $sampleReasons) }}">{{ $blockedCount }} blocker{{ $blockedCount === 1 ? '' : 's' }}</div>
+            @endif
+          </td>
           <td>
             <div style="display:flex;gap:6px;flex-wrap:wrap;">
               @if($batch->status === 'queued')
-              <form method="POST" action="/portal/admin/finance/payouts/{{ $batch->id }}/send" style="display:inline;" onsubmit="return confirmSend(this)">
-                @csrf
-                <input name="bank_reference" placeholder="Bank ref" required style="border:1px solid #c8d3df;border-radius:6px;padding:4px 7px;font-size:.76rem;width:110px;">
-                <input type="date" name="expected_payout_date" title="Expected payout date" style="border:1px solid #c8d3df;border-radius:6px;padding:4px 7px;font-size:.76rem;">
-                <button type="submit" class="btn-warn" style="padding:5px 9px;font-size:.76rem;">Mark Sent</button>
-              </form>
+                @if((bool) ($batch->is_ready_to_send ?? false))
+                <form method="POST" action="/portal/admin/finance/payouts/{{ $batch->id }}/send" style="display:inline;" onsubmit="return confirmSend(this)">
+                  @csrf
+                  <input name="bank_reference" placeholder="Bank ref" required style="border:1px solid #c8d3df;border-radius:6px;padding:4px 7px;font-size:.76rem;width:110px;">
+                  <input type="date" name="expected_payout_date" title="Expected payout date" style="border:1px solid #c8d3df;border-radius:6px;padding:4px 7px;font-size:.76rem;">
+                  <button type="submit" class="btn-warn" style="padding:5px 9px;font-size:.76rem;">Mark Sent</button>
+                </form>
+                @else
+                <span style="font-size:.74rem;color:var(--muted);align-self:center;">Awaiting maturity/proof/approvals</span>
+                @endif
               @elseif($batch->status === 'processing')
               <form method="POST" action="/portal/admin/finance/payouts/{{ $batch->id }}/confirm" style="display:inline;" onsubmit="return confirm('Confirm batch {{ $batch->batch_ref }} as settled?')">
                 @csrf
@@ -142,7 +260,7 @@
           </td>
         </tr>
         @empty
-        <tr><td colspan="9" style="color:var(--muted);padding:16px;">No batches found.</td></tr>
+        <tr><td colspan="10" style="color:var(--muted);padding:16px;">No batches found.</td></tr>
         @endforelse
       </tbody>
     </table>

@@ -281,7 +281,7 @@ Route::post('/portal/vendor/email-otp/verify', function (Request $request) {
             'portal_vendor_user' => $portalUser->name,
             'portal_vendor_user_id' => $portalUser->id,
             'portal_vendor_role' => $portalUser->portal_role,
-            'portal_vendor_oauth_provider' => $provider,
+            'portal_vendor_oauth_provider' => $channel,
         ]);
 
         Auth::login($portalUser);

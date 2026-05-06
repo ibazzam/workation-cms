@@ -14,6 +14,13 @@ class CheckoutPaymentIntentTest extends TestCase
 {
     use RefreshDatabase;
 
+    private array $customerSession = [
+        'portal_customer_authenticated' => true,
+        'portal_customer_user' => 'Checkout Customer',
+        'portal_customer_user_id' => 'cust-test-1',
+        'portal_customer_email' => 'checkout.customer@example.test',
+    ];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -36,6 +43,7 @@ class CheckoutPaymentIntentTest extends TestCase
         $reservationId = $this->createReservation('Maldivian', 'local_resident', 'MVR');
 
         $response = $this
+            ->withSession($this->customerSession)
             ->withoutMiddleware(VerifyCsrfToken::class)
             ->post('/booking/checkout/' . $reservationId . '/payment-intent', [
                 'payment_currency' => 'MVR',
@@ -59,6 +67,7 @@ class CheckoutPaymentIntentTest extends TestCase
         $reservationId = $this->createReservation('Maldivian', 'local_resident', 'MVR');
 
         $response = $this
+            ->withSession($this->customerSession)
             ->withoutMiddleware(VerifyCsrfToken::class)
             ->post('/booking/checkout/' . $reservationId . '/payment-intent', [
                 'payment_currency' => 'MVR',
@@ -82,6 +91,7 @@ class CheckoutPaymentIntentTest extends TestCase
         $reservationId = $this->createReservation('Maldivian', 'local_resident', 'MVR');
 
         $response = $this
+            ->withSession($this->customerSession)
             ->withoutMiddleware(VerifyCsrfToken::class)
             ->post('/booking/checkout/' . $reservationId . '/payment-intent', [
                 'payment_currency' => 'MVR',
@@ -108,6 +118,7 @@ class CheckoutPaymentIntentTest extends TestCase
         $reservationId = $this->createReservation('Maldivian', 'local_resident', 'MVR');
 
         $response = $this
+            ->withSession($this->customerSession)
             ->withoutMiddleware(VerifyCsrfToken::class)
             ->post('/booking/checkout/' . $reservationId . '/payment-intent', [
                 'payment_provider' => 'stripe',
@@ -135,6 +146,7 @@ class CheckoutPaymentIntentTest extends TestCase
         $reservationId = $this->createReservation('German', 'foreign_national', 'USD');
 
         $response = $this
+            ->withSession($this->customerSession)
             ->from('/booking/checkout/' . $reservationId)
             ->withoutMiddleware(VerifyCsrfToken::class)
             ->post('/booking/checkout/' . $reservationId . '/payment-intent', [
@@ -153,6 +165,7 @@ class CheckoutPaymentIntentTest extends TestCase
         $reservationId = $this->createReservation('German', 'foreign_national', 'USD');
 
         $response = $this
+            ->withSession($this->customerSession)
             ->withoutMiddleware(VerifyCsrfToken::class)
             ->post('/booking/checkout/' . $reservationId . '/payment-intent', [
                 'payment_currency' => 'USD',
@@ -176,6 +189,7 @@ class CheckoutPaymentIntentTest extends TestCase
         $reservationId = $this->createReservation('German', 'foreign_national', 'USD');
 
         $response = $this
+            ->withSession($this->customerSession)
             ->withoutMiddleware(VerifyCsrfToken::class)
             ->post('/booking/checkout/' . $reservationId . '/payment-intent', [
                 'payment_currency' => 'USD',
@@ -199,6 +213,7 @@ class CheckoutPaymentIntentTest extends TestCase
         $reservationId = $this->createReservation('Maldivian', 'local_resident', 'MVR');
 
         $response = $this
+            ->withSession($this->customerSession)
             ->withoutMiddleware(VerifyCsrfToken::class)
             ->post('/booking/checkout/' . $reservationId . '/payment-intent', [
                 'payment_currency' => 'MVR',
@@ -227,6 +242,7 @@ class CheckoutPaymentIntentTest extends TestCase
         $reservationId = $this->createReservation('Maldivian', 'local_resident', 'MVR');
 
         $response = $this
+            ->withSession($this->customerSession)
             ->from('/booking/checkout/' . $reservationId)
             ->withoutMiddleware(VerifyCsrfToken::class)
             ->post('/booking/checkout/' . $reservationId . '/payment-intent', [

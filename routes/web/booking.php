@@ -1096,6 +1096,8 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
     $taxRate = (float) ($listingDetails['tax_rate'] ?? 16);
     $discountPercent = (float) ($listingDetails['promotion_discount_percent'] ?? 0);
 
+    $mvrUsdRate = max(0.01, (float) env('MVR_USD_RATE', 15.42));
+
     $previewGuestResidency = strtolower(trim((string) $request->query('guest_residency', '')));
     if (!in_array($previewGuestResidency, ['local_resident', 'foreign_national'], true)) {
         $previewGuestNationality = trim((string) $request->query('primary_nationality', ''));
@@ -1106,7 +1108,9 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         }
     }
     if (!in_array($previewGuestResidency, ['local_resident', 'foreign_national'], true)) {
-        $previewGuestResidency = 'foreign_national';
+        // Detect visitor location from Cloudflare/CDN header — local Maldivians show MVR, everyone else USD.
+        $cfCountry = strtoupper(trim((string) ($request->header('CF-IPCountry') ?? $request->header('X-Country-Code') ?? $request->header('X-GeoIP-Country') ?? '')));
+        $previewGuestResidency = $cfCountry === 'MV' ? 'local_resident' : 'foreign_national';
     }
 
     $excursionBasePrice = (float) ($propertyRow->base_price ?? 0);
@@ -1284,6 +1288,8 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         'unavailableDates' => $unavailableDates,
         'transferOptions' => $transferOptions,
         'rentalItems' => $rentalItems,
+        'mvrUsdRate' => $mvrUsdRate,
+        'visitorResidency' => $previewGuestResidency,
     ]);
 });
 

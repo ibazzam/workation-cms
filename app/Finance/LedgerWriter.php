@@ -43,6 +43,9 @@ final class LedgerWriter
     /** Payout confirmed settled by the bank/gateway. */
     public const EVT_VENDOR_PAYOUT_CONFIRMED = 'vendor_payout_confirmed';
 
+    /** Payout item blocked pending verified payout account. */
+    public const EVT_VENDOR_PAYOUT_ON_HOLD = 'vendor_payout_on_hold';
+
     /** Customer refund initiated. */
     public const EVT_REFUND_INITIATED = 'refund_initiated';
 
@@ -57,6 +60,21 @@ final class LedgerWriter
 
     /** Dispute lost – funds debited. */
     public const EVT_DISPUTE_LOST = 'dispute_lost';
+
+    /** Internal operating expense for website maintenance. */
+    public const EVT_WEBSITE_MAINTENANCE_EXPENSE = 'website_maintenance_expense';
+
+    /** Internal operating expense for domain renewals/services. */
+    public const EVT_DOMAIN_EXPENSE = 'domain_expense';
+
+    /** Internal operating expense for recurring subscriptions/SaaS. */
+    public const EVT_SUBSCRIPTION_EXPENSE = 'subscription_expense';
+
+    /** Internal operating expense for payroll/staff salary. */
+    public const EVT_SALARY_EXPENSE = 'salary_expense';
+
+    /** Internal operating expense for any other finance operations cost. */
+    public const EVT_OPERATIONS_EXPENSE = 'operations_expense';
 
     // ── Medium constants (INTERNAL ONLY) ─────────────────────────────────────
 

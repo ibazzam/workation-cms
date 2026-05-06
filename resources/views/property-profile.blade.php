@@ -3073,6 +3073,9 @@
                                 <i class="fa-solid fa-hotel" aria-hidden="true"></i>{{ $propertyTypeLabel }}
                             </span>
                         @endif
+                    @if (!empty($adminModerationPreview))
+                        <p class="sub" style="margin-top:8px; font-weight:700; color:#ffe8ab;">Admin moderation preview mode. This listing can be reviewed before public approval.</p>
+                    @endif
                     <p class="sub">{{ $locationLine !== '' ? $locationLine : 'Address details will be updated shortly.' }}</p>
                 </div>
                 <div class="hero-cta-wrap">
@@ -4004,11 +4007,24 @@
                         <div class="transfer-rate-head">
                             <div>
                                 <h3 class="transfer-rate-title">Airport &amp; Island Transfers</h3>
-                                <p class="transfer-rate-note">Various transfer modes are available. Pricing depends on your guest status (local resident or foreign national).</p>
+                                <p class="transfer-rate-note">Transfer modes available for this property. Select your preferred option during checkout — fares are calculated based on your guest status.</p>
                             </div>
                             <span class="transfer-pill"><i class="fa-solid fa-route" aria-hidden="true"></i> Choose during checkout</span>
                         </div>
-                        <p class="transfer-policy-intro" style="margin-top: 12px; margin-bottom: 0;">Transfer options and applicable rates will be shown during the booking checkout process after you provide your guest details. Fares are automatically calculated based on whether you are a local resident or a foreign national.</p>
+                        <div class="transfer-rate-grid" style="margin-top: 12px;">
+                            @foreach ($transferChoices as $transferChoice)
+                                @php
+                                    $modeKey = (string) ($transferChoice['key'] ?? '');
+                                    $modeIcon = $resolveTransferModeIcon($modeKey);
+                                    $modeLabel = (string) ($transferChoice['label'] ?? 'Transfer');
+                                @endphp
+                                <div class="transfer-rate-box" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #f7fbff; border: 1px solid #dbe7f0; border-radius: 12px;">
+                                    <i class="{{ $modeIcon }}" style="font-size: 1.2rem; color: #0f6179; min-width: 20px; text-align: center;" aria-hidden="true"></i>
+                                    <span style="font-weight: 600; color: #183e58;">{{ $modeLabel }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                        <p class="transfer-policy-intro" style="margin-top: 12px; margin-bottom: 0;">Applicable fares will be shown during checkout based on whether you are a local resident or a foreign national.</p>
                     </article>
                 </div>
             </section>

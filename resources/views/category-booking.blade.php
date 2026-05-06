@@ -718,11 +718,26 @@
         $categoryFields = collect($categoryFields ?? []);
         $dateLabels = $dateLabels ?? ['start' => 'Service Start Date', 'end' => 'Service End Date'];
         $pricingConfig = $pricingConfig ?? ['tax_rate' => 16, 'discount_percent' => 0];
-        $currency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
+        $propertyCurrency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
+        $visitorResidency = strtolower(trim((string) ($visitorResidency ?? $pricingConfig['guest_residency'] ?? 'foreign_national')));
+        if (!in_array($visitorResidency, ['local_resident', 'foreign_national'], true)) {
+            $visitorResidency = 'foreign_national';
+        }
+        $mvrUsdRate = max(0.01, (float) ($mvrUsdRate ?? env('MVR_USD_RATE', 15.42)));
+        $isForeignVisitor = $visitorResidency === 'foreign_national';
+        // For foreign visitors browsing a MVR-priced property, show prices in USD.
+        $currency = ($isForeignVisitor && $propertyCurrency === 'MVR') ? 'USD' : $propertyCurrency;
         $basePrice = (float) ($pricingConfig['display_price'] ?? $property->base_price ?? 0);
         $adultUnitPrice = (float) ($pricingConfig['adult_price'] ?? $basePrice);
         $childUnitPrice = (float) ($pricingConfig['child_price'] ?? max(0, round($adultUnitPrice * 0.5, 2)));
         $infantUnitPrice = (float) ($pricingConfig['infant_price'] ?? 0);
+        // Convert MVR prices to USD for foreign visitors.
+        if ($isForeignVisitor && $propertyCurrency === 'MVR' && $mvrUsdRate > 0) {
+            $basePrice = round($basePrice / $mvrUsdRate, 2);
+            $adultUnitPrice = round($adultUnitPrice / $mvrUsdRate, 2);
+            $childUnitPrice = round($childUnitPrice / $mvrUsdRate, 2);
+            $infantUnitPrice = round($infantUnitPrice / $mvrUsdRate, 2);
+        }
         $qtyOptions = range(0, 20);
         $adultSelected = max(1, (int) old('adults', (int) ($prefill['adults'] ?? 2)));
         $childSelected = max(0, (int) old('children', (int) ($prefill['children'] ?? 0)));

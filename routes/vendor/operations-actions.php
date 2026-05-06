@@ -937,6 +937,54 @@ Route::post('/portal/vendor/billing/update', function (Request $request) {
         return back()->withErrors(['payout_accounts' => 'Add at least one payout account.'])->withInput();
     }
 
+    $hasMvrAccount = $normalizedAccounts->contains(static fn (array $account): bool => strtoupper((string) ($account['currency'] ?? '')) === 'MVR');
+    $hasUsdAccount = $normalizedAccounts->contains(static fn (array $account): bool => strtoupper((string) ($account['currency'] ?? '')) === 'USD');
+    if (!$hasMvrAccount || !$hasUsdAccount) {
+        return back()->withErrors([
+            'payout_accounts' => 'Register both MVR and USD payout accounts. Local settlements are paid in MVR and foreign settlements are paid in USD.',
+        ])->withInput();
+    }
+
+    $duplicateCurrencyCount = $normalizedAccounts
+        ->groupBy(static fn (array $account): string => strtoupper((string) ($account['currency'] ?? 'MVR')))
+        ->map(static fn ($rows): int => $rows->count())
+        ->filter(static fn (int $count): bool => $count > 3)
+        ->count();
+    if ($duplicateCurrencyCount > 0) {
+        return back()->withErrors([
+            'payout_accounts' => 'Too many payout accounts registered for the same currency. Keep at most 3 accounts per currency for safer payout routing.',
+        ])->withInput();
+    }
+
+    $assessVerificationStatus = static function (array $account): array {
+        $currency = strtoupper(trim((string) ($account['currency'] ?? 'MVR')));
+        $accountNumber = trim((string) ($account['bank_account_number'] ?? ''));
+        $swift = strtoupper(trim((string) ($account['swift_code'] ?? '')));
+
+        $accountNumberLooksValid = (bool) preg_match('/^[A-Za-z0-9\-\s]{6,34}$/', $accountNumber);
+        $swiftLooksValid = $swift === '' || (bool) preg_match('/^[A-Z0-9]{8}([A-Z0-9]{3})?$/', $swift);
+        $usdRequiresSwift = $currency === 'USD';
+        $usdSwiftValid = !$usdRequiresSwift || (bool) preg_match('/^[A-Z0-9]{8}([A-Z0-9]{3})?$/', $swift);
+
+        if ($accountNumberLooksValid && $swiftLooksValid && $usdSwiftValid) {
+            return [
+                'verification_status' => 'pending_review',
+                'verification_notes' => 'Format checks passed. Pending Admin Finance approval.',
+                'verified_at' => null,
+            ];
+        }
+
+        $note = $currency === 'USD'
+            ? 'Needs review: USD payout account requires a valid SWIFT code (8 or 11 characters).'
+            : 'Needs review: payout account number format failed validation.';
+
+        return [
+            'verification_status' => 'needs_review',
+            'verification_notes' => $note,
+            'verified_at' => null,
+        ];
+    };
+
     foreach ($normalizedAccounts as $index => $account) {
         $rowValidator = Validator::make($account, [
             'account_label' => ['nullable', 'string', 'max:80'],
@@ -1024,7 +1072,7 @@ Route::post('/portal/vendor/billing/update', function (Request $request) {
         $payload['swift_code'] = strtoupper(trim((string) ($primaryAccount['swift_code'] ?? '')));
     }
 
-    DB::transaction(function () use ($vendorUserId, $payload, $normalizedAccounts, $primaryAccountIndex): void {
+    DB::transaction(function () use ($vendorUserId, $payload, $normalizedAccounts, $primaryAccountIndex, $assessVerificationStatus): void {
         DB::table('vendor_billing_details')->updateOrInsert(
             [
                 'vendor_user_id' => $vendorUserId,
@@ -1039,6 +1087,7 @@ Route::post('/portal/vendor/billing/update', function (Request $request) {
 
             foreach ($normalizedAccounts->values() as $index => $account) {
                 $accountNumber = trim((string) ($account['bank_account_number'] ?? ''));
+                $verification = $assessVerificationStatus($account);
 
                 DB::table('vendor_payout_accounts')->insert([
                     'vendor_user_id' => $vendorUserId,
@@ -1051,6 +1100,11 @@ Route::post('/portal/vendor/billing/update', function (Request $request) {
                     'swift_code' => strtoupper(trim((string) ($account['swift_code'] ?? ''))),
                     'currency' => strtoupper(trim((string) ($account['currency'] ?? 'MVR'))),
                     'is_primary' => $index === $primaryAccountIndex,
+                    'is_active' => true,
+                    'verification_status' => (string) ($verification['verification_status'] ?? 'needs_review'),
+                    'verification_notes' => (string) ($verification['verification_notes'] ?? ''),
+                    'verified_at' => $verification['verified_at'] ?? null,
+                    'verified_by_user_id' => null,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);

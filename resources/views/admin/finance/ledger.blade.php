@@ -11,16 +11,23 @@
         'vendor_payout_queued'   => 'chip-blue',
         'vendor_payout_sent'     => 'chip-teal',
         'vendor_payout_confirmed'=> 'chip-ok',
+        'vendor_payout_on_hold'  => 'chip-err',
         'refund_initiated'       => 'chip-err',
         'refund_completed'       => 'chip-err',
         'dispute_opened'         => 'chip-purple',
         'dispute_resolved'       => 'chip-teal',
         'dispute_lost'           => 'chip-err',
+        'website_maintenance_expense' => 'chip-warn',
+        'domain_expense'         => 'chip-warn',
+        'subscription_expense'   => 'chip-warn',
+        'salary_expense'         => 'chip-warn',
+        'operations_expense'     => 'chip-warn',
     ];
     $mediumColors = [
       'mib' => 'chip-blue',
       'bml' => 'chip-ok',
       'stripe' => 'chip-purple',
+      'internal' => 'chip-grey',
     ];
     $bandColors = [
         'local_mvr'   => 'chip-teal',
@@ -32,6 +39,60 @@
     'pageSubtitle' => 'Append-only event log — every financial event recorded here. Admin read-only.',
     'activeNav'    => 'ledger',
 ])
+
+@if(session('success'))
+<div class="alert-banner ok">{{ session('success') }}</div>
+@endif
+@if(session('error'))
+<div class="alert-banner err">{{ session('error') }}</div>
+@endif
+
+{{-- Revenue/expense transparency snapshot --}}
+@if(isset($financialSnapshot) && $financialSnapshot->isNotEmpty())
+<div class="section">
+  <p class="section-title">Revenue, Payout, Fee & Expense Snapshot</p>
+  <div class="stat-grid">
+    @foreach($financialSnapshot as $row)
+    <div class="stat-card">
+      <p class="stat-label">Currency: {{ $row->currency }}</p>
+      <p style="margin:0;font-size:.78rem;color:var(--muted);">Revenue Collected: <strong style="color:#0b5c2a;">{{ number_format((float) ($row->revenue_collected ?? 0), 2) }}</strong></p>
+      <p style="margin:4px 0 0;font-size:.78rem;color:var(--muted);">Commission Deductions: <strong>{{ number_format((float) ($row->commission_deducted ?? 0), 2) }}</strong></p>
+      <p style="margin:4px 0 0;font-size:.78rem;color:var(--muted);">Gateway Fee Deductions: <strong>{{ number_format((float) ($row->gateway_fee_deducted ?? 0), 2) }}</strong></p>
+      <p style="margin:4px 0 0;font-size:.78rem;color:var(--muted);">Payouts Queued: <strong>{{ number_format((float) ($row->vendor_payout_queued ?? 0), 2) }}</strong></p>
+      <p style="margin:4px 0 0;font-size:.78rem;color:var(--muted);">Refunds: <strong>{{ number_format((float) ($row->refunds ?? 0), 2) }}</strong></p>
+      <p style="margin:4px 0 0;font-size:.78rem;color:var(--muted);">Operating Expenses: <strong>{{ number_format((float) ($row->operating_expenses ?? 0), 2) }}</strong></p>
+      <p style="margin:8px 0 0;font-size:.82rem;">Net Position: <strong style="color:{{ ((float) ($row->net_after_payout_and_expenses ?? 0)) >= 0 ? '#0b5c2a' : '#6d1111' }};">{{ number_format((float) ($row->net_after_payout_and_expenses ?? 0), 2) }}</strong></p>
+    </div>
+    @endforeach
+  </div>
+</div>
+@endif
+
+{{-- Manual expense update form --}}
+<div class="section">
+  <p class="section-title">Record Finance Expense (Transparent Update)</p>
+  <p style="font-size:.83rem;color:var(--muted);margin:0 0 10px;">
+    Record website maintenance fees, domain fees, monthly subscriptions, staff salaries, and other operating costs.
+    Each entry is appended to the immutable finance ledger for audit transparency.
+  </p>
+  <form method="POST" action="/portal/admin/finance/ledger/expenses" class="filter-bar">
+    @csrf
+    <select name="event_type" required>
+      @foreach(($expenseEventTypes ?? []) as $expenseType)
+      <option value="{{ $expenseType }}">{{ str_replace('_',' ', $expenseType) }}</option>
+      @endforeach
+    </select>
+    <input type="number" step="0.01" min="0.01" name="amount" placeholder="Amount" required style="width:130px;">
+    <select name="currency" required>
+      <option value="MVR">MVR</option>
+      <option value="USD">USD</option>
+    </select>
+    <input type="text" name="reference_id" placeholder="Invoice/Bank Txn Ref" style="min-width:180px;">
+    <input type="date" name="occurred_at">
+    <input type="text" name="notes" placeholder="Description / notes" required style="min-width:260px;">
+    <button type="submit" class="btn-primary">Record Expense</button>
+  </form>
+</div>
 
 {{-- Medium summary (INTERNAL) --}}
 @if(isset($mediumSummary) && $mediumSummary->isNotEmpty())
@@ -73,9 +134,10 @@
   <p class="section-title">Events</p>
 
   <form method="GET" action="/portal/admin/finance/ledger" class="filter-bar">
+    <input type="month" name="report_month" value="{{ $filters['report_month']??'' }}" title="Report month">
     <select name="event_type">
       <option value="">All event types</option>
-      @foreach(['payment_collected','commission_deducted','gateway_fee_deducted','vendor_payout_queued','vendor_payout_sent','vendor_payout_confirmed','refund_initiated','refund_completed','dispute_opened','dispute_resolved','dispute_lost'] as $et)
+      @foreach(($availableEventTypes ?? []) as $et)
       <option value="{{ $et }}" @selected(($filters['event_type']??'') === $et)>{{ str_replace('_',' ',$et) }}</option>
       @endforeach
     </select>
@@ -94,6 +156,15 @@
     <input type="date" name="date_from" value="{{ $filters['date_from']??'' }}">
     <input type="date" name="date_to"   value="{{ $filters['date_to']??'' }}">
     <button type="submit">Filter</button>
+    <a href="/portal/admin/finance/ledger/export/csv?{{ http_build_query([
+      'report_month' => $filters['report_month'] ?? '',
+      'event_type' => $filters['event_type'] ?? '',
+      'medium' => $filters['medium'] ?? '',
+      'band' => $filters['band'] ?? '',
+      'vendor_id' => $filters['vendor_id'] ?? '',
+      'date_from' => $filters['date_from'] ?? '',
+      'date_to' => $filters['date_to'] ?? '',
+    ]) }}" class="btn-primary" style="text-decoration:none;display:inline-flex;align-items:center;">Export CSV</a>
     <a href="/portal/admin/finance/ledger" style="font-size:.8rem;color:var(--muted);align-self:center;">Reset</a>
   </form>
 
@@ -110,6 +181,8 @@
           <th>Reservation</th>
           <th>Vendor</th>
           <th>Batch</th>
+          <th>Reference</th>
+          <th>Notes</th>
           <th>Actor</th>
           <th>Occurred At</th>
         </tr>
@@ -135,11 +208,13 @@
               <span style="color:var(--muted);">—</span>
             @endif
           </td>
+          <td style="font-size:.75rem;">{{ (string) ($ev->gateway_reference ?? '') !== '' ? (string) ($ev->gateway_reference ?? '') : '—' }}</td>
+          <td style="font-size:.75rem;max-width:250px;">{{ (string) ($ev->notes ?? '') !== '' ? (string) ($ev->notes ?? '') : '—' }}</td>
           <td style="font-size:.76rem;">{{ $ev->actor_role ?? '—' }}</td>
           <td style="font-size:.76rem;white-space:nowrap;">{{ $ev->occurred_at }}</td>
         </tr>
         @empty
-        <tr><td colspan="11" style="color:var(--muted);padding:16px;">No events found.</td></tr>
+        <tr><td colspan="13" style="color:var(--muted);padding:16px;">No events found.</td></tr>
         @endforelse
       </tbody>
     </table>

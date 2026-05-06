@@ -36,6 +36,9 @@ Route::get('/users', function (Request $request) {
     foreach ([
         'vendor_verification_status',
         'vendor_verification_notes',
+        'vendor_verification_rejection_reason',
+        'vendor_verification_missing_documents',
+        'vendor_verification_last_reviewed_at',
         'vendor_approved_service_categories',
         'vendor_contact_verified_at',
         'vendor_verified_at',
@@ -138,6 +141,9 @@ Route::get('/admin', function (Request $request) {
     foreach ([
         'vendor_verification_status',
         'vendor_verification_notes',
+        'vendor_verification_rejection_reason',
+        'vendor_verification_missing_documents',
+        'vendor_verification_last_reviewed_at',
         'vendor_approved_service_categories',
         'vendor_contact_verified_at',
         'vendor_verified_at',

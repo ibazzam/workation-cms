@@ -58,8 +58,9 @@ Route::get('/property/{property}', function (Request $request, int $property) {
         abort(404);
     }
 
+    $adminModerationPreview = (string) $request->query('preview', '') === 'admin' && canModerateListings();
     $listingStatus = strtolower(trim((string) ($propertyRow->status ?? 'inactive')));
-    if ($listingStatus !== 'active') {
+    if (!$adminModerationPreview && $listingStatus !== 'active') {
         abort(404);
     }
 
@@ -916,5 +917,6 @@ Route::get('/property/{property}', function (Request $request, int $property) {
         'unavailableDates' => $unavailableDates,
         'visitorResidency' => workationDetectVisitorResidency($request),
         'mvrUsdRate' => (float) env('MVR_USD_RATE', 15.42),
+        'adminModerationPreview' => $adminModerationPreview,
     ]);
 });

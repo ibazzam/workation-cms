@@ -1,0 +1,8 @@
+
+   PASS  Tests\Feature\AdminListingPreviewAccessTest
+  Ô£ô listing preview route is forbidden without admin moderation role     2.97s  
+  Ô£ô admin care can open pending listing preview page                     0.32s  
+
+  Tests:    2 passed (6 assertions)
+  Duration: 3.82s
+

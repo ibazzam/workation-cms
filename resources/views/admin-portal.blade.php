@@ -2335,6 +2335,35 @@
                                     <textarea name="vendor_verification_notes" rows="3" placeholder="Explain what was checked, what is missing, and approval conditions.">{{ old('vendor_verification_notes', (string) ($managedUser->vendor_verification_notes ?? '')) }}</textarea>
                                 </div>
                                 <div>
+                                    <label>Cross-check Validation</label>
+                                    <div class="category-grid" style="margin-top:6px;">
+                                        <label class="category-item" style="min-height:auto; padding:6px 8px;">
+                                            <input type="checkbox" name="crosscheck_business_profile" value="1">
+                                            <span>Business profile docs checked</span>
+                                        </label>
+                                        <label class="category-item" style="min-height:auto; padding:6px 8px;">
+                                            <input type="checkbox" name="crosscheck_service_profile" value="1">
+                                            <span>Service capability checked</span>
+                                        </label>
+                                        <label class="category-item" style="min-height:auto; padding:6px 8px;">
+                                            <input type="checkbox" name="crosscheck_id_proof" value="1">
+                                            <span>Contact ID proof checked</span>
+                                        </label>
+                                        <label class="category-item" style="min-height:auto; padding:6px 8px;">
+                                            <input type="checkbox" name="sole_proprietor_name_override" value="1">
+                                            <span>Sole proprietor personal-name override</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label>Rejection Reason</label>
+                                    <textarea name="vendor_rejection_reason" rows="2" placeholder="Required when status is REJECTED.">{{ old('vendor_rejection_reason', (string) ($managedUser->vendor_verification_rejection_reason ?? '')) }}</textarea>
+                                </div>
+                                <div>
+                                    <label>Missing Documents</label>
+                                    <textarea name="vendor_missing_documents" rows="2" placeholder="List one document per line or comma-separated.">{{ old('vendor_missing_documents', (string) ($managedUser->vendor_verification_missing_documents ?? '')) }}</textarea>
+                                </div>
+                                <div>
                                     <label>Contact Person Verification</label>
                                     <select name="vendor_contact_verified">
                                         <option value="0" @selected(empty($managedUser->vendor_contact_verified_at))>NOT VERIFIED</option>
@@ -2377,6 +2406,9 @@
                                     @if (!empty($listing->listing_submitted_for_review_at))
                                         <div class="small">Submitted: {{ \Illuminate\Support\Carbon::parse($listing->listing_submitted_for_review_at)->format('Y-m-d H:i') }}</div>
                                     @endif
+                                    <div class="small" style="margin-top:4px;">
+                                        <a href="/portal/admin/listings/{{ $listing->id }}/preview" target="_blank" rel="noopener">Open Pre-Approval Preview</a>
+                                    </div>
                                     <div class="registration-actions">
                                         <form method="POST" action="/portal/admin/listings/{{ $listing->id }}/approve">
                                             @csrf
@@ -2388,6 +2420,8 @@
                                             @csrf
                                             <label class="small" for="reject_listing_notes_{{ $listing->id }}">Rejection reason <span style="color:red">*</span></label>
                                             <textarea id="reject_listing_notes_{{ $listing->id }}" name="admin_notes" required placeholder="Explain what must be resolved before the listing can be approved"></textarea>
+                                            <label class="small" for="reject_listing_missing_docs_{{ $listing->id }}">Missing documents (optional)</label>
+                                            <textarea id="reject_listing_missing_docs_{{ $listing->id }}" name="missing_documents" placeholder="List missing documents if any are required to proceed"></textarea>
                                             <button class="btn-reject" type="submit">Reject Listing</button>
                                         </form>
                                     </div>
@@ -2416,6 +2450,9 @@
                                         <span class="small">Vendor: {{ $listing->vendor_name ?: $listing->vendor_email ?: 'Unknown' }}</span>
                                     </div>
                                     <div class="small">Category: {{ ucwords(str_replace('_', ' ', (string) ($listing->listing_category ?: 'general'))) }}</div>
+                                    <div class="small" style="margin-top:4px;">
+                                        <a href="/portal/admin/listings/{{ $listing->id }}/preview" target="_blank" rel="noopener">Open Listing Preview</a>
+                                    </div>
                                     @if (!empty($listing->listing_approved_at))
                                         <div class="small">Actioned: {{ \Illuminate\Support\Carbon::parse($listing->listing_approved_at)->format('Y-m-d H:i') }} by {{ $listing->approved_by_name ?: 'Unknown' }}</div>
                                     @endif

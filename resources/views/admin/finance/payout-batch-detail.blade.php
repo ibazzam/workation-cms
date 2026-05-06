@@ -36,6 +36,33 @@
 @if(isset($batch))
 <div class="section">
   <p class="section-title">Batch Info</p>
+  @php
+    $maturityReady = (bool) (($maturitySnapshot['ready'] ?? false));
+    $maturityAt = $maturitySnapshot['maturity_at'] ?? null;
+    $maturityBlockedCount = (int) (($maturitySnapshot['blocked_count'] ?? 0));
+    $maturityReasons = (array) (($maturitySnapshot['sample_reasons'] ?? []));
+    $firstApprovedBy = (int) ($batch->first_approved_by_user_id ?? 0);
+    $secondApprovedBy = (int) ($batch->second_approved_by_user_id ?? 0);
+    $currentFinanceUserId = (int) ($currentFinanceUserId ?? 0);
+    $hasProof = trim((string) ($batch->settlement_reference_proof ?? '')) !== '';
+    $hasReference = trim((string) ($batch->settlement_reference_id ?? '')) !== '';
+  @endphp
+
+  <div class="alert-banner {{ $maturityReady ? 'ok' : 'warn' }}" style="margin-bottom:12px;">
+    <strong>Payout maturity:</strong>
+    @if($maturityReady)
+      ready for release.
+    @else
+      not ready yet.
+    @endif
+    @if($maturityAt)
+      Expected maturity date: {{ \Illuminate\Support\Carbon::parse((string) $maturityAt)->toDateString() }}.
+    @endif
+    @if($maturityBlockedCount > 0)
+      Blockers: {{ $maturityBlockedCount }} ({{ implode(' | ', $maturityReasons) }}).
+    @endif
+  </div>
+
   <div class="stat-grid">
     <div class="stat-card">
       <p class="stat-label">Reference</p>
@@ -79,6 +106,20 @@
       <p class="stat-value" style="font-size:.9rem;">{{ $batch->bank_reference }}</p>
     </div>
     @endif
+    @if($hasReference)
+    <div class="stat-card">
+      <p class="stat-label">Settlement Reference ID</p>
+      <p class="stat-value" style="font-size:.9rem;word-break:break-all;">{{ $batch->settlement_reference_id }}</p>
+    </div>
+    @endif
+    <div class="stat-card">
+      <p class="stat-label">Primary Approval</p>
+      <p class="stat-value" style="font-size:.85rem;">{{ $firstApprovedBy > 0 ? ('User #' . $firstApprovedBy) : 'Pending' }}</p>
+    </div>
+    <div class="stat-card">
+      <p class="stat-label">Secondary Approval</p>
+      <p class="stat-value" style="font-size:.85rem;">{{ $secondApprovedBy > 0 ? ('User #' . $secondApprovedBy) : 'Pending' }}</p>
+    </div>
     @if($batch->submitted_at)
     <div class="stat-card">
       <p class="stat-label">Submitted</p>
@@ -96,12 +137,32 @@
   {{-- Action buttons --}}
   <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
     @if($batch->status === 'queued')
-    <form method="POST" action="/portal/admin/finance/payouts/{{ $batch->id }}/send" onsubmit="return confirmSend(this)">
-      @csrf
-      <input name="bank_reference" placeholder="Bank reference" required style="border:1px solid #c8d3df;border-radius:6px;padding:6px 9px;font-size:.84rem;width:180px;">
-      <input type="date" name="expected_payout_date" style="border:1px solid #c8d3df;border-radius:6px;padding:6px 9px;font-size:.84rem;width:160px;">
-      <button type="submit" class="btn-warn" style="margin-left:6px;">Mark Sent</button>
-    </form>
+      @if(!((bool) $isReadyToSend))
+      <form method="POST" action="/portal/admin/finance/payouts/{{ $batch->id }}/approve-primary" style="display:grid;gap:6px;min-width:320px;">
+        @csrf
+        <input name="settlement_reference_id" value="{{ (string) ($batch->settlement_reference_id ?? '') }}" placeholder="Bank deposit transaction ID / settlement reference" required style="border:1px solid #c8d3df;border-radius:6px;padding:6px 9px;font-size:.84rem;">
+        <textarea name="settlement_reference_proof" rows="3" required placeholder="Proof note (bank deposit statement reference, settlement evidence, reconciliation note)" style="border:1px solid #c8d3df;border-radius:6px;padding:6px 9px;font-size:.84rem;">{{ (string) ($batch->settlement_reference_proof ?? '') }}</textarea>
+        <button type="submit" class="btn-primary">Save Proof + Primary Approval</button>
+      </form>
+
+      @if($firstApprovedBy > 0 && $secondApprovedBy <= 0)
+        @if($currentFinanceUserId > 0 && $currentFinanceUserId !== $firstApprovedBy)
+        <form method="POST" action="/portal/admin/finance/payouts/{{ $batch->id }}/approve-secondary" onsubmit="return confirm('Confirm secondary approval for this payout batch?')">
+          @csrf
+          <button type="submit" class="btn-ok">Secondary Approval (4-eyes)</button>
+        </form>
+        @else
+        <span style="font-size:.82rem;color:var(--muted);align-self:center;">Waiting for a different finance admin to provide secondary approval.</span>
+        @endif
+      @endif
+      @else
+      <form method="POST" action="/portal/admin/finance/payouts/{{ $batch->id }}/send" onsubmit="return confirmSend(this)">
+        @csrf
+        <input name="bank_reference" placeholder="Bank reference" required style="border:1px solid #c8d3df;border-radius:6px;padding:6px 9px;font-size:.84rem;width:180px;">
+        <input type="date" name="expected_payout_date" style="border:1px solid #c8d3df;border-radius:6px;padding:6px 9px;font-size:.84rem;width:160px;">
+        <button type="submit" class="btn-warn" style="margin-left:6px;">Mark Sent</button>
+      </form>
+      @endif
     @elseif($batch->status === 'processing')
     <form method="POST" action="/portal/admin/finance/payouts/{{ $batch->id }}/confirm" onsubmit="return confirm('Confirm this batch as settled?')">
       @csrf
@@ -128,6 +189,7 @@
           <th>Net Payout</th>
           <th>Currency</th>
           <th>Bank Account</th>
+          <th>Account Link</th>
           <th>Status</th>
           <th>Bank Ref</th>
           <th>Update</th>
@@ -158,6 +220,15 @@
             {{ $item->bank_account_name ?? '—' }}<br>
             <span style="color:var(--muted);">{{ $item->bank_account_number ?? '' }}</span>
           </td>
+          <td style="font-size:.76rem;">
+            @php
+              $verificationStatus = strtolower(trim((string) ($item->payout_account_verification_status ?? '')));
+              $verificationLabel = $verificationStatus !== '' ? strtoupper(str_replace('_', ' ', $verificationStatus)) : 'UNSPECIFIED';
+            @endphp
+            <span style="display:block;">Account ID: {{ (int) ($item->payout_account_id ?? 0) > 0 ? (int) ($item->payout_account_id ?? 0) : 'N/A' }}</span>
+            <span style="display:block;color:var(--muted);">{{ (string) ($item->payout_account_currency ?? '—') }}</span>
+            <span style="display:block;color:var(--muted);">{{ $verificationLabel }}</span>
+          </td>
           <td><span class="chip {{ $adminItemStatusColors[strtolower((string) $item->status)] ?? 'chip-grey' }}">{{ $item->status }}</span></td>
           <td style="font-size:.76rem;">{{ $item->bank_reference ?? '—' }}</td>
           <td>
@@ -175,7 +246,7 @@
           </td>
         </tr>
         @empty
-        <tr><td colspan="11" style="color:var(--muted);padding:16px;">No items in this batch.</td></tr>
+        <tr><td colspan="12" style="color:var(--muted);padding:16px;">No items in this batch.</td></tr>
         @endforelse
       </tbody>
     </table>

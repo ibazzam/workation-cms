@@ -141,6 +141,26 @@ class BookingToPayoutAndRefundLifecycleTest extends TestCase
     {
         $vendor = User::factory()->create();
 
+        DB::table('vendor_payout_accounts')->insert([
+            'vendor_user_id' => $vendor->id,
+            'account_label' => 'MVR Settlement',
+            'payout_method' => 'bank_transfer',
+            'beneficiary_name' => 'Lifecycle Vendor',
+            'bank_account_number' => 'MVR77889900',
+            'bank_account_last4' => '9900',
+            'bank_name' => 'Bank of Maldives',
+            'swift_code' => null,
+            'currency' => 'MVR',
+            'is_primary' => true,
+            'is_active' => true,
+            'verification_status' => 'verified',
+            'verification_notes' => 'Test fixture account.',
+            'verified_at' => now(),
+            'verified_by_user_id' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         $propertyId = (int) DB::table('vendor_accommodation_listings')->insertGetId([
             'vendor_user_id' => $vendor->id,
             'name' => 'Lifecycle Test Villa',

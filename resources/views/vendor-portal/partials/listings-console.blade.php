@@ -730,7 +730,12 @@
                                                                                             </div>
                                                                                         </td>
                                                                                         <td>
-                                                                                            <span class="room-summary-line">Qty: {{ (int) ($rentalItem->quantity_available ?? 1) }} | @if (($rentalItem->pricing_type ?? 'hourly') === 'per_seat')Adult: MVR {{ number_format((float) ($rentalItem->price_per_seat_adult_local ?? 0), 2) }} / USD {{ number_format((float) ($rentalItem->price_per_seat_adult_usd ?? 0), 2) }} per seat@else Local: MVR {{ number_format((float) ($rentalItem->price_per_hour_local ?? 0), 2) }}/hr | Foreign: USD {{ number_format((float) ($rentalItem->price_per_hour_usd ?? 0), 2) }}/hr | Min: {{ (int) ($rentalItem->min_duration_minutes ?? 30) }}min | Max: {{ (int) ($rentalItem->max_duration_hours ?? 8) }}hrs@endif</span>
+                                                                                            @php
+                                                                                                $rentalSummaryText = (($rentalItem->pricing_type ?? 'hourly') === 'per_seat')
+                                                                                                    ? 'Adult: MVR ' . number_format((float) ($rentalItem->price_per_seat_adult_local ?? 0), 2) . ' / USD ' . number_format((float) ($rentalItem->price_per_seat_adult_usd ?? 0), 2) . ' per seat'
+                                                                                                    : 'Local: MVR ' . number_format((float) ($rentalItem->price_per_hour_local ?? 0), 2) . '/hr | Foreign: USD ' . number_format((float) ($rentalItem->price_per_hour_usd ?? 0), 2) . '/hr | Min: ' . (int) ($rentalItem->min_duration_minutes ?? 30) . 'min | Max: ' . (int) ($rentalItem->max_duration_hours ?? 8) . 'hrs';
+                                                                                            @endphp
+                                                                                            <span class="room-summary-line">Qty: {{ (int) ($rentalItem->quantity_available ?? 1) }} | {{ $rentalSummaryText }}</span>
                                                                                         </td>
                                                                                         <td>
                                                                                             <div class="inline-actions listing-actions-inline listing-actions-compact">

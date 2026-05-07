@@ -16,7 +16,7 @@ class ReservationPricingPolicy
         return [
             'taxable_categories' => [
                 'accommodation',
-                'marine_transport',
+                'sea_transport',
                 'land_transport',
                 'excursion',
                 'remote_workspace',
@@ -82,7 +82,7 @@ class ReservationPricingPolicy
                     'default_rate' => 8.0,
                     'applies_to' => 'all',
                     'applies_to_categories' => [
-                        'marine_transport',
+                        'sea_transport',
                         'land_transport',
                         'excursion',
                         'remote_workspace',

@@ -2038,7 +2038,7 @@
         $homeTopCategoryLinks = $homeTopCategoryLinks ?? collect();
         $homeCatalogAllowedUrls = [
             '/catalog/accommodation',
-            '/catalog/marine-transport',
+            '/catalog/sea-transport',
             '/catalog/land-transport',
             '/catalog/excursion',
             '/catalog/resort_day_visit',
@@ -2058,10 +2058,11 @@
         $homeSidebarLinks = collect([
             ['icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'url' => '/catalog/accommodation'],
             ['icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'url' => '/catalog/resort_day_visit'],
+            ['icon' => 'fa-solid fa-ship', 'title' => 'Live Aboard', 'url' => '/catalog/liveaboard'],
             ['icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'url' => '/catalog/excursion'],
             ['icon' => 'fa-solid fa-person-swimming', 'title' => 'Water Sports', 'url' => '/catalog/water_sports'],
             ['icon' => 'fa-solid fa-utensils', 'title' => 'Restaurants', 'url' => '/catalog/restaurant', 'section_start' => true, 'section_end' => true],
-            ['icon' => 'fa-solid fa-water', 'title' => 'Sea Transport', 'url' => '/catalog/marine-transport'],
+            ['icon' => 'fa-solid fa-water', 'title' => 'Sea Transport', 'url' => '/catalog/sea-transport'],
             ['icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'url' => '/catalog/land-transport'],
             ['icon' => 'fa-solid fa-car-side', 'title' => 'Vehicle Rentals', 'url' => '/catalog/vehicle_rental', 'divider_after' => true],
             ['icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'url' => '/catalog/remote_workspace'],
@@ -2220,7 +2221,8 @@
                                         $tabId = 'searchTab-' . $tabCategoryToken;
                                         $tabPanelMap = [
                                             'accommodation' => 'accommodationFields',
-                                            'marine-transport' => 'marineTransportFields',
+                                            'sea-transport' => 'seaTransportFields',
+                                            'marine-transport' => 'seaTransportFields',
                                             'land-transport' => 'landTransportFields',
                                             'excursion' => 'excursionFields',
                                             'remote_workspace' => 'remoteWorkspaceFields',
@@ -2300,8 +2302,8 @@
                                 </div>
                             </div>
 
-                            <!-- Marine Transport Fields -->
-                            <div id="marineTransportFields" class="search-dynamic-fields" role="tabpanel" aria-labelledby="searchTab-marine-transport" data-fields-for="marine-transport" hidden aria-hidden="true">
+                            <!-- Sea Transport Fields -->
+                            <div id="seaTransportFields" class="search-dynamic-fields" role="tabpanel" aria-labelledby="searchTab-sea-transport" data-fields-for="sea-transport" hidden aria-hidden="true">
                                 <div class="field"><label for="marineTripType">Trip Type</label><select id="marineTripType" name="trip_type"><option value="one_way">One Way</option><option value="round_trip">Round Trip</option></select></div>
                                 <div class="field">
                                     <label for="marineFrom">From Island</label>
@@ -2664,7 +2666,8 @@
             // Map all individual field containers
             const fieldSets = {
                 'accommodation': document.getElementById('accommodationFields'),
-                'marine-transport': document.getElementById('marineTransportFields'),
+                'sea-transport': document.getElementById('seaTransportFields'),
+                'marine-transport': document.getElementById('seaTransportFields'),
                 'land-transport': document.getElementById('landTransportFields'),
                 'excursion': document.getElementById('excursionFields'),
                 'remote_workspace': document.getElementById('remoteWorkspaceFields'),

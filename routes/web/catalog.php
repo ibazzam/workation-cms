@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Schema;
 Route::get('/catalog/{category}', function (Request $request, string $category) {
     $categoryMap = [
         'accommodation' => ['label' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas, and guesthouses.', 'hero_image_url' => ''],
-        'marine-transport' => ['label' => 'Marine Transport', 'subtitle' => 'Speedboats, dhonis, and water transfers between islands.', 'hero_image_url' => ''],
         'land-transport' => ['label' => 'Land Transport', 'subtitle' => 'Cars, vans, and local ground transfers.', 'hero_image_url' => ''],
         'excursion' => ['label' => 'Excursion', 'subtitle' => 'Experiences, tours, and activity packages.', 'hero_image_url' => ''],
         'water_sports' => ['label' => 'Water Sports', 'subtitle' => 'Diving, snorkeling, and sea activity experiences.', 'hero_image_url' => ''],
@@ -24,7 +23,9 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
 
     $requestedCategoryKey = strtolower(trim($category));
     $categoryAliases = [
-        'marine_transport' => 'marine-transport',
+        // Legacy marine-transport URLs redirect transparently to sea_transport.
+        'marine-transport' => 'sea_transport',
+        'marine_transport' => 'sea_transport',
         'land_transport' => 'land-transport',
         'remote-workspace' => 'remote_workspace',
         'conference-room' => 'conference_room',
@@ -600,7 +601,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                     $transportDestinationMap = [];
                     $transportLocationColumns = ['pickup_location', 'dropoff_location', 'origin_point', 'destination_point', 'island', 'city', 'atoll'];
 
-                    foreach (['vendor_marine_transport_listings', 'vendor_land_transport_listings'] as $transportTable) {
+                    foreach (['vendor_sea_transport_listings', 'vendor_land_transport_listings'] as $transportTable) {
                         if (!Schema::hasTable($transportTable)) {
                             continue;
                         }

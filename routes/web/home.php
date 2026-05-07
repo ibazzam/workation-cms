@@ -48,7 +48,7 @@ Route::get('/', function (Request $request) {
     // Keep home sidebar identical to category pages for uniform navigation.
     $homeTopCategoryLinks = collect([
         ['icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas', 'url' => '/catalog/accommodation'],
-        ['icon' => 'fa-solid fa-water', 'title' => 'Marine Transport', 'subtitle' => 'Speedboats & water transfers', 'url' => '/catalog/marine-transport'],
+        ['icon' => 'fa-solid fa-water', 'title' => 'Sea Transport', 'subtitle' => 'Speedboats, ferries & water transfers', 'url' => '/catalog/sea-transport'],
         ['icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers', 'url' => '/catalog/land-transport'],
         ['icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'subtitle' => 'Tours and activities', 'url' => '/catalog/excursion'],
         ['icon' => 'fa-solid fa-map-location-dot', 'title' => 'Blog', 'subtitle' => 'Travel stories and island picks', 'url' => '/blog'],
@@ -673,7 +673,7 @@ Route::get('/', function (Request $request) {
         $transportRows = $allProperties
             ->filter(static function ($row) {
                 $category = strtolower(trim(str_replace('-', '_', (string) ($row->listing_category ?? ''))));
-                return in_array($category, ['marine_transport', 'land_transport'], true);
+                return in_array($category, ['sea_transport', 'marine_transport', 'land_transport'], true);
             })
             ->take(2000)
             ->values();
@@ -813,7 +813,7 @@ Route::get('/', function (Request $request) {
                     'conference_rooms' => 'conference_room',
                     'excursions', 'experience', 'experiences', 'watersports', 'water_sports' => 'excursion',
                     'workspace', 'work_friendly', 'workfriendly' => 'remote_workspace',
-                    'marine', 'marine_transfer', 'marine_transfers' => 'marine_transport',
+                    'marine', 'marine_transfer', 'marine_transfers', 'marine_transport' => 'sea_transport',
                     'land', 'land_transfer', 'land_transfers' => 'land_transport',
                     default => $normalized,
                 };
@@ -826,7 +826,7 @@ Route::get('/', function (Request $request) {
 
             $homeCategoryPriceBucket = static function ($property) use ($normalizeHomeCategoryKey): string {
                 $category = $normalizeHomeCategoryKey((string) ($property->listing_category ?? ''));
-                if (in_array($category, ['marine_transport', 'land_transport'], true)) {
+                if (in_array($category, ['sea_transport', 'land_transport'], true)) {
                     return $category;
                 }
 
@@ -846,14 +846,14 @@ Route::get('/', function (Request $request) {
 
                 if ($category === 'transport') {
                     if (preg_match('/speed\\s*boat|ferry|boat|dhoni|yacht|launch|catamaran|seaplane/i', $metaText) === 1) {
-                        return 'marine_transport';
+                        return 'sea_transport';
                     }
 
                     if (preg_match('/car|van|taxi|bus|coach|bike|suv|land/i', $metaText) === 1) {
                         return 'land_transport';
                     }
 
-                    return 'marine_transport';
+                    return 'sea_transport';
                 }
 
                 if ($category === 'water_sports') {
@@ -998,7 +998,8 @@ Route::get('/', function (Request $request) {
                 $key = strtolower(trim((string) ($card['title'] ?? '')));
                 $categoryHint = match ($key) {
                     'accommodation' => 'accommodation',
-                    'marine transport' => 'marine_transport',
+                    'sea transport' => 'sea_transport',
+                    'marine transport' => 'sea_transport',
                     'land transport' => 'land_transport',
                     'excursions' => 'excursion',
                     'remote workspace' => 'remote_workspace',
@@ -1024,7 +1025,8 @@ Route::get('/', function (Request $request) {
             $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categoryCounts) {
                 $categoryHint = match ($card['title']) {
                     'Stay Options' => 'accommodation',
-                    'Marine Transport' => 'marine_transport',
+                    'Sea Transport' => 'sea_transport',
+                    'Marine Transport' => 'sea_transport',
                     'Land Transport' => 'land_transport',
                     'Experiences' => 'excursion',
                     'Work-Friendly' => 'remote_workspace',
@@ -1047,7 +1049,8 @@ Route::get('/', function (Request $request) {
             $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categorySamples, $categoryMinPriceRows, $globalMinPriceRow, $resolvePropertyImage, $resolvePropertyFallbackImage, $propertyLocationLabel, $displayPriceForVisitor) {
                 $categoryHint = match ($card['title']) {
                     'Stay Options' => 'accommodation',
-                    'Marine Transport' => 'marine_transport',
+                    'Sea Transport' => 'sea_transport',
+                    'Marine Transport' => 'sea_transport',
                     'Land Transport' => 'land_transport',
                     'Experiences' => 'excursion',
                     'Work-Friendly' => 'remote_workspace',

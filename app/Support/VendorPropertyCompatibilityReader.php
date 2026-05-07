@@ -728,7 +728,6 @@ class VendorPropertyCompatibilityReader
         return [
             'accommodation' => 'vendor_accommodation_listings',
             'conference_room' => 'vendor_conference_room_listings',
-            'marine_transport' => 'vendor_marine_transport_listings',
             'land_transport' => 'vendor_land_transport_listings',
             'excursion' => 'vendor_excursion_listings',
             'remote_workspace' => 'vendor_remote_workspace_listings',

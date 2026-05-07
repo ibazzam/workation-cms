@@ -10,7 +10,7 @@
                                     && in_array((string) $forcedListingCategory, $listingCategoryViewOrder, true);
                                 $defaultCreateCategory = old('listing_category');
                                 if (!is_string($defaultCreateCategory) || trim($defaultCreateCategory) === '') {
-                                    $defaultCreateCategory = in_array($forcedListingCategory, ['marine_transport', 'land_transport'], true)
+                                    $defaultCreateCategory = in_array($forcedListingCategory, ['sea_transport', 'marine_transport', 'land_transport'], true)
                                         ? 'transport'
                                         : ($forcedListingCategory !== '' ? $forcedListingCategory : null);
                                 }

@@ -55,11 +55,15 @@
         $adults = max(1, (int) ($summary['adults'] ?? 1));
         $children = max(0, (int) ($summary['children'] ?? 0));
         $isForeigner = strtolower(trim((string) ($summary['guest_residency'] ?? ''))) === 'foreign_national';
-        $baseTotal = max(0, (float) ($summary['discounted_subtotal'] ?? ((float) ($summary['invoice_total_amount'] ?? 0))));
-        $reservationTotal = max(0, (float) ($summary['invoice_total_amount'] ?? 0));
+        // Use base amount without transfer, so we can add transfer charge on top
+        $baseTotal = max(0, (float) ($summary['base_amount_without_transfer'] ?? (float) ($summary['invoice_total_amount'] ?? 0)));
+        $currentTransferCharge = (float) ($summary['current_transfer_charge'] ?? 0);
+        $reservationTotal = max(0, $baseTotal + $currentTransferCharge);
         $backUrl = trim((string) ($backUrl ?? '/'));
         $selectedOption = strtolower(trim((string) ($selectedTransferOption ?? 'none')));
         $includeTransfer = (bool) ($includeTransfer ?? false);
+        $hasTransferOptions = $transferOptions->isNotEmpty();
+        $isExcursion = (bool) ($isExcursion ?? false);
         $hasTransferOptions = $transferOptions->isNotEmpty();
           $headerCategorySource = trim((string) ($summary['category_key'] ?? 'accommodation'));
           $headerCategoryKey = str_replace('_', '-', strtolower($headerCategorySource !== '' ? $headerCategorySource : 'accommodation'));
@@ -111,7 +115,15 @@
             <span class="process-chip">Checkout Process: Step 2 of 4</span>
             <h1 class="title">Select Transfer Option</h1>
             <p class="sub">Guest details and nationality are already captured. Choose transfer here, then continue to payment selection.</p>
-            @if ($isServiceBooking && !$hasTransferOptions)
+            @if ($isExcursion && !$hasTransferOptions)
+                <div class="error-box" style="border-color:#cbe6d9;background:#edf8f5;color:#1a5946;">
+                    <strong>Excursion departure times:</strong> Your selected departure date is {{ (string) ($summary['checkin'] ?? 'TBD') }} and return date is {{ (string) ($summary['checkout'] ?? 'TBD') }}. Time slot and departure time details were selected during guest information step. If you need to change times, please go back.
+                </div>
+            @elseif ($isExcursion && $hasTransferOptions)
+                <div class="error-box" style="border-color:#cbe6d9;background:#edf8f5;color:#1a5946;">
+                    <strong>Excursion with optional transfer:</strong> This excursion includes optional airport transfer service. Select your preferred transfer mode below or proceed without transfer.
+                </div>
+            @elseif (!$hasTransferOptions)
                 <div class="error-box" style="border-color:#cfe0eb;background:#edf6f3;color:#25536d;">
                     Guest details and nationality are already captured. Transfer is included for this service. Continue to payment selection.
                 </div>
@@ -138,63 +150,65 @@
                     </div>
 
                     <div class="matrix-grid">
-                        <section class="matrix-card" aria-label="Local resident rates">
-                            <h3>Local Resident</h3>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Mode</th>
-                                        <th>Adult Fare</th>
-                                        <th>Child Fare</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse ($transferOptions as $option)
-                                        @php
-                                            $label = trim((string) ($option['label'] ?? 'Transfer'));
-                                            $adult = (float) ($option['local_adult_charge'] ?? $option['adult_charge'] ?? 0);
-                                            $child = (float) ($option['local_child_charge'] ?? $option['child_charge'] ?? 0);
-                                        @endphp
+                        @if (!$isForeigner)
+                            <section class="matrix-card" aria-label="Local resident rates" style="grid-column: 1 / -1;">
+                                <h3>Local Resident - Transfer Fares</h3>
+                                <table>
+                                    <thead>
                                         <tr>
-                                            <td>{{ $label }}</td>
-                                            <td>{{ $currency }} {{ number_format($adult, 2) }}</td>
-                                            <td>{{ $currency }} {{ number_format($child, 2) }}</td>
+                                            <th>Mode</th>
+                                            <th>Adult Fare</th>
+                                            <th>Child Fare</th>
                                         </tr>
-                                    @empty
-                                        <tr><td colspan="3">No transfer options configured.</td></tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </section>
-
-                        <section class="matrix-card" aria-label="Foreigner rates">
-                            <h3>Foreigner</h3>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Mode</th>
-                                        <th>Adult Fare</th>
-                                        <th>Child Fare</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse ($transferOptions as $option)
-                                        @php
-                                            $label = trim((string) ($option['label'] ?? 'Transfer'));
-                                            $adult = (float) ($option['foreign_adult_charge'] ?? $option['adult_charge'] ?? 0);
-                                            $child = (float) ($option['foreign_child_charge'] ?? $option['child_charge'] ?? 0);
-                                        @endphp
+                                    </thead>
+                                    <tbody>
+                                        @forelse ($transferOptions as $option)
+                                            @php
+                                                $label = trim((string) ($option['label'] ?? 'Transfer'));
+                                                $adult = (float) ($option['local_adult_charge'] ?? $option['adult_charge'] ?? 0);
+                                                $child = (float) ($option['local_child_charge'] ?? $option['child_charge'] ?? 0);
+                                            @endphp
+                                            <tr>
+                                                <td>{{ $label }}</td>
+                                                <td>{{ $currency }} {{ number_format($adult, 2) }}</td>
+                                                <td>{{ $currency }} {{ number_format($child, 2) }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="3">No transfer options configured.</td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </section>
+                        @else
+                            <section class="matrix-card" aria-label="Foreigner rates" style="grid-column: 1 / -1;">
+                                <h3>Foreigner - Transfer Fares</h3>
+                                <table>
+                                    <thead>
                                         <tr>
-                                            <td>{{ $label }}</td>
-                                            <td>{{ $currency }} {{ number_format($adult, 2) }}</td>
-                                            <td>{{ $currency }} {{ number_format($child, 2) }}</td>
+                                            <th>Mode</th>
+                                            <th>Adult Fare</th>
+                                            <th>Child Fare</th>
                                         </tr>
-                                    @empty
-                                        <tr><td colspan="3">No transfer options configured.</td></tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </section>
+                                    </thead>
+                                    <tbody>
+                                        @forelse ($transferOptions as $option)
+                                            @php
+                                                $label = trim((string) ($option['label'] ?? 'Transfer'));
+                                                $adult = (float) ($option['foreign_adult_charge'] ?? $option['adult_charge'] ?? 0);
+                                                $child = (float) ($option['foreign_child_charge'] ?? $option['child_charge'] ?? 0);
+                                            @endphp
+                                            <tr>
+                                                <td>{{ $label }}</td>
+                                                <td>{{ $currency }} {{ number_format($adult, 2) }}</td>
+                                                <td>{{ $currency }} {{ number_format($child, 2) }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="3">No transfer options configured.</td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </section>
+                        @endif
                     </div>
 
                     <p class="helper">Guest nationality: <strong>{{ (string) ($summary['primary_nationality'] ?? '-') }}</strong>. Applied rate type: <strong id="rateTypeLabel">{{ $isForeigner ? 'Foreigner' : 'Local Resident' }}</strong>.</p>

@@ -727,6 +727,8 @@ class VendorPropertyCompatibilityReader
             'restaurant' => 'vendor_restaurant_listings',
             'vehicle_rental' => 'vendor_vehicle_rental_listings',
             'water_sports' => 'vendor_water_sports_listings',
+            'sea_transport' => 'vendor_sea_transport_listings',
+            'liveaboard' => 'vendor_liveaboard_listings',
         ];
     }
 

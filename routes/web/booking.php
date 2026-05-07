@@ -864,6 +864,8 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         'resort_day_visit' => ['label' => 'Resort Day Visit', 'start_label' => 'Visit Date', 'end_label' => 'Return Date'],
         'restaurant' => ['label' => 'Restaurant', 'start_label' => 'Reservation Date & Time', 'end_label' => 'Expected Departure Date & Time'],
         'vehicle_rental' => ['label' => 'Vehicle Rental', 'start_label' => 'Pickup Date', 'end_label' => 'Return Date'],
+        'sea_transport' => ['label' => 'Sea Transport & Ferries', 'start_label' => 'Travel Date', 'end_label' => 'Return Date'],
+        'liveaboard' => ['label' => 'Liveaboard / Safari', 'start_label' => 'Journey Start Date', 'end_label' => 'Journey End Date'],
     ];
 
     $categoryFieldMap = [
@@ -919,6 +921,14 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             ['key' => 'pickup_location', 'label' => 'Pickup Location', 'type' => 'text', 'required' => true],
             ['key' => 'dropoff_location', 'label' => 'Drop-off Location', 'type' => 'text', 'required' => true],
             ['key' => 'driver_license_number', 'label' => "Driver's License Number", 'type' => 'text', 'required' => false],
+        ],
+        'sea_transport' => [
+            ['key' => 'selected_seats', 'label' => 'Selected Seats', 'type' => 'text', 'required' => true],
+            ['key' => 'seat_count', 'label' => 'Number of Seats', 'type' => 'number', 'required' => true, 'min' => 1],
+        ],
+        'liveaboard' => [
+            ['key' => 'boarding_point', 'label' => 'Boarding Point', 'type' => 'text', 'required' => true],
+            ['key' => 'disembark_point', 'label' => 'Disembarking Point', 'type' => 'text', 'required' => true],
         ],
     ];
 
@@ -1519,11 +1529,18 @@ Route::post('/booking/reserve-category', function (Request $request) {
     $infants = (int) ($payload['infants'] ?? 0);
 
     $routeName = '';
-    if (in_array($categoryKey, ['marine-transport', 'land-transport'], true)) {
-        $origin = trim((string) ($payload['origin_point'] ?? ''));
-        $destination = trim((string) ($payload['destination_point'] ?? ''));
+    if (in_array($categoryKey, ['marine-transport', 'land-transport', 'sea_transport'], true)) {
+        $origin = trim((string) ($payload['origin_point'] ?? ($listingDetails['departure_point'] ?? '')));
+        $destination = trim((string) ($payload['destination_point'] ?? ($listingDetails['arrival_point'] ?? '')));
         if ($origin !== '' || $destination !== '') {
             $routeName = trim($origin . ' -> ' . $destination);
+        }
+    }
+    if ($categoryKey === 'liveaboard') {
+        $boardingPt   = trim((string) ($payload['boarding_point'] ?? ''));
+        $disembarkPt  = trim((string) ($payload['disembark_point'] ?? ''));
+        if ($boardingPt !== '' || $disembarkPt !== '') {
+            $routeName = trim($boardingPt . ' -> ' . $disembarkPt);
         }
     }
 
@@ -1531,6 +1548,8 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'accommodation' => max(1, (int) ($payload['rooms'] ?? 1)),
         'conference_room' => max(1, (int) ($payload['expected_capacity'] ?? ($adults + $children))),
         'marine-transport', 'land-transport', 'excursion', 'resort_day_visit', 'restaurant' => max(1, $adults + $children),
+        'sea_transport' => max(1, (int) ($payload['seat_count'] ?? 1)),
+        'liveaboard' => max(1, $adults + $children),
         default => 1,
     };
 
@@ -1602,6 +1621,29 @@ Route::post('/booking/reserve-category', function (Request $request) {
                 + ($effectiveInfantPrice * $infants);
         } elseif ($effectiveFlatPrice > 0) {
             $serviceSubtotal = $effectiveFlatPrice * $units;
+        }
+
+        // Sea transport: price per seat (local MVR or foreign USD rate)
+        if ($categoryKey === 'sea_transport') {
+            $seatCount = max(1, (int) ($payload['seat_count'] ?? 1));
+            $isLocal = $guestResidency === 'local_resident';
+            $pricePerSeat = $isLocal
+                ? (float) ($listingDetails['local_price'] ?? 0)
+                : (float) ($listingDetails['foreign_price'] ?? 0);
+            if ($pricePerSeat > 0) {
+                $serviceSubtotal = $pricePerSeat * $seatCount;
+            }
+        }
+
+        // Liveaboard: pricing matrix lookup
+        if ($categoryKey === 'liveaboard') {
+            $boardingPt   = trim((string) ($payload['boarding_point'] ?? ''));
+            $disembarkPt  = trim((string) ($payload['disembark_point'] ?? ''));
+            $routeKey = $boardingPt . '→' . $disembarkPt;
+            $pricingMatrix = (array) ($listingDetails['pricing_matrix'] ?? []);
+            if (isset($pricingMatrix[$routeKey]) && (float) $pricingMatrix[$routeKey] > 0) {
+                $serviceSubtotal = (float) $pricingMatrix[$routeKey];
+            }
         }
     }
 
@@ -2239,25 +2281,40 @@ Route::get('/booking/checkout/{reservation}/transfer', function (Request $reques
 
     $backUrl = '/booking/checkout/' . $reservation . '?edit_guest=1';
 
+    $isExcursion = strcasecmp($reservationCategoryKey, 'excursion') === 0;
+    $startDate = trim((string) ($notes['service_start_date'] ?? ''));
+    $endDate = trim((string) ($notes['service_end_date'] ?? ''));
+
+    // Calculate base amount without transfer
+    $invoiceTotal = (float) ($notes['invoice_total_amount'] ?? ($reservationRow->total_amount ?? 0));
+    $currentTransferCharge = (float) ($notes['transfer_charge_total'] ?? ($notes['transfer_charge'] ?? 0));
+    $baseAmountWithoutTransfer = max(0, $invoiceTotal - $currentTransferCharge);
+
     return view('booking-transfer-selection', [
         'reservation' => $reservationRow,
         'property' => $propertyRow,
         'room' => $roomRow,
         'summary' => [
             'category_key' => $reservationCategoryKey,
-            'checkin' => trim((string) ($notes['service_start_date'] ?? '')),
-            'checkout' => trim((string) ($notes['service_end_date'] ?? '')),
+            'checkin' => $startDate,
+            'checkout' => $endDate,
             'adults' => max(1, (int) ($notes['adults'] ?? 1)),
             'children' => max(0, (int) ($notes['children'] ?? 0)),
             'primary_nationality' => $primaryNationality,
             'guest_residency' => $guestResidency,
-            'invoice_total_amount' => (float) ($notes['invoice_total_amount'] ?? ($reservationRow->total_amount ?? 0)),
+            'invoice_total_amount' => $invoiceTotal,
+            'base_amount_without_transfer' => $baseAmountWithoutTransfer,
+            'current_transfer_charge' => $currentTransferCharge,
             'discounted_subtotal' => (float) ($notes['discounted_subtotal'] ?? 0),
+            'subtotal_amount' => (float) ($notes['subtotal_amount'] ?? 0),
+            'transfer_charge_total' => $currentTransferCharge,
         ],
         'transferOptions' => $transferOptions,
         'selectedTransferOption' => old('transfer_option', $savedTransferOption),
         'includeTransfer' => old('include_transfer', $includeTransfer ? '1' : '0') === '1',
         'backUrl' => $backUrl,
+        'isExcursion' => $isExcursion,
+        'hasTransferOptions' => $transferOptions->isNotEmpty(),
         'currency' => strtoupper(trim((string) ($notes['quote_payment_currency'] ?? $reservationRow->currency ?? $roomRow->currency ?? $propertyRow->currency ?? 'MVR'))),
     ]);
 });
@@ -3241,7 +3298,7 @@ Route::post('/booking/water-sports-cart', function (Request $request) {
 
     // Collect unique item IDs from cart
     $requestedItemIds = collect($cartRaw)
-        ->map(static fn ($entry) => (int) ($entry['itemId'] ?? 0))
+        ->map(static fn ($entry) => (int) ($entry['itemId'] ?? $entry['id'] ?? 0))
         ->filter(static fn (int $id) => $id > 0)
         ->unique()
         ->values()
@@ -3259,10 +3316,8 @@ Route::post('/booking/water-sports-cart', function (Request $request) {
     $errors     = [];
 
     foreach ($cartRaw as $idx => $entry) {
-        $itemId      = (int) ($entry['itemId'] ?? 0);
-        $qty         = max(1, (int) ($entry['qty'] ?? 1));
-        $durationMins= max(1, (int) ($entry['durationMins'] ?? 30));
-        $guestType   = in_array((string) ($entry['guestType'] ?? 'adult'), ['adult', 'child']) ? (string) $entry['guestType'] : 'adult';
+        $itemId      = (int) ($entry['itemId'] ?? $entry['id'] ?? 0);
+        $pricingType = in_array((string) ($entry['pricingType'] ?? $entry['pricing_type'] ?? 'hourly'), ['per_seat', 'hourly']) ? (string) ($entry['pricingType'] ?? $entry['pricing_type'] ?? 'hourly') : 'hourly';
 
         $dbItem = $dbItems->get($itemId);
         if (!$dbItem) {
@@ -3271,22 +3326,48 @@ Route::post('/booking/water-sports-cart', function (Request $request) {
         }
 
         $qtyAvail = (int) ($dbItem->quantity_available ?? 1);
-        if ($qty > $qtyAvail) {
-            $errors[] = 'Only ' . $qtyAvail . ' unit(s) of "' . $dbItem->name . '" available.';
-            $qty = $qtyAvail;
-        }
 
-        if ($visitorIsLocal) {
-            $unitPrice = $guestType === 'child'
-                ? (float) ($dbItem->price_per_hour_child_local ?? 0)
-                : (float) ($dbItem->price_per_hour_local ?? 0);
+        if ($pricingType === 'per_seat') {
+            $adultQty = max(0, (int) ($entry['adultQty'] ?? 0));
+            $childQty = max(0, (int) ($entry['childQty'] ?? 0));
+            $qty      = $adultQty + $childQty;
+            if ($qty === 0) continue;
+
+            if ($visitorIsLocal) {
+                $adultPrice = (float) ($dbItem->price_per_seat_adult_local ?? 0);
+                $childPrice = (float) ($dbItem->price_per_seat_child_local ?? 0);
+            } else {
+                $adultPrice = (float) ($dbItem->price_per_seat_adult_usd ?? 0);
+                $childPrice = (float) ($dbItem->price_per_seat_child_usd ?? 0);
+            }
+
+            $lineTotal  = ($adultQty * $adultPrice) + ($childQty * $childPrice);
+            $unitPrice  = $qty > 0 ? round($lineTotal / $qty, 4) : 0;
+            $durationMins = 0;
+            $guestType  = 'mixed';
         } else {
-            $unitPrice = $guestType === 'child'
-                ? (float) ($dbItem->price_per_hour_child_usd ?? 0)
-                : (float) ($dbItem->price_per_hour_usd ?? 0);
+            $qty          = max(1, (int) ($entry['qty'] ?? 1));
+            $durationMins = max(1, (int) ($entry['durationMins'] ?? 30));
+            $guestType    = in_array((string) ($entry['guestType'] ?? 'adult'), ['adult', 'child']) ? (string) $entry['guestType'] : 'adult';
+
+            if ($qty > $qtyAvail) {
+                $errors[] = 'Only ' . $qtyAvail . ' unit(s) of "' . $dbItem->name . '" available.';
+                $qty = $qtyAvail;
+            }
+
+            if ($visitorIsLocal) {
+                $unitPrice = $guestType === 'child'
+                    ? (float) ($dbItem->price_per_hour_child_local ?? 0)
+                    : (float) ($dbItem->price_per_hour_local ?? 0);
+            } else {
+                $unitPrice = $guestType === 'child'
+                    ? (float) ($dbItem->price_per_hour_child_usd ?? 0)
+                    : (float) ($dbItem->price_per_hour_usd ?? 0);
+            }
+
+            $lineTotal = $unitPrice * $qty * ($durationMins / 60);
         }
 
-        $lineTotal   = $unitPrice * $qty * ($durationMins / 60);
         $grandTotal += $lineTotal;
 
         $lineItems[] = [

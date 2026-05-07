@@ -640,6 +640,144 @@
         .form-errors { margin:0 0 10px; border:1px solid #e6b2b2; background:#fff5f5; color:#8f2323; border-radius:10px; padding:10px 12px; }
         .form-errors ul { margin:0; padding-left:18px; }
 
+        /* ── Water sports equipment cart ── */
+        .equipment-add-row {
+            border-top: 1px solid var(--line);
+            padding-top: 10px;
+            margin-top: 4px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+        .equipment-stepper {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            border: 1px solid #b8d9e2;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f8fdff;
+        }
+        .equipment-stepper button {
+            width: 30px;
+            height: 32px;
+            border: 0;
+            background: transparent;
+            font: inherit;
+            font-size: 1rem;
+            color: #0f6179;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .equipment-stepper button:hover { background: #eef8fc; }
+        .equipment-stepper input[type=number] {
+            width: 42px;
+            height: 32px;
+            border: 0;
+            border-left: 1px solid #b8d9e2;
+            border-right: 1px solid #b8d9e2;
+            border-radius: 0;
+            background: transparent;
+            text-align: center;
+            font: inherit;
+            font-size: 0.88rem;
+            padding: 0;
+            -moz-appearance: textfield;
+        }
+        .equipment-stepper input[type=number]::-webkit-inner-spin-button,
+        .equipment-stepper input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+        .equipment-stepper-label {
+            font-size: 0.72rem;
+            color: #5f7488;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .equipment-add-btn {
+            margin-left: auto;
+            border: 1px solid #0f6179;
+            background: #0f6179;
+            color: #fff;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font: inherit;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .equipment-add-btn:hover { background: #0d5268; }
+        .equipment-add-btn:disabled { opacity: 0.45; cursor: default; }
+
+        /* ── Cart panel (right aside) ── */
+        .ws-cart-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        .ws-cart-empty {
+            text-align: center;
+            padding: 18px 10px;
+            color: #8fa8b8;
+            font-size: 0.84rem;
+        }
+        .ws-cart-empty i { display: block; font-size: 2rem; margin-bottom: 6px; color: #c0d6e0; }
+        .ws-cart-items { display: flex; flex-direction: column; gap: 0; }
+        .ws-cart-row {
+            display: grid;
+            grid-template-columns: minmax(0,1fr) auto;
+            gap: 6px;
+            align-items: start;
+            padding: 9px 0;
+            border-bottom: 1px solid #e2edf4;
+        }
+        .ws-cart-row:last-child { border-bottom: 0; }
+        .ws-cart-row-name { font-size: 0.84rem; font-weight: 700; color: #1f4760; }
+        .ws-cart-row-meta { font-size: 0.78rem; color: #5f7488; margin-top: 2px; }
+        .ws-cart-row-price { font-size: 0.84rem; font-weight: 700; color: #1a4360; white-space: nowrap; }
+        .ws-cart-remove-btn {
+            background: transparent;
+            border: 0;
+            color: #b05050;
+            cursor: pointer;
+            font-size: 0.88rem;
+            padding: 2px 4px;
+            line-height: 1;
+        }
+        .ws-cart-remove-btn:hover { color: #8c1e1e; }
+        .ws-cart-totals {
+            border-top: 2px solid #d5e2ec;
+            margin-top: 4px;
+            padding-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        .ws-cart-totals-label {
+            font-size: 0.76rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: #3b5f75;
+            font-family: "Space Grotesk","Trebuchet MS",sans-serif;
+        }
+        .ws-cart-totals-amount {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #1a4360;
+        }
+        .ws-cart-nationality-note {
+            margin: 8px 0 0;
+            font-size: 0.75rem;
+            color: #5f7488;
+            font-style: italic;
+        }
+
         .summary {
             margin-top:10px;
             border:1px solid #dbe7f0;
@@ -1356,13 +1494,32 @@
                                     $itemName = (string) ($item->name ?? 'Equipment');
                                     $itemDescription = (string) ($item->description ?? '');
                                     $itemCategory = (string) ($item->equipment_category ?? '');
+                                    $itemPricingType = strtolower(trim((string) ($item->pricing_type ?? 'hourly')));
                                     $itemPriceLocal = (float) ($item->price_per_hour_local ?? 0);
                                     $itemPriceForeign = (float) ($item->price_per_hour_usd ?? 0);
+                                    $itemSeatAdultLocal = (float) ($item->price_per_seat_adult_local ?? 0);
+                                    $itemSeatAdultForeign = (float) ($item->price_per_seat_adult_usd ?? 0);
+                                    $itemSeatChildLocal = (float) ($item->price_per_seat_child_local ?? 0);
+                                    $itemSeatChildForeign = (float) ($item->price_per_seat_child_usd ?? 0);
                                     $itemQuantity = (int) ($item->quantity_available ?? 0);
                                     $itemMinAge = (int) ($item->min_age_years ?? 0);
+                                    $itemRequiresSwimming = (bool) ($item->requires_swimming ?? false);
+                                    $itemSafetyNotes = trim((string) ($item->safety_notes ?? ''));
                                     $itemMinDuration = (int) ($item->min_duration_minutes ?? 0);
+                                    $itemMinHours = $itemMinDuration > 0 ? max(0.5, round($itemMinDuration / 60, 1)) : 1;
                                 @endphp
-                                <article class="equipment-card" data-item-id="{{ $itemId }}" style="border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: var(--surface); display: flex; flex-direction: column; gap: 10px;">
+                                <article class="equipment-card" data-item-id="{{ $itemId }}"
+                                    data-item-name="{{ e($itemName) }}"
+                                    data-pricing-type="{{ $itemPricingType }}"
+                                    data-price-local="{{ $itemPriceLocal }}"
+                                    data-price-foreign="{{ $itemPriceForeign }}"
+                                    data-seat-adult-local="{{ $itemSeatAdultLocal }}"
+                                    data-seat-adult-foreign="{{ $itemSeatAdultForeign }}"
+                                    data-seat-child-local="{{ $itemSeatChildLocal }}"
+                                    data-seat-child-foreign="{{ $itemSeatChildForeign }}"
+                                    data-max-qty="{{ $itemQuantity }}"
+                                    data-min-hours="{{ $itemMinHours }}"
+                                    style="border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: var(--surface); display: flex; flex-direction: column; gap: 10px;">
                                     <div style="display: flex; justify-content: space-between; align-items: start; gap: 8px;">
                                         <h3 style="margin: 0; font-size: 1rem; color: var(--ink);">{{ $itemName }}</h3>
                                         @if ($itemCategory !== '')
@@ -1372,27 +1529,99 @@
                                     @if ($itemDescription !== '')
                                         <p style="margin: 0; font-size: 0.88rem; color: var(--muted); line-height: 1.4;">{{ $itemDescription }}</p>
                                     @endif
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem; color: var(--muted);">
-                                        @if ($itemMinAge > 0)
-                                            <div><i class="fa-solid fa-birthday-cake" aria-hidden="true"></i> Min age: {{ $itemMinAge }}y</div>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.82rem; color: var(--muted);">
+                                        @if ($itemPricingType !== 'per_seat' && $itemMinDuration > 0)
+                                            <span><i class="fa-solid fa-hourglass-end" aria-hidden="true"></i> Min: {{ floor($itemMinDuration / 60) }}h {{ $itemMinDuration % 60 }}m</span>
                                         @endif
-                                        @if ($itemMinDuration > 0)
-                                            <div><i class="fa-solid fa-hourglass-end" aria-hidden="true"></i> Min: {{ floor($itemMinDuration / 60) }}h {{ $itemMinDuration % 60 }}m</div>
-                                        @endif
-                                        <div><i class="fa-solid fa-box" aria-hidden="true"></i> Available: {{ $itemQuantity }}</div>
+                                        <span><i class="fa-solid fa-box" aria-hidden="true"></i> Available: {{ $itemQuantity }}</span>
                                     </div>
-                                    <div style="border-top: 1px solid var(--line); padding-top: 8px; margin-top: 4px;">
-                                        <p style="margin: 0; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px;">Price per hour</p>
-                                        <div style="display: flex; flex-direction: column; gap: 2px;">
-                                            @if ($itemPriceLocal > 0)
-                                                <strong style="color: var(--ink);">MVR {{ number_format($itemPriceLocal, 2) }}</strong>
+                                    {{-- Safety requirements block --}}
+                                    @if ($itemRequiresSwimming || $itemMinAge > 0 || $itemSafetyNotes !== '')
+                                        <div style="border:1px solid #fde8c8; background:#fffbf3; border-radius:6px; padding:8px 10px;">
+                                            <p style="margin:0 0 4px; font-size:0.75rem; font-weight:700; color:#a0570a; text-transform:uppercase; letter-spacing:0.05em;">
+                                                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Safety Requirements
+                                            </p>
+                                            @if ($itemMinAge > 0)
+                                                <p style="margin:0 0 3px; font-size:0.82rem; color:#6b3e00;">
+                                                    <i class="fa-solid fa-child" aria-hidden="true"></i> Minimum age: {{ $itemMinAge }} years
+                                                </p>
                                             @endif
-                                            @if ($itemPriceForeign > 0)
-                                                <span style="color: var(--muted); font-size: 0.85rem;">≈ USD {{ number_format($itemPriceForeign, 2) }}</span>
+                                            @if ($itemRequiresSwimming)
+                                                <p style="margin:0 0 3px; font-size:0.82rem; color:#0a4f7a;">
+                                                    <i class="fa-solid fa-water" aria-hidden="true"></i> Must know how to swim
+                                                </p>
+                                            @endif
+                                            @if ($itemSafetyNotes !== '')
+                                                <p style="margin:0; font-size:0.8rem; color:#4a4a4a; line-height:1.4;">{{ $itemSafetyNotes }}</p>
                                             @endif
                                         </div>
+                                    @endif
+                                    {{-- Price display --}}
+                                    <div style="border-top: 1px solid var(--line); padding-top: 8px; margin-top: 4px;">
+                                        @if ($itemPricingType === 'per_seat')
+                                            <p style="margin: 0 0 4px; font-size: 0.85rem; color: var(--muted);">Price per person</p>
+                                            <div style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.9rem;">
+                                                @if ($itemSeatAdultLocal > 0 || $itemSeatAdultForeign > 0)
+                                                    <div>
+                                                        <span style="font-size:0.75rem; color:var(--muted); display:block;">Adult</span>
+                                                        @if ($itemSeatAdultLocal > 0)<strong style="color:var(--ink);">MVR {{ number_format($itemSeatAdultLocal, 2) }}</strong>@endif
+                                                        @if ($itemSeatAdultForeign > 0)<span style="color:var(--muted); font-size:0.82rem;"> / USD {{ number_format($itemSeatAdultForeign, 2) }}</span>@endif
+                                                    </div>
+                                                @endif
+                                                @if ($itemSeatChildLocal > 0 || $itemSeatChildForeign > 0)
+                                                    <div>
+                                                        <span style="font-size:0.75rem; color:var(--muted); display:block;">Child</span>
+                                                        @if ($itemSeatChildLocal > 0)<strong style="color:var(--ink);">MVR {{ number_format($itemSeatChildLocal, 2) }}</strong>@endif
+                                                        @if ($itemSeatChildForeign > 0)<span style="color:var(--muted); font-size:0.82rem;"> / USD {{ number_format($itemSeatChildForeign, 2) }}</span>@endif
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <p style="margin: 0; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px;">Price per hour</p>
+                                            <div style="display: flex; gap: 10px; align-items: baseline;">
+                                                @if ($itemPriceLocal > 0)
+                                                    <strong style="color: var(--ink);">MVR {{ number_format($itemPriceLocal, 2) }}</strong>
+                                                @endif
+                                                @if ($itemPriceForeign > 0)
+                                                    <span style="color: var(--muted); font-size: 0.85rem;">≈ USD {{ number_format($itemPriceForeign, 2) }}</span>
+                                                @endif
+                                            </div>
+                                        @endif
                                     </div>
-                                    <p style="margin: 0; font-size: 0.78rem; color: var(--muted); font-style: italic; margin-top: 4px;">Details will be confirmed after booking.</p>
+                                    {{-- Add to Cart controls --}}
+                                    <div class="equipment-add-row">
+                                        @if ($itemPricingType === 'per_seat')
+                                            <span class="equipment-stepper-label">Adults</span>
+                                            <div class="equipment-stepper" data-stepper="adults">
+                                                <button type="button" data-step="-1" aria-label="Decrease adults">−</button>
+                                                <input type="number" data-adult-input min="0" max="{{ $itemQuantity }}" step="1" value="1" aria-label="Number of adults">
+                                                <button type="button" data-step="+1" aria-label="Increase adults">+</button>
+                                            </div>
+                                            <span class="equipment-stepper-label" style="margin-left:6px;">Children</span>
+                                            <div class="equipment-stepper" data-stepper="children">
+                                                <button type="button" data-step="-1" aria-label="Decrease children">−</button>
+                                                <input type="number" data-child-input min="0" max="{{ $itemQuantity }}" step="1" value="0" aria-label="Number of children">
+                                                <button type="button" data-step="+1" aria-label="Increase children">+</button>
+                                            </div>
+                                        @else
+                                            <span class="equipment-stepper-label">Duration</span>
+                                            <div class="equipment-stepper" data-stepper="duration">
+                                                <button type="button" data-step="-0.5" aria-label="Decrease duration">−</button>
+                                                <input type="number" data-duration-input min="{{ $itemMinHours }}" step="0.5" value="{{ $itemMinHours }}" aria-label="Duration in hours">
+                                                <button type="button" data-step="+0.5" aria-label="Increase duration">+</button>
+                                            </div>
+                                            <span style="font-size:0.78rem;color:#5f7488;">hrs</span>
+                                            <span class="equipment-stepper-label" style="margin-left:6px;">Qty</span>
+                                            <div class="equipment-stepper" data-stepper="qty">
+                                                <button type="button" data-step="-1" aria-label="Decrease quantity">−</button>
+                                                <input type="number" data-qty-input min="1" max="{{ $itemQuantity }}" step="1" value="1" aria-label="Quantity">
+                                                <button type="button" data-step="+1" aria-label="Increase quantity">+</button>
+                                            </div>
+                                        @endif
+                                        <button type="button" class="equipment-add-btn" data-add-to-cart aria-label="Add {{ e($itemName) }} to order">
+                                            <i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Add
+                                        </button>
+                                    </div>
                                 </article>
                             @endforeach
                         </div>
@@ -1508,85 +1737,105 @@
                                     </div>
                                 @endif
                             @endforeach
-                            @if ($transferIncluded)
-                                @if ($departureTimeMode === 'slots' && $departureSlots !== [])
-                                    <div class="field full">
-                                        <label for="departureTimeSelect">Departure Time</label>
-                                        <select id="departureTimeSelect" name="departure_time" class="{{ $errors->has('departure_time') ? 'input-error' : '' }}" required>
-                                            <option value="">Select departure time</option>
-                                            @foreach ($departureSlots as $slot)
-                                                <option value="{{ $slot }}" {{ old('departure_time') === $slot ? 'selected' : '' }}>{{ $slot }}</option>
-                                            @endforeach
-                                        </select>
-                                        @error('departure_time')<p class="error-text">{{ $message }}</p>@enderror
-                                    </div>
-                                @elseif ($departureTimeFixed !== '')
-                                    <div class="field full">
-                                        <label>Departure Time</label>
-                                        <input type="hidden" name="departure_time" value="{{ old('departure_time', $departureTimeFixed) }}">
-                                        <p class="required-note" style="margin-top:0;">{{ old('departure_time', $departureTimeFixed) }}</p>
-                                    </div>
-                                @endif
+                            @if ($departureTimeMode === 'slots' && $departureSlots !== [])
+                                <div class="field full">
+                                    <label for="departureTimeSelect">Departure Time</label>
+                                    <select id="departureTimeSelect" name="departure_time" class="{{ $errors->has('departure_time') ? 'input-error' : '' }}" required>
+                                        <option value="">Select departure time</option>
+                                        @foreach ($departureSlots as $slot)
+                                            <option value="{{ $slot }}" {{ old('departure_time') === $slot ? 'selected' : '' }}>{{ $slot }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('departure_time')<p class="error-text">{{ $message }}</p>@enderror
+                                </div>
+                            @elseif ($departureTimeFixed !== '')
+                                <div class="field full">
+                                    <label>Departure Time</label>
+                                    <input type="hidden" name="departure_time" value="{{ old('departure_time', $departureTimeFixed) }}">
+                                    <p class="required-note" style="margin-top:0;">{{ old('departure_time', $departureTimeFixed) }}</p>
+                                </div>
+                            @endif
 
-                                @if ($returnTimeMode === 'slots' && $returnSlots !== [])
-                                    <div class="field full">
-                                        <label for="returnSlotSelect">Return Time</label>
-                                        <select id="returnSlotSelect" name="return_slot" class="{{ $errors->has('return_slot') ? 'input-error' : '' }}" required>
-                                            <option value="">Select return time</option>
-                                            @foreach ($returnSlots as $slot)
-                                                <option value="{{ $slot }}" {{ old('return_slot') === $slot ? 'selected' : '' }}>{{ $slot }}</option>
-                                            @endforeach
-                                        </select>
-                                        @error('return_slot')<p class="error-text">{{ $message }}</p>@enderror
-                                    </div>
-                                @elseif ($returnTimeFixed !== '')
-                                    <div class="field full">
-                                        <label>Return Time</label>
-                                        <input type="hidden" name="return_slot" value="{{ old('return_slot', $returnTimeFixed) }}">
-                                        <p class="required-note" style="margin-top:0;">{{ old('return_slot', $returnTimeFixed) }}</p>
-                                    </div>
-                                @endif
+                            @if ($returnTimeMode === 'slots' && $returnSlots !== [])
+                                <div class="field full">
+                                    <label for="returnSlotSelect">Return Time</label>
+                                    <select id="returnSlotSelect" name="return_slot" class="{{ $errors->has('return_slot') ? 'input-error' : '' }}" required>
+                                        <option value="">Select return time</option>
+                                        @foreach ($returnSlots as $slot)
+                                            <option value="{{ $slot }}" {{ old('return_slot') === $slot ? 'selected' : '' }}>{{ $slot }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('return_slot')<p class="error-text">{{ $message }}</p>@enderror
+                                </div>
+                            @elseif ($returnTimeFixed !== '')
+                                <div class="field full">
+                                    <label>Return Time</label>
+                                    <input type="hidden" name="return_slot" value="{{ old('return_slot', $returnTimeFixed) }}">
+                                    <p class="required-note" style="margin-top:0;">{{ old('return_slot', $returnTimeFixed) }}</p>
+                                </div>
                             @endif
                             <div class="field full">
-                                <label>Guests and Price</label>
-                                <div class="booking-lines">
-                                    <div class="booking-line">
-                                        <span class="booking-line-label">Adult</span>
-                                        <span class="booking-line-price">{{ $currency }} {{ number_format($adultUnitPrice, 2) }}</span>
-                                        <select id="adults" name="adults" class="{{ $errors->has('adults') ? 'input-error' : '' }}" data-excursion-qty data-unit-price="{{ $adultUnitPrice }}" required>
-                                            @foreach (range(1, 20) as $qty)
-                                                <option value="{{ $qty }}" {{ $adultSelected === $qty ? 'selected' : '' }}>{{ $qty }}</option>
-                                            @endforeach
-                                        </select>
+                                @if ($categoryKey === 'water_sports' && !empty($rentalItems) && count($rentalItems) > 0)
+                                    {{-- Cart hidden inputs --}}
+                                    <input type="hidden" name="cart_items" id="wsCartItemsInput" value="">
+                                    <input type="hidden" name="adults" id="wsAdultsHidden" value="1">
+                                    <label style="margin-bottom:8px;display:block;">Your Order</label>
+                                    <div class="booking-lines ws-cart-panel" id="wsCartPanel">
+                                        <div class="ws-cart-empty" id="wsCartEmpty">
+                                            <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
+                                            Add equipment from the list on the left
+                                        </div>
+                                        <div class="ws-cart-items" id="wsCartItems" style="display:none;"></div>
                                     </div>
-                                    <div class="booking-line">
-                                        <span class="booking-line-label">Child</span>
-                                        <span class="booking-line-price">{{ $currency }} {{ number_format($childUnitPrice, 2) }}</span>
-                                        <select id="children" name="children" class="{{ $errors->has('children') ? 'input-error' : '' }}" data-excursion-qty data-unit-price="{{ $childUnitPrice }}">
-                                            @foreach ($qtyOptions as $qty)
-                                                <option value="{{ $qty }}" {{ $childSelected === $qty ? 'selected' : '' }}>{{ $qty }}</option>
-                                            @endforeach
-                                        </select>
+                                @else
+                                    <label>Guests and Price</label>
+                                    <div class="booking-lines">
+                                        <div class="booking-line">
+                                            <span class="booking-line-label">Adult</span>
+                                            <span class="booking-line-price">{{ $currency }} {{ number_format($adultUnitPrice, 2) }}</span>
+                                            <select id="adults" name="adults" class="{{ $errors->has('adults') ? 'input-error' : '' }}" data-excursion-qty data-unit-price="{{ $adultUnitPrice }}" required>
+                                                @foreach (range(1, 20) as $qty)
+                                                    <option value="{{ $qty }}" {{ $adultSelected === $qty ? 'selected' : '' }}>{{ $qty }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="booking-line">
+                                            <span class="booking-line-label">Child</span>
+                                            <span class="booking-line-price">{{ $currency }} {{ number_format($childUnitPrice, 2) }}</span>
+                                            <select id="children" name="children" class="{{ $errors->has('children') ? 'input-error' : '' }}" data-excursion-qty data-unit-price="{{ $childUnitPrice }}">
+                                                @foreach ($qtyOptions as $qty)
+                                                    <option value="{{ $qty }}" {{ $childSelected === $qty ? 'selected' : '' }}>{{ $qty }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="booking-line">
+                                            <span class="booking-line-label">Infant</span>
+                                            <span class="booking-line-price">{{ $currency }} {{ number_format($infantUnitPrice, 2) }}</span>
+                                            <select id="infants" name="infants" class="{{ $errors->has('infants') ? 'input-error' : '' }}" data-excursion-qty data-unit-price="{{ $infantUnitPrice }}">
+                                                @foreach ($qtyOptions as $qty)
+                                                    <option value="{{ $qty }}" {{ $infantSelected === $qty ? 'selected' : '' }}>{{ $qty }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div class="booking-line">
-                                        <span class="booking-line-label">Infant</span>
-                                        <span class="booking-line-price">{{ $currency }} {{ number_format($infantUnitPrice, 2) }}</span>
-                                        <select id="infants" name="infants" class="{{ $errors->has('infants') ? 'input-error' : '' }}" data-excursion-qty data-unit-price="{{ $infantUnitPrice }}">
-                                            @foreach ($qtyOptions as $qty)
-                                                <option value="{{ $qty }}" {{ $infantSelected === $qty ? 'selected' : '' }}>{{ $qty }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                                @error('adults')<p class="error-text">{{ $message }}</p>@enderror
-                                @error('children')<p class="error-text">{{ $message }}</p>@enderror
-                                @error('infants')<p class="error-text">{{ $message }}</p>@enderror
+                                    @error('adults')<p class="error-text">{{ $message }}</p>@enderror
+                                    @error('children')<p class="error-text">{{ $message }}</p>@enderror
+                                    @error('infants')<p class="error-text">{{ $message }}</p>@enderror
+                                @endif
                             </div>
                             <div class="booking-total field full" aria-live="polite">
-                                <span>Price Total</span>
-                                <strong id="excursionTotalDisplay">{{ $currency }} {{ number_format($initialExcursionTotal, 2) }}</strong>
-                                @if ($categoryKey === 'water_sports')
-                                    <p style="font-size: 0.78rem; color: #5f7488; margin-top: 8px; margin-bottom: 0; font-style: italic;"><i class="fa-solid fa-info-circle" aria-hidden="true"></i> Final pricing will be calculated from your guest nationality during checkout.</p>
+                                @if ($categoryKey === 'water_sports' && !empty($rentalItems) && count($rentalItems) > 0)
+                                    <div class="ws-cart-totals" id="wsCartTotals">
+                                        <span class="ws-cart-totals-label">Order Total</span>
+                                        <strong class="ws-cart-totals-amount" id="wsCartTotal">MVR 0.00</strong>
+                                    </div>
+                                    <p class="ws-cart-nationality-note"><i class="fa-solid fa-info-circle" aria-hidden="true"></i> Final pricing adjusted for your guest nationality at checkout.</p>
+                                @else
+                                    <span>Price Total</span>
+                                    <strong id="excursionTotalDisplay">{{ $currency }} {{ number_format($initialExcursionTotal, 2) }}</strong>
+                                    @if ($categoryKey === 'water_sports')
+                                        <p style="font-size: 0.78rem; color: #5f7488; margin-top: 8px; margin-bottom: 0; font-style: italic;"><i class="fa-solid fa-info-circle" aria-hidden="true"></i> Final pricing will be calculated from your guest nationality during checkout.</p>
+                                    @endif
                                 @endif
                             </div>
                             <div class="field full">
@@ -1596,7 +1845,7 @@
                         @else
                             <div class="field"><label for="serviceStartDate">{{ (string) ($dateLabels['start'] ?? 'Service Start Date') }}</label><input id="serviceStartDate" name="service_start_date" type="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? 'datetime-local' : 'date' }}" min="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? ((string) ($todayDate ?? now()->toDateString()) . 'T00:00') : (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
                             <div class="field"><label for="serviceEndDate">{{ (string) ($dateLabels['end'] ?? 'Service End Date') }}</label><input id="serviceEndDate" name="service_end_date" type="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? 'datetime-local' : 'date' }}" min="{{ in_array($categoryKey, ['restaurant', 'conference_room']) ? ((string) ($todayDate ?? now()->toDateString()) . 'T00:00') : (string) ($todayDate ?? now()->toDateString()) }}" value="{{ old('service_end_date', (string) ($prefill['service_end_date'] ?? '')) }}" class="{{ $errors->has('service_end_date') ? 'input-error' : '' }}">@error('service_end_date')<p class="error-text">{{ $message }}</p>@enderror</div>
-                            @if ($categoryKey !== 'accommodation' && $transferIncluded)
+                            @if ($categoryKey !== 'accommodation')
                                 @if ($departureTimeMode === 'slots' && $departureSlots !== [])
                                     <div class="field">
                                         <label for="departureTimeSelect">Departure Time</label>
@@ -1647,7 +1896,7 @@
                                     $fieldId = 'categoryField_' . $fieldKey;
                                     $fieldValue = old($fieldKey, $prefill[$fieldKey] ?? '');
                                 @endphp
-                                @if ($transferIncluded && in_array($fieldKey, ['departure_time', 'return_slot'], true))
+                                @if ($categoryKey !== 'accommodation' && in_array($fieldKey, ['departure_time', 'return_slot'], true))
                                     @continue
                                 @endif
                                 @if ($fieldType === 'checkbox')
@@ -1734,8 +1983,11 @@
                     <p class="error-text" data-service-date-error style="display:none; margin:10px 0 0;"></p>
 
                     <div class="actions">
-                        <button class="btn primary" type="submit">{{ $isActivityCategory ? 'Book Now' : 'Proceed to Checkout' }}</button>
-                        <a class="btn" href="/catalog/{{ $categoryKey }}">Back to {{ $categoryLabel }} Catalog</a>
+                        <button class="btn primary" type="submit" id="bookingSubmitBtn"
+                            @if ($categoryKey === 'water_sports' && !empty($rentalItems) && count($rentalItems) > 0)
+                                disabled
+                            @endif
+                        >{{ $isActivityCategory ? 'Book Now' : 'Proceed to Checkout' }}</button>
                     </div>
                 </form>
             </aside>
@@ -1797,6 +2049,189 @@
                 });
                 updateExcursionTotal();
             }
+
+            // ── Water sports equipment cart ────────────────────────────────
+            (function () {
+                const cartPanel   = document.getElementById('wsCartPanel');
+                if (!cartPanel) return; // Not a water_sports cart page
+
+                const cartEmpty   = document.getElementById('wsCartEmpty');
+                const cartItems   = document.getElementById('wsCartItems');
+                const cartTotal   = document.getElementById('wsCartTotal');
+                const cartInput   = document.getElementById('wsCartItemsInput');
+                const adultsInput = document.getElementById('wsAdultsHidden');
+                const submitBtn   = document.getElementById('bookingSubmitBtn');
+
+                let cart = []; // [{id, name, duration, qty, priceLocal, priceForeign}]
+
+                const fmt = (n) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                function renderCart() {
+                    if (cart.length === 0) {
+                        cartEmpty.style.display = '';
+                        cartItems.style.display = 'none';
+                        cartTotal.textContent = 'MVR 0.00';
+                        cartInput.value = '[]';
+                        if (adultsInput) adultsInput.value = '1';
+                        if (submitBtn) submitBtn.disabled = true;
+                        return;
+                    }
+                    cartEmpty.style.display = 'none';
+                    cartItems.style.display = '';
+                    cartItems.innerHTML = '';
+
+                    let totalMvr = 0;
+                    let totalQty = 0;
+
+                    cart.forEach(function (item, idx) {
+                        var lineMvr, lineUsd, meta;
+
+                        if (item.pricingType === 'per_seat') {
+                            lineMvr = (item.adultQty * item.adultPriceLocal) + (item.childQty * item.childPriceLocal);
+                            lineUsd = (item.adultQty * item.adultPriceForeign) + (item.childQty * item.childPriceForeign);
+                            var parts = [];
+                            if (item.adultQty > 0) parts.push(item.adultQty + ' adult' + (item.adultQty > 1 ? 's' : ''));
+                            if (item.childQty > 0) parts.push(item.childQty + ' child' + (item.childQty > 1 ? 'ren' : ''));
+                            meta = parts.join(' + ');
+                            totalQty += item.adultQty + item.childQty;
+                        } else {
+                            lineMvr = item.priceLocal * item.qty * item.duration;
+                            lineUsd = item.priceForeign * item.qty * item.duration;
+                            const durationLabel = item.duration === 1 ? '1 hr' : (item.duration + ' hrs');
+                            meta = durationLabel + ' &times; ' + item.qty + (item.qty > 1 ? ' units' : ' unit');
+                            totalQty += item.qty;
+                        }
+
+                        totalMvr += lineMvr;
+                        const row = document.createElement('div');
+                        row.className = 'ws-cart-row';
+                        row.innerHTML =
+                            '<div>' +
+                                '<div class="ws-cart-row-name">' + escHtml(item.name) + '</div>' +
+                                '<div class="ws-cart-row-meta">' + meta + '</div>' +
+                                '<div class="ws-cart-row-price">MVR ' + fmt(lineMvr) +
+                                    (lineUsd > 0 ? ' <span style="font-weight:400;font-size:0.76rem;color:#5f7488;">≈ USD ' + fmt(lineUsd) + '</span>' : '') +
+                                '</div>' +
+                            '</div>' +
+                            '<button type="button" class="ws-cart-remove-btn" data-remove-idx="' + idx + '" aria-label="Remove ' + escHtml(item.name) + '">' +
+                                '<i class="fa-solid fa-xmark" aria-hidden="true"></i>' +
+                            '</button>';
+                        cartItems.appendChild(row);
+                    });
+
+                    cartTotal.textContent = 'MVR ' + fmt(totalMvr);
+                    cartInput.value = JSON.stringify(cart);
+                    if (adultsInput) adultsInput.value = String(Math.max(1, totalQty));
+                    if (submitBtn) submitBtn.disabled = false;
+
+                    // Bind remove buttons
+                    cartItems.querySelectorAll('[data-remove-idx]').forEach(function (btn) {
+                        btn.addEventListener('click', function () {
+                            const i = parseInt(this.getAttribute('data-remove-idx'), 10);
+                            cart.splice(i, 1);
+                            renderCart();
+                        });
+                    });
+                }
+
+                function escHtml(s) {
+                    return String(s)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;');
+                }
+
+                // Stepper buttons on equipment cards
+                document.querySelectorAll('.equipment-add-row').forEach(function (row) {
+                    // Wire stepper buttons
+                    row.querySelectorAll('.equipment-stepper').forEach(function (stepper) {
+                        const input = stepper.querySelector('input[type=number]');
+                        if (!input) return;
+                        stepper.querySelectorAll('button').forEach(function (btn) {
+                            btn.addEventListener('click', function () {
+                                const step = parseFloat(this.getAttribute('data-step') || '1');
+                                const min = parseFloat(input.min || '0');
+                                const max = parseFloat(input.max || '9999');
+                                let val = parseFloat(input.value || '0') + step;
+                                val = Math.max(min, Math.min(max, Math.round(val * 10) / 10));
+                                input.value = val;
+                            });
+                        });
+                    });
+
+                    // Add to cart button
+                    const addBtn = row.querySelector('[data-add-to-cart]');
+                    if (!addBtn) return;
+
+                    const card = row.closest('[data-item-id]');
+                    if (!card) return;
+
+                    const itemId       = parseInt(card.getAttribute('data-item-id') || '0', 10);
+                    const itemName     = card.getAttribute('data-item-name') || 'Equipment';
+                    const priceLocal   = parseFloat(card.getAttribute('data-price-local') || '0');
+                    const priceForeign = parseFloat(card.getAttribute('data-price-foreign') || '0');
+                    const maxQty       = parseInt(card.getAttribute('data-max-qty') || '1', 10);
+                    const minHours     = parseFloat(card.getAttribute('data-min-hours') || '1');
+
+                    const durationInput = row.querySelector('[data-duration-input]');
+                    const qtyInput      = row.querySelector('[data-qty-input]');
+
+                    addBtn.addEventListener('click', function () {
+                        const pricingType = card.getAttribute('data-pricing-type') || 'hourly';
+
+                        if (pricingType === 'per_seat') {
+                            const adultInput = row.querySelector('[data-adult-input]');
+                            const childInput = row.querySelector('[data-child-input]');
+                            const adultQty = Math.max(0, parseInt(adultInput ? adultInput.value : '1', 10) || 0);
+                            const childQty = Math.max(0, parseInt(childInput ? childInput.value : '0', 10) || 0);
+                            if (adultQty + childQty === 0) return;
+
+                            const seatAdultLocal   = parseFloat(card.getAttribute('data-seat-adult-local') || '0');
+                            const seatAdultForeign = parseFloat(card.getAttribute('data-seat-adult-foreign') || '0');
+                            const seatChildLocal   = parseFloat(card.getAttribute('data-seat-child-local') || '0');
+                            const seatChildForeign = parseFloat(card.getAttribute('data-seat-child-foreign') || '0');
+
+                            const existingIdx = cart.findIndex(function (c) {
+                                return c.itemId === itemId && c.pricingType === 'per_seat';
+                            });
+                            if (existingIdx >= 0) {
+                                cart[existingIdx].adultQty += adultQty;
+                                cart[existingIdx].childQty += childQty;
+                            } else {
+                                cart.push({ itemId: itemId, name: itemName, pricingType: 'per_seat',
+                                    adultQty: adultQty, childQty: childQty,
+                                    adultPriceLocal: seatAdultLocal, adultPriceForeign: seatAdultForeign,
+                                    childPriceLocal: seatChildLocal, childPriceForeign: seatChildForeign });
+                            }
+                        } else {
+                            const duration = Math.max(minHours, parseFloat(durationInput ? durationInput.value : '1') || minHours);
+                            const qty      = Math.max(1, Math.min(maxQty, parseInt(qtyInput ? qtyInput.value : '1', 10) || 1));
+
+                            const existingIdx = cart.findIndex(function (c) {
+                                return c.itemId === itemId && c.duration === duration;
+                            });
+                            if (existingIdx >= 0) {
+                                cart[existingIdx].qty = Math.min(maxQty, cart[existingIdx].qty + qty);
+                            } else {
+                                cart.push({ itemId: itemId, name: itemName, pricingType: 'hourly', duration: duration, durationMins: Math.round(duration * 60), qty: qty, guestType: 'adult', priceLocal: priceLocal, priceForeign: priceForeign });
+                            }
+                        }
+
+                        renderCart();
+
+                        // Visual feedback on button
+                        addBtn.textContent = '✓ Added';
+                        addBtn.style.background = '#17856a';
+                        setTimeout(function () {
+                            addBtn.innerHTML = '<i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Add';
+                            addBtn.style.background = '';
+                        }, 900);
+                    });
+                });
+
+                renderCart();
+            })();
 
             const copyShareBtn = document.querySelector('[data-copy-share-link]');
             if (copyShareBtn) {
@@ -2143,6 +2578,19 @@
                     updateGuestResidency();
                     updatePaymentOptionsByNationality();
                     syncTransferCharge();
+
+                    // Water sports cart guard
+                    const cartInput = document.getElementById('wsCartItemsInput');
+                    if (cartInput) {
+                        let cartData = [];
+                        try { cartData = JSON.parse(cartInput.value || '[]'); } catch (e) { cartData = []; }
+                        if (!Array.isArray(cartData) || cartData.length === 0) {
+                            event.preventDefault();
+                            const cartPanel = document.getElementById('wsCartPanel');
+                            if (cartPanel) cartPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            return;
+                        }
+                    }
 
                     const datesValid = validateServiceDates();
                     const guestValid = validateMandatoryGuestFields();

@@ -24,6 +24,8 @@ if (!function_exists('vendorPortalCategoryMap')) {
             'vehicle_rental' => 'Vehicle Rentals',
             'water_sports' => 'Water Sports',
             'conference_room' => 'Conference Rooms',
+            'sea_transport' => 'Sea Transport & Ferries',
+            'liveaboard' => 'Liveaboard / Safari',
         ];
     }
 }
@@ -74,6 +76,14 @@ if (!function_exists('vendorPortalCategoryAliases')) {
             'water-sports' => 'water_sports',
             'watersport' => 'water_sports',
             'watersports' => 'water_sports',
+            'sea_transport' => 'sea_transport',
+            'sea-transport' => 'sea_transport',
+            'seatransport' => 'sea_transport',
+            'ferry' => 'sea_transport',
+            'liveaboard' => 'liveaboard',
+            'live_aboard' => 'liveaboard',
+            'live-aboard' => 'liveaboard',
+            'safari' => 'liveaboard',
         ];
     }
 }
@@ -92,6 +102,8 @@ if (!function_exists('vendorPortalCategoryRequiredDocumentChecklist')) {
             'restaurant' => ['Food service license', 'Health/sanitation compliance certificate'],
             'vehicle_rental' => ['Vehicle rental operator permit', 'Vehicle fleet registration evidence'],
             'accommodation' => ['Tourism or accommodation operating license'],
+            'sea_transport' => ['Valid vessel/ferry operating license', 'Vessel registration or operator permit'],
+            'liveaboard' => ['Liveaboard or safari vessel operating license', 'Vessel registration or operator permit'],
         ];
     }
 }
@@ -250,6 +262,8 @@ if (!function_exists('vendorPortalCategoryStorageTableMap')) {
             'restaurant' => 'vendor_restaurant_listings',
             'vehicle_rental' => 'vendor_vehicle_rental_listings',
             'water_sports' => 'vendor_water_sports_listings',
+            'sea_transport' => 'vendor_sea_transport_listings',
+            'liveaboard' => 'vendor_liveaboard_listings',
         ];
     }
 }
@@ -1464,6 +1478,76 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['fuel_type'] = trim((string) ($validated['fuel_type'] ?? ''));
         }
 
+        if ($listingCategory === 'sea_transport') {
+            $details['vessel_name'] = trim((string) ($validated['vessel_name'] ?? ''));
+            $details['registration_no'] = trim((string) ($validated['registration_no'] ?? ''));
+            $details['departure_point'] = trim((string) ($validated['departure_point'] ?? ''));
+            $details['arrival_point'] = trim((string) ($validated['arrival_point'] ?? ''));
+            $details['departure_time'] = trim((string) ($validated['departure_time'] ?? ''));
+            $details['return_time'] = trim((string) ($validated['return_time'] ?? ''));
+            $details['trip_duration_minutes'] = isset($validated['trip_duration_minutes']) ? (int) $validated['trip_duration_minutes'] : null;
+            $details['total_seats'] = isset($validated['total_seats']) ? (int) $validated['total_seats'] : null;
+            $details['local_price'] = isset($validated['local_price']) && $validated['local_price'] !== '' ? max(0, (float) $validated['local_price']) : null;
+            $details['foreign_price'] = isset($validated['foreign_price']) && $validated['foreign_price'] !== '' ? max(0, (float) $validated['foreign_price']) : null;
+            $details['contact_name'] = trim((string) ($validated['contact_name'] ?? ''));
+            $details['contact_number'] = trim((string) ($validated['contact_number'] ?? ''));
+            $details['boarding_instructions'] = trim((string) ($validated['boarding_instructions'] ?? ''));
+            $availabilityRaw = trim((string) ($validated['availability_schedule'] ?? ''));
+            $details['availability_schedule'] = $availabilityRaw !== ''
+                ? array_values(array_filter(array_map('trim', preg_split('/[\r\n,]+/', $availabilityRaw) ?: []), static fn ($t) => $t !== ''))
+                : [];
+        }
+
+        if ($listingCategory === 'liveaboard') {
+            $details['start_point'] = trim((string) ($validated['start_point'] ?? ''));
+            $details['end_point'] = trim((string) ($validated['end_point'] ?? ''));
+            $details['journey_duration_days'] = isset($validated['journey_duration_days']) ? (int) $validated['journey_duration_days'] : null;
+            $details['vessel_name'] = trim((string) ($validated['vessel_name'] ?? ''));
+            $details['registration_no'] = trim((string) ($validated['registration_no'] ?? ''));
+            $details['cabin_count'] = isset($validated['cabin_count']) ? (int) $validated['cabin_count'] : null;
+            $details['contact_name'] = trim((string) ($validated['contact_name'] ?? ''));
+            $details['contact_number'] = trim((string) ($validated['contact_number'] ?? ''));
+            $details['boarding_instructions'] = trim((string) ($validated['boarding_instructions'] ?? ''));
+            
+            // Parse stopovers (one per line, format: StopoverName or StopoverName|embark|disembark)
+            $stopoverRaw = trim((string) ($validated['stopovers'] ?? ''));
+            $stopovers = [];
+            if ($stopoverRaw !== '') {
+                foreach (preg_split('/[\r\n]+/', $stopoverRaw) ?: [] as $stopoverLine) {
+                    $stopoverLine = trim($stopoverLine);
+                    if ($stopoverLine === '') continue;
+                    $parts = preg_split('/\|/', $stopoverLine);
+                    $name = trim($parts[0] ?? '');
+                    if ($name === '') continue;
+                    $allowEmbark = strtolower(trim($parts[1] ?? 'yes')) === 'yes';
+                    $allowDisembark = strtolower(trim($parts[2] ?? 'yes')) === 'yes';
+                    $stopovers[] = [
+                        'name' => $name,
+                        'allow_embark' => $allowEmbark,
+                        'allow_disembark' => $allowDisembark,
+                    ];
+                }
+            }
+            $details['stopovers'] = $stopovers;
+            
+            // Parse pricing matrix (format: From→To=Price per line)
+            $pricingRaw = trim((string) ($validated['pricing_matrix'] ?? ''));
+            $pricingMatrix = [];
+            if ($pricingRaw !== '') {
+                foreach (preg_split('/[\r\n]+/', $pricingRaw) ?: [] as $pricingLine) {
+                    $pricingLine = trim($pricingLine);
+                    if ($pricingLine === '') continue;
+                    if (!str_contains($pricingLine, '=')) continue;
+                    [$routeKey, $price] = explode('=', $pricingLine, 2);
+                    $routeKey = trim($routeKey);
+                    $price = trim($price);
+                    if ($routeKey === '' || !is_numeric($price)) continue;
+                    $pricingMatrix[$routeKey] = max(0, (float) $price);
+                }
+            }
+            $details['pricing_matrix'] = $pricingMatrix;
+        }
+
         if ($listingCategory !== 'accommodation') {
             if (array_key_exists('transfer_included', $validated)) {
                 $rawTransferIncluded = strtolower(trim((string) ($validated['transfer_included'] ?? '0')));
@@ -1836,6 +1920,48 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
 
         if ($listingCategory === 'vehicle_rental' && empty($details['vehicle_type'])) {
             $errors[] = 'Vehicle type is required for vehicle rental listings.';
+        }
+
+        if ($listingCategory === 'sea_transport') {
+            if (empty($details['departure_point'])) {
+                $errors[] = 'Departure point is required for sea transport listings.';
+            }
+            if (empty($details['arrival_point'])) {
+                $errors[] = 'Arrival point is required for sea transport listings.';
+            }
+            if (empty($details['departure_time'])) {
+                $errors[] = 'Departure time is required for sea transport listings.';
+            }
+            if (empty($details['return_time'])) {
+                $errors[] = 'Return / arrival time is required for sea transport listings.';
+            }
+            if (!isset($details['trip_duration_minutes']) || $details['trip_duration_minutes'] < 5 || $details['trip_duration_minutes'] > 1440) {
+                $errors[] = 'Trip duration must be between 5 and 1440 minutes.';
+            }
+            if (!isset($details['total_seats']) || $details['total_seats'] < 1 || $details['total_seats'] > 1000) {
+                $errors[] = 'Total seats must be between 1 and 1000.';
+            }
+            if (!isset($details['local_price']) || $details['local_price'] < 0) {
+                $errors[] = 'Local price per seat is required and must be >= 0.';
+            }
+        }
+
+        if ($listingCategory === 'liveaboard') {
+            if (empty($details['start_point'])) {
+                $errors[] = 'Start point is required for liveaboard listings.';
+            }
+            if (empty($details['end_point'])) {
+                $errors[] = 'End point is required for liveaboard listings.';
+            }
+            if (!isset($details['journey_duration_days']) || $details['journey_duration_days'] < 1 || $details['journey_duration_days'] > 90) {
+                $errors[] = 'Journey duration must be between 1 and 90 days.';
+            }
+            if (empty($details['stopovers'])) {
+                $errors[] = 'At least one stopover is required for liveaboard listings.';
+            }
+            if (empty($details['pricing_matrix'])) {
+                $errors[] = 'Pricing matrix with at least one route is required for liveaboard listings.';
+            }
         }
 
         return $errors;

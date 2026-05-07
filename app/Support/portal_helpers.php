@@ -50,7 +50,7 @@ if (!function_exists('vendorPortalCategoryMap')) {
     {
         return [
             'accommodation' => 'Accommodation',
-            'marine_transport' => 'Marine Transport',
+            'sea_transport' => 'Sea Transport & Ferries',
             'land_transport' => 'Land Transport',
             'excursion' => 'Excursions',
             'remote_workspace' => 'Remote Workspaces',
@@ -1831,7 +1831,7 @@ if (!function_exists('portalVendorNormalizeListingCategory')) {
         $normalized = trim((string) preg_replace('/_+/', '_', $normalized), '_');
 
         return match ($normalized) {
-            'marine_transport', 'land_transport' => 'transport',
+            'marine_transport', 'sea_transport', 'land_transport' => 'transport',
             default => $normalized,
         };
     }

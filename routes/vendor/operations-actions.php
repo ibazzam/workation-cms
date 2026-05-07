@@ -246,7 +246,7 @@ Route::post('/portal/vendor/transport/tariff/save', function (Request $request) 
     }
 
     $listingCategory = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
-    if (!in_array($listingCategory, ['marine_transport', 'land_transport'], true)) {
+    if (!in_array($listingCategory, ['sea_transport', 'marine_transport', 'land_transport'], true)) {
         return back()->withErrors(['profile' => 'Tariff options can only be updated for transport listings.'])->withInput();
     }
 

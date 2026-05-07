@@ -15,7 +15,7 @@ if (!function_exists('vendorPortalCategoryMap')) {
     {
         return [
             'accommodation' => 'Accommodation',
-            'marine_transport' => 'Marine Transport',
+            'sea_transport' => 'Sea Transport & Ferries',
             'land_transport' => 'Land Transport',
             'excursion' => 'Excursions',
             'remote_workspace' => 'Remote Workspaces',
@@ -36,15 +36,15 @@ if (!function_exists('vendorPortalCategoryAliases')) {
         return [
             'accommodation' => 'accommodation',
             'accommodations' => 'accommodation',
-            // Legacy transport values remain valid and default to marine transport.
-            'transport' => 'marine_transport',
-            'transports' => 'marine_transport',
-            'marine_transport' => 'marine_transport',
-            'marine_transports' => 'marine_transport',
-            'marine_transportation' => 'marine_transport',
-            'marine-transport' => 'marine_transport',
-            'marinetransport' => 'marine_transport',
-            'marinetransports' => 'marine_transport',
+            // Legacy transport values all map to sea_transport.
+            'transport' => 'sea_transport',
+            'transports' => 'sea_transport',
+            'marine_transport' => 'sea_transport',
+            'marine_transports' => 'sea_transport',
+            'marine_transportation' => 'sea_transport',
+            'marine-transport' => 'sea_transport',
+            'marinetransport' => 'sea_transport',
+            'marinetransports' => 'sea_transport',
             'land_transport' => 'land_transport',
             'land_transports' => 'land_transport',
             'land_transportation' => 'land_transport',
@@ -92,7 +92,7 @@ if (!function_exists('vendorPortalCategoryRequiredDocumentChecklist')) {
     function vendorPortalCategoryRequiredDocumentChecklist(): array
     {
         return [
-            'marine_transport' => ['Valid marine transport operating license', 'Vessel registration or operator permit'],
+            'sea_transport' => ['Valid vessel/ferry operating license', 'Vessel registration or operator permit'],
             'land_transport' => ['Valid transport operator license', 'Vehicle registration/commercial permit'],
             'water_sports' => ['Activity safety/compliance certification', 'Operator or instructor certification'],
             'excursion' => ['Tour/excursion operator permit', 'Public liability or compliance certificate'],
@@ -254,7 +254,7 @@ if (!function_exists('vendorPortalCategoryStorageTableMap')) {
         return [
             'accommodation' => 'vendor_accommodation_listings',
             'conference_room' => 'vendor_conference_room_listings',
-            'marine_transport' => 'vendor_marine_transport_listings',
+            'sea_transport' => 'vendor_sea_transport_listings',
             'land_transport' => 'vendor_land_transport_listings',
             'excursion' => 'vendor_excursion_listings',
             'remote_workspace' => 'vendor_remote_workspace_listings',

@@ -197,17 +197,16 @@
         $roomMediaAssets = $vendorMediaAssets->filter(static function ($media): bool {
             return strtolower((string) ($media->entity_type ?? '')) === 'room';
         });
-        $listingCategoryViewOrder = collect(['accommodation', 'marine_transport', 'land_transport', 'water_sports', 'excursion', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental', 'sea_transport', 'liveaboard'])
+        $listingCategoryViewOrder = collect(['accommodation', 'sea_transport', 'land_transport', 'water_sports', 'excursion', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental', 'liveaboard'])
             ->filter(static function (string $categoryKey) use ($vendorAllowedCategoryKeys): bool {
                 return $vendorAllowedCategoryKeys->contains($categoryKey);
             })
             ->values()
             ->all();
         $listingCategoryLabelMap = array_merge($vendorCategoryMap, [
-            'marine_transport' => 'Marine Transport',
+            'sea_transport' => 'Sea Transport & Ferries',
             'land_transport' => 'Land Transport',
             'conference_room' => 'Conference Rooms',
-            'sea_transport' => 'Sea Transport & Ferries',
             'liveaboard' => 'Liveaboard / Safari',
         ]);
         $roomsByPropertyId = $vendorRooms->groupBy(static function ($room) {
@@ -249,7 +248,7 @@
 
             $transportMode = strtolower(trim((string) ($details['transport_mode'] ?? '')));
             return preg_match('/(^|\s)(speed\s?boat|ferry|boat|safari|dhoni|launch|catamaran|yacht)(\s|$)/', $transportMode)
-                ? 'marine_transport'
+                ? 'sea_transport'
                 : 'land_transport';
         });
         $propertyLookupById = $vendorProperties->keyBy('id');
@@ -1147,7 +1146,7 @@
             function normalizeVendorOpsCategoryKey(categoryKey) {
                 const normalized = normalizeCategoryKey(categoryKey || '');
                 if (normalized === 'transport') {
-                    return 'marine_transport';
+                    return 'sea_transport';
                 }
                 return normalized;
             }
@@ -1769,7 +1768,7 @@
                     return ["stay", "accommodation", "policies", "geo"];
                 }
 
-                if (normalized === "transport" || normalized === "marine_transport" || normalized === "land_transport") {
+                if (normalized === "transport" || normalized === "sea_transport" || normalized === "land_transport") {
                     return ["capacity", "transport", "policies", "geo"];
                 }
 
@@ -1815,9 +1814,9 @@
                 }
 
                 const normalizedCategory = normalizeCategoryKey(propertyCategorySelect.value);
-                const isTransportCategory = normalizedCategory === "transport" || normalizedCategory === "marine_transport" || normalizedCategory === "land_transport";
+                const isTransportCategory = normalizedCategory === "transport" || normalizedCategory === "sea_transport" || normalizedCategory === "land_transport";
                 const isRemoteWorkspaceCategory = normalizedCategory === "remote_workspace";
-                const isMarine = normalizedCategory === "marine_transport"
+                const isMarine = normalizedCategory === "sea_transport"
                     || (normalizedCategory !== "land_transport" && isMarineTransportMode(transportModeInput ? transportModeInput.value : ""));
                 const selectedPricingModel = transportPricingModelSelect ? String(transportPricingModelSelect.value || "per_trip") : "per_trip";
 
@@ -1929,11 +1928,11 @@
                         note: 'Use marine mode for boats and ferries, or land mode for cars and vans.',
                         propertyType: 'service',
                     },
-                    marine_transport: {
-                        title: 'Marine Transport Enlisting',
+                    sea_transport: {
+                        title: 'Sea Transport & Ferries Enlisting',
                         subtitle: 'Capture water transfer details and save.',
-                        submit: 'Save Marine Transport Listing',
-                        note: 'Use marine transport fields for speedboats, ferries, and vessel transfers.',
+                        submit: 'Save Sea Transport Listing',
+                        note: 'Use sea transport fields for speedboats, ferries, and vessel transfers.',
                         propertyType: 'service',
                     },
                     land_transport: {
@@ -2024,7 +2023,7 @@
                 if (preferred !== '') {
                     let matched = Array.from(propertyCategorySelect.options)
                         .find((option) => normalizeCategoryKey(option.value) === preferred);
-                    if (!matched && (preferred === 'marine_transport' || preferred === 'land_transport')) {
+                    if (!matched && (preferred === 'sea_transport' || preferred === 'land_transport')) {
                         matched = Array.from(propertyCategorySelect.options)
                             .find((option) => normalizeCategoryKey(option.value) === 'transport');
                     }
@@ -2088,8 +2087,8 @@
                 }
                 if (propertyCategorySelect) {
                     const selectedCategory = ensureAutoCategorySelected(normalizedCategory);
-                    if (transportModeInput && (normalizedCategory === 'marine_transport' || normalizedCategory === 'land_transport')) {
-                        transportModeInput.value = normalizedCategory === 'marine_transport' ? 'speedboat' : 'car';
+                    if (transportModeInput && (normalizedCategory === 'sea_transport' || normalizedCategory === 'land_transport')) {
+                        transportModeInput.value = normalizedCategory === 'sea_transport' ? 'speedboat' : 'car';
                     }
                     propertyCategorySelect.dispatchEvent(new Event('change'));
                     applyCategoryFormMeta(selectedCategory, true);
@@ -3454,7 +3453,7 @@
                 function categoryScopesFor(category) {
                     const normalized = normalizeCategoryKey(category);
                     if (normalized === 'accommodation') return ['stay', 'accommodation', 'policies', 'geo'];
-                    if (normalized === 'transport' || normalized === 'marine_transport' || normalized === 'land_transport') return ['capacity', 'transport', 'policies', 'geo'];
+                    if (normalized === 'transport' || normalized === 'sea_transport' || normalized === 'land_transport') return ['capacity', 'transport', 'policies', 'geo'];
                     if (normalized === 'excursion') return ['capacity', 'service', 'excursion', 'policies', 'geo'];
                     if (normalized === 'water_sports') return ['capacity', 'service', 'excursion', 'policies', 'geo'];
                     if (normalized === 'remote_workspace') return ['stay', 'capacity', 'workspace', 'geo'];
@@ -3470,7 +3469,7 @@
                     const metaMap = {
                         accommodation: ['Accommodation Enlisting', 'Fill required fields and save.', 'Save Accommodation Listing', 'Fill required fields and save.', 'property'],
                         transport: ['Marine or Land Transport Enlisting', 'Choose the transport mode and save the listing.', 'Save Transport Listing', 'Use marine mode for boats and ferries, or land mode for cars and vans.', 'service'],
-                        marine_transport: ['Marine Transport Enlisting', 'Capture water transfer details and save.', 'Save Marine Transport Listing', 'Use marine transport fields for speedboats, ferries, and vessel transfers.', 'service'],
+                        sea_transport: ['Sea Transport & Ferries Enlisting', 'Capture water transfer details and save.', 'Save Sea Transport Listing', 'Use sea transport fields for speedboats, ferries, and vessel transfers.', 'service'],
                         land_transport: ['Land Transport Enlisting', 'Capture vehicle transfer details and save.', 'Save Land Transport Listing', 'Use land transport fields for cars, vans, and local ground transfers.', 'service'],
                         water_sports: ['Water Sports Enlisting', 'Fill required fields and save.', 'Save Water Sports Listing', 'Use excursion/service fields for diving, snorkeling, and activity packages.', 'service'],
                         excursion: ['Excursion Enlisting', 'Fill required fields and save.', 'Save Excursion Listing', 'Fill required fields and save.', 'service'],
@@ -3488,7 +3487,7 @@
                     const preferred = normalizeCategoryKey(preferredCategory || propertyCategorySelect.getAttribute('data-default-category') || 'accommodation');
                     if (preferred !== '') {
                         let matched = Array.from(propertyCategorySelect.options).find((item) => normalizeCategoryKey(item.value) === preferred);
-                        if (!matched && (preferred === 'marine_transport' || preferred === 'land_transport')) {
+                        if (!matched && (preferred === 'sea_transport' || preferred === 'land_transport')) {
                             matched = Array.from(propertyCategorySelect.options).find((item) => normalizeCategoryKey(item.value) === 'transport');
                         }
                         if (matched) {
@@ -3520,9 +3519,9 @@
                     }
 
                     const normalizedCategory = normalizeCategoryKey(propertyCategorySelect.value);
-                    const isTransportCategory = normalizedCategory === 'transport' || normalizedCategory === 'marine_transport' || normalizedCategory === 'land_transport';
+                    const isTransportCategory = normalizedCategory === 'transport' || normalizedCategory === 'sea_transport' || normalizedCategory === 'land_transport';
                     const isRemoteWorkspaceCategory = normalizedCategory === 'remote_workspace';
-                    const isMarine = normalizedCategory === 'marine_transport'
+                    const isMarine = normalizedCategory === 'sea_transport'
                         || (normalizedCategory !== 'land_transport' && isMarineTransportMode(transportModeInput ? transportModeInput.value : ''));
                     const selectedPricingModel = transportPricingModelSelect ? String(transportPricingModelSelect.value || 'per_trip') : 'per_trip';
 

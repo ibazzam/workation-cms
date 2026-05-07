@@ -33,7 +33,7 @@ Route::get('/vendor', function () {
     $loadBillingData = $activePortalPage === 'billing';
     $loadListingsContextData = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'engagement', 'promotions'], true);
     $vendorPortalCacheTtlSeconds = 900;
-    $categoryRouteTokens = array_merge(array_keys(vendorPortalCategoryMap()), ['marine_transport', 'land_transport']);
+    $categoryRouteTokens = array_merge(array_keys(vendorPortalCategoryMap()), ['sea_transport', 'land_transport']);
     $requestedCategoryScope = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', '')));
     if (!in_array($requestedCategoryScope, $categoryRouteTokens, true)) {
         $requestedCategoryScope = '';
@@ -1053,7 +1053,7 @@ Route::get('/vendor/listings/create/{category}', function (string $category) {
     }
 
     $normalizedCategory = vendorPortalNormalizeCategoryToken($category);
-    $allowedCategories = array_merge(array_keys(vendorPortalCategoryMap()), ['marine_transport', 'land_transport']);
+    $allowedCategories = array_merge(array_keys(vendorPortalCategoryMap()), ['sea_transport', 'land_transport']);
     if (!in_array($normalizedCategory, $allowedCategories, true)) {
         return redirect('/vendor?page=listings')->withErrors([
             'profile' => 'Unsupported listing category route.',
@@ -1069,7 +1069,7 @@ Route::get('/vendor/listings/create/{category}', function (string $category) {
 
 $vendorListingCategoryAliases = [
     'accommodation',
-    'marine_transport',
+    'sea_transport',
     'land_transport',
     'water_sports',
     'excursion',
@@ -1122,8 +1122,8 @@ foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
 
         $vendorCategoryMap = vendorPortalCategoryMap();
         $selectedVendorCategories = vendorPortalSelectedCategories($vendorUser);
-        $listingCategoryViewOrder = ['accommodation','marine_transport','land_transport','water_sports','excursion','remote_workspace','conference_room','resort_day_visit','restaurant','vehicle_rental'];
-        $listingCategoryLabelMap = array_merge($vendorCategoryMap, ['marine_transport' => 'Marine Transport', 'land_transport' => 'Land Transport', 'conference_room' => 'Conference Rooms']);
+        $listingCategoryViewOrder = ['accommodation','sea_transport','land_transport','water_sports','excursion','remote_workspace','conference_room','resort_day_visit','restaurant','vehicle_rental'];
+        $listingCategoryLabelMap = array_merge($vendorCategoryMap, ['sea_transport' => 'Sea Transport & Ferries', 'land_transport' => 'Land Transport', 'conference_room' => 'Conference Rooms']);
         $categoryLabel = $listingCategoryLabelMap[$listingCategoryAlias] ?? ucwords(str_replace('_', ' ', $listingCategoryAlias));
 
         $vendorProfileRow = null;
@@ -1224,8 +1224,8 @@ foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
 
         $vendorCategoryMap = vendorPortalCategoryMap();
         $selectedVendorCategories = vendorPortalSelectedCategories($vendorUser);
-        $listingCategoryViewOrder = ['accommodation','marine_transport','land_transport','water_sports','excursion','remote_workspace','conference_room','resort_day_visit','restaurant','vehicle_rental'];
-        $listingCategoryLabelMap = array_merge($vendorCategoryMap, ['marine_transport' => 'Marine Transport', 'land_transport' => 'Land Transport', 'conference_room' => 'Conference Rooms']);
+        $listingCategoryViewOrder = ['accommodation','sea_transport','land_transport','water_sports','excursion','remote_workspace','conference_room','resort_day_visit','restaurant','vehicle_rental'];
+        $listingCategoryLabelMap = array_merge($vendorCategoryMap, ['sea_transport' => 'Sea Transport & Ferries', 'land_transport' => 'Land Transport', 'conference_room' => 'Conference Rooms']);
         $categoryLabel = $listingCategoryLabelMap[$listingCategoryAlias] ?? ucwords(str_replace('_', ' ', $listingCategoryAlias));
 
         $vendorProfileRow = null;
@@ -1306,7 +1306,7 @@ Route::get('/vendor/listings/{category}', function (string $category) {
     }
 
     $normalizedCategory = vendorPortalNormalizeCategoryToken($category);
-    $allowedCategories = array_merge(array_keys(vendorPortalCategoryMap()), ['marine_transport', 'land_transport']);
+    $allowedCategories = array_merge(array_keys(vendorPortalCategoryMap()), ['sea_transport', 'land_transport']);
     if (!in_array($normalizedCategory, $allowedCategories, true)) {
         return redirect('/vendor?page=listings')->withErrors([
             'profile' => 'Unsupported listing category route.',
@@ -1353,7 +1353,7 @@ Route::get('/vendor/listings/manage/{category}', function (string $category) {
     }
 
     $normalizedCategory = vendorPortalNormalizeCategoryToken($category);
-    $allowedCategories = array_merge(array_keys(vendorPortalCategoryMap()), ['marine_transport', 'land_transport']);
+    $allowedCategories = array_merge(array_keys(vendorPortalCategoryMap()), ['sea_transport', 'land_transport']);
     if (!in_array($normalizedCategory, $allowedCategories, true)) {
         return redirect('/vendor?page=listings')->withErrors([
             'profile' => 'Unsupported listing category route.',

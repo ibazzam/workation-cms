@@ -173,7 +173,8 @@
                         ->groupBy(fn ($item) => strtolower(trim((string) ($item['group'] ?? 'other'))));
                     $createFormPartialMap = [
                         'accommodation' => 'vendor-portal.partials.forms.create.accommodation',
-                        'marine_transport' => 'vendor-portal.partials.forms.create.marine_transport',
+                        'sea_transport' => 'vendor-portal.partials.forms.create.sea_transport',
+                        'marine_transport' => 'vendor-portal.partials.forms.create.sea_transport',
                         'land_transport' => 'vendor-portal.partials.forms.create.land_transport',
                         'water_sports' => 'vendor-portal.partials.forms.create.water_sports',
                         'excursion' => 'vendor-portal.partials.forms.create.excursion',
@@ -367,7 +368,8 @@
                                                             @php
                                                                 $editFormPartialMap = [
                                                                     'accommodation' => 'vendor-portal.partials.forms.edit.accommodation',
-                                                                    'marine_transport' => 'vendor-portal.partials.forms.edit.marine_transport',
+                                                                    'sea_transport' => 'vendor-portal.partials.forms.edit.sea_transport',
+                                                                    'marine_transport' => 'vendor-portal.partials.forms.edit.sea_transport',
                                                                     'land_transport' => 'vendor-portal.partials.forms.edit.land_transport',
                                                                     'water_sports' => 'vendor-portal.partials.forms.edit.water_sports',
                                                                     'excursion' => 'vendor-portal.partials.forms.edit.excursion',

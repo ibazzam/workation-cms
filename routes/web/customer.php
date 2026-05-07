@@ -165,7 +165,7 @@ Route::get('/customer', function (Request $request) {
 
     $categoryMeta = [
         'accommodation'    => ['label' => 'Accommodation'],
-        'marine_transport' => ['label' => 'Marine Transport'],
+        'marine_transport' => ['label' => 'Sea Transport & Ferries'],
         'land_transport'   => ['label' => 'Land Transport'],
         'excursion'        => ['label' => 'Excursions'],
         'remote_workspace' => ['label' => 'Remote Workspace'],
@@ -300,7 +300,7 @@ Route::get('/customer', function (Request $request) {
             }
             // Normalise transport variants from search form / legacy data
             if ($categoryKey === 'transport' || $categoryKey === 'marine-transport' || $categoryKey === 'marine_transport') {
-                $categoryKey = 'marine_transport';
+                $categoryKey = 'sea_transport';
             } elseif ($categoryKey === 'land-transport') {
                 $categoryKey = 'land_transport';
             }

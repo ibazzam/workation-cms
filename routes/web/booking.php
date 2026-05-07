@@ -3081,9 +3081,13 @@ Route::match(['get', 'post'], '/booking/payment/webhooks/{gateway}', function (R
 
     if ($gateway === 'stripe' && trim((string) $request->header('Stripe-Signature', '')) !== '') {
         $gatewayConfig = CheckoutPaymentRouter::gatewayConfig('stripe');
-        $stripeSecret = trim((string) ($gatewayConfig['webhook_secret'] ?? ''));
+        $stripeSecret = trim((string) ($gatewayConfig['webhook_secret'] ?? env('STRIPE_WEBHOOK_SECRET', env('STRIPE_WEBHOOK_SIGNING_SECRET', ''))));
         $stripeSignature = trim((string) $request->header('Stripe-Signature', ''));
         if (!workationVerifyStripeWebhookSignature($raw, $stripeSignature, $stripeSecret)) {
+            Log::warning('Stripe webhook rejected: invalid signature', [
+                'gateway' => $gateway,
+                'has_secret' => $stripeSecret !== '',
+            ]);
             return response()->json(['ok' => false, 'message' => 'Invalid signature'], 401);
         }
 
@@ -3111,10 +3115,11 @@ Route::match(['get', 'post'], '/booking/payment/webhooks/{gateway}', function (R
 
         $reservationRow = DB::table('vendor_reservations')->where('id', $reservationId)->first();
         if (!$reservationRow) {
-            return response()->json(['ok' => false, 'message' => 'Reservation not found'], 404);
+            // Acknowledge unknown reservation IDs to prevent endless Stripe retries.
+            return response()->json(['ok' => true, 'result' => 'ignored']);
         }
 
-        $mappedStatus = 'failed';
+        $mappedStatus = 'ignored';
         if (in_array($eventType, ['checkout.session.completed', 'checkout.session.async_payment_succeeded', 'payment_intent.succeeded'], true)) {
             $mappedStatus = 'paid';
         } elseif (in_array($eventType, ['payment_intent.canceled'], true)) {
@@ -3123,12 +3128,16 @@ Route::match(['get', 'post'], '/booking/payment/webhooks/{gateway}', function (R
             $mappedStatus = 'cancelled';
         }
 
+        if ($mappedStatus === 'ignored') {
+            return response()->json(['ok' => true, 'result' => 'ignored']);
+        }
+
         $result = workationApplyReservationPaymentEvent($reservationRow, [
             'event_id' => $eventId,
             'intent_id' => (string) ($eventObject['metadata']['intent_id'] ?? $reservationRow->payment_intent_id ?? ''),
             'reference' => (string) ($eventObject['id'] ?? $eventId),
             'status' => $mappedStatus,
-            'error' => $mappedStatus === 'failed' ? ('Stripe event: ' . $eventType) : '',
+            'error' => '',
         ]);
 
         return response()->json(['ok' => true, 'result' => $result['status'] ?? 'processed']);

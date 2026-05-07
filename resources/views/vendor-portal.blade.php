@@ -4460,6 +4460,28 @@
             });
             observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
         })();
+
+        // Mobile sidebar toggle
+        (function () {
+            var toggleBtn = document.getElementById('portalNavMobileToggle');
+            var navMenu   = document.getElementById('portalNavMenu');
+            if (!toggleBtn || !navMenu) return;
+
+            toggleBtn.addEventListener('click', function () {
+                var isOpen = navMenu.classList.toggle('is-mobile-open');
+                toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+
+            // Auto-close nav when a link is tapped on mobile
+            navMenu.querySelectorAll('a').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    if (window.innerWidth <= 900) {
+                        navMenu.classList.remove('is-mobile-open');
+                        toggleBtn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            });
+        })();
     </script>
 </body>
 </html>

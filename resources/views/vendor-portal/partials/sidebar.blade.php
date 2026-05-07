@@ -20,7 +20,12 @@
     $sidebarAccountOpen = ($activePortalPage ?? '') === 'profile';
 @endphp
 
-<nav class="portal-nav" aria-label="Vendor navigation">
+<button class="portal-nav-mobile-toggle" id="portalNavMobileToggle" type="button" aria-expanded="false" aria-controls="portalNavMenu">
+    <span style="display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-bars" aria-hidden="true"></i> Menu</span>
+    <i class="fa-solid fa-chevron-down portal-nav-toggle-icon" aria-hidden="true"></i>
+</button>
+
+<nav class="portal-nav" id="portalNavMenu" aria-label="Vendor navigation">
     <div class="vendor-nav-head">
         <div class="vendor-nav-avatar" aria-hidden="true">{{ strtoupper(substr((string) ($vendorProfile['name'] ?? 'V'), 0, 1)) }}</div>
         <div class="vendor-nav-user-meta">

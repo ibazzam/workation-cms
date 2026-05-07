@@ -2714,6 +2714,10 @@
             line-height: 1.4;
         }
 
+        .portal-nav-mobile-toggle {
+            display: none;
+        }
+
         @media (max-width: 900px) {
             .hero-actions {
                 align-items: flex-start;
@@ -2823,14 +2827,59 @@
 
             .portal-shell {
                 grid-template-columns: 1fr;
+                gap: 0;
+            }
+
+            .portal-nav-mobile-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+                padding: 10px 14px;
+                background: #ffffff;
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 0.92rem;
+                font-weight: 600;
+                color: var(--ink);
+                margin-bottom: 6px;
+            }
+
+            .portal-nav-mobile-toggle:hover {
+                background: #f5fafc;
+            }
+
+            .portal-nav-toggle-icon {
+                transition: transform 0.2s ease;
+            }
+
+            .portal-nav-mobile-toggle[aria-expanded="true"] .portal-nav-toggle-icon {
+                transform: rotate(180deg);
             }
 
             .portal-nav {
                 position: static;
-                overflow: visible;
+                display: none;
+                overflow-y: auto;
                 white-space: normal;
                 flex-direction: column;
                 flex-wrap: nowrap;
+                max-height: calc(100vh - 120px);
+                margin-bottom: 8px;
+                border-radius: 8px;
+            }
+
+            .portal-nav.is-mobile-open {
+                display: flex;
+            }
+
+            .listing-edit-stretch .update-row-form.inline-table-form {
+                grid-template-columns: 1fr;
+            }
+
+            .ops-table-wrap td {
+                max-width: 100vw;
             }
 
             .billing-ledger-grid {
@@ -2943,6 +2992,31 @@
 
             .publish-readiness-box {
                 padding: 10px;
+            }
+
+            /* Prevent iOS auto-zoom on input focus */
+            .ops-input,
+            .ops-textarea,
+            .ops-select,
+            .update-row-form input,
+            .update-row-form select,
+            .update-row-form textarea {
+                font-size: 16px;
+            }
+
+            /* Prevent deeply nested inline forms from overflowing viewport */
+            .listing-edit-stretch-row td,
+            .listing-edit-stretch-row td[colspan] {
+                display: block;
+                width: 100%;
+                max-width: 100vw;
+                box-sizing: border-box;
+                overflow-x: auto;
+                padding: 6px 4px;
+            }
+
+            .listing-edit-stretch {
+                min-width: 0;
             }
         }
     </style>

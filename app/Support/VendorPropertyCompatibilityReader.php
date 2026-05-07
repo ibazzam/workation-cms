@@ -64,7 +64,15 @@ class VendorPropertyCompatibilityReader
 
     public static function accommodationSelectColumns(): array
     {
-        $columns = ['vendor_property_id', 'name', 'status', 'location', 'description', 'max_guests', 'details'];
+        $columns = ['vendor_property_id', 'name', 'status', 'location', 'description', 'max_guests'];
+
+        if (self::hasColumn('vendor_accommodation_listings', 'details')) {
+            $columns[] = 'details';
+        }
+
+        if (self::hasColumn('vendor_accommodation_listings', 'listing_details')) {
+            $columns[] = 'listing_details';
+        }
 
         if (self::hasColumn('vendor_accommodation_listings', 'currency')) {
             $columns[] = 'currency';
@@ -114,8 +122,9 @@ class VendorPropertyCompatibilityReader
                 $property->max_guests = (int) $dedicated->max_guests;
             }
 
-            if (isset($dedicated->details) && trim((string) $dedicated->details) !== '') {
-                $property->listing_details = (string) $dedicated->details;
+            $dedicatedDetails = trim((string) ($dedicated->details ?? $dedicated->listing_details ?? ''));
+            if ($dedicatedDetails !== '') {
+                $property->listing_details = $dedicatedDetails;
             }
 
             return $property;
@@ -738,7 +747,14 @@ class VendorPropertyCompatibilityReader
             return self::$dedicatedSelectColumnsCache[$tableName];
         }
 
-        $base = ['id', 'vendor_property_id', 'vendor_user_id', 'name', 'status', 'location', 'description', 'max_guests', 'details', 'created_at', 'updated_at'];
+        $base = ['id', 'vendor_property_id', 'vendor_user_id', 'name', 'status', 'location', 'description', 'max_guests', 'created_at', 'updated_at'];
+
+        if (self::hasColumn($tableName, 'details')) {
+            $base[] = 'details';
+        }
+        if (self::hasColumn($tableName, 'listing_details')) {
+            $base[] = 'listing_details';
+        }
 
         if (self::hasColumn($tableName, 'base_price')) {
             $base[] = 'base_price';

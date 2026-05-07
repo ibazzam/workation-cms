@@ -2237,7 +2237,7 @@ Route::get('/booking/checkout/{reservation}/transfer', function (Request $reques
     $includeTransfer = !in_array($normalizedTransferOption, ['', 'none', 'no_transfer', 'decline', 'declined'], true)
         && $availableCodes->contains($savedTransferOption);
 
-    $backUrl = '/booking/checkout/' . $reservation;
+    $backUrl = '/booking/checkout/' . $reservation . '?edit_guest=1';
 
     return view('booking-transfer-selection', [
         'reservation' => $reservationRow,

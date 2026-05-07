@@ -316,6 +316,7 @@
             'bookingProcessCurrentStep' => $bookingProcessCurrentStep,
             'bookingProcessBackUrl' => $bookingProcessBackUrl,
             'bookingProcessBackLabel' => ($guestDetailsComplete && !$editGuestDetailsMode) ? 'Back to transfer selection' : 'Back to booking view',
+            'bookingProcessBackLabel' => $guestDetailsComplete ? 'Back to transfer selection' : 'Back to booking view',
             'bookingProcessSteps' => $bookingProcessSteps,
             'bookingProcessNextText' => ($requiresCustomerAuth && !$customerAuthenticated)
                 ? 'Next step after guest details: sign in to unlock payment method selection.'
@@ -350,6 +351,7 @@
                 </div>
 
                 @if ($showGuestDetailsForm)
+                @if (!empty($reservation->id) && $customerPaymentStatus !== 'paid' && !$guestDetailsComplete)
                     <section class="guest-details-box" aria-label="Guest details form">
                         <h2>Guest Details</h2>
                         <p class="guest-form-note">Provide guest identity details now. Booking totals and payment currency are recalculated from the selected nationality.</p>

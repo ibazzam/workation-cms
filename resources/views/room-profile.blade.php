@@ -532,22 +532,50 @@
 
             checkin.min = todayDate;
             checkout.min = todayDate;
+            if (sumCheckinInput) {
+                sumCheckinInput.min = todayDate;
+            }
+            if (sumCheckoutInput) {
+                sumCheckoutInput.min = todayDate;
+            }
 
             function syncCheckoutMin() {
                 const checkinValue = String(checkin.value || '').trim();
                 checkout.min = checkinValue !== '' ? checkinValue : todayDate;
+                if (sumCheckoutInput) {
+                    sumCheckoutInput.min = checkout.min;
+                }
 
                 if (checkinValue !== '' && checkinValue < todayDate) {
                     checkin.setCustomValidity('Check-in date cannot be in the past.');
+                    if (sumCheckinInput) {
+                        sumCheckinInput.setCustomValidity('Check-in date cannot be in the past.');
+                    }
                 } else {
                     checkin.setCustomValidity('');
+                    if (sumCheckinInput) {
+                        sumCheckinInput.setCustomValidity('');
+                    }
                 }
 
                 const checkoutValue = String(checkout.value || '').trim();
                 if (checkoutValue !== '' && checkinValue !== '' && checkoutValue <= checkinValue) {
                     checkout.setCustomValidity('Check-out date must be after check-in date.');
+                    if (sumCheckoutInput) {
+                        sumCheckoutInput.setCustomValidity('Check-out date must be after check-in date.');
+                    }
                 } else {
                     checkout.setCustomValidity('');
+                    if (sumCheckoutInput) {
+                        sumCheckoutInput.setCustomValidity('');
+                    }
+                }
+
+                if (checkoutValue !== '' && checkoutValue < todayDate) {
+                    checkout.setCustomValidity('Check-out date cannot be in the past.');
+                    if (sumCheckoutInput) {
+                        sumCheckoutInput.setCustomValidity('Check-out date cannot be in the past.');
+                    }
                 }
             }
 
@@ -617,6 +645,13 @@
                         wrapper.classList.toggle('disabled', !transferEnabled.checked);
                     }
                 });
+            }
+
+            function syncGuestResidencyFromNationality() {
+                const guestResidencyInput = document.getElementById('guestResidency');
+                if (guestResidencyInput) {
+                    guestResidencyInput.value = currentNationalityIso() === 'MV' ? 'local_resident' : 'foreign_national';
+                }
             }
 
             function updatePaymentOptionsByNationality() {
@@ -861,6 +896,7 @@
                             if (suggestedDial !== '' && primaryMobileCountryCode) {
                                 primaryMobileCountryCode.value = suggestedDial;
                             }
+                            syncGuestResidencyFromNationality();
                             updatePaymentOptionsByNationality();
                             updateTransferRatesByResidency();
                         }
@@ -875,6 +911,17 @@
             form.addEventListener('submit', function (event) {
                 syncPrimaryMobile();
                 updatePaymentOptionsByNationality();
+                syncCheckoutMin();
+
+                if ((sumCheckinInput && !sumCheckinInput.checkValidity()) || (sumCheckoutInput && !sumCheckoutInput.checkValidity())) {
+                    event.preventDefault();
+                    if (sumCheckinInput && !sumCheckinInput.checkValidity()) {
+                        sumCheckinInput.reportValidity();
+                    } else if (sumCheckoutInput && !sumCheckoutInput.checkValidity()) {
+                        sumCheckoutInput.reportValidity();
+                    }
+                    return;
+                }
 
                 const hasValidGuests = validateMandatoryGuestFields();
                 if (!hasValidGuests) {
@@ -888,6 +935,7 @@
 
             syncCheckoutMin();
             syncPrimaryMobile();
+            syncGuestResidencyFromNationality();
             updatePaymentOptionsByNationality();
             syncSummary();
         })();

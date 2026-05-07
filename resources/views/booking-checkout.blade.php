@@ -263,10 +263,13 @@
             && trim((string) ($summary['primary_mobile'] ?? '')) !== ''
             && trim((string) ($summary['primary_nationality'] ?? '')) !== ''
             && strcasecmp(trim((string) ($summary['primary_nationality'] ?? '')), 'Not specified') !== 0;
-        $selectedProvider = $lockedPaymentProvider;
-        $hasAvailablePaymentOptions = $paymentOptions->isNotEmpty();
         $customerPaymentStatus = strtolower(trim((string) ($reservation->payment_status ?? 'unpaid')));
         $customerPaymentCollectedAt = trim((string) ($reservation->payment_collected_at ?? $reservation->payment_verified_at ?? ''));
+        $editGuestDetailsMode = (string) request()->query('edit_guest', '0') === '1';
+        $showGuestDetailsForm = !empty($reservation->id) && $customerPaymentStatus !== 'paid' && (!$guestDetailsComplete || $editGuestDetailsMode);
+        $showCheckoutTermsAndPayment = $guestDetailsComplete && !$editGuestDetailsMode;
+        $selectedProvider = $lockedPaymentProvider;
+        $hasAvailablePaymentOptions = $paymentOptions->isNotEmpty();
         $selectedPaymentOption = '';
         foreach ($paymentOptions as $paymentOption) {
             $optionGateway = strtolower(trim((string) ($paymentOption['gateway'] ?? '')));
@@ -286,12 +289,12 @@
         ];
         $selectedNationality = trim((string) old('primary_nationality', (string) ($summary['primary_nationality'] ?? '')));
         $selectedResidency = strcasecmp($selectedNationality, 'Maldives') === 0 ? 'local_resident' : 'foreign_national';
-        $bookingProcessBackUrl = $guestDetailsComplete
+        $bookingProcessBackUrl = ($guestDetailsComplete && !$editGuestDetailsMode)
             ? ($isNoTransferCategory
                 ? (trim((string) ($backUrl ?? '')) !== '' ? (string) $backUrl : '/')
                 : '/booking/checkout/' . (int) ($reservation->id ?? 0) . '/transfer')
             : (trim((string) ($backUrl ?? '')) !== '' ? (string) $backUrl : '/');
-        $bookingProcessCurrentStep = $guestDetailsComplete
+        $bookingProcessCurrentStep = ($guestDetailsComplete && !$editGuestDetailsMode)
             ? ($isNoTransferCategory ? 2 : 3)
             : 1;
         $bookingProcessSteps = $isNoTransferCategory
@@ -312,7 +315,7 @@
         @include('partials.booking-process-highlights', [
             'bookingProcessCurrentStep' => $bookingProcessCurrentStep,
             'bookingProcessBackUrl' => $bookingProcessBackUrl,
-            'bookingProcessBackLabel' => $guestDetailsComplete ? 'Back to transfer selection' : 'Back to booking view',
+            'bookingProcessBackLabel' => ($guestDetailsComplete && !$editGuestDetailsMode) ? 'Back to transfer selection' : 'Back to booking view',
             'bookingProcessSteps' => $bookingProcessSteps,
             'bookingProcessNextText' => ($requiresCustomerAuth && !$customerAuthenticated)
                 ? 'Next step after guest details: sign in to unlock payment method selection.'
@@ -346,7 +349,7 @@
                     <div class="cell"><span class="label">Nationality</span><div class="value">{{ (string) ($summary['primary_nationality'] ?? '-') }}</div></div>
                 </div>
 
-                @if (!empty($reservation->id) && $customerPaymentStatus !== 'paid' && !$guestDetailsComplete)
+                @if ($showGuestDetailsForm)
                     <section class="guest-details-box" aria-label="Guest details form">
                         <h2>Guest Details</h2>
                         <p class="guest-form-note">Provide guest identity details now. Booking totals and payment currency are recalculated from the selected nationality.</p>
@@ -389,16 +392,16 @@
                                 </div>
                             </div>
                             <div class="actions" style="margin-top:10px;">
-                                <button class="btn" type="submit">Save Guest Details</button>
+                                <button class="btn" type="submit">Continue to Transfer Selection</button>
                             </div>
                         </form>
-                        @if (!$guestDetailsComplete)
-                            <p class="fine-print" style="margin:8px 0 0;">Complete and save guest details first. Transfer selection and payment method are shown in the next step.</p>
+                        @if (!$guestDetailsComplete || $editGuestDetailsMode)
+                            <p class="fine-print" style="margin:8px 0 0;">Complete guest details and continue. Transfer selection and payment method are shown in the next step.</p>
                         @endif
                     </section>
                 @endif
 
-                @if ($guestDetailsComplete)
+                @if ($showCheckoutTermsAndPayment)
                 <section class="terms-box" aria-label="Booking terms and policies">
                     <h2>Booking Terms Before Payment</h2>
                     <div class="terms-grid">
@@ -444,7 +447,6 @@
                         </p>
                     @endif
                     <div class="payment-grid">
-                        <div class="payment-stat"><span class="k">Customer Segment</span><span class="v">{{ $isForeigner ? 'Foreign National' : 'Local Maldivian' }}</span></div>
                         <div class="payment-stat"><span class="k">Payment Currency</span><span class="v" id="paymentCurrencyDisplay">{{ $lockedPaymentCurrency }}</span></div>
                         <div class="payment-stat"><span class="k">Gateway</span><span class="v" id="paymentGatewayDisplay">{{ $paymentProviderLabel }}</span></div>
                     </div>

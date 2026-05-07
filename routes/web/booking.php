@@ -657,12 +657,9 @@ Route::post('/booking/reserve', function (Request $request) {
             'child_charge' => 0,
         ];
     })->values()->all();
-    $guestResidency = strtolower(trim((string) ($payload['guest_residency'] ?? '')));
-    if (!in_array($guestResidency, ['local_resident', 'foreign_national'], true)) {
-        $guestResidency = ReservationPricingPolicy::isForeigner((string) ($payload['primary_nationality'] ?? ''), null)
-            ? 'foreign_national'
-            : 'local_resident';
-    }
+    $guestResidency = ReservationPricingPolicy::isForeigner((string) ($payload['primary_nationality'] ?? ''), null)
+        ? 'foreign_national'
+        : 'local_resident';
 
     // Resolve effective nightly rate by meal plan and guest residency.
     $selectedMealPlan = strtolower(trim((string) ($payload['meal_plan'] ?? '')));
@@ -1580,12 +1577,9 @@ Route::post('/booking/reserve-category', function (Request $request) {
     $basePrice = (float) ($propertyRow->base_price ?? 0);
     $serviceSubtotal = $basePrice * $units;
     $discountPercent = (float) ($listingDetails['promotion_discount_percent'] ?? 0);
-    $guestResidency = strtolower(trim((string) ($payload['guest_residency'] ?? '')));
-    if (!in_array($guestResidency, ['local_resident', 'foreign_national'], true)) {
-        $guestResidency = ReservationPricingPolicy::isForeigner((string) ($payload['primary_nationality'] ?? ''), null)
-            ? 'foreign_national'
-            : 'local_resident';
-    }
+    $guestResidency = ReservationPricingPolicy::isForeigner((string) ($payload['primary_nationality'] ?? ''), null)
+        ? 'foreign_national'
+        : 'local_resident';
 
     $effectiveSegmentPricing = ['adult' => 0.0, 'child' => 0.0, 'infant' => 0.0, 'flat' => 0.0];
     if ($categoryKey !== 'accommodation') {
@@ -2237,7 +2231,7 @@ Route::get('/booking/checkout/{reservation}/transfer', function (Request $reques
     $includeTransfer = !in_array($normalizedTransferOption, ['', 'none', 'no_transfer', 'decline', 'declined'], true)
         && $availableCodes->contains($savedTransferOption);
 
-    $backUrl = '/booking/checkout/' . $reservation;
+    $backUrl = '/booking/checkout/' . $reservation . '?edit_guest=1';
 
     return view('booking-transfer-selection', [
         'reservation' => $reservationRow,

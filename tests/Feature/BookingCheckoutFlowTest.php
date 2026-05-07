@@ -129,6 +129,53 @@ class BookingCheckoutFlowTest extends TestCase
         $transferPage->assertSee('USD', false);
     }
 
+    public function test_transfer_back_link_opens_guest_edit_mode_with_additional_guest_details_field(): void
+    {
+        $reservationId = $this->createReservation([
+            'notes' => [
+                'category_key' => 'excursion',
+                'primary_first_name' => 'Guest',
+                'primary_last_name' => 'Customer',
+                'primary_email' => 'guest@example.com',
+                'primary_mobile' => '+49123456',
+                'primary_nationality' => 'Germany',
+                'guest_residency' => 'foreign_national',
+                'property_transfer_options' => [
+                    [
+                        'code' => 'speedboat',
+                        'label' => 'Speedboat',
+                        'local_adult_charge' => 50,
+                        'local_child_charge' => 25,
+                        'foreign_adult_charge' => 80,
+                        'foreign_child_charge' => 40,
+                    ],
+                ],
+                'transfer_option' => 'speedboat',
+                'transfer_option_label' => 'Speedboat',
+                'invoice_total_amount' => 1200,
+                'subtotal_amount' => 1000,
+                'discounted_subtotal' => 1000,
+                'adults' => 2,
+                'children' => 1,
+                'infants' => 0,
+                'nights' => 2,
+                'rooms' => 1,
+                'quote_payment_currency' => 'USD',
+                'quote_payment_amount' => 77.35,
+                'quote_source_currency' => 'MVR',
+                'quote_source_amount' => 1200,
+            ],
+        ]);
+
+        $transferPage = $this->get('/booking/checkout/' . $reservationId . '/transfer');
+        $transferPage->assertOk();
+        $transferPage->assertSee('/booking/checkout/' . $reservationId . '?edit_guest=1', false);
+
+        $checkoutEditPage = $this->get('/booking/checkout/' . $reservationId . '?edit_guest=1');
+        $checkoutEditPage->assertOk();
+        $checkoutEditPage->assertSee('id="checkoutAdditionalGuestDetails"', false);
+    }
+
     public function test_service_checkout_summary_uses_locked_payment_currency(): void
     {
         $reservationId = $this->createReservation([

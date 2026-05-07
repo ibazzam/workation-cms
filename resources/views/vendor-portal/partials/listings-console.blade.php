@@ -730,7 +730,12 @@
                                                                                             </div>
                                                                                         </td>
                                                                                         <td>
-                                                                                            <span class="room-summary-line">Qty: {{ (int) ($rentalItem->quantity_available ?? 1) }} | Local: MVR {{ number_format((float) ($rentalItem->price_per_hour_local ?? 0), 2) }}/hr | Foreign: USD {{ number_format((float) ($rentalItem->price_per_hour_usd ?? 0), 2) }}/hr | Min: {{ (int) ($rentalItem->min_duration_minutes ?? 30) }}min | Max: {{ (int) ($rentalItem->max_duration_hours ?? 8) }}hrs</span>
+                                                                                            @php
+                                                                                                $rentalSummaryText = (($rentalItem->pricing_type ?? 'hourly') === 'per_seat')
+                                                                                                    ? 'Adult: MVR ' . number_format((float) ($rentalItem->price_per_seat_adult_local ?? 0), 2) . ' / USD ' . number_format((float) ($rentalItem->price_per_seat_adult_usd ?? 0), 2) . ' per seat'
+                                                                                                    : 'Local: MVR ' . number_format((float) ($rentalItem->price_per_hour_local ?? 0), 2) . '/hr | Foreign: USD ' . number_format((float) ($rentalItem->price_per_hour_usd ?? 0), 2) . '/hr | Min: ' . (int) ($rentalItem->min_duration_minutes ?? 30) . 'min | Max: ' . (int) ($rentalItem->max_duration_hours ?? 8) . 'hrs';
+                                                                                            @endphp
+                                                                                            <span class="room-summary-line">Qty: {{ (int) ($rentalItem->quantity_available ?? 1) }} | {{ $rentalSummaryText }}</span>
                                                                                         </td>
                                                                                         <td>
                                                                                             <div class="inline-actions listing-actions-inline listing-actions-compact">
@@ -781,7 +786,16 @@
                                                                                                     @endforeach
                                                                                                 </select>
                                                                                                 <textarea class="ops-textarea" name="description" rows="3" maxlength="3000" placeholder="Description">{{ trim((string) ($rentalItem->description ?? '')) }}</textarea>
-                                                                                                <div class="listing-transfer-table">
+                                                                                                @php $editPricingType = strtolower(trim((string) ($rentalItem->pricing_type ?? 'hourly'))); @endphp
+                                                                                                <div style="display:flex;gap:16px;flex-wrap:wrap;margin:6px 0;">
+                                                                                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.9rem;">
+                                                                                                        <input type="radio" name="pricing_type" value="hourly" @checked($editPricingType !== 'per_seat') style="cursor:pointer;"> Hourly Rental
+                                                                                                    </label>
+                                                                                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.9rem;">
+                                                                                                        <input type="radio" name="pricing_type" value="per_seat" @checked($editPricingType === 'per_seat') style="cursor:pointer;"> Per Seat / Per Person
+                                                                                                    </label>
+                                                                                                </div>
+                                                                                                <div class="listing-transfer-table js-pricing-hourly" @if($editPricingType === 'per_seat') style="display:none" @endif>
                                                                                                     <div class="listing-transfer-head" aria-hidden="true">
                                                                                                         <span>Rate</span>
                                                                                                         <span>Price per Hour</span>
@@ -803,9 +817,36 @@
                                                                                                         <label class="listing-transfer-rate"><span>Foreign (USD)</span><input class="ops-input" name="price_per_hour_child_usd" type="number" min="0" step="0.01" value="{{ (float) ($rentalItem->price_per_hour_child_usd ?? 0) > 0 ? (float) ($rentalItem->price_per_hour_child_usd ?? 0) : '' }}" placeholder="USD 0.00"></label>
                                                                                                     </div>
                                                                                                 </div>
+                                                                                                <div class="listing-transfer-table js-pricing-per-seat" @if($editPricingType !== 'per_seat') style="display:none" @endif>
+                                                                                                    <div class="listing-transfer-head" aria-hidden="true">
+                                                                                                        <span>Seat Rate</span>
+                                                                                                        <span>Price per Person</span>
+                                                                                                    </div>
+                                                                                                    <div class="listing-transfer-row">
+                                                                                                        <div class="listing-transfer-option"><label><span>Adult Local (MVR)</span></label></div>
+                                                                                                        <label class="listing-transfer-rate"><span>Local (MVR)</span><input class="ops-input" name="price_per_seat_adult_local" type="number" min="0" step="0.01" value="{{ (float) ($rentalItem->price_per_seat_adult_local ?? 0) > 0 ? (float) ($rentalItem->price_per_seat_adult_local ?? 0) : '' }}" placeholder="MVR 0.00"></label>
+                                                                                                    </div>
+                                                                                                    <div class="listing-transfer-row">
+                                                                                                        <div class="listing-transfer-option"><label><span>Adult Foreign (USD)</span></label></div>
+                                                                                                        <label class="listing-transfer-rate"><span>Foreign (USD)</span><input class="ops-input" name="price_per_seat_adult_usd" type="number" min="0" step="0.01" value="{{ (float) ($rentalItem->price_per_seat_adult_usd ?? 0) > 0 ? (float) ($rentalItem->price_per_seat_adult_usd ?? 0) : '' }}" placeholder="USD 0.00"></label>
+                                                                                                    </div>
+                                                                                                    <div class="listing-transfer-row">
+                                                                                                        <div class="listing-transfer-option"><label><span>Child Local (MVR)</span></label></div>
+                                                                                                        <label class="listing-transfer-rate"><span>Local (MVR)</span><input class="ops-input" name="price_per_seat_child_local" type="number" min="0" step="0.01" value="{{ (float) ($rentalItem->price_per_seat_child_local ?? 0) > 0 ? (float) ($rentalItem->price_per_seat_child_local ?? 0) : '' }}" placeholder="MVR 0.00 (optional)"></label>
+                                                                                                    </div>
+                                                                                                    <div class="listing-transfer-row">
+                                                                                                        <div class="listing-transfer-option"><label><span>Child Foreign (USD)</span></label></div>
+                                                                                                        <label class="listing-transfer-rate"><span>Foreign (USD)</span><input class="ops-input" name="price_per_seat_child_usd" type="number" min="0" step="0.01" value="{{ (float) ($rentalItem->price_per_seat_child_usd ?? 0) > 0 ? (float) ($rentalItem->price_per_seat_child_usd ?? 0) : '' }}" placeholder="USD 0.00 (optional)"></label>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                                <input class="ops-input js-pricing-hourly" @if($editPricingType === 'per_seat') style="display:none" @endif name="min_duration_minutes" type="number" min="5" max="1440" value="{{ (int) ($rentalItem->min_duration_minutes ?? 30) }}" placeholder="Min duration (minutes)">
+                                                                                                <input class="ops-input js-pricing-hourly" @if($editPricingType === 'per_seat') style="display:none" @endif name="max_duration_hours" type="number" min="1" max="24" value="{{ (int) ($rentalItem->max_duration_hours ?? 8) }}" placeholder="Max duration (hours)">
                                                                                                 <input class="ops-input" name="min_age_years" type="number" min="0" max="120" value="{{ (int) ($rentalItem->min_age_years ?? 0) }}" placeholder="Minimum age (0 = no restriction)">
-                                                                                                <input class="ops-input" name="min_duration_minutes" type="number" min="5" max="1440" value="{{ (int) ($rentalItem->min_duration_minutes ?? 30) }}" placeholder="Min duration (minutes)">
-                                                                                                <input class="ops-input" name="max_duration_hours" type="number" min="1" max="24" value="{{ (int) ($rentalItem->max_duration_hours ?? 8) }}" placeholder="Max duration (hours)">
+                                                                                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.9rem;margin:4px 0;">
+                                                                                                    <input type="checkbox" name="requires_swimming" value="1" @checked((bool) ($rentalItem->requires_swimming ?? false)) style="cursor:pointer;width:15px;height:15px;">
+                                                                                                    Requires ability to swim
+                                                                                                </label>
+                                                                                                <textarea class="ops-textarea" name="safety_notes" rows="2" maxlength="1000" placeholder="Safety / warning notes for guests">{{ trim((string) ($rentalItem->safety_notes ?? '')) }}</textarea>
                                                                                                 <input class="ops-input" name="quantity_available" type="number" min="1" max="10000" value="{{ (int) ($rentalItem->quantity_available ?? 1) }}" placeholder="Quantity available">
                                                                                                 <select class="ops-select" name="status">
                                                                                                     <option value="active" @selected(strtolower((string) ($rentalItem->status ?? 'active')) === 'active')>Active</option>
@@ -1087,33 +1128,75 @@
                                                                         <label>Description</label>
                                                                         <textarea class="ops-textarea" name="description" rows="3" maxlength="3000" placeholder="Brief description of this equipment...">{{ $showInlineRentalItemRow ? old('description', '') : '' }}</textarea>
                                                                     </div>
-                                                                    <div class="ops-field">
-                                                                        <label>Price per Hour — Local (MVR)</label>
+                                                                    {{-- Pricing type --}}
+                                                                    @php $oldPricingType = $showInlineRentalItemRow ? old('pricing_type', 'hourly') : 'hourly'; @endphp
+                                                                    <div class="ops-field ops-field-wide">
+                                                                        <label>Pricing Model</label>
+                                                                        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:4px;">
+                                                                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;">
+                                                                                <input type="radio" name="pricing_type" value="hourly" @checked($oldPricingType === 'hourly') style="cursor:pointer;"> Hourly Rental (jet ski, kayak…)
+                                                                            </label>
+                                                                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;">
+                                                                                <input type="radio" name="pricing_type" value="per_seat" @checked($oldPricingType === 'per_seat') style="cursor:pointer;"> Per Seat / Per Person (parasailing, banana boat…)
+                                                                            </label>
+                                                                        </div>
+                                                                    </div>
+                                                                    {{-- Hourly pricing fields --}}
+                                                                    <div class="ops-field js-pricing-hourly" @if($oldPricingType === 'per_seat') style="display:none" @endif>
+                                                                        <label>Adult Price / Hour — Local (MVR)</label>
                                                                         <input class="ops-input" name="price_per_hour_local" type="number" min="0" step="0.01" value="{{ $showInlineRentalItemRow ? old('price_per_hour_local', '') : '' }}" placeholder="MVR 0.00">
                                                                     </div>
-                                                                    <div class="ops-field">
-                                                                        <label>Price per Hour — Foreign (USD)</label>
+                                                                    <div class="ops-field js-pricing-hourly" @if($oldPricingType === 'per_seat') style="display:none" @endif>
+                                                                        <label>Adult Price / Hour — Foreign (USD)</label>
                                                                         <input class="ops-input" name="price_per_hour_usd" type="number" min="0" step="0.01" value="{{ $showInlineRentalItemRow ? old('price_per_hour_usd', '') : '' }}" placeholder="USD 0.00">
                                                                     </div>
-                                                                    <div class="ops-field">
-                                                                        <label>Child Price per Hour — Local (MVR)</label>
+                                                                    <div class="ops-field js-pricing-hourly" @if($oldPricingType === 'per_seat') style="display:none" @endif>
+                                                                        <label>Child Price / Hour — Local (MVR)</label>
                                                                         <input class="ops-input" name="price_per_hour_child_local" type="number" min="0" step="0.01" value="{{ $showInlineRentalItemRow ? old('price_per_hour_child_local', '') : '' }}" placeholder="MVR 0.00 (optional)">
                                                                     </div>
-                                                                    <div class="ops-field">
-                                                                        <label>Child Price per Hour — Foreign (USD)</label>
+                                                                    <div class="ops-field js-pricing-hourly" @if($oldPricingType === 'per_seat') style="display:none" @endif>
+                                                                        <label>Child Price / Hour — Foreign (USD)</label>
                                                                         <input class="ops-input" name="price_per_hour_child_usd" type="number" min="0" step="0.01" value="{{ $showInlineRentalItemRow ? old('price_per_hour_child_usd', '') : '' }}" placeholder="USD 0.00 (optional)">
                                                                     </div>
-                                                                    <div class="ops-field">
-                                                                        <label>Minimum Age (years)</label>
-                                                                        <input class="ops-input" name="min_age_years" type="number" min="0" max="120" value="{{ $showInlineRentalItemRow ? old('min_age_years', 0) : 0 }}" placeholder="0 = no age restriction">
+                                                                    {{-- Per-seat pricing fields --}}
+                                                                    <div class="ops-field js-pricing-per-seat" @if($oldPricingType !== 'per_seat') style="display:none" @endif>
+                                                                        <label>Adult Seat Price — Local (MVR)</label>
+                                                                        <input class="ops-input" name="price_per_seat_adult_local" type="number" min="0" step="0.01" value="{{ $showInlineRentalItemRow ? old('price_per_seat_adult_local', '') : '' }}" placeholder="MVR 0.00">
                                                                     </div>
-                                                                    <div class="ops-field">
+                                                                    <div class="ops-field js-pricing-per-seat" @if($oldPricingType !== 'per_seat') style="display:none" @endif>
+                                                                        <label>Adult Seat Price — Foreign (USD)</label>
+                                                                        <input class="ops-input" name="price_per_seat_adult_usd" type="number" min="0" step="0.01" value="{{ $showInlineRentalItemRow ? old('price_per_seat_adult_usd', '') : '' }}" placeholder="USD 0.00">
+                                                                    </div>
+                                                                    <div class="ops-field js-pricing-per-seat" @if($oldPricingType !== 'per_seat') style="display:none" @endif>
+                                                                        <label>Child Seat Price — Local (MVR)</label>
+                                                                        <input class="ops-input" name="price_per_seat_child_local" type="number" min="0" step="0.01" value="{{ $showInlineRentalItemRow ? old('price_per_seat_child_local', '') : '' }}" placeholder="MVR 0.00 (optional)">
+                                                                    </div>
+                                                                    <div class="ops-field js-pricing-per-seat" @if($oldPricingType !== 'per_seat') style="display:none" @endif>
+                                                                        <label>Child Seat Price — Foreign (USD)</label>
+                                                                        <input class="ops-input" name="price_per_seat_child_usd" type="number" min="0" step="0.01" value="{{ $showInlineRentalItemRow ? old('price_per_seat_child_usd', '') : '' }}" placeholder="USD 0.00 (optional)">
+                                                                    </div>
+                                                                    <div class="ops-field js-pricing-hourly" @if($oldPricingType === 'per_seat') style="display:none" @endif>
                                                                         <label>Minimum Duration (minutes)</label>
                                                                         <input class="ops-input" name="min_duration_minutes" type="number" min="5" max="1440" value="{{ $showInlineRentalItemRow ? old('min_duration_minutes', 30) : 30 }}" placeholder="e.g. 30">
                                                                     </div>
-                                                                    <div class="ops-field">
+                                                                    <div class="ops-field js-pricing-hourly" @if($oldPricingType === 'per_seat') style="display:none" @endif>
                                                                         <label>Maximum Duration (hours)</label>
                                                                         <input class="ops-input" name="max_duration_hours" type="number" min="1" max="24" value="{{ $showInlineRentalItemRow ? old('max_duration_hours', 8) : 8 }}" placeholder="e.g. 8">
+                                                                    </div>
+                                                                    {{-- Safety --}}
+                                                                    <div class="ops-field">
+                                                                        <label>Minimum Age (years)</label>
+                                                                        <input class="ops-input" name="min_age_years" type="number" min="0" max="120" value="{{ $showInlineRentalItemRow ? old('min_age_years', 0) : 0 }}" placeholder="0 = no restriction">
+                                                                    </div>
+                                                                    <div class="ops-field ops-field-wide">
+                                                                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+                                                                            <input type="checkbox" name="requires_swimming" value="1" @checked((bool) ($showInlineRentalItemRow ? old('requires_swimming') : false)) style="cursor:pointer;width:16px;height:16px;">
+                                                                            Requires ability to swim
+                                                                        </label>
+                                                                    </div>
+                                                                    <div class="ops-field ops-field-wide">
+                                                                        <label>Safety / Warning Notes</label>
+                                                                        <textarea class="ops-textarea" name="safety_notes" rows="2" maxlength="1000" placeholder="e.g. Helmet and life jacket provided. Not suitable for pregnant guests or those with back problems.">{{ $showInlineRentalItemRow ? old('safety_notes', '') : '' }}</textarea>
                                                                     </div>
                                                                     <div class="ops-field">
                                                                         <label>Quantity Available</label>

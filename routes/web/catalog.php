@@ -18,6 +18,8 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         'resort_day_visit' => ['label' => 'Resort Day Visit', 'subtitle' => 'Day access offers for top resort properties.', 'hero_image_url' => ''],
         'restaurant' => ['label' => 'Restaurant', 'subtitle' => 'Island-specific dining - find restaurants on your island.', 'hero_image_url' => ''],
         'vehicle_rental' => ['label' => 'Vehicle Rental', 'subtitle' => 'Cars, bikes, speedboats, and private vessel hire by island.', 'hero_image_url' => ''],
+        'sea_transport' => ['label' => 'Sea Transport & Ferries', 'subtitle' => 'Public ferries, scheduled sea routes, and inter-island sea travel.', 'hero_image_url' => ''],
+        'liveaboard' => ['label' => 'Liveaboard / Safari', 'subtitle' => 'Multi-day safari vessel journeys with onboard stay.', 'hero_image_url' => ''],
     ];
 
     $requestedCategoryKey = strtolower(trim($category));
@@ -29,6 +31,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         'resort-day-visit' => 'resort_day_visit',
         'vehicle-rental' => 'vehicle_rental',
         'water-sports' => 'water_sports',
+        'sea-transport' => 'sea_transport',
     ];
 
     $categoryKey = $categoryAliases[$requestedCategoryKey] ?? $requestedCategoryKey;
@@ -88,6 +91,11 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     $sort = strtolower(trim((string) $request->query('sort', 'recommended')));
     $originPointFilter = trim((string) $request->query('origin_point', ''));
     $destinationPointFilter = trim((string) $request->query('destination_point', ''));
+    $travelDate = trim((string) $request->query('travel_date', ''));
+    $seatsRequested = max(1, (int) $request->query('seats', 1));
+    $liveaboardStartPoint = trim((string) $request->query('start_point', ''));
+    $liveaboardEndPoint = trim((string) $request->query('end_point', ''));
+    $liveaboardDate = trim((string) $request->query('journey_date', ''));
     $visitorResidency = function_exists('workationDetectVisitorResidency')
         ? workationDetectVisitorResidency($request)
         : (strtoupper(trim((string) ($request->header('CF-IPCountry') ?? $request->header('X-Country-Code') ?? $request->header('X-GeoIP-Country') ?? ''))) === 'MV'
@@ -689,6 +697,11 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             'rooms' => (int) $request->query('rooms', 1),
             'origin_point' => trim((string) $request->query('origin_point', '')),
             'destination_point' => trim((string) $request->query('destination_point', '')),
+            'travel_date' => $travelDate,
+            'seats' => $seatsRequested,
+            'start_point' => $liveaboardStartPoint,
+            'end_point' => $liveaboardEndPoint,
+            'journey_date' => $liveaboardDate,
             'travel_date' => trim((string) $request->query('travel_date', '')),
             'return_date' => trim((string) $request->query('return_date', '')),
             'pickup_date' => trim((string) $request->query('pickup_date', '')),

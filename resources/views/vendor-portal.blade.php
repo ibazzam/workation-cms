@@ -197,7 +197,7 @@
         $roomMediaAssets = $vendorMediaAssets->filter(static function ($media): bool {
             return strtolower((string) ($media->entity_type ?? '')) === 'room';
         });
-        $listingCategoryViewOrder = collect(['accommodation', 'marine_transport', 'land_transport', 'water_sports', 'excursion', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'])
+        $listingCategoryViewOrder = collect(['accommodation', 'marine_transport', 'land_transport', 'water_sports', 'excursion', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental', 'sea_transport', 'liveaboard'])
             ->filter(static function (string $categoryKey) use ($vendorAllowedCategoryKeys): bool {
                 return $vendorAllowedCategoryKeys->contains($categoryKey);
             })
@@ -207,6 +207,8 @@
             'marine_transport' => 'Marine Transport',
             'land_transport' => 'Land Transport',
             'conference_room' => 'Conference Rooms',
+            'sea_transport' => 'Sea Transport & Ferries',
+            'liveaboard' => 'Liveaboard / Safari',
         ]);
         $roomsByPropertyId = $vendorRooms->groupBy(static function ($room) {
             return (int) ($room->vendor_property_id ?? 0);
@@ -4409,6 +4411,76 @@
                 initFallbackListingActions();
                 initOpsCategoryToggles();
             }
+        })();
+
+        // ── Water sports pricing-type toggle ──────────────────────────────
+        (function () {
+            function bindPricingToggle(form) {
+                if (!form) return;
+                var radios = form.querySelectorAll('input[type=radio][name=pricing_type]');
+                if (!radios.length) return;
+
+                function applyVisibility(type) {
+                    form.querySelectorAll('.js-pricing-hourly').forEach(function (el) {
+                        el.style.display = type === 'per_seat' ? 'none' : '';
+                    });
+                    form.querySelectorAll('.js-pricing-per-seat').forEach(function (el) {
+                        el.style.display = type === 'per_seat' ? '' : 'none';
+                    });
+                }
+
+                radios.forEach(function (radio) {
+                    radio.addEventListener('change', function () {
+                        applyVisibility(this.value);
+                    });
+                });
+
+                var current = form.querySelector('input[type=radio][name=pricing_type]:checked');
+                if (current) applyVisibility(current.value);
+            }
+
+            // Bind on any form already in the DOM
+            document.querySelectorAll('form').forEach(bindPricingToggle);
+
+            // Re-bind when inline rows are revealed (mutation observer)
+            var observer = new MutationObserver(function (mutations) {
+                mutations.forEach(function (m) {
+                    m.addedNodes.forEach(function (node) {
+                        if (node.nodeType !== 1) return;
+                        var forms = node.querySelectorAll ? node.querySelectorAll('form') : [];
+                        forms.forEach(bindPricingToggle);
+                        if (node.matches && node.matches('form')) bindPricingToggle(node);
+                    });
+                    // Also handle rows being un-hidden
+                    if (m.type === 'attributes' && m.attributeName === 'hidden') {
+                        var el = m.target;
+                        if (el.querySelectorAll) el.querySelectorAll('form').forEach(bindPricingToggle);
+                    }
+                });
+            });
+            observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+        })();
+
+        // Mobile sidebar toggle
+        (function () {
+            var toggleBtn = document.getElementById('portalNavMobileToggle');
+            var navMenu   = document.getElementById('portalNavMenu');
+            if (!toggleBtn || !navMenu) return;
+
+            toggleBtn.addEventListener('click', function () {
+                var isOpen = navMenu.classList.toggle('is-mobile-open');
+                toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+
+            // Auto-close nav when a link is tapped on mobile
+            navMenu.querySelectorAll('a').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    if (window.innerWidth <= 900) {
+                        navMenu.classList.remove('is-mobile-open');
+                        toggleBtn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            });
         })();
     </script>
 </body>

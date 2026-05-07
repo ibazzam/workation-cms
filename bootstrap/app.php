@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: [
             '/portal/vendor/oauth/facebook/data-deletion',
+            '/booking/payment/webhooks/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

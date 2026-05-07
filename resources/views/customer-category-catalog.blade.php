@@ -2104,6 +2104,8 @@
             ['key' => 'vehicle-rental', 'icon' => 'fa-solid fa-car', 'title' => 'Vehicle Rentals', 'subtitle' => 'Cars and local rentals', 'url' => '/catalog/vehicle_rental'],
             ['key' => 'remote-workspace', 'icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces', 'url' => '/catalog/remote_workspace'],
             ['key' => 'conference-room', 'icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces', 'url' => '/catalog/conference_room'],
+            ['key' => 'sea_transport', 'icon' => 'fa-solid fa-ferry', 'title' => 'Sea Transport & Ferries', 'subtitle' => 'Scheduled sea routes & ferries', 'url' => '/catalog/sea_transport'],
+            ['key' => 'liveaboard', 'icon' => 'fa-solid fa-ship', 'title' => 'Liveaboard / Safari', 'subtitle' => 'Multi-day safari vessel journeys', 'url' => '/catalog/liveaboard'],
             ['key' => 'blog', 'icon' => 'fa-solid fa-newspaper', 'title' => 'Blog', 'subtitle' => 'Travel stories and picks', 'url' => '/blog'],
         ]);
         $catalogProperties = $catalogProperties ?? collect();
@@ -2254,7 +2256,7 @@
                         <a href="/catalog/{{ $categoryKey }}">Clear all filters</a>
                     </div>
                 </div>
-            @elseif (!in_array($categoryKey, ['marine-transport', 'land-transport'], true))
+            @elseif (!in_array($categoryKey, ['marine-transport', 'land-transport', 'sea_transport', 'liveaboard'], true))
                 <div class="grid">
                     <div class="field field-long">
                         <label for="q">Search</label>
@@ -2514,6 +2516,44 @@
                     <div class="field field-short">
                         <label for="adults_rental">Passengers / Pax</label>
                         <input id="adults_rental" name="adults" type="number" min="1" value="{{ $filters['adults'] ?? 2 }}">
+                    </div>
+                </div>
+            @elseif ($categoryKey === 'sea_transport')
+                <div class="grid">
+                    <div class="field field-long">
+                        <label for="st_origin">From</label>
+                        <input id="st_origin" name="origin_point" type="text" value="{{ $filters['origin_point'] ?? '' }}" placeholder="Departure point">
+                    </div>
+                    <div class="field field-long">
+                        <label for="st_destination">To</label>
+                        <input id="st_destination" name="destination_point" type="text" value="{{ $filters['destination_point'] ?? '' }}" placeholder="Arrival point">
+                    </div>
+                    <div class="field field-date">
+                        <label for="st_travel_date">Travel Date</label>
+                        <input id="st_travel_date" name="travel_date" type="date" value="{{ $filters['travel_date'] ?? '' }}">
+                    </div>
+                    <div class="field field-short">
+                        <label for="st_seats">Seats</label>
+                        <input id="st_seats" name="seats" type="number" min="1" max="100" value="{{ $filters['seats'] ?? 1 }}">
+                    </div>
+                </div>
+            @elseif ($categoryKey === 'liveaboard')
+                <div class="grid">
+                    <div class="field field-long">
+                        <label for="la_start_point">Boarding From</label>
+                        <input id="la_start_point" name="start_point" type="text" value="{{ $filters['start_point'] ?? '' }}" placeholder="Boarding point">
+                    </div>
+                    <div class="field field-long">
+                        <label for="la_end_point">Disembark At</label>
+                        <input id="la_end_point" name="end_point" type="text" value="{{ $filters['end_point'] ?? '' }}" placeholder="Disembark point">
+                    </div>
+                    <div class="field field-date">
+                        <label for="la_journey_date">Journey Date</label>
+                        <input id="la_journey_date" name="journey_date" type="date" value="{{ $filters['journey_date'] ?? '' }}">
+                    </div>
+                    <div class="field field-short">
+                        <label for="la_guests">Guests</label>
+                        <input id="la_guests" name="adults" type="number" min="1" value="{{ $filters['adults'] ?? 1 }}">
                     </div>
                 </div>
             @endif
@@ -2920,6 +2960,124 @@
                                     </div>
                                 </div>
                             </a>
+                            @elseif ($categoryKey === 'sea_transport')
+                            @php
+                                $stDeparture  = trim((string) ($propertyDetails['departure_point'] ?? ''));
+                                $stArrival    = trim((string) ($propertyDetails['arrival_point'] ?? ''));
+                                $stDepTime    = trim((string) ($propertyDetails['departure_time'] ?? ''));
+                                $stTotalSeats = (int) ($propertyDetails['total_seats'] ?? 0);
+                                $stLocalPrice = (float) ($propertyDetails['local_price'] ?? 0);
+                                $stForeignPrice = (float) ($propertyDetails['foreign_price'] ?? 0);
+                                $stVesselName = trim((string) ($propertyDetails['vessel_name'] ?? ''));
+                                $resolvedImage = ($thumbUrl && trim($thumbUrl) !== '')
+                                    ? (string) $thumbUrl
+                                    : ($bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback));
+                                $stAvailDays = (array) ($propertyDetails['availability_schedule'] ?? []);
+                                $stAvailText = count($stAvailDays) > 0 ? implode(', ', $stAvailDays) : '';
+                            @endphp
+                            <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
+                            <div class="card-body">
+                                <div class="card-main-col">
+                                    <span class="card-type-chip"><i class="fa-solid fa-ferry" aria-hidden="true"></i> Sea Transport</span>
+                                    <h3>{{ (string) ($property->name ?? 'Ferry Service') }}</h3>
+                                    @if ($stDeparture !== '' || $stArrival !== '')
+                                        <span class="card-route"><i class="fa-solid fa-route" aria-hidden="true"></i>
+                                            {{ $stDeparture !== '' ? $stDeparture : '?' }}
+                                            <i class="fa-solid fa-arrow-right" aria-hidden="true" style="margin:0 4px;"></i>
+                                            {{ $stArrival !== '' ? $stArrival : '?' }}
+                                        </span>
+                                    @endif
+                                    @if ($stDepTime !== '')
+                                        <span class="card-time"><i class="fa-solid fa-clock" aria-hidden="true"></i> Departs {{ $stDepTime }}</span>
+                                    @endif
+                                    @if ($stAvailText !== '')
+                                        <span class="card-avail"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> {{ $stAvailText }}</span>
+                                    @endif
+                                    @if ($stVesselName !== '')
+                                        <span class="card-vessel"><i class="fa-solid fa-anchor" aria-hidden="true"></i> {{ $stVesselName }}</span>
+                                    @endif
+                                </div>
+                                <div class="card-meta-right">
+                                    <div class="card-price">
+                                        @if ($stLocalPrice > 0)
+                                            <span class="price-local">MVR {{ number_format($stLocalPrice, 2) }} / seat</span>
+                                        @endif
+                                        @if ($stForeignPrice > 0)
+                                            <span class="price-foreign">USD {{ number_format($stForeignPrice, 2) }} / seat</span>
+                                        @endif
+                                        @if ($stLocalPrice <= 0 && $stForeignPrice <= 0)
+                                            <span>Price on request</span>
+                                        @endif
+                                    </div>
+                                    @if ($stTotalSeats > 0)
+                                        <span class="card-seats"><i class="fa-solid fa-chair" aria-hidden="true"></i> {{ $stTotalSeats }} seats</span>
+                                    @endif
+                                    <button type="button"
+                                        class="card-action-btn card-action-btn-primary"
+                                        onclick="openSeatSelector({{ $propertyId }}, '{{ e((string) ($property->name ?? '')) }}', {{ $stTotalSeats }}, [], {{ $stLocalPrice }}, {{ $stForeignPrice }})">
+                                        Select Seats <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            @elseif ($categoryKey === 'liveaboard')
+                            @php
+                                $laStart     = trim((string) ($propertyDetails['start_point'] ?? ''));
+                                $laEnd       = trim((string) ($propertyDetails['end_point'] ?? ''));
+                                $laDays      = (int) ($propertyDetails['journey_duration_days'] ?? 0);
+                                $laCabins    = (int) ($propertyDetails['cabin_count'] ?? 0);
+                                $laStopovers = (array) ($propertyDetails['stopovers'] ?? []);
+                                $laPricing   = (array) ($propertyDetails['pricing_matrix'] ?? []);
+                                $laMinPrice  = count($laPricing) > 0 ? min(array_values($laPricing)) : 0;
+                                $laVessel    = trim((string) ($propertyDetails['vessel_name'] ?? ''));
+                                $resolvedImage = ($thumbUrl && trim($thumbUrl) !== '')
+                                    ? (string) $thumbUrl
+                                    : ($bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback));
+                                $laStopoversJson = htmlspecialchars(json_encode($laStopovers), ENT_QUOTES, 'UTF-8');
+                                $laPricingJson   = htmlspecialchars(json_encode($laPricing), ENT_QUOTES, 'UTF-8');
+                            @endphp
+                            <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
+                            <div class="card-body">
+                                <div class="card-main-col">
+                                    <span class="card-type-chip"><i class="fa-solid fa-ship" aria-hidden="true"></i> Liveaboard / Safari</span>
+                                    <h3>{{ (string) ($property->name ?? 'Safari Vessel') }}</h3>
+                                    @if ($laStart !== '' || $laEnd !== '')
+                                        <span class="card-route"><i class="fa-solid fa-route" aria-hidden="true"></i>
+                                            {{ $laStart !== '' ? $laStart : '?' }}
+                                            <i class="fa-solid fa-arrow-right" aria-hidden="true" style="margin:0 4px;"></i>
+                                            {{ $laEnd !== '' ? $laEnd : '?' }}
+                                        </span>
+                                    @endif
+                                    @if ($laDays > 0)
+                                        <span class="card-duration"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> {{ $laDays }}-day journey</span>
+                                    @endif
+                                    @if (count($laStopovers) > 0)
+                                        <span class="card-stopovers"><i class="fa-solid fa-map-pin" aria-hidden="true"></i>
+                                            {{ count($laStopovers) }} stopover{{ count($laStopovers) > 1 ? 's' : '' }}:
+                                            {{ implode(', ', array_column($laStopovers, 'name')) }}
+                                        </span>
+                                    @endif
+                                    @if ($laVessel !== '')
+                                        <span class="card-vessel"><i class="fa-solid fa-anchor" aria-hidden="true"></i> {{ $laVessel }}</span>
+                                    @endif
+                                    @if ($laCabins > 0)
+                                        <span class="card-cabins"><i class="fa-solid fa-bed" aria-hidden="true"></i> {{ $laCabins }} cabins</span>
+                                    @endif
+                                </div>
+                                <div class="card-meta-right">
+                                    <div class="card-price">
+                                        @if ($laMinPrice > 0)
+                                            <span class="price-local">From MVR {{ number_format($laMinPrice, 2) }}</span>
+                                        @else
+                                            <span>Price on request</span>
+                                        @endif
+                                    </div>
+                                    <button type="button"
+                                        class="card-action-btn card-action-btn-primary"
+                                        onclick="openBoardingPointModal({{ $propertyId }}, '{{ e((string) ($property->name ?? '')) }}', {{ $laStopoversJson }}, {{ $laPricingJson }}, '{{ e($laStart) }}', '{{ e($laEnd) }}')">
+                                        Choose Journey <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            </div>
                             @else
                             <a class="card-link" href="{{ $detailUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
                                 @php
@@ -3880,5 +4038,67 @@
             syncDatePair(document.getElementById('pickup_date'), document.getElementById('return_date_rental'), true);
         })();
     </script>
+
+    @if ($categoryKey === 'sea_transport')
+        {{-- Hidden forms for seat selector booking redirects --}}
+        <form id="sea-transport-booking-form" method="GET" action="" style="display:none;">
+            <input type="hidden" name="selected_seats" id="sea_transport_selected_seats_input">
+            <input type="hidden" name="seat_count" id="sea_transport_seat_count_input">
+            <input type="hidden" name="property_id" id="sea_transport_property_id_input">
+        </form>
+        @include('partials.seat-selector')
+        <script>
+        (function () {
+            window._seaTransportSeatConfirmCallback = function (selectedSeats) {
+                var form = document.getElementById('sea-transport-booking-form');
+                var propertyId = window._seaTransportCurrentPropertyId || '';
+                if (!form || !propertyId) return;
+                document.getElementById('sea_transport_selected_seats_input').value = selectedSeats.join(',');
+                document.getElementById('sea_transport_seat_count_input').value = selectedSeats.length;
+                document.getElementById('sea_transport_property_id_input').value = propertyId;
+                form.action = '/category-booking/sea_transport/' + propertyId;
+                form.submit();
+            };
+
+            window.openSeatSelector = function (propertyId, name, totalSeats, occupiedSeats, localPrice, foreignPrice) {
+                window._seaTransportCurrentPropertyId = propertyId;
+                initializeSeatSelector(totalSeats, occupiedSeats || []);
+                var modal = document.getElementById('seat-selector-modal');
+                if (modal) modal.removeAttribute('hidden');
+            };
+        })();
+        </script>
+    @endif
+
+    @if ($categoryKey === 'liveaboard')
+        {{-- Hidden forms for boarding point selector booking redirects --}}
+        <form id="liveaboard-booking-form" method="GET" action="" style="display:none;">
+            <input type="hidden" name="boarding_point" id="liveaboard_boarding_point_input">
+            <input type="hidden" name="disembark_point" id="liveaboard_disembark_point_input">
+            <input type="hidden" name="property_id" id="liveaboard_property_id_input">
+        </form>
+        @include('partials.boarding-point-selector')
+        <script>
+        (function () {
+            window._liveaboardBoardingConfirmCallback = function (boardingPoint, disembarkPoint) {
+                var form = document.getElementById('liveaboard-booking-form');
+                var propertyId = window._liveaboardCurrentPropertyId || '';
+                if (!form || !propertyId) return;
+                document.getElementById('liveaboard_boarding_point_input').value = boardingPoint;
+                document.getElementById('liveaboard_disembark_point_input').value = disembarkPoint;
+                document.getElementById('liveaboard_property_id_input').value = propertyId;
+                form.action = '/category-booking/liveaboard/' + propertyId;
+                form.submit();
+            };
+
+            window.openBoardingPointModal = function (propertyId, name, stopovers, pricing, startPoint, endPoint) {
+                window._liveaboardCurrentPropertyId = propertyId;
+                initializeBoardingPointSelector(stopovers, pricing, startPoint, endPoint);
+                var modal = document.getElementById('boarding-point-modal');
+                if (modal) modal.removeAttribute('hidden');
+            };
+        })();
+        </script>
+    @endif
 </body>
 </html>

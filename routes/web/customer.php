@@ -173,6 +173,8 @@ Route::get('/customer', function (Request $request) {
         'restaurant'       => ['label' => 'Restaurant'],
         'vehicle_rental'   => ['label' => 'Vehicle Rental'],
         'water_sports'     => ['label' => 'Water Sports'],
+        'sea_transport'    => ['label' => 'Sea Transport & Ferries'],
+        'liveaboard'       => ['label' => 'Liveaboard / Safari'],
     ];
 
     $customerBookingsByCategory = collect(array_fill_keys(array_keys($categoryMeta), collect()));

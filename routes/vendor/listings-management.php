@@ -510,11 +510,18 @@ Route::post('/portal/vendor/water-sports-equipment/create', function (Request $r
         'equipment_type' => ['nullable', 'string', 'max:80'],
         'equipment_category' => ['nullable', 'string', 'max:40'],
         'description' => ['nullable', 'string', 'max:3000'],
+        'pricing_type' => ['nullable', Rule::in(['hourly', 'per_seat'])],
         'price_per_hour_local' => ['nullable', 'numeric', 'min:0'],
         'price_per_hour_usd' => ['nullable', 'numeric', 'min:0'],
         'price_per_hour_child_local' => ['nullable', 'numeric', 'min:0'],
         'price_per_hour_child_usd' => ['nullable', 'numeric', 'min:0'],
+        'price_per_seat_adult_local' => ['nullable', 'numeric', 'min:0'],
+        'price_per_seat_adult_usd' => ['nullable', 'numeric', 'min:0'],
+        'price_per_seat_child_local' => ['nullable', 'numeric', 'min:0'],
+        'price_per_seat_child_usd' => ['nullable', 'numeric', 'min:0'],
         'min_age_years' => ['nullable', 'integer', 'min:0', 'max:120'],
+        'requires_swimming' => ['nullable', 'boolean'],
+        'safety_notes' => ['nullable', 'string', 'max:1000'],
         'min_duration_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
         'max_duration_hours' => ['nullable', 'integer', 'min:1', 'max:24'],
         'quantity_available' => ['nullable', 'integer', 'min:1', 'max:10000'],
@@ -545,6 +552,9 @@ Route::post('/portal/vendor/water-sports-equipment/create', function (Request $r
         $equipmentCategory = 'non_motorized';
     }
 
+    $pricingType = in_array((string) ($validated['pricing_type'] ?? 'hourly'), ['hourly', 'per_seat'], true)
+        ? $validated['pricing_type'] : 'hourly';
+
     DB::table('vendor_water_sports_rental_items')->insert([
         'vendor_user_id' => $vendorUserId,
         'vendor_property_id' => $vendorPropertyId,
@@ -552,11 +562,18 @@ Route::post('/portal/vendor/water-sports-equipment/create', function (Request $r
         'equipment_type' => $equipmentType,
         'equipment_category' => $equipmentCategory,
         'description' => trim((string) ($validated['description'] ?? '')),
+        'pricing_type' => $pricingType,
         'price_per_hour_local' => max(0, (float) ($validated['price_per_hour_local'] ?? 0)),
         'price_per_hour_usd' => max(0, (float) ($validated['price_per_hour_usd'] ?? 0)),
         'price_per_hour_child_local' => max(0, (float) ($validated['price_per_hour_child_local'] ?? 0)),
         'price_per_hour_child_usd' => max(0, (float) ($validated['price_per_hour_child_usd'] ?? 0)),
+        'price_per_seat_adult_local' => max(0, (float) ($validated['price_per_seat_adult_local'] ?? 0)),
+        'price_per_seat_adult_usd' => max(0, (float) ($validated['price_per_seat_adult_usd'] ?? 0)),
+        'price_per_seat_child_local' => max(0, (float) ($validated['price_per_seat_child_local'] ?? 0)),
+        'price_per_seat_child_usd' => max(0, (float) ($validated['price_per_seat_child_usd'] ?? 0)),
         'min_age_years' => max(0, (int) ($validated['min_age_years'] ?? 0)),
+        'requires_swimming' => (bool) ($validated['requires_swimming'] ?? false),
+        'safety_notes' => trim((string) ($validated['safety_notes'] ?? '')),
         'min_duration_minutes' => max(5, (int) ($validated['min_duration_minutes'] ?? 30)),
         'max_duration_hours' => max(1, (int) ($validated['max_duration_hours'] ?? 8)),
         'quantity_available' => max(1, (int) ($validated['quantity_available'] ?? 1)),
@@ -592,11 +609,18 @@ Route::post('/portal/vendor/water-sports-equipment/{item}/update', function (Req
         'equipment_type' => ['nullable', 'string', 'max:80'],
         'equipment_category' => ['nullable', 'string', 'max:40'],
         'description' => ['nullable', 'string', 'max:3000'],
+        'pricing_type' => ['nullable', Rule::in(['hourly', 'per_seat'])],
         'price_per_hour_local' => ['nullable', 'numeric', 'min:0'],
         'price_per_hour_usd' => ['nullable', 'numeric', 'min:0'],
         'price_per_hour_child_local' => ['nullable', 'numeric', 'min:0'],
         'price_per_hour_child_usd' => ['nullable', 'numeric', 'min:0'],
+        'price_per_seat_adult_local' => ['nullable', 'numeric', 'min:0'],
+        'price_per_seat_adult_usd' => ['nullable', 'numeric', 'min:0'],
+        'price_per_seat_child_local' => ['nullable', 'numeric', 'min:0'],
+        'price_per_seat_child_usd' => ['nullable', 'numeric', 'min:0'],
         'min_age_years' => ['nullable', 'integer', 'min:0', 'max:120'],
+        'requires_swimming' => ['nullable', 'boolean'],
+        'safety_notes' => ['nullable', 'string', 'max:1000'],
         'min_duration_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
         'max_duration_hours' => ['nullable', 'integer', 'min:1', 'max:24'],
         'quantity_available' => ['nullable', 'integer', 'min:1', 'max:10000'],
@@ -616,6 +640,9 @@ Route::post('/portal/vendor/water-sports-equipment/{item}/update', function (Req
         $equipmentCategory = 'non_motorized';
     }
 
+    $updatePricingType = in_array((string) ($validated['pricing_type'] ?? 'hourly'), ['hourly', 'per_seat'], true)
+        ? $validated['pricing_type'] : 'hourly';
+
     DB::table('vendor_water_sports_rental_items')
         ->where('id', $item)
         ->where('vendor_user_id', $vendorUserId)
@@ -624,11 +651,18 @@ Route::post('/portal/vendor/water-sports-equipment/{item}/update', function (Req
             'equipment_type' => $equipmentType,
             'equipment_category' => $equipmentCategory,
             'description' => trim((string) ($validated['description'] ?? '')),
+            'pricing_type' => $updatePricingType,
             'price_per_hour_local' => max(0, (float) ($validated['price_per_hour_local'] ?? 0)),
             'price_per_hour_usd' => max(0, (float) ($validated['price_per_hour_usd'] ?? 0)),
             'price_per_hour_child_local' => max(0, (float) ($validated['price_per_hour_child_local'] ?? 0)),
             'price_per_hour_child_usd' => max(0, (float) ($validated['price_per_hour_child_usd'] ?? 0)),
+            'price_per_seat_adult_local' => max(0, (float) ($validated['price_per_seat_adult_local'] ?? 0)),
+            'price_per_seat_adult_usd' => max(0, (float) ($validated['price_per_seat_adult_usd'] ?? 0)),
+            'price_per_seat_child_local' => max(0, (float) ($validated['price_per_seat_child_local'] ?? 0)),
+            'price_per_seat_child_usd' => max(0, (float) ($validated['price_per_seat_child_usd'] ?? 0)),
             'min_age_years' => max(0, (int) ($validated['min_age_years'] ?? 0)),
+            'requires_swimming' => (bool) ($validated['requires_swimming'] ?? false),
+            'safety_notes' => trim((string) ($validated['safety_notes'] ?? '')),
             'min_duration_minutes' => max(5, (int) ($validated['min_duration_minutes'] ?? 30)),
             'max_duration_hours' => max(1, (int) ($validated['max_duration_hours'] ?? 8)),
             'quantity_available' => max(1, (int) ($validated['quantity_available'] ?? 1)),

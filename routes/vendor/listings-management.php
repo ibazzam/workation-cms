@@ -971,9 +971,10 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
     Cache::forget('vendor:portal:listings:v4:' . $vendorUserId . ':all');
     Cache::forget('vendor:portal:listings:v4:' . $vendorUserId . ':' . $canonicalListingCategory);
 
-    return redirect('/vendor/listings/' . $canonicalListingCategory)
-        ->with('portal_notice', 'Listing created successfully.')
-        ->with('portal_active_panel', 'listings');
+    return vendorPortalListingsBackResponse('Listing created successfully.', 1, [
+        'portal_listing_mode' => 'manage',
+        'portal_listing_category' => $canonicalListingCategory,
+    ]);
 });
 
 Route::post('/portal/vendor/properties/{property}/update', function (Request $request, int $property) {
@@ -1261,14 +1262,7 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
     Cache::forget('vendor_property_compatibility_reader:property_by_id:' . md5(($canonicalListingCategory ?? '*') . ':' . $property));
     Cache::forget('vendor_property_compatibility_reader:property_by_id:' . md5('*:' . $property));
 
-    $redirectCategory = $canonicalListingCategory ?? '';
-    if ($redirectCategory !== '') {
-        return redirect('/vendor/listings/' . $redirectCategory)
-            ->with('portal_notice', 'Listing updated successfully.')
-            ->with('portal_active_panel', 'listings');
-    }
-
-    return vendorPortalListingsBackResponse('Property listing updated.', 2, [
+    return vendorPortalListingsBackResponse('Listing updated successfully.', 2, [
         'portal_listing_mode' => 'manage',
         'portal_listing_category' => (string) ($canonicalListingCategory ?? ''),
     ]);

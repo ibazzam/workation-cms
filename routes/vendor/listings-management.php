@@ -1436,4 +1436,3 @@ Route::post('/portal/vendor/services/create', function (Request $request) {
 
     return back()->with('portal_notice', 'Service added successfully.');
 });
-

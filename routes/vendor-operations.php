@@ -1506,6 +1506,19 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['contact_number'] = trim((string) ($validated['contact_number'] ?? ''));
             $details['boarding_instructions'] = trim((string) ($validated['boarding_instructions'] ?? ''));
 
+            // Parse physical stop sequence (one stop per line).
+            $stopSequenceRaw = trim((string) ($validated['stop_sequence'] ?? ''));
+            $stopSequence = [];
+            if ($stopSequenceRaw !== '') {
+                foreach (preg_split('/[\r\n]+/', $stopSequenceRaw) ?: [] as $stopLine) {
+                    $stopLine = trim($stopLine);
+                    if ($stopLine !== '') {
+                        $stopSequence[] = $stopLine;
+                    }
+                }
+            }
+            $details['stop_sequence'] = $stopSequence;
+
             // Parse structured route schedule roster (JSON array from repeater UI).
             $routeSchedulesRaw = trim((string) ($validated['route_schedules'] ?? ''));
             $routeSchedulesParsed = [];
@@ -1529,6 +1542,12 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
                             continue; // skip completely blank rows
                         }
                         $legDuration = vendorPortalDurationMinutesFromTimes($depTime ?: null, $arrTime ?: null);
+                        $parsedLocalAdult    = isset($leg['local_adult'])    && $leg['local_adult']    !== null && $leg['local_adult']    !== '' ? max(0, (float) $leg['local_adult'])    : null;
+                        $parsedLocalChild    = isset($leg['local_child'])    && $leg['local_child']    !== null && $leg['local_child']    !== '' ? max(0, (float) $leg['local_child'])    : null;
+                        $parsedLocalInfant   = isset($leg['local_infant'])   && $leg['local_infant']   !== null && $leg['local_infant']   !== '' ? max(0, (float) $leg['local_infant'])   : null;
+                        $parsedForeignAdult  = isset($leg['foreign_adult'])  && $leg['foreign_adult']  !== null && $leg['foreign_adult']  !== '' ? max(0, (float) $leg['foreign_adult'])  : null;
+                        $parsedForeignChild  = isset($leg['foreign_child'])  && $leg['foreign_child']  !== null && $leg['foreign_child']  !== '' ? max(0, (float) $leg['foreign_child'])  : null;
+                        $parsedForeignInfant = isset($leg['foreign_infant']) && $leg['foreign_infant'] !== null && $leg['foreign_infant'] !== '' ? max(0, (float) $leg['foreign_infant']) : null;
                         $routeSchedulesParsed[] = [
                             'route_code'       => $routeCode,
                             'origin'           => $origin,
@@ -1537,6 +1556,12 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
                             'arr_time'         => $arrTime,
                             'duration_minutes' => $legDuration,
                             'days'             => $days,
+                            'local_adult'      => $parsedLocalAdult,
+                            'local_child'      => $parsedLocalChild,
+                            'local_infant'     => $parsedLocalInfant,
+                            'foreign_adult'    => $parsedForeignAdult,
+                            'foreign_child'    => $parsedForeignChild,
+                            'foreign_infant'   => $parsedForeignInfant,
                         ];
                     }
                 }

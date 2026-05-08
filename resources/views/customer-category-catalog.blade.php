@@ -3208,17 +3208,32 @@
                                 $stAvailDays    = (array) ($propertyDetails['availability_schedule'] ?? []);
                                 $stAvailText    = count($stAvailDays) > 0 ? implode(', ', $stAvailDays) : '';
                                 $stSeatsLimited = $stTotalSeats > 0 && $stTotalSeats <= 5;
+                                // Stop chain and from-price from leg roster.
+                                $stRouteSchedules = is_array($propertyDetails['route_schedules'] ?? null) ? $propertyDetails['route_schedules'] : [];
+                                $stStopSequence   = is_array($propertyDetails['stop_sequence'] ?? null) ? $propertyDetails['stop_sequence'] : [];
+                                $stFromLocal  = $stLocalPrice;
+                                $stFromForeign = $stForeignPrice;
+                                foreach ($stRouteSchedules as $_leg) {
+                                    $lp = isset($_leg['local_adult'])   && $_leg['local_adult']   !== null ? (float) $_leg['local_adult']   : 0;
+                                    $fp = isset($_leg['foreign_adult']) && $_leg['foreign_adult'] !== null ? (float) $_leg['foreign_adult'] : 0;
+                                    if ($lp > 0 && ($stFromLocal  <= 0 || $lp < $stFromLocal))  { $stFromLocal  = $lp; }
+                                    if ($fp > 0 && ($stFromForeign <= 0 || $fp < $stFromForeign)) { $stFromForeign = $fp; }
+                                }
+                                $stStopChain = '';
+                                if (count($stStopSequence) > 0) {
+                                    $stStopChain = implode(' → ', $stStopSequence);
+                                } elseif ($stDeparture !== '' || $stArrival !== '') {
+                                    $stStopChain = ($stDeparture !== '' ? $stDeparture : '?') . ' → ' . ($stArrival !== '' ? $stArrival : '?');
+                                }
                             @endphp
                             <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                             <div class="st-card-inner">
                                 <div class="st-card-info">
                                     <h3 class="st-card-name">{{ (string) ($property->name ?? 'Ferry Service') }}</h3>
-                                    @if ($stDeparture !== '' || $stArrival !== '')
-                                        <span class="st-card-route">
+                                    @if ($stStopChain !== '')
+                                        <span class="st-card-route" style="font-size:0.8rem; color:#1d4b66; font-weight:600;">
                                             <i class="fa-solid fa-route" aria-hidden="true"></i>
-                                            {{ $stDeparture !== '' ? $stDeparture : '?' }}
-                                            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-                                            {{ $stArrival !== '' ? $stArrival : '?' }}
+                                            {{ $stStopChain }}
                                         </span>
                                     @endif
                                     @if ($stDepTime !== '')
@@ -3231,8 +3246,8 @@
                                         @if ($stVesselName !== '')
                                             <span class="st-card-chip"><i class="fa-solid fa-anchor" aria-hidden="true"></i> {{ $stVesselName }}</span>
                                         @endif
-                                        @if ($stAvailText !== '')
-                                            <span class="st-card-chip"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> {{ $stAvailText }}</span>
+                                        @if (count($stRouteSchedules) > 0)
+                                            <span class="st-card-chip"><i class="fa-solid fa-map-signs" aria-hidden="true"></i> {{ count($stRouteSchedules) }} leg{{ count($stRouteSchedules) !== 1 ? 's' : '' }}</span>
                                         @endif
                                     </div>
                                 </div>
@@ -3244,21 +3259,19 @@
                                         </span>
                                     @endif
                                     <div>
-                                        @if ($stLocalPrice > 0)
-                                            <span class="st-price-local">MVR {{ number_format($stLocalPrice, 2) }}<small style="font-weight:500;font-size:0.65rem;"> / seat</small></span>
+                                        @if ($stFromLocal > 0)
+                                            <span class="st-price-local">from MVR {{ number_format($stFromLocal, 2) }}<small style="font-weight:500;font-size:0.65rem;"> / seat</small></span>
                                         @endif
-                                        @if ($stForeignPrice > 0)
-                                            <span class="st-price-foreign">USD {{ number_format($stForeignPrice, 2) }} / seat</span>
+                                        @if ($stFromForeign > 0)
+                                            <span class="st-price-foreign">from USD {{ number_format($stFromForeign, 2) }}</span>
                                         @endif
-                                        @if ($stLocalPrice <= 0 && $stForeignPrice <= 0)
+                                        @if ($stFromLocal <= 0 && $stFromForeign <= 0)
                                             <span class="st-price-local">Price on request</span>
                                         @endif
                                     </div>
-                                    <button type="button"
-                                        class="st-select-btn"
-                                        onclick="openSeatSelector({{ $propertyId }}, '{{ e((string) ($property->name ?? '')) }}', {{ $stTotalSeats }}, [], {{ $stLocalPrice }}, {{ $stForeignPrice }})">
-                                        Select Seat <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-                                    </button>
+                                    <a href="/sea-transport/{{ $propertyId }}" class="st-select-btn">
+                                        View Routes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                                    </a>
                                 </div>
                             </div>
                             @elseif ($categoryKey === 'liveaboard')

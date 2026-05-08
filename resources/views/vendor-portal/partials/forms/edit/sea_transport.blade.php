@@ -141,42 +141,33 @@
             </select>
         </div>
 
-        {{-- ── Route Schedule Roster ────────────────────────────────── --}}
-        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border:1px solid #cfe0eb; border-radius:12px; background:#f7fbff; padding:14px 14px 12px; margin-top:1rem; order:-1;">
-            <p style="margin:0 0 0.3rem; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Step 1. Multi-leg Route Schedule Roster</p>
-            <p style="font-size:0.85rem; color:#51697b; margin:0 0 0.35rem;">Maintain one row per timetable leg. Use separate rows for each direction, stop pattern, or departure slot.</p>
-            <p style="font-size:0.8rem; color:#6d8191; margin:0;">This is now the primary timetable input. The first non-empty roster row is used as a fallback to keep the route defaults consistent.</p>
+        {{-- ── Route Legs Roster ──────────────────────────────────────── --}}
+        @php
+            $stopSequenceArr  = is_array($propertyDetails['stop_sequence'] ?? null) ? $propertyDetails['stop_sequence'] : [];
+            $stopSequenceText = old('stop_sequence', implode("\n", array_map('trim', $stopSequenceArr)));
+            $existingRouteSchedules = old('route_schedules', json_encode($propertyDetails['route_schedules'] ?? []));
+        @endphp
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border:2px solid #1d7bb5; border-radius:12px; background:#f0f8ff; padding:16px 16px 12px; margin-top:1rem; order:-1;">
+            <p style="margin:0 0 0.3rem; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Step 1. Route Legs — Timetable &amp; Fares</p>
+            <p style="font-size:0.85rem; color:#51697b; margin:0 0 0.8rem;">Maintain one card per bookable leg. Per-leg prices override the fallback prices in Step 3.</p>
+
+            {{-- Physical stop sequence --}}
+            <div style="background:#fff; border:1px solid #cfe0eb; border-radius:8px; padding:10px 12px;">
+                <label for="sea_stop_sequence" style="display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#1d4b66; margin-bottom:4px;">Physical Stop Order <span style="font-weight:500; color:#5f7a8e; text-transform:none;">(one stop per line, in vessel travel order)</span></label>
+                <p style="font-size:0.78rem; color:#6d8191; margin:0 0 6px;">Enter all stops in the order the vessel physically passes them. Used to calculate shared seat capacity across overlapping legs.</p>
+                <textarea name="stop_sequence" id="sea_stop_sequence" class="ops-textarea" rows="3" maxlength="3000">{{ $stopSequenceText }}</textarea>
+            </div>
         </div>
 
         <div class="ops-field ops-field-wide" style="grid-column:1/-1;">
             <input type="hidden" id="sea_route_schedules_json" name="route_schedules">
-
-            {{-- Existing schedule data passed to JS --}}
-            @php
-                $existingRouteSchedules = old('route_schedules', json_encode($propertyDetails['route_schedules'] ?? []));
-            @endphp
             <script>
                 window._seaRosterInitial = (function(){
                     try { return JSON.parse({{ Js::from($existingRouteSchedules) }}); } catch(e) { return []; }
                 })();
             </script>
-
-            {{-- Roster table header --}}
-            <div class="sea-roster-header" style="display:grid; grid-template-columns:130px 1fr 90px 1fr 90px 1fr 36px; gap:6px; margin-bottom:4px; font-size:0.75rem; font-weight:600; color:#555; padding:0 2px;">
-                <span>Route Code</span>
-                <span>Origin / Departure Stop</span>
-                <span>Dep. Time</span>
-                <span>Destination / Arrival Stop</span>
-                <span>Arr. Time</span>
-                <span>Operating Days</span>
-                <span></span>
-            </div>
-
-            <div id="sea_roster_rows" style="display:flex; flex-direction:column; gap:6px;"></div>
-
-            <button type="button" id="sea_roster_add_btn" class="ops-button ops-button-secondary" style="margin-top:10px; font-size:0.85rem;">
-                + Add Route Leg
-            </button>
+            <div id="sea_roster_rows" style="display:flex; flex-direction:column; gap:10px;"></div>
+            <button type="button" id="sea_roster_add_btn" class="ops-button ops-button-secondary" style="margin-top:10px; font-size:0.85rem;">+ Add Route Leg</button>
         </div>
 
         <div class="ops-form-actions">
@@ -225,42 +216,71 @@
     const addBtn          = document.getElementById('sea_roster_add_btn');
     const jsonInput       = document.getElementById('sea_route_schedules_json');
 
-    const ROW_STYLE = 'display:grid;grid-template-columns:130px 1fr 90px 1fr 90px 1fr 36px;gap:6px;align-items:start;background:#f7fbff;border:1px solid #cfe0eb;border-radius:6px;padding:8px;';
+    const CARD_STYLE = 'background:#fff;border:1px solid #cfe0eb;border-radius:8px;padding:12px 14px;';
     const INPUT_STYLE = 'width:100%;box-sizing:border-box;padding:5px 8px;font-size:0.83rem;border:1px solid #c8d8e8;border-radius:4px;';
-    const DAY_WRAP_STYLE = 'display:flex;flex-wrap:wrap;gap:4px;';
     const DAY_BTN_STYLE = 'cursor:pointer;font-size:0.72rem;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid #b0c8dc;background:#e8f4fb;color:#1d4b66;user-select:none;';
     const DAY_BTN_ON_STYLE = 'cursor:pointer;font-size:0.72rem;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid #1d7bb5;background:#1d7bb5;color:#fff;user-select:none;';
-    const DEL_BTN_STYLE = 'cursor:pointer;width:30px;height:30px;border:none;border-radius:4px;background:#fde8e8;color:#c0392b;font-size:1rem;line-height:1;';
 
     function buildRow(data) {
         data = data || {};
-        const row = document.createElement('div');
-        row.style.cssText = ROW_STYLE;
-        row.className = 'sea-roster-row';
+        const card = document.createElement('div');
+        card.style.cssText = CARD_STYLE;
+        card.className = 'sea-roster-row';
 
-        function inp(placeholder, val, type) {
+        function inp(ph, val, type) {
             const el = document.createElement('input');
-            el.type = type || 'text';
-            el.style.cssText = INPUT_STYLE;
-            el.placeholder = placeholder;
-            el.value = val || '';
+            el.type = type || 'text'; el.style.cssText = INPUT_STYLE;
+            el.placeholder = ph; el.value = val || '';
             return el;
         }
+        function numInp(ph, val) {
+            const el = document.createElement('input');
+            el.type = 'number'; el.min = '0'; el.step = '0.01'; el.style.cssText = INPUT_STYLE;
+            el.placeholder = ph;
+            el.value = (val !== undefined && val !== null && String(val) !== '') ? String(val) : '';
+            return el;
+        }
+        function fieldWrap(labelText, inputEl) {
+            const wrap = document.createElement('div');
+            const lbl = document.createElement('label');
+            lbl.textContent = labelText;
+            lbl.style.cssText = 'display:block;font-size:0.7rem;font-weight:600;color:#4a6478;margin-bottom:2px;';
+            wrap.appendChild(lbl); wrap.appendChild(inputEl); return wrap;
+        }
 
-        const routeCodeInp  = inp('e.g. MLE-MFUSHI',       data.route_code  || '');
-        const originInp     = inp('e.g. Male Jetty No.1',   data.origin      || '');
-        const depTimeInp    = inp('', data.dep_time || '', 'time');
-        const destInp       = inp('e.g. Maafushi Jetty',    data.destination || '');
-        const arrTimeInp    = inp('', data.arr_time || '', 'time');
+        /* Row 1: schedule fields */
+        const row1 = document.createElement('div');
+        row1.style.cssText = 'display:grid;grid-template-columns:110px 1fr 80px 1fr 80px 28px;gap:6px;align-items:end;margin-bottom:8px;';
+        const routeCodeInp = inp('e.g. MLE-ISL1', data.route_code || '');
+        const originInp    = inp('Board stop',    data.origin || '');
+        const depTimeInp   = inp('',              data.dep_time || '', 'time');
+        const destInp      = inp('Alight stop',   data.destination || '');
+        const arrTimeInp   = inp('',              data.arr_time || '', 'time');
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.style.cssText = 'cursor:pointer;width:28px;height:28px;border:none;border-radius:4px;background:#fde8e8;color:#c0392b;font-size:1rem;line-height:1;align-self:end;flex-shrink:0;';
+        delBtn.title = 'Remove leg'; delBtn.innerHTML = '&times;';
+        delBtn.addEventListener('click', function() { card.remove(); serializeRoster(); });
+        row1.appendChild(fieldWrap('Route Code', routeCodeInp));
+        row1.appendChild(fieldWrap('Origin / Board Stop', originInp));
+        row1.appendChild(fieldWrap('Dep.', depTimeInp));
+        row1.appendChild(fieldWrap('Destination / Alight Stop', destInp));
+        row1.appendChild(fieldWrap('Arr.', arrTimeInp));
+        row1.appendChild(delBtn);
+        card.appendChild(row1);
 
-        const daysWrap = document.createElement('div');
-        daysWrap.style.cssText = DAY_WRAP_STYLE;
+        /* Row 2: operating days */
+        const row2 = document.createElement('div');
+        row2.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-bottom:10px;';
+        const daysLbl = document.createElement('span');
+        daysLbl.textContent = 'Operating days:';
+        daysLbl.style.cssText = 'font-size:0.72rem;font-weight:600;color:#4a6478;margin-right:4px;';
+        row2.appendChild(daysLbl);
         const activeDays = Array.isArray(data.days) ? data.days : [];
         const dayButtons = {};
         DAYS.forEach(function(d) {
             const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.textContent = d;
+            btn.type = 'button'; btn.textContent = d;
             const on = activeDays.indexOf(d) !== -1;
             btn.style.cssText = on ? DAY_BTN_ON_STYLE : DAY_BTN_STYLE;
             btn.dataset.active = on ? '1' : '0';
@@ -269,38 +289,54 @@
                 btn.dataset.active = nowOn ? '1' : '0';
                 btn.style.cssText = nowOn ? DAY_BTN_ON_STYLE : DAY_BTN_STYLE;
             });
-            dayButtons[d] = btn;
-            daysWrap.appendChild(btn);
+            dayButtons[d] = btn; row2.appendChild(btn);
         });
+        card.appendChild(row2);
 
-        const delBtn = document.createElement('button');
-        delBtn.type = 'button';
-        delBtn.style.cssText = DEL_BTN_STYLE;
-        delBtn.title = 'Remove this leg';
-        delBtn.innerHTML = '&times;';
-        delBtn.addEventListener('click', function() { row.remove(); serializeRoster(); });
+        /* Row 3+: per-leg pricing */
+        const pSection = document.createElement('div');
+        pSection.style.cssText = 'border-top:1px dashed #c8d8e8;padding-top:8px;';
+        const pHdr = document.createElement('span');
+        pHdr.textContent = 'Leg Pricing — leave blank to use fallback prices';
+        pHdr.style.cssText = 'font-size:0.71rem;font-weight:600;color:#4a6478;display:block;margin-bottom:6px;';
+        pSection.appendChild(pHdr);
+        const pGrid = document.createElement('div');
+        pGrid.style.cssText = 'display:grid;grid-template-columns:90px 1fr 1fr 1fr;gap:5px;';
+        function hdrCell(t) { const s = document.createElement('span'); s.textContent = t; s.style.cssText = 'font-size:0.7rem;font-weight:600;color:#777;display:flex;align-items:flex-end;padding-bottom:2px;'; return s; }
+        function rowLbl(t) { const s = document.createElement('span'); s.textContent = t; s.style.cssText = 'font-size:0.7rem;font-weight:600;color:#1d4b66;display:flex;align-items:flex-end;padding-bottom:2px;'; return s; }
+        pGrid.appendChild(document.createElement('div'));
+        pGrid.appendChild(hdrCell('Adult')); pGrid.appendChild(hdrCell('Child')); pGrid.appendChild(hdrCell('Infant'));
+        const locAdult  = numInp('MVR', data.local_adult  ?? '');
+        const locChild  = numInp('MVR', data.local_child  ?? '');
+        const locInfant = numInp('MVR', data.local_infant ?? '');
+        pGrid.appendChild(rowLbl('Local (MVR)')); pGrid.appendChild(locAdult); pGrid.appendChild(locChild); pGrid.appendChild(locInfant);
+        const forAdult  = numInp('USD', data.foreign_adult  ?? '');
+        const forChild  = numInp('USD', data.foreign_child  ?? '');
+        const forInfant = numInp('USD', data.foreign_infant ?? '');
+        pGrid.appendChild(rowLbl('Foreign (USD)')); pGrid.appendChild(forAdult); pGrid.appendChild(forChild); pGrid.appendChild(forInfant);
+        pSection.appendChild(pGrid);
+        card.appendChild(pSection);
 
-        row.appendChild(routeCodeInp);
-        row.appendChild(originInp);
-        row.appendChild(depTimeInp);
-        row.appendChild(destInp);
-        row.appendChild(arrTimeInp);
-        row.appendChild(daysWrap);
-        row.appendChild(delBtn);
-
-        row._getData = function() {
+        card._getData = function() {
             const selectedDays = DAYS.filter(function(d) { return dayButtons[d].dataset.active === '1'; });
+            function pv(el) { return el.value !== '' ? parseFloat(el.value) : null; }
             return {
-                route_code:  routeCodeInp.value.trim(),
-                origin:      originInp.value.trim(),
-                dep_time:    depTimeInp.value.trim(),
-                destination: destInp.value.trim(),
-                arr_time:    arrTimeInp.value.trim(),
-                days:        selectedDays,
+                route_code:     routeCodeInp.value.trim(),
+                origin:         originInp.value.trim(),
+                dep_time:       depTimeInp.value.trim(),
+                destination:    destInp.value.trim(),
+                arr_time:       arrTimeInp.value.trim(),
+                days:           selectedDays,
+                local_adult:    pv(locAdult),
+                local_child:    pv(locChild),
+                local_infant:   pv(locInfant),
+                foreign_adult:  pv(forAdult),
+                foreign_child:  pv(forChild),
+                foreign_infant: pv(forInfant),
             };
         };
 
-        return row;
+        return card;
     }
 
     function syncPrimaryDefaultsFromRoster(data) {

@@ -2248,6 +2248,12 @@ Route::get('/booking/checkout/{reservation}/transfer', function (Request $reques
 
     $reservationCategoryKey = strtolower(trim((string) ($notes['category_key'] ?? '')));
 
+    // Sea transport and water sports bypass transfer selection entirely.
+    if (in_array($reservationCategoryKey, ['sea_transport', 'water_sports'], true)) {
+        return redirect('/booking/checkout/' . $reservation)
+            ->with('status', 'Transfer selection is not required for this category.');
+    }
+
     $propertyId = (int) ($reservationRow->vendor_property_id ?? 0);
     $propertyRow = $propertyId > 0 ? VendorPropertyCompatibilityReader::loadPropertyById($propertyId) : null;
 
@@ -2578,6 +2584,26 @@ Route::post('/booking/checkout/{reservation}/guest-details', function (Request $
             'notes' => json_encode($notes),
             'updated_at' => now(),
         ]);
+
+    // Sea transport and water sports do not require a transfer selection step.
+    $skipTransferCategories = ['sea_transport', 'water_sports'];
+    if (in_array($categoryKey, $skipTransferCategories, true)) {
+        $skipCheckoutQuery = [];
+        $skipCheckin = trim((string) ($notes['service_start_date'] ?? ''));
+        $skipCheckout = trim((string) ($notes['service_end_date'] ?? ''));
+        if ($skipCheckin !== '') {
+            $skipCheckoutQuery['checkin'] = $skipCheckin;
+        }
+        if ($skipCheckout !== '') {
+            $skipCheckoutQuery['checkout'] = $skipCheckout;
+        }
+        $skipRedirectUrl = '/booking/checkout/' . $reservation;
+        if ($skipCheckoutQuery !== []) {
+            $skipRedirectUrl .= '?' . http_build_query($skipCheckoutQuery, '', '&', PHP_QUERY_RFC3986);
+        }
+        return redirect($skipRedirectUrl)
+            ->with('status', 'Guest details saved. Proceed to select a payment method.');
+    }
 
     return redirect('/booking/checkout/' . $reservation . '/transfer')
         ->with('status', 'Guest details saved. Continue with transfer selection.');

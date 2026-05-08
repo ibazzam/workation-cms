@@ -31,29 +31,32 @@
             <input id="property_registration_no" name="registration_no" class="ops-input" type="text" maxlength="60" value="{{ old('registration_no', $propertyDetails['registration_no'] ?? '') }}">
         </div>
 
-        {{-- ── Route Schedule ────────────────────────────────────────────── --}}
+        {{-- ── Primary Route Defaults ────────────────────────────────────── --}}
         <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
-            <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Route Schedule</p>
+            <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Step 2. Primary Route Defaults <span style="font-weight:600; color:#5f7a8e; text-transform:none; letter-spacing:0;">(optional fallback)</span></p>
+        </div>
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1; margin-top:-2px;">
+            <p style="margin:0; font-size:0.85rem; color:#5a7284; line-height:1.45;">These are the main route values used in catalog cards and booking summaries. If you leave them blank, the first non-empty row from the timetable roster will populate them automatically.</p>
         </div>
         <div class="ops-field">
-            <label for="property_departure_point">Departure Point <span style="color:#c0392b;">*</span></label>
-            <input id="property_departure_point" name="departure_point" class="ops-input" type="text" maxlength="120" value="{{ old('departure_point', $propertyDetails['departure_point'] ?? '') }}" placeholder="e.g. Malé Harbour" required>
+            <label for="property_departure_point">Departure Point <span style="color:#5f7a8e; font-weight:500;">(optional fallback)</span></label>
+            <input id="property_departure_point" name="departure_point" class="ops-input" type="text" maxlength="120" value="{{ old('departure_point', $propertyDetails['departure_point'] ?? '') }}" placeholder="e.g. Malé Harbour">
         </div>
         <div class="ops-field">
-            <label for="property_arrival_point">Arrival Point <span style="color:#c0392b;">*</span></label>
-            <input id="property_arrival_point" name="arrival_point" class="ops-input" type="text" maxlength="120" value="{{ old('arrival_point', $propertyDetails['arrival_point'] ?? '') }}" placeholder="e.g. Seenu Gan" required>
+            <label for="property_arrival_point">Arrival Point <span style="color:#5f7a8e; font-weight:500;">(optional fallback)</span></label>
+            <input id="property_arrival_point" name="arrival_point" class="ops-input" type="text" maxlength="120" value="{{ old('arrival_point', $propertyDetails['arrival_point'] ?? '') }}" placeholder="e.g. Seenu Gan">
         </div>
         <div class="ops-field">
-            <label for="property_departure_time">Departure Time <span style="color:#c0392b;">*</span></label>
-            <input id="property_departure_time" name="departure_time" class="ops-input" type="time" value="{{ old('departure_time', $propertyDetails['departure_time'] ?? '') }}" required>
+            <label for="property_departure_time">Departure Time <span style="color:#5f7a8e; font-weight:500;">(optional)</span></label>
+            <input id="property_departure_time" name="departure_time" class="ops-input" type="time" value="{{ old('departure_time', $propertyDetails['departure_time'] ?? '') }}">
         </div>
         <div class="ops-field">
-            <label for="property_return_time">Return / Arrival Time <span style="color:#c0392b;">*</span></label>
-            <input id="property_return_time" name="return_time" class="ops-input" type="time" value="{{ old('return_time', $propertyDetails['return_time'] ?? '') }}" required>
+            <label for="property_return_time">Return / Arrival Time <span style="color:#5f7a8e; font-weight:500;">(optional)</span></label>
+            <input id="property_return_time" name="return_time" class="ops-input" type="time" value="{{ old('return_time', $propertyDetails['return_time'] ?? '') }}">
         </div>
         <div class="ops-field">
-            <label for="property_trip_duration_minutes">Trip Duration (minutes) <span style="color:#c0392b;">*</span></label>
-            <input id="property_trip_duration_minutes" name="trip_duration_minutes" class="ops-input" type="number" min="1" value="{{ old('trip_duration_minutes', $propertyDetails['trip_duration_minutes'] ?? '') }}" required>
+            <label for="property_trip_duration_minutes">Trip Duration (minutes) <span style="color:#5f7a8e; font-weight:500;">(optional)</span></label>
+            <input id="property_trip_duration_minutes" name="trip_duration_minutes" class="ops-input" type="number" min="1" value="{{ old('trip_duration_minutes', $propertyDetails['trip_duration_minutes'] ?? '') }}">
         </div>
 
         {{-- ── Seat Configuration ────────────────────────────────────────── --}}
@@ -139,9 +142,10 @@
         </div>
 
         {{-- ── Route Schedule Roster ────────────────────────────────── --}}
-        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-top:2px solid #cfe0eb; padding-top:1.2rem; margin-top:1rem;">
-            <p style="margin:0 0 0.3rem; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Route Schedule</p>
-            <p style="font-size:0.85rem; color:#666; margin:0 0 1rem;">Add one row per timetable leg. Use separate rows for each direction (e.g. MLE→MFUSHI and MFUSHI→MLE).</p>
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border:1px solid #cfe0eb; border-radius:12px; background:#f7fbff; padding:14px 14px 12px; margin-top:1rem; order:-1;">
+            <p style="margin:0 0 0.3rem; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Step 1. Multi-leg Route Schedule Roster</p>
+            <p style="font-size:0.85rem; color:#51697b; margin:0 0 0.35rem;">Maintain one row per timetable leg. Use separate rows for each direction, stop pattern, or departure slot.</p>
+            <p style="font-size:0.8rem; color:#6d8191; margin:0;">This is now the primary timetable input. The first non-empty roster row is used as a fallback to keep the route defaults consistent.</p>
         </div>
 
         <div class="ops-field ops-field-wide" style="grid-column:1/-1;">
@@ -299,11 +303,40 @@
         return row;
     }
 
+    function syncPrimaryDefaultsFromRoster(data) {
+        if (!Array.isArray(data) || data.length === 0) return;
+
+        const firstLeg = data.find(function (leg) {
+            return leg && (leg.origin || leg.destination || leg.dep_time || leg.arr_time);
+        });
+
+        if (!firstLeg) return;
+
+        const departurePointInput = document.getElementById('property_departure_point');
+        const arrivalPointInput = document.getElementById('property_arrival_point');
+
+        if (departurePointInput && !departurePointInput.value && firstLeg.origin) {
+            departurePointInput.value = firstLeg.origin;
+        }
+        if (arrivalPointInput && !arrivalPointInput.value && firstLeg.destination) {
+            arrivalPointInput.value = firstLeg.destination;
+        }
+        if (departureInput && !departureInput.value && firstLeg.dep_time) {
+            departureInput.value = firstLeg.dep_time;
+        }
+        if (arrivalInput && !arrivalInput.value && firstLeg.arr_time) {
+            arrivalInput.value = firstLeg.arr_time;
+        }
+
+        syncDuration();
+    }
+
     function serializeRoster() {
         const rows = rosterContainer.querySelectorAll('.sea-roster-row');
         const data = [];
         rows.forEach(function(row) { if (row._getData) data.push(row._getData()); });
         jsonInput.value = JSON.stringify(data);
+        syncPrimaryDefaultsFromRoster(data);
     }
 
     function addRow(data) {

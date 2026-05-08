@@ -108,7 +108,7 @@
               ['key' => 'excursion', 'icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'subtitle' => 'Tours and activities', 'url' => '/catalog/excursion'],
               ['key' => 'water-sports', 'icon' => 'fa-solid fa-person-swimming', 'title' => 'Water Sports', 'subtitle' => 'Diving, snorkelling and sea fun', 'url' => '/catalog/water_sports'],
               ['key' => 'restaurant', 'icon' => 'fa-solid fa-utensils', 'title' => 'Restaurants', 'subtitle' => 'Dining experiences', 'url' => '/catalog/restaurant'],
-              ['key' => 'marine-transport', 'icon' => 'fa-solid fa-water', 'title' => 'Sea Transport', 'subtitle' => 'Speedboats & water transfers', 'url' => '/catalog/marine-transport'],
+              ['key' => 'sea-transport', 'icon' => 'fa-solid fa-ferry', 'title' => 'Sea Transport', 'subtitle' => 'Speedboats & water transfers', 'url' => '/catalog/sea-transport'],
               ['key' => 'land-transport', 'icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers', 'url' => '/catalog/land-transport'],
               ['key' => 'vehicle-rental', 'icon' => 'fa-solid fa-car', 'title' => 'Vehicle Rentals', 'subtitle' => 'Cars and local rentals', 'url' => '/catalog/vehicle_rental'],
               ['key' => 'remote-workspace', 'icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces', 'url' => '/catalog/remote_workspace'],
@@ -157,7 +157,7 @@
         $guestResidency = strtolower(trim((string) ($summary['guest_residency'] ?? '')));
         $isForeigner = $guestResidency === 'foreign_national';
         $taxLines = collect($summary['tax_lines'] ?? [])->filter(static fn ($line) => is_array($line))->values();
-        $isNoTransferCategory = false;
+        $isNoTransferCategory = in_array($categoryKey, ['sea_transport', 'water_sports'], true);
         $serviceChargeTotal = $categoryKey === 'accommodation'
             ? max(0, (float) ($summary['service_charge_total'] ?? 0))
             : 0.0;
@@ -315,7 +315,7 @@
         @include('partials.booking-process-highlights', [
             'bookingProcessCurrentStep' => $bookingProcessCurrentStep,
             'bookingProcessBackUrl' => $bookingProcessBackUrl,
-            'bookingProcessBackLabel' => ($guestDetailsComplete && !$editGuestDetailsMode) ? 'Back to transfer selection' : 'Back to booking view',
+            'bookingProcessBackLabel' => ($guestDetailsComplete && !$editGuestDetailsMode) ? ($isNoTransferCategory ? 'Back to listing' : 'Back to transfer selection') : 'Back to booking view',
             'bookingProcessSteps' => $bookingProcessSteps,
             'bookingProcessNextText' => ($requiresCustomerAuth && !$customerAuthenticated)
                 ? 'Next step after guest details: sign in to unlock payment method selection.'
@@ -392,7 +392,7 @@
                                 </div>
                             </div>
                             <div class="actions" style="margin-top:10px;">
-                                <button class="btn" type="submit">Continue to Transfer Selection</button>
+                                <button class="btn" type="submit">{{ $isNoTransferCategory ? 'Continue to Payment' : 'Continue to Transfer Selection' }}</button>
                             </div>
                         </form>
                         @if (!$guestDetailsComplete || $editGuestDetailsMode)

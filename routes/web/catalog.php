@@ -710,3 +710,60 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         ],
     ]);
 });
+
+Route::get('/sea-transport/{id}', function (Request $request, int $id) {
+    $property = DB::table('vendor_properties')
+        ->where('id', $id)
+        ->where('listing_category', 'sea_transport')
+        ->where('is_active', 1)
+        ->first();
+
+    if (!$property) {
+        abort(404);
+    }
+
+    $rawDetails = $property->listing_details ?? '{}';
+    $listingDetails = is_string($rawDetails) ? (json_decode($rawDetails, true) ?? []) : (array) $rawDetails;
+    $routeSchedules = is_array($listingDetails['route_schedules'] ?? null) ? $listingDetails['route_schedules'] : [];
+    $stopSequence   = is_array($listingDetails['stop_sequence'] ?? null) ? $listingDetails['stop_sequence'] : [];
+
+    // Resolve "from" price — minimum leg local_adult, fallback to listing local_price.
+    $fromPriceLocal   = (float) ($listingDetails['local_price'] ?? $listingDetails['local_adult'] ?? 0);
+    $fromPriceForeign = (float) ($listingDetails['foreign_price'] ?? $listingDetails['foreign_adult'] ?? 0);
+    foreach ($routeSchedules as $leg) {
+        $legLocal   = isset($leg['local_adult'])   && $leg['local_adult']   !== null ? (float) $leg['local_adult']   : 0;
+        $legForeign = isset($leg['foreign_adult']) && $leg['foreign_adult'] !== null ? (float) $leg['foreign_adult'] : 0;
+        if ($legLocal   > 0 && ($fromPriceLocal   <= 0 || $legLocal   < $fromPriceLocal))   { $fromPriceLocal   = $legLocal; }
+        if ($legForeign > 0 && ($fromPriceForeign <= 0 || $legForeign < $fromPriceForeign)) { $fromPriceForeign = $legForeign; }
+    }
+
+    // Vessel hero image.
+    $heroMedia = DB::table('vendor_listing_media')
+        ->where('vendor_property_id', $id)
+        ->orderByRaw("CASE WHEN is_primary = 1 THEN 0 ELSE 1 END")
+        ->orderBy('sort_order')
+        ->first();
+    $heroUrl = $heroMedia ? (portalManagedMediaUrlFromPath($heroMedia->media_url) ?? $heroMedia->media_url) : '';
+
+    // Operator / vendor.
+    $vendor = DB::table('users')->where('id', $property->user_id ?? 0)->first();
+
+    $visitorResidency = function_exists('workationDetectVisitorResidency')
+        ? workationDetectVisitorResidency($request)
+        : (strtoupper(trim((string) ($request->header('CF-IPCountry') ?? $request->header('X-Country-Code') ?? ''))) === 'MV' ? 'local_resident' : 'foreign_national');
+
+    $mvrUsdRate = max(0.0, (float) env('MVR_USD_RATE', 15.42));
+
+    return view('sea-transport-detail', [
+        'property'          => $property,
+        'listingDetails'    => $listingDetails,
+        'routeSchedules'    => $routeSchedules,
+        'stopSequence'      => $stopSequence,
+        'fromPriceLocal'    => $fromPriceLocal,
+        'fromPriceForeign'  => $fromPriceForeign,
+        'heroUrl'           => $heroUrl,
+        'vendor'            => $vendor,
+        'visitorResidency'  => $visitorResidency,
+        'mvrUsdRate'        => $mvrUsdRate,
+    ]);
+});

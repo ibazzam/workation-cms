@@ -68,10 +68,11 @@
 
     .uniform-header-brand {
         text-decoration: none;
-        color: #103d59;
-        font-size: 1.38rem;
+        color: #02193f;
+        font-size: 1.7rem;
         font-weight: 900;
-        letter-spacing: -0.03em;
+        letter-spacing: -0.04em;
+        line-height: 1;
         white-space: nowrap;
     }
 
@@ -82,9 +83,9 @@
     }
 
     .uniform-header-subline {
-        margin: 0;
-        font-size: 0.68rem;
-        color: #5a7388;
+        margin: 1px 0 0;
+        font-size: 0.7rem;
+        color: #71869a;
         text-transform: uppercase;
         letter-spacing: 0.09em;
         font-family: "Space Grotesk", "Trebuchet MS", sans-serif;

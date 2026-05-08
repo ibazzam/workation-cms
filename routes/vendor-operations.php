@@ -1479,23 +1479,94 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
         }
 
         if ($listingCategory === 'sea_transport') {
+            $seaDepartureTime = trim((string) ($validated['departure_time'] ?? ''));
+            $seaArrivalTime = trim((string) ($validated['return_time'] ?? ''));
+            $seaAutoDuration = vendorPortalDurationMinutesFromTimes($seaDepartureTime, $seaArrivalTime);
             $details['vessel_name'] = trim((string) ($validated['vessel_name'] ?? ''));
             $details['registration_no'] = trim((string) ($validated['registration_no'] ?? ''));
             $details['departure_point'] = trim((string) ($validated['departure_point'] ?? ''));
             $details['arrival_point'] = trim((string) ($validated['arrival_point'] ?? ''));
-            $details['departure_time'] = trim((string) ($validated['departure_time'] ?? ''));
-            $details['return_time'] = trim((string) ($validated['return_time'] ?? ''));
-            $details['trip_duration_minutes'] = isset($validated['trip_duration_minutes']) ? (int) $validated['trip_duration_minutes'] : null;
+            $details['destination_point'] = $details['arrival_point'];
+            $details['departure_time'] = $seaDepartureTime;
+            $details['return_time'] = $seaArrivalTime;
+            $details['trip_duration_minutes'] = $seaAutoDuration
+                ?? (isset($validated['trip_duration_minutes']) ? (int) $validated['trip_duration_minutes'] : null);
             $details['total_seats'] = isset($validated['total_seats']) ? (int) $validated['total_seats'] : null;
             $details['local_price'] = isset($validated['local_price']) && $validated['local_price'] !== '' ? max(0, (float) $validated['local_price']) : null;
             $details['foreign_price'] = isset($validated['foreign_price']) && $validated['foreign_price'] !== '' ? max(0, (float) $validated['foreign_price']) : null;
+            $details['child_price_local'] = isset($validated['child_price_local']) && $validated['child_price_local'] !== '' ? max(0, (float) $validated['child_price_local']) : null;
+            $details['child_price_foreign'] = isset($validated['child_price_foreign']) && $validated['child_price_foreign'] !== '' ? max(0, (float) $validated['child_price_foreign']) : null;
+            $details['infant_price_local'] = isset($validated['infant_price_local']) && $validated['infant_price_local'] !== '' ? max(0, (float) $validated['infant_price_local']) : null;
+            $details['infant_price_foreign'] = isset($validated['infant_price_foreign']) && $validated['infant_price_foreign'] !== '' ? max(0, (float) $validated['infant_price_foreign']) : null;
+            $details['price_per_child'] = $details['child_price_foreign'] ?? $details['child_price_local'] ?? null;
+            $details['price_per_infant'] = $details['infant_price_foreign'] ?? $details['infant_price_local'] ?? (isset($validated['price_per_infant']) && $validated['price_per_infant'] !== '' ? max(0, (float) $validated['price_per_infant']) : null);
+            $details['child_price'] = $details['price_per_child'];
+            $details['infant_price'] = $details['price_per_infant'];
             $details['contact_name'] = trim((string) ($validated['contact_name'] ?? ''));
             $details['contact_number'] = trim((string) ($validated['contact_number'] ?? ''));
             $details['boarding_instructions'] = trim((string) ($validated['boarding_instructions'] ?? ''));
-            $availabilityRaw = trim((string) ($validated['availability_schedule'] ?? ''));
-            $details['availability_schedule'] = $availabilityRaw !== ''
-                ? array_values(array_filter(array_map('trim', preg_split('/[\r\n,]+/', $availabilityRaw) ?: []), static fn ($t) => $t !== ''))
-                : [];
+
+            // Parse physical stop sequence (one stop per line).
+            $stopSequenceRaw = trim((string) ($validated['stop_sequence'] ?? ''));
+            $stopSequence = [];
+            if ($stopSequenceRaw !== '') {
+                foreach (preg_split('/[\r\n]+/', $stopSequenceRaw) ?: [] as $stopLine) {
+                    $stopLine = trim($stopLine);
+                    if ($stopLine !== '') {
+                        $stopSequence[] = $stopLine;
+                    }
+                }
+            }
+            $details['stop_sequence'] = $stopSequence;
+
+            // Parse structured route schedule roster (JSON array from repeater UI).
+            $routeSchedulesRaw = trim((string) ($validated['route_schedules'] ?? ''));
+            $routeSchedulesParsed = [];
+            if ($routeSchedulesRaw !== '') {
+                $decoded = json_decode($routeSchedulesRaw, true);
+                if (is_array($decoded)) {
+                    $allowedDays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+                    foreach ($decoded as $leg) {
+                        if (!is_array($leg)) {
+                            continue;
+                        }
+                        $routeCode = trim((string) ($leg['route_code'] ?? ''));
+                        $origin    = trim((string) ($leg['origin'] ?? ''));
+                        $depTime   = trim((string) ($leg['dep_time'] ?? ''));
+                        $dest      = trim((string) ($leg['destination'] ?? ''));
+                        $arrTime   = trim((string) ($leg['arr_time'] ?? ''));
+                        $days      = is_array($leg['days'] ?? null)
+                            ? array_values(array_filter($leg['days'], static fn ($d) => in_array($d, $allowedDays, true)))
+                            : [];
+                        if ($routeCode === '' && $origin === '' && $depTime === '') {
+                            continue; // skip completely blank rows
+                        }
+                        $legDuration = vendorPortalDurationMinutesFromTimes($depTime ?: null, $arrTime ?: null);
+                        $parsedLocalAdult    = isset($leg['local_adult'])    && $leg['local_adult']    !== null && $leg['local_adult']    !== '' ? max(0, (float) $leg['local_adult'])    : null;
+                        $parsedLocalChild    = isset($leg['local_child'])    && $leg['local_child']    !== null && $leg['local_child']    !== '' ? max(0, (float) $leg['local_child'])    : null;
+                        $parsedLocalInfant   = isset($leg['local_infant'])   && $leg['local_infant']   !== null && $leg['local_infant']   !== '' ? max(0, (float) $leg['local_infant'])   : null;
+                        $parsedForeignAdult  = isset($leg['foreign_adult'])  && $leg['foreign_adult']  !== null && $leg['foreign_adult']  !== '' ? max(0, (float) $leg['foreign_adult'])  : null;
+                        $parsedForeignChild  = isset($leg['foreign_child'])  && $leg['foreign_child']  !== null && $leg['foreign_child']  !== '' ? max(0, (float) $leg['foreign_child'])  : null;
+                        $parsedForeignInfant = isset($leg['foreign_infant']) && $leg['foreign_infant'] !== null && $leg['foreign_infant'] !== '' ? max(0, (float) $leg['foreign_infant']) : null;
+                        $routeSchedulesParsed[] = [
+                            'route_code'       => $routeCode,
+                            'origin'           => $origin,
+                            'dep_time'         => $depTime,
+                            'destination'      => $dest,
+                            'arr_time'         => $arrTime,
+                            'duration_minutes' => $legDuration,
+                            'days'             => $days,
+                            'local_adult'      => $parsedLocalAdult,
+                            'local_child'      => $parsedLocalChild,
+                            'local_infant'     => $parsedLocalInfant,
+                            'foreign_adult'    => $parsedForeignAdult,
+                            'foreign_child'    => $parsedForeignChild,
+                            'foreign_infant'   => $parsedForeignInfant,
+                        ];
+                    }
+                }
+            }
+            $details['route_schedules'] = $routeSchedulesParsed;
         }
 
         if ($listingCategory === 'liveaboard') {

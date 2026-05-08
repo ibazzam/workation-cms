@@ -2901,6 +2901,18 @@
             .publish-readiness-actions .btn {
                 width: 100%;
             }
+
+            /* Listing-form page: override the higher-specificity portal-shell grid
+               so the sidebar collapses to a single column on mobile */
+            .page-listing-form .portal-shell {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+
+            /* On the listing-form page the sidebar toggle must be visible */
+            .page-listing-form .portal-nav-mobile-toggle {
+                display: flex;
+            }
         }
 
         @media (max-width: 640px) {

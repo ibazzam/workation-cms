@@ -1529,6 +1529,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
     $infants = (int) ($payload['infants'] ?? 0);
 
     $routeName = '';
+    $seaBookedSegments = []; // populated later for sea_transport segment capacity tracking
     if (in_array($categoryKey, ['marine-transport', 'land-transport', 'sea_transport'], true)) {
         $origin = trim((string) ($payload['origin_point'] ?? ($listingDetails['departure_point'] ?? '')));
         $destination = trim((string) ($payload['destination_point'] ?? ($listingDetails['arrival_point'] ?? '')));
@@ -1548,7 +1549,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'accommodation' => max(1, (int) ($payload['rooms'] ?? 1)),
         'conference_room' => max(1, (int) ($payload['expected_capacity'] ?? ($adults + $children))),
         'marine-transport', 'land-transport', 'excursion', 'resort_day_visit', 'restaurant' => max(1, $adults + $children),
-        'sea_transport' => max(1, (int) ($payload['seat_count'] ?? 1)),
+        'sea_transport' => max(1, (int) ($payload['seat_count'] ?? ($adults + $children))),
         'liveaboard' => max(1, $adults + $children),
         default => 1,
     };
@@ -1623,15 +1624,84 @@ Route::post('/booking/reserve-category', function (Request $request) {
             $serviceSubtotal = $effectiveFlatPrice * $units;
         }
 
-        // Sea transport: price per seat (local MVR or foreign USD rate)
+        // Sea transport: segment capacity check + per-leg pricing.
         if ($categoryKey === 'sea_transport') {
-            $seatCount = max(1, (int) ($payload['seat_count'] ?? 1));
-            $isLocal = $guestResidency === 'local_resident';
-            $pricePerSeat = $isLocal
-                ? (float) ($listingDetails['local_price'] ?? 0)
-                : (float) ($listingDetails['foreign_price'] ?? 0);
-            if ($pricePerSeat > 0) {
-                $serviceSubtotal = $pricePerSeat * $seatCount;
+            $seatCount = max(1, (int) ($payload['seat_count'] ?? ($adults + $children + $infants > 0 ? $adults + $children : 1)));
+            $isLocal   = $guestResidency === 'local_resident';
+
+            // ── Segment capacity check ────────────────────────────────
+            $stStopSequence = is_array($listingDetails['stop_sequence'] ?? null) ? $listingDetails['stop_sequence'] : [];
+            $stBoardingPt   = trim((string) ($payload['boarding_point'] ?? ''));
+            $stDisembarkPt  = trim((string) ($payload['disembark_point'] ?? ''));
+            $stTotalSeats   = (int) ($listingDetails['total_seats'] ?? 0);
+            $seaBookedSegments = [];
+
+            if (!empty($stStopSequence) && $stBoardingPt !== '' && $stDisembarkPt !== '' && $stTotalSeats > 0) {
+                $originIdx = array_search($stBoardingPt, $stStopSequence, true);
+                $destIdx   = array_search($stDisembarkPt, $stStopSequence, true);
+                if ($originIdx !== false && $destIdx !== false && $destIdx > $originIdx) {
+                    for ($s = (int) $originIdx; $s < (int) $destIdx; $s++) {
+                        $seaBookedSegments[] = $s . ':' . ($s + 1);
+                    }
+                    $existingSeaBookings = DB::table('vendor_reservations')
+                        ->where('vendor_property_id', (int) $propertyRow->id)
+                        ->whereNotIn('status', ['cancelled', 'canceled'])
+                        ->where('start_at', '>=', $serviceStart->copy()->startOfDay())
+                        ->where('start_at', '<', $serviceStart->copy()->addDay())
+                        ->select('notes')
+                        ->get();
+                    $segmentLoad = [];
+                    foreach ($existingSeaBookings as $existingSeaBooking) {
+                        $eNotes = json_decode((string) ($existingSeaBooking->notes ?? ''), true);
+                        if (!is_array($eNotes)) {
+                            continue;
+                        }
+                        $eSegs  = (array) ($eNotes['booked_segments'] ?? []);
+                        $eCount = max(1, (int) ($eNotes['units_requested'] ?? 1));
+                        foreach ($eSegs as $seg) {
+                            $segmentLoad[$seg] = ($segmentLoad[$seg] ?? 0) + $eCount;
+                        }
+                    }
+                    foreach ($seaBookedSegments as $seg) {
+                        if (($segmentLoad[$seg] ?? 0) + $seatCount > $stTotalSeats) {
+                            return back()->withErrors(['booking' => 'Not enough seats available on the ' . $stBoardingPt . ' → ' . $stDisembarkPt . ' leg for the selected date. Please choose a different date or reduce the number of passengers.'])->withInput();
+                        }
+                    }
+                }
+            }
+
+            // ── Per-leg pricing resolution ────────────────────────────
+            $stRouteSchedules   = is_array($listingDetails['route_schedules'] ?? null) ? $listingDetails['route_schedules'] : [];
+            $selectedRouteCode  = trim((string) ($payload['route_code'] ?? ''));
+            $matchedLeg         = null;
+            foreach ($stRouteSchedules as $stLeg) {
+                if ($selectedRouteCode !== '' && ($stLeg['route_code'] ?? '') === $selectedRouteCode) {
+                    $matchedLeg = $stLeg;
+                    break;
+                }
+                if ($matchedLeg === null
+                    && ($stLeg['origin'] ?? '') === $stBoardingPt
+                    && ($stLeg['destination'] ?? '') === $stDisembarkPt) {
+                    $matchedLeg = $stLeg;
+                }
+            }
+            if ($matchedLeg !== null) {
+                $legAdultPrice  = $isLocal ? (float) ($matchedLeg['local_adult']   ?? 0) : (float) ($matchedLeg['foreign_adult']  ?? 0);
+                $legChildPrice  = $isLocal ? (float) ($matchedLeg['local_child']   ?? 0) : (float) ($matchedLeg['foreign_child']  ?? 0);
+                $legInfantPrice = $isLocal ? (float) ($matchedLeg['local_infant']  ?? 0) : (float) ($matchedLeg['foreign_infant'] ?? 0);
+                if ($legAdultPrice > 0 || $legChildPrice > 0) {
+                    $serviceSubtotal = ($legAdultPrice * $adults)
+                        + ($legChildPrice * $children)
+                        + ($legInfantPrice * $infants);
+                }
+            } else {
+                // Fallback to listing-level price per seat.
+                $pricePerSeat = $isLocal
+                    ? (float) ($listingDetails['local_price'] ?? 0)
+                    : (float) ($listingDetails['foreign_price'] ?? 0);
+                if ($pricePerSeat > 0) {
+                    $serviceSubtotal = $pricePerSeat * $seatCount;
+                }
             }
         }
 
@@ -1842,6 +1912,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
                 'policy_snapshot' => $pricing['policy_snapshot'] ?? [],
                 'inclusives' => $listingDetails['inclusives'] ?? [],
                 'cancellation_policy' => (string) ($listingDetails['cancellation_policy'] ?? ''),
+                'booked_segments' => $seaBookedSegments ?? [],
             ]),
             'created_at' => now(),
             'updated_at' => now(),
@@ -2248,6 +2319,12 @@ Route::get('/booking/checkout/{reservation}/transfer', function (Request $reques
 
     $reservationCategoryKey = strtolower(trim((string) ($notes['category_key'] ?? '')));
 
+    // Sea transport and water sports bypass transfer selection entirely.
+    if (in_array($reservationCategoryKey, ['sea_transport', 'water_sports'], true)) {
+        return redirect('/booking/checkout/' . $reservation)
+            ->with('status', 'Transfer selection is not required for this category.');
+    }
+
     $propertyId = (int) ($reservationRow->vendor_property_id ?? 0);
     $propertyRow = $propertyId > 0 ? VendorPropertyCompatibilityReader::loadPropertyById($propertyId) : null;
 
@@ -2578,6 +2655,26 @@ Route::post('/booking/checkout/{reservation}/guest-details', function (Request $
             'notes' => json_encode($notes),
             'updated_at' => now(),
         ]);
+
+    // Sea transport and water sports do not require a transfer selection step.
+    $skipTransferCategories = ['sea_transport', 'water_sports'];
+    if (in_array($categoryKey, $skipTransferCategories, true)) {
+        $skipCheckoutQuery = [];
+        $skipCheckin = trim((string) ($notes['service_start_date'] ?? ''));
+        $skipCheckout = trim((string) ($notes['service_end_date'] ?? ''));
+        if ($skipCheckin !== '') {
+            $skipCheckoutQuery['checkin'] = $skipCheckin;
+        }
+        if ($skipCheckout !== '') {
+            $skipCheckoutQuery['checkout'] = $skipCheckout;
+        }
+        $skipRedirectUrl = '/booking/checkout/' . $reservation;
+        if ($skipCheckoutQuery !== []) {
+            $skipRedirectUrl .= '?' . http_build_query($skipCheckoutQuery, '', '&', PHP_QUERY_RFC3986);
+        }
+        return redirect($skipRedirectUrl)
+            ->with('status', 'Guest details saved. Proceed to select a payment method.');
+    }
 
     return redirect('/booking/checkout/' . $reservation . '/transfer')
         ->with('status', 'Guest details saved. Continue with transfer selection.');

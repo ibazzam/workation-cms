@@ -42,7 +42,7 @@
             max-width: none;
         }
 
-        .header-bar {
+        .header-bar:not([data-uniform-header]) {
             min-height: 84px;
             display: flex;
             flex-wrap: nowrap;
@@ -65,7 +65,7 @@
             backdrop-filter: blur(2px);
         }
 
-        .page.is-header-hidden .header-bar {
+        .page.is-header-hidden .header-bar:not([data-uniform-header]) {
             transform: translateY(-110%);
             opacity: 0;
             pointer-events: none;
@@ -142,7 +142,7 @@
             white-space: nowrap;
         }
 
-        .header-bar .header-search-mini {
+        .header-bar:not([data-uniform-header]) .header-search-mini {
             display: none;
             align-items: center;
             min-width: 0;
@@ -154,7 +154,7 @@
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.55);
         }
 
-        .header-bar .header-search-mini input {
+        .header-bar:not([data-uniform-header]) .header-search-mini input {
             border: 0;
             background: transparent;
             padding: 9px 12px;
@@ -164,7 +164,7 @@
             color: #244057;
         }
 
-        .header-bar .header-search-mini button {
+        .header-bar:not([data-uniform-header]) .header-search-mini button {
             border: 0;
             width: 38px;
             height: 38px;
@@ -1622,6 +1622,233 @@
             display: none;
         }
 
+        /* ── Sea Transport: full-width row cards ── */
+        .page.category-sea-transport .catalog-results-layout {
+            display: block;
+            height: auto;
+        }
+
+        .page.category-sea-transport .catalog-results-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            height: auto;
+            overflow: visible;
+            border-right: 0;
+            background: #ffffff;
+            border: 1px solid #d4e5ef;
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        .page.category-sea-transport .page-body-split {
+            margin-top: 32px;
+        }
+
+        .page.category-sea-transport .catalog-section-title {
+            display: block;
+        }
+
+        .page.category-sea-transport .catalog-grid {
+            display: contents;
+        }
+
+        .page.category-sea-transport .card {
+            border: 0;
+            border-bottom: 1px solid #e8ecf0;
+            border-radius: 0;
+            background: #ffffff;
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            gap: 0;
+            padding: 0;
+            overflow: hidden;
+            transition: background 0.15s ease;
+        }
+
+        .page.category-sea-transport .card:last-child {
+            border-bottom: 0;
+        }
+
+        .page.category-sea-transport .card:hover {
+            background: #f5fbff;
+        }
+
+        .page.category-sea-transport .card > img {
+            width: 148px;
+            min-width: 148px;
+            height: 100%;
+            min-height: 106px;
+            object-fit: cover;
+            display: block;
+            border-radius: 0;
+            flex-shrink: 0;
+            background: #d6e8f3;
+        }
+
+        .page.category-sea-transport .st-card-inner {
+            flex: 1 1 0;
+            min-width: 0;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0;
+            padding: 14px 16px;
+        }
+
+        .page.category-sea-transport .st-card-info {
+            flex: 1 1 0;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .page.category-sea-transport .st-card-name {
+            margin: 0 0 2px;
+            font-size: 0.94rem;
+            font-weight: 700;
+            color: #1a2f43;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .page.category-sea-transport .st-card-route {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #0f6179;
+        }
+
+        .page.category-sea-transport .st-card-departs {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.75rem;
+            color: #345469;
+            background: #eef6fb;
+            border-radius: 5px;
+            padding: 3px 8px;
+            width: fit-content;
+        }
+
+        .page.category-sea-transport .st-card-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 1px;
+        }
+
+        .page.category-sea-transport .st-card-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: #e8f2f8;
+            color: #1e5672;
+            font-size: 0.66rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .page.category-sea-transport .st-card-right {
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+            text-align: right;
+            padding-left: 16px;
+        }
+
+        .page.category-sea-transport .st-card-seats {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #2a7a60;
+            background: #e6f7f0;
+            border-radius: 5px;
+            padding: 3px 9px;
+            white-space: nowrap;
+        }
+
+        .page.category-sea-transport .st-card-seats.is-limited {
+            color: #8a4a00;
+            background: #fff4e0;
+        }
+
+        .page.category-sea-transport .st-price-local {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: #1a2f43;
+            white-space: nowrap;
+        }
+
+        .page.category-sea-transport .st-price-foreign {
+            display: block;
+            font-size: 0.74rem;
+            font-weight: 600;
+            color: #0f6179;
+            white-space: nowrap;
+        }
+
+        .page.category-sea-transport .st-select-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 14px;
+            border: none;
+            border-radius: 8px;
+            background: #0f6179;
+            color: #ffffff;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.15s ease;
+        }
+
+        .page.category-sea-transport .st-select-btn:hover {
+            background: #0b4f66;
+        }
+
+        .page.category-sea-transport .catalog-map-panel {
+            display: none;
+        }
+
+        @media (max-width: 680px) {
+            .page.category-sea-transport .card > img {
+                width: 100px;
+                min-width: 100px;
+            }
+            .page.category-sea-transport .st-card-inner {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .page.category-sea-transport .st-card-right {
+                align-items: flex-start;
+                text-align: left;
+                padding-left: 0;
+                flex-direction: row;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px;
+            }
+        }
+
         .leaflet-control-zoom {
             border: 0 !important;
             box-shadow: none !important;
@@ -1873,7 +2100,7 @@
                 width: calc(100% - 18px);
             }
 
-            .page.is-header-hidden .header-bar {
+            .page.is-header-hidden .header-bar:not([data-uniform-header]) {
                 transform: none;
                 opacity: 1;
                 pointer-events: auto;
@@ -1942,7 +2169,7 @@
                 grid-template-columns: 1fr;
             }
 
-            .header-bar {
+            .header-bar:not([data-uniform-header]) {
                 flex-direction: column;
                 align-items: stretch;
                 position: absolute;
@@ -2096,16 +2323,15 @@
         $catalogCategoryLinks = collect([
             ['key' => 'accommodation', 'icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas', 'url' => '/catalog/accommodation'],
             ['key' => 'resort-day-visit', 'icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'subtitle' => 'Day-use resort offers', 'url' => '/catalog/resort_day_visit'],
+            ['key' => 'liveaboard', 'icon' => 'fa-solid fa-ship', 'title' => 'Live Aboard', 'subtitle' => 'Multi-day safari vessel journeys', 'url' => '/catalog/liveaboard'],
             ['key' => 'excursion', 'icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'subtitle' => 'Tours and activities', 'url' => '/catalog/excursion'],
             ['key' => 'water-sports', 'icon' => 'fa-solid fa-person-swimming', 'title' => 'Water Sports', 'subtitle' => 'Diving, snorkelling and sea fun', 'url' => '/catalog/water_sports'],
             ['key' => 'restaurant', 'icon' => 'fa-solid fa-utensils', 'title' => 'Restaurants', 'subtitle' => 'Dining experiences', 'url' => '/catalog/restaurant'],
-            ['key' => 'marine-transport', 'icon' => 'fa-solid fa-water', 'title' => 'Sea Transport', 'subtitle' => 'Speedboats & water transfers', 'url' => '/catalog/marine-transport'],
+            ['key' => 'sea-transport', 'icon' => 'fa-solid fa-ferry', 'title' => 'Sea Transport', 'subtitle' => 'Speedboats & water transfers', 'url' => '/catalog/sea-transport'],
             ['key' => 'land-transport', 'icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers', 'url' => '/catalog/land-transport'],
-            ['key' => 'vehicle-rental', 'icon' => 'fa-solid fa-car', 'title' => 'Vehicle Rentals', 'subtitle' => 'Cars and local rentals', 'url' => '/catalog/vehicle_rental'],
+            ['key' => 'vehicle-rental', 'icon' => 'fa-solid fa-car-side', 'title' => 'Vehicle Rentals', 'subtitle' => 'Cars and local rentals', 'url' => '/catalog/vehicle_rental'],
             ['key' => 'remote-workspace', 'icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces', 'url' => '/catalog/remote_workspace'],
             ['key' => 'conference-room', 'icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces', 'url' => '/catalog/conference_room'],
-            ['key' => 'sea_transport', 'icon' => 'fa-solid fa-ferry', 'title' => 'Sea Transport & Ferries', 'subtitle' => 'Scheduled sea routes & ferries', 'url' => '/catalog/sea_transport'],
-            ['key' => 'liveaboard', 'icon' => 'fa-solid fa-ship', 'title' => 'Liveaboard / Safari', 'subtitle' => 'Multi-day safari vessel journeys', 'url' => '/catalog/liveaboard'],
             ['key' => 'blog', 'icon' => 'fa-solid fa-newspaper', 'title' => 'Blog', 'subtitle' => 'Travel stories and picks', 'url' => '/blog'],
         ]);
         $catalogProperties = $catalogProperties ?? collect();
@@ -2168,7 +2394,14 @@
         }
     @endphp
 
-    <main class="page {{ $categoryKey === 'accommodation' ? 'category-accommodation' : 'category-default' }}" data-api-base="{{ $apiBase }}" data-category-key="{{ $categoryKey }}">
+    @php
+        $pageCategoryClass = match ($categoryKey) {
+            'accommodation' => 'category-accommodation',
+            'sea_transport'  => 'category-sea-transport',
+            default          => 'category-default',
+        };
+    @endphp
+    <main class="page {{ $pageCategoryClass }}" data-api-base="{{ $apiBase }}" data-category-key="{{ $categoryKey }}">
         <section class="journey-hero" aria-label="Category hero and quick navigation">
             @include('partials.customer-uniform-header', [
                 'injectUniformHeaderStyles' => true,
@@ -2186,7 +2419,7 @@
                     ])
                     ->values()
                     ->all(),
-                'headerActiveCategoryKey' => (string) $categoryKey,
+                'headerActiveCategoryKey' => str_replace('_', '-', (string) $categoryKey),
                 'headerContinueUrl' => (string) $customerContinueUrl,
             ])
 
@@ -2962,61 +3195,83 @@
                             </a>
                             @elseif ($categoryKey === 'sea_transport')
                             @php
-                                $stDeparture  = trim((string) ($propertyDetails['departure_point'] ?? ''));
-                                $stArrival    = trim((string) ($propertyDetails['arrival_point'] ?? ''));
-                                $stDepTime    = trim((string) ($propertyDetails['departure_time'] ?? ''));
-                                $stTotalSeats = (int) ($propertyDetails['total_seats'] ?? 0);
-                                $stLocalPrice = (float) ($propertyDetails['local_price'] ?? 0);
+                                $stDeparture    = trim((string) ($propertyDetails['departure_point'] ?? ''));
+                                $stArrival      = trim((string) ($propertyDetails['arrival_point'] ?? ''));
+                                $stDepTime      = trim((string) ($propertyDetails['departure_time'] ?? ''));
+                                $stTotalSeats   = (int) ($propertyDetails['total_seats'] ?? 0);
+                                $stLocalPrice   = (float) ($propertyDetails['local_price'] ?? 0);
                                 $stForeignPrice = (float) ($propertyDetails['foreign_price'] ?? 0);
-                                $stVesselName = trim((string) ($propertyDetails['vessel_name'] ?? ''));
-                                $resolvedImage = ($thumbUrl && trim($thumbUrl) !== '')
+                                $stVesselName   = trim((string) ($propertyDetails['vessel_name'] ?? ''));
+                                $resolvedImage  = ($thumbUrl && trim($thumbUrl) !== '')
                                     ? (string) $thumbUrl
                                     : ($bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback));
-                                $stAvailDays = (array) ($propertyDetails['availability_schedule'] ?? []);
-                                $stAvailText = count($stAvailDays) > 0 ? implode(', ', $stAvailDays) : '';
+                                $stAvailDays    = (array) ($propertyDetails['availability_schedule'] ?? []);
+                                $stAvailText    = count($stAvailDays) > 0 ? implode(', ', $stAvailDays) : '';
+                                $stSeatsLimited = $stTotalSeats > 0 && $stTotalSeats <= 5;
+                                // Stop chain and from-price from leg roster.
+                                $stRouteSchedules = is_array($propertyDetails['route_schedules'] ?? null) ? $propertyDetails['route_schedules'] : [];
+                                $stStopSequence   = is_array($propertyDetails['stop_sequence'] ?? null) ? $propertyDetails['stop_sequence'] : [];
+                                $stFromLocal  = $stLocalPrice;
+                                $stFromForeign = $stForeignPrice;
+                                foreach ($stRouteSchedules as $_leg) {
+                                    $lp = isset($_leg['local_adult'])   && $_leg['local_adult']   !== null ? (float) $_leg['local_adult']   : 0;
+                                    $fp = isset($_leg['foreign_adult']) && $_leg['foreign_adult'] !== null ? (float) $_leg['foreign_adult'] : 0;
+                                    if ($lp > 0 && ($stFromLocal  <= 0 || $lp < $stFromLocal))  { $stFromLocal  = $lp; }
+                                    if ($fp > 0 && ($stFromForeign <= 0 || $fp < $stFromForeign)) { $stFromForeign = $fp; }
+                                }
+                                $stStopChain = '';
+                                if (count($stStopSequence) > 0) {
+                                    $stStopChain = implode(' → ', $stStopSequence);
+                                } elseif ($stDeparture !== '' || $stArrival !== '') {
+                                    $stStopChain = ($stDeparture !== '' ? $stDeparture : '?') . ' → ' . ($stArrival !== '' ? $stArrival : '?');
+                                }
                             @endphp
                             <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
-                            <div class="card-body">
-                                <div class="card-main-col">
-                                    <span class="card-type-chip"><i class="fa-solid fa-ferry" aria-hidden="true"></i> Sea Transport</span>
-                                    <h3>{{ (string) ($property->name ?? 'Ferry Service') }}</h3>
-                                    @if ($stDeparture !== '' || $stArrival !== '')
-                                        <span class="card-route"><i class="fa-solid fa-route" aria-hidden="true"></i>
-                                            {{ $stDeparture !== '' ? $stDeparture : '?' }}
-                                            <i class="fa-solid fa-arrow-right" aria-hidden="true" style="margin:0 4px;"></i>
-                                            {{ $stArrival !== '' ? $stArrival : '?' }}
+                            <div class="st-card-inner">
+                                <div class="st-card-info">
+                                    <h3 class="st-card-name">{{ (string) ($property->name ?? 'Ferry Service') }}</h3>
+                                    @if ($stStopChain !== '')
+                                        <span class="st-card-route" style="font-size:0.8rem; color:#1d4b66; font-weight:600;">
+                                            <i class="fa-solid fa-route" aria-hidden="true"></i>
+                                            {{ $stStopChain }}
                                         </span>
                                     @endif
                                     @if ($stDepTime !== '')
-                                        <span class="card-time"><i class="fa-solid fa-clock" aria-hidden="true"></i> Departs {{ $stDepTime }}</span>
+                                        <span class="st-card-departs">
+                                            <i class="fa-solid fa-clock" aria-hidden="true"></i> Departs {{ $stDepTime }}
+                                        </span>
                                     @endif
-                                    @if ($stAvailText !== '')
-                                        <span class="card-avail"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> {{ $stAvailText }}</span>
-                                    @endif
-                                    @if ($stVesselName !== '')
-                                        <span class="card-vessel"><i class="fa-solid fa-anchor" aria-hidden="true"></i> {{ $stVesselName }}</span>
-                                    @endif
-                                </div>
-                                <div class="card-meta-right">
-                                    <div class="card-price">
-                                        @if ($stLocalPrice > 0)
-                                            <span class="price-local">MVR {{ number_format($stLocalPrice, 2) }} / seat</span>
+                                    <div class="st-card-meta">
+                                        <span class="st-card-chip"><i class="fa-solid fa-ferry" aria-hidden="true"></i> Sea Transport</span>
+                                        @if ($stVesselName !== '')
+                                            <span class="st-card-chip"><i class="fa-solid fa-anchor" aria-hidden="true"></i> {{ $stVesselName }}</span>
                                         @endif
-                                        @if ($stForeignPrice > 0)
-                                            <span class="price-foreign">USD {{ number_format($stForeignPrice, 2) }} / seat</span>
-                                        @endif
-                                        @if ($stLocalPrice <= 0 && $stForeignPrice <= 0)
-                                            <span>Price on request</span>
+                                        @if (count($stRouteSchedules) > 0)
+                                            <span class="st-card-chip"><i class="fa-solid fa-map-signs" aria-hidden="true"></i> {{ count($stRouteSchedules) }} leg{{ count($stRouteSchedules) !== 1 ? 's' : '' }}</span>
                                         @endif
                                     </div>
+                                </div>
+                                <div class="st-card-right">
                                     @if ($stTotalSeats > 0)
-                                        <span class="card-seats"><i class="fa-solid fa-chair" aria-hidden="true"></i> {{ $stTotalSeats }} seats</span>
+                                        <span class="st-card-seats {{ $stSeatsLimited ? 'is-limited' : '' }}">
+                                            <i class="fa-solid fa-chair" aria-hidden="true"></i>
+                                            {{ $stSeatsLimited ? $stTotalSeats . ' seats left' : $stTotalSeats . ' seats' }}
+                                        </span>
                                     @endif
-                                    <button type="button"
-                                        class="card-action-btn card-action-btn-primary"
-                                        onclick="openSeatSelector({{ $propertyId }}, '{{ e((string) ($property->name ?? '')) }}', {{ $stTotalSeats }}, [], {{ $stLocalPrice }}, {{ $stForeignPrice }})">
-                                        Select Seats <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-                                    </button>
+                                    <div>
+                                        @if ($stFromLocal > 0)
+                                            <span class="st-price-local">from MVR {{ number_format($stFromLocal, 2) }}<small style="font-weight:500;font-size:0.65rem;"> / seat</small></span>
+                                        @endif
+                                        @if ($stFromForeign > 0)
+                                            <span class="st-price-foreign">from USD {{ number_format($stFromForeign, 2) }}</span>
+                                        @endif
+                                        @if ($stFromLocal <= 0 && $stFromForeign <= 0)
+                                            <span class="st-price-local">Price on request</span>
+                                        @endif
+                                    </div>
+                                    <a href="/sea-transport/{{ $propertyId }}" class="st-select-btn">
+                                        View Routes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                                    </a>
                                 </div>
                             </div>
                             @elseif ($categoryKey === 'liveaboard')
@@ -4063,8 +4318,8 @@
             window.openSeatSelector = function (propertyId, name, totalSeats, occupiedSeats, localPrice, foreignPrice) {
                 window._seaTransportCurrentPropertyId = propertyId;
                 initializeSeatSelector(totalSeats, occupiedSeats || []);
-                var modal = document.getElementById('seat-selector-modal');
-                if (modal) modal.removeAttribute('hidden');
+                var modal = document.getElementById('seatSelectorModal');
+                if (modal) modal.style.display = 'block';
             };
         })();
         </script>

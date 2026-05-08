@@ -71,7 +71,7 @@
             border-bottom: 1px solid #d8e3ec;
             border-left: 0;
             border-radius: 0;
-            background: rgba(255, 255, 255, 0.96);
+            background: #ffffff;
             box-shadow: 0 10px 24px rgba(22, 64, 93, 0.06);
             margin: 0;
             width: 100vw;
@@ -81,7 +81,7 @@
             top: 0;
             transition: transform 0.22s ease, opacity 0.22s ease;
             z-index: 980;
-            backdrop-filter: blur(10px);
+            backdrop-filter: none;
         }
 
         .page.is-header-hidden .header-bar {
@@ -2062,7 +2062,7 @@
             ['icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'url' => '/catalog/excursion'],
             ['icon' => 'fa-solid fa-person-swimming', 'title' => 'Water Sports', 'url' => '/catalog/water_sports'],
             ['icon' => 'fa-solid fa-utensils', 'title' => 'Restaurants', 'url' => '/catalog/restaurant', 'section_start' => true, 'section_end' => true],
-            ['icon' => 'fa-solid fa-water', 'title' => 'Sea Transport', 'url' => '/catalog/sea-transport'],
+            ['icon' => 'fa-solid fa-ferry', 'title' => 'Sea Transport', 'url' => '/catalog/sea-transport'],
             ['icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'url' => '/catalog/land-transport'],
             ['icon' => 'fa-solid fa-car-side', 'title' => 'Vehicle Rentals', 'url' => '/catalog/vehicle_rental', 'divider_after' => true],
             ['icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'url' => '/catalog/remote_workspace'],

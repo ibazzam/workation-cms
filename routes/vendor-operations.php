@@ -24,7 +24,6 @@ if (!function_exists('vendorPortalCategoryMap')) {
             'vehicle_rental' => 'Vehicle Rentals',
             'water_sports' => 'Water Sports',
             'conference_room' => 'Conference Rooms',
-            'sea_transport' => 'Sea Transport & Ferries',
             'liveaboard' => 'Liveaboard / Safari',
         ];
     }
@@ -262,7 +261,6 @@ if (!function_exists('vendorPortalCategoryStorageTableMap')) {
             'restaurant' => 'vendor_restaurant_listings',
             'vehicle_rental' => 'vendor_vehicle_rental_listings',
             'water_sports' => 'vendor_water_sports_listings',
-            'sea_transport' => 'vendor_sea_transport_listings',
             'liveaboard' => 'vendor_liveaboard_listings',
         ];
     }
@@ -2033,26 +2031,29 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
         }
 
         if ($listingCategory === 'sea_transport') {
-            if (empty($details['departure_point'])) {
-                $errors[] = 'Departure point is required for sea transport listings.';
+            // departure_point, arrival_point, departure_time, return_time, trip_duration_minutes
+            // and local_price are all optional-fallback fields. They are only required when no
+            // route_schedules timetable rows have been provided (which supply the canonical values).
+            $hasRouteSchedules = !empty($details['route_schedules'])
+                && is_array($details['route_schedules'])
+                && count($details['route_schedules']) > 0;
+
+            if (!$hasRouteSchedules) {
+                if (empty($details['departure_point'])) {
+                    $errors[] = 'Departure point is required when no route timetable rows are provided.';
+                }
+                if (empty($details['arrival_point'])) {
+                    $errors[] = 'Arrival point is required when no route timetable rows are provided.';
+                }
             }
-            if (empty($details['arrival_point'])) {
-                $errors[] = 'Arrival point is required for sea transport listings.';
-            }
-            if (empty($details['departure_time'])) {
-                $errors[] = 'Departure time is required for sea transport listings.';
-            }
-            if (empty($details['return_time'])) {
-                $errors[] = 'Return / arrival time is required for sea transport listings.';
-            }
-            if (!isset($details['trip_duration_minutes']) || $details['trip_duration_minutes'] < 5 || $details['trip_duration_minutes'] > 1440) {
-                $errors[] = 'Trip duration must be between 5 and 1440 minutes.';
-            }
-            if (!isset($details['total_seats']) || $details['total_seats'] < 1 || $details['total_seats'] > 1000) {
+
+            if (!isset($details['total_seats']) || (int) $details['total_seats'] < 1 || (int) $details['total_seats'] > 1000) {
                 $errors[] = 'Total seats must be between 1 and 1000.';
             }
-            if (!isset($details['local_price']) || $details['local_price'] < 0) {
-                $errors[] = 'Local price per seat is required and must be >= 0.';
+
+            // local_price is optional; only error if explicitly negative.
+            if (isset($details['local_price']) && $details['local_price'] < 0) {
+                $errors[] = 'Local price per seat must be >= 0.';
             }
         }
 

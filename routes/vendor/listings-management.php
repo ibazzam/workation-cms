@@ -983,7 +983,12 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
     }
 
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
-    $propertyRecord = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById($property, $vendorUserId);
+    $requestedListingCategory = vendorPortalCanonicalCategory((string) $request->input('listing_category', ''));
+    $propertyRecord = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById(
+        $property,
+        $vendorUserId,
+        $requestedListingCategory
+    );
 
     if (!$propertyRecord) {
         return back()->withErrors(['profile' => 'Property not found for this vendor account.']);
@@ -1094,6 +1099,10 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         if (is_array($decodedDetails)) {
             $existingDetails = $decodedDetails;
         }
+    }
+
+    if ($canonicalListingCategory === null && $requestedListingCategory !== null) {
+        $canonicalListingCategory = $requestedListingCategory;
     }
 
     if ($canonicalListingCategory === null && isset($existingDetails['listing_category'])) {

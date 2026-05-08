@@ -1078,6 +1078,7 @@ $vendorListingCategoryAliases = [
     'resort_day_visit',
     'restaurant',
     'vehicle_rental',
+    'liveaboard',
 ];
 
 foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
@@ -1122,8 +1123,8 @@ foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
 
         $vendorCategoryMap = vendorPortalCategoryMap();
         $selectedVendorCategories = vendorPortalSelectedCategories($vendorUser);
-        $listingCategoryViewOrder = ['accommodation','sea_transport','land_transport','water_sports','excursion','remote_workspace','conference_room','resort_day_visit','restaurant','vehicle_rental'];
-        $listingCategoryLabelMap = array_merge($vendorCategoryMap, ['sea_transport' => 'Sea Transport & Ferries', 'land_transport' => 'Land Transport', 'conference_room' => 'Conference Rooms']);
+        $listingCategoryViewOrder = ['accommodation','sea_transport','land_transport','water_sports','excursion','remote_workspace','conference_room','resort_day_visit','restaurant','vehicle_rental','liveaboard'];
+        $listingCategoryLabelMap = array_merge($vendorCategoryMap, ['sea_transport' => 'Sea Transport & Ferries', 'land_transport' => 'Land Transport', 'conference_room' => 'Conference Rooms', 'liveaboard' => 'Liveaboard / Safari']);
         $categoryLabel = $listingCategoryLabelMap[$listingCategoryAlias] ?? ucwords(str_replace('_', ' ', $listingCategoryAlias));
 
         $vendorProfileRow = null;
@@ -1224,8 +1225,8 @@ foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
 
         $vendorCategoryMap = vendorPortalCategoryMap();
         $selectedVendorCategories = vendorPortalSelectedCategories($vendorUser);
-        $listingCategoryViewOrder = ['accommodation','sea_transport','land_transport','water_sports','excursion','remote_workspace','conference_room','resort_day_visit','restaurant','vehicle_rental'];
-        $listingCategoryLabelMap = array_merge($vendorCategoryMap, ['sea_transport' => 'Sea Transport & Ferries', 'land_transport' => 'Land Transport', 'conference_room' => 'Conference Rooms']);
+        $listingCategoryViewOrder = ['accommodation','sea_transport','land_transport','water_sports','excursion','remote_workspace','conference_room','resort_day_visit','restaurant','vehicle_rental','liveaboard'];
+        $listingCategoryLabelMap = array_merge($vendorCategoryMap, ['sea_transport' => 'Sea Transport & Ferries', 'land_transport' => 'Land Transport', 'conference_room' => 'Conference Rooms', 'liveaboard' => 'Liveaboard / Safari']);
         $categoryLabel = $listingCategoryLabelMap[$listingCategoryAlias] ?? ucwords(str_replace('_', ' ', $listingCategoryAlias));
 
         $vendorProfileRow = null;

@@ -299,6 +299,8 @@ if (!function_exists('vendorPortalSyncCategoryListingRecord')) {
             throw new \RuntimeException('Category storage table is missing: ' . $tableName . '. Run migrations.');
         }
 
+        $encodedDetails = empty($details) ? null : json_encode($details);
+
         $payload = [
             'vendor_user_id' => $vendorUserId,
             'name' => $name,
@@ -306,9 +308,16 @@ if (!function_exists('vendorPortalSyncCategoryListingRecord')) {
             'location' => $location,
             'description' => $description,
             'max_guests' => $maxGuests,
-            'details' => empty($details) ? null : json_encode($details),
             'updated_at' => now(),
         ];
+
+        if (Schema::hasColumn($tableName, 'details')) {
+            $payload['details'] = $encodedDetails;
+        }
+
+        if (Schema::hasColumn($tableName, 'listing_details')) {
+            $payload['listing_details'] = $encodedDetails;
+        }
 
         if (Schema::hasColumn($tableName, 'currency')) {
             $payload['currency'] = $currency;
@@ -364,6 +373,8 @@ if (!function_exists('vendorPortalCreateCategoryListingRecord')) {
             throw new \RuntimeException('Category storage table is missing: ' . $tableName . '. Run migrations.');
         }
 
+        $encodedDetails = empty($details) ? null : json_encode($details);
+
         $payload = [
             'vendor_user_id' => $vendorUserId,
             'name' => $name,
@@ -371,10 +382,17 @@ if (!function_exists('vendorPortalCreateCategoryListingRecord')) {
             'location' => $location,
             'description' => $description,
             'max_guests' => $maxGuests,
-            'details' => empty($details) ? null : json_encode($details),
             'created_at' => now(),
             'updated_at' => now(),
         ];
+
+        if (Schema::hasColumn($tableName, 'details')) {
+            $payload['details'] = $encodedDetails;
+        }
+
+        if (Schema::hasColumn($tableName, 'listing_details')) {
+            $payload['listing_details'] = $encodedDetails;
+        }
 
         if (Schema::hasColumn($tableName, 'base_price')) {
             $payload['base_price'] = max(0, (float) $basePrice);
@@ -1517,8 +1535,6 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
                     }
                 }
             }
-            $details['stop_sequence'] = $stopSequence;
-
             // Parse structured route schedule roster (JSON array from repeater UI).
             $routeSchedulesRaw = trim((string) ($validated['route_schedules'] ?? ''));
             $routeSchedulesParsed = [];
@@ -1566,6 +1582,29 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
                     }
                 }
             }
+
+            // If stop order is not provided explicitly, derive it from leg order.
+            // This preserves repeats for loop routes (e.g. A -> B -> C -> B -> A).
+            if ($stopSequence === [] && $routeSchedulesParsed !== []) {
+                $derivedStops = [];
+                foreach ($routeSchedulesParsed as $leg) {
+                    $legOrigin = trim((string) ($leg['origin'] ?? ''));
+                    $legDestination = trim((string) ($leg['destination'] ?? ''));
+
+                    if ($legOrigin !== '' && (empty($derivedStops) || end($derivedStops) !== $legOrigin)) {
+                        $derivedStops[] = $legOrigin;
+                    }
+                    if ($legDestination !== '' && (empty($derivedStops) || end($derivedStops) !== $legDestination)) {
+                        $derivedStops[] = $legDestination;
+                    }
+                }
+
+                if ($derivedStops !== []) {
+                    $stopSequence = $derivedStops;
+                }
+            }
+
+            $details['stop_sequence'] = $stopSequence;
             $details['route_schedules'] = $routeSchedulesParsed;
         }
 

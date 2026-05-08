@@ -258,6 +258,71 @@ if (!function_exists('workationResolveEffectiveSegmentPricing')) {
     }
 }
 
+if (!function_exists('workationResolveStopSequenceSpan')) {
+    function workationResolveStopSequenceSpan(array $stopSequence, string $originStop, string $destinationStop): ?array
+    {
+        $originNeedle = strtolower(trim($originStop));
+        $destinationNeedle = strtolower(trim($destinationStop));
+        if ($originNeedle === '' || $destinationNeedle === '' || $originNeedle === $destinationNeedle) {
+            return null;
+        }
+
+        $normalizedStops = array_values(array_map(
+            static fn ($stop): string => strtolower(trim((string) $stop)),
+            $stopSequence
+        ));
+
+        $originIndexes = [];
+        $destinationIndexes = [];
+        foreach ($normalizedStops as $idx => $stop) {
+            if ($stop === $originNeedle) {
+                $originIndexes[] = (int) $idx;
+            }
+            if ($stop === $destinationNeedle) {
+                $destinationIndexes[] = (int) $idx;
+            }
+        }
+
+        if ($originIndexes === [] || $destinationIndexes === []) {
+            return null;
+        }
+
+        $bestOrigin = null;
+        $bestDestination = null;
+        $bestDistance = PHP_INT_MAX;
+
+        foreach ($originIndexes as $originIdx) {
+            foreach ($destinationIndexes as $destinationIdx) {
+                if ($destinationIdx <= $originIdx) {
+                    continue;
+                }
+
+                $distance = $destinationIdx - $originIdx;
+                if ($distance < $bestDistance) {
+                    $bestDistance = $distance;
+                    $bestOrigin = $originIdx;
+                    $bestDestination = $destinationIdx;
+                }
+            }
+        }
+
+        if ($bestOrigin === null || $bestDestination === null) {
+            return null;
+        }
+
+        $segments = [];
+        for ($s = (int) $bestOrigin; $s < (int) $bestDestination; $s++) {
+            $segments[] = $s . ':' . ($s + 1);
+        }
+
+        return [
+            'origin_index' => (int) $bestOrigin,
+            'destination_index' => (int) $bestDestination,
+            'segments' => $segments,
+        ];
+    }
+}
+
     if (!function_exists('workationCreateBmlConnectTransaction')) {
         function workationCreateBmlConnectTransaction(array $context): ?array
         {
@@ -1637,12 +1702,9 @@ Route::post('/booking/reserve-category', function (Request $request) {
             $seaBookedSegments = [];
 
             if (!empty($stStopSequence) && $stBoardingPt !== '' && $stDisembarkPt !== '' && $stTotalSeats > 0) {
-                $originIdx = array_search($stBoardingPt, $stStopSequence, true);
-                $destIdx   = array_search($stDisembarkPt, $stStopSequence, true);
-                if ($originIdx !== false && $destIdx !== false && $destIdx > $originIdx) {
-                    for ($s = (int) $originIdx; $s < (int) $destIdx; $s++) {
-                        $seaBookedSegments[] = $s . ':' . ($s + 1);
-                    }
+                $segmentSpan = workationResolveStopSequenceSpan($stStopSequence, $stBoardingPt, $stDisembarkPt);
+                if (is_array($segmentSpan) && !empty($segmentSpan['segments'])) {
+                    $seaBookedSegments = array_values((array) ($segmentSpan['segments'] ?? []));
                     $existingSeaBookings = DB::table('vendor_reservations')
                         ->where('vendor_property_id', (int) $propertyRow->id)
                         ->whereNotIn('status', ['cancelled', 'canceled'])

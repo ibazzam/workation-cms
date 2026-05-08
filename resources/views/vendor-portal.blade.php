@@ -104,7 +104,7 @@
         $showOverviewPage = in_array($activePortalPage, ['overview', 'reports'], true);
         $forcedPanelKey = (string) session('portal_active_panel', $panelFromPageQuery);
         $forcedListingMode = strtolower(trim((string) session('portal_listing_mode', '')));
-        $forcedListingCategory = strtolower(trim((string) request()->query('category', session('portal_listing_category', ''))));
+        $forcedListingCategory = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', ''))) ?? '';
         $showWorkspaceTabs = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'billing', 'messages'], true);
         $workspacePrimaryPage = match (true) {
             $showListingsPage => 'listings',

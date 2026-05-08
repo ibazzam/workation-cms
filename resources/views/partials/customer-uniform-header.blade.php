@@ -86,9 +86,7 @@
         margin: 1px 0 0;
         font-size: 0.7rem;
         color: #71869a;
-        text-transform: uppercase;
-        letter-spacing: 0.09em;
-        font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        white-space: nowrap;
     }
 
     .uniform-header-links {

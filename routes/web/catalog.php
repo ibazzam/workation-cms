@@ -712,10 +712,10 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
 });
 
 Route::get('/sea-transport/{id}', function (Request $request, int $id) {
-    $property = DB::table('vendor_properties')
-        ->where('id', $id)
-        ->where('listing_category', 'sea_transport')
-        ->where('is_active', 1)
+    $stTable = \App\Support\VendorPropertyCompatibilityReader::categoryTableNameFor('sea_transport');
+    $property = DB::table($stTable)
+        ->where('vendor_property_id', $id)
+        ->where('status', 'active')
         ->first();
 
     if (!$property) {
@@ -746,7 +746,7 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
     $heroUrl = $heroMedia ? (portalManagedMediaUrlFromPath($heroMedia->media_url) ?? $heroMedia->media_url) : '';
 
     // Operator / vendor.
-    $vendor = DB::table('users')->where('id', $property->user_id ?? 0)->first();
+    $vendor = DB::table('users')->where('id', $property->vendor_user_id ?? 0)->first();
 
     $visitorResidency = function_exists('workationDetectVisitorResidency')
         ? workationDetectVisitorResidency($request)

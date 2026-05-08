@@ -834,13 +834,16 @@
                                     <input type="hidden" name="inventory" id="sea_sb_inventory_{{ $categorySlug }}" value="0">
                                     <input type="hidden" name="notes" id="sea_sb_notes_hid_{{ $categorySlug }}" value="">
 
-                                    <script type="application/json" id="sea_sb_data_{{ $categorySlug }}">
-                                        @json(collect($seaVesselTargets)->map(static fn($t) => [
+                                    @php
+                                        $seaSbJson = collect($seaVesselTargets)->map(static fn ($t) => [
                                             'id'              => (int) ($t['property_id'] ?? 0),
                                             'label'           => (string) ($t['label'] ?? ''),
                                             'total_seats'     => (int) ($t['total_seats'] ?? 0),
                                             'route_schedules' => $t['route_schedules'] ?? [],
-                                        ])->values()->all())
+                                        ])->values()->all();
+                                    @endphp
+                                    <script type="application/json" id="sea_sb_data_{{ $categorySlug }}">
+                                        @json($seaSbJson)
                                     </script>
 
                                     <p class="label" style="margin-bottom:0.4rem;">Seat Map — Block Externally Sold Seats</p>

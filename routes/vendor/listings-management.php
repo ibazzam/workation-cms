@@ -967,6 +967,9 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         );
     });
 
+    Cache::forget('vendor:portal:listings:v4:' . $vendorUserId . ':all');
+    Cache::forget('vendor:portal:listings:v4:' . $vendorUserId . ':' . $canonicalListingCategory);
+
     return vendorPortalListingsBackResponse('Property/service listing added.', 2, [
         'portal_listing_mode' => 'manage',
         'portal_listing_category' => (string) $canonicalListingCategory,
@@ -1250,6 +1253,13 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
             }
         }
     });
+
+    // Bust vendor portal listing cache so the updated data is visible immediately.
+    Cache::forget('vendor:portal:listings:v4:' . $vendorUserId . ':all');
+    Cache::forget('vendor:portal:listings:v4:' . $vendorUserId . ':' . ($canonicalListingCategory ?? ''));
+    // Bust the property-by-id cache used by the edit form loader.
+    Cache::forget('vendor_property_compatibility_reader:property_by_id:' . md5(($canonicalListingCategory ?? '*') . ':' . $property));
+    Cache::forget('vendor_property_compatibility_reader:property_by_id:' . md5('*:' . $property));
 
     return vendorPortalListingsBackResponse('Property listing updated.', 2, [
         'portal_listing_mode' => 'manage',

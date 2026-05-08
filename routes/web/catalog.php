@@ -738,12 +738,15 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
     }
 
     // Vessel hero image.
-    $heroMedia = DB::table('vendor_listing_media')
-        ->where('vendor_property_id', $id)
-        ->orderByRaw("CASE WHEN is_primary = 1 THEN 0 ELSE 1 END")
-        ->orderBy('sort_order')
-        ->first();
-    $heroUrl = $heroMedia ? (portalManagedMediaUrlFromPath($heroMedia->media_url) ?? $heroMedia->media_url) : '';
+    $heroMedia = Schema::hasTable('vendor_listing_media')
+        ? DB::table('vendor_listing_media')
+            ->where('entity_type', 'sea_transport')
+            ->where('entity_id', $property->id)
+            ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
+            ->orderBy('id')
+            ->first()
+        : null;
+    $heroUrl = $heroMedia ? (function_exists('portalManagedMediaUrlFromPath') ? (portalManagedMediaUrlFromPath($heroMedia->file_path) ?? $heroMedia->file_path) : $heroMedia->file_path) : '';
 
     // Operator / vendor.
     $vendor = DB::table('users')->where('id', $property->vendor_user_id ?? 0)->first();
